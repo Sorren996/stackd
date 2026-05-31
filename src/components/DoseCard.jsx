@@ -15,7 +15,7 @@ export default function DoseCard({ dose, onDelete }) {
         style={{ backgroundColor: profile?.color || "#888" }}
       />
       <div className="flex-1 min-w-0">
-        <p className="font-medium text-sm">{dose.insulin_type}</p>
+        <p className="font-medium text-sm text-white">{dose.insulin_type}</p>
         <p className="text-xs text-muted-foreground mt-0.5">
           {dose.units} units · {format(new Date(dose.administered_at), "MMM d, h:mm a")}
         </p>
