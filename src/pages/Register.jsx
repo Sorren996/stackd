@@ -140,7 +140,7 @@ export default function Register() {
       
       <Button
         variant="outline"
-        className="w-full h-12 text-sm font-medium mb-6"
+        className="w-full h-12 text-sm font-medium mb-6 text-[hsl(var(--popover))]"
         onClick={handleGoogle}>
         
         <GoogleIcon className="w-5 h-5 mr-2" />
