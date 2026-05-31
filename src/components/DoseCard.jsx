@@ -12,8 +12,8 @@ export default function DoseCard({ dose, onDelete }) {
     <div className="flex items-center gap-4 p-4 bg-card rounded-xl border border-border hover:shadow-md transition-all">
       <div
         className="w-3 h-12 rounded-full shrink-0"
-        style={{ backgroundColor: profile?.color || "#888" }}
-      />
+        style={{ backgroundColor: profile?.color || "#888" }} />
+      
       <div className="flex-1 min-w-0">
         <p className="font-medium text-sm text-white">{dose.insulin_type}</p>
         <p className="text-xs text-muted-foreground mt-0.5">
@@ -23,11 +23,11 @@ export default function DoseCard({ dose, onDelete }) {
       </div>
       <div className="text-right shrink-0">
         <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-          status.phase === "expired" ? "bg-muted text-muted-foreground" :
-          status.phase === "waiting" ? "bg-amber-100 text-amber-700" :
-          status.phase === "rising" ? "bg-blue-100 text-blue-700" :
-          "bg-emerald-100 text-emerald-700"
-        }`}>
+        status.phase === "expired" ? "bg-muted text-muted-foreground" :
+        status.phase === "waiting" ? "bg-amber-100 text-amber-700" :
+        status.phase === "rising" ? "bg-blue-100 text-blue-700" :
+        "bg-emerald-100 text-emerald-700"}`
+        }>
           {status.phase === "expired" ? "Done" : status.message.split("—")[0].trim()}
         </span>
       </div>
@@ -45,13 +45,13 @@ export default function DoseCard({ dose, onDelete }) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="text-[hsl(var(--popover))]">Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={() => onDelete(dose.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
-  );
+    </div>);
+
 }
