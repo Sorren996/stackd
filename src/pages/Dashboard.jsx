@@ -20,7 +20,7 @@ export default function Dashboard() {
 
   const { data: doses = [], isLoading } = useQuery({
     queryKey: ["insulin-doses"],
-    queryFn: () => base44.entities.InsulinDose.list("-administered_at", 50),
+    queryFn: () => base44.entities.InsulinDose.list("-administered_at", 50)
   });
 
   const deleteDose = useMutation({
@@ -28,7 +28,7 @@ export default function Dashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["insulin-doses"] });
       toast.success("Dose removed");
-    },
+    }
   });
 
   // Filter doses that are still relevant (last 24 hours)
@@ -41,15 +41,15 @@ export default function Dashboard() {
     return (
       <div className="flex items-center justify-center h-[60vh]">
         <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-      </div>
-    );
+      </div>);
+
   }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">Dashboard</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-[hsl(var(--popover))]">Dashboard</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Track your insulin activity in real time
           </p>
@@ -57,36 +57,36 @@ export default function Dashboard() {
         <DoseForm />
       </div>
 
-      {recentDoses.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
+      {recentDoses.length === 0 ?
+      <div className="flex flex-col items-center justify-center py-20 text-center">
           <div className="w-48 h-48 mb-6 rounded-2xl overflow-hidden opacity-80">
             <img
-              src="https://media.base44.com/images/public/6a1b93f234a8611ee1595134/148c77ff9_generated_image.png"
-              alt="Insulin illustration"
-              className="w-full h-full object-cover"
-            />
+            src="https://media.base44.com/images/public/6a1b93f234a8611ee1595134/148c77ff9_generated_image.png"
+            alt="Insulin illustration"
+            className="w-full h-full object-cover" />
+          
           </div>
           <Activity className="w-10 h-10 text-muted-foreground/40 mb-3" />
           <h3 className="text-lg font-semibold">No active insulin</h3>
           <p className="text-sm text-muted-foreground mt-1 max-w-xs">
             Log your first dose to see its pharmacokinetic curve — onset, peak, and duration — all visualized on a timeline.
           </p>
-        </div>
-      ) : (
-        <>
+        </div> :
+
+      <>
           <ActivityGraph doses={recentDoses} />
 
           <div className="grid gap-6 lg:grid-cols-3">
             <div className="lg:col-span-2 space-y-3">
-              <h2 className="text-lg font-semibold">Recent Doses</h2>
+              <h2 className="text-lg font-semibold text-[hsl(var(--popover))]">Recent Doses</h2>
               <div className="space-y-2">
-                {recentDoses.map((dose) => (
-                  <DoseCard
-                    key={dose.id}
-                    dose={dose}
-                    onDelete={(id) => deleteDose.mutate(id)}
-                  />
-                ))}
+                {recentDoses.map((dose) =>
+              <DoseCard
+                key={dose.id}
+                dose={dose}
+                onDelete={(id) => deleteDose.mutate(id)} />
+
+              )}
               </div>
             </div>
             <div>
@@ -94,7 +94,7 @@ export default function Dashboard() {
             </div>
           </div>
         </>
-      )}
-    </div>
-  );
+      }
+    </div>);
+
 }
