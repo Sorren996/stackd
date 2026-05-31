@@ -41,29 +41,29 @@ export default function ResetPassword() {
         title="Invalid reset link"
         subtitle="This password reset link is missing or invalid"
         footer={
-          <Link to="/forgot-password" className="text-primary font-medium hover:underline">
+        <Link to="/forgot-password" className="text-primary font-medium hover:underline">
             Request a new link
           </Link>
-        }
-      >
-        <p className="text-sm text-foreground text-center">
-          The link you used appears to be incomplete. Please request a new password reset email.
+        }>
+        
+        <p className="text-sm text-center text-[hsl(var(--popover))]">The link you used appears to be incomplete. Please request a new password reset email.
+
         </p>
-      </AuthLayout>
-    );
+      </AuthLayout>);
+
   }
 
   return (
     <AuthLayout
       icon={Lock}
       title="New password"
-      subtitle="Enter your new password below"
-    >
-      {error && (
-        <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+      subtitle="Enter your new password below">
+      
+      {error &&
+      <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
           {error}
         </div>
-      )}
+      }
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="password">New Password</Label>
@@ -78,8 +78,8 @@ export default function ResetPassword() {
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               className="pl-10 h-12"
-              required
-            />
+              required />
+            
           </div>
         </div>
         <div className="space-y-2">
@@ -94,21 +94,21 @@ export default function ResetPassword() {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               className="pl-10 h-12"
-              required
-            />
+              required />
+            
           </div>
         </div>
         <Button type="submit" className="w-full h-12 font-medium" disabled={loading}>
-          {loading ? (
-            <>
+          {loading ?
+          <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               Resetting...
-            </>
-          ) : (
-            "Reset password"
-          )}
+            </> :
+
+          "Reset password"
+          }
         </Button>
       </form>
-    </AuthLayout>
-  );
+    </AuthLayout>);
+
 }
