@@ -16,7 +16,7 @@ export default function Layout() {
       <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-xl border-b border-border">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-emerald-400">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-teal-300">
               <Activity className="w-5 h-5 text-primary-foreground" />
             </div>
             <span className="text-lg font-semibold tracking-tight text-[hsl(var(--popover))]">Stackd</span>
