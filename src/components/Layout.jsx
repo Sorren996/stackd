@@ -29,7 +29,7 @@ export default function Layout() {
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all bg-teal-400
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all bg-teal-900
                     ${isActive ?
                   "text-primary-foreground" :
                   "text-muted-foreground hover:text-foreground hover:bg-muted"}`
