@@ -12,22 +12,29 @@ import {
 import { generateActivityCurve, INSULIN_PROFILES, formatMinutes } from "@/lib/insulinPharmacology";
 import { format } from "date-fns";
 
-function CustomTooltip({ active, payload, label }) {
+function CustomTooltip({ active, payload, label, showTotal }) {
   if (!active || !payload?.length) return null;
+  const totalEntry = payload.find((p) => p.dataKey === "__total");
+  const doseEntries = payload.filter((p) => p.dataKey !== "__total" && p.value > 0);
   return (
     <div className="bg-card border border-border rounded-xl px-4 py-3 shadow-xl">
       <p className="text-xs text-muted-foreground mb-2">
         {format(new Date(label), "h:mm a")}
       </p>
-      {payload
-        .filter((p) => p.value > 0)
-        .map((p) => (
-          <div key={p.dataKey} className="flex items-center gap-2 text-sm">
-            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.color }} />
-            <span className="font-medium">{p.name}</span>
-            <span className="text-muted-foreground ml-auto">{(p.value * 100).toFixed(0)}%</span>
-          </div>
-        ))}
+      {doseEntries.map((p) => (
+        <div key={p.dataKey} className="flex items-center gap-2 text-sm">
+          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.color }} />
+          <span className="font-medium">{p.name}</span>
+          <span className="text-muted-foreground ml-auto">{(p.value * 100).toFixed(0)}%</span>
+        </div>
+      ))}
+      {showTotal && totalEntry && totalEntry.value > 0 && (
+        <div className="flex items-center gap-2 text-sm mt-2 pt-2 border-t border-border">
+          <div className="w-2.5 h-2.5 rounded-full bg-orange-500" />
+          <span className="font-semibold">Combined Total</span>
+          <span className="text-orange-500 font-bold ml-auto">{(totalEntry.value * 100).toFixed(0)}%</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -107,6 +114,12 @@ export default function ActivityGraph({ doses }) {
               {k.label}
             </div>
           ))}
+          {doseKeys.length > 1 && (
+            <div className="flex items-center gap-1.5 text-xs font-medium text-orange-500">
+              <div className="w-2.5 h-2.5 rounded-full bg-orange-500" />
+              Combined Total
+            </div>
+          )}
         </div>
       </div>
 
@@ -139,7 +152,7 @@ export default function ActivityGraph({ doses }) {
               tickLine={false}
               domain={[0, "auto"]}
             />
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip content={<CustomTooltip showTotal={doseKeys.length > 1} />} />
             <ReferenceLine
               x={now}
               stroke="hsl(213, 94%, 48%)"
@@ -153,6 +166,19 @@ export default function ActivityGraph({ doses }) {
                 fontWeight: 600,
               }}
             />
+            {doseKeys.length > 1 && (
+              <Area
+                type="monotone"
+                dataKey="__total"
+                name="Combined Total"
+                stroke="#F97316"
+                strokeWidth={2.5}
+                strokeDasharray="6 3"
+                fill="none"
+                dot={false}
+                animationDuration={800}
+              />
+            )}
             {doseKeys.map((k) => (
               <Area
                 key={k.key}
