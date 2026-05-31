@@ -59,7 +59,7 @@ export default function Register() {
       await base44.auth.resendOtp(email);
       toast({
         title: "Code sent",
-        description: "Check your email for the new code.",
+        description: "Check your email for the new code."
       });
     } catch (err) {
       setError(err.message || "Failed to resend code");
@@ -75,21 +75,21 @@ export default function Register() {
       <AuthLayout
         icon={Mail}
         title="Verify your email"
-        subtitle={`We sent a code to ${email}`}
-      >
-        {error && (
-          <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+        subtitle={`We sent a code to ${email}`}>
+        
+        {error &&
+        <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
             {error}
           </div>
-        )}
+        }
         <div className="flex justify-center mb-6">
           <InputOTP
             maxLength={6}
             value={otpCode}
             onChange={setOtpCode}
             autoFocus
-            autoComplete="one-time-code"
-          >
+            autoComplete="one-time-code">
+            
             <InputOTPGroup>
               <InputOTPSlot index={0} />
               <InputOTPSlot index={1} />
@@ -103,16 +103,16 @@ export default function Register() {
         <Button
           className="w-full h-12 font-medium"
           onClick={handleVerify}
-          disabled={loading || otpCode.length < 6}
-        >
-          {loading ? (
-            <>
+          disabled={loading || otpCode.length < 6}>
+          
+          {loading ?
+          <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               Verifying...
-            </>
-          ) : (
-            "Verify"
-          )}
+            </> :
+
+          "Verify"
+          }
         </Button>
         <p className="text-center text-sm text-muted-foreground mt-4">
           Didn't receive the code?{" "}
@@ -120,8 +120,8 @@ export default function Register() {
             Resend
           </button>
         </p>
-      </AuthLayout>
-    );
+      </AuthLayout>);
+
   }
 
   return (
@@ -130,19 +130,19 @@ export default function Register() {
       title="Create your account"
       subtitle="Sign up to get started"
       footer={
-        <>
+      <>
           Already have an account?{" "}
           <Link to="/login" className="text-primary font-medium hover:underline">
             Log in
           </Link>
         </>
-      }
-    >
+      }>
+      
       <Button
         variant="outline"
         className="w-full h-12 text-sm font-medium mb-6"
-        onClick={handleGoogle}
-      >
+        onClick={handleGoogle}>
+        
         <GoogleIcon className="w-5 h-5 mr-2" />
         Continue with Google
       </Button>
@@ -156,11 +156,11 @@ export default function Register() {
         </div>
       </div>
 
-      {error && (
-        <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+      {error &&
+      <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
           {error}
         </div>
-      )}
+      }
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
@@ -176,8 +176,8 @@ export default function Register() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="pl-10 h-12"
-              required
-            />
+              required />
+            
           </div>
         </div>
         <div className="space-y-2">
@@ -192,8 +192,8 @@ export default function Register() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="pl-10 h-12"
-              required
-            />
+              required />
+            
           </div>
         </div>
         <div className="space-y-2">
@@ -208,21 +208,21 @@ export default function Register() {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               className="pl-10 h-12"
-              required
-            />
+              required />
+            
           </div>
         </div>
-        <Button type="submit" className="w-full h-12 font-medium" disabled={loading}>
-          {loading ? (
-            <>
+        <Button type="submit" className="w-full h-12 font-medium bg-teal-400" disabled={loading}>
+          {loading ?
+          <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               Creating account...
-            </>
-          ) : (
-            "Create account"
-          )}
+            </> :
+
+          "Create account"
+          }
         </Button>
       </form>
-    </AuthLayout>
-  );
+    </AuthLayout>);
+
 }
