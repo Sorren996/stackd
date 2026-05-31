@@ -27,7 +27,7 @@ export default function DoseForm() {
       setInsulinType("");
       setUnits("");
       setNotes("");
-    },
+    }
   });
 
   const handleSubmit = (e) => {
@@ -37,7 +37,7 @@ export default function DoseForm() {
       insulin_type: insulinType,
       units: parseFloat(units),
       administered_at: new Date().toISOString(),
-      notes: notes || undefined,
+      notes: notes || undefined
     });
   };
 
@@ -46,7 +46,7 @@ export default function DoseForm() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="lg" className="gap-2 shadow-lg shadow-primary/20">
+        <Button size="lg" className="gap-2 shadow-lg shadow-primary/20 bg-teal-400">
           <Plus className="w-5 h-5" />
           Log Dose
         </Button>
@@ -66,15 +66,15 @@ export default function DoseForm() {
                 <SelectValue placeholder="Select insulin type" />
               </SelectTrigger>
               <SelectContent>
-                {Object.entries(INSULIN_PROFILES).map(([name, p]) => (
-                  <SelectItem key={name} value={name}>
+                {Object.entries(INSULIN_PROFILES).map(([name, p]) =>
+                <SelectItem key={name} value={name}>
                     <div className="flex items-center gap-2">
                       <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.color }} />
                       <span>{name}</span>
                       <span className="text-xs text-muted-foreground ml-1">({p.category})</span>
                     </div>
                   </SelectItem>
-                ))}
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -88,12 +88,12 @@ export default function DoseForm() {
               value={units}
               onChange={(e) => setUnits(e.target.value)}
               placeholder="e.g. 20"
-              className="text-lg"
-            />
+              className="text-lg" />
+            
           </div>
 
-          {profile && (
-            <div className="bg-muted rounded-xl p-4 space-y-2 text-sm">
+          {profile &&
+          <div className="bg-muted rounded-xl p-4 space-y-2 text-sm">
               <p className="font-medium text-foreground">{profile.category}</p>
               <div className="grid grid-cols-2 gap-2 text-muted-foreground">
                 <span>Onset: {profile.onsetMin}–{profile.onsetMax} min</span>
@@ -103,7 +103,7 @@ export default function DoseForm() {
                 <span>Duration: {Math.round(profile.durationMin / 60)}–{Math.round(profile.durationMax / 60)} hr</span>
               </div>
             </div>
-          )}
+          }
 
           <div className="space-y-2">
             <Label>Notes (optional)</Label>
@@ -111,19 +111,19 @@ export default function DoseForm() {
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Pre-meal, correction, etc."
-              rows={2}
-            />
+              rows={2} />
+            
           </div>
 
           <Button
             type="submit"
             className="w-full"
-            disabled={!insulinType || !units || createDose.isPending}
-          >
+            disabled={!insulinType || !units || createDose.isPending}>
+            
             {createDose.isPending ? "Logging..." : "Log Dose"}
           </Button>
         </form>
       </DialogContent>
-    </Dialog>
-  );
+    </Dialog>);
+
 }
