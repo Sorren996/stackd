@@ -35,8 +35,8 @@ export default function Layout() {
                   "text-muted-foreground hover:text-foreground hover:bg-muted"}`
                   }>
                   
-                  <item.icon className="w-4 h-4" />
-                  <span className="hidden sm:inline">{item.label}</span>
+                  <item.icon className="w-4 h-4 text-[hsl(var(--input))]" />
+                  <span className="hidden sm:inline text-[hsl(var(--secondary))]">{item.label}</span>
                 </Link>);
 
             })}
