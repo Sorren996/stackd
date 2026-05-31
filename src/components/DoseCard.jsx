@@ -39,7 +39,7 @@ export default function DoseCard({ dose, onDelete }) {
         </AlertDialogTrigger>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete this dose?</AlertDialogTitle>
+            <AlertDialogTitle className="text-[hsl(var(--popover))]">Delete this dose?</AlertDialogTitle>
             <AlertDialogDescription>
               This will remove the {dose.units}u {dose.insulin_type} dose from your log and graph.
             </AlertDialogDescription>
