@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { Activity, History, LogOut } from "lucide-react";
+import { Activity, History, LogOut, BarChart2 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 
 export default function Layout() {
@@ -8,6 +8,7 @@ export default function Layout() {
   const navItems = [
     { path: "/", label: "Dashboard", icon: Activity },
     { path: "/history", label: "History", icon: History },
+    { path: "/analytics", label: "Analytics", icon: BarChart2 },
   ];
 
   return (

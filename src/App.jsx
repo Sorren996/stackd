@@ -13,6 +13,7 @@ import ResetPassword from './pages/ResetPassword';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import History from './pages/History';
+import Analytics from './pages/Analytics';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { Navigate } from 'react-router-dom';
 
@@ -50,6 +51,7 @@ const AuthenticatedApp = () => {
         <Route element={<Layout />}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/history" element={<History />} />
+          <Route path="/analytics" element={<Analytics />} />
         </Route>
       </Route>
       <Route path="*" element={<PageNotFound />} />
