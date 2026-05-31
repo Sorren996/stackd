@@ -1,0 +1,34 @@
+{
+  "name": "InsulinDose",
+  "type": "object",
+  "properties": {
+    "insulin_type": {
+      "type": "string",
+      "enum": [
+        "Novolog (Aspart)",
+        "Humalog (Lispro)",
+        "Apidra (Glulisine)",
+        "Regular (Novolin R / Humulin R)",
+        "NPH (Novolin N / Humulin N)",
+        "Lantus (Glargine)",
+        "Levemir (Detemir)",
+        "Tresiba (Degludec)"
+      ]
+    },
+    "units": {
+      "type": "number"
+    },
+    "administered_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "insulin_type",
+    "units",
+    "administered_at"
+  ]
+}
