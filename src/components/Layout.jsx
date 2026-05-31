@@ -17,7 +17,7 @@ export default function Layout() {
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-teal-400">
-              <Activity className="w-5 h-5 text-primary-foreground hidden" />
+              
             </div>
             <span className="text-lg font-semibold tracking-tight text-[hsl(var(--popover))]">Stackd</span>
           </div>
