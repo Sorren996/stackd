@@ -19,7 +19,7 @@ export default function Layout() {
             <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center">
               <Activity className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="text-lg font-semibold tracking-tight">S</span>
+            <span className="text-lg font-semibold tracking-tight">Stack'd</span>
           </div>
 
           <nav className="flex items-center gap-1">
