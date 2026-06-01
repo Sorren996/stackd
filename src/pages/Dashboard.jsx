@@ -48,14 +48,14 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-[hsl(var(--popover))]">Dashboard</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Track your insulin activity in real time
           </p>
         </div>
-        <DoseForm />
+        <DoseForm fullWidth />
       </div>
 
       {recentDoses.length === 0 ?

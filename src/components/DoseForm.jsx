@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Plus, Syringe } from "lucide-react";
 import { toast } from "sonner";
 
-export default function DoseForm() {
+export default function DoseForm({ fullWidth }) {
   const [open, setOpen] = useState(false);
   const [insulinType, setInsulinType] = useState("");
   const [units, setUnits] = useState("");
@@ -46,7 +46,7 @@ export default function DoseForm() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="lg" className="gap-2 shadow-lg shadow-primary/20 bg-teal-400">
+        <Button size="lg" className={`gap-2 shadow-lg shadow-primary/20 bg-teal-400${fullWidth ? " w-full sm:w-auto" : ""}`}>
           <Plus className="w-5 h-5" />
           Log Dose
         </Button>
