@@ -15,7 +15,7 @@ export default function AuthLayout({ icon: Icon, title, subtitle, footer, childr
           {children}
         </div>
         {footer &&
-        <p className="text-center text-sm text-muted-foreground mt-6">{footer}</p>
+        <p className="text-center text-sm text-muted-foreground mt-6 mb-3">{footer}</p>
         }
       </div>
     </div>);
