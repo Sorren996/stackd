@@ -60,15 +60,15 @@ export default function Dashboard() {
 
       {recentDoses.length === 0 ?
       <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="w-48 h-48 mb-6 rounded-2xl overflow-hidden opacity-80">
+          <div className="w-48 h-48 mb-6 rounded-2xl overflow-hidden opacity-80 hidden">
             <img
             src="https://media.base44.com/images/public/6a1b93f234a8611ee1595134/148c77ff9_generated_image.png"
             alt="Insulin illustration"
-            className="w-full h-full object-cover" />
+            className="w-full h-full object-cover hidden" />
           
           </div>
           <Activity className="w-10 h-10 text-muted-foreground/40 mb-3" />
-          <h3 className="text-lg font-semibold">No active insulin</h3>
+          <h3 className="text-lg font-semibold text-[hsl(var(--popover))]">No active insulin</h3>
           <p className="text-sm text-muted-foreground mt-1 max-w-xs">
             Log your first dose to see its pharmacokinetic curve — onset, peak, and duration — all visualized on a timeline.
           </p>
