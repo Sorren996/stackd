@@ -46,7 +46,7 @@ export default function DoseForm({ fullWidth }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="lg" className={`bg-[#1d8f87] h-10 gap-2 shadow-lg shadow-primary/20 w-full sm:w-auto hover:bg${fullWidth ? "" : ""}`}>
+        <Button size="lg" className={`bg-[#1d8f87] hover:bg-[#25b9b0] h-10 gap-2 shadow-lg shadow-primary/20 w-full sm:w-auto${fullWidth ? "" : ""}`}>
           <Plus className="w-5 h-5" />
           Log Dose
         </Button>
