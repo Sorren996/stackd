@@ -104,7 +104,7 @@ export default function ActivityGraph({ doses }) {
   const now = Date.now();
 
   return (
-    <div className="bg-card rounded-2xl border border-border p-4 sm:p-6">
+    <div className="rounded-2xl border border-border p-4 sm:p-6 bg-[#1d2b3a]">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-[hsl(var(--popover))]">Activity Timeline</h2>
         <div className="flex flex-wrap gap-3">
