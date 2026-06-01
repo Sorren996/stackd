@@ -62,7 +62,7 @@ export default function DoseForm() {
           <div className="space-y-2">
             <Label>Insulin Type</Label>
             <Select value={insulinType} onValueChange={setInsulinType}>
-              <SelectTrigger>
+              <SelectTrigger className="text-[hsl(var(--popover))]">
                 <SelectValue placeholder="Select insulin type" />
               </SelectTrigger>
               <SelectContent>
