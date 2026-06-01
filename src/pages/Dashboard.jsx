@@ -89,13 +89,13 @@ export default function Dashboard() {
 
               )}
               </div>
-              {recentDoses.length > 3 &&
-            <button
-              onClick={() => setShowAllDoses((v) => !v)}
-              className="text-sm hover:underline font-medium mt-1 text-[hsl(var(--muted-foreground))]">
+              {recentDoses.length > 3 && (
+                <button
+                  onClick={() => setShowAllDoses((v) => !v)}
+                  className="text-sm text-primary hover:underline font-medium mt-1">
                   {showAllDoses ? "Show less" : `Show more (${Math.min(recentDoses.length, 10) - 3} more)`}
                 </button>
-            }
+              )}
             </div>
             <div>
               <ActiveAlerts doses={recentDoses} />

@@ -108,8 +108,8 @@ export default function ActivityGraph({ doses }) {
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-[hsl(var(--popover))]">Activity Timeline</h2>
         <div className="flex flex-wrap gap-3">
-          {[...new Map(doseKeys.map((k) => [k.label, k])).values()].map((k) =>
-          <div key={k.label} className="flex items-center gap-1.5 text-xs text-gray-400">
+          {doseKeys.map((k) =>
+          <div key={k.key} className="flex items-center gap-1.5 text-xs text-gray-400">
               <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: k.color }} />
               {k.label}
             </div>
