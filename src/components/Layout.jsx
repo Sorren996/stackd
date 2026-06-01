@@ -14,7 +14,7 @@ export default function Layout() {
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-xl border-b border-border">
-        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between fixed bottom-0 left-0 right-0 z-index:0">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl overflow-hidden">
               <img src="https://media.base44.com/images/public/6a1b93f234a8611ee1595134/6be146ac0_stackd_app_icon_ver1.png" alt="Stackd" className="w-full h-full object-cover" />
