@@ -53,17 +53,17 @@ export default function DoseForm() {
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Syringe className="w-5 h-5 text-primary" />
-            Log Insulin Dose
+          <DialogTitle className="flex items-center gap-2 text-[hsl(var(--popover))]">Log Insulin Dose
+
+
           </DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-5 pt-2">
+        <form onSubmit={handleSubmit} className="space-y-5 pt-2 text-[hsl(var(--popover))]">
           <div className="space-y-2">
             <Label>Insulin Type</Label>
             <Select value={insulinType} onValueChange={setInsulinType}>
               <SelectTrigger className="text-[hsl(var(--popover))]">
-                <SelectValue placeholder="Select insulin type" />
+                <SelectValue placeholder="Select insulin type" className="text-[hsl(var(--muted))]" />
               </SelectTrigger>
               <SelectContent>
                 {Object.entries(INSULIN_PROFILES).map(([name, p]) =>
