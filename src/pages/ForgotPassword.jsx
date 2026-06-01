@@ -21,9 +21,9 @@ export default function ForgotPassword() {
 
 
 
+
       // Always show success regardless
-    } finally {setLoading(false);setSent(true);}
-  };
+    } finally {setLoading(false);setSent(true);}};
 
   return (
     <AuthLayout
@@ -59,7 +59,7 @@ export default function ForgotPassword() {
             
             </div>
           </div>
-          <Button type="submit" className="w-full h-12 font-medium bg-teal-400 hover:bg-b[#25b9b0]" disabled={loading}>
+          <Button type="submit" className="w-full h-12 font-medium bg-teal-400 hover:bg-[#25b9b0]" disabled={loading}>
             {loading ?
           <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
