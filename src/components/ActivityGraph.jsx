@@ -24,7 +24,7 @@ function CustomTooltip({ active, payload, label, showTotal }) {
       {doseEntries.map((p) =>
       <div key={p.dataKey} className="flex items-center gap-2 text-sm">
           <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.color }} />
-          <span className="font-medium">{p.name}</span>
+          <span className="font-medium text-white">{p.name}</span>
           <span className="text-muted-foreground ml-auto">{(p.value * 100).toFixed(0)}%</span>
         </div>
       )}
@@ -71,7 +71,7 @@ export default function ActivityGraph({ doses }) {
         if (!keys.find((k) => k.key === key)) {
           keys.push({
             key,
-            label: `${c.dose.insulin_type} (${c.dose.units}u)`,
+            label: c.dose.insulin_type,
             color: c.profile?.color || "#888"
           });
         }

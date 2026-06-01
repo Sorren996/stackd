@@ -11,6 +11,7 @@ import { toast } from "sonner";
 export default function Dashboard() {
   const queryClient = useQueryClient();
   const [, setTick] = useState(0);
+  const [showAllDoses, setShowAllDoses] = useState(false);
 
   // Auto-refresh every 60s to update statuses
   useEffect(() => {
@@ -80,7 +81,7 @@ export default function Dashboard() {
             <div className="lg:col-span-2 space-y-3">
               <h2 className="text-lg font-semibold text-[hsl(var(--popover))]">Recent Doses</h2>
               <div className="space-y-2">
-                {recentDoses.map((dose) =>
+                {(showAllDoses ? recentDoses.slice(0, 10) : recentDoses.slice(0, 3)).map((dose) =>
               <DoseCard
                 key={dose.id}
                 dose={dose}
@@ -88,6 +89,13 @@ export default function Dashboard() {
 
               )}
               </div>
+              {recentDoses.length > 3 && (
+                <button
+                  onClick={() => setShowAllDoses((v) => !v)}
+                  className="text-sm text-primary hover:underline font-medium mt-1">
+                  {showAllDoses ? "Show less" : `Show more (${Math.min(recentDoses.length, 10) - 3} more)`}
+                </button>
+              )}
             </div>
             <div>
               <ActiveAlerts doses={recentDoses} />
