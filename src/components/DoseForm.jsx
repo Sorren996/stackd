@@ -63,7 +63,7 @@ export default function DoseForm() {
             <Label>Insulin Type</Label>
             <Select value={insulinType} onValueChange={setInsulinType}>
               <SelectTrigger className="text-[hsl(var(--popover))]">
-                <SelectValue placeholder="Select insulin type" className="text-[hsl(var(--background))]" />
+                <SelectValue placeholder="Select insulin type" className="text-[hsl(var(--muted-foreground))]" />
               </SelectTrigger>
               <SelectContent>
                 {Object.entries(INSULIN_PROFILES).map(([name, p]) =>
