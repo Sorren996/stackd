@@ -119,7 +119,7 @@ export default function ActivityGraph({ doses }) {
 
       <div className="h-72 sm:h-80">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+          <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} className="text-neutral-950">
             <defs>
               {doseKeys.map((k) =>
               <linearGradient key={k.key} id={`grad_${k.key}`} x1="0" y1="0" x2="0" y2="1">
