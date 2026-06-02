@@ -30,7 +30,8 @@ export default function DoseCard({ dose, onDelete }) {
         <span className={`text-xs px-2 py-1 rounded-full font-medium ${
         status.phase === "expired" ? "bg-muted text-muted-foreground" :
         status.phase === "waiting" ? "bg-muted text-muted-foreground" :
-        status.phase === "rising" ? "bg-muted text-muted-foreground" :}>
+        status.phase === "rising" ? "bg-muted text-muted-foreground" :
+        "bg-muted text-muted-foreground"}`}>
           {status.phase === "expired" ? "Done" : status.message.split("—")[0].trim()}
         </span>
       </div>
