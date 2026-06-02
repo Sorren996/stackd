@@ -42,7 +42,7 @@ export default function Layout() {
       {/* iOS-style glass bottom nav */}
       <nav className="fixed bottom-0 inset-x-0 z-50 flex justify-center pb-safe">
         <div
-          className="mx-4 flex items-center gap-1 py-1 rounded-3xl border border-white/15 mb-4 px-4"
+          className="mx-4 flex items-center gap-1 py-1 rounded-3xl border mb-4 px-4 backdrop-blur-sm border-white/3"
           style={{
             background: "rgba(8,14,10,0.4)",
             backdropFilter: "blur(32px)",
