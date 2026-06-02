@@ -113,13 +113,7 @@ export default function ActivityGraph({ doses }) {
       <div className="flex items-center justify-between mb-3">
         {/* Insulin type labels */}
         <div className="flex flex-wrap gap-3">
-          {doseKeys.map((k) => (
-            <div key={k.key} className="flex items-center gap-1.5 text-xs text-white/50">
-              <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: k.color }} />
-              <span>{k.label}</span>
-              <span className="text-white/30">{k.units}u</span>
-            </div>
-          ))}
+          
         </div>
         {/* Range selector */}
         <div className="flex gap-0.5 rounded-xl p-1" style={{ background: "rgba(255,255,255,0.05)" }}>
