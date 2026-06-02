@@ -32,8 +32,8 @@ export default function ActiveAlerts({ doses }) {
       <h2 className="text-lg font-semibold text-[hsl(var(--popover))]">Active Alerts</h2>
 
       {activeRapid.length > 1 &&
-      <div className="flex items-start gap-3 p-4 rounded-xl border-2 border-amber-300 text-[hsl(var(--foreground))]">
-          <AlertTriangle className="w-5 h-5 mt-0.5 shrink-0" />
+      <div className="flex items-start gap-3 p-4 rounded-xl border-2 text-[hsl(var(--foreground))]">
+          <AlertTriangle className="w-5 h-5 mt-0.5 shrink-0 text-[#bd7800]" />
           <div>
             <p className="font-semibold text-sm">Insulin Stacking Detected</p>
             <p className="text-xs mt-0.5 opacity-80">
