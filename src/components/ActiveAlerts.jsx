@@ -28,7 +28,7 @@ export default function ActiveAlerts({ doses }) {
   if (!activeDoses.length) return null;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 w-full overflow-hidden">
       <h2 className="text-lg font-semibold text-[hsl(var(--popover))]">Active Alerts</h2>
 
       {activeRapid.length > 1 &&
