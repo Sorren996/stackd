@@ -9,34 +9,20 @@ export default function DoseCard({ dose, onDelete }) {
   const status = getDoseStatus(dose);
 
   return (
-    <div className="bg-white/[0.03]
-backdrop-blur-xl
-border border-white/[0.08]
-rounded-3xl
-shadow-[0_8px_32px_rgba(0,0,0,0.25)]">
+    <div className="flex items-center gap-4 p-4 bg-card rounded-xl border border-border hover:shadow-md transition-all">
       <div
-        className="w-1.5 h-12 rounded-full shrink-0"
-  style={{
-    backgroundColor: profile?.color,
-    boxShadow: `0 0 16px ${profile?.color}`
-  }} />
+        className="w-3 h-12 rounded-full shrink-0"
+        style={{ backgroundColor: profile?.color || "#888" }} />
       
       <div className="flex-1 min-w-0">
-        <p className="font-medium text-sm text-white/90 tracking-tight">{dose.insulin_type}</p>
-        <p className="text-xs text-white/40">
+        <p className="font-medium text-sm text-white">{dose.insulin_type}</p>
+        <p className="text-xs text-muted-foreground mt-0.5">
           {dose.units} units · {format(new Date(dose.administered_at), "MMM d, h:mm a")}
         </p>
         {dose.notes && <p className="text-xs text-muted-foreground mt-1 italic">{dose.notes}</p>}
       </div>
       <div className="text-right shrink-0">
-        <span className={`"
-  px-3 py-1
-  rounded-full
-  text-xs
-  bg-white/[0.05]
-  border border-white/[0.08]
-  text-white/70
-" ${
+        <span className={`text-xs px-2 py-1 rounded-full font-medium ${
         status.phase === "expired" ? "bg-muted text-muted-foreground" :
         status.phase === "waiting" ? "bg-amber-100 text-amber-700" :
         status.phase === "rising" ? "bg-blue-100 text-blue-700" :
@@ -44,16 +30,6 @@ shadow-[0_8px_32px_rgba(0,0,0,0.25)]">
         }>
           {status.phase === "expired" ? "Done" : status.message.split("—")[0].trim()}
         </span>
-        <div className="relative">
-  <div
-    className="absolute inset-0 rounded-3xl blur-2xl opacity-20"
-    style={{ backgroundColor: profile?.color }}
-  />
-
-  <div className="relative">
-    {/* Card */}
-  </div>
-</div>
       </div>
       <AlertDialog>
         <AlertDialogTrigger asChild>
