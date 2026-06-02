@@ -212,7 +212,7 @@ export default function Register() {
             
           </div>
         </div>
-        <Button type="submit" className="w-full h-12 font-medium bg-teal-400" disabled={loading}>
+        <Button type="submit" className="w-full h-12 font-medium bg-[hsl(var(--chart-1))]" disabled={loading}>
           {loading ?
           <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
