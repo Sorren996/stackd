@@ -18,10 +18,10 @@ export default function Layout() {
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl overflow-hidden">
-              <img
-                src="https://media.base44.com/images/public/6a1b93f234a8611ee1595134/6be146ac0_stackd_app_icon_ver1.png"
-                alt="Stackd"
-                className="w-full h-full object-cover" />
+              <img src="https://media.base44.com/images/public/6a1b93f234a8611ee1595134/2235392b5_stackd_app_icon_ver2.png"
+
+              alt="Stackd"
+              className="w-full h-full object-cover" />
               
             </div>
             <span className="text-base font-semibold tracking-tight text-white">Stackd</span>
