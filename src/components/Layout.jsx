@@ -35,7 +35,7 @@ export default function Layout() {
       </header>
 
       {/* Page content — extra bottom padding for nav bar */}
-      <main className="max-w-6xl w-full mx-auto px-4 py-6 flex-1 pb-28">
+      <main className="max-w-6xl w-full mx-auto px-4 flex-1 pb-28 py-0">
         <Outlet />
       </main>
 
