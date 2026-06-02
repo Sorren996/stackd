@@ -143,7 +143,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
           
         </div>
         {/* Range selector */}
-        <div className="flex gap-0.5 rounded-xl p-1" style={{ background: "rgba(255,255,255,0.05)" }}>
+        <div className="flex gap-0.5 rounded-xl p-1 justify-center" style={{ background: "rgba(255,255,255,0.05)" }}>
           {TIME_RANGES.map((r, i) =>
           <button
             key={r.label}
