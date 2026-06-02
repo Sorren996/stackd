@@ -5,13 +5,14 @@ import ActivityGraph from "../components/ActivityGraph";
 import ActiveAlerts from "../components/ActiveAlerts";
 import DoseForm from "../components/DoseForm";
 import DoseCard from "../components/DoseCard";
-import { Activity } from "lucide-react";
+import { Activity, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Dashboard() {
   const queryClient = useQueryClient();
   const [, setTick] = useState(0);
   const [showAllDoses, setShowAllDoses] = useState(false);
+  const [doseFormOpen, setDoseFormOpen] = useState(false);
 
   // Auto-refresh every 60s to update statuses
   useEffect(() => {
@@ -48,15 +49,12 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-[hsl(var(--popover))]">Dashboard</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Track your insulin activity in real time
-          </p>
-        </div>
-        <DoseForm fullWidth />
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-[hsl(var(--popover))]">Dashboard</h1>
+        <p className="text-sm text-muted-foreground mt-1">Track your insulin activity in real time</p>
       </div>
+
+      <DoseForm open={doseFormOpen} onOpenChange={setDoseFormOpen} />
 
       {recentDoses.length === 0 ?
       <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -103,6 +101,12 @@ export default function Dashboard() {
           </div>
         </>
       }
+      {/* Floating Log Dose FAB */}
+      <button
+        onClick={() => setDoseFormOpen(true)}
+        className="fixed bottom-24 right-5 z-40 w-14 h-14 rounded-full bg-blue-500 hover:bg-blue-400 shadow-lg shadow-blue-500/40 flex items-center justify-center transition-all active:scale-95">
+        <Plus className="w-7 h-7 text-white" />
+      </button>
     </div>);
 
 }

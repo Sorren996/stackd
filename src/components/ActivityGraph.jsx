@@ -1,92 +1,75 @@
-import { useMemo } from "react";
+import { useMemo, useRef, useEffect } from "react";
 import {
-  ResponsiveContainer,
   AreaChart,
   Area,
   XAxis,
   YAxis,
   Tooltip,
   ReferenceLine,
-  CartesianGrid } from
-"recharts";
-import { generateActivityCurve, INSULIN_PROFILES, formatMinutes } from "@/lib/insulinPharmacology";
+  CartesianGrid,
+} from "recharts";
+import { generateActivityCurve, INSULIN_PROFILES } from "@/lib/insulinPharmacology";
 import { format } from "date-fns";
 
-function CustomTooltip({ active, payload, label, showTotal }) {
+function CustomTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
-  const totalEntry = payload.find((p) => p.dataKey === "__total");
   const doseEntries = payload.filter((p) => p.dataKey !== "__total" && p.value > 0);
   return (
     <div className="bg-card border border-border rounded-xl px-4 py-3 shadow-xl">
       <p className="text-xs text-muted-foreground mb-2">
         {format(new Date(label), "h:mm a")}
       </p>
-      {doseEntries.map((p) =>
-      <div key={p.dataKey} className="flex items-center gap-2 text-sm">
+      {doseEntries.map((p) => (
+        <div key={p.dataKey} className="flex items-center gap-2 text-sm">
           <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.color }} />
           <span className="font-medium text-white">{p.name}</span>
           <span className="text-muted-foreground ml-auto">{(p.value * 100).toFixed(0)}%</span>
         </div>
-      )}
-      {showTotal && totalEntry && totalEntry.value > 0 &&
-      <div className="flex items-center gap-2 text-sm mt-2 pt-2 border-t border-border">
-          <div className="w-2.5 h-2.5 rounded-full bg-orange-500" />
-          <span className="font-semibold">Combined Total</span>
-          <span className="text-orange-500 font-bold ml-auto">{(totalEntry.value * 100).toFixed(0)}%</span>
-        </div>
-      }
-    </div>);
-
+      ))}
+    </div>
+  );
 }
 
-export default function ActivityGraph({ doses }) {
-  const { chartData, doseKeys } = useMemo(() => {
-    if (!doses.length) return { chartData: [], doseKeys: [] };
+const PX_PER_MINUTE = 3; // resolution: 3px per minute → 24h = 4320px
 
-    // Generate curves for all doses
+export default function ActivityGraph({ doses }) {
+  const scrollRef = useRef(null);
+
+  const { chartData, doseKeys, domainStart, domainEnd } = useMemo(() => {
+    const now = Date.now();
+    const domainStart = now - 24 * 60 * 60 * 1000;
+    const domainEnd = now + 2 * 60 * 60 * 1000; // +2h lookahead
+
+    if (!doses.length) return { chartData: [], doseKeys: [], domainStart, domainEnd };
+
     const allCurves = doses.map((dose) => ({
       dose,
       curve: generateActivityCurve(dose, 3),
-      profile: INSULIN_PROFILES[dose.insulin_type]
+      profile: INSULIN_PROFILES[dose.insulin_type],
     }));
 
-    // Find the time range
-    const allTimes = allCurves.flatMap((c) => c.curve.map((p) => p.time));
-    const minTime = Math.min(...allTimes, Date.now() - 30 * 60000);
-    const maxTime = Math.max(...allTimes, Date.now() + 60 * 60000);
-
-    // Create unified time grid
-    const step = 3 * 60000; // 3 min
+    const step = 5 * 60000; // 5 min
     const timePoints = [];
-    for (let t = minTime; t <= maxTime; t += step) {
+    for (let t = domainStart; t <= domainEnd; t += step) {
       timePoints.push(t);
     }
 
-    // Build chart data
     const keys = [];
     const data = timePoints.map((t) => {
       const point = { time: t };
-      allCurves.forEach((c, i) => {
+      allCurves.forEach((c) => {
         const key = `dose_${c.dose.id}`;
         if (!keys.find((k) => k.key === key)) {
-          keys.push({
-            key,
-            label: c.dose.insulin_type,
-            color: c.profile?.color || "#888"
-          });
+          keys.push({ key, label: c.dose.insulin_type, color: c.profile?.color || "#888" });
         }
-        // Interpolate activity at this time
         const curve = c.curve;
         if (!curve.length || t < curve[0].time || t > curve[curve.length - 1].time) {
           point[key] = 0;
         } else {
-          // Find surrounding points
-          let lo = 0,hi = curve.length - 1;
+          let lo = 0, hi = curve.length - 1;
           for (let j = 0; j < curve.length - 1; j++) {
             if (curve[j].time <= t && curve[j + 1].time >= t) {
-              lo = j;
-              hi = j + 1;
-              break;
+              lo = j; hi = j + 1; break;
             }
           }
           const ratio = hi === lo ? 0 : (t - curve[lo].time) / (curve[hi].time - curve[lo].time);
@@ -96,99 +79,103 @@ export default function ActivityGraph({ doses }) {
       return point;
     });
 
-    return { chartData: data, doseKeys: keys };
+    return { chartData: data, doseKeys: keys, domainStart, domainEnd };
   }, [doses]);
+
+  // Scroll so "now" is centered on mount / dose change
+  useEffect(() => {
+    if (!scrollRef.current) return;
+    const now = Date.now();
+    const totalMs = domainEnd - domainStart;
+    const totalPx = (totalMs / 60000) * PX_PER_MINUTE;
+    const nowPx = ((now - domainStart) / totalMs) * totalPx;
+    const containerW = scrollRef.current.clientWidth;
+    scrollRef.current.scrollLeft = nowPx - containerW / 2;
+  }, [doses, domainStart, domainEnd]);
 
   if (!doses.length) return null;
 
+  const totalMinutes = (domainEnd - domainStart) / 60000;
+  const chartWidth = Math.round(totalMinutes * PX_PER_MINUTE);
   const now = Date.now();
 
+  const uniqueTypes = [...new Map(doseKeys.map((k) => [k.label, k])).values()];
+
   return (
-    <div className="rounded-2xl border border-border p-4 sm:p-6 bg-[#1d2b3a]">
+    <div className="rounded-2xl border border-border p-4 sm:p-5 bg-[#1d2b3a]">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-[hsl(var(--popover))]">Activity Timeline</h2>
+        <h2 className="text-base font-semibold text-white">Activity Timeline</h2>
         <div className="flex flex-wrap gap-3">
-          {[...new Map(doseKeys.map((k) => [k.label, k])).values()].map((k) =>
-          <div key={k.label} className="flex items-center gap-1.5 text-xs text-gray-400">
+          {uniqueTypes.map((k) => (
+            <div key={k.label} className="flex items-center gap-1.5 text-xs text-gray-400">
               <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: k.color }} />
               {k.label}
             </div>
-          )}
+          ))}
         </div>
       </div>
 
-      <div className="h-72 sm:h-80">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} className="text-neutral-950">
+      {/* Scrollable chart */}
+      <div
+        ref={scrollRef}
+        className="overflow-x-auto"
+        style={{ WebkitOverflowScrolling: "touch" }}>
+        <div style={{ width: chartWidth, height: 240 }}>
+          <AreaChart
+            width={chartWidth}
+            height={240}
+            data={chartData}
+            margin={{ top: 10, right: 20, left: -20, bottom: 0 }}>
             <defs>
-              {doseKeys.map((k) =>
-              <linearGradient key={k.key} id={`grad_${k.key}`} x1="0" y1="0" x2="0" y2="1">
+              {doseKeys.map((k) => (
+                <linearGradient key={k.key} id={`grad_${k.key}`} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor={k.color} stopOpacity={0.3} />
                   <stop offset="95%" stopColor={k.color} stopOpacity={0.02} />
                 </linearGradient>
-              )}
+              ))}
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(214, 20%, 90%)" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(214,20%,90%)" vertical={false} />
             <XAxis
               dataKey="time"
               type="number"
-              domain={["dataMin", "dataMax"]}
+              domain={[domainStart, domainEnd]}
               tickFormatter={(t) => format(new Date(t), "h:mm a")}
-              tick={{ fontSize: 11, fill: "hsl(215, 15%, 50%)" }}
+              tick={{ fontSize: 10, fill: "hsl(215,15%,50%)" }}
               axisLine={false}
               tickLine={false}
-              interval="preserveStartEnd" />
-            
+              interval={Math.floor(chartData.length / 12)}
+            />
             <YAxis
               tickFormatter={(v) => `${Math.round(v * 100)}%`}
-              tick={{ fontSize: 11, fill: "hsl(215, 15%, 50%)" }}
+              tick={{ fontSize: 10, fill: "hsl(215,15%,50%)" }}
               axisLine={false}
               tickLine={false}
-              domain={[0, "auto"]} />
-            
-            <Tooltip content={<CustomTooltip showTotal={doseKeys.length > 1} />} />
+              domain={[0, "auto"]}
+            />
+            <Tooltip content={<CustomTooltip />} />
             <ReferenceLine
               x={now}
-              stroke="hsl(213, 94%, 48%)"
+              stroke="hsl(213,94%,48%)"
               strokeDasharray="4 4"
               strokeWidth={2}
-              label={{
-                value: "Now",
-                position: "top",
-                fill: "hsl(213, 94%, 48%)",
-                fontSize: 11,
-                fontWeight: 600
-              }} />
-            
-            {doseKeys.length > 1 &&
-            <Area
-              type="monotone"
-              dataKey="__total"
-              name="Combined Total"
-              stroke="#F97316"
-              strokeWidth={2.5}
-              strokeDasharray="6 3"
-              fill="none"
-              dot={false}
-              animationDuration={800} />
-
-            }
-            {doseKeys.map((k) =>
-            <Area
-              key={k.key}
-              type="monotone"
-              dataKey={k.key}
-              name={k.label}
-              stroke={k.color}
-              strokeWidth={2.5}
-              fill={`url(#grad_${k.key})`}
-              dot={false}
-              animationDuration={800} />
-
-            )}
+              label={{ value: "Now", position: "top", fill: "hsl(213,94%,48%)", fontSize: 11, fontWeight: 600 }}
+            />
+            {doseKeys.map((k) => (
+              <Area
+                key={k.key}
+                type="monotone"
+                dataKey={k.key}
+                name={k.label}
+                stroke={k.color}
+                strokeWidth={2.5}
+                fill={`url(#grad_${k.key})`}
+                dot={false}
+                animationDuration={600}
+              />
+            ))}
           </AreaChart>
-        </ResponsiveContainer>
+        </div>
       </div>
-    </div>);
-
+    </div>
+  );
 }
