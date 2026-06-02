@@ -231,7 +231,7 @@ export default function DoseForm({ open, onOpenChange }) {
               <div>
                 <p className="text-xs font-bold tracking-widest text-white/40 uppercase mb-3">Blood Glucose (mg/dL)</p>
                 <div className="bg-white/5 border border-white/10 rounded-2xl px-6 py-6 flex items-center justify-between mb-4">
-                  <button onClick={() => adjustGlucose(-5)} className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white text-xl flex items-center justify-center transition-colors">−</button>
+                  <button onClick={() => adjustGlucose(-1)} className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white text-xl flex items-center justify-center transition-colors">−</button>
                   <div className="text-center">
                     <span className="text-5xl font-bold" style={{ color: glucoseValue < 70 ? "#ef4444" : glucoseValue > 180 ? "#f97316" : "#4ade80" }}>{glucoseValue}</span>
                     <p className="text-white/40 text-xs mt-1">mg/dL</p>
