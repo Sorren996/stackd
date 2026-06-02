@@ -3,10 +3,10 @@ import { Activity, History, BarChart2, LogOut } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 
 const navItems = [
-  { path: "/", label: "Dashboard", icon: Activity },
-  { path: "/history", label: "History", icon: History },
-  { path: "/analytics", label: "Analytics", icon: BarChart2 },
-];
+{ path: "/", label: "Dashboard", icon: Activity },
+{ path: "/history", label: "History", icon: History },
+{ path: "/analytics", label: "Analytics", icon: BarChart2 }];
+
 
 export default function Layout() {
   const location = useLocation();
@@ -21,8 +21,8 @@ export default function Layout() {
               <img
                 src="https://media.base44.com/images/public/6a1b93f234a8611ee1595134/6be146ac0_stackd_app_icon_ver1.png"
                 alt="Stackd"
-                className="w-full h-full object-cover"
-              />
+                className="w-full h-full object-cover" />
+              
             </div>
             <span className="text-base font-semibold tracking-tight text-white">Stackd</span>
           </div>
@@ -42,12 +42,12 @@ export default function Layout() {
       {/* iOS-style glass bottom nav */}
       <nav className="fixed bottom-0 inset-x-0 z-50 flex justify-center pb-safe">
         <div
-          className="mx-4 mb-4 flex items-center gap-1 px-3 py-2 rounded-3xl border border-white/15"
+          className="mb-4 flex items-center gap-1 px-3 py-2 rounded-3xl border border-white/15 mx-4"
           style={{
             background: "rgba(8,14,10,0.4)",
             backdropFilter: "blur(32px)",
             WebkitBackdropFilter: "blur(32px)",
-            boxShadow: "0 8px 40px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -1px 0 rgba(255,255,255,0.04)",
+            boxShadow: "0 8px 40px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -1px 0 rgba(255,255,255,0.04)"
           }}>
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
@@ -56,17 +56,17 @@ export default function Layout() {
                 key={item.path}
                 to={item.path}
                 className={`flex flex-col items-center gap-1 px-5 py-2 rounded-2xl transition-all ${
-                  isActive
-                    ? "bg-white/15 text-white"
-                    : "text-white/40 hover:text-white/70"
-                }`}>
+                isActive ?
+                "bg-white/15 text-white" :
+                "text-white/40 hover:text-white/70"}`
+                }>
                 <item.icon className="w-5 h-5" />
                 <span className="text-[10px] font-medium">{item.label}</span>
-              </Link>
-            );
+              </Link>);
+
           })}
         </div>
       </nav>
-    </div>
-  );
+    </div>);
+
 }
