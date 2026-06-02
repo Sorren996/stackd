@@ -16,7 +16,7 @@ export default function DoseCard({ dose, onDelete }) {
         boxShadow: `0 0 18px 2px ${profile?.color || "#888"}22, inset 0 1px 0 rgba(255,255,255,0.06)`
       }}>
       <div
-        className="w-3 rounded-full shrink-0 h-3"
+        className="rounded-full shrink-0 w-2 h-2"
         style={{ backgroundColor: profile?.color || "#888" }} />
       
       <div className="flex-1 min-w-0">
