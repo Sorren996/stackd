@@ -27,7 +27,7 @@ export default function DoseCard({ dose, onDelete }) {
         {dose.notes && <p className="text-xs text-muted-foreground mt-1 italic">{dose.notes}</p>}
       </div>
       <div className="text-right shrink-0">
-        <span className={`text-xs px-2 py-1 rounded-full font-medium text-[hsl(var(--foreground))] ${
+        <span className={`text-xs px-2 py-1 rounded-full font-medium text-[] ${
         status.phase === "expired" ? "bg-muted text-muted-foreground" :
         status.phase === "waiting" ? "bg-amber-100 text-amber-700" :
         status.phase === "rising" ? "" :
