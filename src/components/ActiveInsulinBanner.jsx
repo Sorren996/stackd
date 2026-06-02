@@ -44,7 +44,7 @@ function formatRemaining(ms) {
   return `${m}m remaining`;
 }
 
-export default function ActiveInsulinBanner({ doses }) {
+export default function ActiveInsulinBanner({ doses, latestGlucose }) {
   const activeUnits = useMemo(() => getTotalActiveUnits(doses), [doses]);
   const remainingMs = useMemo(() => getMaxRemainingTime(doses), [doses]);
   const remainingLabel = formatRemaining(remainingMs);
@@ -76,6 +76,32 @@ export default function ActiveInsulinBanner({ doses }) {
             </div>
           )}
         </div>
+        {latestGlucose && (() => {
+          const val = latestGlucose.value;
+          const color = val < 70 ? "#ef4444" : val > 180 ? "#f97316" : "#4ade80";
+          const label = val < 70 ? "Low" : val > 180 ? "High" : "In Range";
+          return (
+            <div className="flex flex-col items-center" style={{ minWidth: 64 }}>
+              <div className="relative flex items-center justify-center" style={{ width: 56, height: 56 }}>
+                <svg width="56" height="56" viewBox="0 0 56 56">
+                  <circle cx="28" cy="28" r="22" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="4" />
+                  <circle cx="28" cy="28" r="22" fill="none" stroke={color} strokeWidth="4"
+                    strokeDasharray={`${2 * Math.PI * 22 * Math.min(1, (val - 40) / 360)} ${2 * Math.PI * 22}`}
+                    strokeDashoffset={2 * Math.PI * 22 * 0.25}
+                    strokeLinecap="round"
+                    style={{ filter: `drop-shadow(0 0 4px ${color}88)` }}
+                    transform="rotate(-90 28 28)"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-sm font-bold leading-none" style={{ color }}>{val}</span>
+                  <span className="text-[8px] text-white/30 mt-0.5">mg/dL</span>
+                </div>
+              </div>
+              <span className="text-[9px] font-medium mt-0.5" style={{ color }}>{label}</span>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Arc gauge + units */}

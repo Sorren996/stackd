@@ -8,6 +8,7 @@ import DoseForm from "../components/DoseForm";
 import DoseCard from "../components/DoseCard";
 import { Activity, Plus } from "lucide-react";
 import { toast } from "sonner";
+import { formatDistanceToNow } from "date-fns";
 
 export default function Dashboard() {
   const queryClient = useQueryClient();
@@ -26,6 +27,11 @@ export default function Dashboard() {
     queryFn: () => base44.entities.InsulinDose.list("-administered_at", 50)
   });
 
+  const { data: glucoseReadings = [] } = useQuery({
+    queryKey: ["glucose-readings"],
+    queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", 100)
+  });
+
   const deleteDose = useMutation({
     mutationFn: (id) => base44.entities.InsulinDose.delete(id),
     onSuccess: () => {
@@ -39,6 +45,13 @@ export default function Dashboard() {
     const age = Date.now() - new Date(d.administered_at).getTime();
     return age < 48 * 60 * 60 * 1000; // 48 hours for long-acting
   });
+
+  const recentGlucose = glucoseReadings.filter((g) => {
+    const age = Date.now() - new Date(g.recorded_at).getTime();
+    return age < 24 * 60 * 60 * 1000;
+  });
+
+  const latestGlucose = glucoseReadings[0] || null;
 
   if (isLoading) {
     return (
@@ -57,7 +70,7 @@ export default function Dashboard() {
 
       <DoseForm open={doseFormOpen} onOpenChange={setDoseFormOpen} />
 
-      {recentDoses.length === 0 ?
+      {recentDoses.length === 0 && recentGlucose.length === 0 ?
       <div className="flex flex-col items-center justify-center py-20 text-center">
           
 
@@ -74,8 +87,8 @@ export default function Dashboard() {
         </div> :
 
       <>
-          <ActiveInsulinBanner doses={recentDoses} />
-      <ActivityGraph doses={recentDoses} />
+          <ActiveInsulinBanner doses={recentDoses} latestGlucose={latestGlucose} />
+      <ActivityGraph doses={recentDoses} glucoseReadings={recentGlucose} />
 
           <div className="grid gap-6 lg:grid-cols-3">
             <div className="lg:col-span-2 space-y-3">

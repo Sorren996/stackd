@@ -1,5 +1,5 @@
 import { useMemo, useRef, useEffect, useState } from "react";
-import { AreaChart, Area, XAxis, Tooltip, ReferenceLine } from "recharts";
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ReferenceLine, Line, ComposedChart, Scatter } from "recharts";
 import { generateActivityCurve, INSULIN_PROFILES } from "@/lib/insulinPharmacology";
 import { format } from "date-fns";
 
@@ -10,14 +10,23 @@ const TIME_RANGES = [
   { label: "24h", hours: 24, pxPerMin: null },
 ];
 
+const GLUCOSE_COLOR = "#f97316";
+
 function CustomTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
-  const entries = payload.filter((p) => p.value > 0);
-  if (!entries.length) return null;
+  const insulinEntries = payload.filter((p) => p.dataKey?.startsWith("dose_") && p.value > 0);
+  const glucoseEntry = payload.find((p) => p.dataKey === "glucose");
   return (
     <div className="rounded-xl px-3 py-2 shadow-xl" style={{ background: "rgba(20,30,25,0.92)", border: "1px solid rgba(255,255,255,0.08)" }}>
       <p className="text-[10px] text-white/40 mb-1">{format(new Date(label), "h:mm a")}</p>
-      {entries.map((p) => (
+      {glucoseEntry && glucoseEntry.value != null && (
+        <div className="flex items-center gap-2 text-xs mb-1">
+          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: GLUCOSE_COLOR }} />
+          <span className="text-white/80">Glucose</span>
+          <span className="text-white/40 ml-auto pl-3">{glucoseEntry.value} mg/dL</span>
+        </div>
+      )}
+      {insulinEntries.map((p) => (
         <div key={p.dataKey} className="flex items-center gap-2 text-xs">
           <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />
           <span className="text-white/80">{p.name}</span>
@@ -28,7 +37,7 @@ function CustomTooltip({ active, payload, label }) {
   );
 }
 
-export default function ActivityGraph({ doses }) {
+export default function ActivityGraph({ doses, glucoseReadings = [] }) {
   const [rangeIdx, setRangeIdx] = useState(1);
   const scrollRef = useRef(null);
   const containerRef = useRef(null);
@@ -56,8 +65,19 @@ export default function ActivityGraph({ doses }) {
     })),
   [doses]);
 
+  // Build a map of glucose readings by their closest 3-min bucket
+  const glucoseMap = useMemo(() => {
+    const map = {};
+    glucoseReadings.forEach((g) => {
+      const t = new Date(g.recorded_at).getTime();
+      const bucket = Math.round(t / (3 * 60000)) * (3 * 60000);
+      map[bucket] = g.value;
+    });
+    return map;
+  }, [glucoseReadings]);
+
   const chartData = useMemo(() => {
-    if (!doses.length) return [];
+    if (!doses.length && !glucoseReadings.length) return [];
     const step = 3 * 60000;
     const result = [];
     for (let t = domainStart; t <= domainEnd; t += step) {
@@ -76,10 +96,11 @@ export default function ActivityGraph({ doses }) {
           point[key] = curve[lo].activity + ratio * (curve[hi].activity - curve[lo].activity);
         }
       });
+      if (glucoseMap[t] !== undefined) point.glucose = glucoseMap[t];
       result.push(point);
     }
     return result;
-  }, [doses, domainStart, domainEnd, allCurvesMeta]);
+  }, [doses, glucoseReadings, domainStart, domainEnd, allCurvesMeta, glucoseMap]);
 
   const doseKeys = useMemo(() =>
     doses.map((dose) => ({
@@ -103,7 +124,7 @@ export default function ActivityGraph({ doses }) {
     scrollRef.current.scrollLeft = nowOffset - halfContainer;
   }, [rangeIdx, doses]);
 
-  if (!doses.length) return null;
+  if (!doses.length && !glucoseReadings.length) return null;
 
   const tickCount = Math.max(2, Math.floor(chartWidth / 90));
 
@@ -136,10 +157,10 @@ export default function ActivityGraph({ doses }) {
         ref={scrollRef}
         className={is24h ? "" : "overflow-x-auto"}
         style={{ WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
-        <div style={{ width: chartWidth, height: 160 }}>
-          <AreaChart
+        <div style={{ width: chartWidth, height: 180 }}>
+          <ComposedChart
             width={chartWidth}
-            height={160}
+            height={180}
             data={chartData}
             margin={{ top: 12, right: 8, left: -20, bottom: 0 }}>
             <defs>
@@ -149,6 +170,10 @@ export default function ActivityGraph({ doses }) {
                   <stop offset="100%" stopColor={k.color} stopOpacity={0.0} />
                 </linearGradient>
               ))}
+              <linearGradient id="grad_glucose" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={GLUCOSE_COLOR} stopOpacity={0.15} />
+                <stop offset="100%" stopColor={GLUCOSE_COLOR} stopOpacity={0.0} />
+              </linearGradient>
             </defs>
             <XAxis
               dataKey="time"
@@ -160,8 +185,13 @@ export default function ActivityGraph({ doses }) {
               tickLine={false}
               tickCount={tickCount}
             />
+            {/* Left Y axis: insulin activity (0–1) */}
+            <YAxis yAxisId="insulin" domain={[0, 1]} hide />
+            {/* Right Y axis: glucose (70–250) */}
+            <YAxis yAxisId="glucose" orientation="right" domain={[70, 250]} hide />
             <Tooltip content={<CustomTooltip />} cursor={{ stroke: "rgba(255,255,255,0.1)", strokeWidth: 1 }} />
             <ReferenceLine
+              yAxisId="insulin"
               x={now}
               stroke="rgba(255,255,255,0.2)"
               strokeDasharray="3 3"
@@ -170,6 +200,7 @@ export default function ActivityGraph({ doses }) {
             {doseKeys.map((k) => (
               <Area
                 key={k.key}
+                yAxisId="insulin"
                 type="monotoneX"
                 dataKey={k.key}
                 name={k.label}
@@ -180,7 +211,25 @@ export default function ActivityGraph({ doses }) {
                 isAnimationActive={false}
               />
             ))}
-          </AreaChart>
+            {glucoseReadings.length > 0 && (
+              <Line
+                yAxisId="glucose"
+                type="monotone"
+                dataKey="glucose"
+                name="Glucose"
+                stroke={GLUCOSE_COLOR}
+                strokeWidth={2}
+                dot={(props) => {
+                  const { cx, cy, payload } = props;
+                  if (payload.glucose == null) return null;
+                  return <circle key={`dot-${payload.time}`} cx={cx} cy={cy} r={4} fill={GLUCOSE_COLOR} stroke="rgba(0,0,0,0.4)" strokeWidth={1.5} />;
+                }}
+                activeDot={{ r: 6, fill: GLUCOSE_COLOR }}
+                connectNulls={false}
+                isAnimationActive={false}
+              />
+            )}
+          </ComposedChart>
         </div>
       </div>
     </div>
