@@ -86,6 +86,14 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
+    background: linear-gradient(
+      to top,
+      hsl(221, 45%, 8%) 0%,
+      hsl(218, 40%, 11%) 40%,
+      hsl(210, 35%, 14%) 70%,
+      hsl(205, 30%, 16%) 100%
+    );
+    min-height: 100vh;
   }
 }
