@@ -16,7 +16,7 @@ export default function DoseCard({ dose, onDelete }) {
         boxShadow: `0 0 18px 2px ${profile?.color || "#888"}22, inset 0 1px 0 rgba(255,255,255,0.06)`
       }}>
       <div
-        className="w-3 rounded-full shrink-0 h-1"
+        className="w-3 rounded-full shrink-0 h-3"
         style={{ backgroundColor: profile?.color || "#888" }} />
       
       <div className="flex-1 min-w-0">
@@ -30,7 +30,7 @@ export default function DoseCard({ dose, onDelete }) {
         <span className={`text-xs px-2 py-1 rounded-full font-medium ${
         status.phase === "expired" ? "bg-muted text-muted-foreground" :
         status.phase === "waiting" ? "bg-amber-100 text-amber-700" :
-        status.phase === "rising" ? "bg-blue-100 text-blue-700" :
+        status.phase === "rising" ? "text-blue-700" :
         "bg-emerald-100 text-emerald-700"}`
         }>
           {status.phase === "expired" ? "Done" : status.message.split("—")[0].trim()}
