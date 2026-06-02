@@ -55,7 +55,7 @@ export default function Layout() {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex flex-col items-center gap-1 transition-all py-0 px-4 rounded-1xl ${
+                className={`flex flex-col items-center gap-1 transition-all px-4 rounded-2xl py-1 ${
                 isActive ?
                 "bg-white/15 text-white" :
                 "text-white/40 hover:text-white/70"}`
