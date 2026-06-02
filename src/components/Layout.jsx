@@ -14,7 +14,7 @@ export default function Layout() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Top header — logo only */}
-      <header className="sticky top-0 z-50 backdrop-blur-xl border-b border-border" style={{ background: 'rgba(10,18,14,0.85)' }}>
+      <header className="sticky top-0 z-50 backdrop-blur-2xl border-b border-white/8" style={{ background: 'rgba(8,14,10,0.45)', backdropFilter: 'blur(32px)', WebkitBackdropFilter: 'blur(32px)' }}>
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl overflow-hidden">
@@ -44,10 +44,10 @@ export default function Layout() {
         <div
           className="mx-4 mb-4 flex items-center gap-1 px-3 py-2 rounded-3xl border border-white/15"
           style={{
-            background: "rgba(15, 25, 35, 0.75)",
-            backdropFilter: "blur(24px)",
-            WebkitBackdropFilter: "blur(24px)",
-            boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)",
+            background: "rgba(8,14,10,0.4)",
+            backdropFilter: "blur(32px)",
+            WebkitBackdropFilter: "blur(32px)",
+            boxShadow: "0 8px 40px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -1px 0 rgba(255,255,255,0.04)",
           }}>
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
