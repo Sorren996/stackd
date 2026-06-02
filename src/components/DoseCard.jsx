@@ -13,10 +13,10 @@ export default function DoseCard({ dose, onDelete }) {
       className="flex items-center gap-4 p-4 rounded-xl transition-all"
       style={{
         background: "rgba(255,255,255,0.03)",
-        boxShadow: `0 0 18px 2px ${profile?.color || "#888"}22, inset 0 1px 0 rgba(255,255,255,0.06)`
+        boxShadow: `0 0 18px 2px ${profile?.color || "#888"}22, inset 0 1px 0 rgba(255,255,255,0.06)`,
       }}>
       <div
-        className="w-3 rounded-full shrink-0 h-3"
+        className="w-3 h-12 rounded-full shrink-0"
         style={{ backgroundColor: profile?.color || "#888" }} />
       
       <div className="flex-1 min-w-0">
@@ -27,12 +27,10 @@ export default function DoseCard({ dose, onDelete }) {
         {dose.notes && <p className="text-xs text-muted-foreground mt-1 italic">{dose.notes}</p>}
       </div>
       <div className="text-right shrink-0">
-        <span className={`text-xs px-2 py-1 rounded-full font-medium text-[] ${
+        <span className={`text-xs px-2 py-1 rounded-full font-medium ${
         status.phase === "expired" ? "bg-muted text-muted-foreground" :
-        status.phase === "waiting" ? "bg-amber-100 text-amber-700" :
-        status.phase === "rising" ? "" :
-        "bg-emerald-100 text-emerald-700"}`
-        }>
+        status.phase === "waiting" ? "bg-muted text-muted-foreground" :
+        status.phase === "rising" ? "bg-muted text-muted-foreground" :}>
           {status.phase === "expired" ? "Done" : status.message.split("—")[0].trim()}
         </span>
       </div>
