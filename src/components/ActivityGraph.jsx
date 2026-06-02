@@ -56,10 +56,11 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
 
   const selectedRange = TIME_RANGES[rangeIdx];
   const now = Date.now();
-  const domainStart = now - 24 * 60 * 60 * 1000;
-  const domainEnd = now + 2 * 60 * 60 * 1000;
-  const viewStart = now - selectedRange.hours * 60 * 60 * 1000;
-  const viewEnd = now + selectedRange.hours * 0.1 * 60 * 60 * 1000;
+  const snappedNow = Math.round(now / 180000) * 180000;
+  const domainStart = snappedNow - 24 * 60 * 60 * 1000;
+  const domainEnd = snappedNow + 2 * 60 * 60 * 1000;
+  const viewStart = snappedNow - selectedRange.hours * 60 * 60 * 1000;
+  const viewEnd = snappedNow + selectedRange.hours * 0.1 * 60 * 60 * 1000;
 
   const allCurvesMeta = useMemo(() =>
     doses.map((dose) => ({
@@ -124,7 +125,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
   useEffect(() => {
     if (!scrollRef.current || is24h) return;
     const totalViewMs = viewEnd - viewStart;
-    const nowOffset = ((now - viewStart) / totalViewMs) * chartWidth;
+    const nowOffset = ((snappedNow - viewStart) / totalViewMs) * chartWidth;
     const halfContainer = scrollRef.current.clientWidth / 2;
     scrollRef.current.scrollLeft = nowOffset - halfContainer;
   }, [rangeIdx, doses]);
@@ -192,7 +193,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
             <Tooltip content={<CustomTooltip />} cursor={{ stroke: "rgba(255,255,255,0.1)", strokeWidth: 1 }} />
             <ReferenceLine
               yAxisId="insulin"
-              x={now}
+              x={snappedNow}
               stroke="rgba(255,255,255,0.2)"
               strokeDasharray="3 3"
               strokeWidth={1}
