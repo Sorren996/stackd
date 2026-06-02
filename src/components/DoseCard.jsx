@@ -29,7 +29,14 @@ shadow-[0_8px_32px_rgba(0,0,0,0.25)]">
         {dose.notes && <p className="text-xs text-muted-foreground mt-1 italic">{dose.notes}</p>}
       </div>
       <div className="text-right shrink-0">
-        <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+        <span className={`"
+  px-3 py-1
+  rounded-full
+  text-xs
+  bg-white/[0.05]
+  border border-white/[0.08]
+  text-white/70
+" ${
         status.phase === "expired" ? "bg-muted text-muted-foreground" :
         status.phase === "waiting" ? "bg-amber-100 text-amber-700" :
         status.phase === "rising" ? "bg-blue-100 text-blue-700" :
