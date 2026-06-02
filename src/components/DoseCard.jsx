@@ -9,10 +9,17 @@ export default function DoseCard({ dose, onDelete }) {
   const status = getDoseStatus(dose);
 
   return (
-    <div className="flex items-center gap-4 p-4 bg-card rounded-xl border border-border hover:shadow-md transition-all">
+    <div className="bg-white/[0.03]
+backdrop-blur-xl
+border border-white/[0.08]
+rounded-3xl
+shadow-[0_8px_32px_rgba(0,0,0,0.25)]">
       <div
-        className="w-3 h-12 rounded-full shrink-0"
-        style={{ backgroundColor: profile?.color || "#888" }} />
+        className="w-1.5 h-12 rounded-full shrink-0"
+  style={{
+    backgroundColor: profile?.color,
+    boxShadow: `0 0 16px ${profile?.color}`
+  }} />
       
       <div className="flex-1 min-w-0">
         <p className="font-medium text-sm text-white">{dose.insulin_type}</p>
