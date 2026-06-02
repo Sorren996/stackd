@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import ActivityGraph from "../components/ActivityGraph";
+import ActiveInsulinBanner from "../components/ActiveInsulinBanner";
 import ActiveAlerts from "../components/ActiveAlerts";
 import DoseForm from "../components/DoseForm";
 import DoseCard from "../components/DoseCard";
@@ -73,7 +74,8 @@ export default function Dashboard() {
         </div> :
 
       <>
-          <ActivityGraph doses={recentDoses} />
+          <ActiveInsulinBanner doses={recentDoses} />
+      <ActivityGraph doses={recentDoses} />
 
           <div className="grid gap-6 lg:grid-cols-3">
             <div className="lg:col-span-2 space-y-3">

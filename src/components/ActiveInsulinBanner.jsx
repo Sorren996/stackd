@@ -1,0 +1,155 @@
+import { useMemo } from "react";
+import { INSULIN_PROFILES, generateActivityCurve, getDoseStatus, formatMinutes } from "@/lib/insulinPharmacology";
+
+function getTotalActiveUnits(doses) {
+  const now = Date.now();
+  return doses.reduce((sum, dose) => {
+    const curve = generateActivityCurve(dose, 3);
+    if (!curve.length) return sum;
+    // Find activity at "now"
+    const last = curve[curve.length - 1];
+    const first = curve[0];
+    if (now < first.time || now > last.time) return sum;
+    let lo = 0;
+    for (let i = 0; i < curve.length - 1; i++) {
+      if (curve[i].time <= now && curve[i + 1].time >= now) { lo = i; break; }
+    }
+    const hi = lo + 1;
+    const ratio = hi >= curve.length ? 0 : (now - curve[lo].time) / (curve[hi].time - curve[lo].time);
+    const activity = curve[lo].activity + ratio * (curve[hi].activity - curve[lo].activity);
+    return sum + activity * dose.units;
+  }, 0);
+}
+
+function getMaxRemainingTime(doses) {
+  const now = Date.now();
+  let maxMs = 0;
+  doses.forEach((dose) => {
+    const profile = INSULIN_PROFILES[dose.insulin_type];
+    if (!profile) return;
+    const administered = new Date(dose.administered_at).getTime();
+    const end = administered + profile.durationMin * 60000;
+    if (end > now) maxMs = Math.max(maxMs, end - now);
+  });
+  return maxMs;
+}
+
+function formatRemaining(ms) {
+  if (!ms) return null;
+  const totalMin = Math.round(ms / 60000);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  if (h > 0 && m > 0) return `${h}h ${m}m remaining`;
+  if (h > 0) return `${h}h remaining`;
+  return `${m}m remaining`;
+}
+
+export default function ActiveInsulinBanner({ doses }) {
+  const activeUnits = useMemo(() => getTotalActiveUnits(doses), [doses]);
+  const remainingMs = useMemo(() => getMaxRemainingTime(doses), [doses]);
+  const remainingLabel = formatRemaining(remainingMs);
+  const hasActive = activeUnits > 0.01;
+
+  // Arc SVG params
+  const r = 72;
+  const cx = 96;
+  const cy = 96;
+  const strokeWidth = 7;
+  const circumference = 2 * Math.PI * r;
+  // Show progress as a fraction of total possible (clamp 0–1)
+  const progress = Math.min(1, activeUnits / Math.max(1, doses.reduce((s, d) => s + d.units, 0)));
+  const dashOffset = circumference * (1 - progress * 0.75); // 270deg arc
+
+  return (
+    <div
+      className="rounded-3xl p-5 flex flex-col gap-1 relative overflow-hidden"
+      style={{ background: "linear-gradient(145deg, hsl(162,14%,11%) 0%, hsl(162,12%,8%) 100%)", border: "1px solid rgba(255,255,255,0.06)" }}>
+
+      {/* Title row */}
+      <div className="flex items-center justify-between mb-1">
+        <div>
+          <h2 className="text-white font-semibold text-base">Active Insulin</h2>
+          {remainingLabel && (
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-xs text-emerald-400">{remainingLabel}</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Arc gauge + units */}
+      <div className="flex items-center gap-6">
+        <div className="relative shrink-0" style={{ width: 120, height: 120 }}>
+          <svg width="192" height="192" viewBox="0 0 192 192" style={{ width: 120, height: 120 }}>
+            {/* Glow filter */}
+            <defs>
+              <filter id="arcglow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="4" result="blur" />
+                <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+              </filter>
+              <linearGradient id="arcgrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="hsl(162,50%,42%)" />
+                <stop offset="100%" stopColor="hsl(195,60%,50%)" />
+              </linearGradient>
+            </defs>
+            {/* Track */}
+            <circle
+              cx={cx} cy={cy} r={r}
+              fill="none"
+              stroke="rgba(255,255,255,0.06)"
+              strokeWidth={strokeWidth}
+              strokeDasharray={`${circumference * 0.75} ${circumference * 0.25}`}
+              strokeDashoffset={circumference * 0.125}
+              strokeLinecap="round"
+              transform={`rotate(135 ${cx} ${cy})`}
+            />
+            {/* Progress arc */}
+            {hasActive && (
+              <circle
+                cx={cx} cy={cy} r={r}
+                fill="none"
+                stroke="url(#arcgrad)"
+                strokeWidth={strokeWidth}
+                strokeDasharray={`${circumference * 0.75 * progress} ${circumference}`}
+                strokeDashoffset={circumference * 0.125}
+                strokeLinecap="round"
+                transform={`rotate(135 ${cx} ${cy})`}
+                filter="url(#arcglow)"
+                style={{ transition: "stroke-dasharray 0.6s ease" }}
+              />
+            )}
+          </svg>
+          {/* Center label */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <span className="text-2xl font-bold text-white leading-none">
+              {activeUnits.toFixed(2)}<span className="text-base font-medium">u</span>
+            </span>
+            <span className="text-[10px] text-white/40 mt-0.5">{hasActive ? "Currently Active" : "No Active Insulin"}</span>
+          </div>
+        </div>
+
+        {/* Per-dose breakdown */}
+        <div className="flex-1 space-y-2 min-w-0">
+          {doses.slice(0, 4).map((dose) => {
+            const profile = INSULIN_PROFILES[dose.insulin_type];
+            const status = getDoseStatus(dose);
+            const isExpired = status.phase === "expired";
+            return (
+              <div key={dose.id} className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: isExpired ? "#555" : profile?.color || "#888" }} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-white/80 truncate">{dose.insulin_type.split(" ")[0]}</p>
+                  <p className="text-[10px] text-white/40">{dose.units}u · {formatMinutes((Date.now() - new Date(dose.administered_at).getTime()) / 60000)} ago</p>
+                </div>
+                <span className={`text-[10px] font-medium shrink-0 ${isExpired ? "text-white/20" : "text-white/50"}`}>
+                  {isExpired ? "done" : status.message.split("—")[0].trim()}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
