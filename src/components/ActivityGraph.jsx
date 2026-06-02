@@ -10,7 +10,11 @@ const TIME_RANGES = [
 { label: "24h", hours: 24, pxPerMin: null }];
 
 
-const GLUCOSE_COLOR = "#ffffff";
+function getGlucoseColor(mgdl) {
+  if (mgdl < 70) return "#ef4444";
+  if (mgdl > 180) return "#f97316";
+  return "#4ade80";
+}
 const GLUCOSE_MIN = 40;
 const GLUCOSE_MAX = 400;
 
@@ -21,15 +25,17 @@ function CustomTooltip({ active, payload, label }) {
   return (
     <div className="rounded-xl px-3 py-2 shadow-xl" style={{ background: "rgba(20,30,25,0.92)", border: "1px solid rgba(255,255,255,0.08)" }}>
       <p className="text-[10px] text-white/40 mb-1">{format(new Date(label), "h:mm a")}</p>
-      {glucoseEntry && glucoseEntry.value != null &&
-      <div className="flex items-center gap-2 text-xs mb-1">
-          <div className="w-2 h-2 rounded-full bg-white" />
-          <span className="text-white/80">Glucose</span>
-          <span className="text-white/40 ml-auto pl-3">
-            {Math.round(glucoseEntry.value * (GLUCOSE_MAX - GLUCOSE_MIN) + GLUCOSE_MIN)} mg/dL
-          </span>
-        </div>
-      }
+      {glucoseEntry && glucoseEntry.value != null && (() => {
+        const mgdl = Math.round(glucoseEntry.value * (GLUCOSE_MAX - GLUCOSE_MIN) + GLUCOSE_MIN);
+        const color = getGlucoseColor(mgdl);
+        return (
+          <div className="flex items-center gap-2 text-xs mb-1">
+            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+            <span className="text-white/80">Glucose</span>
+            <span className="ml-auto pl-3 font-medium" style={{ color }}>{mgdl} mg/dL</span>
+          </div>
+        );
+      })()}
       {insulinEntries.map((p) =>
       <div key={p.dataKey} className="flex items-center gap-2 text-xs">
           <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />
@@ -218,26 +224,26 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
               type="monotoneX"
               dataKey="glucose"
               name="Glucose"
-              stroke="rgba(255,255,255,0.7)"
+              stroke="rgba(255,255,255,0.25)"
               strokeWidth={1.5}
-              strokeDasharray="none"
               dot={(props) => {
                 const { cx, cy, payload } = props;
                 if (payload.glucose == null) return <g key={`dot-${payload.time}`} />;
+                const mgdl = Math.round(payload.glucose * (GLUCOSE_MAX - GLUCOSE_MIN) + GLUCOSE_MIN);
+                const color = getGlucoseColor(mgdl);
                 return (
                   <circle
                     key={`dot-${payload.time}`}
                     cx={cx} cy={cy} r={3.5}
-                    fill="white"
-                    stroke="rgba(0,0,0,0.5)"
-                    strokeWidth={1} />);
-
-
+                    fill={color}
+                    stroke="rgba(0,0,0,0.4)"
+                    strokeWidth={1}
+                    style={{ filter: `drop-shadow(0 0 3px ${color}99)` }} />
+                );
               }}
-              activeDot={{ r: 5, fill: "white", stroke: "rgba(0,0,0,0.4)", strokeWidth: 1 }}
+              activeDot={{ r: 5, stroke: "rgba(0,0,0,0.4)", strokeWidth: 1 }}
               connectNulls={true}
               isAnimationActive={false} />
-
             }
           </ComposedChart>
         </div>
