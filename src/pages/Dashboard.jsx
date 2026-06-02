@@ -104,7 +104,7 @@ export default function Dashboard() {
       {/* Floating Log Dose FAB */}
       <button
         onClick={() => setDoseFormOpen(true)}
-        className="fixed bottom-24 right-5 z-40 w-14 h-14 rounded-full bg-blue-500 hover:bg-blue-400 shadow-lg shadow-blue-500/40 flex items-center justify-center transition-all active:scale-95">
+        className="fixed bottom-24 right-5 z-40 w-14 h-14 rounded-full bg-teal-700 hover:bg-teal-600 shadow-lg shadow-teal-900/60 flex items-center justify-center transition-all active:scale-95">
         <Plus className="w-7 h-7 text-white" />
       </button>
     </div>);

@@ -143,7 +143,7 @@ export default function ActivityGraph({ doses }) {
   const tickInterval = Math.max(1, Math.floor(builtChartData.length / (chartWidth / 80)));
 
   return (
-    <div className="rounded-2xl border border-border p-4 sm:p-5 bg-[#1d2b3a]">
+    <div className="rounded-2xl border border-border p-4 sm:p-5" style={{ background: 'hsl(162,10%,10%)' }}>
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex flex-wrap gap-3">
@@ -163,7 +163,7 @@ export default function ActivityGraph({ doses }) {
               onClick={() => setRangeIdx(i)}
               className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
                 rangeIdx === i
-                  ? "bg-blue-500 text-white shadow"
+                  ? "bg-teal-700 text-white shadow"
                   : "text-white/40 hover:text-white/70"
               }`}>
               {r.label}
@@ -213,10 +213,10 @@ export default function ActivityGraph({ doses }) {
               <Tooltip content={<CustomTooltip />} />
               <ReferenceLine
                 x={now}
-                stroke="hsl(213,94%,48%)"
+                stroke="hsl(162,50%,42%)"
                 strokeDasharray="4 4"
                 strokeWidth={2}
-                label={{ value: "Now", position: "top", fill: "hsl(213,94%,48%)", fontSize: 10, fontWeight: 600 }}
+                label={{ value: "Now", position: "top", fill: "hsl(162,50%,42%)", fontSize: 10, fontWeight: 600 }}
               />
               {doseKeys.map((k) => (
                 <Area

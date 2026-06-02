@@ -14,7 +14,7 @@ export default function Layout() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Top header — logo only */}
-      <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-xl border-b border-border">
+      <header className="sticky top-0 z-50 backdrop-blur-xl border-b border-border" style={{ background: 'rgba(10,18,14,0.85)' }}>
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl overflow-hidden">
