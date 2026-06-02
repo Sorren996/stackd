@@ -22,8 +22,8 @@ shadow-[0_8px_32px_rgba(0,0,0,0.25)]">
   }} />
       
       <div className="flex-1 min-w-0">
-        <p className="font-medium text-sm text-white">{dose.insulin_type}</p>
-        <p className="text-xs text-muted-foreground mt-0.5">
+        <p className="font-medium text-sm text-white/90 tracking-tight">{dose.insulin_type}</p>
+        <p className="text-xs text-white/40">
           {dose.units} units · {format(new Date(dose.administered_at), "MMM d, h:mm a")}
         </p>
         {dose.notes && <p className="text-xs text-muted-foreground mt-1 italic">{dose.notes}</p>}
