@@ -7,13 +7,13 @@
 @layer base {
   :root {
     --font-sans: 'Inter', system-ui, sans-serif;
-    --background: 215 25% 27%;
+    --background: 221 39% 11%;
     --foreground: 215 25% 12%;
     --card: 211 34% 17%;
     --card-foreground: 215 25% 12%;
     --popover: 0 0% 100%;
     --popover-foreground: 215 25% 12%;
-    --primary: 213 94% 48%;
+    --primary: 195 44% 32%;
     --primary-foreground: 0 0% 100%;
     --secondary: 210 30% 94%;
     --secondary-foreground: 215 25% 20%;
