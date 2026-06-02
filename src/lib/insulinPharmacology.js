@@ -128,11 +128,7 @@ export function generateActivityCurve(dose, intervalMinutes = 5) {
       }
     }
 
-    // Scale by units (normalized — 10u = 1x, 20u = ~1.4x visual, etc.)
-    const unitScale = Math.sqrt(dose.units / 10);
-    activity = Math.max(0, activity * unitScale);
-
-    points.push({ time: time.getTime(), activity: Math.round(activity * 100) / 100 });
+    points.push({ time: time.getTime(), activity: Math.round(Math.max(0, activity) * 100) / 100 });
   }
 
   return points;
