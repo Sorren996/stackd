@@ -11,7 +11,7 @@ function getTotalActiveUnits(doses) {
     if (now < first.time || now > last.time) return sum;
     let lo = 0;
     for (let i = 0; i < curve.length - 1; i++) {
-      if (curve[i].time <= now && curve[i + 1].time >= now) { lo = i; break; }
+      if (curve[i].time <= now && curve[i + 1].time >= now) {lo = i;break;}
     }
     const hi = lo + 1;
     const ratio = hi >= curve.length ? 0 : (now - curve[lo].time) / (curve[hi].time - curve[lo].time);
@@ -52,7 +52,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
   const avgDailyGlucose = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const todaysReadings = glucoseReadings.filter(g => new Date(g.recorded_at) >= today);
+    const todaysReadings = glucoseReadings.filter((g) => new Date(g.recorded_at) >= today);
     if (!todaysReadings.length) return null;
     const sum = todaysReadings.reduce((acc, curr) => acc + curr.value, 0);
     return Math.round(sum / todaysReadings.length);
@@ -76,12 +76,12 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
           <svg width="56" height="56" viewBox="0 0 56 56">
             <circle cx="28" cy="28" r="22" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="4" />
             <circle cx="28" cy="28" r="22" fill="none" stroke={color} strokeWidth="4"
-              strokeDasharray={`${2 * Math.PI * 22 * Math.min(1, (val - 40) / 360)} ${2 * Math.PI * 22}`}
-              strokeDashoffset={2 * Math.PI * 22 * 0.25}
-              strokeLinecap="round"
-              style={{ filter: `drop-shadow(0 0 4px ${color}88)` }}
-              transform="rotate(-90 28 28)"
-            />
+            strokeDasharray={`${2 * Math.PI * 22 * Math.min(1, (val - 40) / 360)} ${2 * Math.PI * 22}`}
+            strokeDashoffset={2 * Math.PI * 22 * 0.25}
+            strokeLinecap="round"
+            style={{ filter: `drop-shadow(0 0 4px ${color}88)` }}
+            transform="rotate(-90 28 28)" />
+            
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <span className="text-sm font-bold leading-none" style={{ color }}>{val}</span>
@@ -89,25 +89,25 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
           </div>
         </div>
         <span className="text-[9px] font-bold mt-1.5" style={{ color }}>{statusLabel}</span>
-      </div>
-    );
+      </div>);
+
   };
 
   return (
     <div
-      className="-mx-4 md:mx-0 rounded-none md:rounded-3xl p-5 flex flex-col gap-5 relative overflow-hidden border-0 md:border md:border-white/5 shadow-xl"
+      className="-mx-4 md:mx-0 rounded-none md:rounded-3xl p-5 flex flex-col gap-5 relative overflow-hidden border-0 md:border md:border-white/5 shadow-xl bg:"
       style={{ background: "linear-gradient(145deg, hsl(162,14%,11%) 0%, hsl(162,12%,8%) 100%)" }}>
 
       {/* Title & Glucose row */}
       <div className="flex flex-row items-start justify-between border-b border-white/5 pb-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-white">Dashboard</h1>
-          {remainingLabel && (
-            <div className="flex items-center gap-1.5 mt-1.5">
+          {remainingLabel &&
+          <div className="flex items-center gap-1.5 mt-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
               <span className="text-xs text-emerald-400 font-medium">{remainingLabel}</span>
             </div>
-          )}
+          }
         </div>
 
         <div className="flex items-start gap-4">
@@ -140,22 +140,22 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
                 strokeDasharray={`${circumference * 0.75} ${circumference * 0.25}`}
                 strokeDashoffset={circumference * 0.125}
                 strokeLinecap="round"
+                transform={`rotate(135 ${cx} ${cy})`} />
+              
+              {hasActive &&
+              <circle
+                cx={cx} cy={cy} r={r}
+                fill="none"
+                stroke="url(#arcgrad)"
+                strokeWidth={strokeWidth}
+                strokeDasharray={`${circumference * 0.75 * progress} ${circumference}`}
+                strokeDashoffset={circumference * 0.125}
+                strokeLinecap="round"
                 transform={`rotate(135 ${cx} ${cy})`}
-              />
-              {hasActive && (
-                <circle
-                  cx={cx} cy={cy} r={r}
-                  fill="none"
-                  stroke="url(#arcgrad)"
-                  strokeWidth={strokeWidth}
-                  strokeDasharray={`${circumference * 0.75 * progress} ${circumference}`}
-                  strokeDashoffset={circumference * 0.125}
-                  strokeLinecap="round"
-                  transform={`rotate(135 ${cx} ${cy})`}
-                  filter="url(#arcglow)"
-                  style={{ transition: "stroke-dasharray 0.6s ease" }}
-                />
-              )}
+                filter="url(#arcglow)"
+                style={{ transition: "stroke-dasharray 0.6s ease" }} />
+
+              }
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <span className="text-2xl font-bold text-white leading-none">
@@ -180,12 +180,12 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
                   <span className={`text-[10px] font-medium shrink-0 ${isExpired ? "text-white/20" : "text-white/50"}`}>
                     {isExpired ? "done" : status.message.split("—")[0].trim()}
                   </span>
-                </div>
-              );
+                </div>);
+
             })}
           </div>
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 }
