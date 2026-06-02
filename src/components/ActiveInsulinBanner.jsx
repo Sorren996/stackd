@@ -161,7 +161,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
               <span className="text-2xl font-bold text-white leading-none">
                 {activeUnits.toFixed(2)}<span className="text-base font-medium">u</span>
               </span>
-              <span className="text-[10px] text-white/40 mt-0.5">{hasActive ? "Currently Active" : "No Active Insulin"}</span>
+              <span className="text-white/40 mt-0.5 text-[8px]">{hasActive ? "Currently Active" : "No Active Insulin"}</span>
             </div>
           </div>
 

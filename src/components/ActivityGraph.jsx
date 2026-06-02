@@ -4,11 +4,11 @@ import { generateActivityCurve, INSULIN_PROFILES } from "@/lib/insulinPharmacolo
 import { format } from "date-fns";
 
 const TIME_RANGES = [
-  { label: "1h",  hours: 1,  pxPerMin: 18 },
-  { label: "3h",  hours: 3,  pxPerMin: 8  },
-  { label: "12h", hours: 12, pxPerMin: 2.5 },
-  { label: "24h", hours: 24, pxPerMin: null },
-];
+{ label: "1h", hours: 1, pxPerMin: 18 },
+{ label: "3h", hours: 3, pxPerMin: 8 },
+{ label: "12h", hours: 12, pxPerMin: 2.5 },
+{ label: "24h", hours: 24, pxPerMin: null }];
+
 
 const GLUCOSE_COLOR = "#ffffff";
 const GLUCOSE_MIN = 40;
@@ -21,24 +21,24 @@ function CustomTooltip({ active, payload, label }) {
   return (
     <div className="rounded-xl px-3 py-2 shadow-xl" style={{ background: "rgba(20,30,25,0.92)", border: "1px solid rgba(255,255,255,0.08)" }}>
       <p className="text-[10px] text-white/40 mb-1">{format(new Date(label), "h:mm a")}</p>
-      {glucoseEntry && glucoseEntry.value != null && (
-        <div className="flex items-center gap-2 text-xs mb-1">
+      {glucoseEntry && glucoseEntry.value != null &&
+      <div className="flex items-center gap-2 text-xs mb-1">
           <div className="w-2 h-2 rounded-full bg-white" />
           <span className="text-white/80">Glucose</span>
           <span className="text-white/40 ml-auto pl-3">
             {Math.round(glucoseEntry.value * (GLUCOSE_MAX - GLUCOSE_MIN) + GLUCOSE_MIN)} mg/dL
           </span>
         </div>
-      )}
-      {insulinEntries.map((p) => (
-        <div key={p.dataKey} className="flex items-center gap-2 text-xs">
+      }
+      {insulinEntries.map((p) =>
+      <div key={p.dataKey} className="flex items-center gap-2 text-xs">
           <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />
           <span className="text-white/80">{p.name}</span>
           <span className="text-white/40 ml-auto pl-3">{(p.value * 100).toFixed(0)}%</span>
         </div>
-      ))}
-    </div>
-  );
+      )}
+    </div>);
+
 }
 
 export default function ActivityGraph({ doses, glucoseReadings = [] }) {
@@ -63,11 +63,11 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
   const viewEnd = snappedNow + selectedRange.hours * 0.1 * 60 * 60 * 1000;
 
   const allCurvesMeta = useMemo(() =>
-    doses.map((dose) => ({
-      dose,
-      curve: generateActivityCurve(dose, 3),
-      profile: INSULIN_PROFILES[dose.insulin_type],
-    })),
+  doses.map((dose) => ({
+    dose,
+    curve: generateActivityCurve(dose, 3),
+    profile: INSULIN_PROFILES[dose.insulin_type]
+  })),
   [doses]);
 
   // Build a map of glucose readings by their exact timestamp (snapped to 3-min bucket)
@@ -95,7 +95,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
         } else {
           let lo = 0;
           for (let j = 0; j < curve.length - 1; j++) {
-            if (curve[j].time <= t && curve[j + 1].time >= t) { lo = j; break; }
+            if (curve[j].time <= t && curve[j + 1].time >= t) {lo = j;break;}
           }
           const hi = Math.min(lo + 1, curve.length - 1);
           const ratio = hi === lo ? 0 : (t - curve[lo].time) / (curve[hi].time - curve[lo].time);
@@ -109,13 +109,13 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
   }, [doses, glucoseReadings, domainStart, domainEnd, allCurvesMeta, glucoseMap]);
 
   const doseKeys = useMemo(() =>
-    doses.map((dose) => ({
-      key: `dose_${dose.id}`,
-      label: dose.insulin_type.split(" ")[0],
-      fullLabel: dose.insulin_type,
-      units: dose.units,
-      color: INSULIN_PROFILES[dose.insulin_type]?.color || "#888",
-    })),
+  doses.map((dose) => ({
+    key: `dose_${dose.id}`,
+    label: dose.insulin_type.split(" ")[0],
+    fullLabel: dose.insulin_type,
+    units: dose.units,
+    color: INSULIN_PROFILES[dose.insulin_type]?.color || "#888"
+  })),
   [doses]);
 
   const is24h = selectedRange.pxPerMin === null;
@@ -125,7 +125,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
   useEffect(() => {
     if (!scrollRef.current || is24h) return;
     const totalViewMs = viewEnd - viewStart;
-    const nowOffset = ((snappedNow - viewStart) / totalViewMs) * chartWidth;
+    const nowOffset = (snappedNow - viewStart) / totalViewMs * chartWidth;
     const halfContainer = scrollRef.current.clientWidth / 2;
     scrollRef.current.scrollLeft = nowOffset - halfContainer;
   }, [rangeIdx, doses]);
@@ -143,18 +143,18 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
           
         </div>
         {/* Range selector */}
-        <div className="flex gap-0.5 rounded-xl p-1" style={{ background: "rgba(255,255,255,0.05)" }}>
-          {TIME_RANGES.map((r, i) => (
-            <button
-              key={r.label}
-              onClick={() => setRangeIdx(i)}
-              className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
-                rangeIdx === i ? "text-white" : "text-white/30 hover:text-white/60"
-              }`}
-              style={rangeIdx === i ? { background: "rgba(255,255,255,0.12)" } : {}}>
+        <div className="gap-0.5 rounded-xl p-1 flex-center" style={{ background: "rgba(255,255,255,0.05)" }}>
+          {TIME_RANGES.map((r, i) =>
+          <button
+            key={r.label}
+            onClick={() => setRangeIdx(i)}
+            className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+            rangeIdx === i ? "text-white" : "text-white/30 hover:text-white/60"}`
+            }
+            style={rangeIdx === i ? { background: "rgba(255,255,255,0.12)" } : {}}>
               {r.label}
             </button>
-          ))}
+          )}
         </div>
       </div>
 
@@ -170,12 +170,12 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
             data={chartData}
             margin={{ top: 12, right: 8, left: -20, bottom: 0 }}>
             <defs>
-              {doseKeys.map((k) => (
-                <linearGradient key={k.key} id={`grad_${k.key}`} x1="0" y1="0" x2="0" y2="1">
+              {doseKeys.map((k) =>
+              <linearGradient key={k.key} id={`grad_${k.key}`} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor={k.color} stopOpacity={0.35} />
                   <stop offset="100%" stopColor={k.color} stopOpacity={0.0} />
                 </linearGradient>
-              ))}
+              )}
 
             </defs>
             <XAxis
@@ -186,8 +186,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
               tick={{ fontSize: 10, fill: "rgba(255,255,255,0.25)" }}
               axisLine={false}
               tickLine={false}
-              tickCount={tickCount}
-            />
+              tickCount={tickCount} />
+            
             {/* Single Y axis: [0,1] — insulin activity AND normalized glucose share it */}
             <YAxis yAxisId="insulin" domain={[0, 1]} hide />
             <Tooltip content={<CustomTooltip />} cursor={{ stroke: "rgba(255,255,255,0.1)", strokeWidth: 1 }} />
@@ -196,52 +196,52 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
               x={snappedNow}
               stroke="rgba(255,255,255,0.2)"
               strokeDasharray="3 3"
-              strokeWidth={1}
-            />
-            {doseKeys.map((k) => (
-              <Area
-                key={k.key}
-                yAxisId="insulin"
-                type="monotoneX"
-                dataKey={k.key}
-                name={k.label}
-                stroke={k.color}
-                strokeWidth={2.5}
-                fill={`url(#grad_${k.key})`}
-                dot={false}
-                isAnimationActive={false}
-              />
-            ))}
-            {glucoseReadings.length > 0 && (
-              <Line
-                yAxisId="insulin"
-                type="monotoneX"
-                dataKey="glucose"
-                name="Glucose"
-                stroke="rgba(255,255,255,0.7)"
-                strokeWidth={1.5}
-                strokeDasharray="none"
-                dot={(props) => {
-                  const { cx, cy, payload } = props;
-                  if (payload.glucose == null) return <g key={`dot-${payload.time}`} />;
-                  return (
-                    <circle
-                      key={`dot-${payload.time}`}
-                      cx={cx} cy={cy} r={3.5}
-                      fill="white"
-                      stroke="rgba(0,0,0,0.5)"
-                      strokeWidth={1}
-                    />
-                  );
-                }}
-                activeDot={{ r: 5, fill: "white", stroke: "rgba(0,0,0,0.4)", strokeWidth: 1 }}
-                connectNulls={true}
-                isAnimationActive={false}
-              />
+              strokeWidth={1} />
+            
+            {doseKeys.map((k) =>
+            <Area
+              key={k.key}
+              yAxisId="insulin"
+              type="monotoneX"
+              dataKey={k.key}
+              name={k.label}
+              stroke={k.color}
+              strokeWidth={2.5}
+              fill={`url(#grad_${k.key})`}
+              dot={false}
+              isAnimationActive={false} />
+
             )}
+            {glucoseReadings.length > 0 &&
+            <Line
+              yAxisId="insulin"
+              type="monotoneX"
+              dataKey="glucose"
+              name="Glucose"
+              stroke="rgba(255,255,255,0.7)"
+              strokeWidth={1.5}
+              strokeDasharray="none"
+              dot={(props) => {
+                const { cx, cy, payload } = props;
+                if (payload.glucose == null) return <g key={`dot-${payload.time}`} />;
+                return (
+                  <circle
+                    key={`dot-${payload.time}`}
+                    cx={cx} cy={cy} r={3.5}
+                    fill="white"
+                    stroke="rgba(0,0,0,0.5)"
+                    strokeWidth={1} />);
+
+
+              }}
+              activeDot={{ r: 5, fill: "white", stroke: "rgba(0,0,0,0.4)", strokeWidth: 1 }}
+              connectNulls={true}
+              isAnimationActive={false} />
+
+            }
           </ComposedChart>
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 }
