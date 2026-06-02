@@ -157,6 +157,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose }) {
 
         {/* Per-dose breakdown */}
         <div className="flex-1 space-y-2 min-w-0">
+        {doses.filter((dose) => getDoseStatus(dose).phase !== "expired")
           {doses.slice(0, 4).map((dose) => {
             const profile = INSULIN_PROFILES[dose.insulin_type];
             const status = getDoseStatus(dose);
