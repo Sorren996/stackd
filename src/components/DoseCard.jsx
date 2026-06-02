@@ -44,6 +44,16 @@ shadow-[0_8px_32px_rgba(0,0,0,0.25)]">
         }>
           {status.phase === "expired" ? "Done" : status.message.split("—")[0].trim()}
         </span>
+        <div className="relative">
+  <div
+    className="absolute inset-0 rounded-3xl blur-2xl opacity-20"
+    style={{ backgroundColor: profile?.color }}
+  />
+
+  <div className="relative">
+    {/* Card */}
+  </div>
+</div>
       </div>
       <AlertDialog>
         <AlertDialogTrigger asChild>
