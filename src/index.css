@@ -28,18 +28,18 @@
     --ring: 162 38% 35%;
     --chart-1: 162 50% 42%;
     --chart-2: 195 55% 45%;
-    --chart-3: 258 50% 58%;
-    --chart-4: 40 85% 55%;
-    --chart-5: 340 65% 52%;
+    --chart-3: 258 45% 53%;
+    --chart-4: 40 73% 52%;
+    --chart-5: 340 63% 48%;
     --radius: 0.75rem;
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 213 94% 48%;
+    --sidebar-primary: 213 82% 39%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 210 30% 94%;
     --sidebar-accent-foreground: 215 25% 20%;
     --sidebar-border: 214 20% 90%;
-    --sidebar-ring: 213 94% 48%;
+    --sidebar-ring: 213 80% 39%;
   }
 
   .dark {
