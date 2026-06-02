@@ -215,7 +215,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
             {glucoseReadings.length > 0 && (
               <Line
                 yAxisId="insulin"
-                type="monotone"
+                type="monotoneX"
                 dataKey="glucose"
                 name="Glucose"
                 stroke="rgba(255,255,255,0.7)"
@@ -235,7 +235,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
                   );
                 }}
                 activeDot={{ r: 5, fill: "white", stroke: "rgba(0,0,0,0.4)", strokeWidth: 1 }}
-                connectNulls={false}
+                connectNulls={true}
                 isAnimationActive={false}
               />
             )}
