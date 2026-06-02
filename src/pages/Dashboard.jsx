@@ -63,11 +63,6 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-[hsl(var(--popover))]">Dashboard</h1>
-        <p className="text-sm text-muted-foreground mt-1">Track your insulin activity in real time</p>
-      </div>
-
       <DoseForm open={doseFormOpen} onOpenChange={setDoseFormOpen} />
 
       {recentDoses.length === 0 && recentGlucose.length === 0 ?
@@ -87,7 +82,7 @@ export default function Dashboard() {
         </div> :
 
       <>
-          <ActiveInsulinBanner doses={recentDoses} latestGlucose={latestGlucose} />
+          <ActiveInsulinBanner doses={recentDoses} latestGlucose={latestGlucose} glucoseReadings={glucoseReadings} />
       <ActivityGraph doses={recentDoses} glucoseReadings={recentGlucose} />
 
           <div className="grid gap-6 lg:grid-cols-3">
