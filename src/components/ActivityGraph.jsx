@@ -156,7 +156,16 @@ export default function ActivityGraph({ doses }) {
                 </linearGradient>
               ))}
             </defs>
-            <XAxis false/>
+            <XAxis
+              dataKey="time"
+              type="number"
+              domain={is24h ? [domainStart, domainEnd] : [viewStart, viewEnd]}
+              tickFormatter={(t) => format(new Date(t), "h:mma")}
+              tick={{ fontSize: 10, fill: "rgba(255,255,255,0.25)" }}
+              axisLine={false}
+              tickLine={false}
+              tickCount={tickCount}
+            />
             <Tooltip content={<CustomTooltip />} cursor={{ stroke: "rgba(255,255,255,0.1)", strokeWidth: 1 }} />
             <ReferenceLine
               x={now}
