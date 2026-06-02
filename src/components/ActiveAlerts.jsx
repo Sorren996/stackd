@@ -64,10 +64,10 @@ export default function ActiveAlerts({ doses }) {
                     {dose.insulin_type} — {dose.units}u
                   </p>
                 </div>
+                <p className="text-xs opacity-75 mt-0.5">{status.message}</p>
                 {status.minutesUntil !== undefined && (
                   <p className="text-xs font-medium mt-0.5">{formatMinutes(status.minutesUntil)} left</p>
                 )}
-                <p className="text-xs opacity-75 mt-0.5">{status.message}</p>
               </div>
             </div>);
 
