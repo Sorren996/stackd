@@ -26,6 +26,10 @@ export default function DoseForm({ open, onOpenChange }) {
   // Glucose state
   const [glucoseValue, setGlucoseValue] = useState(100);
   const [glucoseNotes, setGlucoseNotes] = useState("");
+  const [glucoseTime, setGlucoseTime] = useState(() => {
+    const now = new Date();
+    return now.toTimeString().slice(0, 5); // "HH:MM"
+  });
   const queryClient = useQueryClient();
 
   const createDose = useMutation({
@@ -45,6 +49,7 @@ export default function DoseForm({ open, onOpenChange }) {
       toast.success("Glucose logged");
       onOpenChange(false);
       setGlucoseValue(100); setGlucoseNotes("");
+      setGlucoseTime(new Date().toTimeString().slice(0, 5));
     }
   });
 
@@ -64,9 +69,13 @@ export default function DoseForm({ open, onOpenChange }) {
 
   const handleSubmitGlucose = () => {
     if (!glucoseValue) return;
+    // Build a datetime from today's date + the chosen time
+    const [h, m] = glucoseTime.split(":").map(Number);
+    const dt = new Date();
+    dt.setHours(h, m, 0, 0);
     createGlucose.mutate({
       value: parseFloat(glucoseValue),
-      recorded_at: new Date().toISOString(),
+      recorded_at: dt.toISOString(),
       notes: glucoseNotes || undefined
     });
   };
@@ -251,6 +260,21 @@ export default function DoseForm({ open, onOpenChange }) {
                       {v}
                     </button>
                   ))}
+                </div>
+              </div>
+
+              {/* Time */}
+              <div>
+                <p className="text-xs font-bold tracking-widest text-white/40 uppercase mb-3">Time</p>
+                <div className="bg-white/5 border border-white/10 rounded-2xl px-4 py-3 flex items-center justify-between">
+                  <span className="text-xs text-white/40">Reading time</span>
+                  <input
+                    type="time"
+                    value={glucoseTime}
+                    onChange={(e) => setGlucoseTime(e.target.value)}
+                    className="bg-transparent text-white text-sm font-medium outline-none cursor-pointer"
+                    style={{ colorScheme: "dark" }}
+                  />
                 </div>
               </div>
 

@@ -10,7 +10,9 @@ const TIME_RANGES = [
   { label: "24h", hours: 24, pxPerMin: null },
 ];
 
-const GLUCOSE_COLOR = "#f97316";
+const GLUCOSE_COLOR = "#ffffff";
+const GLUCOSE_MIN = 40;
+const GLUCOSE_MAX = 400;
 
 function CustomTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
@@ -21,9 +23,11 @@ function CustomTooltip({ active, payload, label }) {
       <p className="text-[10px] text-white/40 mb-1">{format(new Date(label), "h:mm a")}</p>
       {glucoseEntry && glucoseEntry.value != null && (
         <div className="flex items-center gap-2 text-xs mb-1">
-          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: GLUCOSE_COLOR }} />
+          <div className="w-2 h-2 rounded-full bg-white" />
           <span className="text-white/80">Glucose</span>
-          <span className="text-white/40 ml-auto pl-3">{glucoseEntry.value} mg/dL</span>
+          <span className="text-white/40 ml-auto pl-3">
+            {Math.round(glucoseEntry.value * (GLUCOSE_MAX - GLUCOSE_MIN) + GLUCOSE_MIN)} mg/dL
+          </span>
         </div>
       )}
       {insulinEntries.map((p) => (
@@ -65,13 +69,14 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
     })),
   [doses]);
 
-  // Build a map of glucose readings by their closest 3-min bucket
+  // Build a map of glucose readings by their exact timestamp (snapped to 3-min bucket)
   const glucoseMap = useMemo(() => {
     const map = {};
     glucoseReadings.forEach((g) => {
       const t = new Date(g.recorded_at).getTime();
       const bucket = Math.round(t / (3 * 60000)) * (3 * 60000);
-      map[bucket] = g.value;
+      // Normalize glucose to [0,1] for the shared Y axis
+      map[bucket] = (g.value - GLUCOSE_MIN) / (GLUCOSE_MAX - GLUCOSE_MIN);
     });
     return map;
   }, [glucoseReadings]);
@@ -170,10 +175,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
                   <stop offset="100%" stopColor={k.color} stopOpacity={0.0} />
                 </linearGradient>
               ))}
-              <linearGradient id="grad_glucose" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={GLUCOSE_COLOR} stopOpacity={0.15} />
-                <stop offset="100%" stopColor={GLUCOSE_COLOR} stopOpacity={0.0} />
-              </linearGradient>
+
             </defs>
             <XAxis
               dataKey="time"
@@ -185,10 +187,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
               tickLine={false}
               tickCount={tickCount}
             />
-            {/* Left Y axis: insulin activity (0–1) */}
+            {/* Single Y axis: [0,1] — insulin activity AND normalized glucose share it */}
             <YAxis yAxisId="insulin" domain={[0, 1]} hide />
-            {/* Right Y axis: glucose (70–250) */}
-            <YAxis yAxisId="glucose" orientation="right" domain={[70, 250]} hide />
             <Tooltip content={<CustomTooltip />} cursor={{ stroke: "rgba(255,255,255,0.1)", strokeWidth: 1 }} />
             <ReferenceLine
               yAxisId="insulin"
@@ -213,18 +213,27 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
             ))}
             {glucoseReadings.length > 0 && (
               <Line
-                yAxisId="glucose"
+                yAxisId="insulin"
                 type="monotone"
                 dataKey="glucose"
                 name="Glucose"
-                stroke={GLUCOSE_COLOR}
-                strokeWidth={2}
+                stroke="rgba(255,255,255,0.7)"
+                strokeWidth={1.5}
+                strokeDasharray="none"
                 dot={(props) => {
                   const { cx, cy, payload } = props;
-                  if (payload.glucose == null) return null;
-                  return <circle key={`dot-${payload.time}`} cx={cx} cy={cy} r={4} fill={GLUCOSE_COLOR} stroke="rgba(0,0,0,0.4)" strokeWidth={1.5} />;
+                  if (payload.glucose == null) return <g key={`dot-${payload.time}`} />;
+                  return (
+                    <circle
+                      key={`dot-${payload.time}`}
+                      cx={cx} cy={cy} r={3.5}
+                      fill="white"
+                      stroke="rgba(0,0,0,0.5)"
+                      strokeWidth={1}
+                    />
+                  );
                 }}
-                activeDot={{ r: 6, fill: GLUCOSE_COLOR }}
+                activeDot={{ r: 5, fill: "white", stroke: "rgba(0,0,0,0.4)", strokeWidth: 1 }}
                 connectNulls={false}
                 isAnimationActive={false}
               />
