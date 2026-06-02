@@ -32,7 +32,7 @@ export default function ActiveAlerts({ doses }) {
       <h2 className="text-lg font-semibold text-[hsl(var(--popover))]">Active Alerts</h2>
 
       {activeRapid.length > 1 &&
-      <div className="flex items-start gap-3 p-4 rounded-xl border-2 border-amber-300 bg-amber-50 text-amber-800">
+      <div className="flex items-start gap-3 p-4 rounded-xl border-2 border-amber-300 text-[hsl(var(--foreground))]">
           <AlertTriangle className="w-5 h-5 mt-0.5 shrink-0" />
           <div>
             <p className="font-semibold text-sm">Insulin Stacking Detected</p>
@@ -55,7 +55,7 @@ export default function ActiveAlerts({ doses }) {
               className="flex items-center gap-3 p-3 rounded-xl transition-all"
               style={{
                 background: "rgba(255,255,255,0.03)",
-                boxShadow: `0 0 18px 2px ${profile?.color || "#888"}22, inset 0 1px 0 rgba(255,255,255,0.06)`,
+                boxShadow: `0 0 18px 2px ${profile?.color || "#888"}22, inset 0 1px 0 rgba(255,255,255,0.06)`
               }}>
               
               <div className="p-1.5 rounded-lg bg-white/60">
@@ -69,9 +69,9 @@ export default function ActiveAlerts({ doses }) {
                   </p>
                 </div>
                 <p className="text-xs opacity-75 mt-0.5">{status.message}</p>
-                {status.minutesUntil !== undefined && (
-                  <p className="text-xs font-medium mt-0.5">{formatMinutes(status.minutesUntil)} left</p>
-                )}
+                {status.minutesUntil !== undefined &&
+                <p className="text-xs font-medium mt-0.5">{formatMinutes(status.minutesUntil)} left</p>
+                }
               </div>
             </div>);
 
