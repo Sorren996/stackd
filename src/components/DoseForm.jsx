@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { X } from "lucide-react";
 import { toast } from "sonner";
@@ -34,6 +34,7 @@ export default function DoseForm({ open, onOpenChange }) {
   });
 
   const profile = insulinType ? INSULIN_PROFILES[insulinType] : null;
+  const accentColor = profile?.color || "#2dd4bf";
 
   const handleSubmit = () => {
     if (!insulinType || !units) return;
@@ -46,13 +47,14 @@ export default function DoseForm({ open, onOpenChange }) {
   };
 
   const adjust = (delta) => setUnits((u) => Math.max(0.5, Math.round((u + delta) * 2) / 2));
-
   const shortName = insulinType ? insulinType.split(" ")[0] : "";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="p-0 gap-0 max-w-md w-full sm:rounded-3xl overflow-hidden border-0"
-        style={{ background: 'hsl(162,10%,8%)', maxHeight: "92vh", display: "flex", flexDirection: "column" }}>
+      <DialogContent
+        className="p-0 gap-0 max-w-md w-full sm:rounded-3xl overflow-hidden border-0"
+        style={{ background: "hsl(162,10%,8%)", maxHeight: "92vh", display: "flex", flexDirection: "column" }}>
+
         {/* Header */}
         <div className="flex items-center justify-center relative px-6 pt-5 pb-3 shrink-0">
           <DialogTitle className="text-white text-lg font-semibold">Log Dose</DialogTitle>
@@ -65,6 +67,7 @@ export default function DoseForm({ open, onOpenChange }) {
 
         {/* Scrollable body */}
         <div className="overflow-y-auto flex-1 px-5 pb-6 space-y-6">
+
           {/* Insulin Type */}
           <div>
             <p className="text-xs font-bold tracking-widest text-white/40 uppercase mb-3">Insulin Type</p>
@@ -81,12 +84,12 @@ export default function DoseForm({ open, onOpenChange }) {
                         <button
                           key={name}
                           onClick={() => setInsulinType(name)}
-                          className={`flex flex-col items-start px-3 py-2 rounded-xl border transition-all text-left ${
-                            isSelected
-                              ? "border-teal-500/70 bg-teal-600/20 text-white"
-                              : "border-white/10 bg-white/5 text-white/70 hover:border-white/30"
-                          }`}
-                          style={{ minWidth: "72px" }}>
+                          className="flex flex-col items-start px-3 py-2 rounded-xl border transition-all text-left text-white"
+                          style={{
+                            minWidth: "72px",
+                            borderColor: isSelected ? p.color + "aa" : "rgba(255,255,255,0.1)",
+                            backgroundColor: isSelected ? p.color + "22" : "rgba(255,255,255,0.05)",
+                          }}>
                           <div className="flex items-center gap-1.5">
                             <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: p.color }} />
                             <span className="text-sm font-semibold">{shortLabel}</span>
@@ -103,23 +106,24 @@ export default function DoseForm({ open, onOpenChange }) {
 
           {/* Pharmacokinetics */}
           {profile && (
-            <div className="bg-white/5 border border-white/10 rounded-2xl px-4 py-3 grid grid-cols-3 divide-x divide-white/10">
+            <div className="border border-white/10 rounded-2xl px-4 py-3 grid grid-cols-3 divide-x divide-white/10"
+              style={{ backgroundColor: accentColor + "11" }}>
               <div className="text-center pr-4">
-                <p className="text-teal-400 font-bold text-base">
+                <p className="font-bold text-base" style={{ color: accentColor }}>
                   {profile.onsetMin < 60 ? `${profile.onsetMin}m` : `${Math.round(profile.onsetMin / 60)}h`}
                 </p>
                 <p className="text-white/40 text-xs mt-0.5 uppercase tracking-wider">Onset</p>
               </div>
               <div className="text-center px-4">
-                <p className="text-teal-400 font-bold text-base">
+                <p className="font-bold text-base" style={{ color: accentColor }}>
                   {profile.peakMin
-                    ? `${Math.round(profile.peakMin / 60)}h ${profile.peakMin % 60 ? `${profile.peakMin % 60}m` : ""}`
+                    ? `${Math.round(profile.peakMin / 60)}h${profile.peakMin % 60 ? ` ${profile.peakMin % 60}m` : ""}`
                     : "—"}
                 </p>
                 <p className="text-white/40 text-xs mt-0.5 uppercase tracking-wider">Peak</p>
               </div>
               <div className="text-center pl-4">
-                <p className="text-teal-400 font-bold text-base">{Math.round(profile.durationMin / 60)}h</p>
+                <p className="font-bold text-base" style={{ color: accentColor }}>{Math.round(profile.durationMin / 60)}h</p>
                 <p className="text-white/40 text-xs mt-0.5 uppercase tracking-wider">Duration</p>
               </div>
             </div>
@@ -149,11 +153,11 @@ export default function DoseForm({ open, onOpenChange }) {
                 <button
                   key={v}
                   onClick={() => setUnits(v)}
-                  className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all border ${
-                    units === v
-                      ? "bg-teal-600/30 border-teal-500/70 text-white"
-                      : "bg-white/5 border-white/10 text-white/50 hover:text-white hover:border-white/30"
-                  }`}>
+                  className="flex-1 py-2 rounded-xl text-sm font-medium transition-all border text-white"
+                  style={{
+                    borderColor: units === v ? accentColor + "99" : "rgba(255,255,255,0.1)",
+                    backgroundColor: units === v ? accentColor + "2a" : "rgba(255,255,255,0.05)",
+                  }}>
                   {v}
                 </button>
               ))}
@@ -168,7 +172,7 @@ export default function DoseForm({ open, onOpenChange }) {
               onChange={(e) => setNotes(e.target.value)}
               placeholder="e.g. before lunch, correction dose..."
               rows={2}
-              className="bg-white/5 border-white/10 text-white placeholder:text-white/30 rounded-2xl resize-none focus:border-teal-500" />
+              className="bg-white/5 border-white/10 text-white placeholder:text-white/30 rounded-2xl resize-none" />
           </div>
         </div>
 
@@ -177,7 +181,10 @@ export default function DoseForm({ open, onOpenChange }) {
           <button
             onClick={handleSubmit}
             disabled={!insulinType || !units || createDose.isPending}
-            className="w-full py-4 rounded-2xl bg-teal-700 hover:bg-teal-600 disabled:opacity-40 text-white font-semibold text-base transition-all">
+            className="w-full py-4 rounded-2xl disabled:opacity-40 text-white font-semibold text-base transition-all"
+            style={{ backgroundColor: accentColor, filter: "brightness(0.85)" }}
+            onMouseEnter={(e) => { e.currentTarget.style.filter = "brightness(1)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.filter = "brightness(0.85)"; }}>
             {createDose.isPending
               ? "Logging..."
               : insulinType
