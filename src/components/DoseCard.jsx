@@ -10,7 +10,7 @@ export default function DoseCard({ dose, onDelete }) {
 
   return (
     <div
-      className="flex items-center gap-4 p-4 rounded-xl transition-all"
+      className="flex rounded-none flex-col relative overflow-hidden border-0 md:rounded-3xl p-4 gap-"
       style={{
         background: "rgba(255,255,255,0.03)",
         boxShadow: `0 0 18px 2px ${profile?.color || "#888"}22, inset 0 1px 0 rgba(255,255,255,0.06)`

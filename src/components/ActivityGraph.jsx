@@ -33,8 +33,8 @@ function CustomTooltip({ active, payload, label }) {
             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
             <span className="text-white/80">Glucose</span>
             <span className="ml-auto pl-3 font-medium" style={{ color }}>{mgdl} mg/dL</span>
-          </div>
-        );
+          </div>);
+
       })()}
       {insulinEntries.map((p) =>
       <div key={p.dataKey} className="flex items-center gap-2 text-xs">
@@ -141,7 +141,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
   const tickCount = Math.max(2, Math.floor(chartWidth / 90));
 
   return (
-    <div ref={containerRef}>
+    <div ref={containerRef} className="-mx-4 overflow-hidden border:0">
       {/* Range selector + labels row — sticky header */}
       <div className="flex items-center mb-3 justify-center">
         {/* Insulin type labels */}
@@ -238,8 +238,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
                     fill={color}
                     stroke="rgba(0,0,0,0.4)"
                     strokeWidth={1}
-                    style={{ filter: `drop-shadow(0 0 3px ${color}99)` }} />
-                );
+                    style={{ filter: `drop-shadow(0 0 3px ${color}99)` }} />);
+
               }}
               activeDot={{ r: 5, stroke: "rgba(0,0,0,0.4)", strokeWidth: 1 }}
               connectNulls={true}

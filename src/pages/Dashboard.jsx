@@ -85,9 +85,9 @@ export default function Dashboard() {
           <ActiveInsulinBanner doses={recentDoses} latestGlucose={latestGlucose} glucoseReadings={glucoseReadings} />
       <ActivityGraph doses={recentDoses} glucoseReadings={recentGlucose} />
 
-          <div className="grid gap-6 lg:grid-cols-3">
+          <div className="grid gap-6 lg:grid-cols-3 overflow-hidden border:0 -mx-4">
             <div className="lg:col-span-2 space-y-3">
-              <h2 className="text-lg font-semibold text-[hsl(var(--popover))]">Recent Doses</h2>
+              <h2 className="text-lg font-semibold text-[hsl(var(--popover))] mx-4">Recent Doses</h2>
               <div className="space-y-2">
                 {(showAllDoses ? recentDoses.slice(0, 10) : recentDoses.slice(0, 3)).map((dose) =>
               <DoseCard
@@ -100,7 +100,7 @@ export default function Dashboard() {
               {recentDoses.length > 3 &&
             <button
               onClick={() => setShowAllDoses((v) => !v)}
-              className="text-sm hover:underline font-medium mt-1 text-[hsl(var(--muted-foreground))]">
+              className="text-sm hover:underline font-medium mt-1 text-[hsl(var(--muted-foreground))] mx-4">
                   {showAllDoses ? "Show less" : `Show more (${Math.min(recentDoses.length, 10) - 3} more)`}
                 </button>
             }
