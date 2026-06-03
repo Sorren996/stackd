@@ -52,11 +52,7 @@ export default function ActiveAlerts({ doses }) {
           return (
             <div
               key={dose.id}
-              className="flex items-center gap-3 p-3 rounded-xl transition-all border-0"
-              style={{
-                background: "rgba(255,255,255,0.03)",
-                boxShadow: `0 0 18px 2px ${profile?.color || "#888888"}22, inset 0 1px 0 rgba(255,255,255,0.06)`
-              }}>
+              className="flex items-center gap-3 p-3 rounded-xl transition-all">
               
               <div className="p-1.5 rounded-lg bg-white/60">
                 <Icon className="w-4 h-4" />

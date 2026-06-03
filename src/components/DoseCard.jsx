@@ -9,12 +9,7 @@ export default function DoseCard({ dose, onDelete }) {
   const status = getDoseStatus(dose);
 
   return (
-    <div
-      className="flex items-center gap-4 p-4 rounded-xl transition-all"
-      style={{
-        background: "rgba(255,255,255,0.03)",
-        boxShadow: `0 0 18px 2px ${profile?.color || "#888888"}22, inset 0 1px 0 rgba(255,255,255,0.06)`
-      }}>
+    <div className="flex items-center gap-4 p-4 rounded-xl transition-all">
       <div
         className="rounded-full shrink-0 w-2 h-2"
         style={{ backgroundColor: profile?.color || "#888888" }} />

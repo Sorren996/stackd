@@ -97,7 +97,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
       allCurvesMeta.forEach(({ dose, curve }) => {
         const key = `dose_${dose.id}`;
         if (!curve.length || t < curve[0].time || t > curve[curve.length - 1].time) {
-          point[key] = 0;
+          point[key] = null;
         } else {
           let lo = 0;
           for (let j = 0; j < curve.length - 1; j++) {
