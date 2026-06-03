@@ -54,7 +54,7 @@ export default function ActiveAlerts({ doses }) {
               key={dose.id}
               className="flex items-center gap-3 p-3 rounded-xl transition-all">
               
-              <div className="p-1.5 rounded-lg bg-white/60">
+              <div className="p-1.5 rounded-lg bg-0">
                 <Icon className="w-4 h-4" />
               </div>
               <div className="flex-1 min-w-0">
