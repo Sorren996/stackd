@@ -94,6 +94,31 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
   };
 
   return (
+    {/* Simplified Header Row */}
+<div className="border-b border-white/5 pb-4">
+  <h1 className="text-2xl font-bold tracking-tight text-white">Dashboard</h1>
+  {remainingLabel && (
+    <div className="flex items-center gap-1.5 mt-1.5">
+      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+      <span className="text-xs text-emerald-400 font-medium">{remainingLabel}</span>
+    </div>
+  )}
+</div>
+
+{/* New Glucose Section (One-Stop-Shop Style) */}
+<div className="border-b border-white/5 pb-5">
+  <h2 className="text-white/50 font-semibold text-xs uppercase tracking-widest mb-4">Glucose Status</h2>
+  <div className="flex gap-8 items-center">
+    {latestGlucose && renderIndicator("Last Reading", latestGlucose.value)}
+    {avgDailyGlucose !== null && renderIndicator("Daily Average", avgDailyGlucose)}
+  </div>
+</div>
+
+{/* Active Insulin Section */}
+<div>
+  <h2 className="text-white/50 font-semibold text-xs uppercase tracking-widest mb-3">Active Insulin</h2>
+  {...}
+</div>
     <div
       className="rounded-none md:rounded-3xl flex flex-col relative overflow-hidden border-0 gap-5 -mx-4 md:mx- p-4">
 
