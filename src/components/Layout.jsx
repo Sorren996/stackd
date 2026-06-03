@@ -14,7 +14,7 @@ export default function Layout() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Top header — logo only */}
-      <header className="sticky top-0 z-50" style={{ background: 'rgba(8, 14, 10, 0)', backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(2px)' }}>
+      <header className="sticky top-0 z-50 relative p-[1px] bg-gradient-to-b from-white/30 to-transparent rounded-2xl overflow-hidden max-w-sm mx-auto" style={{ background: 'rgba(8, 14, 10, 0)', backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(2px)' }}>
       <linearGradient id="arcgrad" x1="0%" y1="0%" x2="100%" y2="0%">
                   <stop offset="0%" stopColor="hsl(162,50%,42%)" />
                   <stop offset="100%" stopColor="hsl(195,60%,50%)" />
