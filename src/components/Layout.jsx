@@ -42,8 +42,8 @@ export default function Layout() {
           className="mx-4 flex items-center gap-1 py-1 rounded-3xl border mb-4 px-4 backdrop-blur-sm border-white/40 bg-white/10"
           style={{
             background: "rgba(8,14,10,0.4)",
-            backdropFilter: "blur(32px)",
-            WebkitBackdropFilter: "blur(32px)",
+            backdropFilter: "blur(2px)",
+            WebkitBackdropFilter: "blur(2px)",
             boxShadow: "0 8px 40px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -1px 0 rgba(255,255,255,0.04)"
           }}>
           {navItems.map((item) => {
