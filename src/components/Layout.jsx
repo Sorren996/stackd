@@ -21,8 +21,12 @@ export default function Layout() {
               <img src="https://media.base44.com/images/public/6a1b93f234a8611ee1595134/2235392b5_stackd_app_icon_ver2.png"
 
               alt="Stackd"
-              className="w-full h-full object-cover" />
               
+              className="w-full h-full object-cover" />
+                              <linearGradient id="arcgrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="hsl(162,50%,42%)" />
+                  <stop offset="100%" stopColor="hsla(0, 0%, 0%, 0.46)" />
+                </linearGradient>
             </div>
             <span className="text-base font-semibold tracking-tight text-white">Stackd</span>
           </div>
