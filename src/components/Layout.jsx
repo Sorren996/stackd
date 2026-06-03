@@ -17,13 +17,7 @@ export default function Layout() {
       <header className="sticky top-0 z-50" style={{ background: 'rgba(8, 14, 10, 0)' }}>
         <div className="max-w-6xl mx-auto h-14 flex items-center justify-between px-4">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl overflow-hidden">
 
-              alt="Stackd"
-              
-              className="w-full h-full object-cover" />
-
-            </div>
             <span className="text-base font-semibold tracking-tight text-white">Stackd</span>
           </div>
 
