@@ -65,9 +65,9 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
 
   const getGlucoseColor = (val) => {
     if (!val) return "rgba(255,255,255,0.1)";
-    if (val < 70) return "#ef4444";
-    if (val > 180) return "#f97316";
-    return "#4ade80";
+    if (val < 70) return "#d19422ff";
+    if (val > 180) return "#c54d16ff";
+    return "#149142ff";
   };
 
   const getGlucoseStatus = (val) => {
