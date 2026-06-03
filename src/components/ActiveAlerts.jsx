@@ -29,7 +29,7 @@ export default function ActiveAlerts({ doses }) {
 
   return (
     <div className="space-y-3 w-full overflow-hidden">
-      <h2 className="text-lg font-semibold text-[hsl(var(--popover))] mx-">Active Alerts</h2>
+      <h2 className="text-lg font-semibold text-[hsl(var(--popover))] mx-4">Active Alerts</h2>
 
       {activeRapid.length > 1 &&
       <div className="flex items-start gap-3 p-4 rounded-xl border-0 text-[hsl(var(--foreground))]">
