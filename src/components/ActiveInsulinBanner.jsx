@@ -33,21 +33,14 @@ function getMaxRemainingTime(doses) {
   return maxMs;
 }
 
-function formatRemaining(ms) {
-  if (!ms) return null;
-  const totalMin = Math.round(ms / 60000);
-  const h = Math.floor(totalMin / 60);
-  const m = totalMin % 60;
-  if (h > 0 && m > 0) return `${h}h ${m}m remaining`;
-  if (h > 0) return `${h}h remaining`;
-  return `${m}m remaining`;
-}
-
 export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadings = [] }) {
   const activeUnits = useMemo(() => getTotalActiveUnits(doses), [doses]);
   const remainingMs = useMemo(() => getMaxRemainingTime(doses), [doses]);
-  const remainingLabel = formatRemaining(remainingMs);
   const hasActive = activeUnits > 0.01;
+
+  const totalAdministered = useMemo(() => {
+    return doses.reduce((sum, d) => sum + d.units, 0) || 1;
+  }, [doses]);
 
   const avgDailyGlucose = useMemo(() => {
     const today = new Date();
@@ -58,132 +51,108 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
     return Math.round(sum / todaysReadings.length);
   }, [glucoseReadings]);
 
-  const r = 72;
-  const cx = 96;
-  const cy = 96;
-  const strokeWidth = 7;
-  const circumference = 2 * Math.PI * r;
-  const progress = Math.min(1, activeUnits / Math.max(1, doses.reduce((s, d) => s + d.units, 0)));
+  const getRemainingTimeData = () => {
+    if (!remainingMs) return { val: "0", unit: "min", pct: 0, status: "Cleared" };
+    const totalMin = Math.round(remainingMs / 60000);
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    const maxActiveWindow = 6 * 60 * 60 * 1000;
+    const pct = Math.min(1, remainingMs / maxActiveWindow);
+    if (h > 0) return { val: `${h}h`, unit: `${m}m`, pct, status: "Absorbing" };
+    return { val: `${m}`, unit: "min", pct, status: "Absorbing" };
+  };
 
-  const renderIndicator = (label, val) => {
-    if (val === null || val === undefined) return null;
-    const color = val < 70 ? "#ef4444" : val > 180 ? "#f97316" : "#4ade80";
-    const statusLabel = val < 70 ? "Low" : val > 180 ? "High" : "In Range";
+  const getGlucoseColor = (val) => {
+    if (!val) return "rgba(255,255,255,0.1)";
+    if (val < 70) return "#ef4444";
+    if (val > 180) return "#f97316";
+    return "#4ade80";
+  };
+
+  const getGlucoseStatus = (val) => {
+    if (!val) return "—";
+    if (val < 70) return "Low";
+    if (val > 180) return "High";
+    return "Stable";
+  };
+
+  const timeData = getRemainingTimeData();
+
+  const renderGauge = (label, val, unit, percentage, color, statusLabel) => {
+    const activeColor = color || "rgba(255,255,255,0.15)";
     return (
-      <div className="flex flex-col items-center gap-1" style={{ minWidth: 72 }}>
-        <span className="text-[10px] font-bold text-white/30 uppercase tracking-wider">{label}</span>
-        <div className="relative flex items-center justify-center" style={{ width: 56, height: 56 }}>
-          <svg width="56" height="56" viewBox="0 0 56 56">
-            <circle cx="28" cy="28" r="22" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="4" />
-            <circle cx="28" cy="28" r="22" fill="none" stroke={color} strokeWidth="4"
-              strokeDasharray={`${2 * Math.PI * 22 * Math.min(1, (val - 40) / 360)} ${2 * Math.PI * 22}`}
-              strokeDashoffset={2 * Math.PI * 22 * 0.25}
-              strokeLinecap="round"
-              style={{ filter: `drop-shadow(0 0 4px ${color}88)` }}
-              transform="rotate(-90 28 28)" />
+      <div className="flex flex-col items-center flex-1 min-w-[76px] text-center">
+        <span className="text-[10px] font-bold text-white/35 uppercase tracking-wider mb-2.5 truncate w-full px-1">
+          {label}
+        </span>
+        <div className="relative flex items-center justify-center" style={{ width: 62, height: 62 }}>
+          <svg width="62" height="62" viewBox="0 0 62 62">
+            <circle cx="31" cy="31" r="25" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="4.5" />
+            {percentage > 0 && (
+              <circle
+                cx="31" cy="31" r="25"
+                fill="none"
+                stroke={activeColor}
+                strokeWidth="4.5"
+                strokeDasharray={`${2 * Math.PI * 25 * percentage} ${2 * Math.PI * 25}`}
+                strokeDashoffset={0}
+                strokeLinecap="round"
+                style={{ filter: `drop-shadow(0 0 4px ${activeColor}55)` }}
+                transform="rotate(-90 31 31)"
+              />
+            )}
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-sm font-bold leading-none" style={{ color }}>{val}</span>
-            <span className="text-[8px] text-white/30 mt-0.5">mg/dL</span>
+            <span className="text-sm font-extrabold leading-none tracking-tight text-white">{val}</span>
+            <span className="text-[8px] text-white/40 font-medium mt-0.5">{unit}</span>
           </div>
         </div>
-        <span className="text-[9px] font-bold" style={{ color }}>{statusLabel}</span>
+        <span className="text-[9px] font-bold mt-2 truncate w-full px-1" style={{ color: activeColor }}>
+          {statusLabel}
+        </span>
       </div>
     );
   };
 
   return (
-    <div className="rounded-none md:rounded-3xl flex flex-col relative overflow-hidden border-0 gap-5 -mx-4 md:mx-0 p-4">
-
-      {/* Header Row */}
-      <div className="border-b border-white/5 pb-4">
+    <div className="p-4 rounded-none md:rounded-3xl border-0 flex flex-col gap-6 -mx-4 md:mx-0">
+      <div>
         <h1 className="text-2xl font-bold tracking-tight text-white">Dashboard</h1>
-        {remainingLabel &&
-          <div className="flex items-center gap-1.5 mt-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-xs text-emerald-400 font-medium">{remainingLabel}</span>
-          </div>
-        }
       </div>
 
-      {/* Glucose Status Section */}
-      {(latestGlucose || avgDailyGlucose !== null) &&
-        <div className="border-b border-white/5 pb-5">
-          <h2 className="text-white/50 font-semibold text-xs uppercase tracking-widest mb-4">Glucose Status</h2>
-          <div className="flex gap-8 items-center">
-            {latestGlucose && renderIndicator("Last Reading", latestGlucose.value)}
-            {avgDailyGlucose !== null && renderIndicator("Daily Average", avgDailyGlucose)}
-          </div>
-        </div>
-      }
-
-      {/* Active Insulin Section */}
-      <div>
-        <h2 className="text-white/50 font-semibold text-xs uppercase tracking-widest mb-3">Active Insulin</h2>
-        <div className="flex items-center gap-6">
-          <div className="relative shrink-0" style={{ width: 120, height: 120 }}>
-            <svg width="192" height="192" viewBox="0 0 192 192" style={{ width: 120, height: 120 }}>
-              <defs>
-                <filter id="arcglow" x="-50%" y="-50%" width="200%" height="200%">
-                  <feGaussianBlur stdDeviation="4" result="blur" />
-                  <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-                </filter>
-                <linearGradient id="arcgrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="hsl(162,50%,42%)" />
-                  <stop offset="100%" stopColor="hsl(195,60%,50%)" />
-                </linearGradient>
-              </defs>
-              <circle
-                cx={cx} cy={cy} r={r}
-                fill="none"
-                stroke="rgba(255,255,255,0.06)"
-                strokeWidth={strokeWidth}
-                strokeDasharray={`${circumference * 0.75} ${circumference * 0.25}`}
-                strokeDashoffset={circumference * 0.125}
-                strokeLinecap="round"
-                transform={`rotate(135 ${cx} ${cy})`} />
-              {hasActive &&
-                <circle
-                  cx={cx} cy={cy} r={r}
-                  fill="none"
-                  stroke="url(#arcgrad)"
-                  strokeWidth={strokeWidth}
-                  strokeDasharray={`${circumference * 0.75 * progress} ${circumference}`}
-                  strokeDashoffset={circumference * 0.125}
-                  strokeLinecap="round"
-                  transform={`rotate(135 ${cx} ${cy})`}
-                  filter="url(#arcglow)"
-                  style={{ transition: "stroke-dasharray 0.6s ease" }} />
-              }
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-2xl font-bold text-white leading-none">
-                {activeUnits.toFixed(2)}<span className="text-base font-medium">u</span>
-              </span>
-              <span className="text-white/40 mt-0.5 text-[8px]">{hasActive ? "Currently Active" : "No Active Insulin"}</span>
-            </div>
-          </div>
-
-          <div className="flex-1 space-y-2 min-w-0">
-            {doses.filter((dose) => getDoseStatus(dose).phase !== "expired").slice(0, 4).map((dose) => {
-              const profile = INSULIN_PROFILES[dose.insulin_type];
-              const status = getDoseStatus(dose);
-              const isExpired = status.phase === "expired";
-              return (
-                <div key={dose.id} className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: isExpired ? "#555" : profile?.color || "#888" }} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-white/80 truncate">{dose.insulin_type.split(" ")[0]}</p>
-                    <p className="text-[10px] text-white/40">{dose.units}u · {formatMinutes((Date.now() - new Date(dose.administered_at).getTime()) / 60000)} ago</p>
-                  </div>
-                  <span className={`text-[10px] font-medium shrink-0 ${isExpired ? "text-white/20" : "text-white/50"}`}>
-                    {isExpired ? "done" : status.message.split("—")[0].trim()}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+      <div className="flex justify-between items-center gap-1.5 md:gap-4">
+        {renderGauge(
+          "Active Insulin",
+          activeUnits.toFixed(1),
+          "units",
+          Math.min(1, activeUnits / totalAdministered),
+          "hsl(162, 50%, 42%)",
+          hasActive ? "Active" : "Cleared"
+        )}
+        {renderGauge(
+          "Time Left",
+          timeData.val,
+          timeData.unit,
+          timeData.pct,
+          "hsl(195, 60%, 50%)",
+          timeData.status
+        )}
+        {renderGauge(
+          "Last Reading",
+          latestGlucose ? latestGlucose.value : "—",
+          "mg/dL",
+          latestGlucose ? Math.min(1, (latestGlucose.value - 40) / 360) : 0,
+          getGlucoseColor(latestGlucose?.value),
+          getGlucoseStatus(latestGlucose?.value)
+        )}
+        {renderGauge(
+          "Daily Avg",
+          avgDailyGlucose || "—",
+          "mg/dL",
+          avgDailyGlucose ? Math.min(1, (avgDailyGlucose - 40) / 360) : 0,
+          getGlucoseColor(avgDailyGlucose),
+          getGlucoseStatus(avgDailyGlucose)
+        )}
       </div>
     </div>
   );
