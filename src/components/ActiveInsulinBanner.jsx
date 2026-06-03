@@ -109,7 +109,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
           }
         </div>
 
-        <div className="flex items-start gap-4">
+        <div className="flex gap-4 flex-col">
           {latestGlucose && renderIndicator("Last Reading", latestGlucose.value)}
           {avgDailyGlucose !== null && renderIndicator("Daily Average", avgDailyGlucose)}
         </div>
