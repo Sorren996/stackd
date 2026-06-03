@@ -15,7 +15,7 @@ export default function Layout() {
     <div className="min-h-screen bg-background flex flex-col">
       {/* Top header — logo only */}
       <header className="sticky top-0 z-50" style={{ background: 'rgba(8, 14, 10, 0)' }}>
-        <div className="max-w-6xl mx-auto h-14 flex items-center justify-between px-4 bg-gradient-to-b from-teal-400 to-black bg-clip-text text-transparent">
+        <div className="max-w-6xl mx-auto h-14 flex items-center justify-between px-4">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl overflow-hidden">
               <img src="https://media.base44.com/images/public/6a1b93f234a8611ee1595134/2235392b5_stackd_app_icon_ver2.png"
