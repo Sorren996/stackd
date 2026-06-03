@@ -113,10 +113,16 @@ export default function Dashboard() {
       }
       {/* Floating Log Dose FAB */}
       <button
-        onClick={() => setDoseFormOpen(true)}
-        className="fixed bottom-24 right-5 z-40 w-14 h-14 shadow-lg flex items-center justify-center transition-all active:scale-95 hover:bg-muted-foreground border-white/40 mb-4 px-4 backdrop-blur-sm rounded-3xl bbg-white/10 bg-[hsl(var(--chart-1))] opacity-100">
-        <Plus className="w-7 h-7 text-white" />
-      </button>
+         onClick={() => setDoseFormOpen(true)}
+  className="fixed bottom-24 right-5 z-40 w-14 h-14 flex items-center justify-center
+  rounded-2xl
+  border border-white/10
+  bg-white/5
+  backdrop-blur-md
+  shadow-[0_8px_30px_rgba(0,0,0,0.25)]
+  active:scale-95 transition"
+>
+  <Plus className="w-7 h-7 text-white/80" />
     </div>);
 
 }
