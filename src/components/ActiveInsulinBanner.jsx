@@ -95,7 +95,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
 
   return (
     <div
-      className="rounded-none md:rounded-3xl flex flex-col relative overflow-hidden border-0 gap-5 -mx-4 md:mx- p-4"
+      className="rounded-none md:rounded-3xl flex flex-col relative overflow-hidden border-0 gap-5 -mx-4 md:mx- p-4">
 
       {/* Title & Glucose row */}
       <div className="flex flex-row items-start justify-between border-b border-white/5 pb-4">
