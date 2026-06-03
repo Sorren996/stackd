@@ -96,7 +96,6 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
   return (
     <div
       className="rounded-none md:rounded-3xl flex flex-col relative overflow-hidden border-0 gap-5 -mx-4 md:mx- p-4"
-      style={{ background: "linear-gradient(180deg, hsl(174,40%,12%) 0%, hsl(162,14%,9%) 45%, transparent 100%)" }}>
 
       {/* Title & Glucose row */}
       <div className="flex flex-row items-start justify-between border-b border-white/5 pb-4">
