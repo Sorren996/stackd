@@ -120,7 +120,7 @@ w-14 h-14
 flex items-center justify-center
 rounded-full
 bg-white/10
-backdrop-blur-s
+backdrop-blur-m
 border border-white/10
 shadow-lg
 active:scale-95 transition"
