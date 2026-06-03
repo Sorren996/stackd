@@ -22,7 +22,10 @@ export default function Layout() {
 
               alt="Stackd"
               className="w-full h-full object-cover" />
-              
+              <linearGradient id="arcgrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="hsl(162,50%,42%)" />
+                  <stop offset="100%" stopColor="hsl(195,60%,50%)" />
+                </linearGradient>
             </div>
             <span className="text-base font-semibold tracking-tight text-white">Stackd</span>
           </div>
