@@ -30,11 +30,7 @@ export default function Layout() {
             </div>
             <span className="text-base font-semibold tracking-tight text-white">Stackd</span>
           </div>
-          <button
-            onClick={() => base44.auth.logout()}
-            className="p-2 rounded-xl text-white/40 hover:text-white hover:bg-white/10 transition-all">
-            <LogOut className="w-4 h-4" />
-          </button>
+
         </div>
       </header>
 
