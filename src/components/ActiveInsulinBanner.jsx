@@ -119,9 +119,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
 
   return (
     <div className="p-4 rounded-none md:rounded-3xl border-0 flex flex-col gap-6 -mx-4 md:mx-0">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-white">Dashboard</h1>
-      </div>
+
 
       <div className="flex justify-between items-center gap-1.5 md:gap-4">
         {renderGauge(
