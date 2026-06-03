@@ -87,7 +87,7 @@ export default function Dashboard() {
 
           <div className="grid gap-6 lg:grid-cols-3 overflow-hidden border:0 -mx-4">
             <div className="lg:col-span-2 space-y-3">
-              <h2 className="text-lg font-semibold text-[hsl(var(--popover))] mx-4">Recent Doses</h2>
+              <h2 className="text-lg font-semibold text-[hsl(var(--popover))] mx-4 text-[hsl(var(--card-foreground))] px-0 py-1 font-medium opacity-65 rounded-full opacity-65 rounded-full">Recent Doses</h2>
               <div className="space-y-2">
                 {(showAllDoses ? recentDoses.slice(0, 10) : recentDoses.slice(0, 3)).map((dose) =>
               <DoseCard
