@@ -14,11 +14,7 @@ export default function Layout() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Top header — logo only */}
-      <header className="sticky top-0 z-50" style={{ background: 'rgba(8, 14, 10, 0)', backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(2px)' }}>
-      <linearGradient id="arcgrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="hsla(0, 0%, 0%, 1.00)" />
-                  <stop offset="100%" stopColor="hsla(162,50%,42%)" />
-                </linearGradient>
+      <header className="sticky top-0 z-50" style={{ background: 'rgba(8, 14, 10, 0)', backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(2px)' }}>>
         <div className="max-w-6xl mx-auto h-14 flex items-center justify-between px-4">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl overflow-hidden">
@@ -36,6 +32,10 @@ export default function Layout() {
 
       {/* Page content — extra bottom padding for nav bar */}
       <main className="max-w-6xl w-full mx-auto px-4 flex-1 pb-28 py-0">
+                      <linearGradient id="arcgrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="hsl(162,50%,42%)" />
+                  <stop offset="100%" stopColor="hsl(195,60%,50%)" />
+                </linearGradient>
         <Outlet />
       </main>
 
