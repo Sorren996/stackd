@@ -15,7 +15,7 @@ export default function Layout() {
     <div className="min-h-screen bg-gradient-to-b from-teal-900 to-black">
       {/* Top header — logo only */}
       <header className="sticky top-0 z-50" style={{ background: 'rgba(8, 14, 10, 0)' }}>
-        <div className="max-w-6xl mx-auto h-14 flex items-center justify-between px-4">
+        <div className="max-w-6xl mx-auto h-14 flex items-center justify-between px-4 bg-gradient-to-b from-black to-transparent">
           <div className="flex items-center gap-2.5">
 
             <span className="text-base font-semibold tracking-tight text-white">Stackd</span>
