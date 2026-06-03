@@ -12,7 +12,7 @@ export default function Layout() {
   const location = useLocation();
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-teal-900 to-coral-400">
+    <div className="min-h-screen bg-gradient-to-b from-teal-900 to-rose-800">
       {/* Top header — logo only */}
       <header className="sticky top-0 z-50" style={{ background: 'rgba(8, 14, 10, 0)' }}>
         <div className="max-w-6xl mx-auto h-14 flex items-center justify-between px-4 bg-gradient-to-b from-black to-transparent">
