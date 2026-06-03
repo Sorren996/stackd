@@ -70,7 +70,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
     const color = val < 70 ? "#ef4444" : val > 180 ? "#f97316" : "#4ade80";
     const statusLabel = val < 70 ? "Low" : val > 180 ? "High" : "In Range";
     return (
-      <div className="flex gap-4 items" style={{ minWidth: 72 }}>
+      <div className="flex gap-4 flex-r" style={{ minWidth: 72 }}>
         <span className="text-[10px] font-bold text-white/30 uppercase tracking-wider mb-2">{label}</span>
         <div className="relative flex items-center justify-center" style={{ width: 56, height: 56 }}>
           <svg width="56" height="56" viewBox="0 0 56 56">
