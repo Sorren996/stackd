@@ -1,6 +1,7 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { Activity, History, BarChart2, LogOut } from "lucide-react";
 import { base44 } from "@/api/base44Client";
+import { motion } from "framer-motion";
 
 const navItems = [
 { path: "/", label: "Dashboard", icon: Activity },
@@ -46,13 +47,19 @@ export default function Layout() {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex flex-col items-center gap-1 transition-all px-4 rounded-2xl py-1 ${
-                isActive ?
-                "bg-white/15 text-white" :
-                "text-white/40 hover:text-white/70"}`
-                }>
-                <item.icon className="w-5 h-5" />
-                <span className="text-[10px] font-medium">{item.label}</span>
+                className={`relative flex flex-col items-center gap-1 transition-colors px-4 py-1.5 rounded-2xl ${
+                  isActive ? "text-white" : "text-white/40 hover:text-white/70"
+                }`}
+              >
+                {isActive && (
+                  <motion.div
+                    layoutId="active-nav-tab"
+                    className="absolute inset-0 bg-white/15 rounded-2xl -z-10"
+                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                  />
+                )}
+                <item.icon className="w-5 h-5 relative z-10" />
+                <span className="text-[10px] font-medium relative z-10">{item.label}</span>
               </Link>);
 
           })}
