@@ -23,13 +23,14 @@ export default function DoseForm({ open, onOpenChange }) {
   const [insulinType, setInsulinType] = useState("");
   const [units, setUnits] = useState(10);
   const [insulinNotes, setInsulinNotes] = useState("");
+  // Insulin time state
+  const [insulinTime, setInsulinTime] = useState(() => new Date().toTimeString().slice(0, 5));
   // Glucose state
   const [glucoseValue, setGlucoseValue] = useState(100);
   const [glucoseNotes, setGlucoseNotes] = useState("");
-  const [glucoseTime, setGlucoseTime] = useState(() => {
-    const now = new Date();
-    return now.toTimeString().slice(0, 5); // "HH:MM"
-  });
+  const [glucoseTime, setGlucoseTime] = useState(() => new Date().toTimeString().slice(0, 5));
+
+  const nowTimeString = new Date().toTimeString().slice(0, 5);
   const queryClient = useQueryClient();
 
   const createDose = useMutation({
@@ -39,6 +40,7 @@ export default function DoseForm({ open, onOpenChange }) {
       toast.success("Dose logged — tracking activity now");
       onOpenChange(false);
       setInsulinType(""); setUnits(10); setInsulinNotes("");
+      setInsulinTime(new Date().toTimeString().slice(0, 5));
     }
   });
 
@@ -59,10 +61,13 @@ export default function DoseForm({ open, onOpenChange }) {
 
   const handleSubmitInsulin = () => {
     if (!insulinType || !units) return;
+    const [h, m] = insulinTime.split(":").map(Number);
+    const dt = new Date();
+    dt.setHours(h, m, 0, 0);
     createDose.mutate({
       insulin_type: insulinType,
       units: parseFloat(units),
-      administered_at: new Date().toISOString(),
+      administered_at: dt.toISOString(),
       notes: insulinNotes || undefined
     });
   };
@@ -205,6 +210,22 @@ export default function DoseForm({ open, onOpenChange }) {
                 </div>
               </div>
 
+              {/* Time */}
+              <div>
+                <p className="text-xs font-bold tracking-widest text-white/40 uppercase mb-3">Time Administered</p>
+                <div className="bg-white/5 border border-white/10 rounded-2xl px-4 py-3 flex items-center justify-between">
+                  <span className="text-xs text-white/40">Administered at</span>
+                  <input
+                    type="time"
+                    value={insulinTime}
+                    max={nowTimeString}
+                    onChange={(e) => { if (e.target.value <= nowTimeString) setInsulinTime(e.target.value); }}
+                    className="bg-transparent text-white text-sm font-medium outline-none cursor-pointer"
+                    style={{ colorScheme: "dark" }}
+                  />
+                </div>
+              </div>
+
               {/* Notes */}
               <div>
                 <p className="text-xs font-bold tracking-widest text-white/40 uppercase mb-3">Notes (Optional)</p>
@@ -271,7 +292,8 @@ export default function DoseForm({ open, onOpenChange }) {
                   <input
                     type="time"
                     value={glucoseTime}
-                    onChange={(e) => setGlucoseTime(e.target.value)}
+                    max={nowTimeString}
+                    onChange={(e) => { if (e.target.value <= nowTimeString) setGlucoseTime(e.target.value); }}
                     className="bg-transparent text-white text-sm font-medium outline-none cursor-pointer"
                     style={{ colorScheme: "dark" }}
                   />
