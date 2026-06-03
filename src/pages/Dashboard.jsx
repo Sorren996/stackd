@@ -123,6 +123,8 @@ export default function Dashboard() {
   active:scale-95 transition"
 >
   <Plus className="w-7 h-7 text-white/80" />
-    </div>);
+      </button>
+    </div>
+  );
 
 }
