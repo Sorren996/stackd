@@ -32,10 +32,7 @@ export default function Layout() {
 
       {/* Page content — extra bottom padding for nav bar */}
       <main className="max-w-6xl w-full mx-auto px-4 flex-1 pb-28 py-0">
-                      <linearGradient id="arcgrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="hsl(162,50%,42%)" />
-                  <stop offset="100%" stopColor="hsl(195,60%,50%)" />
-                </linearGradient>
+
         <Outlet />
       </main>
 
