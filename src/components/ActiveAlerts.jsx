@@ -33,7 +33,7 @@ export default function ActiveAlerts({ doses }) {
 
       {activeRapid.length > 1 &&
       <div className="flex items-start gap-3 p-4 rounded-xl border-0 text-[hsl(var(--foreground))]">
-          <AlertTriangle className="w-5 h-5 mt-0.5 shrink-0 text-[#bd7800]" />
+          <AlertTriangle className="w-5 h-5 mt-0.5 shrink-0 text-[#bd7800] drop-shadow-[0_0_4px_rgba(189,120,0,0.4)] drop-shadow-[0_0_12px_rgba(189,120,0,0.25)]" />
           <div>
             <p className="font-semibold text-sm">Insulin Stacking Detected</p>
             <p className="text-xs mt-0.5 opacity-80">
@@ -52,10 +52,10 @@ export default function ActiveAlerts({ doses }) {
           return (
             <div
               key={dose.id}
-              className="flex items-center gap-3 p-3 rounded-xl transition-all border:none"
+              className="flex items-center gap-3 p-3 rounded-xl transition-all border-0"
               style={{
                 background: "rgba(255,255,255,0.03)",
-                boxShadow: `0 0 18px 2px ${profile?.color || "#888"}22, inset 0 1px 0 rgba(255,255,255,0.06)`
+                boxShadow: `0 0 18px 2px ${profile?.color || "#888888"}22, inset 0 1px 0 rgba(255,255,255,0.06)`
               }}>
               
               <div className="p-1.5 rounded-lg bg-white/60">
