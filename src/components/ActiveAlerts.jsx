@@ -70,7 +70,7 @@ export default function ActiveAlerts({ doses }) {
                 </div>
                 <p className="text-xs opacity-75 mt-0.5">{status.message}</p>
                 {status.minutesUntil !== undefined &&
-                <p className="text-xs font-medium mt-0.5">{formatMinutes(status.minutesUntil)} left</p>
+                <p className="text-xs font-medium mt-0.5 text-[hsl(var(--card-foreground))] px-0 py-1 text-xs font-medium opacity-65 rounded-full opacity-65 rounded-full">{formatMinutes(status.minutesUntil)} left</p>
                 }
               </div>
             </div>);
