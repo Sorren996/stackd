@@ -11,9 +11,9 @@ const TIME_RANGES = [
 
 
 function getGlucoseColor(mgdl) {
-  if (mgdl < 70) return "#ef4444";
-  if (mgdl > 180) return "#f97316";
-  return "#4ade80";
+  if (mgdl < 70) return "#cd9719ff";
+  if (mgdl > 180) return "#b50f0dff";
+  return "#2c9352ff";
 }
 const GLUCOSE_MIN = 40;
 const GLUCOSE_MAX = 400;
