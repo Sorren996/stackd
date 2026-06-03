@@ -29,7 +29,7 @@ export default function ActiveAlerts({ doses }) {
 
   return (
     <div className="space-y-3 w-full overflow-hidden">
-      <h2 className="text-lg font-semibold text-[hsl(var(--popover))] mx-4">Active Alerts</h2>
+      <h2 className="text-lg font-semibold text-[hsl(var(--popover))] mx-4 text-[hsl(var(--card-foreground))] px-0 py-1 text-xs font-medium opacity-65 rounded-full opacity-65 rounded-full">Active Alerts</h2>
 
       {activeRapid.length > 1 &&
       <div className="flex items-start gap-3 p-4 rounded-xl border-0 text-[hsl(var(--foreground))]">
@@ -64,7 +64,7 @@ export default function ActiveAlerts({ doses }) {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: profile?.color }} />
-                  <p className="text-sm font-medium truncate">
+                  <p className="text-sm font-medium truncate text-[hsl(var(--card-foreground))] px-0 py-1 text-xs font-medium opacity-65 rounded-full opacity-65 rounded-full">
                     {dose.insulin_type} — {dose.units}u
                   </p>
                 </div>
