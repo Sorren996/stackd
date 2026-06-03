@@ -10,7 +10,7 @@ export const INSULIN_PROFILES = {
     peakMax: 180,
     durationMin: 180,
     durationMax: 300,
-    color: "#3B82F6", // blue
+    color: "#284575ff", // blue
   },
   "Humalog (Lispro)": {
     category: "Rapid-Acting",
@@ -20,7 +20,7 @@ export const INSULIN_PROFILES = {
     peakMax: 150,
     durationMin: 180,
     durationMax: 390,
-    color: "#8B5CF6", // violet
+    color: "#402976ff", // violet
   },
   "Apidra (Glulisine)": {
     category: "Rapid-Acting",
@@ -30,7 +30,7 @@ export const INSULIN_PROFILES = {
     peakMax: 90,
     durationMin: 180,
     durationMax: 300,
-    color: "#EC4899", // pink
+    color: "#712049ff", // pink
   },
   "Regular (Novolin R / Humulin R)": {
     category: "Short-Acting",
@@ -40,7 +40,7 @@ export const INSULIN_PROFILES = {
     peakMax: 240,
     durationMin: 300,
     durationMax: 480,
-    color: "#F59E0B", // amber
+    color: "#b97807ff", // amber
   },
   "NPH (Novolin N / Humulin N)": {
     category: "Intermediate-Acting",
@@ -50,7 +50,7 @@ export const INSULIN_PROFILES = {
     peakMax: 720,
     durationMin: 720,
     durationMax: 1080,
-    color: "#10B981", // emerald
+    color: "#157152ff", // emerald
   },
   "Lantus (Glargine)": {
     category: "Long-Acting",
@@ -60,7 +60,7 @@ export const INSULIN_PROFILES = {
     peakMax: null,
     durationMin: 1200,
     durationMax: 1440,
-    color: "#6366F1", // indigo
+    color: "#1f207fff", // indigo
   },
   "Levemir (Detemir)": {
     category: "Long-Acting",
@@ -70,7 +70,7 @@ export const INSULIN_PROFILES = {
     peakMax: 480,
     durationMin: 720,
     durationMax: 1440,
-    color: "#14B8A6", // teal
+    color: "#166c62ff", // teal
   },
   "Tresiba (Degludec)": {
     category: "Ultra-Long-Acting",
@@ -80,7 +80,7 @@ export const INSULIN_PROFILES = {
     peakMax: null,
     durationMin: 2520,
     durationMax: 2520,
-    color: "#0EA5E9", // sky
+    color: "#045a82ff", // sky
   },
 };
 
