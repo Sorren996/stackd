@@ -161,7 +161,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
 
         {tooltipOpen && (
           <div
-            className="absolute bottom-6 left-0 z-50 w-64 rounded-xl p-3.5 text-xs space-y-2 shadow-xl"
+            className="absolute left-0 z-50 w-64 rounded-xl p-3.5 text-xs space-y-2 shadow-xl"
             style={{ background: "rgba(18,28,22,0.97)", border: "1px solid rgba(255,255,255,0.08)" }}
           >
             <div className="flex items-center justify-between mb-1">
