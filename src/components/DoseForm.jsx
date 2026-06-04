@@ -55,12 +55,15 @@ export default function DoseForm({ open, onOpenChange }) {
     }
   });
 
-  const profile = insulinType ? INSULIN_PROFILES[insulinType] : null;
-  const accentColor = profile?.color || "#2dd4bf";
+ const profile = insulinType ? INSULIN_PROFILES[insulinType] : null;
+  const rawAccentColor = profile?.color || "#2dd4bf";
+  const accentColor = rawAccentColor.slice(0, 7); // Clean hex (e.g., #284575 or #2dd4bf)
+  
   const infoColor = profile ? accentColor : "rgba(255,255,255,0.3)";
-const infoBg = profile ? accentColor + "11" : "rgba(255,255,255,0.02)";
-const infoBorder = profile ? accentColor + "22" : "rgba(255,255,255,0.05)";
-  const glucoseColor = "#c2611cff";
+  const infoBg = profile ? accentColor + "11" : "rgba(255,255,255,0.02)";
+  const infoBorder = profile ? accentColor + "22" : "rgba(255,255,255,0.05)";
+  
+  const glucoseColor = "#c2611c"; // Clean hex without 'ff'
 
   const handleSubmitInsulin = () => {
     if (!insulinType || !units) return;
@@ -138,21 +141,46 @@ const infoBorder = profile ? accentColor + "22" : "rgba(255,255,255,0.05)";
                 </button>
               </div>
 
-              {/* Tabs */}
-              <div className="flex mx-5 mb-2 rounded-2xl p-1 shrink-0" style={{ background: "rgba(255,255,255,0.06)" }}>
+    {/* Tabs */}
+              <div className="flex mx-5 mb-2 rounded-2xl p-1 shrink-0 relative" style={{ background: "rgba(255,255,255,0.06)" }}>
                 <button
+                  type="button"
                   onClick={() => setTab("insulin")}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-all ${tab === "insulin" ? "text-white" : "text-white/40"}`}
-                  style={tab === "insulin" ? { background: "rgba(255,255,255,0.12)" } : {}}>
-                  <Syringe className="w-4 h-4" />
-                  Insulin
+                  className={`relative flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-colors duration-200 ${
+                    tab === "insulin" ? "text-white" : "text-white/40 hover:text-white/60"
+                  }`}
+                >
+                  {tab === "insulin" && (
+                    <motion.div
+                      layoutId="active-form-tab"
+                      className="absolute inset-0 rounded-xl bg-white/10 -z-0"
+                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                    />
+                  )}
+                  <span className="relative z-10 flex items-center gap-2">
+                    <Syringe className="w-4 h-4" />
+                    Insulin
+                  </span>
                 </button>
                 <button
+                  type="button"
                   onClick={() => setTab("glucose")}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-all ${tab === "glucose" ? "text-white" : "text-white/40"}`}
-                  style={tab === "glucose" ? { background: `${glucoseColor}33` } : {}}>
-                  <Droplets className="w-4 h-4" style={{ color: tab === "glucose" ? glucoseColor : undefined }} />
-                  <span style={{ color: tab === "glucose" ? glucoseColor : undefined }}>Glucose</span>
+                  className={`relative flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-colors duration-200 ${
+                    tab === "glucose" ? "text-orange-400" : "text-white/40 hover:text-white/60"
+                  }`}
+                >
+                  {tab === "glucose" && (
+                    <motion.div
+                      layoutId="active-form-tab"
+                      className="absolute inset-0 rounded-xl -z-0"
+                      style={{ backgroundColor: `${glucoseColor}33` }}
+                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                    />
+                  )}
+                  <span className="relative z-10 flex items-center gap-2">
+                    <Droplets className="w-4 h-4" />
+                    Glucose
+                  </span>
                 </button>
               </div>
 
