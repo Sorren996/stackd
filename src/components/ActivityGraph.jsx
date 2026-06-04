@@ -160,7 +160,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
   return (
     <div ref={containerRef} className="-mx-4 overflow-hidden">
       {/* Range selector */}
-      <div className="flex items-center mb-10 justify-center">
+      <div className="flex py-3 items-center mb-10 justify-center">
         <div className="flex gap-0.5 rounded-xl p-1 justify-center" style={{ background: "rgba(255,255,255,0.05)" }}>
           {TIME_RANGES.map((r, i) => (
             <button
