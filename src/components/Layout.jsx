@@ -19,8 +19,11 @@ export default function Layout() {
         <div className="max-w-6xl mx-auto h-14 flex items-center justify-center px-4 bg-gradient-to-b from-black to-transparent">
           <div className="flex items-center justify-center gap-2.5">
 
-            <span className="text-base font-semibold tracking-tight text-white justify-center">Stackd</span>
-          </div>
+<img 
+  src="https://media.base44.com/images/public/6a1b93f234a8611ee1595134/9cd3c84cf_stackdappiconver3tran.png" 
+  alt="Stackd Logo" 
+  className="h-9 w-auto object-contain"
+/>          </div>
 
         </div>
       </header>
