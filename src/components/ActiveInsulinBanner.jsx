@@ -89,8 +89,8 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
     return (
       <div className="flex flex-col items-center text-center shrink-0">
         <span className="text-[10px] font-bold text-white/35 uppercase tracking-wider mb-3.5">{label}</span>
-        <div className="relative flex items-center justify-center w-36 h-36">
-          <svg width="144" height="144" viewBox="0 0 144 144" className="overflow-visible">
+        <div className="relative flex items-center justify-center w-48 h-48">
+          <svg width="192" height="192" viewBox="0 0 192 192" className="overflow-visible">
             <defs>
               <filter id="glow-large" x="-50%" y="-50%" width="200%" height="200%">
                 <feGaussianBlur stdDeviation="4" result="blur1" />
@@ -102,23 +102,23 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
                 </feMerge>
               </filter>
             </defs>
-            <circle cx={72} cy={72} r={58} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={6} />
+            <circle cx={96} cy={96} r={80} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={8} />
             {percentage > 0 && (
-              <circle cx={72} cy={72} r={58} fill="none" stroke={activeColor} strokeWidth={6}
-                strokeDasharray={`${2 * Math.PI * 58 * percentage} ${2 * Math.PI * 58}`}
-                strokeDashoffset={0} strokeLinecap="round" transform="rotate(-90 72 72)"
+              <circle cx={96} cy={96} r={80} fill="none" stroke={activeColor} strokeWidth={8}
+                strokeDasharray={`${2 * Math.PI * 80 * percentage} ${2 * Math.PI * 80}`}
+                strokeDashoffset={0} strokeLinecap="round" transform="rotate(-90 96 96)"
                 filter="url(#glow-large)" />
             )}
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <div className="flex items-center gap-1.5 justify-center">
-              {TrendIcon && <TrendIcon className="w-4 h-4 shrink-0 text-white" />}
-              <span className="text-2xl font-extrabold leading-none tracking-tight text-white">{val}</span>
+            <div className="flex items-center gap-2 justify-center">
+              {TrendIcon && <TrendIcon className="w-6 h-6 shrink-0 text-white" />}
+              <span className="text-4xl font-extrabold leading-none tracking-tight text-white">{val}</span>
             </div>
-            <span className="text-[10px] text-white/40 font-medium mt-1">{unit}</span>
+            <span className="text-xs text-white/40 font-medium mt-1.5">{unit}</span>
           </div>
         </div>
-        <span className="text-[11px] font-bold mt-2.5" style={{ color: activeColor }}>
+        <span className="text-sm font-bold mt-3" style={{ color: activeColor }}>
           {getGlucoseStatus(latestGlucose?.value)}
         </span>
       </div>
@@ -129,9 +129,9 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
     const activeColor = color || "rgba(255,255,255,0.15)";
     return (
       <div className={`flex flex-col items-center text-center ${className}`}>
-        <span className="text-[9px] font-bold text-white/35 uppercase tracking-wider mb-1.5">{label}</span>
-        <div className="relative flex items-center justify-center w-14 h-14">
-          <svg width="56" height="56" viewBox="0 0 56 56" className="overflow-visible">
+        <span className="text-[11px] font-bold text-white/35 uppercase tracking-wider mb-1.5">{label}</span>
+        <div className="relative flex items-center justify-center w-20 h-20">
+          <svg width="80" height="80" viewBox="0 0 80 80" className="overflow-visible">
             <defs>
               <filter id="glow-small" x="-50%" y="-50%" width="200%" height="200%">
                 <feGaussianBlur stdDeviation="2.5" result="blur1" />
@@ -143,20 +143,20 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
                 </feMerge>
               </filter>
             </defs>
-            <circle cx={28} cy={28} r={22} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={4} />
+            <circle cx={40} cy={40} r={33} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={5.5} />
             {percentage > 0 && (
-              <circle cx={28} cy={28} r={22} fill="none" stroke={activeColor} strokeWidth={4}
-                strokeDasharray={`${2 * Math.PI * 22 * percentage} ${2 * Math.PI * 22}`}
-                strokeDashoffset={0} strokeLinecap="round" transform="rotate(-90 28 28)"
+              <circle cx={40} cy={40} r={33} fill="none" stroke={activeColor} strokeWidth={5.5}
+                strokeDasharray={`${2 * Math.PI * 33 * percentage} ${2 * Math.PI * 33}`}
+                strokeDashoffset={0} strokeLinecap="round" transform="rotate(-90 40 40)"
                 filter="url(#glow-small)" />
             )}
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-sm font-extrabold leading-none text-white">{val}</span>
-            <span className="text-[7px] text-white/40 font-medium mt-0.5">{unit}</span>
+            <span className="text-lg font-extrabold leading-none text-white">{val}</span>
+            <span className="text-[9px] text-white/40 font-medium mt-0.5">{unit}</span>
           </div>
         </div>
-        <span className="text-[10px] font-bold mt-1.5" style={{ color: activeColor }}>{statusLabel}</span>
+        <span className="text-xs font-bold mt-2" style={{ color: activeColor }}>{statusLabel}</span>
       </div>
     );
   };
