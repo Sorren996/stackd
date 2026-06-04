@@ -263,6 +263,40 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
                 isAnimationActive={false}
               />
             )}
+
+const targetLow = parseInt(localStorage.getItem("target_range_low") || "70", 10);
+const targetHigh = parseInt(localStorage.getItem("target_range_high") || "180", 10);
+const rangeTotal = GLUCOSE_MAX - GLUCOSE_MIN;
+const lowOffset = ((GLUCOSE_MAX - targetLow) / rangeTotal) * 100;
+const highOffset = ((GLUCOSE_MAX - targetHigh) / rangeTotal) * 100;
+const midOffset = (lowOffset + highOffset) / 2;
+
+<linearGradient id="glucose_range_gradient" x1="0" y1="0" x2="0" y2="1">
+  {/* Above the target range: Dark/Transparent */}
+  <stop offset="0%" stopColor="rgba(0,0,0,0.9)" />
+  <stop offset={`${highOffset}%`} stopColor="rgba(0,0,0,0.9)" />
+  
+  {/* Inside the target range: Amber-900 Warm Highlight */}
+  <stop offset={`${midOffset}%`} stopColor="#78350f" stopOpacity={0.45} />
+  
+  {/* Below the target range: Dark/Transparent */}
+  <stop offset={`${lowOffset}%`} stopColor="rgba(0,0,0,0.9)" />
+  <stop offset="100%" stopColor="rgba(0,0,0,0.9)" />
+</linearGradient>
+
+const point = { time: t, bg: GLUCOSE_MAX };
+{glucoseReadings.length > 0 && (
+  <Area
+    yAxisId="glucose"
+    type="monotoneX"
+    dataKey="bg"
+    stroke="none"
+    fill="url(#glucose_range_gradient)"
+    isAnimationActive={false}
+    dot={false}
+  />
+)}
+
           </ComposedChart>
         </div>
       </div>
