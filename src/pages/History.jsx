@@ -107,8 +107,7 @@ export default function History() {
     <div className="space-y-6">
       <div className="flex flex-col items-center gap-4">
         <div className="text-center">
-          <h1 className="text-2xl font-bold tracking-tight text-[hsl(var(--popover))]">Medical Logs</h1>
-          <p className="text-sm text-muted-foreground mt-1">Review and manage your history logs</p>
+          <p className="text-sm text-muted-foreground mt-1">Review and manage your logs</p>
         </div>
 
         <div className="flex gap-1 bg-white/5 p-1 rounded-xl">
