@@ -88,7 +88,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
         </span>
         <div className="relative flex items-center justify-center" style={{ width: 62, height: 62 }}>
           <svg width="70" height="70" viewBox="0 0 62 62">
-            <circle cx="40" cy="40" r="25" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="4.5" />
+            <circle cx="32" cy="32" r="25" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="4.5" />
             {percentage > 0 && (
               <circle
                 cx="31" cy="31" r="25"
