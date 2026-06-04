@@ -1,6 +1,7 @@
-import { Outlet, Link, useLocation } from "react-router-dom";
+import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { Activity, History, BarChart2, Settings } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import SettingsContent from "../pages/Settings";
 
 const navItems = [
   { path: "/", label: "Dashboard", icon: Activity },
@@ -10,6 +11,12 @@ const navItems = [
 
 export default function Layout() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const isSettingsOpen = location.pathname === "/settings";
+
+  const toggleSettings = () => {
+    navigate(isSettingsOpen ? "/" : "/settings");
+  };
 
   return (
     <div className="min-h-screen text-white relative">
@@ -25,12 +32,23 @@ export default function Layout() {
             alt="Stackd Logo"
             className="h-9 w-auto object-contain"
           />
-          <Link
-            to="/settings"
-            className="w-9 h-9 flex items-center justify-center rounded-full bg-white/5 border border-white/5 text-white/50 hover:text-white hover:bg-white/10 transition-all"
+          <button
+            onClick={toggleSettings}
+            className="w-9 h-9 flex items-center justify-center rounded-full transition-all relative"
+            style={{
+              background: isSettingsOpen ? "rgba(20,184,166,0.1)" : "rgba(255,255,255,0.05)",
+              border: isSettingsOpen ? "1px solid rgba(20,184,166,0.35)" : "1px solid rgba(255,255,255,0.05)",
+              boxShadow: isSettingsOpen ? "0 0 18px rgba(20,184,166,0.5), 0 0 6px rgba(20,184,166,0.3)" : "none"
+            }}
           >
-            <Settings className="w-4 h-4" />
-          </Link>
+            <motion.div
+              animate={{ rotate: isSettingsOpen ? 180 : 0 }}
+              transition={{ type: "spring", stiffness: 260, damping: 18 }}
+              className="flex items-center justify-center"
+            >
+              <Settings className={`w-4 h-4 transition-colors ${isSettingsOpen ? "text-teal-400" : "text-white/50"}`} />
+            </motion.div>
+          </button>
         </div>
       </header>
 
@@ -38,6 +56,25 @@ export default function Layout() {
       <main className="max-w-6xl w-full mx-auto px-4 flex-1 pb-28 py-0 relative z-10">
         <Outlet />
       </main>
+
+      {/* Full-screen settings overlay */}
+      <AnimatePresence>
+        {isSettingsOpen && (
+          <motion.div
+            key="settings-overlay"
+            initial={{ y: "-100%", opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: "-100%", opacity: 0 }}
+            transition={{ type: "spring", stiffness: 220, damping: 28 }}
+            className="fixed inset-0 z-40 overflow-y-auto pt-16 pb-28"
+            style={{ background: "rgba(8,14,11,0.97)", backdropFilter: "blur(16px)" }}
+          >
+            <div className="px-4">
+              <SettingsContent />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* iOS-style glass bottom nav */}
       <nav className="fixed bottom-0 inset-x-0 z-50 flex justify-center pb-safe">
@@ -51,7 +88,7 @@ export default function Layout() {
           }}
         >
           {navItems.map((item) => {
-            const isActive = location.pathname === item.path;
+            const isActive = location.pathname === item.path && !isSettingsOpen;
             return (
               <Link
                 key={item.path}
