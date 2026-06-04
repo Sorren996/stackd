@@ -71,7 +71,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
       <div className="flex flex-col items-center text-center shrink-0">
         <span className="text-[10px] font-bold text-white/35 uppercase tracking-wider mb-3.5">{label}</span>
         <div className="relative flex items-center justify-center w-36 h-36">
-          <svg width="144" height="144" viewBox="0 0 144 144">
+          <svg width="144" height="144" viewBox="0 0 144 144" className="overflow-visible">
             <circle cx={72} cy={72} r={58} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={6} />
             {percentage > 0 && (
               <circle cx={72} cy={72} r={58} fill="none" stroke={activeColor} strokeWidth={6}
@@ -103,7 +103,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
       <div className={`flex flex-col items-center text-center ${className}`}>
         <span className="text-[9px] font-bold text-white/35 uppercase tracking-wider mb-1.5">{label}</span>
         <div className="relative flex items-center justify-center w-14 h-14">
-          <svg width="56" height="56" viewBox="0 0 56 56">
+          <svg width="56" height="56" viewBox="0 0 56 56" className="overflow-visible">
             <circle cx={28} cy={28} r={22} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={4} />
             {percentage > 0 && (
               <circle cx={28} cy={28} r={22} fill="none" stroke={activeColor} strokeWidth={4}
@@ -149,7 +149,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
             activeUnits.toFixed(1),
             "units",
             Math.min(1, activeUnits / totalAdministered),
-            "hsl(162, 50%, 42%)",
+            "#35a879",
             hasActive ? "Active" : "Cleared"
           )}
         </div>
