@@ -186,7 +186,7 @@ export default function DoseForm({ open, onOpenChange }) {
 
               {tab === "insulin" ? (
                 <>
-                  <div className="overflow-y-auto flex-1 px-5 pb-6 space-y-6">
+<div className="overflow-y-auto h-[500px] px-5 pb-6 space-y-6">
                     {/* Insulin Type */}
                     <div>
                       <p className="text-sm font-bold tracking-widest text-white/40 uppercase mb-3">Insulin Type</p>
@@ -317,7 +317,7 @@ export default function DoseForm({ open, onOpenChange }) {
                 </>
               ) : (
                 <>
-                  <div className="overflow-y-auto flex-1 px-5 pb-6 space-y-6">
+<div className="overflow-y-auto h-[500px] px-5 pb-6 space-y-6">
                     <div>
                       <p className="text-sm font-bold tracking-widest text-white/40 uppercase mb-3">Blood Glucose (mg/dL)</p>
                       <div className="bg-white/5 border border-white/10 rounded-2xl px-6 py-6 flex items-center justify-between mb-4">
