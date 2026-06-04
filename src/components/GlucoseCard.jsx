@@ -23,17 +23,17 @@ export default function GlucoseCard({ reading, onDelete }) {
       <div className="shrink-0 w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
 
       <div className="flex-1 min-w-0">
-        <p className="text-[hsl(var(--card-foreground))] px-0 py-1 text-xs font-medium opacity-65 rounded-full">
+        <p className="text-[hsl(var(--card-foreground))] px-0 py-1 text-sm font-medium opacity-65 rounded-full">
           Glucose · <span style={{ color }}>{value} mg/dL</span>
         </p>
-        <p className="text-xs text-muted-foreground mt-0.5">
+        <p className="text-sm text-muted-foreground mt-0.5">
           {format(new Date(reading.recorded_at), "MMM d, h:mm a")}
         </p>
-        {reading.notes && <p className="text-xs text-muted-foreground mt-1 italic">{reading.notes}</p>}
+        {reading.notes && <p className="text-sm text-muted-foreground mt-1 italic">{reading.notes}</p>}
       </div>
 
       <div className="text-right shrink-0">
-        <span className="text-[hsl(var(--card-foreground))] px-2 py-1 text-xs font-medium opacity-65 rounded-full">
+        <span className="text-[hsl(var(--card-foreground))] px-2 py-1 text-sm font-medium opacity-65 rounded-full">
           {statusLabel}
         </span>
       </div>
