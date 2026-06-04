@@ -98,17 +98,30 @@ export default function Dashboard() {
 
       <>
           <ActiveInsulinBanner doses={recentDoses} latestGlucose={latestGlucose} glucoseReadings={glucoseReadings} />
-          <ActiveAlerts doses={recentDoses} />
-          <ActivityGraph doses={recentDoses} glucoseReadings={recentGlucose} />
+      <ActivityGraph doses={recentDoses} glucoseReadings={recentGlucose} />
 
-          <div className="space-y-3 overflow-hidden -mx-4">
-            <h2 className="text-lg font-semibold text-[hsl(var(--popover))] mx-4 text-[hsl(var(--card-foreground))] px-0 py-1 font-medium opacity-65 rounded-full">Recent Activity</h2>
-            <div className="space-y-2">
-              {(showAllDoses ? recentActivity.slice(0, 15) : recentActivity.slice(0, 5)).map((item) =>
-                item.feedType === "insulin" ?
-                <DoseCard key={`dose-${item.id}`} dose={item} onDelete={(id) => deleteDose.mutate(id)} /> :
-                <GlucoseCard key={`glucose-${item.id}`} reading={item} onDelete={(id) => deleteGlucose.mutate(id)} />
+          <div className="grid gap-6 lg:grid-cols-3 overflow-hidden border:0 -mx-4">
+            <div className="lg:col-span-2 space-y-3">
+              <h2 className="text-lg font-semibold text-[hsl(var(--popover))] mx-4 text-[hsl(var(--card-foreground))] px-0 py-1 font-medium opacity-65 rounded-full">Recent Activity</h2>
+              <div className="space-y-2">
+                {(showAllDoses ? recentActivity.slice(0, 15) : recentActivity.slice(0, 5)).map((item) =>
+              item.feedType === "insulin" ?
+              <DoseCard key={`dose-${item.id}`} dose={item} onDelete={(id) => deleteDose.mutate(id)} /> :
+
+              <GlucoseCard key={`glucose-${item.id}`} reading={item} onDelete={(id) => deleteGlucose.mutate(id)} />
+
               )}
+              </div>
+              {recentActivity.length > 5 &&
+            <button
+              onClick={() => setShowAllDoses((v) => !v)}
+              className="text-sm hover:underline font-medium mt-1 text-[hsl(var(--muted-foreground))] mx-4 hidden">
+                  {showAllDoses ? "Show less" : `Show more (${Math.min(recentActivity.length, 10) - 5} more)`}
+                </button>
+            }
+            </div>
+            <div>
+              <ActiveAlerts doses={recentDoses} />
             </div>
           </div>
         </>
