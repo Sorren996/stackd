@@ -18,7 +18,7 @@ export default function Layout() {
 
       {/* Top header */}
       <header className="sticky top-0 z-50 bg-transparent">
-        <div className="max-w-6xl mx-auto h-14 flex items-center justify-center px-4 bg-gradient-to-b from-black/80 to-transparent">
+        <div className="max-w-6xl mx-auto h-14 flex items-center justify-center px-4 bg-gradient-to-b from-black/40 via-black/10 to-transparent">
           <img
             src="https://media.base44.com/images/public/6a1b93f234a8611ee1595134/9cd3c84cf_stackdappiconver3tran.png"
             alt="Stackd Logo"
