@@ -11,9 +11,9 @@ const TIME_RANGES = [
 ];
 
 function getGlucoseColor(mgdl) {
-  if (mgdl < 70) return "#cd9719ff";
-  if (mgdl > 180) return "#b50f0dff";
-  return "#2c9352ff";
+  if (mgdl < 70) return "hsla(0, 0%, 93%, 1.00)";
+  if (mgdl > 180) return "hsla(0, 0%, 93%, 1.00)";
+  return "hsla(0, 0%, 93%, 1.00)";
 }
 
 const GLUCOSE_MIN = 40;
