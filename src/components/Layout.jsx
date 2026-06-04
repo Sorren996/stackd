@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { Activity, History, BarChart2 } from "lucide-react";
+import { Activity, History, BarChart2, Settings } from "lucide-react";
 import { motion } from "framer-motion";
 
 const navItems = [
@@ -18,12 +18,19 @@ export default function Layout() {
 
       {/* Top header */}
       <header className="sticky top-0 z-50 bg-transparent">
-        <div className="max-w-6xl mx-auto h-14 flex items-center justify-center px-4 bg-gradient-to-b from-black/80 via-black/40 to-transparent">
+        <div className="max-w-6xl mx-auto h-14 flex items-center justify-between px-4 bg-gradient-to-b from-black/80 via-black/40 to-transparent">
+          <div className="w-9" />
           <img
             src="https://media.base44.com/images/public/6a1b93f234a8611ee1595134/9cd3c84cf_stackdappiconver3tran.png"
             alt="Stackd Logo"
             className="h-9 w-auto object-contain"
           />
+          <Link
+            to="/settings"
+            className="w-9 h-9 flex items-center justify-center rounded-full bg-white/5 border border-white/5 text-white/50 hover:text-white hover:bg-white/10 transition-all"
+          >
+            <Settings className="w-4 h-4" />
+          </Link>
         </div>
       </header>
 
