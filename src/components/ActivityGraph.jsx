@@ -183,46 +183,60 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
         </div>
 
 
-        {/* Informational Help Icon */}
-        <button
-          onClick={() => setShowInfo(true)}
-          className="w-8 h-8 flex items-center justify-center rounded-xl border border-white/5 bg-white/[0.03] text-white/40 hover:text-white/80 hover:bg-white/[0.08] transition-all"
-          style={{ boxShadow: "0 0 10px rgba(255,255,255,0.02)" }}
-        >
-          <HelpCircle className="w-4 h-4" />
-        </button>
-           {/* Fading Informational Overlay */}
-      <AnimatePresence>
-        {showInfo && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.35, ease: "easeInOut" }}
-            onClick={() => setShowInfo(false)}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-4 backdrop-blur-sm cursor-pointer"
+         {/* Informational Help Icon with Spring Dropdown */}
+        <div className="relative">
+          <button
+            onClick={() => setShowInfo(!showInfo)}
+            className={`w-8 h-8 flex items-center justify-center rounded-xl border transition-all ${
+              showInfo 
+                ? "bg-teal-500/10 border-teal-500/30 text-teal-400" 
+                : "border-white/5 bg-white/[0.03] text-white/40 hover:text-white/80 hover:bg-white/[0.08]"
+            }`}
+            style={{ boxShadow: "0 0 10px rgba(255,255,255,0.02)" }}
           >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.98 }}
-              transition={{ duration: 0.3, ease: "easeOut" }}
-              onClick={(e) => e.stopPropagation()} // Prevents closing when clicking on the image itself
-              className="relative max-w-lg w-full rounded-2xl overflow-hidden bg-black border border-teal-500/20 p-0.5"
-              style={{
-                boxShadow: "0 0 35px rgba(20,184,166,0.15)" // Soft teal glow around the image card
-              }}
-            >
-              <img
-                src="https://media.base44.com/images/public/6a1b93f234a8611ee1595134/1005e28fb_graphinfotooltip.png"
-                alt="Graph Information Details"
-                className="w-full h-auto rounded-xl object-contain block"
-              />
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-      </div>
+            <HelpCircle className="w-4 h-4" />
+          </button>
+
+          <AnimatePresence>
+            {showInfo && (
+              <>
+                {/* Full-screen invisible backdrop to handle clicking anywhere outside to close */}
+                <div 
+                  className="fixed inset-0 z-40 cursor-default" 
+                  onClick={() => setShowInfo(false)} 
+                />
+
+                {/* Spring animated dropdown card */}
+                <motion.div
+                  initial={{ opacity: 0, y: -15, scale: 0.95 }}
+                  animate={{ 
+                    opacity: 1, 
+                    y: 10, 
+                    scale: 1,
+                    transition: { type: "spring", stiffness: 300, damping: 22 }
+                  }}
+                  exit={{ 
+                    opacity: 0, 
+                    y: -15, 
+                    scale: 0.95,
+                    transition: { duration: 0.15 } 
+                  }}
+                  className="absolute right-0 top-full z-50 w-72 sm:w-96 rounded-2xl overflow-hidden bg-black border border-teal-500/20 p-0.5"
+                  style={{
+                    boxShadow: "0 12px 40px rgba(20, 184, 166, 0.15)",
+                    transformOrigin: "top right"
+                  }}
+                >
+                  <img
+                    src="https://media.base44.com/images/public/6a1b93f234a8611ee1595134/1005e28fb_graphinfotooltip.png"
+                    alt="Graph Information Details"
+                    className="w-full h-auto rounded-xl object-contain block"
+                  />
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+        </div>
 
       <div
         ref={scrollRef}
