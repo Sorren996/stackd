@@ -107,6 +107,7 @@ export default function History() {
 
   return (
     <div className="space-y-6">
+  <div className="flex justify-center">
   <div className="flex gap-1 bg-white/5 p-1 rounded-xl">
   <button
     onClick={() => setActiveTab("doses")}
@@ -140,6 +141,7 @@ export default function History() {
     <span className="relative z-10">Glucose Readings</span>
   </button>
 </div>
+  </div>
 
       {activeTab === "doses" ? (
         <div className="space-y-6">
