@@ -32,7 +32,7 @@ export default function DoseCard({ dose, onDelete }) {
       </div>
       <AlertDialog>
         <AlertDialogTrigger asChild>
-          <Button variant="ghost" size="icon" className="shrink-0 text-muted-foreground hover:text-destructive">
+          <Button variant="ghost" size="icon" className="shrink-0 text-muted-foreground hover:bg-zinc-800 hover:text-destructive">
             <Trash2 className="w-4 h-4" />
           </Button>
         </AlertDialogTrigger>
