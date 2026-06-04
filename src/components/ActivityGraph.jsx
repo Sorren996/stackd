@@ -143,7 +143,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
   return (
     <div ref={containerRef} className="-mx-4 overflow-hidden border:0">
       {/* Range selector + labels row — sticky header */}
-      <div className="flex items-center mb-3 justify-center">
+      <div className="flex items-center mb-10 justify-center">
         {/* Insulin type labels */}
         <div className="flex flex-wrap gap-3">
           
