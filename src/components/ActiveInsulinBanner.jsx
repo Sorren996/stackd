@@ -126,7 +126,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
     <div className="p-10 rounded-none md:rounded-3xl border-0 flex flex-col gap-6 -mx-4 md:mx-0">
 
 
-      <div className="flex justify-between items-center gap-1.5 md:gap-4">
+      <div className="flex justify-center items-center gap-3 sm:gap-6 md:gap-10">
         {renderGauge(
           "Active Insulin",
           activeUnits.toFixed(1),
