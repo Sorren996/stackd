@@ -80,32 +80,76 @@ export default function Settings() {
       </div>
 
       {/* Target Range Preference */}
+// Initialize with standard range or parse current selection
+const [targetLow, setTargetLow] = useState(() => {
+  const saved = localStorage.getItem("target_range_low");
+  return saved ? parseInt(saved, 10) : 70;
+});
+const [targetHigh, setTargetHigh] = useState(() => {
+  const saved = localStorage.getItem("target_range_high");
+  return saved ? parseInt(saved, 10) : 180;
+});
+const [isCustom, setIsCustom] = useState(() => localStorage.getItem("target_range_mode") === "custom");
+
       <div className="space-y-3">
-        <h3 className="text-xs font-bold text-white/35 uppercase tracking-wider px-1">Target Range Preference</h3>
-        <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-4 grid grid-cols-3 gap-2">
-          {[
-            { label: "Tight", range: "80-140" },
-            { label: "Standard", range: "70-180" },
-            { label: "Relaxed", range: "90-200" }
-          ].map((preset) => {
-            const isActive = targetRange === preset.range;
-            return (
-              <button
-                key={preset.label}
-                onClick={() => handleRangeChange(preset.range)}
-                className={`py-3 px-2 rounded-2xl border text-center transition-all ${
-                  isActive
-                    ? "bg-teal-500/10 border-teal-500/40 text-white"
-                    : "bg-white/[0.01] border-white/5 text-white/40 hover:bg-white/[0.03]"
-                }`}
-              >
-                <div className="text-xs font-bold">{preset.label}</div>
-                <div className="text-[10px] mt-0.5 font-medium opacity-70">{preset.range}</div>
-              </button>
-            );
-          })}
-        </div>
+  <h3 className="text-xs font-bold text-white/35 uppercase tracking-wider px-1">Target Range Preference</h3>
+  <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-4 flex flex-col md:flex-row gap-4 items-center">
+    
+    {/* Left Column: Recommended Button */}
+    <div className="w-full md:w-2/5">
+      <button
+        onClick={() => {
+          setTargetLow(70);
+          setTargetHigh(180);
+          setIsCustom(false);
+          localStorage.setItem("target_range_mode", "recommended");
+          localStorage.setItem("target_range_low", "70");
+          localStorage.setItem("target_range_high", "180");
+          toast.success("Set to recommended range (70-180 mg/dL)");
+        }}
+        className={`w-full py-4 px-3 rounded-2xl border text-center transition-all ${
+          !isCustom && targetLow === 70 && targetHigh === 180
+            ? "bg-teal-500/10 border-teal-500/40 text-white"
+            : "bg-white/[0.01] border-white/5 text-white/40 hover:bg-white/[0.03]"
+        }`}
+      >
+        <div className="text-xs font-bold">Recommended</div>
+        <div className="text-sm mt-1 font-semibold">70-180</div>
+        <div className="text-[9px] text-white/30 mt-0.5">mg/dL</div>
+      </button>
+    </div>
+
+    {/* Right Column: Interactive Dual Range Slider */}
+    <div className="w-full md:w-3/5 space-y-2">
+      <div className="flex justify-between items-center text-xs px-1">
+        <span className="text-white/40">Custom Range</span>
+        <span className="text-teal-400 font-bold">{targetLow} - {targetHigh} mg/dL</span>
       </div>
+      <div className="py-2">
+        <Slider
+          min={70}
+          max={250}
+          step={5}
+          value={[targetLow, targetHigh]}
+          onValueChange={([low, high]) => {
+            setTargetLow(low);
+            setTargetHigh(high);
+            setIsCustom(true);
+            localStorage.setItem("target_range_mode", "custom");
+            localStorage.setItem("target_range_low", low.toString());
+            localStorage.setItem("target_range_high", high.toString());
+          }}
+          className="cursor-pointer"
+        />
+      </div>
+      <div className="flex justify-between text-[10px] text-white/20 px-1">
+        <span>Min: 70</span>
+        <span>Max: 250</span>
+      </div>
+    </div>
+
+  </div>
+</div>
 
       {/* Alerts & Preferences */}
       <div className="space-y-3">
