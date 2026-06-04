@@ -269,7 +269,7 @@ export default function DoseForm({ open, onOpenChange }) {
                   className="w-full h-2 rounded-full appearance-none cursor-pointer"
                   style={{ accentColor: glucoseColor }} />
                 <div className="flex justify-between text-[10px] text-white/30 mt-1 px-1">
-                  <span>40</span><span>120</span><span>180</span><span>250</span><span>400</span>
+                  <span>40</span><span>125</span><span>220</span><span>300</span><span>400</span>
                 </div>
 
                 {/* Presets */}
