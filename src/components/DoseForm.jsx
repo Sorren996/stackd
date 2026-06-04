@@ -154,11 +154,11 @@ export default function DoseForm({ open, onOpenChange }) {
                   <div className="overflow-y-auto flex-1 px-5 pb-6 space-y-6">
                     {/* Insulin Type */}
                     <div>
-                      <p className="text-xs font-bold tracking-widest text-white/40 uppercase mb-3">Insulin Type</p>
+                      <p className="text-sm font-bold tracking-widest text-white/40 uppercase mb-3">Insulin Type</p>
                       <div className="space-y-3">
                         {groupedInsulins.map(({ category, items }) => (
                           <div key={category}>
-                            <p className="text-xs text-white/40 mb-2">{category}</p>
+                            <p className="text-sm text-white/40 mb-2">{category}</p>
                             <div className="flex flex-wrap gap-2">
                               {items.map(([name, p]) => {
                                 const shortLabel = name.split(" ")[0];
@@ -178,7 +178,7 @@ export default function DoseForm({ open, onOpenChange }) {
                                       <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: p.color }} />
                                       <span className="text-sm font-semibold">{shortLabel}</span>
                                     </div>
-                                    {subLabel && <span className="text-xs text-white/40 mt-0.5 ml-3.5">{subLabel}</span>}
+                                    {subLabel && <span className="text-sm text-white/40 mt-0.5 ml-3.5">{subLabel}</span>}
                                   </button>
                                 );
                               })}
@@ -196,7 +196,7 @@ export default function DoseForm({ open, onOpenChange }) {
                           <p className="font-bold text-base" style={{ color: accentColor }}>
                             {profile.onsetMin < 60 ? `${profile.onsetMin}m` : `${Math.round(profile.onsetMin / 60)}h`}
                           </p>
-                          <p className="text-white/40 text-xs mt-0.5 uppercase tracking-wider">Onset</p>
+                          <p className="text-white/40 text-sm mt-0.5 uppercase tracking-wider">Onset</p>
                         </div>
                         <div className="text-center px-4">
                           <p className="font-bold text-base" style={{ color: accentColor }}>
@@ -204,23 +204,23 @@ export default function DoseForm({ open, onOpenChange }) {
                               ? `${Math.round(profile.peakMin / 60)}h${profile.peakMin % 60 ? ` ${profile.peakMin % 60}m` : ""}`
                               : "—"}
                           </p>
-                          <p className="text-white/40 text-xs mt-0.5 uppercase tracking-wider">Peak</p>
+                          <p className="text-white/40 text-sm mt-0.5 uppercase tracking-wider">Peak</p>
                         </div>
                         <div className="text-center pl-4">
                           <p className="font-bold text-base" style={{ color: accentColor }}>{Math.round(profile.durationMin / 60)}h</p>
-                          <p className="text-white/40 text-xs mt-0.5 uppercase tracking-wider">Duration</p>
+                          <p className="text-white/40 text-sm mt-0.5 uppercase tracking-wider">Duration</p>
                         </div>
                       </div>
                     )}
 
                     {/* Units */}
                     <div>
-                      <p className="text-xs font-bold tracking-widest text-white/40 uppercase mb-3">Units</p>
+                      <p className="text-sm font-bold tracking-widest text-white/40 uppercase mb-3">Units</p>
                       <div className="bg-white/5 border border-white/10 rounded-2xl px-6 py-4 flex items-center justify-between mb-3">
                         <button onClick={() => adjust(-1)} className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white text-xl flex items-center justify-center transition-colors">−</button>
                         <div className="text-center">
                           <span className="text-4xl font-bold text-white">{units}</span>
-                          <p className="text-white/40 text-xs mt-1">units</p>
+                          <p className="text-white/40 text-sm mt-1">units</p>
                         </div>
                         <button onClick={() => adjust(1)} className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white text-xl flex items-center justify-center transition-colors">+</button>
                       </div>
@@ -237,9 +237,9 @@ export default function DoseForm({ open, onOpenChange }) {
 
                     {/* Time */}
                     <div>
-                      <p className="text-xs font-bold tracking-widest text-white/40 uppercase mb-3">Time Administered</p>
+                      <p className="text-sm font-bold tracking-widest text-white/40 uppercase mb-3">Time Administered</p>
                       <div className="bg-white/5 border border-white/10 rounded-2xl px-4 py-3 flex items-center justify-between">
-                        <span className="text-xs text-white/40">Administered at</span>
+                        <span className="text-sm text-white/40">Administered at</span>
                         <input
                           type="time"
                           value={insulinTime}
@@ -253,7 +253,7 @@ export default function DoseForm({ open, onOpenChange }) {
 
                     {/* Notes */}
                     <div>
-                      <p className="text-xs font-bold tracking-widest text-white/40 uppercase mb-3">Notes (Optional)</p>
+                      <p className="text-sm font-bold tracking-widest text-white/40 uppercase mb-3">Notes (Optional)</p>
                       <Textarea value={insulinNotes} onChange={(e) => setInsulinNotes(e.target.value)}
                         placeholder="e.g. before lunch, correction dose..." rows={2}
                         className="bg-white/5 border-white/10 text-white placeholder:text-white/30 rounded-2xl resize-none" />
@@ -274,13 +274,13 @@ export default function DoseForm({ open, onOpenChange }) {
                 <>
                   <div className="overflow-y-auto flex-1 px-5 pb-6 space-y-6">
                     <div>
-                      <p className="text-xs font-bold tracking-widest text-white/40 uppercase mb-3">Blood Glucose (mg/dL)</p>
+                      <p className="text-sm font-bold tracking-widest text-white/40 uppercase mb-3">Blood Glucose (mg/dL)</p>
                       <div className="bg-white/5 border border-white/10 rounded-2xl px-6 py-6 flex items-center justify-between mb-4">
                         <button onClick={() => adjustGlucose(-1)} className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white text-xl flex items-center justify-center transition-colors">−</button>
                         <div className="text-center">
                           <span className="text-5xl font-bold" style={{ color: glucoseValue < 70 ? "#ef4444" : glucoseValue > 180 ? "#f97316" : "#4ade80" }}>{glucoseValue}</span>
-                          <p className="text-white/40 text-xs mt-1">mg/dL</p>
-                          <p className="text-xs mt-1 font-medium" style={{ color: glucoseValue < 70 ? "#ef4444" : glucoseValue > 180 ? "#f97316" : "#4ade80" }}>
+                          <p className="text-white/40 text-sm mt-1">mg/dL</p>
+                          <p className="text-sm mt-1 font-medium" style={{ color: glucoseValue < 70 ? "#ef4444" : glucoseValue > 180 ? "#f97316" : "#4ade80" }}>
                             {glucoseValue < 70 ? "Low" : glucoseValue > 180 ? "High" : "In Range"}
                           </p>
                         </div>
@@ -298,7 +298,7 @@ export default function DoseForm({ open, onOpenChange }) {
                       <div className="flex gap-2 flex-wrap mt-4">
                         {GLUCOSE_PRESETS.map((v) => (
                           <button key={v} onClick={() => setGlucoseValue(v)}
-                            className="px-3 py-1.5 rounded-xl text-xs font-medium border text-white transition-all"
+                            className="px-3 py-1.5 rounded-xl text-sm font-medium border text-white transition-all"
                             style={{ borderColor: glucoseValue === v ? glucoseColor + "aa" : "rgba(255,255,255,0.1)", backgroundColor: glucoseValue === v ? glucoseColor + "22" : "rgba(255,255,255,0.05)" }}>
                             {v}
                           </button>
@@ -308,9 +308,9 @@ export default function DoseForm({ open, onOpenChange }) {
 
                     {/* Time */}
                     <div>
-                      <p className="text-xs font-bold tracking-widest text-white/40 uppercase mb-3">Time</p>
+                      <p className="text-sm font-bold tracking-widest text-white/40 uppercase mb-3">Time</p>
                       <div className="bg-white/5 border border-white/10 rounded-2xl px-4 py-3 flex items-center justify-between">
-                        <span className="text-xs text-white/40">Reading time</span>
+                        <span className="text-sm text-white/40">Reading time</span>
                         <input
                           type="time"
                           value={glucoseTime}
@@ -324,7 +324,7 @@ export default function DoseForm({ open, onOpenChange }) {
 
                     {/* Notes */}
                     <div>
-                      <p className="text-xs font-bold tracking-widest text-white/40 uppercase mb-3">Notes (Optional)</p>
+                      <p className="text-sm font-bold tracking-widest text-white/40 uppercase mb-3">Notes (Optional)</p>
                       <Textarea value={glucoseNotes} onChange={(e) => setGlucoseNotes(e.target.value)}
                         placeholder="e.g. fasting, after meal..." rows={2}
                         className="bg-white/5 border-white/10 text-white placeholder:text-white/30 rounded-2xl resize-none" />
