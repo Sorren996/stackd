@@ -193,6 +193,91 @@ export default function Settings() {
         </div>
       </div>
 
+
+{/* Apple Health Sync Card */}
+<div className="space-y-3">
+  <h3 className="text-sm font-bold text-white/35 uppercase tracking-wider px-1">Apple Health Sync</h3>
+  <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-5 space-y-4">
+    <div className="space-y-1">
+      <div className="text-sm font-semibold text-white flex items-center gap-2">
+        <Heart className="w-4 h-4 text-red-500 animate-pulse" />
+        Sync Apple Health Data
+      </div>
+      <p className="text-xs text-white/40 leading-relaxed">
+        Export your health database from iPhone (Health App → Profile → Export All Health Data). Upload the export file below to replace manual logs with high-resolution continuous records.
+      </p>
+    </div>
+    
+    <label className="flex flex-col items-center justify-center border-2 border-dashed border-white/10 hover:border-teal-500/40 rounded-2xl p-6 cursor-pointer bg-white/[0.01] hover:bg-teal-500/[0.02] transition-all group">
+      <Upload className="w-6 h-6 text-white/30 group-hover:text-teal-400 mb-2 transition-colors" />
+      <span className="text-sm font-medium text-white/70 group-hover:text-white transition-colors">
+        {isSyncing ? "Parsing export data..." : "Select export.xml or health.zip"}
+      </span>
+      <span className="text-xs text-white/30 mt-1">Accepts XML or Zip exports</span>
+      <input 
+        type="file" 
+        accept=".xml,.zip" 
+        onChange={handleAppleHealthImport} 
+        disabled={isSyncing} 
+        className="hidden" 
+      />
+    </label>
+  </div>
+</div>
+
+const handleAppleHealthImport = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  setIsSyncing(true);
+  toast.info("Reading Apple Health export... Please keep this page open.");
+
+  try {
+    const text = await file.text();
+    // Match blood glucose record entries in Apple Health XML format:
+    // <Record type="HKQuantityTypeIdentifierBloodGlucose" ... value="120" ... startDate="2026-06-04 ..."/>
+    const recordRegex = /<Record[^>]*type="HKQuantityTypeIdentifierBloodGlucose"[^>]*>/g;
+    const records = text.match(recordRegex) || [];
+
+    if (records.length === 0) {
+      throw new Error("No blood glucose records found in this file.");
+    }
+
+    // Extract attributes (value, timestamp)
+    const newReadings = records.map(record => {
+      const valueMatch = record.match(/value="([^"]+)"/);
+      const dateMatch = record.match(/startDate="([^"]+)"/);
+      
+      return {
+        value: parseFloat(valueMatch[1]),
+        recorded_at: new Date(dateMatch[1]).toISOString(),
+        notes: "Synced from Apple Health"
+      };
+    }).filter(r => !isNaN(r.value));
+
+    // 1. Delete all existing manual glucose records to clear the slate
+    const existingReadings = await base44.entities.GlucoseReading.list("-recorded_at", 5000);
+    await Promise.all(existingReadings.map(r => base44.entities.GlucoseReading.delete(r.id)));
+
+    // 2. Bulk insert the new continuous records in chunks of 500
+    const chunkSize = 500;
+    for (let i = 0; i < newReadings.length; i += chunkSize) {
+      const chunk = newReadings.slice(i, i + chunkSize);
+      await base44.entities.GlucoseReading.bulkCreate(chunk);
+    }
+
+    toast.success(`Success! Synced ${newReadings.length} continuous glucose readings.`);
+    
+    // Refresh the graph & history queries
+    queryClient.invalidateQueries({ queryKey: ["glucose-readings"] });
+  } catch (err) {
+    toast.error(err.message || "Failed to parse file. Make sure it's a valid export.xml");
+  } finally {
+    setIsSyncing(false);
+  }
+};
+
+
       {/* Backup & Export */}
       <div className="space-y-3">
         <h3 className="text-sm font-bold text-white/35 uppercase tracking-wider px-1">Backup & Logs</h3>
