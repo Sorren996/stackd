@@ -8,7 +8,10 @@ import { toast } from "sonner";
 
 export default function Settings() {
   const [user, setUser] = useState(null);
-  const [stackingAlerts, setStackingAlerts] = useState(true);
+  const [stackingAlerts, setStackingAlerts] = useState(() => {
+    const saved = localStorage.getItem("stacking_alerts_enabled");
+    return saved !== null ? saved === "true" : true;
+  });
   const [notifications, setNotifications] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [steloConnected, setSteloConnected] = useState(false);
@@ -32,20 +35,10 @@ export default function Settings() {
     base44.auth.logout("/login");
   };
 
-  // Initialize stackingAlerts from localStorage
-const [stackingAlerts, setStackingAlerts] = useState(() => {
-  const saved = localStorage.getItem("stacking_alerts_enabled");
-  return saved !== null ? saved === "true" : true;
-});
-
-// Update localStorage when changed
-const handleStackingToggle = (checked) => {
-  setStackingAlerts(checked);
-  localStorage.setItem("stacking_alerts_enabled", checked ? "true" : "false");
-};
-
-// ... in the Switch element:
-<Switch checked={stackingAlerts} onCheckedChange={handleStackingToggle} />
+  const handleStackingToggle = (checked) => {
+    setStackingAlerts(checked);
+    localStorage.setItem("stacking_alerts_enabled", checked ? "true" : "false");
+  };
 
   const handleSetRecommended = () => {
     setTargetLow(70);
@@ -165,7 +158,7 @@ const handleStackingToggle = (checked) => {
               </Label>
               <p className="text-sm text-white/40">Alert when multiple rapid doses overlap</p>
             </div>
-            <Switch checked={stackingAlerts} onCheckedChange={setStackingAlerts} />
+            <Switch checked={stackingAlerts} onCheckedChange={handleStackingToggle} />
           </div>
 
         </div>
