@@ -108,39 +108,45 @@ export default function History() {
   return (
     <div className="space-y-6">
   <div className="flex justify-center">
-  <div className="flex gap-1 bg-white/5 p-1 rounded-xl">
-  <button
-    onClick={() => setActiveTab("doses")}
-    className={`relative px-4 py-2 rounded-lg text-xs font-medium transition-colors ${
-      activeTab === "doses" ? "text-white" : "text-white/40 hover:text-white/70"
-    }`}
+  <div 
+    className="flex items-center gap-1 p-1 rounded-3xl border border-white/20 bg-white/5 backdrop-blur-sm shadow-lg"
+    style={{
+      background: "rgba(255, 255, 255, 0.03)",
+      boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.05)"
+    }}
   >
-    {activeTab === "doses" && (
-      <motion.div
-        layoutId="active-history-tab"
-        className="absolute inset-0 bg-white/10 rounded-lg -z-10"
-        transition={{ type: "spring", stiffness: 380, damping: 30 }}
-      />
-    )}
-    <span className="relative z-10">Insulin Doses</span>
-  </button>
-  
-  <button
-    onClick={() => setActiveTab("glucose")}
-    className={`relative px-4 py-2 rounded-lg text-xs font-medium transition-colors ${
-      activeTab === "glucose" ? "text-white" : "text-white/40 hover:text-white/70"
-    }`}
-  >
-    {activeTab === "glucose" && (
-      <motion.div
-        layoutId="active-history-tab"
-        className="absolute inset-0 bg-white/10 rounded-lg -z-10"
-        transition={{ type: "spring", stiffness: 380, damping: 30 }}
-      />
-    )}
-    <span className="relative z-10">Glucose Readings</span>
-  </button>
-</div>
+    <button
+      onClick={() => setActiveTab("doses")}
+      className={`relative px-4 py-2 rounded-2xl text-xs font-medium transition-colors ${
+        activeTab === "doses" ? "text-white" : "text-white/40 hover:text-white/70"
+      }`}
+    >
+      {activeTab === "doses" && (
+        <motion.div
+          layoutId="active-history-tab"
+          className="absolute inset-0 bg-white/10 rounded-2xl -z-10"
+          transition={{ type: "spring", stiffness: 380, damping: 30 }}
+        />
+      )}
+      <span className="relative z-10">Insulin Doses</span>
+    </button>
+    
+    <button
+      onClick={() => setActiveTab("glucose")}
+      className={`relative px-4 py-2 rounded-2xl text-xs font-medium transition-colors ${
+        activeTab === "glucose" ? "text-white" : "text-white/40 hover:text-white/70"
+      }`}
+    >
+      {activeTab === "glucose" && (
+        <motion.div
+          layoutId="active-history-tab"
+          className="absolute inset-0 bg-white/10 rounded-2xl -z-10"
+          transition={{ type: "spring", stiffness: 380, damping: 30 }}
+        />
+      )}
+      <span className="relative z-10">Glucose Readings</span>
+    </button>
+  </div>
   </div>
 
       {activeTab === "doses" ? (
