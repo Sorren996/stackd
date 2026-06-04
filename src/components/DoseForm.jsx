@@ -290,7 +290,8 @@ export default function DoseForm({ open, onOpenChange }) {
                         </div>
                         <button onClick={() => adjustGlucose(1)} className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white text-xl flex items-center justify-center transition-colors">+</button>
                       </div>
-<Slider
+
+  <Slider
   min={40}
   max={400}
   step={1}
@@ -298,13 +299,6 @@ export default function DoseForm({ open, onOpenChange }) {
   onValueChange={([v]) => setGlucoseValue(v)}
   className="my-4 cursor-pointer"
 />
-                      <input type="range" min={40} max={400} step={1} value={glucoseValue}
-                        onChange={(e) => setGlucoseValue(Number(e.target.value))}
-                        className="w-full h-2 rounded-full appearance-none cursor-pointer"
-                        style={{ accentColor: glucoseColor }} />
-                      <div className="flex justify-between text-[10px] text-white/30 mt-1 px-1">
-                        <span>40</span><span>125</span><span>220</span><span>300</span><span>400</span>
-                      </div>
 
                       <div className="flex gap-2 flex-wrap mt-4">
                         {GLUCOSE_PRESETS.map((v) => (
