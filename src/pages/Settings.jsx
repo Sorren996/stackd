@@ -32,6 +32,21 @@ export default function Settings() {
     base44.auth.logout("/login");
   };
 
+  // Initialize stackingAlerts from localStorage
+const [stackingAlerts, setStackingAlerts] = useState(() => {
+  const saved = localStorage.getItem("stacking_alerts_enabled");
+  return saved !== null ? saved === "true" : true;
+});
+
+// Update localStorage when changed
+const handleStackingToggle = (checked) => {
+  setStackingAlerts(checked);
+  localStorage.setItem("stacking_alerts_enabled", checked ? "true" : "false");
+};
+
+// ... in the Switch element:
+<Switch checked={stackingAlerts} onCheckedChange={handleStackingToggle} />
+
   const handleSetRecommended = () => {
     setTargetLow(70);
     setTargetHigh(180);
