@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import { Info, X } from "lucide-react";
-import { INSULIN_PROFILES, generateActivityCurve, getDoseStatus, formatMinutes } from "@/lib/insulinPharmacology";
+import { ArrowUp, ArrowUpRight, ArrowLeft, ArrowDownRight, ArrowDown } from "lucide-react";
+import { INSULIN_PROFILES, generateActivityCurve } from "@/lib/insulinPharmacology";
 
 function getTotalActiveUnits(doses) {
   const now = Date.now();
@@ -36,7 +36,6 @@ function getMaxRemainingTime(doses) {
 
 export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadings = [] }) {
   const activeUnits = useMemo(() => getTotalActiveUnits(doses), [doses]);
-  const remainingMs = useMemo(() => getMaxRemainingTime(doses), [doses]);
   const hasActive = activeUnits > 0.01;
 
   const totalAdministered = useMemo(() => {
@@ -52,16 +51,19 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
     return Math.round(sum / todaysReadings.length);
   }, [glucoseReadings]);
 
-  const getRemainingTimeData = () => {
-    if (!remainingMs) return { val: "0", unit: "min", pct: 0, status: "Cleared" };
-    const totalMin = Math.round(remainingMs / 60000);
-    const h = Math.floor(totalMin / 60);
-    const m = totalMin % 60;
-    const maxActiveWindow = 6 * 60 * 60 * 1000;
-    const pct = Math.min(1, remainingMs / maxActiveWindow);
-    if (h > 0) return { val: `${h}h`, unit: `${m}m`, pct, status: "Absorbing" };
-    return { val: `${m}`, unit: "min", pct, status: "Absorbing" };
-  };
+  const trend = useMemo(() => {
+    if (!glucoseReadings || glucoseReadings.length < 2) return null;
+    const current = glucoseReadings[0].value;
+    const previous = glucoseReadings[1].value;
+    const diff = current - previous;
+
+    if (Math.abs(diff) <= 6) return { icon: ArrowLeft, text: diff > 0 ? `+${diff}` : `${diff}`, color: "text-emerald-400" };
+    if (diff >= 10)          return { icon: ArrowUp, text: `+${diff}`, color: "text-rose-500" };
+    if (diff >= 7)           return { icon: ArrowUpRight, text: `+${diff}`, color: "text-orange-400" };
+    if (diff <= -10)         return { icon: ArrowDown, text: `${diff}`, color: "text-amber-500" };
+    if (diff <= -7)          return { icon: ArrowDownRight, text: `${diff}`, color: "text-yellow-400" };
+    return null;
+  }, [glucoseReadings]);
 
   const getGlucoseColor = (val) => {
     if (!val) return "rgba(255,255,255,0.1)";
@@ -77,83 +79,104 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
     return "Stable";
   };
 
-  const timeData = getRemainingTimeData();
-
-  const renderGauge = (label, val, unit, percentage, color, statusLabel) => {
-  const activeColor = color || "rgba(255,255,255,0.15)";
-  const radius = 45;       // Increased from 32
-  const center = 56;       // Increased from 50
-  const strokeWidth = 6;   // Slightly thicker stroke
-  return (
-    <div className="flex flex-col items-center flex-1 min-w-[110px] text-center">
-      <span className="text-[10px] font-bold text-white/35 uppercase tracking-wider mb-3.5 truncate w-full px-1">
-        {label}
-      </span>
-      {/* Container resized from w-20 h-20 to w-28 h-28 */}
-      <div className="relative flex items-center justify-center w-28 h-28">
-        {/* SVG scaled to 112x112 */}
-        <svg width="112" height="112" viewBox="0 0 112 112">
-          <circle cx={center} cy={center} r={radius} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={strokeWidth} />
-          {percentage > 0 && (
-            <circle
-              cx={center} cy={center} r={radius}
-              fill="none"
-              stroke={activeColor}
-              strokeWidth={strokeWidth}
-              strokeDasharray={`${2 * Math.PI * radius * percentage} ${2 * Math.PI * radius}`}
-              strokeDashoffset={0}
-              strokeLinecap="round"
-              transform={`rotate(-90 ${center} ${center})`}
-            />
-          )}
-        </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          {/* Boosted text-base to text-2xl */}
-          <span className="text-2xl font-extrabold leading-none tracking-tight text-white">{val}</span>
-          <span className="text-[10px] text-white/40 font-medium mt-1">{unit}</span>
+  const renderSmallGauge = (label, val, unit, percentage, color, statusLabel) => {
+    const activeColor = color || "rgba(255,255,255,0.15)";
+    const radius = 20;
+    const center = 24;
+    const strokeWidth = 3.5;
+    return (
+      <div className="flex items-center gap-3 w-full bg-white/[0.02] hover:bg-white/[0.04] p-2.5 rounded-xl border border-white/5 transition-all">
+        <div className="relative flex items-center justify-center w-12 h-12 shrink-0">
+          <svg width="48" height="48" viewBox="0 0 48 48">
+            <circle cx={center} cy={center} r={radius} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={strokeWidth} />
+            {percentage > 0 && (
+              <circle
+                cx={center} cy={center} r={radius}
+                fill="none"
+                stroke={activeColor}
+                strokeWidth={strokeWidth}
+                strokeDasharray={`${2 * Math.PI * radius * percentage} ${2 * Math.PI * radius}`}
+                strokeDashoffset={0}
+                strokeLinecap="round"
+                transform={`rotate(-90 ${center} ${center})`}
+              />
+            )}
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <span className="text-xs font-bold leading-none text-white">{val}</span>
+            <span className="text-[7px] text-white/40 font-medium mt-0.5">{unit}</span>
+          </div>
+        </div>
+        <div className="min-w-0 flex-1">
+          <span className="block text-[9px] font-bold text-white/35 uppercase tracking-wider truncate">{label}</span>
+          <span className="block text-[11px] font-bold mt-0.5 truncate" style={{ color: activeColor }}>{statusLabel}</span>
         </div>
       </div>
-      <span className="text-[11px] font-bold mt-2.5 truncate w-full px-1" style={{ color: activeColor }}>
-        {statusLabel}
-      </span>
-    </div>
-  );
-};
+    );
+  };
 
-  const [tooltipOpen, setTooltipOpen] = useState(false);
+  const glucoseColor = getGlucoseColor(latestGlucose?.value);
+  const TrendIcon = trend?.icon;
 
   return (
-    <div className="p-9 rounded-none md:rounded-3xl border-0 flex flex-col gap-6 -mx-4 md:mx-0">
+    <div className="p-5 rounded-none md:rounded-3xl border-0 flex flex-col gap-6 -mx-4 md:mx-0">
+      <div className="flex flex-col sm:flex-row justify-center items-center gap-6 sm:gap-8 md:gap-12 max-w-xl mx-auto w-full">
 
+        {/* Left: Large Last Reading gauge with trend arrow inside */}
+        <div className="flex flex-col items-center text-center shrink-0">
+          <span className="text-[10px] font-bold text-white/35 uppercase tracking-wider mb-3">Last Reading</span>
+          <div className="relative flex items-center justify-center w-28 h-28">
+            <svg width="112" height="112" viewBox="0 0 112 112">
+              <circle cx={56} cy={56} r={45} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={6} />
+              {latestGlucose && (
+                <circle
+                  cx={56} cy={56} r={45}
+                  fill="none"
+                  stroke={glucoseColor}
+                  strokeWidth={6}
+                  strokeDasharray={`${2 * Math.PI * 45 * Math.min(1, (latestGlucose.value - 40) / 360)} ${2 * Math.PI * 45}`}
+                  strokeDashoffset={0}
+                  strokeLinecap="round"
+                  transform="rotate(-90 56 56)"
+                />
+              )}
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <div className="flex items-center gap-1 justify-center">
+                <span className="text-2xl font-extrabold leading-none tracking-tight text-white">
+                  {latestGlucose ? latestGlucose.value : "—"}
+                </span>
+                {TrendIcon && <TrendIcon className={`w-4 h-4 shrink-0 ${trend.color}`} />}
+              </div>
+              <span className="text-[10px] text-white/40 font-medium mt-1">mg/dL</span>
+            </div>
+          </div>
+          <span className="text-[11px] font-bold mt-2.5" style={{ color: glucoseColor }}>
+            {getGlucoseStatus(latestGlucose?.value)}
+          </span>
+        </div>
 
-      <div className="flex justify-center items-center gap-3 sm:gap-6 md:gap-10">
-        {renderGauge(
-          "Active Insulin",
-          activeUnits.toFixed(1),
-          "units",
-          Math.min(1, activeUnits / totalAdministered),
-          "hsl(162, 50%, 42%)",
-          hasActive ? "Active" : "Cleared"
-        )}
+        {/* Right: Stacked small gauges — Daily Avg on top, Active Insulin below */}
+        <div className="flex flex-col gap-3 flex-1 w-full max-w-xs justify-center">
+          {renderSmallGauge(
+            "Daily Avg",
+            avgDailyGlucose || "—",
+            "mg/dL",
+            avgDailyGlucose ? Math.min(1, (avgDailyGlucose - 40) / 360) : 0,
+            getGlucoseColor(avgDailyGlucose),
+            getGlucoseStatus(avgDailyGlucose)
+          )}
+          {renderSmallGauge(
+            "Active Insulin",
+            activeUnits.toFixed(1),
+            "units",
+            Math.min(1, activeUnits / totalAdministered),
+            "hsl(162, 50%, 42%)",
+            hasActive ? "Active" : "Cleared"
+          )}
+        </div>
 
-        {renderGauge(
-          "Last Reading",
-          latestGlucose ? latestGlucose.value : "—",
-          "mg/dL",
-          latestGlucose ? Math.min(1, (latestGlucose.value - 40) / 360) : 0,
-          getGlucoseColor(latestGlucose?.value),
-          getGlucoseStatus(latestGlucose?.value)
-        )}
-        {renderGauge(
-          "Daily Avg",
-          avgDailyGlucose || "—",
-          "mg/dL",
-          avgDailyGlucose ? Math.min(1, (avgDailyGlucose - 40) / 360) : 0,
-          getGlucoseColor(avgDailyGlucose),
-          getGlucoseStatus(avgDailyGlucose)
-        )}
       </div>
-
-      </div>
+    </div>
   );
 }
