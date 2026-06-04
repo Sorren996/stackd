@@ -7,6 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { X, Syringe, Droplets } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { Slider } from "@/components/ui/slider";
 
 const CATEGORY_ORDER = ["Rapid-Acting", "Short-Acting", "Intermediate", "Long-Acting", "Ultra Long-Acting"];
 
@@ -104,6 +106,8 @@ export default function DoseForm({ open, onOpenChange }) {
             </DialogOverlay>
 
             {/* Animated Sheet / Modal */}
+            <DialogPrimitive.Content asChild forceMount>
+
             <motion.div
               initial={{ opacity: 0, y: "100%" }}
               animate={{
@@ -286,7 +290,14 @@ export default function DoseForm({ open, onOpenChange }) {
                         </div>
                         <button onClick={() => adjustGlucose(1)} className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white text-xl flex items-center justify-center transition-colors">+</button>
                       </div>
-
+<Slider
+  min={40}
+  max={400}
+  step={1}
+  value={[glucoseValue]}
+  onValueChange={([v]) => setGlucoseValue(v)}
+  className="my-4 cursor-pointer"
+/>
                       <input type="range" min={40} max={400} step={1} value={glucoseValue}
                         onChange={(e) => setGlucoseValue(Number(e.target.value))}
                         className="w-full h-2 rounded-full appearance-none cursor-pointer"
@@ -343,6 +354,8 @@ export default function DoseForm({ open, onOpenChange }) {
                 </>
               )}
             </motion.div>
+            </DialogPrimitive.Content>
+
           </DialogPortal>
         </Dialog>
       )}
