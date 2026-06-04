@@ -120,7 +120,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
           </div>
         </div>
         <span className="text-sm font-bold mt-3" style={{ color: activeColor }}>
-          {getGlucoseStatus(TrendIcon?.value)}
+          {getGlucoseStatus(latestGlucose?.value)}
         </span>
       </div>
     );
