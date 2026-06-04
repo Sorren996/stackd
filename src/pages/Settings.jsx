@@ -152,16 +152,7 @@ export default function Settings() {
             </div>
             <Switch checked={stackingAlerts} onCheckedChange={setStackingAlerts} />
           </div>
-          <div className="flex items-center justify-between gap-4">
-            <div className="space-y-0.5">
-              <Label className="text-sm font-semibold text-white/90 flex items-center gap-2">
-                <Bell className="w-4 h-4 text-teal-400" />
-                Reminders
-              </Label>
-              <p className="text-xs text-white/40">Remind to log glucose after meals</p>
-            </div>
-            <Switch checked={notifications} onCheckedChange={setNotifications} />
-          </div>
+
         </div>
       </div>
 
