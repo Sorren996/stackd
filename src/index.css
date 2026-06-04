@@ -5,8 +5,8 @@
 @tailwind utilities;
 
 @layer base {
-  html {
-    font-size: 105%; /* Increases all text sizes globally by 5% */
+ body {
+    @apply text-sm text-foreground; /* Defaults unstyled text to Small instead of Base */
   }
 
   :root {
