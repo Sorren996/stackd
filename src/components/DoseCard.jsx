@@ -15,14 +15,14 @@ export default function DoseCard({ dose, onDelete }) {
         style={{ backgroundColor: profile?.color || "#888888" }} />
       
       <div className="flex-1 min-w-0">
-        <p className="text-[hsl(var(--card-foreground))] px-0 py-1 text-xs font-medium opacity-65 rounded-full opacity-65 rounded-full">{dose.insulin_type}</p>
-        <p className="text-xs text-muted-foreground mt-0.5">
+        <p className="text-[hsl(var(--card-foreground))] px-0 py-1 text-sm font-medium opacity-65 rounded-full opacity-65 rounded-full">{dose.insulin_type}</p>
+        <p className="text-sm text-muted-foreground mt-0.5">
           {dose.units} units · {format(new Date(dose.administered_at), "MMM d, h:mm a")}
         </p>
-        {dose.notes && <p className="text-xs text-muted-foreground mt-1 italic">{dose.notes}</p>}
+        {dose.notes && <p className="text-sm text-muted-foreground mt-1 italic">{dose.notes}</p>}
       </div>
       <div className="text-right shrink-0">
-        <span className={`text-[hsl(var(--card-foreground))] px-2 py-1 text-xs font-medium opacity-65 rounded-full ${
+        <span className={`text-[hsl(var(--card-foreground))] px-2 py-1 text-sm font-medium opacity-65 rounded-full ${
         status.phase === "expired" ? "opacity-65 rounded-full" :
         status.phase === "waiting" ? "opacity-65 rounded-full" :
         status.phase === "rising" ? "opacity-65 rounded-full" :
