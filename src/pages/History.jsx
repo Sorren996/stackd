@@ -13,7 +13,7 @@ function CollapsibleDateGroup({ label, count, isOpen, onToggle, children }) {
     <motion.div
       animate={{
         borderColor: isOpen ? "rgba(20, 184, 166, 0.4)" : "rgba(255, 255, 255, 0.05)",
-        boxShadow: isOpen
+        bosmhadow: isOpen
           ? "0 0 15px rgba(20, 184, 166, 0.15), inset 0 0 0 1px rgba(20, 184, 166, 0.1)"
           : "0 0 0px rgba(0,0,0,0)"
       }}
@@ -26,7 +26,7 @@ function CollapsibleDateGroup({ label, count, isOpen, onToggle, children }) {
       >
         <div className="flex items-center gap-3">
           <span className="text-sm font-semibold text-white/90">{label}</span>
-          <span className="text-xs bg-white/10 px-2 py-0.5 rounded-full text-white/50">
+          <span className="text-sm bg-white/10 px-2 py-0.5 rounded-full text-white/50">
             {count} {count === 1 ? "log" : "logs"}
           </span>
         </div>
@@ -147,11 +147,11 @@ export default function History() {
           className="flex items-center gap-1 p-1 rounded-3xl border border-white/20 bg-white/5 backdrop-blur-sm shadow-lg"
           style={{
             background: "rgba(255, 255, 255, 0.03)",
-            boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.05)"
+            bosmhadow: "inset 0 1px 0 rgba(255, 255, 255, 0.05)"
           }}>
           <button
             onClick={() => handleTabChange("doses")}
-            className={`relative px-4 py-2 rounded-2xl text-xs font-medium transition-colors ${
+            className={`relative px-4 py-2 rounded-2xl text-sm font-medium transition-colors ${
               activeTab === "doses" ? "text-white" : "text-white/40 hover:text-white/70"
             }`}>
             {activeTab === "doses" && (
@@ -165,7 +165,7 @@ export default function History() {
 
           <button
             onClick={() => handleTabChange("glucose")}
-            className={`relative px-4 py-2 rounded-2xl text-xs font-medium transition-colors ${
+            className={`relative px-4 py-2 rounded-2xl text-sm font-medium transition-colors ${
               activeTab === "glucose" ? "text-white" : "text-white/40 hover:text-white/70"
             }`}>
             {activeTab === "glucose" && (
@@ -219,7 +219,7 @@ export default function History() {
                 <p className="text-[10px] text-white/30 mt-0.5">mg/dL</p>
               </div>
             ))}
-            <div className="bg-white/5 border border-teal-500/20 rounded-2xl p-3 text-center" style={{ boxShadow: "0 0 15px rgba(20, 184, 166, 0.05)" }}>
+            <div className="bg-white/5 border border-teal-500/20 rounded-2xl p-3 text-center" style={{ bosmhadow: "0 0 15px rgba(20, 184, 166, 0.05)" }}>
               <p className="text-[10px] font-bold text-teal-400 uppercase tracking-wider">In Range</p>
               <p className="text-xl text-teal-400 mt-1 font-extrabold text-center">{inRangePercentage}</p>
               <p className="text-[10px] text-teal-400/50 mt-0.5">{targetLow}–{targetHigh} mg/dL</p>
