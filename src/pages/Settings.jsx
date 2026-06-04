@@ -143,13 +143,13 @@ export default function Settings() {
   return (
     <div className="max-w-md mx-auto space-y-6 pt-4 pb-12">
       {/* Profile Card */}
-      <div className="flex flex-col items-center text-center p-6 bg-white/[0.02] border border-white/5 rounded-3xl">
-        <div className="w-16 h-16 rounded-full bg-teal-500/10 border border-teal-500/20 flex items-center justify-center mb-3">
-          <User className="w-8 h-8 text-teal-400" />
-        </div>
-        <h2 className="text-lg font-bold text-white">{user?.full_name || "User"}</h2>
-        <p className="text-sm text-white/40 mt-0.5">{user?.email}</p>
-      </div>
+   / //  <div className="flex flex-col items-center text-center p-6 bg-white/[0.02] border border-white/5 rounded-3xl">
+   //     <div className="w-16 h-16 rounded-full bg-teal-500/10 border border-teal-500/20 flex items-center justify-center mb-3">
+   //       <User className="w-8 h-8 text-teal-400" />
+   //     </div>
+   //     <h2 className="text-lg font-bold text-white">{user?.full_name || "User"}</h2>
+   //     <p className="text-sm text-white/40 mt-0.5">{user?.email}</p>
+    //  </div>
 
       {/* Target Range Preference */}
       <div className="space-y-3">
