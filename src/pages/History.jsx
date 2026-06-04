@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useState, useMemo } from "react"; // <-- Add useMemo here
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import DoseCard from "../components/DoseCard";
@@ -116,6 +117,17 @@ export default function History() {
     return `${Math.round(sum / filtered.length)}`;
   };
 
+const targetLow = parseInt(localStorage.getItem("target_range_low") || "70", 10);
+  const targetHigh = parseInt(localStorage.getItem("target_range_high") || "180", 10);
+
+  const inRangePercentage = useMemo(() => {
+    if (!glucoseReadings.length) return "—";
+    const inRangeCount = glucoseReadings.filter(
+      (r) => r.value >= targetLow && r.value <= targetHigh
+    ).length;
+    return `${Math.round((inRangeCount / glucoseReadings.length) * 100)}%`;
+  }, [glucoseReadings, targetLow, targetHigh]);
+
   const handleTabChange = (tab) => {
     setActiveTab(tab);
     setOpenGroup(null);
@@ -193,8 +205,8 @@ export default function History() {
           )}
         </div>
       ) : (
-        <div className="space-y-6">
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+  {/* Update grid columns to col-6 on medium screens */}
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
             {[
               { label: "1 Day", days: 1 },
               { label: "3 Day", days: 3 },
@@ -208,14 +220,14 @@ export default function History() {
                 <p className="text-[10px] text-white/30 mt-0.5">mg/dL</p>
               </div>
             ))}
-          </div>
 
-          {glucoseGroups.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <CalendarDays className="w-10 h-10 text-muted-foreground/40 mb-3" />
-              <h3 className="text-lg font-semibold">No glucose logs for the last 30 days</h3>
-              <p className="text-sm text-muted-foreground mt-1">Glucose logs recorded in the dashboard will appear here.</p>
+            {/* 6th Tile - Time In Range (TIR) Percent */}
+            <div className="bg-white/5 border border-teal-500/20 rounded-2xl p-3 text-center relative overflow-hidden" style={{ boxShadow: "0 0 15px rgba(20, 184, 166, 0.05)" }}>
+              <p className="text-[10px] font-bold text-teal-400 uppercase tracking-wider">In Range</p>
+              <p className="text-xl text-teal-400 mt-1 font-extrabold text-center">{inRangePercentage}</p>
+              <p className="text-[10px] text-teal-400/50 mt-0.5">{targetLow}–{targetHigh} mg/dL</p>
             </div>
+        
           ) : (
             glucoseGroups.map((group) => (
               <CollapsibleDateGroup
