@@ -4,8 +4,33 @@ import { base44 } from "@/api/base44Client";
 import DoseCard from "../components/DoseCard";
 import GlucoseCard from "../components/GlucoseCard";
 import { toast } from "sonner";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, ChevronRight, ChevronDown } from "lucide-react";
 import { format, isToday, isYesterday, parseISO } from "date-fns";
+
+function CollapsibleDateGroup({ label, count, children }) {
+  const [isOpen, setIsOpen] = useState(false);
+  return (
+    <div className="bg-white/[0.02] border border-white/5 rounded-2xl overflow-hidden">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/[0.04] transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-semibold text-white/90">{label}</span>
+          <span className="text-xs bg-white/10 px-2 py-0.5 rounded-full text-white/50">
+            {count} {count === 1 ? "log" : "logs"}
+          </span>
+        </div>
+        {isOpen ? <ChevronDown className="w-4 h-4 text-white/40" /> : <ChevronRight className="w-4 h-4 text-white/40" />}
+      </button>
+      {isOpen && (
+        <div className="border-t border-white/5 divide-y divide-white/5">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function groupByDate(items, dateField) {
   const groups = {};
@@ -80,13 +105,13 @@ export default function History() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
+      <div className="flex flex-col items-center gap-4">
+        <div className="text-center">
           <h1 className="text-2xl font-bold tracking-tight text-[hsl(var(--popover))]">Medical Logs</h1>
           <p className="text-sm text-muted-foreground mt-1">Review and manage your history logs</p>
         </div>
 
-        <div className="flex gap-1 bg-white/5 p-1 rounded-xl self-start">
+        <div className="flex gap-1 bg-white/5 p-1 rounded-xl">
           <button
             onClick={() => setActiveTab("doses")}
             className={`px-4 py-2 rounded-lg text-xs font-medium transition-all ${
@@ -116,12 +141,11 @@ export default function History() {
             </div>
           ) : (
             doseGroups.map((group) => (
-              <div key={group.date} className="space-y-2">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">{group.label}</h3>
+              <CollapsibleDateGroup key={group.date} label={group.label} count={group.items.length}>
                 {group.items.map((dose) => (
                   <DoseCard key={dose.id} dose={dose} onDelete={(id) => deleteDose.mutate(id)} />
                 ))}
-              </div>
+              </CollapsibleDateGroup>
             ))
           )}
         </div>
@@ -152,12 +176,11 @@ export default function History() {
             </div>
           ) : (
             glucoseGroups.map((group) => (
-              <div key={group.date} className="space-y-2">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">{group.label}</h3>
+              <CollapsibleDateGroup key={group.date} label={group.label} count={group.items.length}>
                 {group.items.map((reading) => (
                   <GlucoseCard key={reading.id} reading={reading} onDelete={(id) => deleteGlucose.mutate(id)} />
                 ))}
-              </div>
+              </CollapsibleDateGroup>
             ))
           )}
         </div>
