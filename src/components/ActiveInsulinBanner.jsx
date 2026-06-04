@@ -112,8 +112,9 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <div className="flex items-center gap-2 justify-center">
-              {TrendIcon && <TrendIcon className="w-6 h-6 shrink-0 text-white" />}
+              
               <span className="text-4xl font-extrabold leading-none tracking-tight text-white">{val}</span>
+              {TrendIcon && <TrendIcon className="w-6 h-6 shrink-0 text-white" />}
             </div>
             <span className="text-xs text-white/40 font-medium mt-1.5">{unit}</span>
           </div>
