@@ -154,10 +154,10 @@ export default function History() {
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
             {[
               { label: "1 Day", days: 1 },
-              { label: "3 Days", days: 3 },
-              { label: "7 Days", days: 7 },
-              { label: "14 Days", days: 14 },
-              { label: "30 Days", days: 30 },
+              { label: "3 Day", days: 3 },
+              { label: "7 Day", days: 7 },
+              { label: "14 Day", days: 14 },
+              { label: "30 Day", days: 30 },
             ].map((window) => (
               <div key={window.label} className="bg-white/5 border border-white/5 rounded-2xl p-3 text-center">
                 <p className="text-[10px] font-bold text-white/30 uppercase tracking-wider">{window.label} Avg</p>
