@@ -12,7 +12,7 @@ function getTotalActiveUnits(doses) {
     if (now < first.time || now > last.time) return sum;
     let lo = 0;
     for (let i = 0; i < curve.length - 1; i++) {
-      if (curve[i].time <= now && curve[i + 1].time >= now) { lo = i; break; }
+      if (curve[i].time <= now && curve[i + 1].time >= now) {lo = i;break;}
     }
     const hi = lo + 1;
     const ratio = hi >= curve.length ? 0 : (now - curve[lo].time) / (curve[hi].time - curve[lo].time);
@@ -89,18 +89,18 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
         <div className="relative flex items-center justify-center" style={{ width: 62, height: 62 }}>
           <svg width="70" height="70" viewBox="0 0 62 62">
             <circle cx="31" cy="31" r="25" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="4.5" />
-            {percentage > 0 && (
-              <circle
-                cx="31" cy="31" r="25"
-                fill="none"
-                stroke={activeColor}
-                strokeWidth="4.5"
-                strokeDasharray={`${2 * Math.PI * 25 * percentage} ${2 * Math.PI * 25}`}
-                strokeDashoffset={0}
-                strokeLinecap="round"
-                transform="rotate(-90 31 31)"
-              />
-            )}
+            {percentage > 0 &&
+            <circle
+              cx="31" cy="31" r="25"
+              fill="none"
+              stroke={activeColor}
+              strokeWidth="4.5"
+              strokeDasharray={`${2 * Math.PI * 25 * percentage} ${2 * Math.PI * 25}`}
+              strokeDashoffset={0}
+              strokeLinecap="round"
+              transform="rotate(-90 31 31)" />
+
+            }
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <span className="text-sm font-extrabold leading-none tracking-tight text-white">{val}</span>
@@ -110,14 +110,14 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
         <span className="text-[9px] font-bold mt-2 truncate w-full px-1" style={{ color: activeColor }}>
           {statusLabel}
         </span>
-      </div>
-    );
+      </div>);
+
   };
 
   const [tooltipOpen, setTooltipOpen] = useState(false);
 
   return (
-    <div className="p-10 rounded-none md:rounded-3xl border-0 flex flex-col gap-6 -mx-4 md:mx-0">
+    <div className="rounded-none md:rounded-3xl border-0 flex flex-col gap-6 md:mx-0 -mx-4 p-1">
 
 
       <div className="flex justify-between items-center gap-1.5 md:gap-4">
@@ -152,17 +152,17 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
       <div className="relative self-start">
         <button
           onClick={() => setTooltipOpen((v) => !v)}
-          className="flex items-center gap-1.5 text-white/25 hover:text-white/50 transition-colors text-[10px]"
-        >
+          className="flex items-center gap-1.5 text-white/25 hover:text-white/50 transition-colors text-[10px]">
+          
           <Info className="w-3 h-3" />
           <span>How to read this</span>
         </button>
 
-        {tooltipOpen && (
-          <div
-            className="absolute left-0 z-50 w-64 rounded-xl p-3.5 text-xs space-y-2 shadow-xl"
-            style={{ background: "rgba(18,28,22,0.97)", border: "1px solid rgba(255,255,255,0.08)" }}
-          >
+        {tooltipOpen &&
+        <div
+          className="absolute left-0 z-50 w-64 rounded-xl p-3.5 text-xs space-y-2 shadow-xl"
+          style={{ background: "rgba(18,28,22,0.97)", border: "1px solid rgba(255,255,255,0.08)" }}>
+          
             <div className="flex items-center justify-between mb-1">
               <span className="font-semibold text-white/70 text-[11px]">Reading the gauges</span>
               <button onClick={() => setTooltipOpen(false)} className="text-white/30 hover:text-white/60">
@@ -170,21 +170,21 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
               </button>
             </div>
             {[
-              ["Active Insulin", "Estimated units still working in your body right now."],
-              ["Last Reading", "Your most recently logged blood glucose value."],
-              ["Daily Avg", "Average of all glucose readings logged today."],
-            ].map(([title, desc]) => (
-              <div key={title}>
+          ["Active Insulin", "Estimated units still working in your body right now."],
+          ["Last Reading", "Your most recently logged blood glucose value."],
+          ["Daily Avg", "Average of all glucose readings logged today."]].
+          map(([title, desc]) =>
+          <div key={title}>
                 <p className="font-semibold text-white/60">{title}</p>
                 <p className="text-white/35 leading-relaxed">{desc}</p>
               </div>
-            ))}
+          )}
             <p className="text-white/25 text-[9px] pt-1 border-t border-white/5">
               Ring fill = relative progress. Colors: green = in range, orange = high, red = low.
             </p>
           </div>
-        )}
+        }
       </div>
-    </div>
-  );
+    </div>);
+
 }
