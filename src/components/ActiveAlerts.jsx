@@ -50,13 +50,13 @@ export default function ActiveAlerts({ doses }) {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: profile?.color }} />
-                  <p className="text-sm font-medium truncate text-[hsl(var(--card-foreground))] px-0 py-1 text-xs font-medium opacity-65 rounded-full opacity-65 rounded-full">
+                  <p className="text-sm font-medium truncate text-[hsl(var(--card-foreground))] px-0 py-1 text-sm font-medium opacity-65 rounded-full opacity-65 rounded-full">
                     {dose.insulin_type} — {dose.units}u
                   </p>
                 </div>
-                <p className="text-xs opacity-75 mt-0.5">{status.message}</p>
+                <p className="text-sm opacity-75 mt-0.5">{status.message}</p>
                 {status.minutesUntil !== undefined &&
-                <p className="text-xs font-medium mt-0.5 text-[hsl(var(--card-foreground))] px-0 py-1 text-xs font-medium opacity-65 rounded-full opacity-65 rounded-full">{formatMinutes(status.minutesUntil)} left</p>
+                <p className="text-sm font-medium mt-0.5 text-[hsl(var(--card-foreground))] px-0 py-1 text-sm font-medium opacity-65 rounded-full opacity-65 rounded-full">{formatMinutes(status.minutesUntil)} left</p>
                 }
               </div>
             </div>);
