@@ -18,6 +18,16 @@ import Settings from './pages/Settings';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { Navigate } from 'react-router-dom';
 
+import Settings from './pages/Settings';
+
+// Inside your main Routes layout element:
+<Route element={<Layout />}>
+  <Route path="/" element={<Dashboard />} />
+  <Route path="/history" element={<History />} />
+  <Route path="/analytics" element={<Analytics />} />
+  <Route path="/settings" element={<Settings />} /> {/* 👈 Add this line */}
+</Route>
+
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
 
