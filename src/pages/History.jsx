@@ -180,7 +180,7 @@ export default function History() {
           map((window) =>
           <div key={window.label} className="bg-white/5 border border-white/5 rounded-2xl p-3 text-center">
                 <p className="text-[10px] font-bold text-white/30 uppercase tracking-wider">{window.label} Avg</p>
-                <p className="text-xl text-white mt-1 font-extrabold text-right">{getAverage(window.days)}</p>
+                <p className="text-xl text-white mt-1 font-extrabold text-center">{getAverage(window.days)}</p>
                 <p className="text-[10px] text-white/30 mt-0.5">mg/dL</p>
               </div>
           )}
