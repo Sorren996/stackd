@@ -263,8 +263,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
   <stop offset={`${highPct}%`} stopColor="#78350f" stopOpacity={0} />
   
   {/* Solid 15% Amber starting exactly at the high threshold */}
-  <stop offset={`${highPct}%`} stopColor="#78350f" stopOpacity={0.15} />
-  <stop offset={`${lowPct}%`} stopColor="#78350f" stopOpacity={0.15} />
+  <stop offset={`${highPct}%`} stopColor="#78350f" stopOpacity={0.4} />
+  <stop offset={`${lowPct}%`} stopColor="#78350f" stopOpacity={0.4} />
   
   {/* Transparent again below the low threshold */}
   <stop offset={`${lowPct}%`} stopColor="#78350f" stopOpacity={0} />
