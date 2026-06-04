@@ -77,7 +77,9 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
               <circle cx={72} cy={72} r={58} fill="none" stroke={activeColor} strokeWidth={6}
                 strokeDasharray={`${2 * Math.PI * 58 * percentage} ${2 * Math.PI * 58}`}
                 strokeDashoffset={0} strokeLinecap="round" transform="rotate(-90 72 72)"
-                style={{ filter: `drop-shadow(0 0 8px ${activeColor}90)` }} />
+                style={{ 
+  filter: `drop-shadow(0 0 4px ${activeColor}) drop-shadow(0 0 12px ${activeColor}b0)` 
+}} />
             )}
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -107,7 +109,9 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
               <circle cx={28} cy={28} r={22} fill="none" stroke={activeColor} strokeWidth={4}
                 strokeDasharray={`${2 * Math.PI * 22 * percentage} ${2 * Math.PI * 22}`}
                 strokeDashoffset={0} strokeLinecap="round" transform="rotate(-90 28 28)"
-                style={{ filter: `drop-shadow(0 0 5px ${activeColor}90)` }} />
+                style={{ 
+  filter: `drop-shadow(0 0 3px ${activeColor}) drop-shadow(0 0 8px ${activeColor}b0)` 
+}} />
             )}
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
