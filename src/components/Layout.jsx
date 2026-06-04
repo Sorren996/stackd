@@ -1,60 +1,48 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { Activity, History, BarChart2, LogOut } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { Activity, History, BarChart2 } from "lucide-react";
 import { motion } from "framer-motion";
 
 const navItems = [
-{ path: "/", label: "Dashboard", icon: Activity },
-{ path: "/history", label: "History", icon: History },
-{ path: "/analytics", label: "Analytics", icon: BarChart2 }];
-
+  { path: "/", label: "Dashboard", icon: Activity },
+  { path: "/history", label: "History", icon: History },
+  { path: "/analytics", label: "Analytics", icon: BarChart2 }
+];
 
 export default function Layout() {
   const location = useLocation();
 
   return (
     <div className="min-h-screen text-white relative">
-      {/* 1. This fixed div stays strictly pinned to the viewport */}
-      <div 
-        className="fixed inset-0 -z-50 bg-gradient-to-b from-teal-950 via-zinc-950 to-black pointer-events-none" 
-      />
+      {/* Fixed gradient backdrop */}
+      <div className="fixed inset-0 -z-50 bg-gradient-to-b from-teal-950 via-zinc-950 to-black pointer-events-none" />
 
-      {/* Top header — logo only */}
+      {/* Top header */}
       <header className="sticky top-0 z-50 bg-transparent">
         <div className="max-w-6xl mx-auto h-14 flex items-center justify-center px-4 bg-gradient-to-b from-black/80 to-transparent">
-          <div className="flex items-center justify-center gap-2.5">
-            <img 
-              src="https://media.base44.com/images/public/6a1b93f234a8611ee1595134/9cd3c84cf_stackdappiconver3tran.png" 
-              alt="Stackd Logo" 
-              className="h-9 w-auto object-contain"
-            />          
-          </div>
+          <img
+            src="https://media.base44.com/images/public/6a1b93f234a8611ee1595134/9cd3c84cf_stackdappiconver3tran.png"
+            alt="Stackd Logo"
+            className="h-9 w-auto object-contain"
+          />
         </div>
       </header>
 
-      {/* Page content — rolls on top of the fixed backdrop */}
+      {/* Page content */}
       <main className="max-w-6xl w-full mx-auto px-4 flex-1 pb-28 py-0 relative z-10">
         <Outlet />
       </main>
 
-      {/* Bottom Nav */}
-      <nav className="fixed bottom-0 inset-x-0 z-50 flex justify-center pb-safe">
-        {/* ... Nav items ... */}
-      </nav>
-    </div>
-  );
-
-
       {/* iOS-style glass bottom nav */}
       <nav className="fixed bottom-0 inset-x-0 z-50 flex justify-center pb-safe">
         <div
-          className="mx-4 flex items-center gap-1 py-1 rounded-3xl border mb-4 px-4 backdrop-blur-sm border-white/40 bg-white/10"
+          className="mx-4 flex items-center gap-1 py-1 rounded-3xl border mb-4 px-4 backdrop-blur-sm border-white/40"
           style={{
             background: "rgba(8,14,10,0.4)",
             backdropFilter: "blur(2px)",
             WebkitBackdropFilter: "blur(2px)",
             boxShadow: "0 8px 40px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -1px 0 rgba(255,255,255,0.04)"
-          }}>
+          }}
+        >
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
             return (
@@ -74,11 +62,11 @@ export default function Layout() {
                 )}
                 <item.icon className="w-5 h-5 relative z-10" />
                 <span className="text-[10px] font-medium relative z-10">{item.label}</span>
-              </Link>);
-
+              </Link>
+            );
           })}
         </div>
       </nav>
-    </div>);
-
+    </div>
+  );
 }
