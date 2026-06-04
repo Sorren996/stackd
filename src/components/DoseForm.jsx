@@ -209,7 +209,7 @@ export default function DoseForm({ open, onOpenChange }) {
                                     style={{
                                       minWidth: "72px",
                                       borderColor: isSelected ? basePColor + "aa" : "rgba(255,255,255,0.1)",
-                                      backgroundColor: isSelected ? basePColor + "22" : "rgba(255,255,255,0.05)",
+                                      backgroundColor: isSelected ? basePColor + "22" : "rgba(255, 255, 255, 0)",
                                     }}>
                                     <div className="flex items-center gap-1.5">
                                       <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: p.color }} />
