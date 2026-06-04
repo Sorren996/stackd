@@ -195,10 +195,12 @@ export default function DoseForm({ open, onOpenChange }) {
                           <div key={category}>
                             <p className="text-sm text-white/40 mb-2">{category}</p>
                             <div className="flex flex-wrap gap-2">
-                              {items.map(([name, p]) => {
+                               {items.map(([name, p]) => {
                                 const shortLabel = name.split(" ")[0];
                                 const subLabel = name.match(/\(([^)]+)\)/)?.[1] || "";
                                 const isSelected = insulinType === name;
+                                const basePColor = p.color.slice(0, 7); // Safe slice
+                                
                                 return (
                                   <button
                                     key={name}
@@ -206,8 +208,8 @@ export default function DoseForm({ open, onOpenChange }) {
                                     className="flex flex-col items-start px-3 py-2 rounded-xl border transition-all text-left text-white"
                                     style={{
                                       minWidth: "72px",
-                                      borderColor: isSelected ? p.color + "aa" : "rgba(255,255,255,0.1)",
-                                      backgroundColor: isSelected ? p.color + "22" : "rgba(255,255,255,0.05)",
+                                      borderColor: isSelected ? basePColor + "aa" : "rgba(255,255,255,0.1)",
+                                      backgroundColor: isSelected ? basePColor + "22" : "rgba(255,255,255,0.05)",
                                     }}>
                                     <div className="flex items-center gap-1.5">
                                       <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: p.color }} />
