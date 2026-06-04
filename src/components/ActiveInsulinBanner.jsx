@@ -81,36 +81,20 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
 
   const renderGauge = (label, val, unit, percentage, color, statusLabel) => {
     const activeColor = color || "rgba(255,255,255,0.15)";
-    return (
-const renderGauge = (label, val, unit, percentage, color, statusLabel) => {
-    const activeColor = color || "rgba(255,255,255,0.15)";
-    const radius = 32; // Increased radius for a larger ring
-    const center = 40; // Exact center of the 80x80 grid
+    const radius = 32;
+    const center = 40;
     const strokeWidth = 5;
-
     return (
       <div className="flex flex-col items-center flex-1 min-w-[90px] text-center">
         <span className="text-[9px] font-bold text-white/35 uppercase tracking-wider mb-2.5 truncate w-full px-1">
           {label}
         </span>
-        {/* Container resized to 80px */}
         <div className="relative flex items-center justify-center w-20 h-20">
-          <svg width="80" height="80" viewBox="0 0 80 80" className="overflow-visible">
-            {/* Background Circle */}
-            <circle 
-              cx={center} 
-              cy={center} 
-              r={radius} 
-              fill="none" 
-              stroke="rgba(255,255,255,0.06)" 
-              strokeWidth={strokeWidth} 
-            />
-            {/* Active Circle */}
+          <svg width="80" height="80" viewBox="0 0 80 80">
+            <circle cx={center} cy={center} r={radius} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={strokeWidth} />
             {percentage > 0 && (
               <circle
-                cx={center}
-                cy={center}
-                r={radius}
+                cx={center} cy={center} r={radius}
                 fill="none"
                 stroke={activeColor}
                 strokeWidth={strokeWidth}
@@ -121,7 +105,6 @@ const renderGauge = (label, val, unit, percentage, color, statusLabel) => {
               />
             )}
           </svg>
-          {/* Centered values */}
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <span className="text-base font-extrabold leading-none tracking-tight text-white">{val}</span>
             <span className="text-[9px] text-white/40 font-medium mt-1">{unit}</span>
