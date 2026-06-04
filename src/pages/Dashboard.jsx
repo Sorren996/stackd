@@ -7,7 +7,8 @@ import ActiveAlerts from "../components/ActiveAlerts";
 import DoseForm from "../components/DoseForm";
 import DoseCard from "../components/DoseCard";
 import GlucoseCard from "../components/GlucoseCard";
-import { Activity, Plus } from "lucide-react";
+import { getDoseStatus, INSULIN_PROFILES } from "@/lib/insulinPharmacology";
+import { Activity, Plus, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 
@@ -62,6 +63,17 @@ export default function Dashboard() {
 
   const latestGlucose = glucoseReadings[0] || null;
 
+  const activeRapidCount = useMemo(() => {
+    const activeDoses = recentDoses
+      .map((dose) => ({ dose, status: getDoseStatus(dose) }))
+      .filter((d) => d.status.phase !== "expired");
+    return activeDoses.filter(
+      (d) =>
+        ["rising", "active", "declining"].includes(d.status.phase) &&
+        ["Rapid-Acting", "Short-Acting"].includes(INSULIN_PROFILES[d.dose.insulin_type]?.category)
+    ).length;
+  }, [recentDoses]);
+
   const recentActivity = useMemo(() => {
     const doseLogs = recentDoses.map((d) => ({ ...d, feedType: "insulin", timestamp: new Date(d.administered_at).getTime() }));
     const glucoseLogs = recentGlucose.map((g) => ({ ...g, feedType: "glucose", timestamp: new Date(g.recorded_at).getTime() }));
@@ -98,7 +110,20 @@ export default function Dashboard() {
 
       <>
           <ActiveInsulinBanner doses={recentDoses} latestGlucose={latestGlucose} glucoseReadings={glucoseReadings} />
-      <ActivityGraph doses={recentDoses} glucoseReadings={recentGlucose} />
+
+          {activeRapidCount > 1 && (
+            <div className="mx-4 sm:mx-0 flex items-start gap-3 p-4 rounded-xl border border-white/5 bg-amber-500/10 text-white">
+              <AlertTriangle className="w-5 h-5 mt-0.5 shrink-0 text-amber-500" />
+              <div>
+                <p className="font-semibold text-sm">Insulin Stacking Detected</p>
+                <p className="text-xs mt-0.5 opacity-80">
+                  {activeRapidCount} rapid/short-acting doses are active simultaneously. Monitor for low blood sugar.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <ActivityGraph doses={recentDoses} glucoseReadings={recentGlucose} />
 
           <div className="grid gap-6 lg:grid-cols-3 overflow-hidden border:0 -mx-4">
             <div className="lg:col-span-2 space-y-3">

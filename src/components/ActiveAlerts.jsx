@@ -31,17 +31,7 @@ export default function ActiveAlerts({ doses }) {
     <div className="space-y-3 w-full overflow-hidden">
       <h1 className="text-lg font-semibold text-[hsl(var(--popover))] mx-4 text-[hsl(var(--card-foreground))] px-0 py-1 font-medium opacity-65 rounded-full opacity-65 rounded-full">Active Alerts</h1>
 
-      {activeRapid.length > 1 &&
-      <div className="flex items-start gap-3 p-4 rounded-xl border-0 text-[hsl(var(--foreground))]">
-          <AlertTriangle className="w-5 h-5 mt-0.5 shrink-0 text-[#bd7800]" />
-          <div>
-            <p className="font-semibold text-sm">Insulin Stacking Detected</p>
-            <p className="text-xs mt-0.5 opacity-80">
-              {activeRapid.length} rapid/short-acting doses are active simultaneously. Monitor for low blood sugar.
-            </p>
-          </div>
-        </div>
-      }
+
 
       <div className="space-y-2">
         {activeDoses.map(({ dose, status }) => {
