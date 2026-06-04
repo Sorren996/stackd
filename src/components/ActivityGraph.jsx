@@ -169,15 +169,23 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
   return (
     <div ref={containerRef} className="-mx-4 overflow-hidden">
           {/* Range selector & Info Tooltip */}
-      <div className="flex py-3 items-center mb-4 justify-center gap-3">
-        <div className="flex gap-0.5 rounded-xl p-1" style={{ background: "rgba(255,255,255,0.05)" }}>
+<div className="flex gap-0.5 rounded-xl p-1" style={{ background: "rgba(255,255,255,0.05)" }}>
           {TIME_RANGES.map((r, i) => (
             <button
               key={r.label}
               onClick={() => setRangeIdx(i)}
-              className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${rangeIdx === i ? "text-white" : "text-white/30 hover:text-white/60"}`}
-              style={rangeIdx === i ? { background: "rgba(255,255,255,0.12)" } : {}}>
-              {r.label}
+              className={`relative px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                rangeIdx === i ? "text-white" : "text-white/40 hover:text-white/70"
+              }`}
+            >
+              {rangeIdx === i && (
+                <motion.div
+                  layoutId="active-range-tab"
+                  className="absolute inset-0 bg-white/10 rounded-lg -z-10"
+                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                />
+              )}
+              <span className="relative z-10">{r.label}</span>
             </button>
           ))}
         </div>
