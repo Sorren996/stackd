@@ -65,30 +65,18 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
     return "Stable";
   };
 
-  const renderGauge = (label, val, unit, percentage, color, statusLabel, hasArrow = false) => {
+  const renderLargeGauge = (label, val, unit, percentage, color, hasArrow = false) => {
     const activeColor = color || "rgba(255,255,255,0.15)";
-    const radius = 45;
-    const center = 56;
-    const strokeWidth = 6;
     return (
-      <div className="flex flex-col items-center flex-1 min-w-[110px] text-center">
-        <span className="text-[10px] font-bold text-white/35 uppercase tracking-wider mb-3.5 truncate w-full px-1">
-          {label}
-        </span>
+      <div className="flex flex-col items-center text-center shrink-0">
+        <span className="text-[10px] font-bold text-white/35 uppercase tracking-wider mb-3.5">{label}</span>
         <div className="relative flex items-center justify-center w-28 h-28">
           <svg width="112" height="112" viewBox="0 0 112 112">
-            <circle cx={center} cy={center} r={radius} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={strokeWidth} />
+            <circle cx={56} cy={56} r={45} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={6} />
             {percentage > 0 && (
-              <circle
-                cx={center} cy={center} r={radius}
-                fill="none"
-                stroke={activeColor}
-                strokeWidth={strokeWidth}
-                strokeDasharray={`${2 * Math.PI * radius * percentage} ${2 * Math.PI * radius}`}
-                strokeDashoffset={0}
-                strokeLinecap="round"
-                transform={`rotate(-90 ${center} ${center})`}
-              />
+              <circle cx={56} cy={56} r={45} fill="none" stroke={activeColor} strokeWidth={6}
+                strokeDasharray={`${2 * Math.PI * 45 * percentage} ${2 * Math.PI * 45}`}
+                strokeDashoffset={0} strokeLinecap="round" transform="rotate(-90 56 56)" />
             )}
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -99,41 +87,66 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
             <span className="text-[10px] text-white/40 font-medium mt-1">{unit}</span>
           </div>
         </div>
-        <span className="text-[11px] font-bold mt-2.5 truncate w-full px-1" style={{ color: activeColor }}>
-          {statusLabel}
+        <span className="text-[11px] font-bold mt-2.5" style={{ color: activeColor }}>
+          {getGlucoseStatus(latestGlucose?.value)}
         </span>
       </div>
     );
   };
 
+  const renderSmallGauge = (label, val, unit, percentage, color, statusLabel) => {
+    const activeColor = color || "rgba(255,255,255,0.15)";
+    return (
+      <div className="flex flex-col items-center text-center">
+        <span className="text-[9px] font-bold text-white/35 uppercase tracking-wider mb-1.5">{label}</span>
+        <div className="relative flex items-center justify-center w-14 h-14">
+          <svg width="56" height="56" viewBox="0 0 56 56">
+            <circle cx={28} cy={28} r={22} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={4} />
+            {percentage > 0 && (
+              <circle cx={28} cy={28} r={22} fill="none" stroke={activeColor} strokeWidth={4}
+                strokeDasharray={`${2 * Math.PI * 22 * percentage} ${2 * Math.PI * 22}`}
+                strokeDashoffset={0} strokeLinecap="round" transform="rotate(-90 28 28)" />
+            )}
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <span className="text-sm font-extrabold leading-none text-white">{val}</span>
+            <span className="text-[7px] text-white/40 font-medium mt-0.5">{unit}</span>
+          </div>
+        </div>
+        <span className="text-[10px] font-bold mt-1.5" style={{ color: activeColor }}>{statusLabel}</span>
+      </div>
+    );
+  };
+
   return (
-    <div className="p-9 rounded-none md:rounded-3xl border-0 flex flex-col gap-6 -mx-4 md:mx-0">
-      <div className="flex justify-center items-center gap-3 sm:gap-6 md:gap-10">
-        {renderGauge(
+    <div className="p-9 rounded-none md:rounded-3xl border-0 -mx-4 md:mx-0">
+      <div className="flex justify-center items-center gap-6">
+        {renderLargeGauge(
           "Last Reading",
           latestGlucose ? latestGlucose.value : "—",
           "mg/dL",
           latestGlucose ? Math.min(1, (latestGlucose.value - 40) / 360) : 0,
           getGlucoseColor(latestGlucose?.value),
-          getGlucoseStatus(latestGlucose?.value),
           true
         )}
-        {renderGauge(
-          "Daily Avg",
-          avgDailyGlucose || "—",
-          "mg/dL",
-          avgDailyGlucose ? Math.min(1, (avgDailyGlucose - 40) / 360) : 0,
-          getGlucoseColor(avgDailyGlucose),
-          getGlucoseStatus(avgDailyGlucose)
-        )}
-        {renderGauge(
-          "Active Insulin",
-          activeUnits.toFixed(1),
-          "units",
-          Math.min(1, activeUnits / totalAdministered),
-          "hsl(162, 50%, 42%)",
-          hasActive ? "Active" : "Cleared"
-        )}
+        <div className="flex flex-col gap-4">
+          {renderSmallGauge(
+            "Daily Avg",
+            avgDailyGlucose || "—",
+            "mg/dL",
+            avgDailyGlucose ? Math.min(1, (avgDailyGlucose - 40) / 360) : 0,
+            getGlucoseColor(avgDailyGlucose),
+            getGlucoseStatus(avgDailyGlucose)
+          )}
+          {renderSmallGauge(
+            "Active Insulin",
+            activeUnits.toFixed(1),
+            "units",
+            Math.min(1, activeUnits / totalAdministered),
+            "hsl(162, 50%, 42%)",
+            hasActive ? "Active" : "Cleared"
+          )}
+        </div>
       </div>
     </div>
   );
