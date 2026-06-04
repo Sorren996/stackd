@@ -384,9 +384,9 @@ export default function DoseForm({ open, onOpenChange }) {
             </motion.div>
             </DialogPrimitive.Content>
 
-            return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <AnimatePresence>
-        {open && (
-          <DialogPortal forceMount>
+          </DialogPortal>
+        )}
+      </AnimatePresence>
+    </Dialog>
+  );
 }
