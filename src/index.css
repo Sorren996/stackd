@@ -2,11 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Permanent+Marker:wght@400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
 
 @layer base {
   :root {
-    --font-sans: 'Permanent Marker', system-ui;
+    --font-sans: 'Montserrat', system-ui;
     --background: 160 12% 7%;
     --foreground: 160 8% 92%;
     --card: 162 10% 11%;
