@@ -59,8 +59,9 @@ function CustomTooltip({ active, payload, label }) {
 
 export default function ActivityGraph({ doses, glucoseReadings = [] }) {
   const [rangeIdx, setRangeIdx] = useState(1);
-  const [showInfo, setShowInfo] = useState(false); // <-- Add this
+  const [showInfo, setShowInfo] = useState(false);
   const scrollRef = useRef(null);
+  const containerRef = useRef(null);
   const [containerWidth, setContainerWidth] = useState(600);
 
   useEffect(() => {
