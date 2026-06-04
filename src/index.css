@@ -5,6 +5,10 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    font-size: 105%; /* Increases all text sizes globally by 5% */
+  }
+}
   :root {
     --font-sans: 'Montserrat', system-ui;
     --background: 160 12% 7%;
