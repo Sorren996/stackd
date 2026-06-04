@@ -70,13 +70,14 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
     return (
       <div className="flex flex-col items-center text-center shrink-0">
         <span className="text-[10px] font-bold text-white/35 uppercase tracking-wider mb-3.5">{label}</span>
-        <div className="relative flex items-center justify-center w-28 h-28">
-          <svg width="112" height="112" viewBox="0 0 112 112">
-            <circle cx={56} cy={56} r={45} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={6} />
+        <div className="relative flex items-center justify-center w-36 h-36">
+          <svg width="144" height="144" viewBox="0 0 144 144">
+            <circle cx={72} cy={72} r={58} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={6} />
             {percentage > 0 && (
-              <circle cx={56} cy={56} r={45} fill="none" stroke={activeColor} strokeWidth={6}
-                strokeDasharray={`${2 * Math.PI * 45 * percentage} ${2 * Math.PI * 45}`}
-                strokeDashoffset={0} strokeLinecap="round" transform="rotate(-90 56 56)" />
+              <circle cx={72} cy={72} r={58} fill="none" stroke={activeColor} strokeWidth={6}
+                strokeDasharray={`${2 * Math.PI * 58 * percentage} ${2 * Math.PI * 58}`}
+                strokeDashoffset={0} strokeLinecap="round" transform="rotate(-90 72 72)"
+                style={{ filter: `drop-shadow(0 0 8px ${activeColor}90)` }} />
             )}
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -105,7 +106,8 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
             {percentage > 0 && (
               <circle cx={28} cy={28} r={22} fill="none" stroke={activeColor} strokeWidth={4}
                 strokeDasharray={`${2 * Math.PI * 22 * percentage} ${2 * Math.PI * 22}`}
-                strokeDashoffset={0} strokeLinecap="round" transform="rotate(-90 28 28)" />
+                strokeDashoffset={0} strokeLinecap="round" transform="rotate(-90 28 28)"
+                style={{ filter: `drop-shadow(0 0 5px ${activeColor}90)` }} />
             )}
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
