@@ -103,7 +103,7 @@ export default function Dashboard() {
         
           <Activity className="w-10 h-10 text-muted-foreground/40 mb-3" />
           <h3 className="text-lg font-semibold text-[hsl(var(--popover))]">No active insulin</h3>
-          <p className="text-sm text-muted-foreground mt-1 max-w-xs">
+          <p className="text-sm text-muted-foreground mt-1 max-w-sm">
             Log your first dose to see its pharmacokinetic curve — onset, peak, and duration — all visualized on a timeline.
           </p>
         </div> :
@@ -116,7 +116,7 @@ export default function Dashboard() {
               <AlertTriangle className="w-5 h-5 mt-0.5 shrink-0 text-amber-500" />
               <div>
                 <p className="font-semibold text-sm">Insulin Stacking Detected</p>
-                <p className="text-xs mt-0.5 opacity-80">
+                <p className="text-sm mt-0.5 opacity-80">
                   {activeRapidCount} rapid/short-acting doses are active simultaneously. Monitor for low blood sugar.
                 </p>
               </div>
