@@ -95,9 +95,9 @@ export default function DoseForm({ open, onOpenChange }) {
   const shortName = insulinType ? insulinType.split(" ")[0] : "";
 
   return (
-    <AnimatePresence>
-      {open && (
-        <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <AnimatePresence>
+        {open && (
           <DialogPortal forceMount>
             {/* Animated Backdrop */}
             <DialogOverlay asChild forceMount>
@@ -384,9 +384,9 @@ export default function DoseForm({ open, onOpenChange }) {
             </motion.div>
             </DialogPrimitive.Content>
 
-          </DialogPortal>
-        </Dialog>
-      )}
-    </AnimatePresence>
-  );
+            return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <AnimatePresence>
+        {open && (
+          <DialogPortal forceMount>
 }
