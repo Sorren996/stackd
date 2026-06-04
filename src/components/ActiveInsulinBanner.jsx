@@ -82,7 +82,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
   const renderGauge = (label, val, unit, percentage, color, statusLabel) => {
     const activeColor = color || "rgba(255,255,255,0.15)";
     const radius = 32;
-    const center = 50;
+    const center = 30;
     const strokeWidth = 5;
     return (
       <div className="flex flex-col items-center flex-1 min-w-[90px] text-center">
