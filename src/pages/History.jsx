@@ -105,8 +105,8 @@ export default function History() {
     );
   }
 
-  return (
-    <div className="space-y-6">
+   return (
+    <div className="max-w-2xl mx-auto space-y-6 w-full">
   <div className="flex justify-center">
   <div 
     className="flex items-center gap-1 p-1 rounded-3xl border border-white/20 bg-white/5 backdrop-blur-sm shadow-lg"
