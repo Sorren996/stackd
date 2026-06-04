@@ -146,7 +146,7 @@ export default function Dashboard() {
         </>
       }
       {/* Floating Log Dose FAB */}
-      <button p="Log"
+      <button
         onClick={() => setDoseFormOpen(true)}
         className="
 fixed bottom-24 right-5 z-40
