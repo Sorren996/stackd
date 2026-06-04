@@ -68,6 +68,16 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
     return "down";
   }, [glucoseReadings]);
 
+const trendLabel = useMemo(() => {
+  if (glucoseReadings.length < 2) return "Stable";
+  const diff = glucoseReadings[0].value - glucoseReadings[1].value;
+  if (diff >= 7) return "Rising";
+  if (diff >= 4) return "Slowly Rising";
+  if (diff >= -3) return "Stable";
+  if (diff >= -6) return "Slowly Falling";
+  return "Falling";
+}, [glucoseReadings]);
+
   const getGlucoseStatus = (val) => {
     if (!val) return "—";
     if (val < 70) return "Low";
@@ -120,7 +130,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
           </div>
         </div>
         <span className="text-sm font-bold mt-3" style={{ color: activeColor }}>
-          {getGlucoseStatus(latestGlucose?.value)}
+          {trendLabel}
         </span>
       </div>
     );
