@@ -146,27 +146,36 @@ export default function DoseForm({ open, onOpenChange }) {
             sm:data-[state=closed]:animate-[desktop-scale-out_0.22s_cubic-bezier(0.25,1,0.5,1)]"
           style={{ background: "hsl(162,10%,8%)", maxHeight: "92vh" }}
         >
-          {/* Header */}
+        {/* Header */}
           <div className="flex items-center justify-between relative px-6 pt-5 pb-3 shrink-0">
             <div className="w-8" />
             <span className="text-white text-lg font-semibold">Log Entry</span>
-            <button
-              onClick={() => onOpenChange(false)}
-              className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 border border-white/10 text-white/60 hover:text-white active:scale-95 transition"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            {/* Wrapped in DialogClose for native lifecycle cleanup */}
+            <DialogClose asChild>
+              <button
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 border border-white/10 text-white/60 hover:text-white active:scale-95 transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </DialogClose>
           </div>
 
-          {/* Tabs */}
+          {/* Tabs with Springs */}
           <div className="flex mx-5 mb-2 rounded-2xl p-1 shrink-0 relative" style={{ background: "rgba(255,255,255,0.06)" }}>
             <button
               type="button"
               onClick={() => setTab("insulin")}
               className={`relative flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-colors duration-200 ${
-                tab === "insulin" ? "text-white bg-white/10" : "text-white/40 hover:text-white/60"
+                tab === "insulin" ? "text-white" : "text-white/40 hover:text-white/60"
               }`}
             >
+              {tab === "insulin" && (
+                <motion.div
+                  layoutId="active-form-tab"
+                  className="absolute inset-0 rounded-xl bg-white/10 -z-0"
+                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                />
+              )}
               <span className="relative z-10 flex items-center gap-2">
                 <Syringe className="w-4 h-4" />
                 Insulin
@@ -176,9 +185,17 @@ export default function DoseForm({ open, onOpenChange }) {
               type="button"
               onClick={() => setTab("glucose")}
               className={`relative flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-colors duration-200 ${
-                tab === "glucose" ? "text-orange-400 bg-orange-500/10" : "text-white/40 hover:text-white/60"
+                tab === "glucose" ? "text-orange-400" : "text-white/40 hover:text-white/60"
               }`}
             >
+              {tab === "glucose" && (
+                <motion.div
+                  layoutId="active-form-tab"
+                  className="absolute inset-0 rounded-xl -z-0"
+                  style={{ backgroundColor: `${glucoseColor}33` }}
+                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                />
+              )}
               <span className="relative z-10 flex items-center gap-2">
                 <Droplets className="w-4 h-4" />
                 Glucose
