@@ -3,16 +3,26 @@ import { base44 } from "@/api/base44Client";
 import { LogOut, User, Target, Bell, Radio, Download, Loader2, Sparkles } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
 
 export default function Settings() {
   const [user, setUser] = useState(null);
   const [stackingAlerts, setStackingAlerts] = useState(true);
   const [notifications, setNotifications] = useState(true);
-  const [targetRange, setTargetRange] = useState(() => localStorage.getItem("target_range_pref") || "70-180");
   const [isExporting, setIsExporting] = useState(false);
   const [steloConnected, setSteloConnected] = useState(false);
   const [connectingStelo, setConnectingStelo] = useState(false);
+
+  const [targetLow, setTargetLow] = useState(() => {
+    const saved = localStorage.getItem("target_range_low");
+    return saved ? parseInt(saved, 10) : 70;
+  });
+  const [targetHigh, setTargetHigh] = useState(() => {
+    const saved = localStorage.getItem("target_range_high");
+    return saved ? parseInt(saved, 10) : 180;
+  });
+  const isRecommended = targetLow === 70 && targetHigh === 180;
 
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => {});
@@ -22,10 +32,19 @@ export default function Settings() {
     base44.auth.logout("/login");
   };
 
-  const handleRangeChange = (range) => {
-    setTargetRange(range);
-    localStorage.setItem("target_range_pref", range);
-    toast.success(`Target range set to ${range} mg/dL`);
+  const handleSetRecommended = () => {
+    setTargetLow(70);
+    setTargetHigh(180);
+    localStorage.setItem("target_range_low", "70");
+    localStorage.setItem("target_range_high", "180");
+    toast.success("Set to recommended range (70–180 mg/dL)");
+  };
+
+  const handleSliderChange = ([low, high]) => {
+    setTargetLow(low);
+    setTargetHigh(high);
+    localStorage.setItem("target_range_low", low.toString());
+    localStorage.setItem("target_range_high", high.toString());
   };
 
   const handleExportCSV = async () => {
@@ -80,76 +99,44 @@ export default function Settings() {
       </div>
 
       {/* Target Range Preference */}
-// Initialize with standard range or parse current selection
-const [targetLow, setTargetLow] = useState(() => {
-  const saved = localStorage.getItem("target_range_low");
-  return saved ? parseInt(saved, 10) : 70;
-});
-const [targetHigh, setTargetHigh] = useState(() => {
-  const saved = localStorage.getItem("target_range_high");
-  return saved ? parseInt(saved, 10) : 180;
-});
-const [isCustom, setIsCustom] = useState(() => localStorage.getItem("target_range_mode") === "custom");
-
       <div className="space-y-3">
-  <h3 className="text-xs font-bold text-white/35 uppercase tracking-wider px-1">Target Range Preference</h3>
-  <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-4 flex flex-col md:flex-row gap-4 items-center">
-    
-    {/* Left Column: Recommended Button */}
-    <div className="w-full md:w-2/5">
-      <button
-        onClick={() => {
-          setTargetLow(70);
-          setTargetHigh(180);
-          setIsCustom(false);
-          localStorage.setItem("target_range_mode", "recommended");
-          localStorage.setItem("target_range_low", "70");
-          localStorage.setItem("target_range_high", "180");
-          toast.success("Set to recommended range (70-180 mg/dL)");
-        }}
-        className={`w-full py-4 px-3 rounded-2xl border text-center transition-all ${
-          !isCustom && targetLow === 70 && targetHigh === 180
-            ? "bg-teal-500/10 border-teal-500/40 text-white"
-            : "bg-white/[0.01] border-white/5 text-white/40 hover:bg-white/[0.03]"
-        }`}
-      >
-        <div className="text-xs font-bold">Recommended</div>
-        <div className="text-sm mt-1 font-semibold">70-180</div>
-        <div className="text-[9px] text-white/30 mt-0.5">mg/dL</div>
-      </button>
-    </div>
+        <h3 className="text-xs font-bold text-white/35 uppercase tracking-wider px-1">Target Range Preference</h3>
+        <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-4 flex gap-4 items-stretch">
+          {/* Recommended preset button */}
+          <button
+            onClick={handleSetRecommended}
+            className={`shrink-0 w-28 py-3 px-2 rounded-2xl border text-center transition-all flex flex-col items-center justify-center ${
+              isRecommended
+                ? "bg-teal-500/10 border-teal-500/40 text-white"
+                : "bg-white/[0.01] border-white/5 text-white/40 hover:bg-white/[0.03]"
+            }`}
+          >
+            <div className="text-[10px] font-bold uppercase tracking-wider opacity-60">Recommended</div>
+            <div className="text-base font-extrabold mt-1">70–180</div>
+            <div className="text-[9px] text-white/30 mt-0.5">mg/dL</div>
+          </button>
 
-    {/* Right Column: Interactive Dual Range Slider */}
-    <div className="w-full md:w-3/5 space-y-2">
-      <div className="flex justify-between items-center text-xs px-1">
-        <span className="text-white/40">Custom Range</span>
-        <span className="text-teal-400 font-bold">{targetLow} - {targetHigh} mg/dL</span>
+          {/* Custom range slider */}
+          <div className="flex-1 flex flex-col justify-center space-y-3">
+            <div className="flex justify-between items-center">
+              <span className="text-[10px] text-white/40 uppercase tracking-wider">Custom Range</span>
+              <span className="text-sm font-bold text-teal-400">{targetLow}–{targetHigh} mg/dL</span>
+            </div>
+            <Slider
+              min={70}
+              max={250}
+              step={5}
+              value={[targetLow, targetHigh]}
+              onValueChange={handleSliderChange}
+              className="cursor-pointer"
+            />
+            <div className="flex justify-between text-[10px] text-white/20">
+              <span>70</span>
+              <span>250</span>
+            </div>
+          </div>
+        </div>
       </div>
-      <div className="py-2">
-        <Slider
-          min={70}
-          max={250}
-          step={5}
-          value={[targetLow, targetHigh]}
-          onValueChange={([low, high]) => {
-            setTargetLow(low);
-            setTargetHigh(high);
-            setIsCustom(true);
-            localStorage.setItem("target_range_mode", "custom");
-            localStorage.setItem("target_range_low", low.toString());
-            localStorage.setItem("target_range_high", high.toString());
-          }}
-          className="cursor-pointer"
-        />
-      </div>
-      <div className="flex justify-between text-[10px] text-white/20 px-1">
-        <span>Min: 70</span>
-        <span>Max: 250</span>
-      </div>
-    </div>
-
-  </div>
-</div>
 
       {/* Alerts & Preferences */}
       <div className="space-y-3">
