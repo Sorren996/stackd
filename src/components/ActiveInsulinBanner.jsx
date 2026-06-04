@@ -82,7 +82,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
   const renderGauge = (label, val, unit, percentage, color, statusLabel) => {
     const activeColor = color || "rgba(255,255,255,0.15)";
     const radius = 32;
-    const center = 40;
+    const center = 50;
     const strokeWidth = 5;
     return (
       <div className="flex flex-col items-center flex-1 min-w-[90px] text-center">
@@ -90,7 +90,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
           {label}
         </span>
         <div className="relative flex items-center justify-center w-20 h-20">
-          <svg width="80" height="80" viewBox="0 0 80 80">
+          <svg width="100" height="100" viewBox="0 0 100 100">
             <circle cx={center} cy={center} r={radius} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={strokeWidth} />
             {percentage > 0 && (
               <circle
