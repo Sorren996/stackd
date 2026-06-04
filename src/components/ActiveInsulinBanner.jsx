@@ -172,7 +172,6 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
             </div>
             {[
               ["Active Insulin", "Estimated units still working in your body right now."],
-              ["Time Left", "How long until the longest-lasting active dose clears."],
               ["Last Reading", "Your most recently logged blood glucose value."],
               ["Daily Avg", "Average of all glucose readings logged today."],
             ].map(([title, desc]) => (
