@@ -311,15 +311,8 @@ const infoBorder = profile ? accentColor + "22" : "rgba(255,255,255,0.05)";
   className="my-4 cursor-pointer"
 />
 
-                      <div className="flex gap-2 flex-wrap mt-4">
-                        {GLUCOSE_PRESETS.map((v) => (
-                          <button key={v} onClick={() => setGlucoseValue(v)}
-                            className="px-3 py-1.5 rounded-xl text-sm font-medium border text-white transition-all"
-                            style={{ borderColor: glucoseValue === v ? glucoseColor + "aa" : "rgba(255,255,255,0.1)", backgroundColor: glucoseValue === v ? glucoseColor + "22" : "rgba(255,255,255,0.05)" }}>
-                            {v}
-                          </button>
-                        ))}
-                      </div>
+                     
+                    
                     </div>
 
                     {/* Time */}
