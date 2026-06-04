@@ -1,93 +1,115 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
+import { Activity, History, BarChart2, Settings } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import SettingsContent from "../pages/Settings";
 
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
+const navItems = [
+  { path: "/", label: "Dashboard", icon: Activity },
+  { path: "/history", label: "History", icon: History },
+  { path: "/analytics", label: "Analytics", icon: BarChart2 }
+];
 
-@layer base {
-  :root {
-    --font-sans: 'Montserrat', system-ui;
-    --background: 160 12% 7%;
-    --foreground: 160 8% 92%;
-    --card: 162 10% 11%;
-    --card-foreground: 160 8% 92%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 215 25% 12%;
-    --primary: 162 38% 28%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 160 8% 16%;
-    --secondary-foreground: 160 8% 80%;
-    --muted: 160 8% 14%;
-    --muted-foreground: 160 6% 50%;
-    --accent: 162 42% 35%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 162 8% 18%;
-    --input: 162 8% 18%;
-    --ring: 162 38% 35%;
-    --chart-1: 162 50% 42%;
-    --chart-2: 195 55% 45%;
-    --chart-3: 258 45% 53%;
-    --chart-4: 38 75% 51%;
-    --chart-5: 337 33% 25%;
-    --radius: 0.75rem;
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 213 82% 39%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 210 30% 94%;
-    --sidebar-accent-foreground: 215 25% 20%;
-    --sidebar-border: 214 20% 90%;
-    --sidebar-ring: 213 80% 39%;
-  }
+export default function Layout() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isSettingsOpen = location.pathname === "/settings";
 
-  .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
-  }
-}
+  const toggleSettings = () => {
+    navigate(isSettingsOpen ? "/" : "/settings");
+  };
 
+  return (
+    <div className="min-h-screen text-white relative">
+      {/* Fixed gradient backdrop */}
+      <div className="fixed inset-0 -z-50 bg-gradient-to-b from-teal-950 via-zinc-950 to-black pointer-events-none" />
 
+      {/* Top header */}
+      <header className="sticky top-0 z-50 bg-transparent">
+        <div className="max-w-6xl mx-auto h-14 flex items-center justify-between px-4 bg-gradient-to-b from-black/80 via-black/40 to-transparent">
+          <div className="w-9" />
+          <img
+            src="https://media.base44.com/images/public/6a1b93f234a8611ee1595134/9cd3c84cf_stackdappiconver3tran.png"
+            alt="Stackd Logo"
+            className="h-9 w-auto object-contain"
+          />
+          <button
+            onClick={toggleSettings}
+            className="w-9 h-9 flex items-center justify-center rounded-full transition-all relative"
+            style={{
+              background: isSettingsOpen ? "rgba(20,184,166,0.1)" : "rgba(255,255,255,0.05)",
+              border: isSettingsOpen ? "1px solid rgba(20,184,166,0.35)" : "1px solid rgba(255,255,255,0.05)",
+              boxShadow: isSettingsOpen ? "0 0 18px rgba(20,184,166,0.5), 0 0 6px rgba(20,184,166,0.3)" : "none"
+            }}
+          >
+            <motion.div
+              animate={{ rotate: isSettingsOpen ? 180 : 0 }}
+              transition={{ type: "spring", stiffness: 260, damping: 18 }}
+              className="flex items-center justify-center"
+            >
+              <Settings className={`w-4 h-4 transition-colors ${isSettingsOpen ? "text-teal-400" : "text-white/50"}`} />
+            </motion.div>
+          </button>
+        </div>
+      </header>
 
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
+      {/* Page content */}
+      <main className="max-w-6xl w-full mx-auto px-4 flex-1 pb-28 py-0 relative z-10">
+        <Outlet />
+      </main>
 
-  body {
-    @apply text-foreground;
-    background: radial-gradient(ellipse 120% 60% at 50% 100%, hsl(162, 28%, 10%) 0%, hsl(160, 14%, 7%) 55%, hsl(158, 10%, 5%) 100%);
-    min-height: 100vh;
-  }
-}
+      {/* Full-screen settings overlay */}
+      <AnimatePresence>
+        {isSettingsOpen && (
+          <motion.div
+            key="settings-overlay"
+            initial={{ y: "-100%", opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: "-100%", opacity: 0 }}
+            transition={{ type: "spring", stiffness: 220, damping: 28 }}
+            className="fixed inset-0 z-40 overflow-y-auto pt-16 pb-28"
+            style={{ background: "rgba(8,14,11,0.97)", backdropFilter: "blur(16px)" }}
+          >
+            <div className="px-4">
+              <SettingsContent />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* iOS-style glass bottom nav */}
+      <nav className="fixed bottom-0 inset-x-0 z-30 flex justify-center pb-safe">
+        <div
+          className="mx-4 flex items-center gap-1 py-1 rounded-3xl border mb-4 px-4 backdrop-blur-sm border-white/40"
+          style={{
+            background: "rgba(8,14,10,0.4)",
+            backdropFilter: "blur(2px)",
+            WebkitBackdropFilter: "blur(2px)",
+            boxShadow: "0 8px 40px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -1px 0 rgba(255,255,255,0.04)"
+          }}
+        >
+          {navItems.map((item) => {
+            const isActive = location.pathname === item.path && !isSettingsOpen;
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`relative flex flex-col items-center gap-1 transition-colors px-4 py-1.5 rounded-2xl ${
+                  isActive ? "text-white" : "text-white/40 hover:text-white/70"
+                }`}
+              >
+                {isActive && (
+                  <motion.div
+                    layoutId="active-nav-tab"
+                    className="absolute inset-0 bg-white/15 rounded-2xl -z-10"
+                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                  />
+                )}
+                <item.icon className="w-5 h-5 relative z-10" />
+                <span className="text-[10px] font-medium relative z-10">{item.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+    </div>
+  );
