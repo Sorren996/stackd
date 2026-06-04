@@ -197,13 +197,19 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
                   <stop offset="100%" stopColor={k.color} stopOpacity={0.0} />
                 </linearGradient>
               ))}
-              <linearGradient id="glucose_range_grad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#000000" stopOpacity={0} />
-                <stop offset={`${highPct}%`} stopColor="#000000" stopOpacity={0} />
-                <stop offset={`${midPct}%`} stopColor="#78350f" stopOpacity={0.45} />
-                <stop offset={`${lowPct}%`} stopColor="#000000" stopOpacity={0} />
-                <stop offset="100%" stopColor="#000000" stopOpacity={0} />
-              </linearGradient>
+             <linearGradient id="glucose_range_grad" x1="0" y1="0" x2="0" y2="1">
+  {/* Transparent above high threshold */}
+  <stop offset="0%" stopColor="#78350f" stopOpacity={0} />
+  <stop offset={`${highPct}%`} stopColor="#78350f" stopOpacity={0} />
+  
+  {/* Solid 15% Amber starting exactly at the high threshold */}
+  <stop offset={`${highPct}%`} stopColor="#78350f" stopOpacity={0.15} />
+  <stop offset={`${lowPct}%`} stopColor="#78350f" stopOpacity={0.15} />
+  
+  {/* Transparent again below the low threshold */}
+  <stop offset={`${lowPct}%`} stopColor="#78350f" stopOpacity={0} />
+  <stop offset="100%" stopColor="#78350f" stopOpacity={0} />
+</linearGradient>
             </defs>
 
             <XAxis
