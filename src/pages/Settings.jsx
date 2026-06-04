@@ -95,12 +95,12 @@ export default function Settings() {
           <User className="w-8 h-8 text-teal-400" />
         </div>
         <h2 className="text-lg font-bold text-white">{user?.full_name || "User"}</h2>
-        <p className="text-xs text-white/40 mt-0.5">{user?.email}</p>
+        <p className="text-sm text-white/40 mt-0.5">{user?.email}</p>
       </div>
 
       {/* Target Range Preference */}
       <div className="space-y-3">
-        <h3 className="text-xs font-bold text-white/35 uppercase tracking-wider px-1">Target Range Preference</h3>
+        <h3 className="text-sm font-bold text-white/35 uppercase tracking-wider px-1">Target Range Preference</h3>
         <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-4 flex gap-4 items-stretch">
           {/* Recommended preset button */}
           <button
@@ -140,7 +140,7 @@ export default function Settings() {
 
       {/* Alerts & Preferences */}
       <div className="space-y-3">
-        <h3 className="text-xs font-bold text-white/35 uppercase tracking-wider px-1">Alerts & Preferences</h3>
+        <h3 className="text-sm font-bold text-white/35 uppercase tracking-wider px-1">Alerts & Preferences</h3>
         <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-4 space-y-5">
           <div className="flex items-center justify-between gap-4">
             <div className="space-y-0.5">
@@ -148,7 +148,7 @@ export default function Settings() {
                 <Target className="w-4 h-4 text-teal-400" />
                 Insulin Stacking Warnings
               </Label>
-              <p className="text-xs text-white/40">Alert when multiple rapid doses overlap</p>
+              <p className="text-sm text-white/40">Alert when multiple rapid doses overlap</p>
             </div>
             <Switch checked={stackingAlerts} onCheckedChange={setStackingAlerts} />
           </div>
@@ -158,7 +158,7 @@ export default function Settings() {
 
       {/* Hardware Integrations */}
       <div className="space-y-3">
-        <h3 className="text-xs font-bold text-white/35 uppercase tracking-wider px-1">Hardware Integrations</h3>
+        <h3 className="text-sm font-bold text-white/35 uppercase tracking-wider px-1">Hardware Integrations</h3>
         <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-4">
           <div className="flex items-center justify-between gap-4">
             <div className="space-y-0.5">
@@ -166,12 +166,12 @@ export default function Settings() {
                 <Radio className={`w-4 h-4 ${steloConnected ? "text-teal-400 animate-pulse" : "text-white/40"}`} />
                 Dexcom Stelo Biosensor
               </Label>
-              <p className="text-xs text-white/40">Sync CGM data automatically (coming soon)</p>
+              <p className="text-sm text-white/40">Sync CGM data automatically (coming soon)</p>
             </div>
             <button
               onClick={handleSteloToggle}
               disabled={connectingStelo}
-              className={`text-xs font-bold px-4 py-2 rounded-xl border transition-all ${
+              className={`text-sm font-bold px-4 py-2 rounded-xl border transition-all ${
                 steloConnected
                   ? "bg-teal-500/10 border-teal-500/30 text-teal-400 hover:bg-teal-500/20"
                   : "bg-white/5 border-white/5 text-white/80 hover:bg-white/10"
@@ -187,7 +187,7 @@ export default function Settings() {
 
       {/* Backup & Export */}
       <div className="space-y-3">
-        <h3 className="text-xs font-bold text-white/35 uppercase tracking-wider px-1">Backup & Logs</h3>
+        <h3 className="text-sm font-bold text-white/35 uppercase tracking-wider px-1">Backup & Logs</h3>
         <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-4">
           <button
             onClick={handleExportCSV}
@@ -199,7 +199,7 @@ export default function Settings() {
                 <Download className="w-4 h-4 text-teal-400" />
                 Export logs as CSV
               </div>
-              <p className="text-xs text-white/40">Download insulin & glucose data for past 30 days</p>
+              <p className="text-sm text-white/40">Download insulin & glucose data for past 30 days</p>
             </div>
             {isExporting
               ? <Loader2 className="w-4 h-4 animate-spin text-teal-400" />
