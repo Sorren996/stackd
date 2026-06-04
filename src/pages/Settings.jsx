@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { base44 } from "@/api/base44Client";
-import { LogOut, User, Target, Bell, Radio, Download, Loader2, Sparkles } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { LogOut, User, Target, Radio, Download, Loader2, Sparkles, Heart, Upload } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
@@ -12,10 +13,10 @@ export default function Settings() {
     const saved = localStorage.getItem("stacking_alerts_enabled");
     return saved !== null ? saved === "true" : true;
   });
-  const [notifications, setNotifications] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [steloConnected, setSteloConnected] = useState(false);
   const [connectingStelo, setConnectingStelo] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const [targetLow, setTargetLow] = useState(() => {
     const saved = localStorage.getItem("target_range_low");
@@ -26,6 +27,8 @@ export default function Settings() {
     return saved ? parseInt(saved, 10) : 180;
   });
   const isRecommended = targetLow === 70 && targetHigh === 180;
+
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => {});
@@ -95,6 +98,48 @@ export default function Settings() {
     }, 2200);
   };
 
+  const handleAppleHealthImport = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setIsSyncing(true);
+    toast.info("Reading Apple Health export... Please keep this page open.");
+
+    const text = await file.text();
+    const recordRegex = /<Record[^>]*type="HKQuantityTypeIdentifierBloodGlucose"[^>]*>/g;
+    const records = text.match(recordRegex) || [];
+
+    if (records.length === 0) {
+      toast.error("No blood glucose records found in this file.");
+      setIsSyncing(false);
+      return;
+    }
+
+    const newReadings = records.map(record => {
+      const valueMatch = record.match(/value="([^"]+)"/);
+      const dateMatch = record.match(/startDate="([^"]+)"/);
+      return {
+        value: parseFloat(valueMatch[1]),
+        recorded_at: new Date(dateMatch[1]).toISOString(),
+        notes: "Synced from Apple Health"
+      };
+    }).filter(r => !isNaN(r.value));
+
+    // Delete all existing glucose records
+    const existingReadings = await base44.entities.GlucoseReading.list("-recorded_at", 5000);
+    await Promise.all(existingReadings.map(r => base44.entities.GlucoseReading.delete(r.id)));
+
+    // Bulk insert in chunks of 500
+    const chunkSize = 500;
+    for (let i = 0; i < newReadings.length; i += chunkSize) {
+      await base44.entities.GlucoseReading.bulkCreate(newReadings.slice(i, i + chunkSize));
+    }
+
+    toast.success(`Synced ${newReadings.length} glucose readings from Apple Health!`);
+    queryClient.invalidateQueries({ queryKey: ["glucose-readings"] });
+    setIsSyncing(false);
+  };
+
   return (
     <div className="max-w-md mx-auto space-y-6 pt-4 pb-12">
       {/* Profile Card */}
@@ -110,7 +155,6 @@ export default function Settings() {
       <div className="space-y-3">
         <h3 className="text-sm font-bold text-white/35 uppercase tracking-wider px-1">Target Range Preference</h3>
         <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-4 flex gap-4 items-stretch">
-          {/* Recommended preset button */}
           <button
             onClick={handleSetRecommended}
             className={`shrink-0 w-28 py-3 px-2 rounded-2xl border text-center transition-all flex flex-col items-center justify-center ${
@@ -124,7 +168,6 @@ export default function Settings() {
             <div className="text-[9px] text-white/30 mt-0.5">mg/dL</div>
           </button>
 
-          {/* Custom range slider */}
           <div className="flex-1 flex flex-col justify-center space-y-3">
             <div className="flex justify-between items-center">
               <span className="text-[10px] text-white/40 uppercase tracking-wider">Custom Range</span>
@@ -160,7 +203,6 @@ export default function Settings() {
             </div>
             <Switch checked={stackingAlerts} onCheckedChange={handleStackingToggle} />
           </div>
-
         </div>
       </div>
 
@@ -193,90 +235,41 @@ export default function Settings() {
         </div>
       </div>
 
+      {/* Apple Health Sync */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-bold text-white/35 uppercase tracking-wider px-1">Apple Health Sync</h3>
+        <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-5 space-y-4">
+          <div className="space-y-1">
+            <div className="text-sm font-semibold text-white flex items-center gap-2">
+              <Heart className="w-4 h-4 text-red-500" />
+              Sync Apple Health Data
+            </div>
+            <p className="text-xs text-white/40 leading-relaxed">
+              Export from iPhone: Health App → Profile → Export All Health Data. Upload the file to replace manual logs with continuous records.
+            </p>
+          </div>
 
-{/* Apple Health Sync Card */}
-<div className="space-y-3">
-  <h3 className="text-sm font-bold text-white/35 uppercase tracking-wider px-1">Apple Health Sync</h3>
-  <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-5 space-y-4">
-    <div className="space-y-1">
-      <div className="text-sm font-semibold text-white flex items-center gap-2">
-        <Heart className="w-4 h-4 text-red-500 animate-pulse" />
-        Sync Apple Health Data
+          <label className={`flex flex-col items-center justify-center border-2 border-dashed rounded-2xl p-6 cursor-pointer transition-all group ${
+            isSyncing ? "border-teal-500/40 bg-teal-500/[0.02]" : "border-white/10 hover:border-teal-500/40 bg-white/[0.01] hover:bg-teal-500/[0.02]"
+          }`}>
+            {isSyncing
+              ? <Loader2 className="w-6 h-6 text-teal-400 animate-spin mb-2" />
+              : <Upload className="w-6 h-6 text-white/30 group-hover:text-teal-400 mb-2 transition-colors" />
+            }
+            <span className="text-sm font-medium text-white/70 group-hover:text-white transition-colors">
+              {isSyncing ? "Parsing export data..." : "Select export.xml or health.zip"}
+            </span>
+            <span className="text-xs text-white/30 mt-1">Accepts XML or Zip exports</span>
+            <input
+              type="file"
+              accept=".xml,.zip"
+              onChange={handleAppleHealthImport}
+              disabled={isSyncing}
+              className="hidden"
+            />
+          </label>
+        </div>
       </div>
-      <p className="text-xs text-white/40 leading-relaxed">
-        Export your health database from iPhone (Health App → Profile → Export All Health Data). Upload the export file below to replace manual logs with high-resolution continuous records.
-      </p>
-    </div>
-    
-    <label className="flex flex-col items-center justify-center border-2 border-dashed border-white/10 hover:border-teal-500/40 rounded-2xl p-6 cursor-pointer bg-white/[0.01] hover:bg-teal-500/[0.02] transition-all group">
-      <Upload className="w-6 h-6 text-white/30 group-hover:text-teal-400 mb-2 transition-colors" />
-      <span className="text-sm font-medium text-white/70 group-hover:text-white transition-colors">
-        {isSyncing ? "Parsing export data..." : "Select export.xml or health.zip"}
-      </span>
-      <span className="text-xs text-white/30 mt-1">Accepts XML or Zip exports</span>
-      <input 
-        type="file" 
-        accept=".xml,.zip" 
-        onChange={handleAppleHealthImport} 
-        disabled={isSyncing} 
-        className="hidden" 
-      />
-    </label>
-  </div>
-</div>
-
-const handleAppleHealthImport = async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  setIsSyncing(true);
-  toast.info("Reading Apple Health export... Please keep this page open.");
-
-  try {
-    const text = await file.text();
-    // Match blood glucose record entries in Apple Health XML format:
-    // <Record type="HKQuantityTypeIdentifierBloodGlucose" ... value="120" ... startDate="2026-06-04 ..."/>
-    const recordRegex = /<Record[^>]*type="HKQuantityTypeIdentifierBloodGlucose"[^>]*>/g;
-    const records = text.match(recordRegex) || [];
-
-    if (records.length === 0) {
-      throw new Error("No blood glucose records found in this file.");
-    }
-
-    // Extract attributes (value, timestamp)
-    const newReadings = records.map(record => {
-      const valueMatch = record.match(/value="([^"]+)"/);
-      const dateMatch = record.match(/startDate="([^"]+)"/);
-      
-      return {
-        value: parseFloat(valueMatch[1]),
-        recorded_at: new Date(dateMatch[1]).toISOString(),
-        notes: "Synced from Apple Health"
-      };
-    }).filter(r => !isNaN(r.value));
-
-    // 1. Delete all existing manual glucose records to clear the slate
-    const existingReadings = await base44.entities.GlucoseReading.list("-recorded_at", 5000);
-    await Promise.all(existingReadings.map(r => base44.entities.GlucoseReading.delete(r.id)));
-
-    // 2. Bulk insert the new continuous records in chunks of 500
-    const chunkSize = 500;
-    for (let i = 0; i < newReadings.length; i += chunkSize) {
-      const chunk = newReadings.slice(i, i + chunkSize);
-      await base44.entities.GlucoseReading.bulkCreate(chunk);
-    }
-
-    toast.success(`Success! Synced ${newReadings.length} continuous glucose readings.`);
-    
-    // Refresh the graph & history queries
-    queryClient.invalidateQueries({ queryKey: ["glucose-readings"] });
-  } catch (err) {
-    toast.error(err.message || "Failed to parse file. Make sure it's a valid export.xml");
-  } finally {
-    setIsSyncing(false);
-  }
-};
-
 
       {/* Backup & Export */}
       <div className="space-y-3">
