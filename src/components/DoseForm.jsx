@@ -6,7 +6,6 @@ import { Dialog, DialogPortal, DialogOverlay } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { X, Syringe, Droplets } from "lucide-react";
 import { toast } from "sonner";
-import { motion, AnimatePresence } from "framer-motion";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Slider } from "@/components/ui/slider";
 
@@ -20,7 +19,81 @@ const groupedInsulins = CATEGORY_ORDER.reduce((acc, cat) => {
 
 const GLUCOSE_PRESETS = [70, 100, 120, 140, 180, 200, 250];
 
-return (
+export default function DoseForm({ open, onOpenChange }) {
+  const [tab, setTab] = useState("insulin");
+  const [insulinType, setInsulinType] = useState("");
+  const [units, setUnits] = useState(10);
+  const [insulinNotes, setInsulinNotes] = useState("");
+  const [insulinTime, setInsulinTime] = useState(() => new Date().toTimeString().slice(0, 5));
+  const [glucoseValue, setGlucoseValue] = useState(100);
+  const [glucoseNotes, setGlucoseNotes] = useState("");
+  const [glucoseTime, setGlucoseTime] = useState(() => new Date().toTimeString().slice(0, 5));
+
+  const nowTimeString = new Date().toTimeString().slice(0, 5);
+  const queryClient = useQueryClient();
+
+  const createDose = useMutation({
+    mutationFn: (data) => base44.entities.InsulinDose.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["insulin-doses"] });
+      toast.success("Dose logged — tracking activity now");
+      onOpenChange(false);
+      setInsulinType(""); setUnits(10); setInsulinNotes("");
+      setInsulinTime(new Date().toTimeString().slice(0, 5));
+    }
+  });
+
+  const createGlucose = useMutation({
+    mutationFn: (data) => base44.entities.GlucoseReading.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["glucose-readings"] });
+      toast.success("Glucose logged");
+      onOpenChange(false);
+      setGlucoseValue(100); setGlucoseNotes("");
+      setGlucoseTime(new Date().toTimeString().slice(0, 5));
+    }
+  });
+
+  const profile = insulinType ? INSULIN_PROFILES[insulinType] : null;
+  const rawAccentColor = profile?.color || "#2dd4bf";
+  const accentColor = rawAccentColor.slice(0, 7);
+  
+  const infoColor = profile ? accentColor : "rgba(255,255,255,0.3)";
+  const infoBg = profile ? accentColor + "11" : "rgba(255,255,255,0.02)";
+  const infoBorder = profile ? accentColor + "22" : "rgba(255,255,255,0.05)";
+  
+  const glucoseColor = "#c2611c";
+
+  const handleSubmitInsulin = () => {
+    if (!insulinType || !units) return;
+    const [h, m] = insulinTime.split(":").map(Number);
+    const dt = new Date();
+    dt.setHours(h, m, 0, 0);
+    createDose.mutate({
+      insulin_type: insulinType,
+      units: parseFloat(units),
+      administered_at: dt.toISOString(),
+      notes: insulinNotes || undefined
+    });
+  };
+
+  const handleSubmitGlucose = () => {
+    if (!glucoseValue) return;
+    const [h, m] = glucoseTime.split(":").map(Number);
+    const dt = new Date();
+    dt.setHours(h, m, 0, 0);
+    createGlucose.mutate({
+      value: parseFloat(glucoseValue),
+      recorded_at: dt.toISOString(),
+      notes: glucoseNotes || undefined
+    });
+  };
+
+  const adjust = (delta) => setUnits((u) => Math.max(0.5, Math.round((u + delta) * 2) / 2));
+  const adjustGlucose = (delta) => setGlucoseValue((v) => Math.min(400, Math.max(40, v + delta)));
+  const shortName = insulinType ? insulinType.split(" ")[0] : "";
+
+  return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogPortal>
         {/* Standard Backdrop */}
@@ -266,3 +339,4 @@ return (
       </DialogPortal>
     </Dialog>
   );
+}
