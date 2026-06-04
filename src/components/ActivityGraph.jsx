@@ -197,47 +197,47 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
             <HelpCircle className="w-4 h-4" />
           </button>
 
-          <AnimatePresence>
+              <AnimatePresence>
             {showInfo && (
-              <>
-                {/* Full-screen invisible backdrop to handle clicking anywhere outside to close */}
-                <div 
-                  className="fixed inset-0 z-40 cursor-default" 
-                  onClick={() => setShowInfo(false)} 
-                />
-
-                {/* Spring animated dropdown card */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                onClick={() => setShowInfo(false)}
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 cursor-pointer"
+              >
+                {/* Centered card that drops down with a spring transition */}
                 <motion.div
-                  initial={{ opacity: 0, y: -15, scale: 0.95 }}
+                  initial={{ opacity: 0, y: -100, scale: 0.9 }}
                   animate={{ 
                     opacity: 1, 
-                    y: 10, 
+                    y: 0, 
                     scale: 1,
-                    transition: { type: "spring", stiffness: 300, damping: 22 }
+                    transition: { type: "spring", stiffness: 280, damping: 22 }
                   }}
                   exit={{ 
                     opacity: 0, 
-                    y: -15, 
-                    scale: 0.95,
+                    y: 60, 
+                    scale: 0.9,
                     transition: { duration: 0.15 } 
                   }}
-                  className="absolute right-0 top-full z-50 w-72 sm:w-96 rounded-2xl overflow-hidden bg-black border border-teal-500/20 p-0.5"
+                  onClick={(e) => e.stopPropagation()} // Prevents closing when clicking the image itself
+                  className="relative max-w-4xl w-full rounded-2xl overflow-hidden bg-black border border-teal-500/20 p-0.5"
                   style={{
-                    boxShadow: "0 12px 40px rgba(20, 184, 166, 0.15)",
-                    transformOrigin: "top right"
+                    boxShadow: "0 20px 50px rgba(20, 184, 166, 0.25)"
                   }}
                 >
                   <img
                     src="https://media.base44.com/images/public/6a1b93f234a8611ee1595134/1005e28fb_graphinfotooltip.png"
                     alt="Graph Information Details"
-                    className="w-full h-auto rounded-xl object-contain block"
+                    className="w-full h-auto rounded-xl object-contain block max-h-[85vh] mx-auto"
                   />
                 </motion.div>
-              </>
+              </motion.div>
             )}
           </AnimatePresence>
-        </div>
-
+</div>
       </div>
 
       <div
