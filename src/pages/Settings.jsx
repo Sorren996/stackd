@@ -99,47 +99,91 @@ export default function Settings() {
   };
 
   const handleAppleHealthImport = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  const file = e.target.files[0];
+  if (!file) return;
 
-    setIsSyncing(true);
-    toast.info("Reading Apple Health export... Please keep this page open.");
+  setIsSyncing(true);
+  toast.info("Processing large file in secure chunks. Please keep this tab open...");
 
-    const text = await file.text();
-    const recordRegex = /<Record[^>]*type="HKQuantityTypeIdentifierBloodGlucose"[^>]*>/g;
-    const records = text.match(recordRegex) || [];
-
-    if (records.length === 0) {
-      toast.error("No blood glucose records found in this file.");
-      setIsSyncing(false);
-      return;
-    }
-
-    const newReadings = records.map(record => {
-      const valueMatch = record.match(/value="([^"]+)"/);
-      const dateMatch = record.match(/startDate="([^"]+)"/);
-      return {
-        value: parseFloat(valueMatch[1]),
-        recorded_at: new Date(dateMatch[1]).toISOString(),
-        notes: "Synced from Apple Health"
-      };
-    }).filter(r => !isNaN(r.value));
-
-    // Delete all existing glucose records
+  try {
+    // 1. Clear previous glucose readings
+    toast.info("Clearing previous readings to prepare for new data...");
     const existingReadings = await base44.entities.GlucoseReading.list("-recorded_at", 5000);
     await Promise.all(existingReadings.map(r => base44.entities.GlucoseReading.delete(r.id)));
 
-    // Bulk insert in chunks of 500
-    const chunkSize = 500;
-    for (let i = 0; i < newReadings.length; i += chunkSize) {
-      await base44.entities.GlucoseReading.bulkCreate(newReadings.slice(i, i + chunkSize));
+    // 2. Stream and parse the file chunk-by-chunk (16MB slices)
+    const chunkSize = 16 * 1024 * 1024; 
+    let offset = 0;
+    let remainder = "";
+    let totalSyncedCount = 0;
+    let batch = [];
+    const batchSize = 500;
+
+    while (offset < file.size) {
+      const slice = file.slice(offset, offset + chunkSize);
+      const chunkText = await slice.text();
+      const textToParse = remainder + chunkText;
+
+      // Ensure we don't parse a cut-off XML element at the chunk boundary
+      const lastClosedBracket = textToParse.lastIndexOf('>');
+      let processableText = "";
+      if (lastClosedBracket !== -1) {
+        processableText = textToParse.substring(0, lastClosedBracket + 1);
+        remainder = textToParse.substring(lastClosedBracket + 1);
+      } else {
+        remainder = textToParse;
+        offset += chunkSize;
+        continue;
+      }
+
+      // Extract blood glucose records in this chunk
+      const recordRegex = /<Record[^>]*type="HKQuantityTypeIdentifierBloodGlucose"[^>]*>/g;
+      const matches = processableText.match(recordRegex) || [];
+
+      for (const record of matches) {
+        const valueMatch = record.match(/value="([^"]+)"/);
+        const dateMatch = record.match(/startDate="([^"]+)"/);
+        
+        if (valueMatch && dateMatch) {
+          const val = parseFloat(valueMatch[1]);
+          if (!isNaN(val)) {
+            batch.push({
+              value: val,
+              recorded_at: new Date(dateMatch[1]).toISOString(),
+              notes: "Synced from Apple Health"
+            });
+
+            // Bulk insert in batches to save memory & optimize database performance
+            if (batch.length >= batchSize) {
+              await base44.entities.GlucoseReading.bulkCreate(batch);
+              totalSyncedCount += batch.length;
+              batch = [];
+            }
+          }
+        }
+      }
+
+      offset += chunkSize;
     }
 
-    toast.success(`Synced ${newReadings.length} glucose readings from Apple Health!`);
-    queryClient.invalidateQueries({ queryKey: ["glucose-readings"] });
-    setIsSyncing(false);
-  };
+    // Insert any remaining records in the last batch
+    if (batch.length > 0) {
+      await base44.entities.GlucoseReading.bulkCreate(batch);
+      totalSyncedCount += batch.length;
+    }
 
+    if (totalSyncedCount === 0) {
+      throw new Error("No blood glucose records found in this export file.");
+    }
+
+    toast.success(`Successfully synced ${totalSyncedCount} continuous glucose readings!`);
+    queryClient.invalidateQueries({ queryKey: ["glucose-readings"] });
+  } catch (err) {
+    toast.error(err.message || "Failed to process the XML export.");
+  } finally {
+    setIsSyncing(false);
+  }
+};
 
   return (
     <div className="max-w-md mx-auto space-y-6 pt-4 pb-12">
