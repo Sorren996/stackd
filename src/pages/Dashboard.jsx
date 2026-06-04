@@ -105,20 +105,20 @@ export default function Dashboard() {
               <h2 className="text-lg font-semibold text-[hsl(var(--popover))] mx-4 text-[hsl(var(--card-foreground))] px-0 py-1 font-medium opacity-65 rounded-full">Recent Activity</h2>
               <div className="space-y-2">
                 {(showAllDoses ? recentActivity.slice(0, 15) : recentActivity.slice(0, 5)).map((item) =>
-                  item.feedType === "insulin" ? (
-                    <DoseCard key={`dose-${item.id}`} dose={item} onDelete={(id) => deleteDose.mutate(id)} />
-                  ) : (
-                    <GlucoseCard key={`glucose-${item.id}`} reading={item} onDelete={(id) => deleteGlucose.mutate(id)} />
-                  )
-                )}
+              item.feedType === "insulin" ?
+              <DoseCard key={`dose-${item.id}`} dose={item} onDelete={(id) => deleteDose.mutate(id)} /> :
+
+              <GlucoseCard key={`glucose-${item.id}`} reading={item} onDelete={(id) => deleteGlucose.mutate(id)} />
+
+              )}
               </div>
               {recentActivity.length > 5 &&
-                <button
-                  onClick={() => setShowAllDoses((v) => !v)}
-                  className="text-sm hover:underline font-medium mt-1 text-[hsl(var(--muted-foreground))] mx-4">
+            <button
+              onClick={() => setShowAllDoses((v) => !v)}
+              className="text-sm hover:underline font-medium mt-1 text-[hsl(var(--muted-foreground))] mx-4 hidden">
                   {showAllDoses ? "Show less" : `Show more (${Math.min(recentActivity.length, 10) - 5} more)`}
                 </button>
-              }
+            }
             </div>
             <div>
               <ActiveAlerts doses={recentDoses} />
@@ -128,8 +128,8 @@ export default function Dashboard() {
       }
       {/* Floating Log Dose FAB */}
       <button
-         onClick={() => setDoseFormOpen(true)}
-  className="
+        onClick={() => setDoseFormOpen(true)}
+        className="
 fixed bottom-24 right-5 z-40
 w-14 h-14
 flex items-center justify-center
@@ -138,11 +138,20 @@ bg-white/10
 backdrop-blur-xl
 border border-white/10
 shadow-lg
-active:scale-95 transition"
->
+active:scale-95 transition">
+
+
+
+
+
+
+
+
+
+        
   <Plus className="w-7 h-7 text-white/80" />
       </button>
-    </div>
-  );
+    </div>);
+
 
 }
