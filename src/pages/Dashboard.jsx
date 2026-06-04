@@ -116,7 +116,7 @@ export default function Dashboard() {
                 <button
                   onClick={() => setShowAllDoses((v) => !v)}
                   className="text-sm hover:underline font-medium mt-1 text-[hsl(var(--muted-foreground))] mx-4">
-                  {showAllDoses ? "Show less" : `Show more (${Math.min(recentActivity.length, 15) - 5} more)`}
+                  {showAllDoses ? "Show less" : `Show more (${Math.min(recentActivity.length, 10) - 5} more)`}
                 </button>
               }
             </div>
