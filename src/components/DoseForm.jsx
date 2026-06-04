@@ -332,13 +332,13 @@ export default function DoseForm({ open, onOpenChange }) {
                         <button onClick={() => adjustGlucose(1)} className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white text-xl flex items-center justify-center transition-colors">+</button>
                       </div>
 
-  <Slider
+<Slider
   min={40}
   max={400}
   step={1}
   value={[glucoseValue]}
   onValueChange={([v]) => setGlucoseValue(v)}
-  className="my-4 cursor-pointer"
+  className="my-4 cursor-pointer [&_span]:bg-[#c2611c]/20 [&_span_span]:bg-[#c2611c] [&_[role=slider]]:border-[#c2611c] [&_[role=slider]]:bg-white"
 />
 
                      
