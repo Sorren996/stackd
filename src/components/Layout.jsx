@@ -77,7 +77,7 @@ export default function Layout() {
       </AnimatePresence>
 
       {/* iOS-style glass bottom nav */}
-      <nav className="fixed bottom-0 inset-x-0 z-50 flex justify-center pb-safe">
+      <nav className="fixed bottom-0 inset-x-0 z-30 flex justify-center pb-safe">
         <div
           className="mx-4 flex items-center gap-1 py-1 rounded-3xl border mb-4 px-4 backdrop-blur-sm border-white/40"
           style={{
