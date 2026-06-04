@@ -13,7 +13,8 @@ export default function Layout() {
   const location = useLocation();
 
   return (
-<div className="min-h-screen bg-gradient-to-b from-zinc-600 via-black to-teal-900 w-full overflow-x-hidden flex flex-col">      {/* Top header — logo only */}
+    <div className="min-h-screen bg-gradient-to-b from-zinc-600 via-black to-teal-900">
+      {/* Top header — logo only */}
       <header className="sticky top-0 z-50" style={{ background: 'rgba(8, 14, 10, 0)' }}>
         <div className="max-w-6xl mx-auto h-14 flex items-center justify-center px-4 bg-gradient-to-b from-black to-transparent">
           <div className="flex items-center justify-center gap-2.5">
