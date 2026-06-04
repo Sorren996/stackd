@@ -192,7 +192,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
             />
 
             {/* Insulin Y axis: 0–100 units */}
-            <YAxis yAxisId="insulin" domain={[0, 100]} hide />
+            <YAxis yAxisId="insulin" domain={[0, 75]} hide />
 
             {/* Glucose Y axis: raw mg/dL range */}
             <YAxis yAxisId="glucose" domain={[GLUCOSE_MIN, GLUCOSE_MAX]} hide />
