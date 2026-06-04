@@ -19,7 +19,7 @@ export default function Layout() {
         <div className="max-w-6xl mx-auto h-14 flex items-center justify-between px-4 bg-gradient-to-b from-black to-transparent">
           <div className="flex items-center gap-2.5">
 
-            <span className="text-base font-semibold tracking-tight text-white">Stackd</span>
+            <span className="text-base font-semibold tracking-tight text-white justify-center">Stackd</span>
           </div>
 
         </div>
