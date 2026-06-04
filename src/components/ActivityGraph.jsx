@@ -89,6 +89,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
     return map;
   }, [glucoseReadings]);
 
+  const maxDoseUnits = useMemo(() => Math.max(...doses.map((d) => d.units), 1), [doses]);
+
   const chartData = useMemo(() => {
     if (!doses.length && !glucoseReadings.length) return [];
     const step = 3 * 60000;
@@ -107,8 +109,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
           const hi = Math.min(lo + 1, curve.length - 1);
           const ratio = hi === lo ? 0 : (t - curve[lo].time) / (curve[hi].time - curve[lo].time);
           const activity = curve[lo].activity + ratio * (curve[hi].activity - curve[lo].activity);
-          // Scale by dose units so larger doses appear proportionally taller
-          point[key] = activity * dose.units;
+          // Scale so the largest dose peaks near the top of the axis (70), smaller doses proportionally shorter
+          point[key] = activity * (dose.units / maxDoseUnits) * 70;
         }
       });
       if (glucoseMap[t] !== undefined) point.glucose = glucoseMap[t];
