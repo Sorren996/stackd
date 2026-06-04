@@ -38,7 +38,7 @@ export default function Layout() {
             style={{
               background: isSettingsOpen ? "rgba(20,184,166,0.1)" : "rgba(255,255,255,0.05)",
               border: isSettingsOpen ? "1px solid rgba(20,184,166,0.35)" : "1px solid rgba(255,255,255,0.05)",
-              boxShadow: isSettingsOpen ? "0 0 18px rgba(20,184,166,0.5), 0 0 6px rgba(20,184,166,0.3)" : "none"
+              bosmhadow: isSettingsOpen ? "0 0 18px rgba(20,184,166,0.5), 0 0 6px rgba(20,184,166,0.3)" : "none"
             }}
           >
             <motion.div
@@ -84,7 +84,7 @@ export default function Layout() {
             background: "rgba(8,14,10,0.4)",
             backdropFilter: "blur(2px)",
             WebkitBackdropFilter: "blur(2px)",
-            boxShadow: "0 8px 40px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -1px 0 rgba(255,255,255,0.04)"
+            bosmhadow: "0 8px 40px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -1px 0 rgba(255,255,255,0.04)"
           }}
         >
           {navItems.map((item) => {
