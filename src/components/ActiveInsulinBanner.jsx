@@ -72,14 +72,23 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
         <span className="text-[10px] font-bold text-white/35 uppercase tracking-wider mb-3.5">{label}</span>
         <div className="relative flex items-center justify-center w-36 h-36">
           <svg width="144" height="144" viewBox="0 0 144 144" className="overflow-visible">
+            <defs>
+              <filter id="glow-large" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="4" result="blur1" />
+                <feGaussianBlur stdDeviation="10" result="blur2" />
+                <feMerge>
+                  <feMergeNode in="blur2" />
+                  <feMergeNode in="blur1" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
             <circle cx={72} cy={72} r={58} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={6} />
             {percentage > 0 && (
               <circle cx={72} cy={72} r={58} fill="none" stroke={activeColor} strokeWidth={6}
                 strokeDasharray={`${2 * Math.PI * 58 * percentage} ${2 * Math.PI * 58}`}
                 strokeDashoffset={0} strokeLinecap="round" transform="rotate(-90 72 72)"
-                style={{ 
-  filter: `drop-shadow(0 0 4px ${activeColor}) drop-shadow(0 0 12px ${activeColor}b0)` 
-}} />
+                filter="url(#glow-large)" />
             )}
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -104,14 +113,23 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
         <span className="text-[9px] font-bold text-white/35 uppercase tracking-wider mb-1.5">{label}</span>
         <div className="relative flex items-center justify-center w-14 h-14">
           <svg width="56" height="56" viewBox="0 0 56 56" className="overflow-visible">
+            <defs>
+              <filter id="glow-small" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="2.5" result="blur1" />
+                <feGaussianBlur stdDeviation="6" result="blur2" />
+                <feMerge>
+                  <feMergeNode in="blur2" />
+                  <feMergeNode in="blur1" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
             <circle cx={28} cy={28} r={22} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={4} />
             {percentage > 0 && (
               <circle cx={28} cy={28} r={22} fill="none" stroke={activeColor} strokeWidth={4}
                 strokeDasharray={`${2 * Math.PI * 22 * percentage} ${2 * Math.PI * 22}`}
                 strokeDashoffset={0} strokeLinecap="round" transform="rotate(-90 28 28)"
-                style={{ 
-  filter: `drop-shadow(0 0 3px ${activeColor}) drop-shadow(0 0 8px ${activeColor}b0)` 
-}} />
+                filter="url(#glow-small)" />
             )}
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
