@@ -98,11 +98,7 @@ export default function DoseForm({ open, onOpenChange }) {
         {/* Header */}
         <div className="flex items-center justify-center relative px-6 pt-5 pb-3 shrink-0">
           <DialogTitle className="text-white text-lg font-semibold">Log Entry</DialogTitle>
-          <button
-            onClick={() => onOpenChange(false)}
-            className="absolute left-5 top-5 text-white/60 hover:text-white transition-colors">
-            <X className="w-5 h-5" />
-          </button>
+
         </div>
 
         {/* Tabs */}
