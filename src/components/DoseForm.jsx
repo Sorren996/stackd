@@ -338,7 +338,7 @@ export default function DoseForm({ open, onOpenChange }) {
   step={1}
   value={[glucoseValue]}
   onValueChange={([v]) => setGlucoseValue(v)}
-  className="my-4 cursor-pointer [&_span]:bg-[#c2611c]/20 [&_span_span]:bg-[#c2611c] [&_[role=slider]]:border-[#c2611c] [&_[role=slider]]:bg-white"
+  className="my-4 cursor-pointer [&_span]:bg-[#c2611c]/20 [&_span_span]:bg-[#c2611c] [&_[role=slider]]:border-[#c2611c] [&_[role=slider]]:bg-white overflow-visible"
 />
 
                      
