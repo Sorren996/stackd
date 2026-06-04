@@ -154,43 +154,6 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
         )}
       </div>
 
-      {/* Info tooltip trigger */}
-      <div className="relative self-start">
-        <button
-          onClick={() => setTooltipOpen((v) => !v)}
-          className="flex items-center gap-1.5 text-white/25 hover:text-white/50 transition-colors text-[10px]"
-        >
-          <Info className="w-3 h-3" />
-          <span>How to read this</span>
-        </button>
-
-        {tooltipOpen && (
-          <div
-            className="absolute left-0 z-50 w-64 rounded-xl p-3.5 text-xs space-y-2 shadow-xl"
-            style={{ background: "rgba(18,28,22,0.97)", border: "1px solid rgba(255,255,255,0.08)" }}
-          >
-            <div className="flex items-center justify-between mb-1">
-              <span className="font-semibold text-white/70 text-[11px]">Reading the gauges</span>
-              <button onClick={() => setTooltipOpen(false)} className="text-white/30 hover:text-white/60">
-                <X className="w-3 h-3" />
-              </button>
-            </div>
-            {[
-              ["Active Insulin", "Estimated units still working in your body right now."],
-              ["Last Reading", "Your most recently logged blood glucose value."],
-              ["Daily Avg", "Average of all glucose readings logged today."],
-            ].map(([title, desc]) => (
-              <div key={title}>
-                <p className="font-semibold text-white/60">{title}</p>
-                <p className="text-white/35 leading-relaxed">{desc}</p>
-              </div>
-            ))}
-            <p className="text-white/25 text-[9px] pt-1 border-t border-white/5">
-              Ring fill = relative progress. Colors: green = in range, orange = high, red = low.
-            </p>
-          </div>
-        )}
       </div>
-    </div>
   );
 }
