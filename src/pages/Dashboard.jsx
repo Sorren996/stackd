@@ -112,7 +112,7 @@ export default function Dashboard() {
           <ActiveInsulinBanner doses={recentDoses} latestGlucose={latestGlucose} glucoseReadings={glucoseReadings} />
 
           {activeRapidCount > 1 && (
-            <div className="mx-4 sm:mx-0 flex items-start gap-3 p-4 rounded-xl border border-white/5 bg-amber-500/10 text-white">
+            <div className="mx-0 sm:mx-0 flex items-start gap-3 p-4 rounded-xl border border-white/5 bg-amber-500/10 text-white">
               <AlertTriangle className="w-5 h-5 mt-0.5 shrink-0 text-amber-500" />
               <div>
                 <p className="font-semibold text-sm">Insulin Stacking Detected</p>
