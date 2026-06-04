@@ -21,7 +21,7 @@ const GLUCOSE_MAX = 400;
 
 function CustomTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
-  const insulinEntries = payload.filter((p) => p.dataKey?.startsWith("dose_") && p.value != null && p.value > 0);
+  const insulinEntries = payload.filter((p) => p.dataKey?.startsWith("dose_") && !p.dataKey.includes("_actual") && !p.dataKey.includes("_total") && p.value != null && p.value > 0);
   const glucoseEntry = payload.find((p) => p.dataKey === "glucose");
   return (
     <div className="rounded-xl px-3 py-2 shadow-xl" style={{ background: "rgba(20,30,25,0.92)", border: "1px solid rgba(255,255,255,0.08)" }}>
@@ -37,13 +37,20 @@ function CustomTooltip({ active, payload, label }) {
           </div>
         );
       })()}
-      {insulinEntries.map((p) => (
-        <div key={p.dataKey} className="flex items-center gap-2 text-xs">
-          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />
-          <span className="text-white/80">{p.name}</span>
-          <span className="text-white/40 ml-auto pl-3">{p.value.toFixed(1)}u</span>
-        </div>
-      ))}
+      {insulinEntries.map((p) => {
+        const actual = p.payload[`${p.dataKey}_actual`];
+        const total = p.payload[`${p.dataKey}_total`];
+        return (
+          <div key={p.dataKey} className="flex items-center gap-2 text-xs">
+            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />
+            <span className="text-white/80">{p.name}</span>
+            <span className="ml-auto pl-3">
+              <span className="text-white font-medium">{actual != null ? actual.toFixed(1) : p.value.toFixed(1)}u</span>
+              {total != null && <span className="text-white/30 text-[10px]"> / {total}u</span>}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -101,6 +108,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
         const key = `dose_${dose.id}`;
         if (!curve.length || t < curve[0].time || t > curve[curve.length - 1].time) {
           point[key] = null;
+          point[`${key}_actual`] = null;
         } else {
           let lo = 0;
           for (let j = 0; j < curve.length - 1; j++) {
@@ -109,8 +117,11 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
           const hi = Math.min(lo + 1, curve.length - 1);
           const ratio = hi === lo ? 0 : (t - curve[lo].time) / (curve[hi].time - curve[lo].time);
           const activity = curve[lo].activity + ratio * (curve[hi].activity - curve[lo].activity);
-          // Scale so the largest dose peaks near the top of the axis (70), smaller doses proportionally shorter
+          // Visual height scaled proportionally to largest dose
           point[key] = activity * (dose.units / maxDoseUnits) * 70;
+          // Actual active insulin units for tooltip accuracy
+          point[`${key}_actual`] = activity * dose.units;
+          point[`${key}_total`] = dose.units;
         }
       });
       if (glucoseMap[t] !== undefined) point.glucose = glucoseMap[t];
