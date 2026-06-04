@@ -80,42 +80,45 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
   const timeData = getRemainingTimeData();
 
   const renderGauge = (label, val, unit, percentage, color, statusLabel) => {
-    const activeColor = color || "rgba(255,255,255,0.15)";
-    const radius = 32;
-    const center = 50;
-    const strokeWidth = 5;
-    return (
-      <div className="flex flex-col items-center flex-1 min-w-[90px] text-center">
-        <span className="text-[9px] font-bold text-white/35 uppercase tracking-wider mb-2.5 truncate w-full px-1">
-          {label}
-        </span>
-        <div className="relative flex items-center justify-center w-20 h-20">
-          <svg width="100" height="100" viewBox="0 0 100 100">
-            <circle cx={center} cy={center} r={radius} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={strokeWidth} />
-            {percentage > 0 && (
-              <circle
-                cx={center} cy={center} r={radius}
-                fill="none"
-                stroke={activeColor}
-                strokeWidth={strokeWidth}
-                strokeDasharray={`${2 * Math.PI * radius * percentage} ${2 * Math.PI * radius}`}
-                strokeDashoffset={0}
-                strokeLinecap="round"
-                transform={`rotate(-90 ${center} ${center})`}
-              />
-            )}
-          </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-base font-extrabold leading-none tracking-tight text-white">{val}</span>
-            <span className="text-[9px] text-white/40 font-medium mt-1">{unit}</span>
-          </div>
+  const activeColor = color || "rgba(255,255,255,0.15)";
+  const radius = 45;       // Increased from 32
+  const center = 56;       // Increased from 50
+  const strokeWidth = 6;   // Slightly thicker stroke
+  return (
+    <div className="flex flex-col items-center flex-1 min-w-[110px] text-center">
+      <span className="text-[10px] font-bold text-white/35 uppercase tracking-wider mb-3.5 truncate w-full px-1">
+        {label}
+      </span>
+      {/* Container resized from w-20 h-20 to w-28 h-28 */}
+      <div className="relative flex items-center justify-center w-28 h-28">
+        {/* SVG scaled to 112x112 */}
+        <svg width="112" height="112" viewBox="0 0 112 112">
+          <circle cx={center} cy={center} r={radius} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={strokeWidth} />
+          {percentage > 0 && (
+            <circle
+              cx={center} cy={center} r={radius}
+              fill="none"
+              stroke={activeColor}
+              strokeWidth={strokeWidth}
+              strokeDasharray={`${2 * Math.PI * radius * percentage} ${2 * Math.PI * radius}`}
+              strokeDashoffset={0}
+              strokeLinecap="round"
+              transform={`rotate(-90 ${center} ${center})`}
+            />
+          )}
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          {/* Boosted text-base to text-2xl */}
+          <span className="text-2xl font-extrabold leading-none tracking-tight text-white">{val}</span>
+          <span className="text-[10px] text-white/40 font-medium mt-1">{unit}</span>
         </div>
-        <span className="text-[10px] font-bold mt-2 truncate w-full px-1" style={{ color: activeColor }}>
-          {statusLabel}
-        </span>
       </div>
-    );
-  };
+      <span className="text-[11px] font-bold mt-2.5 truncate w-full px-1" style={{ color: activeColor }}>
+        {statusLabel}
+      </span>
+    </div>
+  );
+};
 
   const [tooltipOpen, setTooltipOpen] = useState(false);
 
