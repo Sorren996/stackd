@@ -6,6 +6,8 @@ import GlucoseCard from "../components/GlucoseCard";
 import { toast } from "sonner";
 import { CalendarDays, ChevronRight, ChevronDown } from "lucide-react";
 import { format, isToday, isYesterday, parseISO } from "date-fns";
+import { motion } from "framer-motion";
+
 
 function CollapsibleDateGroup({ label, count, children }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -105,30 +107,39 @@ export default function History() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col items-center gap-4">
-        <div className="text-center">
-          <p className="text-sm text-muted-foreground mt-1">Review and manage your logs</p>
-        </div>
-
-        <div className="flex gap-1 bg-white/5 p-1 rounded-xl">
-          <button
-            onClick={() => setActiveTab("doses")}
-            className={`px-4 py-2 rounded-lg text-xs font-medium transition-all ${
-              activeTab === "doses" ? "bg-white/10 text-white" : "text-white/40 hover:text-white/70"
-            }`}
-          >
-            Insulin Doses
-          </button>
-          <button
-            onClick={() => setActiveTab("glucose")}
-            className={`px-4 py-2 rounded-lg text-xs font-medium transition-all ${
-              activeTab === "glucose" ? "bg-white/10 text-white" : "text-white/40 hover:text-white/70"
-            }`}
-          >
-            Glucose Readings
-          </button>
-        </div>
-      </div>
+  <div className="flex gap-1 bg-white/5 p-1 rounded-xl">
+  <button
+    onClick={() => setActiveTab("doses")}
+    className={`relative px-4 py-2 rounded-lg text-xs font-medium transition-colors ${
+      activeTab === "doses" ? "text-white" : "text-white/40 hover:text-white/70"
+    }`}
+  >
+    {activeTab === "doses" && (
+      <motion.div
+        layoutId="active-history-tab"
+        className="absolute inset-0 bg-white/10 rounded-lg -z-10"
+        transition={{ type: "spring", stiffness: 380, damping: 30 }}
+      />
+    )}
+    <span className="relative z-10">Insulin Doses</span>
+  </button>
+  
+  <button
+    onClick={() => setActiveTab("glucose")}
+    className={`relative px-4 py-2 rounded-lg text-xs font-medium transition-colors ${
+      activeTab === "glucose" ? "text-white" : "text-white/40 hover:text-white/70"
+    }`}
+  >
+    {activeTab === "glucose" && (
+      <motion.div
+        layoutId="active-history-tab"
+        className="absolute inset-0 bg-white/10 rounded-lg -z-10"
+        transition={{ type: "spring", stiffness: 380, damping: 30 }}
+      />
+    )}
+    <span className="relative z-10">Glucose Readings</span>
+  </button>
+</div>
 
       {activeTab === "doses" ? (
         <div className="space-y-6">
