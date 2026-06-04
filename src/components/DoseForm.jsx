@@ -93,15 +93,57 @@ export default function DoseForm({ open, onOpenChange }) {
   const adjustGlucose = (delta) => setGlucoseValue((v) => Math.min(400, Math.max(40, v + delta)));
   const shortName = insulinType ? insulinType.split(" ")[0] : "";
 
-  return (
+    return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogPortal>
-        {/* Standard Backdrop */}
-        <DialogOverlay className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm transition-opacity duration-300" />
+        {/* local hardware-accelerated custom spring animations */}
+        <style>{`
+          @keyframes custom-backdrop-fade {
+            from { opacity: 0; backdrop-filter: blur(0px); }
+            to { opacity: 1; backdrop-filter: blur(4px); }
+          }
+          @keyframes custom-backdrop-fade-out {
+            from { opacity: 1; backdrop-filter: blur(4px); }
+            to { opacity: 0; backdrop-filter: blur(0px); }
+          }
+          
+          /* Mobile Bottom Sheet Spring */
+          @keyframes mobile-spring-up {
+            0% { transform: translateY(100%); }
+            60% { transform: translateY(-10px); }
+            85% { transform: translateY(3px); }
+            100% { transform: translateY(0); }
+          }
+          @keyframes mobile-slide-down {
+            from { transform: translateY(0); }
+            to { transform: translateY(100%); }
+          }
 
-        {/* Standard Animated Sheet / Modal */}
+          /* Desktop Centered Scale Spring */
+          @keyframes desktop-spring-scale {
+            0% { transform: translate(-50%, -42%) scale(0.92); opacity: 0; }
+            55% { transform: translate(-50%, -51.5%) scale(1.02); opacity: 1; }
+            80% { transform: translate(-50%, -49.5%) scale(0.995); }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+          }
+          @keyframes desktop-scale-out {
+            from { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+            to { transform: translate(-50%, -47%) scale(0.95); opacity: 0; }
+          }
+        `}</style>
+
+        {/* Backdrop with Smooth CSS Blur Transition */}
+        <DialogOverlay className="fixed inset-0 z-50 bg-black/75 data-[state=open]:animate-[custom-backdrop-fade_0.3s_ease-out] data-[state=closed]:animate-[custom-backdrop-fade-out_0.2s_ease-in]" />
+
+        {/* Responsive Sheet & Modal with Spring Physics */}
         <DialogPrimitive.Content 
-          className="fixed bottom-0 sm:bottom-auto left-0 right-0 sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 z-50 w-full sm:max-w-md flex flex-col overflow-hidden rounded-t-[2rem] sm:rounded-3xl border border-white/5 shadow-2xl duration-300 ease-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:slide-in-from-bottom-12 data-[state=closed]:slide-out-to-bottom-12 sm:data-[state=open]:zoom-in-95 sm:data-[state=closed]:zoom-out-95"
+          className="fixed bottom-0 sm:bottom-auto left-0 right-0 sm:left-1/2 sm:top-1/2 z-50 w-full sm:max-w-md flex flex-col overflow-hidden rounded-t-[2rem] sm:rounded-3xl border border-white/5 shadow-2xl origin-bottom sm:origin-center
+            /* Mobile Springs */
+            data-[state=open]:animate-[mobile-spring-up_0.42s_cubic-bezier(0.215,0.61,0.355,1)] 
+            data-[state=closed]:animate-[mobile-slide-down_0.24s_cubic-bezier(0.25,1,0.5,1)]
+            /* Desktop Springs */
+            sm:data-[state=open]:animate-[desktop-spring-scale_0.44s_cubic-bezier(0.25,1,0.5,1)]
+            sm:data-[state=closed]:animate-[desktop-scale-out_0.22s_cubic-bezier(0.25,1,0.5,1)]"
           style={{ background: "hsl(162,10%,8%)", maxHeight: "92vh" }}
         >
           {/* Header */}
