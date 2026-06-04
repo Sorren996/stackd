@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import ActivityGraph from "../components/ActivityGraph";
@@ -6,6 +6,7 @@ import ActiveInsulinBanner from "../components/ActiveInsulinBanner";
 import ActiveAlerts from "../components/ActiveAlerts";
 import DoseForm from "../components/DoseForm";
 import DoseCard from "../components/DoseCard";
+import GlucoseCard from "../components/GlucoseCard";
 import { Activity, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
@@ -32,6 +33,14 @@ export default function Dashboard() {
     queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", 100)
   });
 
+  const deleteGlucose = useMutation({
+    mutationFn: (id) => base44.entities.GlucoseReading.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["glucose-readings"] });
+      toast.success("Glucose reading removed");
+    }
+  });
+
   const deleteDose = useMutation({
     mutationFn: (id) => base44.entities.InsulinDose.delete(id),
     onSuccess: () => {
@@ -52,6 +61,12 @@ export default function Dashboard() {
   });
 
   const latestGlucose = glucoseReadings[0] || null;
+
+  const recentActivity = useMemo(() => {
+    const doseLogs = recentDoses.map((d) => ({ ...d, feedType: "insulin", timestamp: new Date(d.administered_at).getTime() }));
+    const glucoseLogs = recentGlucose.map((g) => ({ ...g, feedType: "glucose", timestamp: new Date(g.recorded_at).getTime() }));
+    return [...doseLogs, ...glucoseLogs].sort((a, b) => b.timestamp - a.timestamp);
+  }, [recentDoses, recentGlucose]);
 
   if (isLoading) {
     return (
@@ -87,23 +102,23 @@ export default function Dashboard() {
 
           <div className="grid gap-6 lg:grid-cols-3 overflow-hidden border:0 -mx-4">
             <div className="lg:col-span-2 space-y-3">
-              <h2 className="text-lg font-semibold text-[hsl(var(--popover))] mx-4 text-[hsl(var(--card-foreground))] px-0 py-1 font-medium opacity-65 rounded-full opacity-65 rounded-full">Recent Doses</h2>
+              <h2 className="text-lg font-semibold text-[hsl(var(--popover))] mx-4 text-[hsl(var(--card-foreground))] px-0 py-1 font-medium opacity-65 rounded-full">Recent Activity</h2>
               <div className="space-y-2">
-                {(showAllDoses ? recentDoses.slice(0, 10) : recentDoses.slice(0, 3)).map((dose) =>
-              <DoseCard
-                key={dose.id}
-                dose={dose}
-                onDelete={(id) => deleteDose.mutate(id)} />
-
-              )}
+                {(showAllDoses ? recentActivity.slice(0, 15) : recentActivity.slice(0, 5)).map((item) =>
+                  item.feedType === "insulin" ? (
+                    <DoseCard key={`dose-${item.id}`} dose={item} onDelete={(id) => deleteDose.mutate(id)} />
+                  ) : (
+                    <GlucoseCard key={`glucose-${item.id}`} reading={item} onDelete={(id) => deleteGlucose.mutate(id)} />
+                  )
+                )}
               </div>
-              {recentDoses.length > 3 &&
-            <button
-              onClick={() => setShowAllDoses((v) => !v)}
-              className="text-sm hover:underline font-medium mt-1 text-[hsl(var(--muted-foreground))] mx-4">
-                  {showAllDoses ? "Show less" : `Show more (${Math.min(recentDoses.length, 10) - 3} more)`}
+              {recentActivity.length > 5 &&
+                <button
+                  onClick={() => setShowAllDoses((v) => !v)}
+                  className="text-sm hover:underline font-medium mt-1 text-[hsl(var(--muted-foreground))] mx-4">
+                  {showAllDoses ? "Show less" : `Show more (${Math.min(recentActivity.length, 15) - 5} more)`}
                 </button>
-            }
+              }
             </div>
             <div>
               <ActiveAlerts doses={recentDoses} />
