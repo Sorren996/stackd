@@ -32,7 +32,7 @@ function CustomTooltip({ active, payload, label }) {
         const mgdl = Math.round(glucoseEntry.value);
         const color = getGlucoseColor(mgdl);
         return (
-          <div className="flex items-center gap-2 text-xs mb-1">
+          <div className="flex items-center gap-2 text-sm mb-1">
             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
             <span className="text-white/80">Glucose</span>
             <span className="ml-auto pl-3 font-medium" style={{ color }}>{mgdl} mg/dL</span>
@@ -43,7 +43,7 @@ function CustomTooltip({ active, payload, label }) {
         const actual = p.payload[`${p.dataKey}_actual`];
         const total = p.payload[`${p.dataKey}_total`];
         return (
-          <div key={p.dataKey} className="flex items-center gap-2 text-xs">
+          <div key={p.dataKey} className="flex items-center gap-2 text-sm">
             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />
             <span className="text-white/80">{p.name}</span>
             <span className="ml-auto pl-3">
@@ -175,7 +175,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
             <button
               key={r.label}
               onClick={() => setRangeIdx(i)}
-              className={`relative px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+              className={`relative px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
                 rangeIdx === i ? "text-white" : "text-white/40 hover:text-white/70"
               }`}
             >
@@ -200,7 +200,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
                 ? "bg-teal-500/10 border-teal-500/30 text-teal-400" 
                 : "border-white/5 bg-white/[0.03] text-white/40 hover:text-white/80 hover:bg-white/[0.08]"
             }`}
-            style={{ boxShadow: "0 0 10px rgba(255,255,255,0.02)" }}
+            style={{ bosmhadow: "0 0 10px rgba(255,255,255,0.02)" }}
           >
             <HelpCircle className="w-4 h-4" />
           </button>
@@ -233,7 +233,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
                   onClick={(e) => e.stopPropagation()} // Prevents closing when clicking the image itself
                   className="relative max-w-4xl w-full rounded-2xl overflow-hidden bg-black border border-teal-500/20 p-0.5"
                   style={{
-                    boxShadow: "0 20px 50px rgba(20, 184, 166, 0.25)"
+                    bosmhadow: "0 20px 50px rgba(20, 184, 166, 0.25)"
                   }}
                 >
                   <img
