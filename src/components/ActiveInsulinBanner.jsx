@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { ArrowRight } from "lucide-react";
+import { ArrowUp, ArrowDown, ArrowRight, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { INSULIN_PROFILES, generateActivityCurve } from "@/lib/insulinPharmacology";
 
 function getTotalActiveUnits(doses) {
@@ -58,6 +58,16 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
     return "#149142";
   };
 
+  const trendArrow = useMemo(() => {
+    if (glucoseReadings.length < 2) return "right";
+    const diff = glucoseReadings[0].value - glucoseReadings[1].value;
+    if (diff >= 7) return "up";
+    if (diff >= 4) return "up-right";
+    if (diff >= -3) return "right";
+    if (diff >= -6) return "down-right";
+    return "down";
+  }, [glucoseReadings]);
+
   const getGlucoseStatus = (val) => {
     if (!val) return "—";
     if (val < 70) return "Low";
@@ -65,8 +75,17 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
     return "Stable";
   };
 
-  const renderLargeGauge = (label, val, unit, percentage, color, hasArrow = false) => {
+  const TREND_ICONS = {
+    "up": ArrowUp,
+    "up-right": ArrowUpRight,
+    "right": ArrowRight,
+    "down-right": ArrowDownRight,
+    "down": ArrowDown,
+  };
+
+  const renderLargeGauge = (label, val, unit, percentage, color, trend = null) => {
     const activeColor = color || "rgba(255,255,255,0.15)";
+    const TrendIcon = trend ? TREND_ICONS[trend] : null;
     return (
       <div className="flex flex-col items-center text-center shrink-0">
         <span className="text-[10px] font-bold text-white/35 uppercase tracking-wider mb-3.5">{label}</span>
@@ -92,9 +111,9 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
             )}
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <div className="flex items-center gap-1 justify-center">
+            <div className="flex items-center gap-1.5 justify-center">
+              {TrendIcon && <TrendIcon className="w-4 h-4 shrink-0 text-white" />}
               <span className="text-2xl font-extrabold leading-none tracking-tight text-white">{val}</span>
-              {hasArrow && <ArrowRight className="w-4 h-4 shrink-0 text-white" />}
             </div>
             <span className="text-[10px] text-white/40 font-medium mt-1">{unit}</span>
           </div>
@@ -151,7 +170,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
           "mg/dL",
           latestGlucose ? Math.min(1, (latestGlucose.value - 40) / 360) : 0,
           getGlucoseColor(latestGlucose?.value),
-          true
+          latestGlucose ? trendArrow : null
         )}
         <div className="flex flex-col gap-4 pb-1">
           {renderSmallGauge(
