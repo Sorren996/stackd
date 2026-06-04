@@ -238,6 +238,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
           </AnimatePresence>
         </div>
 
+      </div>
+
       <div
         ref={scrollRef}
         className={is24h ? "" : "overflow-x-auto"}
