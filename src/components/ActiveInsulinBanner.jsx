@@ -95,10 +95,10 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
     );
   };
 
-  const renderSmallGauge = (label, val, unit, percentage, color, statusLabel) => {
+  const renderSmallGauge = (label, val, unit, percentage, color, statusLabel, className = "") => {
     const activeColor = color || "rgba(255,255,255,0.15)";
     return (
-      <div className="flex flex-col items-center text-center">
+      <div className={`flex flex-col items-center text-center ${className}`}>
         <span className="text-[9px] font-bold text-white/35 uppercase tracking-wider mb-1.5">{label}</span>
         <div className="relative flex items-center justify-center w-14 h-14">
           <svg width="56" height="56" viewBox="0 0 56 56">
@@ -139,25 +139,6 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
             avgDailyGlucose ? Math.min(1, (avgDailyGlucose - 40) / 360) : 0,
             getGlucoseColor(avgDailyGlucose),
             getGlucoseStatus(avgDailyGlucose)
-            // 1. Update the function signature to accept a className:
-const renderSmallGauge = (label, val, unit, percentage, color, statusLabel, className = "") => {
-  return (
-    <div className={`flex flex-col items-center text-center ${className}`}>
-      {/* rest of the function remains the same */}
-    </div>
-  );
-};
-
-// 2. Pass your desired padding or margin class (e.g., pb-0 or mb-0) to "Daily Avg":
-{renderSmallGauge(
-  "Daily Avg",
-  avgDailyGlucose || "—",
-  "mg/dL",
-  avgDailyGlucose ? Math.min(1, (avgDailyGlucose - 40) / 360) : 0,
-  getGlucoseColor(avgDailyGlucose),
-  getGlucoseStatus(avgDailyGlucose),
-  "pb-1" // <-- Your custom padding/margin class here
-)}
           )}
           {renderSmallGauge(
             "Active Insulin",
