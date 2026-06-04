@@ -98,7 +98,6 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
                 strokeDasharray={`${2 * Math.PI * 25 * percentage} ${2 * Math.PI * 25}`}
                 strokeDashoffset={0}
                 strokeLinecap="round"
-                style={{ filter: `drop-shadow(0 0 4px ${activeColor}55)` }}
                 transform="rotate(-90 31 31)"
               />
             )}
