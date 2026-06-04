@@ -57,7 +57,10 @@ export default function DoseForm({ open, onOpenChange }) {
 
   const profile = insulinType ? INSULIN_PROFILES[insulinType] : null;
   const accentColor = profile?.color || "#2dd4bf";
-  const glucoseColor = "#f97316";
+  const infoColor = profile ? accentColor : "rgba(255,255,255,0.3)";
+const infoBg = profile ? accentColor + "11" : "rgba(255,255,255,0.02)";
+const infoBorder = profile ? accentColor + "22" : "rgba(255,255,255,0.05)";
+  const glucoseColor = "#c2611cff";
 
   const handleSubmitInsulin = () => {
     if (!insulinType || !units) return;
@@ -193,29 +196,37 @@ export default function DoseForm({ open, onOpenChange }) {
                     </div>
 
                     {/* Pharmacokinetics */}
-                    {profile && (
-                      <div className="border border-white/10 rounded-2xl px-4 py-3 grid grid-cols-3 divide-x divide-white/10"
-                        style={{ backgroundColor: accentColor + "11" }}>
-                        <div className="text-center pr-4">
-                          <p className="font-bold text-base" style={{ color: accentColor }}>
-                            {profile.onsetMin < 60 ? `${profile.onsetMin}m` : `${Math.round(profile.onsetMin / 60)}h`}
-                          </p>
-                          <p className="text-white/40 text-sm mt-0.5 uppercase tracking-wider">Onset</p>
-                        </div>
-                        <div className="text-center px-4">
-                          <p className="font-bold text-base" style={{ color: accentColor }}>
-                            {profile.peakMin
-                              ? `${Math.round(profile.peakMin / 60)}h${profile.peakMin % 60 ? ` ${profile.peakMin % 60}m` : ""}`
-                              : "—"}
-                          </p>
-                          <p className="text-white/40 text-sm mt-0.5 uppercase tracking-wider">Peak</p>
-                        </div>
-                        <div className="text-center pl-4">
-                          <p className="font-bold text-base" style={{ color: accentColor }}>{Math.round(profile.durationMin / 60)}h</p>
-                          <p className="text-white/40 text-sm mt-0.5 uppercase tracking-wider">Duration</p>
-                        </div>
-                      </div>
-                    )}
+<div 
+  className="border rounded-2xl px-4 py-3 grid grid-cols-3 divide-x divide-white/10 transition-all duration-300"
+  style={{ backgroundColor: infoBg, borderColor: infoBorder }}
+>
+  <div className="text-center pr-4">
+    <p className="font-bold text-base transition-colors" style={{ color: infoColor }}>
+      {profile 
+        ? (profile.onsetMin < 60 ? `${profile.onsetMin}m` : `${Math.round(profile.onsetMin / 60)}h`) 
+        : "—"
+      }
+    </p>
+    <p className="text-white/40 text-sm mt-0.5 uppercase tracking-wider">Onset</p>
+  </div>
+  <div className="text-center px-4">
+    <p className="font-bold text-base transition-colors" style={{ color: infoColor }}>
+      {profile 
+        ? (profile.peakMin 
+            ? `${Math.round(profile.peakMin / 60)}h${profile.peakMin % 60 ? ` ${profile.peakMin % 60}m` : ""}` 
+            : "—") 
+        : "—"
+      }
+    </p>
+    <p className="text-white/40 text-sm mt-0.5 uppercase tracking-wider">Peak</p>
+  </div>
+  <div className="text-center pl-4">
+    <p className="font-bold text-base transition-colors" style={{ color: infoColor }}>
+      {profile ? `${Math.round(profile.durationMin / 60)}h` : "—"}
+    </p>
+    <p className="text-white/40 text-sm mt-0.5 uppercase tracking-wider">Duration</p>
+  </div>
+</div>
 
                     {/* Units */}
                     <div>
