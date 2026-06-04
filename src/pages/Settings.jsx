@@ -141,7 +141,8 @@ export default function Settings() {
   };
 
 
-
+  return (
+    <div className="max-w-md mx-auto space-y-6 pt-4 pb-12">
       {/* Target Range Preference */}
       <div className="space-y-3">
         <h3 className="text-sm font-bold text-white/35 uppercase tracking-wider px-1">Target Range Preference</h3>
