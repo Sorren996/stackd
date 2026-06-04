@@ -126,7 +126,7 @@ const trendLabel = useMemo(() => {
               <span className="text-4xl font-extrabold leading-none tracking-tight text-white">{val}</span>
               {TrendIcon && <TrendIcon className="w-6 h-6 shrink-0 text-white" />}
             </div>
-            <span className="text-xs text-white/40 font-medium mt-1.5">{unit}</span>
+            <span className="text-sm text-white/40 font-medium mt-1.5">{unit}</span>
           </div>
         </div>
         <span className="text-sm font-bold mt-3" style={{ color: activeColor }}>
@@ -167,7 +167,7 @@ const trendLabel = useMemo(() => {
             <span className="text-[9px] text-white/40 font-medium mt-0.5">{unit}</span>
           </div>
         </div>
-        <span className="text-xs font-bold mt-2" style={{ color: activeColor }}>{statusLabel}</span>
+        <span className="text-sm font-bold mt-2" style={{ color: activeColor }}>{statusLabel}</span>
       </div>
     );
   };
