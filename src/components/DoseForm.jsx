@@ -2,10 +2,14 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogPortal, DialogOverlay } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { X, Syringe, Droplets } from "lucide-react";
 import { toast } from "sonner";
+import { motion, AnimatePresence } from "framer-motion"; 
+
+export default function DoseForm({ open, onOpenChange }) {
+  const [tab, setTab] = useState("insulin");
 
 const CATEGORY_ORDER = ["Rapid-Acting", "Short-Acting", "Intermediate", "Long-Acting", "Ultra Long-Acting"];
 
@@ -16,6 +20,64 @@ const groupedInsulins = CATEGORY_ORDER.reduce((acc, cat) => {
 }, []);
 
 const GLUCOSE_PRESETS = [70, 100, 120, 140, 180, 200, 250];
+
+ return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogPortal>
+        {/* AnimatePresence manages the exit slide-down animation */}
+        <AnimatePresence>
+          {open && (
+            <>
+              {/* Animated Backdrop */}
+              <DialogOverlay asChild>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm"
+                />
+              </DialogOverlay>
+
+              {/* Animated Dialog Content Container */}
+              <motion.div
+                initial={{ opacity: 0, y: "100%", scale: 0.95 }}
+                animate={{ 
+                  opacity: 1, 
+                  y: 0, 
+                  scale: 1,
+                  transition: { type: "spring", stiffness: 260, damping: 26 } 
+                }}
+                exit={{ 
+                  opacity: 0, 
+                  y: "100%", 
+                  scale: 0.95,
+                  transition: { duration: 0.2, ease: "easeInOut" } 
+                }}
+                className="fixed bottom-0 sm:bottom-auto left-0 right-0 sm:left-[50%] sm:top-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%] z-50 grid w-full max-w-md gap-0 overflow-hidden border-0 shadow-lg max-h-[92vh] flex flex-col rounded-t-[2.5rem] sm:rounded-3xl"
+                style={{ background: "hsl(162,10%,8%)" }}
+              >
+                {/* Header with Close Button */}
+                <div className="flex items-center justify-between relative px-6 pt-5 pb-3 shrink-0">
+                  <div className="w-6" /> {/* Balance spacer */}
+                  <span className="text-white text-lg font-semibold">Log Entry</span>
+                  <button 
+                    onClick={() => onOpenChange(false)}
+                    className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 border border-white/5 text-white/60 hover:text-white/100 active:scale-95 transition"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* ... keep existing tabs & form content (insulin/glucose bodies) ... */}
+                
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+      </DialogPortal>
+    </Dialog>
+  );
+}
 
 export default function DoseForm({ open, onOpenChange }) {
   const [tab, setTab] = useState("insulin");
