@@ -13,26 +13,37 @@ export default function Layout() {
   const location = useLocation();
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-teal-900 to-black">
+    <div className="min-h-screen text-white relative">
+      {/* 1. This fixed div stays strictly pinned to the viewport */}
+      <div 
+        className="fixed inset-0 -z-50 bg-gradient-to-b from-teal-950 via-zinc-950 to-black pointer-events-none" 
+      />
+
       {/* Top header — logo only */}
-      <header className="sticky top-0 z-50" style={{ background: 'rgba(8, 14, 10, 0)' }}>
-        <div className="max-w-6xl mx-auto h-14 flex items-center justify-center px-4 bg-gradient-to-b from-black to-transparent">
+      <header className="sticky top-0 z-50 bg-transparent">
+        <div className="max-w-6xl mx-auto h-14 flex items-center justify-center px-4 bg-gradient-to-b from-black/80 to-transparent">
           <div className="flex items-center justify-center gap-2.5">
-
-<img 
-  src="https://media.base44.com/images/public/6a1b93f234a8611ee1595134/9cd3c84cf_stackdappiconver3tran.png" 
-  alt="Stackd Logo" 
-  className="h-9 w-auto object-contain"
-/>          </div>
-
+            <img 
+              src="https://media.base44.com/images/public/6a1b93f234a8611ee1595134/9cd3c84cf_stackdappiconver3tran.png" 
+              alt="Stackd Logo" 
+              className="h-9 w-auto object-contain"
+            />          
+          </div>
         </div>
       </header>
 
-      {/* Page content — extra bottom padding for nav bar */}
-      <main className="max-w-6xl w-full mx-auto px-4 flex-1 pb-28 py-0">
-
+      {/* Page content — rolls on top of the fixed backdrop */}
+      <main className="max-w-6xl w-full mx-auto px-4 flex-1 pb-28 py-0 relative z-10">
         <Outlet />
       </main>
+
+      {/* Bottom Nav */}
+      <nav className="fixed bottom-0 inset-x-0 z-50 flex justify-center pb-safe">
+        {/* ... Nav items ... */}
+      </nav>
+    </div>
+  );
+
 
       {/* iOS-style glass bottom nav */}
       <nav className="fixed bottom-0 inset-x-0 z-50 flex justify-center pb-safe">
