@@ -131,7 +131,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
           getGlucoseColor(latestGlucose?.value),
           true
         )}
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 pb-1">
           {renderSmallGauge(
             "Daily Avg",
             avgDailyGlucose || "—",
