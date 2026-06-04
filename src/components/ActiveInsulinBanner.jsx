@@ -130,14 +130,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
           "hsl(162, 50%, 42%)",
           hasActive ? "Active" : "Cleared"
         )}
-        {renderGauge(
-          "Time Left",
-          timeData.val,
-          timeData.unit,
-          timeData.pct,
-          "hsl(195, 60%, 50%)",
-          timeData.status
-        )}
+
         {renderGauge(
           "Last Reading",
           latestGlucose ? latestGlucose.value : "—",
