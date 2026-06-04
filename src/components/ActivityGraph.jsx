@@ -68,6 +68,15 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
     return () => ro.disconnect();
   }, []);
 
+  const targetLow = parseInt(localStorage.getItem("target_range_low") || "70", 10);
+  const targetHigh = parseInt(localStorage.getItem("target_range_high") || "180", 10);
+
+  // Map glucose values to gradient % positions (top=0%, bottom=100%)
+  const rangeTotal = GLUCOSE_MAX - GLUCOSE_MIN;
+  const highPct = ((GLUCOSE_MAX - targetHigh) / rangeTotal * 100).toFixed(1);
+  const midPct = ((GLUCOSE_MAX - (targetLow + targetHigh) / 2) / rangeTotal * 100).toFixed(1);
+  const lowPct = ((GLUCOSE_MAX - targetLow) / rangeTotal * 100).toFixed(1);
+
   const selectedRange = TIME_RANGES[rangeIdx];
   const now = Date.now();
   const snappedNow = Math.round(now / 180000) * 180000;
@@ -85,7 +94,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
     [doses]
   );
 
-  // Build glucose map: bucket → raw mg/dL value (no normalization)
   const glucoseMap = useMemo(() => {
     const map = {};
     glucoseReadings.forEach((g) => {
@@ -103,7 +111,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
     const step = 3 * 60000;
     const result = [];
     for (let t = domainStart; t <= domainEnd; t += step) {
-      const point = { time: t };
+      const point = { time: t, bg: GLUCOSE_MAX };
       allCurvesMeta.forEach(({ dose, curve }) => {
         const key = `dose_${dose.id}`;
         if (!curve.length || t < curve[0].time || t > curve[curve.length - 1].time) {
@@ -117,9 +125,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
           const hi = Math.min(lo + 1, curve.length - 1);
           const ratio = hi === lo ? 0 : (t - curve[lo].time) / (curve[hi].time - curve[lo].time);
           const activity = curve[lo].activity + ratio * (curve[hi].activity - curve[lo].activity);
-          // Visual height scaled proportionally to largest dose
           point[key] = activity * (dose.units / maxDoseUnits) * 70;
-          // Actual active insulin units for tooltip accuracy
           point[`${key}_actual`] = activity * dose.units;
           point[`${key}_total`] = dose.units;
         }
@@ -191,6 +197,13 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
                   <stop offset="100%" stopColor={k.color} stopOpacity={0.0} />
                 </linearGradient>
               ))}
+              <linearGradient id="glucose_range_grad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#000000" stopOpacity={0} />
+                <stop offset={`${highPct}%`} stopColor="#000000" stopOpacity={0} />
+                <stop offset={`${midPct}%`} stopColor="#78350f" stopOpacity={0.45} />
+                <stop offset={`${lowPct}%`} stopColor="#000000" stopOpacity={0} />
+                <stop offset="100%" stopColor="#000000" stopOpacity={0} />
+              </linearGradient>
             </defs>
 
             <XAxis
@@ -204,10 +217,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
               tickCount={tickCount}
             />
 
-            {/* Insulin Y axis: 0–100 units */}
             <YAxis yAxisId="insulin" domain={[0, 75]} hide />
-
-            {/* Glucose Y axis: raw mg/dL range */}
             <YAxis yAxisId="glucose" domain={[GLUCOSE_MIN, GLUCOSE_MAX]} hide />
 
             <Tooltip content={<CustomTooltip />} cursor={{ stroke: "rgba(255,255,255,0.1)", strokeWidth: 1 }} />
@@ -219,6 +229,21 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
               strokeDasharray="3 3"
               strokeWidth={1}
             />
+
+            {/* Target range background gradient */}
+            {glucoseReadings.length > 0 && (
+              <Area
+                yAxisId="glucose"
+                type="monotoneX"
+                dataKey="bg"
+                stroke="none"
+                fill="url(#glucose_range_grad)"
+                isAnimationActive={false}
+                dot={false}
+                activeDot={false}
+                legendType="none"
+              />
+            )}
 
             {doseKeys.map((k) => (
               <Area
@@ -263,40 +288,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
                 isAnimationActive={false}
               />
             )}
-
-const targetLow = parseInt(localStorage.getItem("target_range_low") || "70", 10);
-const targetHigh = parseInt(localStorage.getItem("target_range_high") || "180", 10);
-const rangeTotal = GLUCOSE_MAX - GLUCOSE_MIN;
-const lowOffset = ((GLUCOSE_MAX - targetLow) / rangeTotal) * 100;
-const highOffset = ((GLUCOSE_MAX - targetHigh) / rangeTotal) * 100;
-const midOffset = (lowOffset + highOffset) / 2;
-
-<linearGradient id="glucose_range_gradient" x1="0" y1="0" x2="0" y2="1">
-  {/* Above the target range: Dark/Transparent */}
-  <stop offset="0%" stopColor="rgba(0,0,0,0.9)" />
-  <stop offset={`${highOffset}%`} stopColor="rgba(0,0,0,0.9)" />
-  
-  {/* Inside the target range: Amber-900 Warm Highlight */}
-  <stop offset={`${midOffset}%`} stopColor="#78350f" stopOpacity={0.45} />
-  
-  {/* Below the target range: Dark/Transparent */}
-  <stop offset={`${lowOffset}%`} stopColor="rgba(0,0,0,0.9)" />
-  <stop offset="100%" stopColor="rgba(0,0,0,0.9)" />
-</linearGradient>
-
-const point = { time: t, bg: GLUCOSE_MAX };
-{glucoseReadings.length > 0 && (
-  <Area
-    yAxisId="glucose"
-    type="monotoneX"
-    dataKey="bg"
-    stroke="none"
-    fill="url(#glucose_range_gradient)"
-    isAnimationActive={false}
-    dot={false}
-  />
-)}
-
           </ComposedChart>
         </div>
       </div>
