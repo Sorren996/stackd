@@ -117,7 +117,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
   const [tooltipOpen, setTooltipOpen] = useState(false);
 
   return (
-    <div className="p-6 rounded-none md:rounded-3xl border-0 flex flex-col gap-6 -mx-4 md:mx-0">
+    <div className="p-10 rounded-none md:rounded-3xl border-0 flex flex-col gap-6 -mx-4 md:mx-0">
 
 
       <div className="flex justify-between items-center gap-1.5 md:gap-4">
