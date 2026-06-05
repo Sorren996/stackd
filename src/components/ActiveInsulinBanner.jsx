@@ -293,7 +293,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
                 getGlucoseStatus(avgDailyGlucose)
               )}
               {renderSmallGauge(
-                "Act. Insulin",
+                "Act Insulin",
                 activeUnits.toFixed(1),
                 "units",
                 Math.min(1, activeUnits / totalAdministered),
