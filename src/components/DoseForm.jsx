@@ -207,6 +207,7 @@ export default function DoseForm({ open, onOpenChange }) {
             );
           })()}
 
+          <div className="flex-1 flex flex-col" style={{ minHeight: 580 }}>
           {tab === "carbs" ? (
             <CarbsTab onSubmit={(data) => createCarb.mutate(data)} isPending={createCarb.isPending} />
           ) : tab === "insulin" ? (
@@ -400,6 +401,7 @@ export default function DoseForm({ open, onOpenChange }) {
               </div>
             </>
           )}
+          </div>
         </DialogPrimitive.Content>
       </DialogPortal>
     </Dialog>
