@@ -44,15 +44,15 @@ export default function Settings() {
     setIsDeletingAccount(true);
     // Delete all user data
     const [doses, readings, carbs] = await Promise.all([
-      base44.entities.InsulinDose.list("-administered_at", 5000),
-      base44.entities.GlucoseReading.list("-recorded_at", 5000),
-      base44.entities.CarbEntry.list("-consumed_at", 5000),
-    ]);
+    base44.entities.InsulinDose.list("-administered_at", 5000),
+    base44.entities.GlucoseReading.list("-recorded_at", 5000),
+    base44.entities.CarbEntry.list("-consumed_at", 5000)]
+    );
     await Promise.all([
-      ...doses.map(d => base44.entities.InsulinDose.delete(d.id)),
-      ...readings.map(r => base44.entities.GlucoseReading.delete(r.id)),
-      ...carbs.map(c => base44.entities.CarbEntry.delete(c.id)),
-    ]);
+    ...doses.map((d) => base44.entities.InsulinDose.delete(d.id)),
+    ...readings.map((r) => base44.entities.GlucoseReading.delete(r.id)),
+    ...carbs.map((c) => base44.entities.CarbEntry.delete(c.id))]
+    );
     base44.auth.logout("/login");
   };
 
@@ -81,14 +81,14 @@ export default function Settings() {
     const doses = await base44.entities.InsulinDose.list("-administered_at", 1000);
     const glucose = await base44.entities.GlucoseReading.list("-recorded_at", 1000);
     const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
-    const filteredDoses = doses.filter(d => new Date(d.administered_at).getTime() >= cutoff);
-    const filteredGlucose = glucose.filter(g => new Date(g.recorded_at).getTime() >= cutoff);
+    const filteredDoses = doses.filter((d) => new Date(d.administered_at).getTime() >= cutoff);
+    const filteredGlucose = glucose.filter((g) => new Date(g.recorded_at).getTime() >= cutoff);
 
     let csv = "Type,Value / Units,Insulin Type,Timestamp,Notes\n";
-    filteredDoses.forEach(d => {
+    filteredDoses.forEach((d) => {
       csv += `Insulin,${d.units},"${d.insulin_type}",${d.administered_at},"${d.notes || ""}"\n`;
     });
-    filteredGlucose.forEach(g => {
+    filteredGlucose.forEach((g) => {
       csv += `Glucose,${g.value},,${g.recorded_at},"${g.notes || ""}"\n`;
     });
 
@@ -117,91 +117,91 @@ export default function Settings() {
   };
 
   const handleAppleHealthImport = async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
+    const file = e.target.files[0];
+    if (!file) return;
 
-  setIsSyncing(true);
-  toast.info("Processing large file in secure chunks. Please keep this tab open...");
+    setIsSyncing(true);
+    toast.info("Processing large file in secure chunks. Please keep this tab open...");
 
-  try {
-    // 1. Clear previous glucose readings
-    toast.info("Clearing previous readings to prepare for new data...");
-    const existingReadings = await base44.entities.GlucoseReading.list("-recorded_at", 5000);
-    await Promise.all(existingReadings.map(r => base44.entities.GlucoseReading.delete(r.id)));
+    try {
+      // 1. Clear previous glucose readings
+      toast.info("Clearing previous readings to prepare for new data...");
+      const existingReadings = await base44.entities.GlucoseReading.list("-recorded_at", 5000);
+      await Promise.all(existingReadings.map((r) => base44.entities.GlucoseReading.delete(r.id)));
 
-    // 2. Stream and parse the file chunk-by-chunk (16MB slices)
-    const chunkSize = 16 * 1024 * 1024; 
-    let offset = 0;
-    let remainder = "";
-    let totalSyncedCount = 0;
-    let batch = [];
-    const batchSize = 500;
+      // 2. Stream and parse the file chunk-by-chunk (16MB slices)
+      const chunkSize = 16 * 1024 * 1024;
+      let offset = 0;
+      let remainder = "";
+      let totalSyncedCount = 0;
+      let batch = [];
+      const batchSize = 500;
 
-    while (offset < file.size) {
-      const slice = file.slice(offset, offset + chunkSize);
-      const chunkText = await slice.text();
-      const textToParse = remainder + chunkText;
+      while (offset < file.size) {
+        const slice = file.slice(offset, offset + chunkSize);
+        const chunkText = await slice.text();
+        const textToParse = remainder + chunkText;
 
-      // Ensure we don't parse a cut-off XML element at the chunk boundary
-      const lastClosedBracket = textToParse.lastIndexOf('>');
-      let processableText = "";
-      if (lastClosedBracket !== -1) {
-        processableText = textToParse.substring(0, lastClosedBracket + 1);
-        remainder = textToParse.substring(lastClosedBracket + 1);
-      } else {
-        remainder = textToParse;
-        offset += chunkSize;
-        continue;
-      }
+        // Ensure we don't parse a cut-off XML element at the chunk boundary
+        const lastClosedBracket = textToParse.lastIndexOf('>');
+        let processableText = "";
+        if (lastClosedBracket !== -1) {
+          processableText = textToParse.substring(0, lastClosedBracket + 1);
+          remainder = textToParse.substring(lastClosedBracket + 1);
+        } else {
+          remainder = textToParse;
+          offset += chunkSize;
+          continue;
+        }
 
-      // Extract blood glucose records in this chunk
-      const recordRegex = /<Record[^>]*type="HKQuantityTypeIdentifierBloodGlucose"[^>]*>/g;
-      const matches = processableText.match(recordRegex) || [];
+        // Extract blood glucose records in this chunk
+        const recordRegex = /<Record[^>]*type="HKQuantityTypeIdentifierBloodGlucose"[^>]*>/g;
+        const matches = processableText.match(recordRegex) || [];
 
-      for (const record of matches) {
-        const valueMatch = record.match(/value="([^"]+)"/);
-        const dateMatch = record.match(/startDate="([^"]+)"/);
-        
-        if (valueMatch && dateMatch) {
-          const val = parseFloat(valueMatch[1]);
-          if (!isNaN(val)) {
-            batch.push({
-              value: val,
-              recorded_at: new Date(dateMatch[1]).toISOString(),
-              notes: "Synced from Apple Health"
-            });
+        for (const record of matches) {
+          const valueMatch = record.match(/value="([^"]+)"/);
+          const dateMatch = record.match(/startDate="([^"]+)"/);
 
-            // Bulk insert in batches to save memory & optimize database performance
-            if (batch.length >= batchSize) {
-              await base44.entities.GlucoseReading.bulkCreate(batch);
-              totalSyncedCount += batch.length;
-              batch = [];
+          if (valueMatch && dateMatch) {
+            const val = parseFloat(valueMatch[1]);
+            if (!isNaN(val)) {
+              batch.push({
+                value: val,
+                recorded_at: new Date(dateMatch[1]).toISOString(),
+                notes: "Synced from Apple Health"
+              });
+
+              // Bulk insert in batches to save memory & optimize database performance
+              if (batch.length >= batchSize) {
+                await base44.entities.GlucoseReading.bulkCreate(batch);
+                totalSyncedCount += batch.length;
+                batch = [];
+              }
             }
           }
         }
+
+        offset += chunkSize;
       }
 
-      offset += chunkSize;
-    }
+      // Insert any remaining records in the last batch
+      if (batch.length > 0) {
+        await base44.entities.GlucoseReading.bulkCreate(batch);
+        totalSyncedCount += batch.length;
+      }
 
-    // Insert any remaining records in the last batch
-    if (batch.length > 0) {
-      await base44.entities.GlucoseReading.bulkCreate(batch);
-      totalSyncedCount += batch.length;
-    }
+      if (totalSyncedCount === 0) {
+        throw new Error("No blood glucose records found in this export file.");
+      }
 
-    if (totalSyncedCount === 0) {
-      throw new Error("No blood glucose records found in this export file.");
+      toast.success(`Successfully synced ${totalSyncedCount} continuous glucose readings!`);
+      queryClient.invalidateQueries({ queryKey: ["glucose-readings"] });
+    } catch (err) {
+      toast.error(err.message || "Failed to process the XML export.");
+    } finally {
+      setIsSyncing(false);
     }
-
-    toast.success(`Successfully synced ${totalSyncedCount} continuous glucose readings!`);
-    queryClient.invalidateQueries({ queryKey: ["glucose-readings"] });
-  } catch (err) {
-    toast.error(err.message || "Failed to process the XML export.");
-  } finally {
-    setIsSyncing(false);
-  }
-};
+  };
 
   return (
     <div className="max-w-md mx-auto space-y-6 pt-4 pb-12">
@@ -212,11 +212,11 @@ export default function Settings() {
           <button
             onClick={handleSetRecommended}
             className={`shrink-0 w-28 py-3 px-2 rounded-2xl border text-center transition-all flex flex-col items-center justify-center ${
-              isRecommended
-                ? "bg-teal-500/10 border-teal-500/40 text-white"
-                : "bg-white/[0.01] border-white/5 text-white/40 hover:bg-white/[0.03]"
-            }`}
-          >
+            isRecommended ?
+            "bg-teal-500/10 border-teal-500/40 text-white" :
+            "bg-white/[0.01] border-white/5 text-white/40 hover:bg-white/[0.03]"}`
+            }>
+            
             <div className="text-[10px] font-bold uppercase tracking-wider opacity-60">Recommended</div>
             <div className="text-base font-extrabold mt-1">70–180</div>
             <div className="text-[9px] text-white/30 mt-0.5">mg/dL</div>
@@ -233,8 +233,8 @@ export default function Settings() {
               step={5}
               value={[targetLow, targetHigh]}
               onValueChange={handleSliderChange}
-              className="cursor-pointer"
-            />
+              className="cursor-pointer" />
+            
             <div className="flex justify-between text-[10px] text-white/20">
               <span>70</span>
               <span>250</span>
@@ -276,14 +276,14 @@ export default function Settings() {
               onClick={handleSteloToggle}
               disabled={connectingStelo}
               className={`text-sm font-bold px-4 py-2 rounded-xl border transition-all ${
-                steloConnected
-                  ? "bg-teal-500/10 border-teal-500/30 text-teal-400 hover:bg-teal-500/20"
-                  : "bg-white/5 border-white/5 text-white/80 hover:bg-white/10"
-              }`}
-            >
-              {connectingStelo ? (
-                <span className="flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Syncing...</span>
-              ) : steloConnected ? "Connected" : "Connect"}
+              steloConnected ?
+              "bg-teal-500/10 border-teal-500/30 text-teal-400 hover:bg-teal-500/20" :
+              "bg-white/5 border-white/5 text-white/80 hover:bg-white/10"}`
+              }>
+              
+              {connectingStelo ?
+              <span className="flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Syncing...</span> :
+              steloConnected ? "Connected" : "Connect"}
             </button>
           </div>
         </div>
@@ -304,11 +304,11 @@ export default function Settings() {
           </div>
 
           <label className={`flex flex-col items-center justify-center border-2 border-dashed rounded-2xl p-6 cursor-pointer transition-all group ${
-            isSyncing ? "border-teal-500/40 bg-teal-500/[0.02]" : "border-white/10 hover:border-teal-500/40 bg-white/[0.01] hover:bg-teal-500/[0.02]"
-          }`}>
-            {isSyncing
-              ? <Loader2 className="w-6 h-6 text-teal-400 animate-spin mb-2" />
-              : <Upload className="w-6 h-6 text-white/30 group-hover:text-teal-400 mb-2 transition-colors" />
+          isSyncing ? "border-teal-500/40 bg-teal-500/[0.02]" : "border-white/10 hover:border-teal-500/40 bg-white/[0.01] hover:bg-teal-500/[0.02]"}`
+          }>
+            {isSyncing ?
+            <Loader2 className="w-6 h-6 text-teal-400 animate-spin mb-2" /> :
+            <Upload className="w-6 h-6 text-white/30 group-hover:text-teal-400 mb-2 transition-colors" />
             }
             <span className="text-sm font-medium text-white/70 group-hover:text-white transition-colors">
               {isSyncing ? "Parsing export data..." : "Select export.xml or health.zip"}
@@ -319,8 +319,8 @@ export default function Settings() {
               accept=".xml,.zip"
               onChange={handleAppleHealthImport}
               disabled={isSyncing}
-              className="hidden"
-            />
+              className="hidden" />
+            
           </label>
         </div>
       </div>
@@ -332,8 +332,8 @@ export default function Settings() {
           <button
             onClick={handleExportCSV}
             disabled={isExporting}
-            className="w-full flex items-center justify-between py-1 bg-transparent hover:opacity-80 transition-all text-left"
-          >
+            className="w-full flex items-center justify-between py-1 bg-transparent hover:opacity-80 transition-all text-left">
+            
             <div className="space-y-0.5">
               <div className="text-sm font-semibold text-white flex items-center gap-2">
                 <Download className="w-4 h-4 text-teal-400" />
@@ -341,9 +341,9 @@ export default function Settings() {
               </div>
               <p className="text-sm text-white/40">Download insulin & glucose data for past 30 days</p>
             </div>
-            {isExporting
-              ? <Loader2 className="w-4 h-4 animate-spin text-teal-400" />
-              : <Sparkles className="w-4 h-4 text-teal-400/60" />
+            {isExporting ?
+            <Loader2 className="w-4 h-4 animate-spin text-teal-400" /> :
+            <Sparkles className="w-4 h-4 text-teal-400/60" />
             }
           </button>
         </div>
@@ -371,23 +371,23 @@ export default function Settings() {
       {/* Log Out */}
       <button
         onClick={handleLogout}
-        className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl border border-white/5 text-white/50 hover:bg-white/5 hover:text-white/80 transition-all text-sm font-medium"
-      >
+        className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl border border-white/5 text-white/50 hover:bg-white/5 hover:text-white/80 transition-all text-sm font-medium">
+        
         <LogOut className="w-4 h-4" />
         Log Out
       </button>
 
       {/* Delete Account */}
-      {!showDeleteConfirm ? (
-        <button
-          onClick={() => setShowDeleteConfirm(true)}
-          className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl border border-red-500/10 text-red-500/50 hover:bg-red-500/5 hover:text-red-400 transition-all text-sm font-medium"
-        >
+      {!showDeleteConfirm ?
+      <button
+        onClick={() => setShowDeleteConfirm(true)}
+        className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl border border-red-500/10 text-red-500/50 hover:bg-red-500/5 hover:text-red-400 transition-all text-sm font-medium">
+        
           <Trash2 className="w-4 h-4" />
           Delete Account
-        </button>
-      ) : (
-        <div className="bg-red-950/30 border border-red-500/20 rounded-3xl p-5 space-y-4">
+        </button> :
+
+      <div className="bg-red-950/30 border border-red-500/20 rounded-3xl p-5 space-y-4">
           <div className="flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
             <div>
@@ -399,22 +399,22 @@ export default function Settings() {
           </div>
           <div className="flex gap-3">
             <button
-              onClick={() => setShowDeleteConfirm(false)}
-              className="flex-1 text-sm py-3 rounded-2xl border border-white/10 text-white/60 hover:bg-white/5 transition-all text-sm font-medium"
-            >
+            onClick={() => setShowDeleteConfirm(false)}
+            className="flex-1 text-sm py-3 rounded-2xl border border-white/10 text-white/60 hover:bg-white/5 transition-all text-sm font-medium">
+            
               Cancel
             </button>
             <button
-              onClick={handleDeleteAccount}
-              disabled={isDeletingAccount}
-              className="flex-1 text-sm py-3 rounded-2xl bg-red-600/80 hover:bg-red-600 text-white transition-all text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              {isDeletingAccount ? <Loader2 className="w-4 h-4 text-sm animate-spin" /> : <Trash2 className="w-4 h-4" />}
+            onClick={handleDeleteAccount}
+            disabled={isDeletingAccount}
+            className="flex-1 text-sm py-3 rounded-2xl bg-red-600/80 hover:bg-red-600 text-white transition-all text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50">
+            
+              {isDeletingAccount ? <Loader2 className="w-4 h-4 text-sm animate-spin" /> : <Trash2 className="h-4 w-4" />}
               {isDeletingAccount ? "Deleting..." : "Yes, Delete Everything"}
             </button>
           </div>
         </div>
-      )}
-    </div>
-  );
+      }
+    </div>);
+
 }
