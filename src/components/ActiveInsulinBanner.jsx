@@ -283,7 +283,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
               latestGlucose ? trendArrow : null
             )}
             {/* 2x2 grid */}
-            <div className="grid grid-cols-2 gap-x-5 gap-y-6 sm:gap-x-6 sm:gap-y-7">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-5 sm:gap-x-6 sm:gap-y-6">
               {renderSmallGauge(
                 "Daily Avg",
                 avgDailyGlucose || "—",
