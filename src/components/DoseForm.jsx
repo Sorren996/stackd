@@ -172,67 +172,40 @@ export default function DoseForm({ open, onOpenChange }) {
           </div>
 
           {/* Tabs with Springs */}
-          <div className="flex mx-5 mb-2 rounded-2xl p-1 shrink-0 relative" style={{ background: "rgba(255,255,255,0.06)" }}>
-            <button
-              type="button"
-              onClick={() => setTab("insulin")}
-              className={`relative flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-medium transition-colors duration-200 ${
-                tab === "insulin" ? "text-white" : "text-white/40 hover:text-white/60"
-              }`}
-            >
-              {tab === "insulin" && (
-                <motion.div
-                  layoutId="active-form-tab"
-                  className="absolute inset-0 rounded-xl bg-white/10 -z-0"
-                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                />
-              )}
-              <span className="relative z-10 flex items-center gap-2">
-                <Syringe className="w-3.5 h-3.5" />
-                Insulin
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setTab("glucose")}
-              className={`relative flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-medium transition-colors duration-200 ${
-                tab === "glucose" ? "text-orange-400" : "text-white/40 hover:text-white/60"
-              }`}
-            >
-              {tab === "glucose" && (
-                <motion.div
-                  layoutId="active-form-tab"
-                  className="absolute inset-0 rounded-xl -z-0"
-                  style={{ backgroundColor: `${glucoseColor}33` }}
-                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                />
-              )}
-              <span className="relative z-10 flex items-center gap-2">
-                <Droplets className="w-3.5 h-3.5" />
-                Glucose
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setTab("carbs")}
-              className={`relative flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-medium transition-colors duration-200 ${
-                tab === "carbs" ? "text-amber-400" : "text-white/40 hover:text-white/60"
-              }`}
-            >
-              {tab === "carbs" && (
-                <motion.div
-                  layoutId="active-form-tab"
-                  className="absolute inset-0 rounded-xl -z-0"
-                  style={{ backgroundColor: "rgba(217,119,6,0.2)" }}
-                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                />
-              )}
-              <span className="relative z-10 flex items-center gap-2">
-                <Wheat className="w-3.5 h-3.5" />
-                Carbs
-              </span>
-            </button>
-          </div>
+          {(() => {
+            const tabs = [
+              { id: "insulin", label: "Insulin", Icon: Syringe, activeClass: "text-white", activeBg: "rgba(255,255,255,0.10)" },
+              { id: "glucose", label: "Glucose", Icon: Droplets, activeClass: "text-orange-400", activeBg: `${glucoseColor}33` },
+              { id: "carbs", label: "Carbs", Icon: Wheat, activeClass: "text-amber-400", activeBg: "rgba(217,119,6,0.2)" },
+            ];
+            return (
+              <div className="flex mx-5 mb-2 rounded-2xl p-1 shrink-0 relative" style={{ background: "rgba(255,255,255,0.06)" }}>
+                {tabs.map(({ id, label, Icon, activeClass, activeBg }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setTab(id)}
+                    className={`relative flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-medium transition-colors duration-200 ${
+                      tab === id ? activeClass : "text-white/40 hover:text-white/60"
+                    }`}
+                  >
+                    {tab === id && (
+                      <motion.div
+                        layoutId="active-form-tab"
+                        className="absolute inset-0 rounded-xl"
+                        style={{ backgroundColor: activeBg }}
+                        transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                      />
+                    )}
+                    <span className="relative z-10 flex items-center gap-2">
+                      <Icon className="w-3.5 h-3.5" />
+                      {label}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            );
+          })()}
 
           {tab === "carbs" ? (
             <CarbsTab onSubmit={(data) => createCarb.mutate(data)} isPending={createCarb.isPending} />

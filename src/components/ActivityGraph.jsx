@@ -1,9 +1,9 @@
 import { useMemo, useRef, useEffect, useState } from "react";
-import { Area, XAxis, YAxis, Tooltip, ReferenceLine, Line, ComposedChart, Scatter } from "recharts";
+import { Area, XAxis, YAxis, Tooltip, ReferenceLine, Line, ComposedChart } from "recharts";
 import { generateActivityCurve, INSULIN_PROFILES } from "@/lib/insulinPharmacology";
 import { generateCarbCurve, PROFILE_COLORS } from "@/lib/carbAbsorption";
 import { format } from "date-fns";
-import { HelpCircle } from "lucide-react";
+import { HelpCircle, SlidersHorizontal, Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const TIME_RANGES = [
@@ -14,8 +14,6 @@ const TIME_RANGES = [
 ];
 
 function getGlucoseColor(mgdl) {
-  if (mgdl < 70) return "hsla(0, 0%, 93%, 1.00)";
-  if (mgdl > 180) return "hsla(0, 0%, 93%, 1.00)";
   return "hsla(0, 0%, 93%, 1.00)";
 }
 
@@ -57,7 +55,7 @@ function CustomTooltip({ active, payload, label }) {
       })}
       {carbCurveEntries.map((p) => {
         const carbs = p.payload[`${p.dataKey}_carbs`];
-        const food  = p.payload[`${p.dataKey}_food`];
+        const food = p.payload[`${p.dataKey}_food`];
         return (
           <div key={p.dataKey} className="flex items-center gap-2 text-sm">
             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />
@@ -72,11 +70,52 @@ function CustomTooltip({ active, payload, label }) {
   );
 }
 
+// Filter dropdown component
+function FilterDropdown({ filters, onChange, onClose }) {
+  const items = [
+    { key: "glucose", label: "Glucose", color: "rgba(255,255,255,0.6)" },
+    { key: "insulin", label: "Insulin", color: "#35a879" },
+    { key: "carbs", label: "Carbs", color: "#f59e0b" },
+  ];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1, transition: { type: "spring", stiffness: 380, damping: 28 } }}
+      exit={{ opacity: 0, y: 6, scale: 0.96, transition: { duration: 0.13 } }}
+      className="absolute right-0 top-full mt-2 z-50 rounded-2xl border border-white/10 shadow-2xl py-1.5 min-w-[130px]"
+      style={{ background: "hsl(162,10%,10%)" }}
+    >
+      {items.map((item) => (
+        <button
+          key={item.key}
+          onClick={() => onChange(item.key)}
+          className="w-full flex items-center gap-2.5 px-3.5 py-2 hover:bg-white/5 transition-colors text-left"
+        >
+          <div className="w-4 h-4 rounded-md border flex items-center justify-center shrink-0 transition-all"
+            style={{
+              borderColor: filters[item.key] ? item.color : "rgba(255,255,255,0.15)",
+              backgroundColor: filters[item.key] ? item.color + "22" : "transparent",
+            }}>
+            {filters[item.key] && <Check className="w-2.5 h-2.5" style={{ color: item.color }} />}
+          </div>
+          <span className="text-sm font-medium" style={{ color: filters[item.key] ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.35)" }}>
+            {item.label}
+          </span>
+        </button>
+      ))}
+    </motion.div>
+  );
+}
+
 export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries = [] }) {
   const [rangeIdx, setRangeIdx] = useState(1);
   const [showInfo, setShowInfo] = useState(false);
+  const [showFilter, setShowFilter] = useState(false);
+  const [filters, setFilters] = useState({ glucose: true, insulin: true, carbs: true });
   const scrollRef = useRef(null);
   const containerRef = useRef(null);
+  const filterRef = useRef(null);
   const [containerWidth, setContainerWidth] = useState(600);
 
   useEffect(() => {
@@ -86,13 +125,24 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     return () => ro.disconnect();
   }, []);
 
+  // Close filter on outside click
+  useEffect(() => {
+    if (!showFilter) return;
+    const handler = (e) => {
+      if (filterRef.current && !filterRef.current.contains(e.target)) setShowFilter(false);
+    };
+    document.addEventListener("mousedown", handler);
+    document.addEventListener("touchstart", handler);
+    return () => { document.removeEventListener("mousedown", handler); document.removeEventListener("touchstart", handler); };
+  }, [showFilter]);
+
+  const toggleFilter = (key) => setFilters((f) => ({ ...f, [key]: !f[key] }));
+
   const targetLow = parseInt(localStorage.getItem("target_range_low") || "70", 10);
   const targetHigh = parseInt(localStorage.getItem("target_range_high") || "180", 10);
 
-  // Map glucose values to gradient % positions (top=0%, bottom=100%)
   const rangeTotal = GLUCOSE_MAX - GLUCOSE_MIN;
   const highPct = ((GLUCOSE_MAX - targetHigh) / rangeTotal * 100).toFixed(1);
-  const midPct = ((GLUCOSE_MAX - (targetLow + targetHigh) / 2) / rangeTotal * 100).toFixed(1);
   const lowPct = ((GLUCOSE_MAX - targetLow) / rangeTotal * 100).toFixed(1);
 
   const selectedRange = TIME_RANGES[rangeIdx];
@@ -103,45 +153,50 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const viewStart = snappedNow - selectedRange.hours * 60 * 60 * 1000;
   const viewEnd = snappedNow + selectedRange.hours * 0.1 * 60 * 60 * 1000;
 
+  // Only include doses/carbs if their filter is on
+  const filteredDoses = filters.insulin ? doses : [];
+  const filteredCarbEntries = filters.carbs ? carbEntries : [];
+  const filteredGlucoseReadings = filters.glucose ? glucoseReadings : [];
+
   const allCurvesMeta = useMemo(() =>
-    doses.map((dose) => ({
+    filteredDoses.map((dose) => ({
       dose,
       curve: generateActivityCurve(dose, 3),
       profile: INSULIN_PROFILES[dose.insulin_type],
     })),
-    [doses]
+    [filteredDoses]
   );
 
   const allCarbCurvesMeta = useMemo(() =>
-    carbEntries
+    filteredCarbEntries
       .filter((e) => !e.is_custom)
       .map((entry) => ({
         entry,
         curve: generateCarbCurve(entry),
         color: PROFILE_COLORS[entry.absorption_profile] || "#f59e0b",
       })),
-    [carbEntries]
+    [filteredCarbEntries]
   );
 
   const customCarbEvents = useMemo(() =>
-    carbEntries
+    filteredCarbEntries
       .filter((e) => e.is_custom)
       .map((e) => ({ time: new Date(e.consumed_at).getTime(), entry: e })),
-    [carbEntries]
+    [filteredCarbEntries]
   );
 
   const glucoseMap = useMemo(() => {
     const map = {};
-    glucoseReadings.forEach((g) => {
+    filteredGlucoseReadings.forEach((g) => {
       const t = new Date(g.recorded_at).getTime();
       const bucket = Math.round(t / (3 * 60000)) * (3 * 60000);
       map[bucket] = g.value;
     });
     return map;
-  }, [glucoseReadings]);
+  }, [filteredGlucoseReadings]);
 
-  const maxDoseUnits = useMemo(() => Math.max(...doses.map((d) => d.units), 1), [doses]);
-  const maxCarbGrams = useMemo(() => Math.max(...carbEntries.filter(e => !e.is_custom).map((e) => e.carbs), 1), [carbEntries]);
+  const maxDoseUnits = useMemo(() => Math.max(...filteredDoses.map((d) => d.units), 1), [filteredDoses]);
+  const maxCarbGrams = useMemo(() => Math.max(...filteredCarbEntries.filter(e => !e.is_custom).map((e) => e.carbs), 1), [filteredCarbEntries]);
 
   const chartData = useMemo(() => {
     if (!doses.length && !glucoseReadings.length && !carbEntries.length) return [];
@@ -188,21 +243,20 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       result.push(point);
     }
     return result;
-  }, [doses, glucoseReadings, carbEntries, domainStart, domainEnd, allCurvesMeta, allCarbCurvesMeta, glucoseMap, maxCarbGrams]);
+  }, [doses, glucoseReadings, carbEntries, filters, domainStart, domainEnd, allCurvesMeta, allCarbCurvesMeta, glucoseMap, maxCarbGrams]);
 
   const doseKeys = useMemo(() =>
-    doses.map((dose) => ({
+    filteredDoses.map((dose) => ({
       key: `dose_${dose.id}`,
       label: dose.insulin_type.split(" ")[0],
-      fullLabel: dose.insulin_type,
       units: dose.units,
       color: INSULIN_PROFILES[dose.insulin_type]?.color || "#888",
     })),
-    [doses]
+    [filteredDoses]
   );
 
   const carbKeys = useMemo(() =>
-    carbEntries
+    filteredCarbEntries
       .filter((e) => !e.is_custom)
       .map((entry) => ({
         key: `carb_${entry.id}`,
@@ -210,7 +264,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         carbs: entry.carbs,
         color: PROFILE_COLORS[entry.absorption_profile] || "#f59e0b",
       })),
-    [carbEntries]
+    [filteredCarbEntries]
   );
 
   const is24h = selectedRange.pxPerMin === null;
@@ -229,10 +283,37 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
   const tickCount = Math.max(2, Math.floor(chartWidth / 90));
 
+  // How many filters are off (to show indicator dot)
+  const activeFilterCount = Object.values(filters).filter(Boolean).length;
+
   return (
     <div ref={containerRef} className="-mx-4 overflow-hidden">
-      {/* Range selector & Info Tooltip */}
-      <div className="flex py-3 items-center mb-4 justify-center gap-3">
+      {/* Controls row */}
+      <div className="flex py-3 items-center mb-4 justify-center gap-2">
+
+        {/* Filter button */}
+        <div ref={filterRef} className="relative">
+          <button
+            onClick={() => setShowFilter(!showFilter)}
+            className={`w-8 h-8 flex items-center justify-center rounded-xl border transition-all relative ${
+              showFilter
+                ? "bg-teal-500/10 border-teal-500/30 text-teal-400"
+                : "border-white/5 bg-white/[0.03] text-white/40 hover:text-white/80 hover:bg-white/[0.08]"
+            }`}
+          >
+            <SlidersHorizontal className="w-4 h-4" />
+            {activeFilterCount < 3 && (
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-teal-400" />
+            )}
+          </button>
+          <AnimatePresence>
+            {showFilter && (
+              <FilterDropdown filters={filters} onChange={toggleFilter} onClose={() => setShowFilter(false)} />
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Range selector */}
         <div className="flex gap-0.5 rounded-xl p-1" style={{ background: "rgba(255,255,255,0.05)" }}>
           {TIME_RANGES.map((r, i) => (
             <button
@@ -254,21 +335,19 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           ))}
         </div>
 
-        {/* Informational Help Icon with Spring Dropdown */}
+        {/* Help icon */}
         <div className="relative">
           <button
             onClick={() => setShowInfo(!showInfo)}
             className={`w-8 h-8 flex items-center justify-center rounded-xl border transition-all ${
-              showInfo 
-                ? "bg-teal-500/10 border-teal-500/30 text-teal-400" 
+              showInfo
+                ? "bg-teal-500/10 border-teal-500/30 text-teal-400"
                 : "border-white/5 bg-white/[0.03] text-white/40 hover:text-white/80 hover:bg-white/[0.08]"
             }`}
-            style={{ bosmhadow: "0 0 10px rgba(255,255,255,0.02)" }}
           >
             <HelpCircle className="w-4 h-4" />
           </button>
-
-              <AnimatePresence>
+          <AnimatePresence>
             {showInfo && (
               <motion.div
                 initial={{ opacity: 0 }}
@@ -278,26 +357,12 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                 onClick={() => setShowInfo(false)}
                 className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 cursor-pointer"
               >
-                {/* Centered card that drops down with a spring transition */}
                 <motion.div
                   initial={{ opacity: 0, y: -100, scale: 0.9 }}
-                  animate={{ 
-                    opacity: 1, 
-                    y: 0, 
-                    scale: 1,
-                    transition: { type: "spring", stiffness: 280, damping: 22 }
-                  }}
-                  exit={{ 
-                    opacity: 0, 
-                    y: 60, 
-                    scale: 0.9,
-                    transition: { duration: 0.15 } 
-                  }}
-                  onClick={(e) => e.stopPropagation()} // Prevents closing when clicking the image itself
+                  animate={{ opacity: 1, y: 0, scale: 1, transition: { type: "spring", stiffness: 280, damping: 22 } }}
+                  exit={{ opacity: 0, y: 60, scale: 0.9, transition: { duration: 0.15 } }}
+                  onClick={(e) => e.stopPropagation()}
                   className="relative max-w-4xl w-full rounded-2xl overflow-hidden bg-black border border-teal-500/20 p-0.5"
-                  style={{
-                    bosmhadow: "0 20px 50px rgba(20, 184, 166, 0.25)"
-                  }}
                 >
                   <img
                     src="https://media.base44.com/images/public/6a1b93f234a8611ee1595134/1005e28fb_graphinfotooltip.png"
@@ -334,19 +399,14 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                   <stop offset="100%" stopColor={k.color} stopOpacity={0.0} />
                 </linearGradient>
               ))}
-             <linearGradient id="glucose_range_grad" x1="0" y1="0" x2="0" y2="1">
-  {/* Transparent above high threshold */}
-  <stop offset="0%" stopColor="#78350f" stopOpacity={0} />
-  <stop offset={`${highPct}%`} stopColor="#78350f" stopOpacity={0} />
-  
-  {/* Solid 15% Amber starting exactly at the high threshold */}
-  <stop offset={`${highPct}%`} stopColor="#78350f" stopOpacity={0.4} />
-  <stop offset={`${lowPct}%`} stopColor="#78350f" stopOpacity={0.4} />
-  
-  {/* Transparent again below the low threshold */}
-  <stop offset={`${lowPct}%`} stopColor="#78350f" stopOpacity={0} />
-  <stop offset="100%" stopColor="#78350f" stopOpacity={0} />
-</linearGradient>
+              <linearGradient id="glucose_range_grad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#78350f" stopOpacity={0} />
+                <stop offset={`${highPct}%`} stopColor="#78350f" stopOpacity={0} />
+                <stop offset={`${highPct}%`} stopColor="#78350f" stopOpacity={0.4} />
+                <stop offset={`${lowPct}%`} stopColor="#78350f" stopOpacity={0.4} />
+                <stop offset={`${lowPct}%`} stopColor="#78350f" stopOpacity={0} />
+                <stop offset="100%" stopColor="#78350f" stopOpacity={0} />
+              </linearGradient>
             </defs>
 
             <XAxis
@@ -374,8 +434,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               strokeWidth={1}
             />
 
-            {/* Target range background gradient */}
-            {glucoseReadings.length > 0 && (
+            {filters.glucose && filteredGlucoseReadings.length > 0 && (
               <Area
                 yAxisId="glucose"
                 type="monotoneX"
@@ -421,7 +480,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               />
             ))}
 
-            {/* Custom carb event markers */}
             {customCarbEvents.map(({ time, entry }) => (
               <ReferenceLine
                 key={`custom_${entry.id}`}
@@ -434,7 +492,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               />
             ))}
 
-            {glucoseReadings.length > 0 && (
+            {filters.glucose && filteredGlucoseReadings.length > 0 && (
               <Line
                 yAxisId="glucose"
                 type="monotoneX"
