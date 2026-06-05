@@ -400,7 +400,7 @@ export default function Settings() {
           <div className="flex gap-3">
             <button
               onClick={() => setShowDeleteConfirm(false)}
-              className="flex-1 py-3 rounded-2xl border border-white/10 text-white/60 hover:bg-white/5 transition-all text-sm font-medium"
+              className="flex-1 text-sm py-3 rounded-2xl border border-white/10 text-white/60 hover:bg-white/5 transition-all text-sm font-medium"
             >
               Cancel
             </button>
