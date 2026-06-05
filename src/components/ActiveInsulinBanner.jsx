@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { ArrowUp, ArrowDown, ArrowRight, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { INSULIN_PROFILES, generateActivityCurve } from "@/lib/insulinPharmacology";
+import { getActiveCarbsNow, getTotalCarbsToday } from "@/lib/carbAbsorption";
 
 function getTotalActiveUnits(doses) {
   const now = Date.now();
@@ -34,9 +35,13 @@ function getMaxRemainingTime(doses) {
   return maxMs;
 }
 
-export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadings = [] }) {
+export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadings = [], carbEntries = [] }) {
   const activeUnits = useMemo(() => getTotalActiveUnits(doses), [doses]);
   const hasActive = activeUnits > 0.01;
+
+  const activeCarbs = useMemo(() => getActiveCarbsNow(carbEntries), [carbEntries]);
+  const totalCarbsToday = useMemo(() => getTotalCarbsToday(carbEntries), [carbEntries]);
+  const netActiveCarbs = useMemo(() => activeCarbs - activeUnits * 10, [activeCarbs, activeUnits]);
 
   const totalAdministered = useMemo(() => {
     return doses.reduce((sum, d) => sum + d.units, 0) || 1;
@@ -172,6 +177,9 @@ const trendLabel = useMemo(() => {
     );
   };
 
+  const netLabel = netActiveCarbs > 5 ? "Rising Risk" : netActiveCarbs < -5 ? "Falling Risk" : "Balanced";
+  const netColor = netActiveCarbs > 5 ? "#ef4444" : netActiveCarbs < -5 ? "#3b82f6" : "#35a879";
+
   return (
     <div className="p-9 rounded-none md:rounded-3xl border-0 -mx-4 md:mx-0">
       <div className="flex justify-center items-center gap-6">
@@ -201,6 +209,26 @@ const trendLabel = useMemo(() => {
             hasActive ? "Active" : "Cleared"
           )}
         </div>
+        {(carbEntries.length > 0) && (
+          <div className="flex flex-col gap-4 pb-1">
+            {renderSmallGauge(
+              "Active Carbs",
+              activeCarbs > 0 ? `${Math.round(activeCarbs)}g` : "0g",
+              `${totalCarbsToday}g today`,
+              Math.min(1, activeCarbs / Math.max(totalCarbsToday, 1)),
+              "#f59e0b",
+              activeCarbs > 0 ? "Absorbing" : "Cleared"
+            )}
+            {renderSmallGauge(
+              "Net Carbs",
+              (netActiveCarbs > 0 ? "+" : "") + Math.round(netActiveCarbs),
+              "balance",
+              Math.min(1, Math.abs(netActiveCarbs) / 50),
+              netColor,
+              netLabel
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

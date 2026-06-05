@@ -1,9 +1,10 @@
 import { useMemo, useRef, useEffect, useState } from "react";
-import { Area, XAxis, YAxis, Tooltip, ReferenceLine, Line, ComposedChart } from "recharts";
+import { Area, XAxis, YAxis, Tooltip, ReferenceLine, Line, ComposedChart, Scatter } from "recharts";
 import { generateActivityCurve, INSULIN_PROFILES } from "@/lib/insulinPharmacology";
+import { generateCarbCurve, PROFILE_COLORS } from "@/lib/carbAbsorption";
 import { format } from "date-fns";
 import { HelpCircle } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion"; 
+import { motion, AnimatePresence } from "framer-motion";
 
 const TIME_RANGES = [
   { label: "1h", hours: 1, pxPerMin: 18 },
@@ -24,6 +25,7 @@ const GLUCOSE_MAX = 400;
 function CustomTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   const insulinEntries = payload.filter((p) => p.dataKey?.startsWith("dose_") && !p.dataKey.includes("_actual") && !p.dataKey.includes("_total") && p.value != null && p.value > 0);
+  const carbCurveEntries = payload.filter((p) => p.dataKey?.startsWith("carb_") && !p.dataKey.includes("_carbs") && !p.dataKey.includes("_food") && p.value != null && p.value > 0);
   const glucoseEntry = payload.find((p) => p.dataKey === "glucose");
   return (
     <div className="rounded-xl px-3 py-2 shadow-xl" style={{ background: "rgba(20,30,25,0.92)", border: "1px solid rgba(255,255,255,0.08)" }}>
@@ -53,11 +55,24 @@ function CustomTooltip({ active, payload, label }) {
           </div>
         );
       })}
+      {carbCurveEntries.map((p) => {
+        const carbs = p.payload[`${p.dataKey}_carbs`];
+        const food  = p.payload[`${p.dataKey}_food`];
+        return (
+          <div key={p.dataKey} className="flex items-center gap-2 text-sm">
+            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />
+            <span className="text-white/80">{food}</span>
+            <span className="ml-auto pl-3">
+              <span className="font-medium" style={{ color: p.color }}>{carbs}g carbs</span>
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }
 
-export default function ActivityGraph({ doses, glucoseReadings = [] }) {
+export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries = [] }) {
   const [rangeIdx, setRangeIdx] = useState(1);
   const [showInfo, setShowInfo] = useState(false);
   const scrollRef = useRef(null);
@@ -97,6 +112,24 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
     [doses]
   );
 
+  const allCarbCurvesMeta = useMemo(() =>
+    carbEntries
+      .filter((e) => !e.is_custom)
+      .map((entry) => ({
+        entry,
+        curve: generateCarbCurve(entry),
+        color: PROFILE_COLORS[entry.absorption_profile] || "#f59e0b",
+      })),
+    [carbEntries]
+  );
+
+  const customCarbEvents = useMemo(() =>
+    carbEntries
+      .filter((e) => e.is_custom)
+      .map((e) => ({ time: new Date(e.consumed_at).getTime(), entry: e })),
+    [carbEntries]
+  );
+
   const glucoseMap = useMemo(() => {
     const map = {};
     glucoseReadings.forEach((g) => {
@@ -108,9 +141,10 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
   }, [glucoseReadings]);
 
   const maxDoseUnits = useMemo(() => Math.max(...doses.map((d) => d.units), 1), [doses]);
+  const maxCarbGrams = useMemo(() => Math.max(...carbEntries.filter(e => !e.is_custom).map((e) => e.carbs), 1), [carbEntries]);
 
   const chartData = useMemo(() => {
-    if (!doses.length && !glucoseReadings.length) return [];
+    if (!doses.length && !glucoseReadings.length && !carbEntries.length) return [];
     const step = 3 * 60000;
     const result = [];
     for (let t = domainStart; t <= domainEnd; t += step) {
@@ -133,11 +167,28 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
           point[`${key}_total`] = dose.units;
         }
       });
+      allCarbCurvesMeta.forEach(({ entry, curve }) => {
+        const key = `carb_${entry.id}`;
+        if (!curve.length || t < curve[0].time || t > curve[curve.length - 1].time) {
+          point[key] = null;
+        } else {
+          let lo = 0;
+          for (let j = 0; j < curve.length - 1; j++) {
+            if (curve[j].time <= t && curve[j + 1].time >= t) { lo = j; break; }
+          }
+          const hi = Math.min(lo + 1, curve.length - 1);
+          const ratio = hi === lo ? 0 : (t - curve[lo].time) / (curve[hi].time - curve[lo].time);
+          const activity = curve[lo].activity + ratio * (curve[hi].activity - curve[lo].activity);
+          point[key] = activity * (entry.carbs / maxCarbGrams) * 50;
+          point[`${key}_carbs`] = entry.carbs;
+          point[`${key}_food`] = entry.food_name;
+        }
+      });
       if (glucoseMap[t] !== undefined) point.glucose = glucoseMap[t];
       result.push(point);
     }
     return result;
-  }, [doses, glucoseReadings, domainStart, domainEnd, allCurvesMeta, glucoseMap]);
+  }, [doses, glucoseReadings, carbEntries, domainStart, domainEnd, allCurvesMeta, allCarbCurvesMeta, glucoseMap, maxCarbGrams]);
 
   const doseKeys = useMemo(() =>
     doses.map((dose) => ({
@@ -148,6 +199,18 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
       color: INSULIN_PROFILES[dose.insulin_type]?.color || "#888",
     })),
     [doses]
+  );
+
+  const carbKeys = useMemo(() =>
+    carbEntries
+      .filter((e) => !e.is_custom)
+      .map((entry) => ({
+        key: `carb_${entry.id}`,
+        label: entry.food_name,
+        carbs: entry.carbs,
+        color: PROFILE_COLORS[entry.absorption_profile] || "#f59e0b",
+      })),
+    [carbEntries]
   );
 
   const is24h = selectedRange.pxPerMin === null;
@@ -162,7 +225,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
     scrollRef.current.scrollLeft = nowOffset - halfContainer;
   }, [rangeIdx, doses]);
 
-  if (!doses.length && !glucoseReadings.length) return null;
+  if (!doses.length && !glucoseReadings.length && !carbEntries.length) return null;
 
   const tickCount = Math.max(2, Math.floor(chartWidth / 90));
 
@@ -265,6 +328,12 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
                   <stop offset="100%" stopColor={k.color} stopOpacity={0.0} />
                 </linearGradient>
               ))}
+              {carbKeys.map((k) => (
+                <linearGradient key={k.key} id={`grad_${k.key}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={k.color} stopOpacity={0.28} />
+                  <stop offset="100%" stopColor={k.color} stopOpacity={0.0} />
+                </linearGradient>
+              ))}
              <linearGradient id="glucose_range_grad" x1="0" y1="0" x2="0" y2="1">
   {/* Transparent above high threshold */}
   <stop offset="0%" stopColor="#78350f" stopOpacity={0} />
@@ -292,6 +361,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
             />
 
             <YAxis yAxisId="insulin" domain={[0, 75]} hide />
+            <YAxis yAxisId="carbs" domain={[0, 55]} hide />
             <YAxis yAxisId="glucose" domain={[GLUCOSE_MIN, GLUCOSE_MAX]} hide />
 
             <Tooltip content={<CustomTooltip />} cursor={{ stroke: "rgba(255,255,255,0.1)", strokeWidth: 1 }} />
@@ -331,6 +401,36 @@ export default function ActivityGraph({ doses, glucoseReadings = [] }) {
                 fill={`url(#grad_${k.key})`}
                 dot={false}
                 isAnimationActive={false}
+              />
+            ))}
+
+            {carbKeys.map((k) => (
+              <Area
+                key={k.key}
+                yAxisId="carbs"
+                type="monotoneX"
+                dataKey={k.key}
+                name={k.label}
+                stroke={k.color}
+                strokeWidth={2}
+                strokeDasharray="5 3"
+                fill={`url(#grad_${k.key})`}
+                dot={false}
+                isAnimationActive={false}
+                opacity={0.85}
+              />
+            ))}
+
+            {/* Custom carb event markers */}
+            {customCarbEvents.map(({ time, entry }) => (
+              <ReferenceLine
+                key={`custom_${entry.id}`}
+                yAxisId="carbs"
+                x={time}
+                stroke="#6b7280"
+                strokeDasharray="3 3"
+                strokeWidth={1.5}
+                label={{ value: `${entry.carbs}g`, position: "insideTopRight", fill: "#9ca3af", fontSize: 9 }}
               />
             ))}
 

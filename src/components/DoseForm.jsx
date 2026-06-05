@@ -4,11 +4,12 @@ import { base44 } from "@/api/base44Client";
 import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
 import { Dialog, DialogPortal, DialogOverlay, DialogClose } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { X, Syringe, Droplets } from "lucide-react";
+import { X, Syringe, Droplets, Wheat } from "lucide-react";
 import { toast } from "sonner";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Slider } from "@/components/ui/slider";
 import { motion } from "framer-motion";
+import CarbsTab from "@/components/CarbsTab";
 
 const CATEGORY_ORDER = ["Rapid-Acting", "Short-Acting", "Intermediate", "Long-Acting", "Ultra Long-Acting"];
 
@@ -52,6 +53,15 @@ export default function DoseForm({ open, onOpenChange }) {
       onOpenChange(false);
       setGlucoseValue(100); setGlucoseNotes("");
       setGlucoseTime(new Date().toTimeString().slice(0, 5));
+    }
+  });
+
+  const createCarb = useMutation({
+    mutationFn: (data) => base44.entities.CarbEntry.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["carb-entries"] });
+      toast.success("Carbs logged");
+      onOpenChange(false);
     }
   });
 
@@ -166,7 +176,7 @@ export default function DoseForm({ open, onOpenChange }) {
             <button
               type="button"
               onClick={() => setTab("insulin")}
-              className={`relative flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-colors duration-200 ${
+              className={`relative flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-medium transition-colors duration-200 ${
                 tab === "insulin" ? "text-white" : "text-white/40 hover:text-white/60"
               }`}
             >
@@ -178,14 +188,14 @@ export default function DoseForm({ open, onOpenChange }) {
                 />
               )}
               <span className="relative z-10 flex items-center gap-2">
-                <Syringe className="w-4 h-4" />
+                <Syringe className="w-3.5 h-3.5" />
                 Insulin
               </span>
             </button>
             <button
               type="button"
               onClick={() => setTab("glucose")}
-              className={`relative flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-colors duration-200 ${
+              className={`relative flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-medium transition-colors duration-200 ${
                 tab === "glucose" ? "text-orange-400" : "text-white/40 hover:text-white/60"
               }`}
             >
@@ -198,13 +208,35 @@ export default function DoseForm({ open, onOpenChange }) {
                 />
               )}
               <span className="relative z-10 flex items-center gap-2">
-                <Droplets className="w-4 h-4" />
+                <Droplets className="w-3.5 h-3.5" />
                 Glucose
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab("carbs")}
+              className={`relative flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-medium transition-colors duration-200 ${
+                tab === "carbs" ? "text-amber-400" : "text-white/40 hover:text-white/60"
+              }`}
+            >
+              {tab === "carbs" && (
+                <motion.div
+                  layoutId="active-form-tab"
+                  className="absolute inset-0 rounded-xl -z-0"
+                  style={{ backgroundColor: "rgba(217,119,6,0.2)" }}
+                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                />
+              )}
+              <span className="relative z-10 flex items-center gap-2">
+                <Wheat className="w-3.5 h-3.5" />
+                Carbs
               </span>
             </button>
           </div>
 
-          {tab === "insulin" ? (
+          {tab === "carbs" ? (
+            <CarbsTab onSubmit={(data) => createCarb.mutate(data)} isPending={createCarb.isPending} />
+          ) : tab === "insulin" ? (
             <>
               <div className="overflow-y-auto h-[500px] px-5 pb-6 space-y-6">
                 {/* Insulin Type */}

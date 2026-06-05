@@ -1,0 +1,65 @@
+{
+  "name": "CarbEntry",
+  "type": "object",
+  "properties": {
+    "food_name": {
+      "type": "string",
+      "description": "Name of the food consumed"
+    },
+    "is_custom": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this is a custom food without a validated absorption profile"
+    },
+    "carbs": {
+      "type": "number",
+      "description": "Total carbohydrates in grams"
+    },
+    "serving_amount": {
+      "type": "number",
+      "default": 1,
+      "description": "Number of servings consumed"
+    },
+    "glycemic_index": {
+      "type": "number",
+      "description": "Glycemic index of the food"
+    },
+    "absorption_profile": {
+      "type": "string",
+      "enum": [
+        "fast",
+        "medium",
+        "slow"
+      ],
+      "description": "Absorption speed profile"
+    },
+    "consumed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the food was consumed"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Optional notes"
+    }
+  },
+  "required": [
+    "food_name",
+    "carbs",
+    "consumed_at"
+  ],
+  "rls": {
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

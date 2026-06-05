@@ -7,6 +7,7 @@ import ActiveAlerts from "../components/ActiveAlerts";
 import DoseForm from "../components/DoseForm";
 import DoseCard from "../components/DoseCard";
 import GlucoseCard from "../components/GlucoseCard";
+import CarbCard from "../components/CarbCard";
 import { getDoseStatus, INSULIN_PROFILES } from "@/lib/insulinPharmacology";
 import { Activity, Plus, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
@@ -35,11 +36,24 @@ export default function Dashboard() {
     queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", 100)
   });
 
+  const { data: carbEntries = [] } = useQuery({
+    queryKey: ["carb-entries"],
+    queryFn: () => base44.entities.CarbEntry.list("-consumed_at", 100)
+  });
+
   const deleteGlucose = useMutation({
     mutationFn: (id) => base44.entities.GlucoseReading.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["glucose-readings"] });
       toast.success("Glucose reading removed");
+    }
+  });
+
+  const deleteCarb = useMutation({
+    mutationFn: (id) => base44.entities.CarbEntry.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["carb-entries"] });
+      toast.success("Carb entry removed");
     }
   });
 
@@ -62,6 +76,11 @@ export default function Dashboard() {
     return age < 24 * 60 * 60 * 1000;
   });
 
+  const recentCarbs = carbEntries.filter((e) => {
+    const age = Date.now() - new Date(e.consumed_at).getTime();
+    return age < 24 * 60 * 60 * 1000;
+  });
+
   const latestGlucose = glucoseReadings[0] || null;
 
   const activeRapidCount = useMemo(() => {
@@ -78,8 +97,9 @@ export default function Dashboard() {
   const recentActivity = useMemo(() => {
     const doseLogs = recentDoses.map((d) => ({ ...d, feedType: "insulin", timestamp: new Date(d.administered_at).getTime() }));
     const glucoseLogs = recentGlucose.map((g) => ({ ...g, feedType: "glucose", timestamp: new Date(g.recorded_at).getTime() }));
-    return [...doseLogs, ...glucoseLogs].sort((a, b) => b.timestamp - a.timestamp);
-  }, [recentDoses, recentGlucose]);
+    const carbLogs = recentCarbs.map((e) => ({ ...e, feedType: "carbs", timestamp: new Date(e.consumed_at).getTime() }));
+    return [...doseLogs, ...glucoseLogs, ...carbLogs].sort((a, b) => b.timestamp - a.timestamp);
+  }, [recentDoses, recentGlucose, recentCarbs]);
 
   if (isLoading) {
     return (
@@ -93,7 +113,7 @@ export default function Dashboard() {
     <div className="space-y-0">
       <DoseForm open={doseFormOpen} onOpenChange={setDoseFormOpen} />
 
-      {recentDoses.length === 0 && recentGlucose.length === 0 ?
+      {recentDoses.length === 0 && recentGlucose.length === 0 && recentCarbs.length === 0 ?
       <div className="flex flex-col items-center justify-center py-20 text-center">
           <Activity className="w-10 h-10 text-muted-foreground/40 mb-3" />
           <h3 className="text-lg font-semibold text-[hsl(var(--popover))]">No active insulin</h3>
@@ -103,7 +123,7 @@ export default function Dashboard() {
         </div> :
 
       <>
-          <ActiveInsulinBanner doses={recentDoses} latestGlucose={latestGlucose} glucoseReadings={glucoseReadings} />
+          <ActiveInsulinBanner doses={recentDoses} latestGlucose={latestGlucose} glucoseReadings={glucoseReadings} carbEntries={recentCarbs} />
 
           {stackingAlertsEnabled && activeRapidCount > 1 && (
             <div className="mx-0 pb-3 sm:mx-0 flex items-start gap-3 p-4 rounded-xl">
@@ -117,18 +137,18 @@ export default function Dashboard() {
             </div>
           )}
 
-          <ActivityGraph doses={recentDoses} glucoseReadings={recentGlucose} />
+          <ActivityGraph doses={recentDoses} glucoseReadings={recentGlucose} carbEntries={recentCarbs} />
 
           <div className="grid gap-6 lg:grid-cols-3 overflow-hidden border:0 -mx-4">
             <div className="lg:col-span-2 space-y-3">
               <h2 className="text-lg font-semibold text-[hsl(var(--popover))] mx-4 text-[hsl(var(--card-foreground))] px-0 py-1 font-medium opacity-65 rounded-full">Recent Activity</h2>
               <div className="space-y-2">
                 {(showAllDoses ? recentActivity.slice(0, 15) : recentActivity.slice(0, 5)).map((item) =>
-              item.feedType === "insulin" ?
-              <DoseCard key={`dose-${item.id}`} dose={item} onDelete={(id) => deleteDose.mutate(id)} /> :
-
-              <GlucoseCard key={`glucose-${item.id}`} reading={item} onDelete={(id) => deleteGlucose.mutate(id)} />
-
+                item.feedType === "insulin" ?
+                  <DoseCard key={`dose-${item.id}`} dose={item} onDelete={(id) => deleteDose.mutate(id)} /> :
+                item.feedType === "carbs" ?
+                  <CarbCard key={`carb-${item.id}`} entry={item} onDelete={(id) => deleteCarb.mutate(id)} /> :
+                  <GlucoseCard key={`glucose-${item.id}`} reading={item} onDelete={(id) => deleteGlucose.mutate(id)} />
               )}
               </div>
               {recentActivity.length > 5 &&
