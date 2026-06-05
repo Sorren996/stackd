@@ -171,21 +171,23 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
   };
 
   const renderSmallGauge = (label, val, unit, percentage, color, statusLabel, tooltipId = null) => {
-    const activeColor = color || "rgba(255,255,255,0.15)";
-    return (
-      <div className="flex flex-col items-center text-center relative">
-        <div className="flex items-center gap-1 mb-1.5">
-          <span className="text-[10px] font-bold text-white/35 uppercase tracking-wider">{label}</span>
-          {tooltipId && (
-            <button
-              onClick={() => setOpenTooltip(openTooltip === tooltipId ? null : tooltipId)}
-              className="text-white/20 hover:text-white/50 transition-colors"
-              aria-label={`Info about ${label}`}
-            >
-              <Info className="w-3 h-3" />
-            </button>
-          )}
-        </div>
+  const activeColor = color || "rgba(255,255,255,0.15)";
+  return (
+    <div className="flex flex-col items-center text-center relative">
+      {/* 1. Make this container relative with no extra padding so text centers perfectly */}
+      <div className="relative flex items-center justify-center mb-1.5">
+        <span className="text-[10px] font-bold text-white/35 uppercase tracking-wider">{label}</span>
+        {tooltipId && (
+          <button
+            onClick={() => setOpenTooltip(openTooltip === tooltipId ? null : tooltipId)}
+            {/* 2. Float the button completely outside the text layout flow */}
+            className="absolute left-full ml-1 text-white/20 hover:text-white/50 transition-colors"
+            aria-label={`Info about ${label}`}
+          >
+            <Info className="w-3 h-3" />
+          </button>
+        )}
+      </div>
         <div className="relative flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20">
           <svg width="100%" height="100%" viewBox="0 0 80 80" className="overflow-visible w-full h-full">
             <defs>
