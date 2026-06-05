@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import DoseCard from "../components/DoseCard";
 import GlucoseCard from "../components/GlucoseCard";
+import CarbCard from "../components/CarbCard";
 import { toast } from "sonner";
 import { CalendarDays, ChevronRight } from "lucide-react";
 import { format, isToday, isYesterday, parseISO } from "date-fns";
@@ -85,6 +86,11 @@ export default function History() {
     queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", 300)
   });
 
+  const { data: carbEntries = [], isLoading: loadingCarbs } = useQuery({
+    queryKey: ["carb-entries"],
+    queryFn: () => base44.entities.CarbEntry.list("-consumed_at", 300)
+  });
+
   const deleteDose = useMutation({
     mutationFn: (id) => base44.entities.InsulinDose.delete(id),
     onSuccess: () => {
@@ -101,7 +107,30 @@ export default function History() {
     }
   });
 
+  const deleteCarb = useMutation({
+    mutationFn: (id) => base44.entities.CarbEntry.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["carb-entries"] });
+      toast.success("Carb entry removed");
+    }
+  });
+
   const doseGroups = groupByDate(doses, "administered_at");
+  const carbGroups = groupByDate(carbEntries, "consumed_at");
+
+  const getCarbAverage = (days) => {
+    const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+    const filtered = carbEntries.filter((e) => new Date(e.consumed_at).getTime() >= cutoff);
+    if (!filtered.length) return "—";
+    const totalDays = Math.max(1, Math.ceil((Date.now() - Math.min(...filtered.map(e => new Date(e.consumed_at).getTime()))) / (24*60*60*1000)) || days);
+    const sum = filtered.reduce((acc, e) => acc + e.carbs, 0);
+    return `${Math.round(sum / Math.min(days, totalDays))}`;
+  };
+
+  const totalCarbsLast30 = useMemo(() => {
+    const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    return carbEntries.filter(e => new Date(e.consumed_at).getTime() >= cutoff).reduce((acc, e) => acc + e.carbs, 0);
+  }, [carbEntries]);
 
   const glucose30Days = glucoseReadings.filter((r) => {
     return Date.now() - new Date(r.recorded_at).getTime() <= 30 * 24 * 60 * 60 * 1000;
@@ -132,7 +161,7 @@ export default function History() {
     setOpenGroup(null);
   };
 
-  if (loadingDoses || loadingGlucose) {
+  if (loadingDoses || loadingGlucose || loadingCarbs) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
         <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
@@ -176,10 +205,25 @@ export default function History() {
             )}
             <span className="relative z-10">Glucose Readings</span>
           </button>
+
+          <button
+            onClick={() => handleTabChange("carbs")}
+            className={`relative px-4 py-2 rounded-2xl text-sm font-medium transition-colors ${
+              activeTab === "carbs" ? "text-amber-400" : "text-white/40 hover:text-white/70"
+            }`}>
+            {activeTab === "carbs" && (
+              <motion.div
+                layoutId="active-history-tab"
+                className="absolute inset-0 rounded-2xl -z-10"
+                style={{ backgroundColor: "rgba(245,158,11,0.15)" }}
+                transition={{ type: "spring", stiffness: 380, damping: 30 }} />
+            )}
+            <span className="relative z-10">Carb Log</span>
+          </button>
         </div>
       </div>
 
-      {activeTab === "doses" ? (
+      {activeTab === "doses" && (
         <div className="space-y-6">
           {doseGroups.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -203,7 +247,9 @@ export default function History() {
             ))
           )}
         </div>
-      ) : (
+      )}
+
+      {activeTab === "glucose" && (
         <div className="space-y-6">
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
             {[
@@ -243,6 +289,51 @@ export default function History() {
               >
                 {group.items.map((reading) => (
                   <GlucoseCard key={reading.id} reading={reading} onDelete={(id) => deleteGlucose.mutate(id)} />
+                ))}
+              </CollapsibleDateGroup>
+            ))
+          )}
+        </div>
+      )}
+
+      {activeTab === "carbs" && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              { label: "1 Day Avg", days: 1 },
+              { label: "7 Day Avg", days: 7 },
+              { label: "14 Day Avg", days: 14 },
+              { label: "30 Day Avg", days: 30 },
+            ].map((window) => (
+              <div key={window.label} className="bg-white/5 border border-white/5 rounded-2xl p-3 text-center">
+                <p className="text-[10px] font-bold text-white/30 uppercase tracking-wider">{window.label}</p>
+                <p className="text-xl text-white mt-1 font-extrabold">{getCarbAverage(window.days)}</p>
+                <p className="text-[10px] text-white/30 mt-0.5">g / day</p>
+              </div>
+            ))}
+          </div>
+          <div className="bg-white/5 border border-amber-500/20 rounded-2xl p-3 text-center" style={{ boxShadow: "0 0 15px rgba(245,158,11,0.05)" }}>
+            <p className="text-[10px] font-bold text-amber-400 uppercase tracking-wider">Total Carbs (30 Days)</p>
+            <p className="text-2xl text-amber-400 mt-1 font-extrabold">{totalCarbsLast30}g</p>
+          </div>
+
+          {carbGroups.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <CalendarDays className="w-10 h-10 text-muted-foreground/40 mb-3" />
+              <h3 className="text-lg font-semibold">No carb entries yet</h3>
+              <p className="text-sm text-muted-foreground mt-1">Log food from the Dashboard to see it here.</p>
+            </div>
+          ) : (
+            carbGroups.map((group) => (
+              <CollapsibleDateGroup
+                key={group.date}
+                label={group.label}
+                count={group.items.length}
+                isOpen={openGroup === group.date}
+                onToggle={() => setOpenGroup(openGroup === group.date ? null : group.date)}
+              >
+                {group.items.map((entry) => (
+                  <CarbCard key={entry.id} entry={entry} onDelete={(id) => deleteCarb.mutate(id)} />
                 ))}
               </CollapsibleDateGroup>
             ))
