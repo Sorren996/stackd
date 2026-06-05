@@ -293,7 +293,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
                 getGlucoseStatus(avgDailyGlucose)
               )}
               {renderSmallGauge(
-                "Act Insulin",
+                "Act. Insulin",
                 activeUnits.toFixed(1),
                 "units",
                 Math.min(1, activeUnits / totalAdministered),
@@ -301,7 +301,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
                 hasActive ? "Active" : "Cleared"
               )}
               {renderSmallGauge(
-                "Act Carbs",
+                "Act. Carbs",
                 activeCarbs > 0 ? `${Math.round(activeCarbs)}g` : "0g",
                 `${totalCarbsToday}g today`,
                 Math.min(1, activeCarbs / Math.max(totalCarbsToday, 1)),
