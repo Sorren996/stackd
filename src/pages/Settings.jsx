@@ -407,7 +407,7 @@ export default function Settings() {
             <button
               onClick={handleDeleteAccount}
               disabled={isDeletingAccount}
-              className="flex-1 py-3 rounded-2xl bg-red-600/80 hover:bg-red-600 text-white transition-all text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
+              className="flex-1 text-sm py-3 rounded-2xl bg-red-600/80 hover:bg-red-600 text-white transition-all text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {isDeletingAccount ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
               {isDeletingAccount ? "Deleting..." : "Yes, Delete Everything"}
