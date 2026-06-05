@@ -186,7 +186,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
           </button>
         )}
       </div>
-        <div className="relative flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20">
+        <div className="relative flex items-center justify-center w-20 h-20 sm:w-24 sm:h-24">
           <svg width="100%" height="100%" viewBox="0 0 80 80" className="overflow-visible w-full h-full">
             <defs>
               <filter id="glow-small" x="-50%" y="-50%" width="200%" height="200%">
