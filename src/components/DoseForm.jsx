@@ -57,10 +57,10 @@ export default function DoseForm({ open, onOpenChange }) {
   });
 
   const createCarb = useMutation({
-    mutationFn: (data) => base44.entities.CarbEntry.create(data),
-    onSuccess: () => {
+    mutationFn: (entries) => base44.entities.CarbEntry.bulkCreate(entries),
+    onSuccess: (_, entries) => {
       queryClient.invalidateQueries({ queryKey: ["carb-entries"] });
-      toast.success("Carbs logged");
+      toast.success(`Logged ${entries.length} food item${entries.length > 1 ? "s" : ""}`);
       onOpenChange(false);
     }
   });
@@ -209,7 +209,7 @@ export default function DoseForm({ open, onOpenChange }) {
 
           <div className="flex-1 flex flex-col" style={{ minHeight: 580 }}>
           {tab === "carbs" ? (
-            <CarbsTab onSubmit={(data) => createCarb.mutate(data)} isPending={createCarb.isPending} />
+            <CarbsTab onSubmit={(entries) => createCarb.mutate(entries)} isPending={createCarb.isPending} />
           ) : tab === "insulin" ? (
             <>
               <div className="overflow-y-auto h-[500px] px-5 pb-6 space-y-6">

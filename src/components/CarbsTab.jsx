@@ -1,184 +1,196 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { FOOD_DATABASE, FOOD_CATEGORIES } from "@/lib/carbAbsorption";
-import { Switch } from "@/components/ui/switch";
+import { base44 } from "@/api/base44Client";
+import { X, Clock } from "lucide-react";
 
 const CARB_COLOR = "#d97706";
+const PROFILE_COLORS = { fast: "#ef4444", medium: "#f59e0b", slow: "#a78bfa" };
 
 export default function CarbsTab({ onSubmit, isPending }) {
-  const [carbFood, setCarbFood]           = useState(null);
-  const [carbSearch, setCarbSearch]       = useState("");
-  const [isCustom, setIsCustom]           = useState(false);
-  const [customName, setCustomName]       = useState("");
-  const [customCarbs, setCustomCarbs]     = useState(30);
-  const [carbServings, setCarbServings]   = useState(1);
-  const [carbTime, setCarbTime]           = useState(() => new Date().toTimeString().slice(0, 5));
+  const [carbSearch, setCarbSearch] = useState("");
+  const [selectedFoods, setSelectedFoods] = useState([]); // [{ food, carbs }]
+  const [recentFoods, setRecentFoods] = useState([]);
+  const [carbTime, setCarbTime] = useState(() => new Date().toTimeString().slice(0, 5));
 
   const nowTimeString = new Date().toTimeString().slice(0, 5);
 
+  // Load last 3 recently used foods from DB
+  useEffect(() => {
+    base44.entities.CarbEntry.list("-consumed_at", 20).then((entries) => {
+      const seen = new Set();
+      const recent = [];
+      for (const e of entries) {
+        if (!e.is_custom && !seen.has(e.food_name)) {
+          seen.add(e.food_name);
+          const food = FOOD_DATABASE.find((f) => f.name === e.food_name);
+          if (food) recent.push(food);
+        }
+        if (recent.length >= 3) break;
+      }
+      setRecentFoods(recent);
+    }).catch(() => {});
+  }, []);
+
   const filteredFoods = useMemo(() => {
-    const q = carbSearch.toLowerCase();
-    return FOOD_CATEGORIES.map((cat) => ({
-      category: cat,
-      items: FOOD_DATABASE.filter((f) => f.category === cat && (!q || f.name.toLowerCase().includes(q))),
-    })).filter((g) => g.items.length > 0);
+    const q = carbSearch.toLowerCase().trim();
+    if (!q) return [];
+    return FOOD_DATABASE.filter((f) => f.name.toLowerCase().includes(q));
   }, [carbSearch]);
 
-  const totalCarbs = isCustom
-    ? customCarbs
-    : carbFood ? Math.round(carbFood.carbs * carbServings * 10) / 10 : 0;
+  const addFood = (food) => {
+    if (selectedFoods.find((s) => s.food.name === food.name)) return;
+    setSelectedFoods((prev) => [...prev, { food, carbs: food.carbs }]);
+    setCarbSearch("");
+  };
 
-  const canSubmit = isCustom
-    ? (customName.trim().length > 0 && customCarbs > 0)
-    : !!carbFood;
+  const removeFood = (name) => setSelectedFoods((prev) => prev.filter((s) => s.food.name !== name));
+
+  const updateCarbs = (name, val) => {
+    const n = parseFloat(val);
+    setSelectedFoods((prev) =>
+      prev.map((s) => s.food.name === name ? { ...s, carbs: isNaN(n) ? "" : n } : s)
+    );
+  };
+
+  const totalCarbs = selectedFoods.reduce((sum, s) => sum + (parseFloat(s.carbs) || 0), 0);
+  const canSubmit = selectedFoods.length > 0 && selectedFoods.every((s) => parseFloat(s.carbs) > 0);
 
   const handleSubmit = () => {
     if (!canSubmit) return;
     const [h, m] = carbTime.split(":").map(Number);
     const dt = new Date();
     dt.setHours(h, m, 0, 0);
-    if (isCustom) {
-      onSubmit({
-        food_name: customName.trim(),
-        is_custom: true,
-        carbs: parseFloat(customCarbs),
-        serving_amount: 1,
-        consumed_at: dt.toISOString(),
-      });
-    } else {
-      onSubmit({
-        food_name: carbFood.name,
-        is_custom: false,
-        carbs: totalCarbs,
-        serving_amount: carbServings,
-        glycemic_index: carbFood.gi,
-        absorption_profile: carbFood.profile,
-        consumed_at: dt.toISOString(),
-      });
-    }
+    const entries = selectedFoods.map((s) => ({
+      food_name: s.food.name,
+      is_custom: false,
+      carbs: parseFloat(s.carbs),
+      serving_amount: 1,
+      glycemic_index: s.food.gi,
+      absorption_profile: s.food.profile,
+      consumed_at: dt.toISOString(),
+    }));
+    onSubmit(entries);
   };
-
-  const adjustServings   = (d) => setCarbServings((v) => Math.max(0.5, Math.round((v + d) * 2) / 2));
-  const adjustCustomCarbs = (d) => setCustomCarbs((v) => Math.max(1, v + d));
 
   return (
     <>
       <div className="overflow-y-auto h-[500px] px-5 pb-6 space-y-5">
 
-        {/* Custom Food Toggle */}
-        <div className="flex items-center justify-between bg-white/5 border border-white/10 rounded-2xl px-4 py-3">
-          <div>
-            <p className="text-sm text-white font-medium">Custom Food</p>
-            <p className="text-xs text-white/40 mt-0.5">Manually enter carb amount</p>
-          </div>
-          <Switch
-            checked={isCustom}
-            onCheckedChange={(v) => { setIsCustom(v); setCarbFood(null); setCarbSearch(""); }}
+        {/* Search Bar */}
+        <div className="relative">
+          <p className="text-sm font-bold tracking-widest text-white/40 uppercase mb-3">Search Foods</p>
+          <input
+            type="text"
+            value={carbSearch}
+            onChange={(e) => setCarbSearch(e.target.value)}
+            placeholder="Search foods..."
+            className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm placeholder:text-white/30 outline-none focus:border-amber-500/30 transition-colors"
           />
+
+          {/* Search Results Dropdown */}
+          {filteredFoods.length > 0 && (
+            <div className="mt-2 bg-[hsl(162,10%,12%)] border border-white/10 rounded-2xl overflow-hidden shadow-xl">
+              {filteredFoods.map((food) => {
+                const already = !!selectedFoods.find((s) => s.food.name === food.name);
+                return (
+                  <button
+                    key={food.name}
+                    onClick={() => addFood(food)}
+                    disabled={already}
+                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors text-left border-b border-white/5 last:border-0 disabled:opacity-40"
+                  >
+                    <div>
+                      <p className="text-sm font-medium text-white">{food.name}</p>
+                      <p className="text-xs text-white/40">{food.carbs}g · GI {food.gi}</p>
+                    </div>
+                    <span
+                      className="text-xs font-bold px-2 py-0.5 rounded-full"
+                      style={{ backgroundColor: PROFILE_COLORS[food.profile] + "22", color: PROFILE_COLORS[food.profile] }}
+                    >
+                      {food.profile}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
-        {isCustom ? (
-          <>
-            {/* Warning Banner */}
-            <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl px-4 py-3">
-              <p className="text-xs text-amber-300/80 leading-relaxed">
-                Custom foods do not have validated glycemic absorption data. They will appear as a plotted carbohydrate event rather than a predictive absorption curve.
-              </p>
-            </div>
-
-            {/* Food Name */}
-            <div>
-              <p className="text-sm font-bold tracking-widest text-white/40 uppercase mb-3">Food Name</p>
-              <input
-                type="text"
-                value={customName}
-                onChange={(e) => setCustomName(e.target.value)}
-                placeholder="e.g. Homemade pasta..."
-                className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm placeholder:text-white/30 outline-none focus:border-amber-500/30 transition-colors"
-              />
-            </div>
-
-            {/* Carbs Stepper */}
-            <div>
-              <p className="text-sm font-bold tracking-widest text-white/40 uppercase mb-3">Total Carbs (g)</p>
-              <div className="bg-white/5 border border-white/10 rounded-2xl px-6 py-4 flex items-center justify-between mb-2">
-                <button onClick={() => adjustCustomCarbs(-5)} className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white text-xl flex items-center justify-center transition-colors">−</button>
-                <div className="text-center">
-                  <span className="text-4xl font-bold text-white">{customCarbs}</span>
-                  <p className="text-white/40 text-sm mt-1">grams</p>
-                </div>
-                <button onClick={() => adjustCustomCarbs(5)} className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white text-xl flex items-center justify-center transition-colors">+</button>
-              </div>
-              <div className="flex gap-2">
-                {[15, 30, 45, 60, 80].map((v) => (
-                  <button key={v} onClick={() => setCustomCarbs(v)}
-                    className="flex-1 py-2 rounded-xl text-sm font-medium transition-all border text-white"
-                    style={{ borderColor: customCarbs === v ? "#d9770699" : "rgba(255,255,255,0.1)", backgroundColor: customCarbs === v ? "#d977062a" : "rgba(255,255,255,0.05)" }}>
-                    {v}
+        {/* Recently Used */}
+        {recentFoods.length > 0 && carbSearch === "" && (
+          <div>
+            <p className="text-sm font-bold tracking-widest text-white/40 uppercase mb-3 flex items-center gap-2">
+              <Clock className="w-3.5 h-3.5" /> Recently Used
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {recentFoods.map((food) => {
+                const already = !!selectedFoods.find((s) => s.food.name === food.name);
+                return (
+                  <button
+                    key={food.name}
+                    onClick={() => addFood(food)}
+                    disabled={already}
+                    className="flex flex-col items-start px-3 py-2 rounded-xl border transition-all text-left disabled:opacity-40"
+                    style={{
+                      borderColor: already ? PROFILE_COLORS[food.profile] + "99" : "rgba(255,255,255,0.1)",
+                      backgroundColor: already ? PROFILE_COLORS[food.profile] + "22" : "transparent",
+                    }}
+                  >
+                    <span className="text-sm font-medium text-white">{food.name}</span>
+                    <span className="text-xs text-white/40">{food.carbs}g · {food.profile}</span>
                   </button>
-                ))}
-              </div>
+                );
+              })}
             </div>
-          </>
-        ) : (
-          <>
-            {/* Food Search */}
-            <div>
-              <p className="text-sm font-bold tracking-widest text-white/40 uppercase mb-3">Food</p>
-              <input
-                type="text"
-                value={carbSearch}
-                onChange={(e) => setCarbSearch(e.target.value)}
-                placeholder="Search foods..."
-                className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm placeholder:text-white/30 outline-none focus:border-amber-500/30 transition-colors mb-3"
-              />
+          </div>
+        )}
 
-              <div className="space-y-3">
-                {filteredFoods.map(({ category, items }) => (
-                  <div key={category}>
-                    <p className="text-xs text-white/30 uppercase tracking-wider mb-2">{category}</p>
-                    <div className="flex flex-wrap gap-2">
-                      {items.map((food) => {
-                        const isSelected = carbFood?.name === food.name;
-                        return (
-                          <button
-                            key={food.name}
-                            onClick={() => { setCarbFood(food); setCarbServings(1); }}
-                            className="flex flex-col items-start px-3 py-2 rounded-xl border text-left transition-all"
-                            style={{
-                              borderColor: isSelected ? "#f59e0b99" : "rgba(255,255,255,0.1)",
-                              backgroundColor: isSelected ? "rgba(245,158,11,0.15)" : "transparent",
-                            }}
-                          >
-                            <span className="text-sm font-medium text-white">{food.name}</span>
-                            <span className="text-xs text-white/40">{food.carbs}g · GI {food.gi}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
+        {/* Selected Foods */}
+        {selectedFoods.length > 0 && (
+          <div>
+            <p className="text-sm font-bold tracking-widest text-white/40 uppercase mb-3">Selected Foods</p>
+            <div className="space-y-2">
+              {selectedFoods.map(({ food, carbs }) => (
+                <div
+                  key={food.name}
+                  className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl px-4 py-3"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-white truncate">{food.name}</p>
+                    <p className="text-xs text-white/40">GI {food.gi} ·{" "}
+                      <span style={{ color: PROFILE_COLORS[food.profile] }}>{food.profile}</span>
+                    </p>
                   </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Servings (only when food is selected) */}
-            {carbFood && (
-              <div>
-                <p className="text-sm font-bold tracking-widest text-white/40 uppercase mb-3">Servings</p>
-                <div className="bg-white/5 border border-white/10 rounded-2xl px-6 py-4 flex items-center justify-between mb-3">
-                  <button onClick={() => adjustServings(-0.5)} className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white text-xl flex items-center justify-center transition-colors">−</button>
-                  <div className="text-center">
-                    <span className="text-4xl font-bold text-white">{carbServings}</span>
-                    <p className="text-white/40 text-sm mt-1">servings</p>
+                  {/* Carbs Input */}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <input
+                      type="number"
+                      min="1"
+                      max="500"
+                      value={carbs}
+                      onChange={(e) => updateCarbs(food.name, e.target.value)}
+                      className="w-16 text-center bg-black/20 border border-white/10 rounded-xl px-2 py-1.5 text-white text-sm font-bold outline-none focus:border-amber-500/40 transition-colors"
+                    />
+                    <span className="text-xs text-white/40">g</span>
                   </div>
-                  <button onClick={() => adjustServings(0.5)} className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white text-xl flex items-center justify-center transition-colors">+</button>
+                  <button
+                    onClick={() => removeFood(food.name)}
+                    className="text-white/30 hover:text-white/70 transition-colors shrink-0"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
-                <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl px-4 py-3 flex items-center justify-between">
+              ))}
+
+              {/* Total */}
+              {selectedFoods.length > 1 && (
+                <div className="flex items-center justify-between bg-amber-500/10 border border-amber-500/20 rounded-2xl px-4 py-2.5">
                   <span className="text-sm text-white/60">Total Carbs</span>
-                  <span className="text-xl font-bold text-amber-400">{totalCarbs}g</span>
+                  <span className="text-lg font-bold text-amber-400">{Math.round(totalCarbs * 10) / 10}g</span>
                 </div>
-              </div>
-            )}
-          </>
+              )}
+            </div>
+          </div>
         )}
 
         {/* Time */}
@@ -211,8 +223,8 @@ export default function CarbsTab({ onSubmit, isPending }) {
           {isPending
             ? "Logging..."
             : canSubmit
-              ? `Log ${totalCarbs}g ${isCustom ? (customName || "Custom Food") : carbFood.name}`
-              : "Select a food"}
+              ? `Log ${Math.round(totalCarbs * 10) / 10}g across ${selectedFoods.length} food${selectedFoods.length > 1 ? "s" : ""}`
+              : "Select a food to log"}
         </button>
       </div>
     </>
