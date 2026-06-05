@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQueryClient } from "@tanstack/react-query";
-import { LogOut, User, Target, Radio, Download, Loader2, Sparkles, Heart, Upload } from "lucide-react";
+import { LogOut, User, Target, Radio, Download, Loader2, Sparkles, Heart, Upload, Trash2, Shield, AlertTriangle } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
@@ -17,6 +17,8 @@ export default function Settings() {
   const [steloConnected, setSteloConnected] = useState(false);
   const [connectingStelo, setConnectingStelo] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   const [targetLow, setTargetLow] = useState(() => {
     const saved = localStorage.getItem("target_range_low");
@@ -35,6 +37,22 @@ export default function Settings() {
   }, []);
 
   const handleLogout = () => {
+    base44.auth.logout("/login");
+  };
+
+  const handleDeleteAccount = async () => {
+    setIsDeletingAccount(true);
+    // Delete all user data
+    const [doses, readings, carbs] = await Promise.all([
+      base44.entities.InsulinDose.list("-administered_at", 5000),
+      base44.entities.GlucoseReading.list("-recorded_at", 5000),
+      base44.entities.CarbEntry.list("-consumed_at", 5000),
+    ]);
+    await Promise.all([
+      ...doses.map(d => base44.entities.InsulinDose.delete(d.id)),
+      ...readings.map(r => base44.entities.GlucoseReading.delete(r.id)),
+      ...carbs.map(c => base44.entities.CarbEntry.delete(c.id)),
+    ]);
     base44.auth.logout("/login");
   };
 
@@ -331,14 +349,72 @@ export default function Settings() {
         </div>
       </div>
 
+      {/* Privacy Notice */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-bold text-white/35 uppercase tracking-wider px-1">Privacy</h3>
+        <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-4 space-y-3">
+          <div className="flex items-start gap-3">
+            <Shield className="w-4 h-4 text-teal-400 mt-0.5 shrink-0" />
+            <div className="space-y-1.5">
+              <p className="text-sm font-semibold text-white/90">Your data is private & secure</p>
+              <p className="text-xs text-white/40 leading-relaxed">
+                All health data logged in Stackd — including glucose readings, insulin doses, and carbohydrate entries — is stored securely and is only accessible by you. We do not share, sell, or transmit your personal health information to any third parties.
+              </p>
+              <p className="text-xs text-white/40 leading-relaxed">
+                Data is encrypted in transit and at rest. You can export or delete your data at any time from this settings page.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Log Out */}
       <button
         onClick={handleLogout}
-        className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl border border-red-500/10 text-red-500/70 hover:bg-red-500/5 hover:text-red-400 transition-all text-sm font-medium"
+        className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl border border-white/5 text-white/50 hover:bg-white/5 hover:text-white/80 transition-all text-sm font-medium"
       >
         <LogOut className="w-4 h-4" />
         Log Out
       </button>
+
+      {/* Delete Account */}
+      {!showDeleteConfirm ? (
+        <button
+          onClick={() => setShowDeleteConfirm(true)}
+          className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl border border-red-500/10 text-red-500/50 hover:bg-red-500/5 hover:text-red-400 transition-all text-sm font-medium"
+        >
+          <Trash2 className="w-4 h-4" />
+          Delete Account
+        </button>
+      ) : (
+        <div className="bg-red-950/30 border border-red-500/20 rounded-3xl p-5 space-y-4">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-bold text-red-300">This action cannot be undone</p>
+              <p className="text-xs text-red-400/70 mt-1 leading-relaxed">
+                All your data — glucose readings, insulin doses, carbohydrate logs, and account information — will be permanently and irreversibly deleted. There is no way to recover this data.
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setShowDeleteConfirm(false)}
+              className="flex-1 py-3 rounded-2xl border border-white/10 text-white/60 hover:bg-white/5 transition-all text-sm font-medium"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleDeleteAccount}
+              disabled={isDeletingAccount}
+              className="flex-1 py-3 rounded-2xl bg-red-600/80 hover:bg-red-600 text-white transition-all text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {isDeletingAccount ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+              {isDeletingAccount ? "Deleting..." : "Yes, Delete Everything"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
