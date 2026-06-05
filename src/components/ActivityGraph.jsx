@@ -70,21 +70,41 @@ function CustomTooltip({ active, payload, label }) {
   );
 }
 
-// Filter dropdown component
-function FilterDropdown({ filters, onChange, onClose }) {
+// Filter dropdown — portal-rendered with smart viewport positioning
+function FilterDropdown({ filters, onChange, anchorRect }) {
   const items = [
     { key: "glucose", label: "Glucose", color: "rgba(255,255,255,0.6)" },
     { key: "insulin", label: "Insulin", color: "#35a879" },
     { key: "carbs", label: "Carbs", color: "#f59e0b" },
   ];
 
+  const MARGIN = 8;
+  const DROPDOWN_W = 140;
+  const DROPDOWN_H = 128; // approx height for 3 rows
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+
+  // Horizontal: align left edge to button left, but clamp to screen
+  let left = anchorRect.left;
+  if (left + DROPDOWN_W > vw - MARGIN) left = vw - DROPDOWN_W - MARGIN;
+  if (left < MARGIN) left = MARGIN;
+
+  // Vertical: prefer below button, flip above if not enough space
+  const spaceBelow = vh - anchorRect.bottom;
+  const openBelow = spaceBelow >= DROPDOWN_H + MARGIN;
+  const top = openBelow
+    ? anchorRect.bottom + MARGIN
+    : anchorRect.top - DROPDOWN_H - MARGIN;
+
+  const initY = openBelow ? -8 : 8;
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8, scale: 0.95 }}
+      initial={{ opacity: 0, y: initY, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1, transition: { type: "spring", stiffness: 380, damping: 28 } }}
-      exit={{ opacity: 0, y: 6, scale: 0.96, transition: { duration: 0.13 } }}
-      className="absolute right-0 top-full mt-2 z-50 rounded-2xl border border-white/10 shadow-2xl py-1.5 min-w-[130px]"
-      style={{ background: "hsl(162,10%,10%)" }}
+      exit={{ opacity: 0, y: initY * 0.7, scale: 0.96, transition: { duration: 0.13 } }}
+      className="fixed z-[200] rounded-2xl border border-white/10 shadow-2xl py-1.5"
+      style={{ background: "hsl(162,10%,10%)", width: DROPDOWN_W, left, top }}
     >
       {items.map((item) => (
         <button
@@ -112,10 +132,10 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const [rangeIdx, setRangeIdx] = useState(1);
   const [showInfo, setShowInfo] = useState(false);
   const [showFilter, setShowFilter] = useState(false);
+  const [filterAnchorRect, setFilterAnchorRect] = useState(null);
   const [filters, setFilters] = useState({ glucose: true, insulin: true, carbs: true });
   const scrollRef = useRef(null);
   const containerRef = useRef(null);
-  const filterRef = useRef(null);
   const [containerWidth, setContainerWidth] = useState(600);
 
   useEffect(() => {
@@ -124,17 +144,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     ro.observe(containerRef.current);
     return () => ro.disconnect();
   }, []);
-
-  // Close filter on outside click
-  useEffect(() => {
-    if (!showFilter) return;
-    const handler = (e) => {
-      if (filterRef.current && !filterRef.current.contains(e.target)) setShowFilter(false);
-    };
-    document.addEventListener("mousedown", handler);
-    document.addEventListener("touchstart", handler);
-    return () => { document.removeEventListener("mousedown", handler); document.removeEventListener("touchstart", handler); };
-  }, [showFilter]);
 
   const toggleFilter = (key) => setFilters((f) => ({ ...f, [key]: !f[key] }));
 
@@ -292,9 +301,13 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       <div className="flex py-3 items-center mb-4 justify-center gap-2">
 
         {/* Filter button */}
-        <div ref={filterRef} className="relative">
+        <div className="relative">
           <button
-            onClick={() => setShowFilter(!showFilter)}
+            onClick={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              setFilterAnchorRect(rect);
+              setShowFilter((v) => !v);
+            }}
             className={`w-8 h-8 flex items-center justify-center rounded-xl border transition-all relative ${
               showFilter
                 ? "bg-teal-500/10 border-teal-500/30 text-teal-400"
@@ -306,12 +319,16 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-teal-400" />
             )}
           </button>
-          <AnimatePresence>
-            {showFilter && (
-              <FilterDropdown filters={filters} onChange={toggleFilter} onClose={() => setShowFilter(false)} />
-            )}
-          </AnimatePresence>
         </div>
+        {/* Portal-style backdrop + dropdown rendered outside flow */}
+        <AnimatePresence>
+          {showFilter && filterAnchorRect && (
+            <>
+              <div className="fixed inset-0 z-[199]" onClick={() => setShowFilter(false)} />
+              <FilterDropdown filters={filters} onChange={toggleFilter} anchorRect={filterAnchorRect} />
+            </>
+          )}
+        </AnimatePresence>
 
         {/* Range selector */}
         <div className="flex gap-0.5 rounded-xl p-1" style={{ background: "rgba(255,255,255,0.05)" }}>

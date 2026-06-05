@@ -27,17 +27,20 @@ function TooltipPopover({ title, description, onClose }) {
   return (
     <AnimatePresence>
       <motion.div
+        key="tooltip-backdrop"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.15 }}
-        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+        className="fixed inset-0 z-[300] flex items-center justify-center p-6"
+        style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom, 1.5rem))" }}
         onClick={onClose}
       >
         <motion.div
-          initial={{ opacity: 0, scale: 0.92, y: 12 }}
-          animate={{ opacity: 1, scale: 1, y: 0, transition: { type: "spring", stiffness: 340, damping: 26 } }}
-          exit={{ opacity: 0, scale: 0.94, y: 8, transition: { duration: 0.14 } }}
+          key="tooltip-card"
+          initial={{ opacity: 0, scale: 0.90, y: -16 }}
+          animate={{ opacity: 1, scale: 1, y: 0, transition: { type: "spring", stiffness: 360, damping: 26 } }}
+          exit={{ opacity: 0, scale: 0.93, y: -10, transition: { duration: 0.13 } }}
           onClick={(e) => e.stopPropagation()}
           className="w-full max-w-xs rounded-2xl p-4 border border-white/10 shadow-2xl"
           style={{ background: "hsl(162,10%,10%)" }}
@@ -216,21 +219,25 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
 
   return (
     <>
-      {/* Tooltip Popovers */}
-      {openTooltip === "active-carbs" && (
-        <TooltipPopover
-          title="Active Carbs"
-          description="Active Carbs estimates the amount of carbohydrates currently being absorbed from recent meals. This value decreases as food absorption progresses."
-          onClose={() => setOpenTooltip(null)}
-        />
-      )}
-      {openTooltip === "net-carbs" && (
-        <TooltipPopover
-          title="Net Active Carbs"
-          description="Net Active Carbs compares estimated carbohydrate absorption against active insulin activity. Positive values suggest carbohydrates may be outpacing insulin, while negative values suggest insulin activity may be stronger."
-          onClose={() => setOpenTooltip(null)}
-        />
-      )}
+      {/* Tooltip Popovers — z-[300] clears nav bar and all overlays */}
+      <AnimatePresence>
+        {openTooltip === "active-carbs" && (
+          <TooltipPopover
+            key="active-carbs-tip"
+            title="Active Carbs"
+            description="Active Carbs estimates the amount of carbohydrates currently being absorbed from recent meals. This value decreases as food absorption progresses."
+            onClose={() => setOpenTooltip(null)}
+          />
+        )}
+        {openTooltip === "net-carbs" && (
+          <TooltipPopover
+            key="net-carbs-tip"
+            title="Net Active Carbs"
+            description="Net Active Carbs compares estimated carbohydrate absorption against active insulin activity. Positive values suggest carbohydrates may be outpacing insulin, while negative values suggest insulin activity may be stronger."
+            onClose={() => setOpenTooltip(null)}
+          />
+        )}
+      </AnimatePresence>
 
       <div className="p-6 sm:p-9 rounded-none md:rounded-3xl border-0 -mx-4 md:mx-0">
         {/* Without carb data: original single-row layout */}
