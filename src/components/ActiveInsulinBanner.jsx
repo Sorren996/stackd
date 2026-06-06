@@ -241,7 +241,7 @@ const heroOrbColor =
 
       <div className="pt-2 pb-6 -mx-4 px-4">
         {/* Ambient breathing background orb */}
-        <div className="absolute left-1/2 -translate-x-1/2 top-16 w-72 h-72 pointer-events-none -z-10 overflow-hidden">
+        <div className="absolute left-1/2 -translate-x-1/2 top-16 w-72 h-72 pointer-events-none -z-10 overflow-y-hidden">
           <motion.div
             animate={{ scale: [1, 1.08, 1], opacity: [0.25, 0.4, 0.25] }}
             transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
@@ -278,7 +278,7 @@ const heroOrbColor =
         </div>
 
         {/* Primary Glucose Hero */}
-<div className="relative flex flex-col items-center text-center mb-6 pt-8 pb-8 overflow-visible rounded-[28px]">
+<div className="relative flex flex-col items-center text-center mb-6 pt-8 pb-8 overflow-hidden rounded-[28px]">
   {/* Main glucose orb */}
 
 
