@@ -133,12 +133,13 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
 
   // Convert netActiveCarbs to a clamped percentage (-100% to +100%) for display
   const netPct = Math.round(Math.min(100, Math.max(-100, (netActiveCarbs / 50) * 100)));
-  const netLabel = netActiveCarbs > 5
-    ? `${Math.abs(netPct)}% Rising Risk`
-    : netActiveCarbs < -5
-    ? `${Math.abs(netPct)}% Falling Risk`
-    : "Balanced";
-  const netColor = netActiveCarbs > 5 ? "#ef4444" : netActiveCarbs < -5 ? "#3b82f6" : "#35a879";
+ const netLabel = netActiveCarbs > 5
+  ? "Rising Risk"
+  : netActiveCarbs < -5
+  ? "Falling Risk"
+  : "Balanced";
+  
+   const netColor = netActiveCarbs > 5 ? "#ef4444" : netActiveCarbs < -5 ? "#3b82f6" : "#35a879";
 
   const hasCarbData = carbEntries.length > 0;
 
@@ -324,14 +325,14 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
                 "active-carbs"
               )}
               {renderSmallGauge(
-                "Net Carbs",
-                (netPct > 0 ? "+" : "") + netPct + "%",
-                "balance",
-                Math.min(1, Math.abs(netPct) / 100),
-                netColor,
-                netLabel,
-                "net-carbs"
-              )}
+  "Net Carbs",
+  Math.abs(netPct) + "%", // Displays positive value only
+  "balance",
+  Math.min(1, Math.abs(netPct) / 100),
+  netColor,
+  netLabel, // Caption underneath with no numbers
+  "net-carbs"
+)}
             </div>
           </div>
         )}
