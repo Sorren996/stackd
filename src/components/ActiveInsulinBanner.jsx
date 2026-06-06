@@ -314,11 +314,7 @@ const heroOrbColor =
     <span
       className="text-[72px] sm:text-[88px] font-black leading-none tracking-tight text-white"
       style={{
-        textShadow: `
-          0 0 18px ${heroOrbColor}AA,
-          0 0 44px ${heroOrbColor}77,
-          0 0 86px ${heroOrbColor}44
-        `,
+
       }}
     >
       {glucoseVal ?? "—"}
