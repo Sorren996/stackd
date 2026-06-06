@@ -257,7 +257,7 @@ const heroOrbColor =
 <div className="relative flex flex-col items-center text-center mb-6 pt-6 pb-5 overflow-hidden rounded-[28px]">
   {/* Main glucose orb */}
   <motion.div
-    aria-hidden
+    aria-visible
     className="absolute left-1/2 top-1/2 w-72 h-72 -translate-x-1/2 -translate-y-1/2 rounded-full pointer-events-none"
     animate={{
       scale: [0.88, 1.12, 0.88],
