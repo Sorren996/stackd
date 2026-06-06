@@ -264,7 +264,7 @@ const heroOrbColor =
       opacity: [0.35, 0.85, 0.35],
     }}
     transition={{
-      duration: 2.1,
+      duration: 3.1,
       repeat: Infinity,
       ease: "easeInOut",
     }}
@@ -290,7 +290,7 @@ const heroOrbColor =
       opacity: [0.4, 0, 0.4],
     }}
     transition={{
-      duration: 1.6,
+      duration: 4,
       repeat: Infinity,
       ease: "easeOut",
     }}
