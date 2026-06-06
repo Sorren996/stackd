@@ -400,7 +400,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         <div style={{ width: chartWidth, height: 180 }}>
           <ComposedChart
             width={chartWidth}
-            height={180}
+            height={240}
             data={chartData}
             margin={{ top: 12, right: 0, left: -20, bottom: 0 }}>
             <defs>
