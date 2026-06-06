@@ -23,8 +23,6 @@ function getTotalActiveUnits(doses, targetTime = Date.now()) {
   }, 0);
 }
 
-
-
 function getActiveCarbsAt(entries, targetTime) {
   return entries.reduce((sum, entry) => {
     if (entry.is_custom) return sum;
@@ -221,8 +219,6 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
   const targetLow = parseInt(localStorage.getItem("target_range_low") || "70", 10);
   const targetHigh = parseInt(localStorage.getItem("target_range_high") || "180", 10);
   const inRange = glucoseVal ? (glucoseVal >= targetLow && glucoseVal <= targetHigh) : null;
-const heroOrbColor =
-  inRange === null ? "#64748b" : inRange ? "#35a879" : "#f59e0b";
 
   return (
     <>
@@ -241,7 +237,7 @@ const heroOrbColor =
 
       <div className="pt-2 pb-6 -mx-4 px-4">
         {/* Ambient breathing background orb */}
-        <div className="absolute left-1/2 -translate-x-1/2 top-16 w-72 h-72 pointer-events-none -z-10 overflow-y-hidden">
+        <div className="absolute left-1/2 -translate-x-1/2 top-16 w-72 h-72 pointer-events-none -z-10 overflow-hidden">
           <motion.div
             animate={{ scale: [1, 1.08, 1], opacity: [0.25, 0.4, 0.25] }}
             transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
@@ -251,80 +247,42 @@ const heroOrbColor =
               filter: "blur(40px)",
             }}
           />
-
-
         </div>
 
-        {/* Primary Glucose Hero */}
-<div className="relative flex flex-col items-center text-center mb-6 pt-8 pb-8 overflow-hidden rounded-[28px]">
-  {/* Main glucose orb */}
+        {/* ── Primary Glucose Hero ── */}
+        <div className="flex flex-col items-center text-center mb-6 pt-2">
+          <span className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] mb-3">Current Glucose</span>
 
-  <motion.div
-    aria-hidden    className="absolute left-0 top-1/2 w-72 h-72 rounded-full pointer-events-none"
-    animate={{
-      scale: [0.4, .75, 0.4],
-      opacity: [0.35, 0.85, 0.35],
-    }}
-    transition={{
-      duration: 8.1,
-      repeat: Infinity,
-      ease: "easeInOut",
-    }}
-    style={{
-      background: `
-        radial-gradient(circle,
-          ${heroOrbColor}88 0%,
-          ${heroOrbColor}55 28%,
-          ${heroOrbColor}24 52%,
-          transparent 74%
-        )
-      `,
-      filter: "blur(18px)",
-    }}
-  />
-  {/* Outer pulse ring */}
+          <motion.div
+            key={glucoseVal}
+            initial={{ scale: 0.94, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: "spring", stiffness: 300, damping: 22 }}
+            className="flex items-end gap-3 mb-1"
+          >
+            <span className="text-[72px] sm:text-[88px] font-black leading-none tracking-tight text-white">
+              {glucoseVal ?? "—"}
+            </span>
+            {latestGlucose && (
+              <TrendIcon className="w-8 h-8 mb-3 shrink-0" style={{ color: glucoseColor }} />
+            )}
+          </motion.div>
 
-  
+          <span className="text-sm text-white/35 font-medium mb-4">mg/dL</span>
 
-  <span className="relative text-[10px] font-bold text-white/40 uppercase tracking-[0.2em] mb-3">
-    Current Glucose
-  </span>
-
-  <motion.div
-    key={glucoseVal}
-    initial={{ scale: 0.94, opacity: 0 }}
-    animate={{ scale: 1, opacity: 1 }}
-    transition={{ type: "spring", stiffness: 300, damping: 22 }}
-    className="relative flex items-end gap-3 mb-1"
-  >
-    <span
-      className="text-[72px] sm:text-[88px] font-black leading-none tracking-tight text-white"
-      style={{
-
-      }}
-    >
-      {glucoseVal ?? "—"}
-    </span>
-
-    {latestGlucose && (
-      
-      
-        <TrendIcon className="w-8 h-8 mb-3 shrink-0" style={{ color: heroOrbColor }} />
-     
-    )}
-  </motion.div>
-
-  <span className="relative text-sm text-white/45 font-medium mb-4">mg/dL</span>
-
-  {/* Status capsule */}
-
-
-    <span className="text-sm font-semibold" style={{ color: heroOrbColor }}>
-      {trendLabel}
-    </span>
-
-</div>
-         
+          {/* Status capsule */}
+          <motion.div
+            whileTap={{ scale: 0.96 }}
+            className="flex items-center gap-2 px-4 py-2 rounded-full"
+            style={{
+              background: `${glucoseColor}18`,
+              border: `1px solid ${glucoseColor}40`,
+            }}
+          >
+            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: glucoseColor }} />
+            <span className="text-sm font-semibold" style={{ color: glucoseColor }}>{trendLabel}</span>
+          </motion.div>
+        </div>
 
         {/* ── Target Range Banner ── */}
         {latestGlucose && (
@@ -424,7 +382,7 @@ const heroOrbColor =
             />
           </div>
         )}
-</div>
+      </div>
     </>
   );
 }
