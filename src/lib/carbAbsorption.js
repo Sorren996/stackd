@@ -64,6 +64,44 @@ export const FOOD_DATABASE = [
   { name: "Pancakes",             carbs: 30, gi: 66,  category: "Fast Absorbing", profile: "fast" },
   { name: "French Toast",         carbs: 22, gi: 68,  category: "Fast Absorbing", profile: "fast" },
   { name: "Cheese Crackers",      carbs: 18, gi: 70,  category: "Fast Absorbing", profile: "fast" },
+//Breakfast & Bakery
+{ name: "Cinnamon Roll with Icing", carbs: 48, gi: 74, category: "Fast Absorbing", profile: "fast" },
+{ name: "Corn Muffin", carbs: 34, gi: 70, category: "Fast Absorbing", profile: "fast" },
+{ name: "Frosted Flakes Cereal", carbs: 26, gi: 80, category: "Fast Absorbing", profile: "fast" },
+{ name: "White Toast with Strawberry Jam", carbs: 28, gi: 75, category: "Fast Absorbing", profile: "fast" },
+{ name: "Blueberry Pancake with Syrup", carbs: 45, gi: 72, category: "Fast Absorbing", profile: "fast" },
+{ name: "Toaster Strudel", carbs: 26, gi: 73, category: "Fast Absorbing", profile: "fast" },
+{ name: "Rice Krispies Treat", carbs: 22, gi: 82, category: "Fast Absorbing", profile: "fast" },
+
+// Drinks & Juices
+{ name: "Gatorade / Sports Drink", carbs: 21, gi: 78, category: "Fast Absorbing", profile: "fast" },
+{ name: "Red Bull / Energy Drink", carbs: 27, gi: 70, category: "Fast Absorbing", profile: "fast" },
+{ name: "Sweetened Iced Coffee", carbs: 24, gi: 68, category: "Fast Absorbing", profile: "fast" },
+{ name: "Sweet Tea", carbs: 22, gi: 72, category: "Fast Absorbing", profile: "fast" },
+{ name: "Apple Cider", carbs: 28, gi: 65, category: "Fast Absorbing", profile: "fast" },
+{ name: "Fruit Punch", carbs: 28, gi: 72, category: "Fast Absorbing", profile: "fast" },
+{ name: "Lemonade", carbs: 26, gi: 72, category: "Fast Absorbing", profile: "fast" },
+{ name: "Bubble Tea (with Tapioca)", carbs: 54, gi: 70, category: "Fast Absorbing", profile: "fast" },
+
+// Sweet Treats & Snacks
+{ name: "Skittles", carbs: 22, gi: 85, category: "Fast Absorbing", profile: "fast" },
+{ name: "Fruit Snacks / Fruit Leather", carbs: 18, gi: 78, category: "Fast Absorbing", profile: "fast" },
+{ name: "Vanilla Ice Cream Cone", carbs: 25, gi: 68, category: "Fast Absorbing", profile: "fast" },
+{ name: "Sugar Cookie", carbs: 15, gi: 70, category: "Fast Absorbing", profile: "fast" },
+{ name: "Marshmallows", carbs: 24, gi: 80, category: "Fast Absorbing", profile: "fast" },
+{ name: "Pop-Tarts", carbs: 38, gi: 75, category: "Fast Absorbing", profile: "fast" },
+{ name: "Pineapple Chunks", carbs: 16, gi: 66, category: "Fast Absorbing", profile: "fast" },
+{ name: "Gummy Worms", carbs: 22, gi: 78, category: "Fast Absorbing", profile: "fast" },
+{ name: "Orange Sherbet", carbs: 29, gi: 65, category: "Fast Absorbing", profile: "fast" },
+{ name: "Animal Crackers", carbs: 22, gi: 70, category: "Fast Absorbing", profile: "fast" },
+{ name: "Caramel Corn", carbs: 22, gi: 75, category: "Fast Absorbing", profile: "fast" },
+{ name: "Vanilla Wafers", carbs: 12, gi: 71, category: "Fast Absorbing", profile: "fast" },
+{ name: "Pretzels", carbs: 23, gi: 83, category: "Fast Absorbing", profile: "fast" },
+{ name: "Graham Crackers", carbs: 11, gi: 74, category: "Fast Absorbing", profile: "fast" },
+{ name: "Cheese Crackers (e.g., Goldfish)", carbs: 15, gi: 70, category: "Fast Absorbing", profile: "fast" },
+
+
+
 
   // ── Medium Absorbing ────────────────────────────────────────────────────────
   { name: "Oatmeal",              carbs: 27, gi: 55,  category: "Medium Absorbing", profile: "medium" },
@@ -116,6 +154,48 @@ export const FOOD_DATABASE = [
   { name: "Tomato Soup",          carbs: 16, gi: 54,  category: "Medium Absorbing", profile: "medium" },
   { name: "Thick Pizza Crust",    carbs: 30, gi: 65,  category: "Medium Absorbing", profile: "medium" },
   { name: "Split Pea Soup",       carbs: 26, gi: 60,  category: "Medium Absorbing", profile: "medium" },
+//Takeout & Diner Favorites
+{ name: "Chicken Fried Rice", carbs: 42, gi: 62, category: "Medium Absorbing", profile: "medium" },
+{ name: "Chicken Tacos (Corn Tortilla)", carbs: 22, gi: 52, category: "Medium Absorbing", profile: "medium" },
+{ name: "Sushi California Roll", carbs: 38, gi: 65, category: "Medium Absorbing", profile: "medium" },
+{ name: "Turkey Sub Sandwich", carbs: 45, gi: 56, category: "Medium Absorbing", profile: "medium" },
+{ name: "Teriyaki Chicken with White Rice", carbs: 48, gi: 63, category: "Medium Absorbing", profile: "medium" },
+{ name: "Veggie Fried Rice", carbs: 40, gi: 60, category: "Medium Absorbing", profile: "medium" },
+
+// Home-Cooked Mains & Soups
+{ name: "Spaghetti with Meat Sauce", carbs: 40, gi: 52, category: "Medium Absorbing", profile: "medium" },
+{ name: "Ham & Swiss Cheese Sandwich", carbs: 28, gi: 50, category: "Medium Absorbing", profile: "medium" },
+{ name: "Salmon with Quinoa & Asparagus", carbs: 22, gi: 48, category: "Medium Absorbing", profile: "medium" },
+{ name: "Chicken Noodle Soup", carbs: 18, gi: 50, category: "Medium Absorbing", profile: "medium" },
+{ name: "New England Clam Chowder", carbs: 24, gi: 55, category: "Medium Absorbing", profile: "medium" },
+{ name: "Turkey Burger on Wheat Bun", carbs: 26, gi: 51, category: "Medium Absorbing", profile: "medium" },
+{ name: "Corn Chowder", carbs: 26, gi: 60, category: "Medium Absorbing", profile: "medium" },
+{ name: "Black Bean Soup", carbs: 22, gi: 45, category: "Medium Absorbing", profile: "medium" },
+{ name: "Beef Stew", carbs: 20, gi: 50, category: "Medium Absorbing", profile: "medium" },
+{ name: "Minestrone Soup", carbs: 18, gi: 46, category: "Medium Absorbing", profile: "medium" },
+{ name: "Shrimp Scampi with Pasta", carbs: 38, gi: 50, category: "Medium Absorbing", profile: "medium" },
+{ name: "Chili Con Carne", carbs: 22, gi: 48, category: "Medium Absorbing", profile: "medium" },
+
+// Sides & Snacks
+{ name: "Hummus with Pita Bread", carbs: 25, gi: 48, category: "Medium Absorbing", profile: "medium" },
+{ name: "Apple Slices with Peanut Butter", carbs: 18, gi: 38, category: "Medium Absorbing", profile: "medium" },
+{ name: "Bran Muffin", carbs: 28, gi: 55, category: "Medium Absorbing", profile: "medium" },
+{ name: "Popcorn (Butter & Salt)", carbs: 15, gi: 55, category: "Medium Absorbing", profile: "medium" },
+{ name: "Baked Potato with Butter", carbs: 37, gi: 62, category: "Medium Absorbing", profile: "medium" },
+{ name: "Whole Wheat Bagel (Plain)", carbs: 48, gi: 54, category: "Medium Absorbing", profile: "medium" },
+{ name: "Chicken Caesar Wrap", carbs: 32, gi: 50, category: "Medium Absorbing", profile: "medium" },
+{ name: "Oat Bran Cereal", carbs: 22, gi: 55, category: "Medium Absorbing", profile: "medium" },
+{ name: "Fresh Banana", carbs: 27, gi: 51, category: "Medium Absorbing", profile: "medium" },
+{ name: "Sweet Potato Fries", carbs: 30, gi: 58, category: "Medium Absorbing", profile: "medium" },
+{ name: "Oatmeal Raisin Cookie", carbs: 18, gi: 55, category: "Medium Absorbing", profile: "medium" },
+{ name: "Potato Salad", carbs: 24, gi: 58, category: "Medium Absorbing", profile: "medium" },
+{ name: "Coleslaw", carbs: 12, gi: 45, category: "Medium Absorbing", profile: "medium" },
+{ name: "Glazed Carrots", carbs: 14, gi: 50, category: "Medium Absorbing", profile: "medium" },
+{ name: "Mango Slices", carbs: 22, gi: 51, category: "Medium Absorbing", profile: "medium" },
+{ name: "Whole Wheat Crackers", carbs: 18, gi: 49, category: "Medium Absorbing", profile: "medium" },
+{ name: "Yogurt Parfait (with Granola)", carbs: 28, gi: 50, category: "Medium Absorbing", profile: "medium" },
+
+
 
   // ── Slow Absorbing ──────────────────────────────────────────────────────────
   { name: "Pizza",                carbs: 35, gi: 45,  category: "Slow Absorbing", profile: "slow" },
@@ -170,6 +250,46 @@ export const FOOD_DATABASE = [
   { name: "Dark Chocolate 85%",   carbs: 10, gi: 20,  category: "Slow Absorbing", profile: "slow" },
   { name: "Firm Tofu",            carbs:  2, gi: 15,  category: "Slow Absorbing", profile: "slow" },
   { name: "Quinoa Vegetable Salad", carbs: 25, gi: 35, category: "Slow Absorbing", profile: "slow" },
+  //Heavy Takeout & Restaurant Favorites
+{ name: "Pepperoni Pizza", carbs: 32, gi: 45, category: "Slow Absorbing", profile: "slow" },
+{ name: "Fettuccine Alfredo", carbs: 42, gi: 40, category: "Slow Absorbing", profile: "slow" },
+{ name: "Beef Burrito (with Beans & Cheese)", carbs: 48, gi: 42, category: "Slow Absorbing", profile: "slow" },
+{ name: "Fried Chicken (with skin/breading)", carbs: 12, gi: 45, category: "Slow Absorbing", profile: "slow" },
+{ name: "Beef Stroganoff", carbs: 35, gi: 43, category: "Slow Absorbing", profile: "slow" },
+{ name: "Chicken Parmesan (with Pasta)", carbs: 38, gi: 44, category: "Slow Absorbing", profile: "slow" },
+{ name: "Macaroni and Cheese", carbs: 40, gi: 45, category: "Slow Absorbing", profile: "slow" },
+{ name: "Chicken Quesadilla", carbs: 32, gi: 50, category: "Slow Absorbing", profile: "slow" },
+{ name: "Cheeseburger", carbs: 35, gi: 48, category: "Slow Absorbing", profile: "slow" },
+{ name: "Beef Lasagna", carbs: 35, gi: 45, category: "Slow Absorbing", profile: "slow" },
+{ name: "Falafel Wrap with Tahini", carbs: 35, gi: 44, category: "Slow Absorbing", profile: "slow" },
+{ name: "Beef Enchiladas", carbs: 30, gi: 45, category: "Slow Absorbing", profile: "slow" },
+{ name: "Chicken Tikka Masala with Naan", carbs: 45, gi: 48, category: "Slow Absorbing", profile: "slow" },
+{ name: "Pad Thai with Chicken & Peanuts", carbs: 55, gi: 49, category: "Slow Absorbing", profile: "slow" },
+{ name: "Pork Dumplings / Potstickers", carbs: 24, gi: 45, category: "Slow Absorbing", profile: "slow" },
+{ name: "Beef Nachos with Cheese & Guac", carbs: 38, gi: 46, category: "Slow Absorbing", profile: "slow" },
+{ name: "Fish and Chips", carbs: 42, gi: 49, category: "Slow Absorbing", profile: "slow" },
+{ name: "Buffalo Wings (Breaded & Sauced)", carbs: 14, gi: 44, category: "Slow Absorbing", profile: "slow" },
+
+// Classic Comfort Dinners & Breakfasts
+{ name: "Peanut Butter & Jelly Sandwich", carbs: 30, gi: 48, category: "Slow Absorbing", profile: "slow" },
+{ name: "Greek Yogurt with Walnuts", carbs: 12, gi: 25, category: "Slow Absorbing", profile: "slow" },
+{ name: "Grilled Cheese Sandwich", carbs: 28, gi: 46, category: "Slow Absorbing", profile: "slow" },
+{ name: "Avocado Toast on Sourdough", carbs: 18, gi: 40, category: "Slow Absorbing", profile: "slow" },
+{ name: "Beef Chili with Beans", carbs: 25, gi: 30, category: "Slow Absorbing", profile: "slow" },
+{ name: "Sausage & Egg Biscuit", carbs: 26, gi: 48, category: "Slow Absorbing", profile: "slow" },
+{ name: "Meatloaf with Gravy", carbs: 15, gi: 45, category: "Slow Absorbing", profile: "slow" },
+{ name: "Pulled Pork Sandwich", carbs: 38, gi: 49, category: "Slow Absorbing", profile: "slow" },
+{ name: "Tuna Salad Sandwich on Rye", carbs: 28, gi: 44, category: "Slow Absorbing", profile: "slow" },
+{ name: "Eggs Benedict", carbs: 24, gi: 46, category: "Slow Absorbing", profile: "slow" },
+{ name: "Quiche Lorraine", carbs: 18, gi: 40, category: "Slow Absorbing", profile: "slow" },
+{ name: "Steak with Mashed Potatoes & Butter", carbs: 28, gi: 48, category: "Slow Absorbing", profile: "slow" },
+{ name: "Chicken Pot Pie", carbs: 34, gi: 48, category: "Slow Absorbing", profile: "slow" },
+{ name: "Baked Salmon with Cream Sauce", carbs: 5, gi: 15, category: "Slow Absorbing", profile: "slow" },
+{ name: "French Dip Sandwich with Au Jus", carbs: 32, gi: 46, category: "Slow Absorbing", profile: "slow" },
+//Party Platter / Appetizers
+{ name: "Spinach & Artichoke Dip with Chips", carbs: 24, gi: 42, category: "Slow Absorbing", profile: "slow" },
+{ name: "Cobb Salad with Blue Cheese Dressing", carbs: 8, gi: 25, category: "Slow Absorbing", profile: "slow" }
+
 ];
 
 /** Generate a time-series absorption activity curve (0–1) for a carb entry */
