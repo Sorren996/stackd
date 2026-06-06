@@ -448,6 +448,6 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
           </div>
         )}
       </div>
-    </>
+    </
   );
 }
