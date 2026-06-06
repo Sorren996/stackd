@@ -312,7 +312,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
             </div>
 <span
   className="text-xs font-medium"
-  style={{ color: orbColor }}
+  style={{ color: heroOrbColor }}
 >
   {inRange === null ? "" : inRange ? "✓" : glucoseVal < 70 ? "↓" : "↑"}
 </span>
