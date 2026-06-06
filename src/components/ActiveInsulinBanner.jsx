@@ -256,7 +256,7 @@ const heroOrbColor =
         </div>
 
         {/* Primary Glucose Hero */}
-<div className="relative flex flex-col items-center text-center mb-6 pt-8 pb-8 overflow-visible rounded-[28px]">
+<div className="relative flex flex-col items-center text-center mb-6 pt-8 pb-8 overflow-hidden rounded-[28px]">
   {/* Main glucose orb */}
 
   <motion.div
