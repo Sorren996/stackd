@@ -53,6 +53,38 @@ function CustomTooltip({ active, payload, label }) {
           </div>
         );
       })}
+      /* Remove the absolute gradients and relative wrapper entirely */}
+<div
+  ref__={scrollRef}
+  className={is24h ? "" : "overflow-x-auto"}
+  style={{ WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}
+>
+  <div style={{ width: chartWidth, height: 180 }}>
+    <ComposedChart
+      width={chartWidth}
+      height={180}
+      data={chartData}
+      margin={{ top: 12, right: 0, left: -20, bottom: 0 }} // Adjusted right margin to 0 for a tight, clean fit
+    >
+      <defs>
+        {/* Gradients ... */}
+      </defs>
+
+      <XAxis
+        dataKey="time"
+        type="number"
+        domain={is24h ? [domainStart, domainEnd] : [viewStart, viewEnd]}
+        tickFormatter={(t) => format(new Date(t), "h:mma")}
+        tick={{ fontSize: 10, fill: "rgba(255,255,255,0.25)", textAnchor: "middle" }}
+        axisLine={false}
+        tickLine={false}
+        tickCount={tickCount}
+      />
+
+      {/* Other chart elements ... */}
+    </ComposedChart>
+  </div>
+</div>
       {carbCurveEntries.map((p) => {
         const carbs = p.payload[`${p.dataKey}_carbs`];
         const food = p.payload[`${p.dataKey}_food`];
