@@ -235,55 +235,120 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
         )}
       </AnimatePresence>
 
-      <div className="pt-2 pb-6 -mx-4 px-4">
-        {/* Ambient breathing background orb */}
-        <div className="absolute left-1/2 -translate-x-1/2 top-16 w-72 h-72 pointer-events-none -z-10 overflow-hidden">
-          <motion.div
-            animate={{ scale: [1, 1.08, 1], opacity: [0.25, 0.4, 0.25] }}
-            transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-            className="w-full h-full rounded-full"
-            style={{
-              background: `radial-gradient(circle, ${ambientColor} 0%, transparent 70%)`,
-              filter: "blur(40px)",
-            }}
-          />
-        </div>
+     {/* ── Primary Glucose Hero ── */}
+<div className="relative flex flex-col items-center text-center mb-6 pt-2 overflow-hidden rounded-[28px] px-6 py-5">
+  {/* Prominent glucose glow */}
+  <motion.div
+    aria-hidden
+    className="absolute inset-0 pointer-events-none"
+    animate={{
+      opacity: [0.55, 0.9, 0.55],
+      scale: [0.98, 1.04, 0.98],
+    }}
+    transition={{
+      duration: 2.4,
+      repeat: Infinity,
+      ease: "easeInOut",
+    }}
+    style={{
+      background: `
+        radial-gradient(circle at 50% 42%, ${glucoseColor}4D 0%, ${glucoseColor}24 34%, transparent 68%),
+        linear-gradient(135deg, ${glucoseColor}26 0%, rgba(255,255,255,0.045) 42%, ${glucoseColor}1A 100%)
+      `,
+      filter: "blur(2px)",
+    }}
+  />
 
-        {/* ── Primary Glucose Hero ── */}
-        <div className="flex flex-col items-center text-center mb-6 pt-2">
-          <span className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] mb-3">Current Glucose</span>
+  {/* Sharper inner pulse */}
+  <motion.div
+    aria-hidden
+    className="absolute w-48 h-48 rounded-full pointer-events-none"
+    animate={{
+      opacity: [0.18, 0.46, 0.18],
+      scale: [0.82, 1.15, 0.82],
+    }}
+    transition={{
+      duration: 1.8,
+      repeat: Infinity,
+      ease: "easeInOut",
+    }}
+    style={{
+      background: `radial-gradient(circle, ${glucoseColor}55 0%, ${glucoseColor}20 42%, transparent 72%)`,
+      boxShadow: `0 0 56px ${glucoseColor}45`,
+    }}
+  />
 
-          <motion.div
-            key={glucoseVal}
-            initial={{ scale: 0.94, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: "spring", stiffness: 300, damping: 22 }}
-            className="flex items-end gap-3 mb-1"
-          >
-            <span className="text-[72px] sm:text-[88px] font-black leading-none tracking-tight text-white">
-              {glucoseVal ?? "—"}
-            </span>
-            {latestGlucose && (
-              <TrendIcon className="w-8 h-8 mb-3 shrink-0" style={{ color: glucoseColor }} />
-            )}
-          </motion.div>
+  <span className="relative text-[10px] font-bold text-white/45 uppercase tracking-[0.2em] mb-3">
+    Current Glucose
+  </span>
 
-          <span className="text-sm text-white/35 font-medium mb-4">mg/dL</span>
+  <motion.div
+    key={glucoseVal}
+    initial={{ scale: 0.94, opacity: 0 }}
+    animate={{ scale: 1, opacity: 1 }}
+    transition={{ type: "spring", stiffness: 300, damping: 22 }}
+    className="relative flex items-end gap-3 mb-1"
+  >
+    <span
+      className="text-[72px] sm:text-[88px] font-black leading-none tracking-tight text-white"
+      style={{
+        textShadow: `0 0 22px ${glucoseColor}66, 0 0 48px ${glucoseColor}38`,
+      }}
+    >
+      {glucoseVal ?? "—"}
+    </span>
 
-          {/* Status capsule */}
-          <motion.div
-            whileTap={{ scale: 0.96 }}
-            className="flex items-center gap-2 px-4 py-2 rounded-full"
-            style={{
-              background: `${glucoseColor}18`,
-              border: `1px solid ${glucoseColor}40`,
-            }}
-          >
-            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: glucoseColor }} />
-            <span className="text-sm font-semibold" style={{ color: glucoseColor }}>{trendLabel}</span>
-          </motion.div>
-        </div>
+    {latestGlucose && (
+      <motion.div
+        animate={{
+          scale: [1, 1.14, 1],
+          opacity: [0.75, 1, 0.75],
+        }}
+        transition={{
+          duration: 1.4,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+      >
+        <TrendIcon className="w-8 h-8 mb-3 shrink-0" style={{ color: glucoseColor }} />
+      </motion.div>
+    )}
+  </motion.div>
 
+  <span className="relative text-sm text-white/45 font-medium mb-4">mg/dL</span>
+
+  {/* Status capsule */}
+  <motion.div
+    whileTap={{ scale: 0.96 }}
+    animate={{
+      boxShadow: [
+        `0 0 0 0 ${glucoseColor}33`,
+        `0 0 0 8px ${glucoseColor}00`,
+        `0 0 0 0 ${glucoseColor}00`,
+      ],
+    }}
+    transition={{
+      duration: 1.7,
+      repeat: Infinity,
+      ease: "easeOut",
+    }}
+    className="relative flex items-center gap-2 px-4 py-2 rounded-full"
+    style={{
+      background: `${glucoseColor}24`,
+      border: `1px solid ${glucoseColor}66`,
+    }}
+  >
+    <motion.div
+      className="w-1.5 h-1.5 rounded-full"
+      animate={{ scale: [1, 1.8, 1], opacity: [0.75, 1, 0.75] }}
+      transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
+      style={{ backgroundColor: glucoseColor }}
+    />
+    <span className="text-sm font-semibold" style={{ color: glucoseColor }}>
+      {trendLabel}
+    </span>
+  </motion.div>
+</div>
         {/* ── Target Range Banner ── */}
         {latestGlucose && (
           <motion.div
