@@ -310,12 +310,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
               </p>
               <p className="text-xs text-white/35">Target: {targetLow} – {targetHigh} mg/dL</p>
             </div>
-<span
-  className="text-xs font-medium"
-  style={{ color: heroOrbColor }}
->
-  {inRange === null ? "" : inRange ? "✓" : glucoseVal < 70 ? "↓" : "↑"}
-</span>
+{inRange === null ? "" : inRange ? "✓" : glucoseVal < 70 ? "↓" : "↑"}
           </motion.div>
         )}
 
