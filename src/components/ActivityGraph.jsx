@@ -134,6 +134,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const [showFilter, setShowFilter] = useState(false);
   const [filterAnchorRect, setFilterAnchorRect] = useState(null);
   const [filters, setFilters] = useState({ glucose: true, insulin: true, carbs: true });
+  const [isInteracting, setIsInteracting] = useState(false);
   const scrollRef = useRef(null);
   const containerRef = useRef(null);
   const [containerWidth, setContainerWidth] = useState(600);
@@ -402,7 +403,12 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             width={chartWidth}
             height={240}
             data={chartData}
-            margin={{ top: 12, right: 0, left: -20, bottom: 0 }}>
+            margin={{ top: 12, right: 0, left: -20, bottom: 0 }}
+            onMouseMove={(state) => setIsInteracting(!!(state && state.activePayload))}
+            onMouseLeave={() => setIsInteracting(false)}
+            onTouchStart={(state) => { if (state && state.activePayload) setIsInteracting(true); }}
+            onTouchMove={(state) => { if (state && state.activePayload) setIsInteracting(true); }}
+            onTouchEnd={() => setIsInteracting(false)}>
             <defs>
               {doseKeys.map((k) => (
                 <linearGradient key={k.key} id={`grad_${k.key}`} x1="0" y1="0" x2="0" y2="1">
@@ -410,31 +416,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                   <stop offset="100%" stopColor={k.color} stopOpacity={0.0} />
                 </linearGradient>
               ))}
-              <ComposedChart
-  width={chartWidth}
-  height={240}
-  data={chartData}
-  margin={{ top: 12, right: 0, left: -20, bottom: 0 }}
-  onMouseMove={(state) => {
-    if (state && state.activePayload) {
-      setIsInteracting(true);
-    } else {
-      setIsInteracting(false);
-    }
-  }}
-  onMouseLeave={() => setIsInteracting(false)}
-  onTouchStart={(state) => {
-    if (state && state.activePayload) {
-      setIsInteracting(true);
-    }
-  }}
-  onTouchMove={(state) => {
-    if (state && state.activePayload) {
-      setIsInteracting(true);
-    }
-  }}
-  onTouchEnd={() => setIsInteracting(false)}
->
               {carbKeys.map((k) => (
                 <linearGradient key={k.key} id={`grad_${k.key}`} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor={k.color} stopOpacity={0.28} />
@@ -466,7 +447,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             <YAxis yAxisId="carbs" domain={[0, 55]} hide />
             <YAxis yAxisId="glucose" domain={[GLUCOSE_MIN, GLUCOSE_MAX]} hide />
 
-            <Tooltip content={<CustomTooltip />} cursor={{ stroke: "rgba(255,255,255,0.1)", strokeWidth: 1 }} />
+            <Tooltip active={isInteracting} content={<CustomTooltip />} cursor={{ stroke: "rgba(255,255,255,0.1)", strokeWidth: 1 }} />
 
             <ReferenceLine
               yAxisId="insulin"
