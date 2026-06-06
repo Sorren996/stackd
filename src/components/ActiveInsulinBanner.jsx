@@ -292,10 +292,10 @@ const heroOrbColor =
     transition={{
       duration: 10,
       repeat: Infinity,
-      ease: "easeInOut",
+      ease: "easeOut",
     }}
     style={{
-      border: `2px solid ${heroOrbColor}99`,
+      border: `1px solid ${heroOrbColor}99`,
       boxShadow: `0 0 36px ${heroOrbColor}66`,
     }}
   />
