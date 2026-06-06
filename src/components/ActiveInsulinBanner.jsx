@@ -66,7 +66,15 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
 
   const activeCarbs = useMemo(() => getActiveCarbsNow(carbEntries), [carbEntries]);
   const totalCarbsToday = useMemo(() => getTotalCarbsToday(carbEntries), [carbEntries]);
-  const netActiveCarbs = useMemo(() => activeCarbs - activeUnits * 10, [activeCarbs, activeUnits]);
+  const netActiveCarbs = useMemo(() => {
+    const currentGlucose = latestGlucose ? latestGlucose.value : 100;
+    const targetGlucose = 110;
+    const isf = 50;
+    const activeCorrectionUnits = Math.max(0, currentGlucose - targetGlucose) / isf;
+    const activeFoodUnits = Math.max(0, activeUnits - activeCorrectionUnits);
+    return activeCarbs - activeFoodUnits * 10;
+  }, [activeCarbs, activeUnits, latestGlucose]);
+
 
   const totalAdministered = useMemo(() => {
     return doses.reduce((sum, d) => sum + d.units, 0) || 1;
@@ -123,7 +131,13 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
     "down": ArrowDown,
   };
 
-  const netLabel = netActiveCarbs > 5 ? "Rising Risk" : netActiveCarbs < -5 ? "Falling Risk" : "Balanced";
+  // Convert netActiveCarbs to a clamped percentage (-100% to +100%) for display
+  const netPct = Math.round(Math.min(100, Math.max(-100, (netActiveCarbs / 50) * 100)));
+  const netLabel = netActiveCarbs > 5
+    ? `${Math.abs(netPct)}% Rising Risk`
+    : netActiveCarbs < -5
+    ? `${Math.abs(netPct)}% Falling Risk`
+    : "Balanced";
   const netColor = netActiveCarbs > 5 ? "#ef4444" : netActiveCarbs < -5 ? "#3b82f6" : "#35a879";
 
   const hasCarbData = carbEntries.length > 0;
@@ -233,7 +247,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
           <TooltipPopover
             key="net-carbs-tip"
             title="Net Active Carbs"
-            description="Net Active Carbs compares estimated carbohydrate absorption against active insulin activity. Positive values suggest carbohydrates may be outpacing insulin, while negative values suggest insulin activity may be stronger."
+            description="Net Active Carbs compares carbohydrate absorption against insulin dedicated to food coverage — after accounting for correction insulin based on your current glucose level. A positive % means carbs may be outpacing insulin (rising risk), a negative % means insulin may be stronger (falling risk)."
             onClose={() => setOpenTooltip(null)}
           />
         )}
@@ -311,9 +325,9 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
               )}
               {renderSmallGauge(
                 "Net Carbs",
-                (netActiveCarbs > 0 ? "+" : "") + Math.round(netActiveCarbs),
+                (netPct > 0 ? "+" : "") + netPct + "%",
                 "balance",
-                Math.min(1, Math.abs(netActiveCarbs) / 50),
+                Math.min(1, Math.abs(netPct) / 100),
                 netColor,
                 netLabel,
                 "net-carbs"
