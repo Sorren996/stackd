@@ -53,38 +53,6 @@ function CustomTooltip({ active, payload, label }) {
           </div>
         );
       })}
-      /* Remove the absolute gradients and relative wrapper entirely */}
-<div
-  ref__={scrollRef}
-  className={is24h ? "" : "overflow-x-auto"}
-  style={{ WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}
->
-  <div style={{ width: chartWidth, height: 180 }}>
-    <ComposedChart
-      width={chartWidth}
-      height={180}
-      data={chartData}
-      margin={{ top: 12, right: 0, left: -20, bottom: 0 }} // Adjusted right margin to 0 for a tight, clean fit
-    >
-      <defs>
-        {/* Gradients ... */}
-      </defs>
-
-      <XAxis
-        dataKey="time"
-        type="number"
-        domain={is24h ? [domainStart, domainEnd] : [viewStart, viewEnd]}
-        tickFormatter={(t) => format(new Date(t), "h:mma")}
-        tick={{ fontSize: 10, fill: "rgba(255,255,255,0.25)", textAnchor: "middle" }}
-        axisLine={false}
-        tickLine={false}
-        tickCount={tickCount}
-      />
-
-      {/* Other chart elements ... */}
-    </ComposedChart>
-  </div>
-</div>
       {carbCurveEntries.map((p) => {
         const carbs = p.payload[`${p.dataKey}_carbs`];
         const food = p.payload[`${p.dataKey}_food`];
@@ -425,9 +393,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         </div>
       </div>
 
-      <div className="relative">
-        <div className="absolute left-0 top-0 bottom-0 w-10 z-10 pointer-events-none bg-gradient-to-r from-black to-transparent" />
-        <div className="absolute right-0 top-0 bottom-0 w-10 z-10 pointer-events-none bg-gradient-to-l from-black to-transparent" />
       <div
         ref={scrollRef}
         className={is24h ? "" : "overflow-x-auto"}
@@ -437,7 +402,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             width={chartWidth}
             height={180}
             data={chartData}
-            margin={{ top: 12, right: 32, left: -20, bottom: 0 }}>
+            margin={{ top: 12, right: 8, left: -20, bottom: 0 }}>
             <defs>
               {doseKeys.map((k) => (
                 <linearGradient key={k.key} id={`grad_${k.key}`} x1="0" y1="0" x2="0" y2="1">
@@ -574,7 +539,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             )}
           </ComposedChart>
         </div>
-      </div>
       </div>
     </div>
   );
