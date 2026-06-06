@@ -240,7 +240,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
         <div className="absolute left-1/2 -translate-x-1/2 top-8 w-72 h-72 pointer-events-none -z-10 overflow-visible">
           <motion.div
             animate={{ scale: [.7, 1.2, .7], opacity: [0.25, 0.7, 0.25] }}
-            transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+            transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
             className="w-full h-full rounded-full"
             style={{
               background: `radial-gradient(circle, ${ambientColor} 0%, transparent 70%)`,
