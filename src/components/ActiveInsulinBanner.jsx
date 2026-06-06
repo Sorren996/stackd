@@ -239,7 +239,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
         {/* Ambient breathing background orb */}
         <div className="absolute left-1/2 -translate-x-1/2 top-16 w-72 h-72 pointer-events-none -z-10 overflow-hidden">
           <motion.div
-            animate={{ scale: [1, 1.2, 1], opacity: [0.25, 0.7, 0.25] }}
+            animate={{ scale: [.7, 1.2, .7], opacity: [0.25, 0.7, 0.25] }}
             transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
             className="w-full h-full rounded-full"
             style={{
