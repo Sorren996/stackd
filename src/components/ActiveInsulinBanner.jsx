@@ -295,8 +295,7 @@ const heroOrbColor =
       ease: "easeOut",
     }}
     style={{
-      border: `1px solid ${heroOrbColor}99`,
-      boxShadow: `0 0 36px ${heroOrbColor}66`,
+
     }}
   /> 
 
