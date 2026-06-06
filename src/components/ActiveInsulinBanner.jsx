@@ -300,7 +300,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
               {[3,4,3,5,4,3,4,5,3].map((h, i) => (
                 <div key={i} className="w-0.5 rounded-full" style={{
                   height: h * 3,
-                  backgroundColor: inRange ? "#35a87988" : "#f59e0b88"
+                  backgroundColor: inRange ? "#35a87988" : glucoseValue < 70 ? "#3b82f6" : "#f59e0b88"
                 }} />
               ))}
             </div>
