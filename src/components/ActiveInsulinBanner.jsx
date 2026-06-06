@@ -1,11 +1,11 @@
 import { useMemo, useState } from "react";
 import { ArrowUp, ArrowDown, ArrowRight, ArrowUpRight, ArrowDownRight, Info, X } from "lucide-react";
 import { INSULIN_PROFILES, generateActivityCurve } from "@/lib/insulinPharmacology";
-import { getActiveCarbsNow, getTotalCarbsToday } from "@/lib/carbAbsorption";
+import { getActiveCarbsNow, getTotalCarbsToday, generateCarbCurve } from "@/lib/carbAbsorption";
 import { motion, AnimatePresence } from "framer-motion";
 
-function getTotalActiveUnits(doses) {
-  const now = Date.now();
+function getTotalActiveUnits(doses, targetTime = Date.now()) {
+  const now = targetTime;
   return doses.reduce((sum, dose) => {
     const curve = generateActivityCurve(dose, 3);
     if (!curve.length) return sum;
@@ -20,6 +20,23 @@ function getTotalActiveUnits(doses) {
     const ratio = hi >= curve.length ? 0 : (now - curve[lo].time) / (curve[hi].time - curve[lo].time);
     const activity = curve[lo].activity + ratio * (curve[hi].activity - curve[lo].activity);
     return sum + activity * dose.units;
+  }, 0);
+}
+
+function getActiveCarbsAt(entries, targetTime) {
+  return entries.reduce((sum, entry) => {
+    if (entry.is_custom) return sum;
+    const curve = generateCarbCurve(entry);
+    if (!curve.length) return sum;
+    if (targetTime < curve[0].time || targetTime > curve[curve.length - 1].time) return sum;
+    let lo = 0;
+    for (let i = 0; i < curve.length - 1; i++) {
+      if (curve[i].time <= targetTime && curve[i + 1].time >= targetTime) { lo = i; break; }
+    }
+    const hi = Math.min(lo + 1, curve.length - 1);
+    const ratio = hi === lo ? 0 : (targetTime - curve[lo].time) / (curve[hi].time - curve[lo].time);
+    const activity = curve[lo].activity + ratio * (curve[hi].activity - curve[lo].activity);
+    return sum + activity * entry.carbs;
   }, 0);
 }
 
@@ -66,14 +83,19 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
 
   const activeCarbs = useMemo(() => getActiveCarbsNow(carbEntries), [carbEntries]);
   const totalCarbsToday = useMemo(() => getTotalCarbsToday(carbEntries), [carbEntries]);
+
+  const futureTime = Date.now() + 30 * 60 * 1000;
+  const activeUnitsFuture = useMemo(() => getTotalActiveUnits(doses, futureTime), [doses]);
+  const activeCarbsFuture = useMemo(() => getActiveCarbsAt(carbEntries, futureTime), [carbEntries]);
+
   const netActiveCarbs = useMemo(() => {
     const currentGlucose = latestGlucose ? latestGlucose.value : 100;
     const targetGlucose = 110;
     const isf = 50;
     const activeCorrectionUnits = Math.max(0, currentGlucose - targetGlucose) / isf;
-    const activeFoodUnits = Math.max(0, activeUnits - activeCorrectionUnits);
-    return activeCarbs - activeFoodUnits * 10;
-  }, [activeCarbs, activeUnits, latestGlucose]);
+    const activeFoodUnitsFuture = Math.max(0, activeUnitsFuture - activeCorrectionUnits);
+    return activeCarbsFuture - activeFoodUnitsFuture * 10;
+  }, [activeCarbsFuture, activeUnitsFuture, latestGlucose]);
 
 
   const totalAdministered = useMemo(() => {

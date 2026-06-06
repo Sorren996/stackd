@@ -431,7 +431,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               type="number"
               domain={is24h ? [domainStart, domainEnd] : [viewStart, viewEnd]}
               tickFormatter={(t) => format(new Date(t), "h:mma")}
-              tick={{ fontSize: 10, fill: "rgba(255,255,255,0.25)" }}
+              tick={{ fontSize: 10, fill: "rgba(255,255,255,0.25)", textAnchor: "start" }}
               axisLine={false}
               tickLine={false}
               tickCount={tickCount}
