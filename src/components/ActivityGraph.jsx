@@ -426,7 +426,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               </linearGradient>
             </defs>
 
-<div className="relative">
+div className="relative">
   {/* Left Fade Overlay (Black to Transparent) */}
   <div className="absolute left-0 top-0 bottom-0 w-8 z-10 pointer-events-none bg-gradient-to-r from-black via-black/50 to-transparent" />
 
