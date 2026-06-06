@@ -344,47 +344,12 @@ const heroOrbColor =
   <span className="relative text-sm text-white/45 font-medium mb-4">mg/dL</span>
 
   {/* Status capsule */}
-  <motion.div
-    whileTap={{ scale: 0.96 }}
-    animate={{
-      boxShadow: [
-        `0 0 0 0 ${heroOrbColor}66`,
-        `0 0 0 10px ${heroOrbColor}00`,
-        `0 0 0 0 ${heroOrbColor}00`,
-      ],
-    }}
-    transition={{
-      duration: 1.5,
-      repeat: Infinity,
-      ease: "easeOut",
-    }}
-    className="relative flex items-center gap-2 px-4 py-2 rounded-full"
-    style={{
-      background: `${heroOrbColor}2E`,
-      border: `1px solid ${heroOrbColor}80`,
-    }}
-  >
-    <motion.div
-      className="w-2 h-2 rounded-full"
-      animate={{
-        scale: [1, 1.3, 1],
-        opacity: [0.7, 1, 0.7],
-      }}
-      transition={{
-        duration: 7,
-        repeat: Infinity,
-        ease: "easeInOut",
-      }}
-      style={{
-        backgroundColor: heroOrbColor,
-        boxShadow: `0 0 14px ${heroOrbColor}`,
-      }}
-    />
+
 
     <span className="text-sm font-semibold" style={{ color: heroOrbColor }}>
       {trendLabel}
     </span>
-  </motion.div>
+
 </div>
          
 
