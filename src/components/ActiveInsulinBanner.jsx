@@ -244,7 +244,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
             className="w-full h-full rounded-full"
             style={{
               background: `radial-gradient(circle, ${ambientColor} 0%, transparent 70%)`,
-              filter: "blur(20px)",
+              filter: "blur(10px)",
             }}
           />
         </div>
