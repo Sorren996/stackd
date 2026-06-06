@@ -354,7 +354,7 @@ const heroOrbColor =
       ],
     }}
     transition={{
-      duration: 1.5,
+      duration: 7,
       repeat: Infinity,
       ease: "easeOut",
     }}
