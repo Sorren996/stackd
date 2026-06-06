@@ -310,8 +310,10 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
               </p>
               <p className="text-xs text-white/35">Target: {targetLow} – {targetHigh} mg/dL</p>
             </div>
-{inRange === null ? "" : inRange ? "✓" : glucoseVal < 70 ? "↓" : "↑"}
-          </motion.div>
+            <span className="text-xs font-medium" style={{ color: inRange ? "#35a879" : glucoseVal < 70 ? "#3b82f6" : "#f59e0b" }}>
+              {inRange === null ? "" : inRange ? "✓" : "↑"}
+            </span>          
+            </motion.div>
         )}
 
         {/* ── Metric Cards Grid ── */}
