@@ -321,19 +321,10 @@ const heroOrbColor =
     </span>
 
     {latestGlucose && (
-      <motion.div
-        animate={{
-          scale: [1, 1.2, 1],
-          opacity: [0.65, 1, 0.65],
-        }}
-        transition={{
-          duration: 1.25,
-          repeat: Infinity,
-          ease: "easeInOut",
-        }}
-      >
+      
+      
         <TrendIcon className="w-8 h-8 mb-3 shrink-0" style={{ color: heroOrbColor }} />
-      </motion.div>
+     
     )}
   </motion.div>
 
