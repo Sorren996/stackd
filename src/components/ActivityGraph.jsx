@@ -410,6 +410,31 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                   <stop offset="100%" stopColor={k.color} stopOpacity={0.0} />
                 </linearGradient>
               ))}
+              <ComposedChart
+  width={chartWidth}
+  height={240}
+  data={chartData}
+  margin={{ top: 12, right: 0, left: -20, bottom: 0 }}
+  onMouseMove={(state) => {
+    if (state && state.activePayload) {
+      setIsInteracting(true);
+    } else {
+      setIsInteracting(false);
+    }
+  }}
+  onMouseLeave={() => setIsInteracting(false)}
+  onTouchStart={(state) => {
+    if (state && state.activePayload) {
+      setIsInteracting(true);
+    }
+  }}
+  onTouchMove={(state) => {
+    if (state && state.activePayload) {
+      setIsInteracting(true);
+    }
+  }}
+  onTouchEnd={() => setIsInteracting(false)}
+>
               {carbKeys.map((k) => (
                 <linearGradient key={k.key} id={`grad_${k.key}`} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor={k.color} stopOpacity={0.28} />
