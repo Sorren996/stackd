@@ -386,19 +386,7 @@ const heroOrbColor =
     </span>
   </motion.div>
 </div>
-          {/* Status capsule */}
-          <motion.div
-            whileTap={{ scale: 0.96 }}
-            className="flex items-center gap-2 px-4 py-2 rounded-full"
-            style={{
-              background: `${glucoseColor}18`,
-              border: `1px solid ${glucoseColor}40`,
-            }}
-          >
-            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: glucoseColor }} />
-            <span className="text-sm font-semibold" style={{ color: glucoseColor }}>{trendLabel}</span>
-          </motion.div>
-        </div>
+         
 
         {/* ── Target Range Banner ── */}
         {latestGlucose && (
@@ -498,7 +486,7 @@ const heroOrbColor =
             />
           </div>
         )}
-
+</div>
     </>
   );
 }
