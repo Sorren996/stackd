@@ -395,7 +395,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
       <div
         ref={scrollRef}
-        className={is24h ? "" : "overflow-x-auto"}
+        className={is24h ? "" : "overflow-hidden"}
         style={{ WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
         <div style={{ width: chartWidth, height: 180 }}>
           <ComposedChart
