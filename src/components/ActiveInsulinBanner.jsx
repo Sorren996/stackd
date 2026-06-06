@@ -367,7 +367,7 @@ const heroOrbColor =
     <motion.div
       className="w-2 h-2 rounded-full"
       animate={{
-        scale: [1, 1.9, 1],
+        scale: [1, 1.3, 1],
         opacity: [0.7, 1, 0.7],
       }}
       transition={{
