@@ -397,12 +397,12 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         ref={scrollRef}
         className={is24h ? "" : "overflow-x-auto"}
         style={{ WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
-        <div style={{ width: chartWidth, height: 180 }}>
+        <div style={{ width: chartWidth, height: 240 }}>
           <ComposedChart
             width={chartWidth}
             height={240}
             data={chartData}
-            margin={{ top: 16, right: 0, left: -20, bottom: 0 }}>
+            margin={{ top: 12, right: 0, left: -20, bottom: 0 }}>
             <defs>
               {doseKeys.map((k) => (
                 <linearGradient key={k.key} id={`grad_${k.key}`} x1="0" y1="0" x2="0" y2="1">
