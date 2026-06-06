@@ -393,9 +393,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         </div>
       </div>
 
-      <div className="relative">
-        <div className="absolute left-0 top-0 bottom-0 w-10 z-10 pointer-events-none bg-gradient-to-r from-black to-transparent" />
-        <div className="absolute right-0 top-0 bottom-0 w-10 z-10 pointer-events-none bg-gradient-to-l from-black to-transparent" />
       <div
         ref={scrollRef}
         className={is24h ? "" : "overflow-x-auto"}
@@ -428,6 +425,25 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                 <stop offset="100%" stopColor="#78350f" stopOpacity={0} />
               </linearGradient>
             </defs>
+
+<div className="relative">
+  {/* Left Fade Overlay (Black to Transparent) */}
+  <div className="absolute left-0 top-0 bottom-0 w-8 z-10 pointer-events-none bg-gradient-to-r from-black via-black/50 to-transparent" />
+
+  {/* Scrollable Graph */}
+  <div
+    ref__={scrollRef}
+    className={is24h ? "" : "overflow-x-auto"}
+    style={{ WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}
+  >
+    <div style={{ width: chartWidth, height: 180 }}>
+      {/* ... ComposedChart component ... */}
+    </div>
+  </div>
+
+  {/* Right Fade Overlay (Transparent to Black) */}
+  <div className="absolute right-0 top-0 bottom-0 w-8 z-10 pointer-events-none bg-gradient-to-l from-black via-black/50 to-transparent" />
+</div>
 
             <XAxis
               dataKey="time"
@@ -542,7 +558,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             )}
           </ComposedChart>
         </div>
-      </div>
       </div>
     </div>
   );
