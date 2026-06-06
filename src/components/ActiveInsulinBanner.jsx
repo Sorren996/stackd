@@ -282,7 +282,7 @@ const heroOrbColor =
   />
 
   {/* Outer pulse ring */}
-  /*<motion.div
+  <motion.div
     aria-hidden
     className="absolute left-1/2 top-1/2 w-52 h-52 -translate-x-1/2 -translate-y-1/2 rounded-full pointer-events-none"
     animate={{
@@ -298,7 +298,7 @@ const heroOrbColor =
       border: `1px solid ${heroOrbColor}99`,
       boxShadow: `0 0 36px ${heroOrbColor}66`,
     }}
-  /> */
+  /> 
 
   <span className="relative text-[10px] font-bold text-white/40 uppercase tracking-[0.2em] mb-3">
     Current Glucose
