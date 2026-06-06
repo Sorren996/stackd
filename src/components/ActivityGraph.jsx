@@ -16,7 +16,47 @@ const TIME_RANGES = [
 function getGlucoseColor(mgdl) {
   return "hsla(0, 0%, 93%, 1.00)";
 }
+<div className="relative">
+  {/* Left Fade Overlay */}
+  <div className="absolute left-0 top-0 bottom-0 w-10 z-10 pointer-events-none bg-gradient-to-r from-black to-transparent" />
 
+  {/* Scrollable Graph */}
+  <div
+    ref__={scrollRef}
+    className={is24h ? "" : "overflow-x-auto"}
+    style={{ WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}
+  >
+    <div style={{ width: chartWidth, height: 180 }}>
+      <ComposedChart
+        width={chartWidth}
+        height={180}
+        data={chartData}
+        margin={{ top: 12, right: 32, left: -20, bottom: 0 }} // Increased right margin to 32px
+      >
+        <defs>
+          {/* linearGradients go here... */}
+        </defs>
+
+        {/* XAxis with centered tick labels to prevent overflow */}
+        <XAxis
+          dataKey="time"
+          type="number"
+          domain={is24h ? [domainStart, domainEnd] : [viewStart, viewEnd]}
+          tickFormatter={(t) => format(new Date(t), "h:mma")}
+          tick={{ fontSize: 10, fill: "rgba(255,255,255,0.25)", textAnchor: "middle" }} // Set to "middle" to keep text aligned directly on ticks
+          axisLine={false}
+          tickLine={false}
+          tickCount={tickCount}
+        />
+
+        {/* YAxis, Tooltip, Area, and Line charts go here... */}
+      </ComposedChart>
+    </div>
+  </div>
+
+  {/* Right Fade Overlay */}
+  <div className="absolute right-0 top-0 bottom-0 w-10 z-10 pointer-events-none bg-gradient-to-l from-black to-transparent" />
+</div>
 const GLUCOSE_MIN = 40;
 const GLUCOSE_MAX = 400;
 
