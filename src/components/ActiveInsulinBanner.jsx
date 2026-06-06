@@ -260,7 +260,7 @@ const heroOrbColor =
   {/* Main glucose orb */}
 
   <motion.div
-    aria-hidden    className="absolute left-1/2 top-0 w-72 h-72 -translate-x-1/2 -translate-y-1/2 rounded-full pointer-events-none"
+    aria-hidden    className="absolute left-0 top-0 w-72 h-72 -translate-x-1/2 -translate-y-1/2 rounded-full pointer-events-none"
     animate={{
       scale: [0.88, 1.12, 0.88],
       opacity: [0.35, 0.85, 0.35],
