@@ -230,7 +230,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
         )}
         {openTooltip === "net-carbs" && (
           <TooltipPopover key="net-carbs-tip" title="Net Active Carbs"
-            description="Net Active Carbs compares carbohydrate absorption against insulin dedicated to food coverage — after accounting for correction insulin based on your current glucose level. A positive % means carbs may be outpacing insulin (rising risk), a negative % means insulin may be stronger (falling risk)."
+            description="Net Active Carbs compares carbohydrate absorption against insulin dedicated to food coverage — after accounting for correction insulin based on your current glucose level. A % accompanied by Rising Risk means carbs may be outpacing insulin (rising risk), a % accompanied by a Falling Risk means insulin may be stronger (falling risk). This tooltip is paced for 1-hour in the future."
             onClose={() => setOpenTooltip(null)} />
         )}
       </AnimatePresence>
