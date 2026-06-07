@@ -151,7 +151,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
   const activeCarbs = useMemo(() => getActiveCarbsNow(carbEntries), [carbEntries]);
   const totalCarbsToday = useMemo(() => getTotalCarbsToday(carbEntries), [carbEntries]);
 
-  const futureTime = Date.now() + 30 * 60 * 1000;
+  const futureTime = Date.now() * 60 * 1000;
   const activeUnitsFuture = useMemo(() => getTotalActiveUnits(doses, futureTime), [doses]);
   const activeCarbsFuture = useMemo(() => getActiveCarbsAt(carbEntries, futureTime), [carbEntries]);
 
@@ -177,20 +177,20 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
   const trendArrow = useMemo(() => {
     if (glucoseReadings.length < 2) return "right";
     const diff = glucoseReadings[0].value - glucoseReadings[1].value;
-    if (diff >= 7) return "up";
-    if (diff >= 4) return "up-right";
-    if (diff >= -3) return "right";
-    if (diff >= -6) return "down-right";
+    if (diff >= 15) return "up";
+    if (diff >= 9) return "up-right";
+    if (diff >= -9) return "right";
+    if (diff >= -15) return "down-right";
     return "down";
   }, [glucoseReadings]);
 
   const trendLabel = useMemo(() => {
     if (glucoseReadings.length < 2) return "Stable";
     const diff = glucoseReadings[0].value - glucoseReadings[1].value;
-    if (diff >= 7) return "Rising";
-    if (diff >= 4) return "Slowly Rising";
-    if (diff >= -3) return "Stable";
-    if (diff >= -6) return "Slowly Falling";
+    if (diff >= 15) return "Rising";
+    if (diff >= 9) return "Slowly Rising";
+    if (diff >= -9) return "Stable";
+    if (diff >= -15) return "Slowly Falling";
     return "Falling";
   }, [glucoseReadings]);
 
@@ -237,14 +237,14 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
 
       <div className="pt-2 pb-6 -mx-4 px-4">
         {/* Ambient breathing background orb */}
-        <div className="absolute left-1/2 -translate-x-1/2 top-0 w-72 h-72 pointer-events-none -z-10 overflow-visible">
+        <div className="absolute left-1/2 -translate-x-1/2 top-16 w-72 h-72 pointer-events-none -z-10 overflow-hidden">
           <motion.div
-            animate={{ scale: [.7, 1.2, .7], opacity: [0.25, 0.7, 0.25] }}
-            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+            animate={{ scale: [1, 1.08, 1], opacity: [0.25, 0.4, 0.25] }}
+            transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
             className="w-full h-full rounded-full"
             style={{
               background: `radial-gradient(circle, ${ambientColor} 0%, transparent 70%)`,
-              filter: "blur(16px)",
+              filter: "blur(40px)",
             }}
           />
         </div>
@@ -300,7 +300,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
               {[3,4,3,5,4,3,4,5,3].map((h, i) => (
                 <div key={i} className="w-0.5 rounded-full" style={{
                   height: h * 3,
-                  backgroundColor: inRange ? "#35a87988" : glucoseVal < 70 ? "#3b82f6" : "#f59e0b88"
+                  backgroundColor: inRange ? "#35a87988" : "#f59e0b88"
                 }} />
               ))}
             </div>
@@ -310,10 +310,10 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
               </p>
               <p className="text-xs text-white/35">Target: {targetLow} – {targetHigh} mg/dL</p>
             </div>
-            <span className="text-xs font-medium" style={{ color: inRange ? "#35a879" : glucoseVal < 70 ? "#3b82f6" : "#f59e0b" }}>
-              {inRange === null ? "" : inRange ? "✓" : glucoseVal < 70 ? "↓" : "↑"}
-            </span>          
-            </motion.div>
+            <span className="text-xs font-medium" style={{ color: inRange ? "#35a879" : "#f59e0b" }}>
+              {inRange === null ? "" : inRange ? "✓" : "↑"}
+            </span>
+          </motion.div>
         )}
 
         {/* ── Metric Cards Grid ── */}
