@@ -151,7 +151,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
   const activeCarbs = useMemo(() => getActiveCarbsNow(carbEntries), [carbEntries]);
   const totalCarbsToday = useMemo(() => getTotalCarbsToday(carbEntries), [carbEntries]);
 
-  const futureTime = Date.now() + 30 * 60 * 1000;
+  const futureTime = Date.now() + 60 * 60 * 1000;
   const activeUnitsFuture = useMemo(() => getTotalActiveUnits(doses, futureTime), [doses]);
   const activeCarbsFuture = useMemo(() => getActiveCarbsAt(carbEntries, futureTime), [carbEntries]);
 
