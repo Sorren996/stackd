@@ -78,7 +78,7 @@ function TooltipPopover({ title, description, onClose }) {
 function AmbientOrb({ color, duration = 6, size = 48 }) {
   return (
     <motion.div
-      animate={{ scale: [1, 1.18, 1], opacity: [0.45, 0.7, 0.45] }}
+      animate={{ scale: [1, 1.18, 1], opacity: [0.15, 0.4, 0.15] }}
       transition={{ duration, repeat: Infinity, ease: "easeInOut" }}
       className="rounded-full shrink-0"
       style={{
