@@ -239,12 +239,12 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
         {/* Ambient breathing background orb */}
         <div className="absolute left-1/2 -translate-x-1/2 top-16 w-72 h-72 pointer-events-none -z-10 overflow-hidden">
           <motion.div
-            animate={{ scale: [1, 1.08, 1], opacity: [0.25, 0.4, 0.25] }}
+            animate={{ scale: [1, 1.08, 1], opacity: [0.4, 0.7, 0.4] }}
             transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
             className="w-full h-full rounded-full"
             style={{
               background: `radial-gradient(circle, ${ambientColor} 0%, transparent 70%)`,
-              filter: "blur(40px)",
+              filter: "blur(16px)",
             }}
           />
         </div>
