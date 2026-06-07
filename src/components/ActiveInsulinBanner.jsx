@@ -258,7 +258,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
             initial={{ scale: 0.94, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ type: "spring", stiffness: 300, damping: 22 }}
-            className="flex items-end gap-3 mb-1"
+            className="flex items-end gap-3 mb-1 overflow-visible"
           >
             <span className="text-[72px] sm:text-[88px] font-black leading-none tracking-tight text-white">
               {glucoseVal ?? "—"}
