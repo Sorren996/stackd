@@ -250,7 +250,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
         </div>
 
         {/* ── Primary Glucose Hero ── */}
-        <div className="flex flex-col items-center text-center mb-6 pt-2 overflow-visible">
+        <div className="flex flex-col items-center text-center mb-6 pt-2 overflow-hidden">
           <span className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] mb-3">Current Glucose</span>
 
           <motion.div
