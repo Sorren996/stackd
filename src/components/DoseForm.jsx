@@ -431,6 +431,7 @@ const handleSubmit = () => {
                   style={{ backgroundColor: glucoseColor, filter: "brightness(0.85)" }}
                   onMouseEnter={(e) => { e.currentTarget.style.filter = "brightness(1)"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.filter = "brightness(0.85)"; }}>
+                  Submit
                   {createGlucose.isPending ? "Logging..." : `Log ${glucoseValue} mg/dL`}
                 </button>
               </div>
