@@ -19,7 +19,7 @@ const groupedInsulins = CATEGORY_ORDER.reduce((acc, cat) => {
   return acc;
 }, []);
 
-const GLUCOSE_PRESETS = [70, 100, 120, 140, 180, 200, 250];
+
 
 export default function DoseForm({ open, onOpenChange }) {
   const [tab, setTab] = useState("insulin");
@@ -27,9 +27,28 @@ export default function DoseForm({ open, onOpenChange }) {
   const [units, setUnits] = useState(10);
   const [insulinNotes, setInsulinNotes] = useState("");
   const [insulinTime, setInsulinTime] = useState(() => new Date().toTimeString().slice(0, 5));
-  const [glucoseValue, setGlucoseValue] = useState("");
   const [glucoseNotes, setGlucoseNotes] = useState("");
   const [glucoseTime, setGlucoseTime] = useState(() => new Date().toTimeString().slice(0, 5));
+  const [glucoseValue, setGlucoseValue] = useState("");
+const [glucoseError, setGlucoseError] = useState("");
+
+const handleSubmit = () => {
+  const glucoseNumber = Number(glucoseValue);
+
+  if (!glucoseValue) {
+    setGlucoseError("Enter a blood glucose value.");
+    return;
+  }
+
+  if (glucoseNumber < 40 || glucoseNumber > 400) {
+    setGlucoseError("Blood glucose must be between 40 and 400 mg/dL.");
+    return;
+  }
+
+  setGlucoseError("");
+
+  // submit/save here
+};
 
 
   const nowTimeString = new Date().toTimeString().slice(0, 5);
@@ -367,10 +386,15 @@ export default function DoseForm({ open, onOpenChange }) {
   onChange={(e) => {
     const value = e.target.value.replace(/\D/g, "").slice(0, 3);
     setGlucoseValue(value);
+    setGlucoseError("");
   }}
-  placeholder="Enter glucose"
+  placeholder="Enter glucose between 40MG/DL and 400MG/DL"
   className="w-full rounded-xl bg-white/10 border border-white/10 px-4 py-3 text-white placeholder:text-white/30 outline-none focus:border-white/30"
 />
+
+{glucoseError && (
+  <p className="text-red-400 text-sm mt-2">{glucoseError}</p>
+)}
     </div>
   </div>
 
