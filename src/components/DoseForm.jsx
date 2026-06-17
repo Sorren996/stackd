@@ -359,11 +359,11 @@ export default function DoseForm({ open, onOpenChange }) {
       </label>
 
 
-     <input
-  type="number"
-  min={40}
-  max={400}
-  step={1}
+<input
+  type="text"
+  inputMode="numeric"
+  pattern="[0-9]*"
+  maxLength={3}
   value={glucoseInput}
   onChange={(e) => {
     setGlucoseInput(e.target.value);
