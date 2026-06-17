@@ -5,6 +5,11 @@ import { generateCarbCurve, PROFILE_COLORS } from "@/lib/carbAbsorption";
 import { format } from "date-fns";
 import { HelpCircle, SlidersHorizontal, Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Area, XAxis, YAxis, Tooltip, ReferenceLine, ReferenceDot, Line, ComposedChart } from "recharts";
+
+
+const [centerTime, setCenterTime] = useState(Date.now());
+
 
 const TIME_RANGES = [
   { label: "1h", hours: 1, pxPerMin: 18 },
@@ -139,12 +144,13 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const containerRef = useRef(null);
   const [containerWidth, setContainerWidth] = useState(600);
 
-  useEffect(() => {
-    if (!containerRef.current) return;
-    const ro = new ResizeObserver(([e]) => setContainerWidth(e.contentRect.width));
-    ro.observe(containerRef.current);
-    return () => ro.disconnect();
-  }, []);
+useEffect(() => {
+  if (!scrollRef.current || is24h) return;
+  const totalViewMs = viewEnd - viewStart;
+  const nowOffset = (snappedNow - viewStart) / totalViewMs * chartWidth;
+  const halfContainer = scrollRef.current.clientWidth / 2;
+  scrollRef.current.scrollLeft = nowOffset - halfContainer;
+}, [rangeIdx, doses]);
 
   const toggleFilter = (key) => setFilters((f) => ({ ...f, [key]: !f[key] }));
 
@@ -289,6 +295,43 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     scrollRef.current.scrollLeft = nowOffset - halfContainer;
   }, [rangeIdx, doses]);
 
+  const updateCenterTime = () => {
+  if (!scrollRef.current) return;
+
+  const activeGlucosePoint = useMemo(() => {
+  const points = chartData.filter((point) => point.glucose != null);
+  if (!points.length) return null;
+
+  return points.reduce((closest, point) => {
+    const closestDiff = Math.abs(closest.time - centerTime);
+    const pointDiff = Math.abs(point.time - centerTime);
+
+    return pointDiff < closestDiff ? point : closest;
+  });
+}, [chartData, centerTime]);
+
+{activeGlucosePoint && (
+  <div className="text-center mb-2">
+    <p className="text-2xl font-bold text-white">
+      {Math.round(activeGlucosePoint.glucose)} mg/dL
+    </p>
+    <p className="text-xs text-white/35">
+      {format(new Date(activeGlucosePoint.time), "h:mm a")}
+    </p>
+  </div>
+)}
+
+  const el = scrollRef.current;
+  const centerX = el.scrollLeft + el.clientWidth / 2;
+  const progress = centerX / chartWidth;
+
+  const visibleStart = is24h ? domainStart : viewStart;
+  const visibleEnd = is24h ? domainEnd : viewEnd;
+
+  const nextCenterTime = visibleStart + progress * (visibleEnd - visibleStart);
+  setCenterTime(nextCenterTime);
+};
+
   if (!doses.length && !glucoseReadings.length && !carbEntries.length) return null;
 
   const tickCount = Math.max(2, Math.floor(chartWidth / 90));
@@ -395,9 +438,13 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       </div>
 
       <div
-        ref={scrollRef}
-        className={is24h ? "" : "overflow-x-auto"}
-        style={{ WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
+  ref={scrollRef}
+  onScroll={updateCenterTime}
+  className={is24h ? "relative" : "relative overflow-x-auto"}
+  style={{ WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}
+>
+<div className="pointer-events-none absolute left-1/2 top-0 z-20 h-[240px] -translate-x-1/2 border-l border-white/30 border-dashed" />
+
         <div style={{ width: chartWidth, height: 240 }}>
           <ComposedChart
             width={chartWidth}
@@ -431,6 +478,20 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                 <stop offset="100%" stopColor="#78350f" stopOpacity={0} />
               </linearGradient>
             </defs>
+            
+
+{activeGlucosePoint && (
+  <ReferenceDot
+    yAxisId="glucose"
+    x={activeGlucosePoint.time}
+    y={activeGlucosePoint.glucose}
+    r={6}
+    fill="white"
+    stroke="rgba(0,0,0,0.45)"
+    strokeWidth={2}
+    isFront
+  />
+)}
 
             <XAxis
               dataKey="time"
@@ -449,13 +510,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
             <Tooltip active={isInteracting} content={<CustomTooltip />} cursor={{ stroke: "rgba(255,255,255,0.1)", strokeWidth: 1 }} />
 
-            <ReferenceLine
-              yAxisId="insulin"
-              x={snappedNow}
-              stroke="rgba(255,255,255,0.2)"
-              strokeDasharray="3 3"
-              strokeWidth={1}
-            />
+
 
             {filters.glucose && filteredGlucoseReadings.length > 0 && (
               <Area
@@ -470,6 +525,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                 legendType="none"
               />
             )}
+
+            
 
             {doseKeys.map((k) => (
               <Area
@@ -542,6 +599,9 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                 connectNulls={true}
                 isAnimationActive={false}
               />
+
+              
+              
             )}
           </ComposedChart>
         </div>
