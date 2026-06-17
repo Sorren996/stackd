@@ -388,7 +388,7 @@ const handleSubmit = () => {
     setGlucoseValue(value);
     setGlucoseError("");
   }}
-  placeholder="Enter glucose between 40MG/DL and 400MG/DL"
+  placeholder="Enter glucose"
   className="w-full rounded-xl bg-white/10 border border-white/10 px-4 py-3 text-white placeholder:text-white/30 outline-none focus:border-white/30"
 />
 
