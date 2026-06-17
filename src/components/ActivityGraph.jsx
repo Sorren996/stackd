@@ -159,7 +159,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const now = Date.now();
   const snappedNow = Math.round(now / 180000) * 180000;
   const domainStart = snappedNow - 30 * 24 * 60 * 60 * 1000;
-  const domainEnd = snappedNow + 2 * 60 * 60 * 1000;
+  const domainEnd = snappedNow + 4 * 60 * 60 * 1000;
   const viewStart = snappedNow - selectedRange.hours * 60 * 60 * 1000;
   const viewEnd = snappedNow + selectedRange.hours * 0.1 * 60 * 60 * 1000;
 
