@@ -78,7 +78,7 @@ function TooltipPopover({ title, description, onClose }) {
 function AmbientOrb({ color, duration = 6, size = 48 }) {
   return (
     <motion.div
-      animate={{ scale: [1, 1.18, 1], opacity: [0.15, 0.4, 0.15] }}
+      animate={{ scale: [1, 1.18, 1], opacity: [0.45, 0.7, 0.45] }}
       transition={{ duration, repeat: Infinity, ease: "easeInOut" }}
       className="rounded-full shrink-0"
       style={{
@@ -151,7 +151,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
   const activeCarbs = useMemo(() => getActiveCarbsNow(carbEntries), [carbEntries]);
   const totalCarbsToday = useMemo(() => getTotalCarbsToday(carbEntries), [carbEntries]);
 
-  const futureTime = Date.now() + 60 * 60 * 1000;
+  const futureTime = Date.now() + 30 * 60 * 1000;
   const activeUnitsFuture = useMemo(() => getTotalActiveUnits(doses, futureTime), [doses]);
   const activeCarbsFuture = useMemo(() => getActiveCarbsAt(carbEntries, futureTime), [carbEntries]);
 
@@ -177,20 +177,20 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
   const trendArrow = useMemo(() => {
     if (glucoseReadings.length < 2) return "right";
     const diff = glucoseReadings[0].value - glucoseReadings[1].value;
-    if (diff >= 15) return "up";
-    if (diff >= 9) return "up-right";
-    if (diff >= -9) return "right";
-    if (diff >= -15) return "down-right";
+    if (diff >= 7) return "up";
+    if (diff >= 4) return "up-right";
+    if (diff >= -3) return "right";
+    if (diff >= -6) return "down-right";
     return "down";
   }, [glucoseReadings]);
 
   const trendLabel = useMemo(() => {
     if (glucoseReadings.length < 2) return "Stable";
     const diff = glucoseReadings[0].value - glucoseReadings[1].value;
-    if (diff >= 15) return "Rising";
-    if (diff >= 9) return "Slowly Rising";
-    if (diff >= -9) return "Stable";
-    if (diff >= -15) return "Slowly Falling";
+    if (diff >= 7) return "Rising";
+    if (diff >= 4) return "Slowly Rising";
+    if (diff >= -3) return "Stable";
+    if (diff >= -6) return "Slowly Falling";
     return "Falling";
   }, [glucoseReadings]);
 
@@ -230,7 +230,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
         )}
         {openTooltip === "net-carbs" && (
           <TooltipPopover key="net-carbs-tip" title="Net Active Carbs"
-            description="Net Active Carbs compares carbohydrate absorption against insulin dedicated to food coverage — after accounting for correction insulin based on your current glucose level. A % accompanied by Rising Risk means carbs may be outpacing insulin (rising risk), a % accompanied by a Falling Risk means insulin may be stronger (falling risk). This tooltip is paced for 1-hour in the future."
+            description="Net Active Carbs compares carbohydrate absorption against insulin dedicated to food coverage — after accounting for correction insulin based on your current glucose level. A positive % means carbs may be outpacing insulin (rising risk), a negative % means insulin may be stronger (falling risk)."
             onClose={() => setOpenTooltip(null)} />
         )}
       </AnimatePresence>
@@ -239,18 +239,18 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
         {/* Ambient breathing background orb */}
         <div className="absolute left-1/2 -translate-x-1/2 top-16 w-72 h-72 pointer-events-none -z-10 overflow-hidden">
           <motion.div
-            animate={{ scale: [1, 1.08, 1], opacity: [0.4, 0.7, 0.4] }}
-            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+            animate={{ scale: [1, 1.08, 1], opacity: [0.25, 0.4, 0.25] }}
+            transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
             className="w-full h-full rounded-full"
             style={{
               background: `radial-gradient(circle, ${ambientColor} 0%, transparent 70%)`,
-              filter: "blur(16px)",
+              filter: "blur(40px)",
             }}
           />
         </div>
 
         {/* ── Primary Glucose Hero ── */}
-        <div className="flex flex-col items-center text-center mb-6 pt-2 overflow-visible">
+        <div className="flex flex-col items-center text-center mb-6 pt-2">
           <span className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] mb-3">Current Glucose</span>
 
           <motion.div
@@ -258,7 +258,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
             initial={{ scale: 0.94, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ type: "spring", stiffness: 300, damping: 22 }}
-            className="flex items-end gap-3 mb-1 overflow-visible"
+            className="flex items-end gap-3 mb-1"
           >
             <span className="text-[72px] sm:text-[88px] font-black leading-none tracking-tight text-white">
               {glucoseVal ?? "—"}
