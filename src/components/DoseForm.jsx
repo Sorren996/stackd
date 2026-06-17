@@ -427,15 +427,6 @@ export default function DoseForm({ open, onOpenChange }) {
 
 
 
-              <div className="px-5 pb-6 pt-2 shrink-0">
-                <button onClick={handleSubmitGlucose} disabled={!glucoseValue || createGlucose.isPending}
-                  className="w-full py-4 rounded-2xl disabled:opacity-40 text-white font-semibold text-base transition-all"
-                  style={{ backgroundColor: glucoseColor, filter: "brightness(0.85)" }}
-                  onMouseEnter={(e) => { e.currentTarget.style.filter = "brightness(1)"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.filter = "brightness(0.85)"; }}>
-                  {createGlucose.isPending ? "Logging..." : `Log ${glucoseValue} mg/dL`}
-                </button>
-              </div>
 
 
 
