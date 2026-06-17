@@ -354,20 +354,30 @@ export default function DoseForm({ open, onOpenChange }) {
         mg/dL
       </label>
 
-      <input
-        type="number"
-        min={40}
-        max={400}
-        step={1}
-        value={glucoseValue}
-       onChange={(e) => {
-    const value = Number(e.target.value);
+     <input
+  type="number"
+  min={40}
+  max={400}
+  step={1}
+  value={glucoseInput}
+  onChange={(e) => {
+    setGlucoseInput(e.target.value);
+  }}
+  onBlur={() => {
+    const value = Number(glucoseInput);
+
+    if (!glucoseInput) {
+      setGlucoseInput(String(glucoseValue));
+      return;
+    }
+
     const clampedValue = Math.min(400, Math.max(40, value));
 
     setGlucoseValue(clampedValue);
+    setGlucoseInput(String(clampedValue));
   }}
-        className="w-full bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-3xl font-bold text-center text-[#e9e9e9] outline-none focus:border-[#c2611c] focus:ring-2 focus:ring-[#c2611c]/30"
-      />
+  className="w-full text-[16px] sm:text-3xl bg-white/10 border border-white/10 rounded-xl px-4 py-3 font-bold text-center text-[#e9e9e9] outline-none focus:border-[#c2611c] focus:ring-2 focus:ring-[#c2611c]/30"
+/>
     </div>
   </div>
 
@@ -398,6 +408,17 @@ export default function DoseForm({ open, onOpenChange }) {
 
               <div className="px-5 pb-6 pt-2 shrink-0">
                 <button onClick={handleSubmitGlucose} disabled={!glucoseValue || createGlucose.isPending}
+                const handleSubmit = () => {
+  const value = Number(glucoseInput);
+
+  if (!glucoseInput || value < 40 || value > 400) {
+    return;
+  }
+
+  setGlucoseValue(value);
+
+  // submit using value
+};
                   className="w-full py-4 rounded-2xl disabled:opacity-40 text-white font-semibold text-base transition-all"
                   style={{ backgroundColor: glucoseColor, filter: "brightness(0.85)" }}
                   onMouseEnter={(e) => { e.currentTarget.style.filter = "brightness(1)"; }}
