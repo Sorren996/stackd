@@ -143,14 +143,18 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const scrollRef = useRef(null);
   const containerRef = useRef(null);
   const [containerWidth, setContainerWidth] = useState(600);
+  const [centerTime, setCenterTime] = useState(Date.now());
 
 useEffect(() => {
   if (!scrollRef.current || is24h) return;
+
   const totalViewMs = viewEnd - viewStart;
-  const nowOffset = (snappedNow - viewStart) / totalViewMs * chartWidth;
+  const nowOffset = ((snappedNow - viewStart) / totalViewMs) * chartWidth;
   const halfContainer = scrollRef.current.clientWidth / 2;
+
   scrollRef.current.scrollLeft = nowOffset - halfContainer;
-}, [rangeIdx, doses]);
+  setCenterTime(snappedNow);
+}, [rangeIdx, doses, chartWidth, is24h, snappedNow, viewEnd, viewStart]);
 
   const toggleFilter = (key) => setFilters((f) => ({ ...f, [key]: !f[key] }));
 
@@ -287,13 +291,16 @@ useEffect(() => {
   const viewMinutes = selectedRange.hours * 60 * 1.1;
   const chartWidth = is24h ? containerWidth : Math.round(viewMinutes * selectedRange.pxPerMin);
 
-  useEffect(() => {
-    if (!scrollRef.current || is24h) return;
-    const totalViewMs = viewEnd - viewStart;
-    const nowOffset = (snappedNow - viewStart) / totalViewMs * chartWidth;
-    const halfContainer = scrollRef.current.clientWidth / 2;
-    scrollRef.current.scrollLeft = nowOffset - halfContainer;
-  }, [rangeIdx, doses]);
+useEffect(() => {
+  if (!scrollRef.current || is24h) return;
+
+  const totalViewMs = viewEnd - viewStart;
+  const nowOffset = ((snappedNow - viewStart) / totalViewMs) * chartWidth;
+  const halfContainer = scrollRef.current.clientWidth / 2;
+
+  scrollRef.current.scrollLeft = nowOffset - halfContainer;
+  setCenterTime(snappedNow);
+}, [rangeIdx, doses, chartWidth, is24h, snappedNow, viewEnd, viewStart]);
 
   const updateCenterTime = () => {
   if (!scrollRef.current) return;
