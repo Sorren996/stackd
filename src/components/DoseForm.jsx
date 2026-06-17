@@ -30,8 +30,6 @@ export default function DoseForm({ open, onOpenChange }) {
   const [glucoseValue, setGlucoseValue] = useState(100);
   const [glucoseNotes, setGlucoseNotes] = useState("");
   const [glucoseTime, setGlucoseTime] = useState(() => new Date().toTimeString().slice(0, 5));
-        const [glucoseInput, setGlucoseInput] = useState(String(glucoseValue));
-
 
   const nowTimeString = new Date().toTimeString().slice(0, 5);
   const queryClient = useQueryClient();
@@ -90,21 +88,16 @@ export default function DoseForm({ open, onOpenChange }) {
     });
   };
 
-const handleSubmitGlucose = () => {
-  const value = Number(glucoseInput);
-
-  if (!glucoseInput || value < 40 || value > 400) {
-    return;
-  }
-
-  setGlucoseValue(value);
-
-  createGlucose.mutate({
-    value,
-    time: glucoseTime,
-    notes: glucoseNotes,
-  });
-
+  const handleSubmitGlucose = () => {
+    if (!glucoseValue) return;
+    const [h, m] = glucoseTime.split(":").map(Number);
+    const dt = new Date();
+    dt.setHours(h, m, 0, 0);
+    createGlucose.mutate({
+      value: parseFloat(glucoseValue),
+      recorded_at: dt.toISOString(),
+      notes: glucoseNotes || undefined
+    });
   };
 
   const adjust = (delta) => setUnits((u) => Math.max(0.5, Math.round((u + delta) * 2) / 2));
@@ -350,46 +343,27 @@ const handleSubmitGlucose = () => {
             </>
           ) : (
             <>
-            <div className="overflow-y-auto h-[500px] px-5 pb-6 space-y-6">
-  <div>
-    <p className="text-sm font-bold tracking-widest text-white/40 uppercase mb-3">
-      Blood Glucose (mg/dL)
-    </p>
+              <div className="overflow-y-auto h-[500px] px-5 pb-6 space-y-6">
+                <div>
+                  <p className="text-sm font-bold tracking-widest text-white/40 uppercase mb-3">Blood Glucose (mg/dL)</p>
+                  <div className="bg-white/5 border border-white/10 rounded-2xl px-6 py-6 flex items-center justify-between mb-4">
+                    <button onClick={() => adjustGlucose(-1)} className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white text-xl flex items-center justify-center transition-colors">−</button>
+                    <div className="text-center">
+                      <span className="text-5xl font-bold" style={{ color: "#e9e9e9" }}>{glucoseValue}</span>
+                      <p className="text-white/40 text-sm mt-1">mg/dL</p>
+                    </div>
+                    <button onClick={() => adjustGlucose(1)} className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white text-xl flex items-center justify-center transition-colors">+</button>
+                  </div>
 
-    <div className="bg-white/5 border border-white/10 rounded-2xl px-6 py-6 mb-4">
-      <label className="block text-white/40 text-sm mb-2">
-        mg/dL
-      </label>
-
-
-<input
-  type="text"
-  inputMode="numeric"
-  pattern="[0-9]*"
-  maxLength={3}
-  value={glucoseInput}
-  onChange={(e) => {
-    setGlucoseInput(e.target.value.replace(/\D/g, ""));
-  }}
-  className="w-full bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-[16px] sm:text-3xl font-bold text-center text-[#e9e9e9] outline-none focus:border-[#c2611c] focus:ring-2 focus:ring-[#c2611c]/30"
-
-  onBlur={() => {
-    const value = Number(glucoseInput);
-
-    if (!glucoseInput) {
-      setGlucoseInput(String(glucoseValue));
-      return;
-    }
-
-    const clampedValue = Math.min(400, Math.max(40, value));
-
-    setGlucoseValue(clampedValue);
-    setGlucoseInput(String(clampedValue));
-  }}
-  className="w-full bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-[16px] sm:text-3xl font-bold text-center text-[#e9e9e9] outline-none focus:border-[#c2611c] focus:ring-2 focus:ring-[#c2611c]/30"
-/>
-    </div>
-  </div>
+                  <Slider
+                    min={40}
+                    max={400}
+                    step={1}
+                    value={[glucoseValue]}
+                    onValueChange={([v]) => setGlucoseValue(v)}
+                    className="my-4 cursor-pointer [&_span]:bg-[#c2611c]/20 [&_span_span]:bg-[#c2611c] [&_[role=slider]]:border-[#c2611c] [&_[role=slider]]:bg-white overflow-visible"
+                  />
+                </div>
 
                 {/* Time */}
                 <div>
@@ -416,43 +390,14 @@ const handleSubmitGlucose = () => {
                 </div>
               </div>
 
-            <div className="px-5 pb-6 pt-2 shrink-0">
-<button
-  onClick={handleSubmitGlucose}
-  disabled={!glucoseInput || createGlucose.isPending}
-  className="w-full py-4 rounded-2xl disabled:opacity-40 text-white font-semibold text-base transition-all"
-  style={{ backgroundColor: glucoseColor, filter: "brightness(0.85)" }}
->
-  {createGlucose.isPending ? "Logging..." : `Log ${glucoseInput} mg/dL`}
-
-              </button>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+              <div className="px-5 pb-6 pt-2 shrink-0">
+                <button onClick={handleSubmitGlucose} disabled={!glucoseValue || createGlucose.isPending}
+                  className="w-full py-4 rounded-2xl disabled:opacity-40 text-white font-semibold text-base transition-all"
+                  style={{ backgroundColor: glucoseColor, filter: "brightness(0.85)" }}
+                  onMouseEnter={(e) => { e.currentTarget.style.filter = "brightness(1)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.filter = "brightness(0.85)"; }}>
+                  {createGlucose.isPending ? "Logging..." : `Log ${glucoseValue} mg/dL`}
+                </button>
               </div>
             </>
           )}

@@ -137,14 +137,11 @@ export default function Dashboard() {
             </div>
           )}
 
-          <div className="mb-2">
-            <p className="text-[10px] font-bold text-white/25 uppercase tracking-[0.18em] mb-2 px-0">Glucose Trend</p>
-            <ActivityGraph doses={recentDoses} glucoseReadings={recentGlucose} carbEntries={recentCarbs} />
-          </div>
+          <ActivityGraph doses={recentDoses} glucoseReadings={recentGlucose} carbEntries={recentCarbs} />
 
           <div className="grid gap-6 lg:grid-cols-3 overflow-hidden border:0 -mx-4">
-            <div className="lg:col-span-2 space-y-2">
-              <p className="text-[10px] font-bold text-white/25 uppercase tracking-[0.18em] mb-3 mx-4">Recent Activity</p>
+            <div className="lg:col-span-2 space-y-3">
+              <h2 className="text-lg font-semibold text-[hsl(var(--popover))] mx-4 text-[hsl(var(--card-foreground))] px-0 py-1 font-medium opacity-65 rounded-full">Recent Activity</h2>
               <div className="space-y-2">
                 {(showAllDoses ? recentActivity.slice(0, 15) : recentActivity.slice(0, 5)).map((item) =>
                 item.feedType === "insulin" ?

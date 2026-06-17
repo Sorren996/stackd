@@ -1,55 +1,39 @@
-import { INSULIN_PROFILES, getDoseStatus } from "@/lib/insulinPharmacology";
-import { formatDistanceToNow, format } from "date-fns";
-import { Trash2, Syringe } from "lucide-react";
+import { INSULIN_PROFILES, getDoseStatus, formatMinutes } from "@/lib/insulinPharmacology";
+import { format } from "date-fns";
+import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { motion } from "framer-motion";
 
 export default function DoseCard({ dose, onDelete }) {
   const profile = INSULIN_PROFILES[dose.insulin_type];
   const status = getDoseStatus(dose);
-  const color = profile?.color || "#888888";
-  const isExpired = status.phase === "expired";
-  const shortName = dose.insulin_type.split(" ")[0];
-  const timeAgo = formatDistanceToNow(new Date(dose.administered_at), { addSuffix: true });
-
-  const statusText = isExpired
-    ? "Activity cleared"
-    : status.phase === "waiting" ? "Onset pending"
-    : status.phase === "rising" ? "Building activity"
-    : status.phase === "active" ? "Peak activity"
-    : "Activity declining";
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="flex items-start gap-3.5 px-4 py-3.5 rounded-2xl transition-all"
-      style={{
-        background: "rgba(255,255,255,0.03)",
-        border: "1px solid rgba(255,255,255,0.06)",
-      }}
-    >
-      {/* Timeline dot */}
-      <div className="flex flex-col items-center pt-1 shrink-0">
-        <div className="w-7 h-7 rounded-full flex items-center justify-center"
-          style={{ background: `${color}20`, border: `1px solid ${color}50` }}>
-          <Syringe className="w-3.5 h-3.5" style={{ color }} />
-        </div>
-        <div className="w-px flex-1 mt-2" style={{ background: `${color}25`, minHeight: 12 }} />
+    <div className="flex items-center gap-4 p-4 rounded-xl transition-all">
+      <div
+        className="rounded-full shrink-0 w-2 h-2"
+        style={{ backgroundColor: profile?.color || "#888888" }} />
+      
+      <div className="flex-1 min-w-0">
+        <p className="text-[hsl(var(--card-foreground))] px-0 py-1 text-sm font-medium opacity-65 rounded-full opacity-65 rounded-full">{dose.insulin_type}</p>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          {dose.units} units · {format(new Date(dose.administered_at), "MMM d, h:mm a")}
+        </p>
+        {dose.notes && <p className="text-sm text-muted-foreground mt-1 italic">{dose.notes}</p>}
       </div>
-
-      <div className="flex-1 min-w-0 pt-0.5">
-        <p className="text-sm font-semibold text-white/85">{dose.units}u {shortName} administered</p>
-        <p className="text-xs text-white/35 mt-0.5">{timeAgo} · {format(new Date(dose.administered_at), "h:mm a")}</p>
-        <p className="text-xs mt-1.5 font-medium" style={{ color: isExpired ? "rgba(255,255,255,0.25)" : color }}>{statusText}</p>
-        {dose.notes && <p className="text-xs text-white/30 mt-1 italic">{dose.notes}</p>}
+      <div className="text-right shrink-0">
+        <span className={`text-[hsl(var(--card-foreground))] px-2 py-1 text-sm font-medium opacity-65 rounded-full ${
+        status.phase === "expired" ? "opacity-65 rounded-full" :
+        status.phase === "waiting" ? "opacity-65 rounded-full" :
+        status.phase === "rising" ? "opacity-65 rounded-full" :
+        "opacity-65 rounded-full"}`}>
+          {status.phase === "expired" ? "Done" : status.message.split("—")[0].trim()}
+        </span>
       </div>
-
       <AlertDialog>
         <AlertDialogTrigger asChild>
-          <Button variant="ghost" size="icon" className="shrink-0 w-7 h-7 text-white/20 hover:text-destructive hover:bg-destructive/10 mt-0.5">
-            <Trash2 className="w-3.5 h-3.5" />
+          <Button variant="ghost" size="icon" className="shrink-0 text-muted-foreground hover:bg-zinc-800 hover:text-destructive">
+            <Trash2 className="w-4 h-4" />
           </Button>
         </AlertDialogTrigger>
         <AlertDialogContent>
@@ -67,6 +51,6 @@ export default function DoseCard({ dose, onDelete }) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </motion.div>
-  );
+    </div>);
+
 }

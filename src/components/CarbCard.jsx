@@ -1,49 +1,43 @@
-import { formatDistanceToNow, format } from "date-fns";
-import { Trash2, Wheat } from "lucide-react";
+import { format } from "date-fns";
+import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { PROFILE_COLORS } from "@/lib/carbAbsorption";
-import { motion } from "framer-motion";
 
-const PROFILE_LABELS = { fast: "fast carbs", medium: "medium carbs", slow: "slow carbs" };
+const PROFILE_LABELS = { fast: "Fast", medium: "Medium", slow: "Slow" };
 
 export default function CarbCard({ entry, onDelete }) {
-  const color = entry.is_custom ? "#6b7280" : (PROFILE_COLORS[entry.absorption_profile] || "#f59e0b");
-  const profileLabel = entry.is_custom ? "custom" : (PROFILE_LABELS[entry.absorption_profile] || "");
-  const timeAgo = formatDistanceToNow(new Date(entry.consumed_at), { addSuffix: true });
+  const color = entry.is_custom
+    ? "#6b7280"
+    : (PROFILE_COLORS[entry.absorption_profile] || "#f59e0b");
+
+  const profileLabel = entry.is_custom
+    ? "Custom"
+    : (PROFILE_LABELS[entry.absorption_profile] || "");
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="flex items-start gap-3.5 px-4 py-3.5 rounded-2xl transition-all"
-      style={{
-        background: "rgba(255,255,255,0.03)",
-        border: "1px solid rgba(255,255,255,0.06)",
-      }}
-    >
-      {/* Timeline dot */}
-      <div className="flex flex-col items-center pt-1 shrink-0">
-        <div className="w-7 h-7 rounded-full flex items-center justify-center"
-          style={{ background: `${color}20`, border: `1px solid ${color}50` }}>
-          <Wheat className="w-3.5 h-3.5" style={{ color }} />
-        </div>
-        <div className="w-px flex-1 mt-2" style={{ background: `${color}25`, minHeight: 12 }} />
+    <div className="flex items-center gap-4 p-4 rounded-xl transition-all">
+      <div className="rounded-full shrink-0 w-2 h-2" style={{ backgroundColor: color }} />
+
+      <div className="flex-1 min-w-0">
+        <p className="text-[hsl(var(--card-foreground))] px-0 py-1 text-sm font-medium opacity-65">
+          {entry.food_name}
+        </p>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          {entry.carbs}g carbs · {format(new Date(entry.consumed_at), "MMM d, h:mm a")}
+        </p>
       </div>
 
-      <div className="flex-1 min-w-0 pt-0.5">
-        <p className="text-sm font-semibold text-white/85">{entry.food_name} consumed</p>
-        <p className="text-xs text-white/35 mt-0.5">{timeAgo} · {format(new Date(entry.consumed_at), "h:mm a")}</p>
-        <p className="text-xs mt-1.5 font-medium" style={{ color }}>
-          {entry.carbs}g {profileLabel}
-        </p>
-        {entry.notes && <p className="text-xs text-white/30 mt-1 italic">{entry.notes}</p>}
+      <div className="text-right shrink-0">
+        <span className="text-sm font-medium opacity-65" style={{ color }}>
+          {profileLabel}
+        </span>
       </div>
 
       <AlertDialog>
         <AlertDialogTrigger asChild>
-          <Button variant="ghost" size="icon" className="shrink-0 w-7 h-7 text-white/20 hover:text-destructive hover:bg-destructive/10 mt-0.5">
-            <Trash2 className="w-3.5 h-3.5" />
+          <Button variant="ghost" size="icon" className="shrink-0 text-muted-foreground hover:bg-zinc-800 hover:text-destructive">
+            <Trash2 className="w-4 h-4" />
           </Button>
         </AlertDialogTrigger>
         <AlertDialogContent>
@@ -61,6 +55,6 @@ export default function CarbCard({ entry, onDelete }) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </motion.div>
+    </div>
   );
 }
