@@ -30,6 +30,8 @@ export default function DoseForm({ open, onOpenChange }) {
   const [glucoseValue, setGlucoseValue] = useState(100);
   const [glucoseNotes, setGlucoseNotes] = useState("");
   const [glucoseTime, setGlucoseTime] = useState(() => new Date().toTimeString().slice(0, 5));
+        const [glucoseInput, setGlucoseInput] = useState(String(glucoseValue));
+
 
   const nowTimeString = new Date().toTimeString().slice(0, 5);
   const queryClient = useQueryClient();
@@ -355,7 +357,6 @@ export default function DoseForm({ open, onOpenChange }) {
       <label className="block text-white/40 text-sm mb-2">
         mg/dL
       </label>
-        const [glucoseInput, setGlucoseInput] = useState(String(glucoseValue));
 
 
      <input
