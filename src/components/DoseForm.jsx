@@ -360,7 +360,12 @@ export default function DoseForm({ open, onOpenChange }) {
         max={400}
         step={1}
         value={glucoseValue}
-        onChange={(e) => setGlucoseValue(Number(e.target.value))}
+       onChange={(e) => {
+    const value = Number(e.target.value);
+    const clampedValue = Math.min(400, Math.max(40, value));
+
+    setGlucoseValue(clampedValue);
+  }}
         className="w-full bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-3xl font-bold text-center text-[#e9e9e9] outline-none focus:border-[#c2611c] focus:ring-2 focus:ring-[#c2611c]/30"
       />
     </div>
