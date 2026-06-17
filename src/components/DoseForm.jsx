@@ -89,15 +89,17 @@ export default function DoseForm({ open, onOpenChange }) {
   };
 
   const handleSubmitGlucose = () => {
-    if (!glucoseValue) return;
-    const [h, m] = glucoseTime.split(":").map(Number);
-    const dt = new Date();
-    dt.setHours(h, m, 0, 0);
-    createGlucose.mutate({
-      value: parseFloat(glucoseValue),
-      recorded_at: dt.toISOString(),
-      notes: glucoseNotes || undefined
-    });
+    const handleSubmitGlucose = () => {
+  const value = Number(glucoseInput);
+
+  if (!glucoseInput || value < 40 || value > 400) {
+    return;
+  }
+
+  setGlucoseValue(value);
+
+  // keep the rest of your existing submit code here
+};
   };
 
   const adjust = (delta) => setUnits((u) => Math.max(0.5, Math.round((u + delta) * 2) / 2));
@@ -353,6 +355,8 @@ export default function DoseForm({ open, onOpenChange }) {
       <label className="block text-white/40 text-sm mb-2">
         mg/dL
       </label>
+        const [glucoseInput, setGlucoseInput] = useState(String(glucoseValue));
+
 
      <input
   type="number"
@@ -376,7 +380,7 @@ export default function DoseForm({ open, onOpenChange }) {
     setGlucoseValue(clampedValue);
     setGlucoseInput(String(clampedValue));
   }}
-  className="w-full text-[16px] sm:text-3xl bg-white/10 border border-white/10 rounded-xl px-4 py-3 font-bold text-center text-[#e9e9e9] outline-none focus:border-[#c2611c] focus:ring-2 focus:ring-[#c2611c]/30"
+  className="w-full bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-[16px] sm:text-3xl font-bold text-center text-[#e9e9e9] outline-none focus:border-[#c2611c] focus:ring-2 focus:ring-[#c2611c]/30"
 />
     </div>
   </div>
@@ -407,14 +411,17 @@ export default function DoseForm({ open, onOpenChange }) {
               </div>
 
               <div className="px-5 pb-6 pt-2 shrink-0">
-                <button onClick={handleSubmitGlucose} disabled={!glucoseValue || createGlucose.isPending}
-                
-                  className="w-full py-4 rounded-2xl disabled:opacity-40 text-white font-semibold text-base transition-all"
-                  style={{ backgroundColor: glucoseColor, filter: "brightness(0.85)" }}
-                  onMouseEnter={(e) => { e.currentTarget.style.filter = "brightness(1)"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.filter = "brightness(0.85)"; }}>
-                  {createGlucose.isPending ? "Logging..." : `Log ${glucoseValue} mg/dL`}
-                </button>
+               <button
+  onClick={handleSubmitGlucose
+  }
+  disabled={!glucoseInput || createGlucose.isPending}
+  className="w-full py-4 rounded-2xl disabled:opacity-40 text-white font-semibold text-base transition-all"
+  style={{ backgroundColor: glucoseColor, filter: "brightness(0.85)" }}
+>
+  {createGlucose.isPending ? "Logging..." : `Log ${glucoseInput} mg/dL`}
+  
+</button>
+
               </div>
             </>
           )}
