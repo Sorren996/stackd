@@ -361,7 +361,7 @@ export default function DoseForm({ open, onOpenChange }) {
         step={1}
         value={glucoseValue}
         onChange={(e) => setGlucoseValue(Number(e.target.value))}
-        className="w-full bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-3xl font-bold text-[#e9e9e9] outline-none focus:border-[#c2611c] focus:ring-2 focus:ring-[#c2611c]/30"
+        className="w-full bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-3xl font-bold text-center text-[#e9e9e9] outline-none focus:border-[#c2611c] focus:ring-2 focus:ring-[#c2611c]/30"
       />
     </div>
   </div>
