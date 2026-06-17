@@ -378,19 +378,19 @@ const handleSubmit = () => {
       </div>
 
       <input
-  type="text"
-  inputMode="numeric"
-  pattern="[0-9]*"
-  maxLength={3}
-  value={glucoseValue}
-  onChange={(e) => {
-    const value = e.target.value.replace(/\D/g, "").slice(0, 3);
-    setGlucoseValue(value);
-    setGlucoseError("");
-  }}
-  placeholder="Enter glucose"
-  className="w-full rounded-xl bg-white/10 border border-white/10 px-4 py-3 text-white placeholder:text-white/30 outline-none focus:border-white/30"
-/>
+        type="text"
+        inputMode="numeric"
+        pattern="[0-9]*"
+        maxLength={3}
+        value={glucoseValue}
+          onChange={(e) => {
+          const value = e.target.value.replace(/\D/g, "").slice(0, 3);
+          setGlucoseValue(value);
+          setGlucoseError("");
+      }}
+          placeholder="Enter glucose"
+          className="w-full rounded-xl bg-white/10 border border-white/10 px-4 py-3 text-white placeholder:text-white/30 outline-none focus:border-white/30"
+      />
 
 {glucoseError && (
   <p className="text-red-400 text-sm mt-2">{glucoseError}</p>
