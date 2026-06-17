@@ -254,7 +254,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
           <span className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] mb-3">Current Glucose</span>
 
           <motion.div
-            key={glucoseVa}
+            key={glucoseVal}
             initial={{ scale: 0.94, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ type: "spring", stiffness: 300, damping: 22 }}
