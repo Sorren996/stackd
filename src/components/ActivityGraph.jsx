@@ -704,9 +704,7 @@ export default function ActivityGraph({
                 tickCount={tickCount}
               />
 
-              <YAxis yAxisId="insulin" domain={[0, 75]} hide width={0} />
-              <YAxis yAxisId="carbs" domain={[0, 55]} hide width={0} />
-              <YAxis yAxisId="glucose" domain={[GLUCOSE_MIN, GLUCOSE_MAX]} hide width={0} />
+<YAxis yAxisId="main" domain={[GLUCOSE_MIN, GLUCOSE_MAX]} hide width={0} />
 
               <Tooltip
                 active={isInteracting}
@@ -722,7 +720,7 @@ export default function ActivityGraph({
               {doseKeys.map((k) => (
                 <Area
                   key={k.key}
-                  yAxisId="insulin"
+                  yAxisId="main"
                   type="monotoneX"
                   dataKey={k.key}
                   name={k.label}
@@ -737,7 +735,7 @@ export default function ActivityGraph({
               {carbKeys.map((k) => (
                 <Area
                   key={k.key}
-                  yAxisId="carbs"
+                  yAxisId="main"
                   type="monotoneX"
                   dataKey={k.key}
                   name={k.label}
@@ -754,7 +752,7 @@ export default function ActivityGraph({
               {customCarbEvents.map(({ time, entry }) => (
                 <ReferenceLine
                   key={`custom_${entry.id}`}
-                  yAxisId="carbs"
+                  yAxisId="main"
                   x={time}
                   stroke="#6b7280"
                   strokeDasharray="3 3"
@@ -770,7 +768,7 @@ export default function ActivityGraph({
 
 {filters.glucose && filteredGlucoseReadings.length > 0 && (
   <Line
-    yAxisId="glucose"
+    yAxisId="main"
     type="monotoneX"
     dataKey="glucose"
     name="Glucose"
@@ -812,7 +810,7 @@ export default function ActivityGraph({
 
 {activeGlucosePoint && (
   <ReferenceDot
-    yAxisId="glucose"
+    yAxisId="main"
     x={activeGlucosePoint.time}
     y={activeGlucosePoint.glucose}
     r={6}
