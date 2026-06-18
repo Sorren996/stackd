@@ -438,17 +438,42 @@ export default function ActivityGraph({
     ? containerWidth
     : Math.round(viewMinutes * selectedRange.pxPerMin);
 
-  const activeGlucosePoint = useMemo(() => {
-    const points = chartData.filter((point) => point.glucose != null);
-    if (!points.length) return null;
+const activeGlucosePoint = useMemo(() => {
+  const points = chartData
+    .filter((point) => point.glucose != null)
+    .sort((a, b) => a.time - b.time);
 
-    return points.reduce((closest, point) => {
-      const closestDiff = Math.abs(closest.time - centerTime);
-      const pointDiff = Math.abs(point.time - centerTime);
+  if (!points.length) return null;
 
-      return pointDiff < closestDiff ? point : closest;
-    });
-  }, [chartData, centerTime]);
+  let before = null;
+  let after = null;
+
+  for (const point of points) {
+    if (point.time <= centerTime) before = point;
+    if (point.time >= centerTime) {
+      after = point;
+      break;
+    }
+  }
+
+  if (!before && !after) return null;
+  if (!before) return after;
+  if (!after) return before;
+
+  if (before.time === after.time) {
+    return before;
+  }
+
+  const ratio = (centerTime - before.time) / (after.time - before.time);
+  const glucose = before.glucose + ratio * (after.glucose - before.glucose);
+
+  return {
+    time: centerTime,
+    glucose,
+    before,
+    after,
+  };
+}, [chartData, centerTime]);
 
 const updateCenterTime = () => {
   if (!scrollRef.current) return;
@@ -611,16 +636,16 @@ useEffect(() => {
         </div>
       </div>
 
-      {activeGlucosePoint && (
-        <div className="text-center mb-2">
-          <p className="text-2xl font-bold text-white">
-            {Math.round(activeGlucosePoint.glucose)} mg/dL
-          </p>
-          <p className="text-xs text-white/35">
-            {format(new Date(activeGlucosePoint.time), "h:mm a")}
-          </p>
-        </div>
-      )}
+{activeGlucosePoint && (
+  <div className="text-center mb-2">
+    <p className="text-2xl font-bold text-white">
+      {Math.round(activeGlucosePoint.glucose)} mg/dL
+    </p>
+    <p className="text-xs text-white/35">
+      {format(new Date(activeGlucosePoint.time), "h:mm a")}
+    </p>
+  </div>
+)}
 
       <div className="relative">
 
@@ -822,18 +847,18 @@ useEffect(() => {
                 />
               )}
 
-              {activeGlucosePoint && (
-                <ReferenceDot
-                  yAxisId="glucose"
-                  x={activeGlucosePoint.time}
-                  y={activeGlucosePoint.glucose}
-                  r={6}
-                  fill="white"
-                  stroke="rgba(0,0,0,0.45)"
-                  strokeWidth={2}
-                  isFront
-                />
-              )}
+{activeGlucosePoint && (
+  <ReferenceDot
+    yAxisId="glucose"
+    x={activeGlucosePoint.time}
+    y={activeGlucosePoint.glucose}
+    r={6}
+    fill="white"
+    stroke="rgba(0,0,0,0.45)"
+    strokeWidth={2}
+    isFront
+  />
+)}
             </ComposedChart>
           </div>
         </div>
