@@ -309,7 +309,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               setFilterAnchorRect(rect);
               setShowFilter((v) => !v);
             }}
-            className={`w-8 h-8 flex items-center justify-center rounded-xl border transition-all relative ${
+            className={`w-8 h-8 flex justify-start rounded-xl border transition-all relative ${
               showFilter
                 ? "bg-teal-500/10 border-teal-500/30 text-teal-400"
                 : "border-white/5 bg-white/[0.03] text-white/40 hover:text-white/80 hover:bg-white/[0.08]"
