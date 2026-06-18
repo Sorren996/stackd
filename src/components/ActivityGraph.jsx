@@ -15,6 +15,9 @@ import { format } from "date-fns";
 import { HelpCircle, SlidersHorizontal, Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
+const CHART_HEIGHT = 240;
+const CHART_MARGIN = { top: 12, right: 0, left: -20, bottom: 0 };
+
 const TIME_RANGES = [
   { label: "1h", hours: 1, pxPerMin: 18 },
   { label: "3h", hours: 3, pxPerMin: 8 },
@@ -447,34 +450,45 @@ export default function ActivityGraph({
     });
   }, [chartData, centerTime]);
 
-  const updateCenterTime = () => {
-    if (!scrollRef.current) return;
+const updateCenterTime = () => {
+  if (!scrollRef.current) return;
 
-    const el = scrollRef.current;
-    const centerX = el.scrollLeft + el.clientWidth / 2;
-    const progress = centerX / chartWidth;
+  const el = scrollRef.current;
 
-    const visibleStart = is24h ? domainStart : viewStart;
-    const visibleEnd = is24h ? domainEnd : viewEnd;
+  const visibleStart = is24h ? domainStart : viewStart;
+  const visibleEnd = is24h ? domainEnd : viewEnd;
 
-    setCenterTime(visibleStart + progress * (visibleEnd - visibleStart));
-  };
+  const plotLeft = CHART_MARGIN.left;
+  const plotRight = CHART_MARGIN.right;
+  const plotWidth = chartWidth - plotLeft - plotRight;
 
-  useEffect(() => {
-    if (!scrollRef.current) return;
+  const centerXInChart = el.scrollLeft + el.clientWidth / 2;
+  const centerXInPlot = centerXInChart - plotLeft;
 
-    if (is24h) {
-      setCenterTime(snappedNow);
-      return;
-    }
+  const progress = Math.min(1, Math.max(0, centerXInPlot / plotWidth));
 
-    const totalViewMs = viewEnd - viewStart;
-    const nowOffset = ((snappedNow - viewStart) / totalViewMs) * chartWidth;
-    const halfContainer = scrollRef.current.clientWidth / 2;
+  setCenterTime(visibleStart + progress * (visibleEnd - visibleStart));
+};
 
-    scrollRef.current.scrollLeft = nowOffset - halfContainer;
+useEffect(() => {
+  if (!scrollRef.current) return;
+
+  if (is24h) {
     setCenterTime(snappedNow);
-  }, [rangeIdx, chartWidth, is24h, snappedNow, viewEnd, viewStart]);
+    return;
+  }
+
+  const totalViewMs = viewEnd - viewStart;
+  const nowOffset = ((snappedNow - viewStart) / totalViewMs) * chartWidth;
+  const halfContainer = scrollRef.current.clientWidth / 2;
+
+  scrollRef.current.scrollLeft = nowOffset - halfContainer;
+
+  requestAnimationFrame(() => {
+    updateCenterTime();
+  });
+}, [rangeIdx, chartWidth, is24h, snappedNow, viewEnd, viewStart]);
+
 
   if (!doses.length && !glucoseReadings.length && !carbEntries.length) {
     return null;
@@ -609,8 +623,8 @@ export default function ActivityGraph({
       )}
 
       <div className="relative">
-        <div className="pointer-events-none absolute left-1/2 top-0 z-20 h-[240px] -translate-x-1/2 border-l border-white/30 border-dashed" />
 
+  <div className="pointer-events-none absolute left-1/2 top-0 z-20 h-[240px] -translate-x-1/2 border-l border-white/30 border-dashed" />
         <div
           ref={scrollRef}
           onScroll={updateCenterTime}
@@ -620,12 +634,13 @@ export default function ActivityGraph({
             scrollbarWidth: "none",
           }}
         >
-          <div style={{ width: chartWidth, height: 240 }}>
+         <div style={{ width: chartWidth, height: CHART_HEIGHT }}>
+
             <ComposedChart
-              width={chartWidth}
-              height={240}
-              data={chartData}
-              margin={{ top: 12, right: 0, left: -20, bottom: 0 }}
+             width={chartWidth}
+  height={CHART_HEIGHT}
+  data={chartData}
+  margin={CHART_MARGIN}
               onMouseMove={(state) => setIsInteracting(!!(state && state.activePayload))}
               onMouseLeave={() => setIsInteracting(false)}
               onTouchStart={(state) => {
