@@ -355,10 +355,13 @@ export default function DoseForm({ open, onOpenChange }) {
     >
       Blood Glucose Log (mg/dL)
     </label>
-const [glucoseValue, setGlucoseValue] = useState("");
 
     <div className="bg-white/5 border border-white/10 rounded-2xl px-6 py-6 mb-4">
+const [glucoseValue, setGlucoseValue] = useState("");
+
       <input
+
+      
         id="glucose-log"
         type="number"
         pattern="[0-9]*"
