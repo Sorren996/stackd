@@ -360,7 +360,7 @@ export default function DoseForm({ open, onOpenChange }) {
 
       <input
         id="glucose-log"
-        type="number"
+        type="text"
         pattern="[0-9]*"
         maxLength={3}
         inputMode="numeric"
