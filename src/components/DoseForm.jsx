@@ -47,6 +47,7 @@ export default function DoseForm({ open, onOpenChange }) {
       setInsulinTime(new Date().toTimeString().slice(0, 5));
     }
   });
+const [glucoseValue, setGlucoseValue] = useState("");
 
   const createGlucose = useMutation({
     mutationFn: (data) => base44.entities.GlucoseReading.create(data),
