@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowUp, ArrowDown, ArrowRight, ArrowUpRight, ArrowDownRight, Info, X, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { INSULIN_PROFILES, generateActivityCurve } from "@/lib/insulinPharmacology";
 import { getActiveCarbsNow, getTotalCarbsToday, generateCarbCurve } from "@/lib/carbAbsorption";
@@ -38,6 +38,19 @@ function getActiveCarbsAt(entries, targetTime) {
     const activity = curve[lo].activity + ratio * (curve[hi].activity - curve[lo].activity);
     return sum + activity * entry.carbs;
   }, 0);
+}
+
+function getGlucoseTimeLabel(latestGlucose, now) {
+  const recordedAt = latestGlucose?.recorded_at || latestGlucose?.created_at || latestGlucose?.timestamp;
+  if (!recordedAt) return "No recent reading";
+
+  const recordedTime = new Date(recordedAt).getTime();
+  if (Number.isNaN(recordedTime)) return "No recent reading";
+
+  const minutesAgo = Math.max(0, Math.floor((now - recordedTime) / 60000));
+  if (minutesAgo === 0) return "Just now";
+
+  return `${minutesAgo} minute${minutesAgo === 1 ? "" : "s"} ago`;
 }
 
 function TooltipPopover({ title, description, onClose }) {
@@ -144,6 +157,15 @@ const TREND_ICONS = {
 
 export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadings = [], carbEntries = [] }) {
   const [openTooltip, setOpenTooltip] = useState(null);
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setNow(Date.now());
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const activeUnits = useMemo(() => getTotalActiveUnits(doses), [doses]);
   const hasActive = activeUnits > 0.01;
@@ -196,6 +218,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
 
   const glucoseVal = latestGlucose?.value;
   const glucoseColor = !glucoseVal ? "#35a879" : glucoseVal < 70 ? "#3b82f6" : glucoseVal > 180 ? "#f59e0b" : "#35a879";
+  const glucoseTimeLabel = getGlucoseTimeLabel(latestGlucose, now);
 
   // Ambient background color based on glucose state
   const ambientColor = !glucoseVal ? "#0d4a2e" : glucoseVal < 55 ? "#7f1d1d" : glucoseVal < 70 ? "#1e3a5f" : glucoseVal > 250 ? "#7c2d12" : glucoseVal > 180 ? "#78350f" : "#0d4a2e";
@@ -268,7 +291,10 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
             )}
           </motion.div>
 
-          <span className="text-sm text-white/35 font-medium mb-4">mg/dL</span>
+          <div className="mb-4">
+            <span className="block text-sm text-white/35 font-medium">mg/dL</span>
+            <span className="block text-xs text-white/25 mt-1">{glucoseTimeLabel}</span>
+          </div>
 
           {/* Status capsule */}
           <motion.div
