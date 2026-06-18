@@ -376,8 +376,7 @@ export default function ActivityGraph({
           const activity =
             curve[lo].activity + ratio * (curve[hi].activity - curve[lo].activity);
 
-          point[key] = activity * (dose.units / maxDoseUnits) * 70;
-          point[`${key}_actual`] = activity * dose.units;
+point[key] = GLUCOSE_MIN + activity * (dose.units / maxDoseUnits) * 70;          point[`${key}_actual`] = activity * dose.units;
           point[`${key}_total`] = dose.units;
         }
       });
@@ -403,7 +402,7 @@ export default function ActivityGraph({
           const activity =
             curve[lo].activity + ratio * (curve[hi].activity - curve[lo].activity);
 
-          point[key] = activity * (entry.carbs / maxCarbGrams) * 50;
+point[key] = GLUCOSE_MIN + activity * (entry.carbs / maxCarbGrams) * 50;
           point[`${key}_carbs`] = entry.carbs;
           point[`${key}_food`] = entry.food_name;
         }
