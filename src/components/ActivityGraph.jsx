@@ -717,19 +717,7 @@ export default function ActivityGraph({
                 }}
               />
 
-              {filters.glucose && filteredGlucoseReadings.length > 0 && (
-                <Area
-                  yAxisId="glucose"
-                  type="monotoneX"
-                  dataKey="bg"
-                  stroke="none"
-                  fill="url(#glucose_range_grad)"
-                  isAnimationActive={false}
-                  dot={false}
-                  activeDot={false}
-                  legendType="none"
-                />
-              )}
+            
 
               {doseKeys.map((k) => (
                 <Area
@@ -779,6 +767,20 @@ export default function ActivityGraph({
                   }}
                 />
               ))}
+
+                {filters.glucose && filteredGlucoseReadings.length > 0 && (
+                <Area
+                  yAxisId="glucose"
+                  type="monotoneX"
+                  dataKey="bg"
+                  stroke="none"
+                  fill="url(#glucose_range_grad)"
+                  isAnimationActive={false}
+                  dot={false}
+                  activeDot={false}
+                  legendType="none"
+                />
+              )}
 
               {filters.glucose && filteredGlucoseReadings.length > 0 && (
                 <Line
