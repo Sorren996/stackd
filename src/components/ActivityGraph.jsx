@@ -804,7 +804,7 @@ point[key] = GLUCOSE_MIN + activity * (entry.carbs / maxCarbGrams) * 50;
                 tickCount={tickCount}
               />
 
-<YAxis yAxisId="main" domain={[GLUCOSE_MIN, GLUCOSE_MAX]} hide width={0} />
+<YAxis yAxisId="glucose" domain={[GLUCOSE_MIN, GLUCOSE_MAX]} hide width={0} />
 
               <Tooltip
                 active={isInteracting}
@@ -824,7 +824,7 @@ point[key] = GLUCOSE_MIN + activity * (entry.carbs / maxCarbGrams) * 50;
               {customCarbEvents.map(({ time, entry }) => (
                 <ReferenceLine
                   key={`custom_${entry.id}`}
-                  yAxisId="main"
+                  yAxisId="glucose"
                   x={time}
                   stroke="#6b7280"
                   strokeDasharray="3 3"
