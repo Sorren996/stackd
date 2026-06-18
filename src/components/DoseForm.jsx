@@ -11,7 +11,6 @@ import { Slider } from "@/components/ui/slider";
 import { motion } from "framer-motion";
 import CarbsTab from "@/components/CarbsTab";
 
-const [glucoseValue, setGlucoseValue] = useState("");
 
 
 const CATEGORY_ORDER = ["Rapid-Acting", "Short-Acting", "Intermediate", "Long-Acting", "Ultra Long-Acting"];
@@ -47,7 +46,6 @@ export default function DoseForm({ open, onOpenChange }) {
       setInsulinTime(new Date().toTimeString().slice(0, 5));
     }
   });
-const [glucoseValue, setGlucoseValue] = useState("");
 
   const createGlucose = useMutation({
     mutationFn: (data) => base44.entities.GlucoseReading.create(data),
@@ -357,6 +355,7 @@ const [glucoseValue, setGlucoseValue] = useState("");
     >
       Blood Glucose Log (mg/dL)
     </label>
+const [glucoseValue, setGlucoseValue] = useState("");
 
     <div className="bg-white/5 border border-white/10 rounded-2xl px-6 py-6 mb-4">
       <input
