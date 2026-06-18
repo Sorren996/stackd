@@ -1,14 +1,5 @@
 import { useMemo, useRef, useEffect, useState } from "react";
-import {
-  Area,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ReferenceLine,
-  ReferenceDot,
-  Line,
-  ComposedChart,
-} from "recharts";
+
 import { generateActivityCurve, INSULIN_PROFILES } from "@/lib/insulinPharmacology";
 import { generateCarbCurve, PROFILE_COLORS } from "@/lib/carbAbsorption";
 import { format } from "date-fns";
@@ -486,6 +477,30 @@ point[key] = GLUCOSE_MIN + activity * (entry.carbs / maxCarbGrams) * 50;
     };
   }, [chartData, centerTime]);
 
+  const xForTime = (time) => {
+  return ((time - timelineStart) / (timelineEnd - timelineStart)) * chartWidth;
+};
+
+const yForGlucose = (value) => {
+  return (
+    CHART_HEIGHT -
+    ((value - GLUCOSE_MIN) / (GLUCOSE_MAX - GLUCOSE_MIN)) * CHART_HEIGHT
+  );
+};
+
+const glucosePoints = chartData
+  .filter((point) => point.glucose != null)
+  .map((point) => ({
+    x: xForTime(point.time),
+    y: yForGlucose(point.glucose),
+    time: point.time,
+    value: point.glucose,
+  }));
+
+const glucosePath = glucosePoints
+  .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
+  .join(" ");
+
   const updateCenterTime = () => {
     if (!scrollRef.current) return;
 
@@ -735,182 +750,106 @@ point[key] = GLUCOSE_MIN + activity * (entry.carbs / maxCarbGrams) * 50;
   })}
 </svg>
 
-            <ComposedChart
-              width={chartWidth}
-              height={CHART_HEIGHT}
-              data={chartData}
-              margin={CHART_MARGIN}
-              onMouseMove={(state) => setIsInteracting(!!(state && state.activePayload))}
-              onMouseLeave={() => setIsInteracting(false)}
-              onTouchStart={(state) => {
-                if (state && state.activePayload) setIsInteracting(true);
-              }}
-              onTouchMove={(state) => {
-                if (state && state.activePayload) setIsInteracting(true);
-              }}
-              onTouchEnd={() => setIsInteracting(false)}
-            >
-              <defs>
-                {doseKeys.map((k) => (
-                  <linearGradient
-                    key={k.key}
-                    id={`grad_${k.key}`}
-                    x1="0"
-                    y1="0"
-                    x2="0"
-                    y2="1"
-                  >
-                    <stop offset="0%" stopColor={k.color} stopOpacity={0.35} />
-                    <stop offset="100%" stopColor={k.color} stopOpacity={0} />
-                  </linearGradient>
-                ))}
+<div className="relative">
+  <div
+    className="pointer-events-none absolute left-1/2 top-0 z-30 -translate-x-1/2 border-l border-white/30 border-dashed"
+    style={{ height: CHART_HEIGHT }}
+  />
 
-                {carbKeys.map((k) => (
-                  <linearGradient
-                    key={k.key}
-                    id={`grad_${k.key}`}
-                    x1="0"
-                    y1="0"
-                    x2="0"
-                    y2="1"
-                  >
-                    <stop offset="0%" stopColor={k.color} stopOpacity={0.28} />
-                    <stop offset="100%" stopColor={k.color} stopOpacity={0} />
-                  </linearGradient>
-                ))}
-
-                <linearGradient id="glucose_range_grad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#78350f" stopOpacity={0} />
-                  <stop offset={`${highPct}%`} stopColor="#78350f" stopOpacity={0} />
-                  <stop offset={`${highPct}%`} stopColor="#78350f" stopOpacity={0.4} />
-                  <stop offset={`${lowPct}%`} stopColor="#78350f" stopOpacity={0.4} />
-                  <stop offset={`${lowPct}%`} stopColor="#78350f" stopOpacity={0} />
-                  <stop offset="100%" stopColor="#78350f" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-
-              <XAxis
-                dataKey="time"
-                type="number"
-                domain={[timelineStart, timelineEnd]}
-                tickFormatter={(t) => format(new Date(t), "h:mma")}
-                tick={{
-                  fontSize: 10,
-                  fill: "rgba(255,255,255,0.25)",
-                  textAnchor: "middle",
-                }}
-                axisLine={false}
-                tickLine={false}
-                tickCount={tickCount}
-              />
-
-<YAxis yAxisId="glucose" domain={[GLUCOSE_MIN, GLUCOSE_MAX]} hide width={0} />
-
-              <Tooltip
-                active={isInteracting}
-                content={<CustomTooltip />}
-                cursor={{
-                  stroke: "rgba(255,255,255,0.1)",
-                  strokeWidth: 1,
-                }}
-              />
-
-            
-
-             
-
-              
-
-              {customCarbEvents.map(({ time, entry }) => (
-                <ReferenceLine
-                  key={`custom_${entry.id}`}
-                  yAxisId="glucose"
-                  x={time}
-                  stroke="#6b7280"
-                  strokeDasharray="3 3"
-                  strokeWidth={1.5}
-                  label={{
-                    value: `${entry.carbs}g`,
-                    position: "insideTopRight",
-                    fill: "#9ca3af",
-                    fontSize: 9,
-                  }}
-                />
-              ))}
-
-{filters.glucose && filteredGlucoseReadings.length > 0 && (
-  <Line
-    yAxisId="glucose"
-    type="monotoneX"
-    dataKey="glucose"
-    name="Glucose"
-    stroke="rgba(255,255,255,0.95)"
-    strokeWidth={2.5}
-    dot={(props) => {
-      const { cx, cy, payload } = props;
-
-      if (payload.glucose == null) {
-        return <g key={`dot-${payload.time}`} />;
-      }
-
-      const color = getGlucoseColor(payload.glucose);
-
-      return (
-        <circle
-          key={`dot-${payload.time}`}
-          cx={cx}
-          cy={cy}
-          r={3.5}
-          fill={color}
-          stroke="rgba(0,0,0,0.4)"
-          strokeWidth={1}
-          style={{
-            filter: `drop-shadow(0 0 3px ${color}99)`,
-          }}
-        />
-      );
+  <div
+    ref={scrollRef}
+    onScroll={updateCenterTime}
+    className="overflow-x-auto"
+    style={{
+      WebkitOverflowScrolling: "touch",
+      scrollbarWidth: "none",
     }}
-    activeDot={{
-      r: 5,
-      stroke: "rgba(0,0,0,0.4)",
-      strokeWidth: 1,
-    }}
-    connectNulls={true}
-    isAnimationActive={false}
-  />
-)}
+  >
+    <div style={{ width: chartWidth, height: CHART_HEIGHT, position: "relative" }}>
+      <svg
+        width={chartWidth}
+        height={CHART_HEIGHT}
+        viewBox={`0 0 ${chartWidth} ${CHART_HEIGHT}`}
+        className="block"
+      >
+        {doseKeys.map((k) => {
+          const points = chartData
+            .filter((point) => point[k.key] != null)
+            .map((point) => ({
+              x: xForTime(point.time),
+              y: CHART_HEIGHT - point[k.key],
+            }));
 
-{filters.glucose && filteredGlucoseReadings.length > 0 && (
-  <Line
-    yAxisId="glucose"
-    type="monotoneX"
-    dataKey="glucose"
-    name="Glucose"
-    stroke="rgba(255,255,255,0.95)"
-    strokeWidth={2.5}
-    dot={false}
-    connectNulls={true}
-    isAnimationActive={false}
-  />
-)}
+          if (points.length < 2) return null;
 
-{activeGlucosePoint && (
-  <ReferenceDot
-    yAxisId="glucose"
-    x={activeGlucosePoint.time}
-    y={activeGlucosePoint.glucose}
-    r={6}
-    fill="white"
-    stroke="rgba(0,0,0,0.45)"
-    strokeWidth={2}
-    isFront
-  />
-)}
+          const path = points
+            .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
+            .join(" ");
 
+          return (
+            <path
+              key={k.key}
+              d={path}
+              fill="none"
+              stroke={k.color}
+              strokeWidth="2.5"
+              opacity="0.75"
+            />
+          );
+        })}
 
-              
-            </ComposedChart>
-          </div>
+        {carbKeys.map((k) => {
+          const points = chartData
+            .filter((point) => point[k.key] != null)
+            .map((point) => ({
+              x: xForTime(point.time),
+              y: CHART_HEIGHT - point[k.key],
+            }));
+
+          if (points.length < 2) return null;
+
+          const path = points
+            .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
+            .join(" ");
+
+          return (
+            <path
+              key={k.key}
+              d={path}
+              fill="none"
+              stroke={k.color}
+              strokeWidth="2"
+              strokeDasharray="5 3"
+              opacity="0.8"
+            />
+          );
+        })}
+
+        {glucosePath && (
+          <path
+            d={glucosePath}
+            fill="none"
+            stroke="rgba(255,255,255,0.95)"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        )}
+
+        {activeGlucosePoint && (
+          <circle
+            cx={xForTime(activeGlucosePoint.time)}
+            cy={yForGlucose(activeGlucosePoint.glucose)}
+            r="6"
+            fill="white"
+            stroke="rgba(0,0,0,0.45)"
+            strokeWidth="2"
+          />
+        )}
+      </svg>
+    </div>
+  </div>
+</div>          </div>
         </div>
       </div>
     </div>
