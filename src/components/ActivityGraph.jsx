@@ -840,7 +840,7 @@ point[key] = GLUCOSE_MIN + activity * (entry.carbs / maxCarbGrams) * 50;
 
 {filters.glucose && filteredGlucoseReadings.length > 0 && (
   <Line
-    yAxisId="main"
+    yAxisId="glucose"
     type="monotoneX"
     dataKey="glucose"
     name="Glucose"
@@ -896,7 +896,7 @@ point[key] = GLUCOSE_MIN + activity * (entry.carbs / maxCarbGrams) * 50;
 
 {activeGlucosePoint && (
   <ReferenceDot
-    yAxisId="main"
+    yAxisId="glucose"
     x={activeGlucosePoint.time}
     y={activeGlucosePoint.glucose}
     r={6}
