@@ -16,7 +16,7 @@ import { HelpCircle, SlidersHorizontal, Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const CHART_HEIGHT = 240;
-const CHART_MARGIN = { top: 12, right: 0, left: -20, bottom: 0 };
+const CHART_MARGIN = { top: 12, right: 0, left: 0, bottom: 0 };
 
 const TIME_RANGES = [
   { label: "1h", hours: 1, pxPerMin: 18 },
@@ -479,18 +479,12 @@ const updateCenterTime = () => {
   if (!scrollRef.current) return;
 
   const el = scrollRef.current;
+  const centerX = el.scrollLeft + el.clientWidth / 2;
 
   const visibleStart = is24h ? domainStart : viewStart;
   const visibleEnd = is24h ? domainEnd : viewEnd;
 
-  const plotLeft = CHART_MARGIN.left;
-  const plotRight = CHART_MARGIN.right;
-  const plotWidth = chartWidth - plotLeft - plotRight;
-
-  const centerXInChart = el.scrollLeft + el.clientWidth / 2;
-  const centerXInPlot = centerXInChart - plotLeft;
-
-  const progress = Math.min(1, Math.max(0, centerXInPlot / plotWidth));
+  const progress = Math.min(1, Math.max(0, centerX / chartWidth));
 
   setCenterTime(visibleStart + progress * (visibleEnd - visibleStart));
 };
@@ -730,9 +724,11 @@ useEffect(() => {
                 tickCount={tickCount}
               />
 
-              <YAxis yAxisId="insulin" domain={[0, 75]} hide />
-              <YAxis yAxisId="carbs" domain={[0, 55]} hide />
-              <YAxis yAxisId="glucose" domain={[GLUCOSE_MIN, GLUCOSE_MAX]} hide />
+<YAxis yAxisId="insulin" domain={[0, 75]} hide width={0} />
+<YAxis yAxisId="carbs" domain={[0, 55]} hide width={0} />
+<YAxis yAxisId="glucose" domain={[GLUCOSE_MIN, GLUCOSE_MAX]} hide width={0} />
+
+
 
               <Tooltip
                 active={isInteracting}
