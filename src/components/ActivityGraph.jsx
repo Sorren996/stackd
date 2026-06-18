@@ -768,74 +768,61 @@ export default function ActivityGraph({
                 />
               ))}
 
-                {filters.glucose && filteredGlucoseReadings.length > 0 && (
-                <Area
-                  yAxisId="glucose"
-                  type="monotoneX"
-                  dataKey="bg"
-                  stroke="none"
-                  fill="url(#glucose_range_grad)"
-                  isAnimationActive={false}
-                  dot={false}
-                  activeDot={false}
-                  legendType="none"
-                />
-              )}
+{filters.glucose && filteredGlucoseReadings.length > 0 && (
+  <Line
+    yAxisId="glucose"
+    type="monotoneX"
+    dataKey="glucose"
+    name="Glucose"
+    stroke="rgba(255,255,255,0.95)"
+    strokeWidth={2.5}
+    dot={(props) => {
+      const { cx, cy, payload } = props;
 
-              {filters.glucose && filteredGlucoseReadings.length > 0 && (
-                <Line
-                  yAxisId="glucose"
-                  type="monotoneX"
-                  dataKey="glucose"
-                  name="Glucose"
-                  stroke="rgba(255,255,255,0.95)"
-                  strokeWidth={1.5}
-                  dot={(props) => {
-                    const { cx, cy, payload } = props;
+      if (payload.glucose == null) {
+        return <g key={`dot-${payload.time}`} />;
+      }
 
-                    if (payload.glucose == null) {
-                      return <g key={`dot-${payload.time}`} />;
-                    }
+      const color = getGlucoseColor(payload.glucose);
 
-                    const color = getGlucoseColor(payload.glucose);
+      return (
+        <circle
+          key={`dot-${payload.time}`}
+          cx={cx}
+          cy={cy}
+          r={3.5}
+          fill={color}
+          stroke="rgba(0,0,0,0.4)"
+          strokeWidth={1}
+          style={{
+            filter: `drop-shadow(0 0 3px ${color}99)`,
+          }}
+        />
+      );
+    }}
+    activeDot={{
+      r: 5,
+      stroke: "rgba(0,0,0,0.4)",
+      strokeWidth: 1,
+    }}
+    connectNulls={true}
+    isAnimationActive={false}
+  />
+)}
 
-                    return (
-                      <circle
-                        key={`dot-${payload.time}`}
-                        cx={cx}
-                        cy={cy}
-                        r={3.5}
-                        fill={color}
-                        stroke="rgba(0,0,0,0.4)"
-                        strokeWidth={2.5}
-                        style={{
-                          filter: `drop-shadow(0 0 3px ${color}99)`,
-                        }}
-                      />
-                    );
-                  }}
-                  activeDot={{
-                    r: 5,
-                    stroke: "rgba(0,0,0,0.4)",
-                    strokeWidth: 1,
-                  }}
-                  connectNulls={true}
-                  isAnimationActive={false}
-                />
-              )}
-
-              {activeGlucosePoint && (
-                <ReferenceDot
-                  yAxisId="glucose"
-                  x={activeGlucosePoint.time}
-                  y={activeGlucosePoint.glucose}
-                  r={6}
-                  fill="white"
-                  stroke="rgba(0,0,0,0.45)"
-                  strokeWidth={2}
-                  isFront
-                />
-              )}
+{activeGlucosePoint && (
+  <ReferenceDot
+    yAxisId="glucose"
+    x={activeGlucosePoint.time}
+    y={activeGlucosePoint.glucose}
+    r={6}
+    fill="white"
+    stroke="rgba(0,0,0,0.45)"
+    strokeWidth={2}
+    isFront
+  />
+)}
+              
             </ComposedChart>
           </div>
         </div>
