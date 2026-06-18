@@ -634,6 +634,107 @@ point[key] = GLUCOSE_MIN + activity * (entry.carbs / maxCarbGrams) * 50;
           }}
         >
           <div style={{ width: chartWidth, height: CHART_HEIGHT }}>
+
+<svg
+  className="pointer-events-none absolute inset-0 z-10"
+  width={chartWidth}
+  height={CHART_HEIGHT}
+  viewBox={`0 0 ${chartWidth} ${CHART_HEIGHT}`}
+>
+  {doseKeys.map((k) => {
+    const points = chartData
+      .filter((point) => point[k.key] != null)
+      .map((point) => {
+        const x =
+          ((point.time - timelineStart) / (timelineEnd - timelineStart)) *
+          chartWidth;
+
+        const displayValue = GLUCOSE_MIN + point[k.key];
+        const y =
+          CHART_HEIGHT -
+          ((displayValue - GLUCOSE_MIN) / (GLUCOSE_MAX - GLUCOSE_MIN)) *
+            CHART_HEIGHT;
+
+        return { x, y };
+      });
+
+    if (points.length < 2) return null;
+
+    const linePath = points
+      .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
+      .join(" ");
+
+    const areaPath = `
+      ${linePath}
+      L ${points[points.length - 1].x} ${CHART_HEIGHT}
+      L ${points[0].x} ${CHART_HEIGHT}
+      Z
+    `;
+
+    return (
+      <g key={k.key}>
+        <path d={areaPath} fill={k.color} opacity="0.12" />
+        <path
+          d={linePath}
+          fill="none"
+          stroke={k.color}
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          opacity="0.9"
+        />
+      </g>
+    );
+  })}
+
+  {carbKeys.map((k) => {
+    const points = chartData
+      .filter((point) => point[k.key] != null)
+      .map((point) => {
+        const x =
+          ((point.time - timelineStart) / (timelineEnd - timelineStart)) *
+          chartWidth;
+
+        const displayValue = GLUCOSE_MIN + point[k.key];
+        const y =
+          CHART_HEIGHT -
+          ((displayValue - GLUCOSE_MIN) / (GLUCOSE_MAX - GLUCOSE_MIN)) *
+            CHART_HEIGHT;
+
+        return { x, y };
+      });
+
+    if (points.length < 2) return null;
+
+    const linePath = points
+      .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
+      .join(" ");
+
+    const areaPath = `
+      ${linePath}
+      L ${points[points.length - 1].x} ${CHART_HEIGHT}
+      L ${points[0].x} ${CHART_HEIGHT}
+      Z
+    `;
+
+    return (
+      <g key={k.key}>
+        <path d={areaPath} fill={k.color} opacity="0.1" />
+        <path
+          d={linePath}
+          fill="none"
+          stroke={k.color}
+          strokeWidth="2"
+          strokeDasharray="5 3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          opacity="0.9"
+        />
+      </g>
+    );
+  })}
+</svg>
+
             <ComposedChart
               width={chartWidth}
               height={CHART_HEIGHT}
@@ -716,37 +817,9 @@ point[key] = GLUCOSE_MIN + activity * (entry.carbs / maxCarbGrams) * 50;
 
             
 
-              {doseKeys.map((k) => (
-                <Area
-                  key={k.key}
-                  yAxisId="main"
-                  type="monotoneX"
-                  dataKey={k.key}
-                  name={k.label}
-                  stroke={k.color}
-                  strokeWidth={2.5}
-                  fill={`url(#grad_${k.key})`}
-                  dot={false}
-                  isAnimationActive={false}
-                />
-              ))}
+             
 
-              {carbKeys.map((k) => (
-                <Area
-                  key={k.key}
-                  yAxisId="main"
-                  type="monotoneX"
-                  dataKey={k.key}
-                  name={k.label}
-                  stroke={k.color}
-                  strokeWidth={2}
-                  strokeDasharray="5 3"
-                  fill={`url(#grad_${k.key})`}
-                  dot={false}
-                  isAnimationActive={false}
-                  opacity={0.85}
-                />
-              ))}
+              
 
               {customCarbEvents.map(({ time, entry }) => (
                 <ReferenceLine
@@ -807,6 +880,20 @@ point[key] = GLUCOSE_MIN + activity * (entry.carbs / maxCarbGrams) * 50;
   />
 )}
 
+{filters.glucose && filteredGlucoseReadings.length > 0 && (
+  <Line
+    yAxisId="glucose"
+    type="monotoneX"
+    dataKey="glucose"
+    name="Glucose"
+    stroke="rgba(255,255,255,0.95)"
+    strokeWidth={2.5}
+    dot={false}
+    connectNulls={true}
+    isAnimationActive={false}
+  />
+)}
+
 {activeGlucosePoint && (
   <ReferenceDot
     yAxisId="main"
@@ -819,6 +906,8 @@ point[key] = GLUCOSE_MIN + activity * (entry.carbs / maxCarbGrams) * 50;
     isFront
   />
 )}
+
+
               
             </ComposedChart>
           </div>
