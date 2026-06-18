@@ -361,6 +361,8 @@ const [glucoseValue, setGlucoseValue] = useState("");
       <input
         id="glucose-log"
         type="number"
+        pattern="[0-9]*"
+  maxLength={3}
         inputMode="numeric"
         min="0"
         value={glucoseValue}
