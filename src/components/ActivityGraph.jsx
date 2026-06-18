@@ -805,7 +805,7 @@ export default function ActivityGraph({
                         r={3.5}
                         fill={color}
                         stroke="rgba(0,0,0,0.4)"
-                        strokeWidth={1}
+                        strokeWidth={2.5}
                         style={{
                           filter: `drop-shadow(0 0 3px ${color}99)`,
                         }}
