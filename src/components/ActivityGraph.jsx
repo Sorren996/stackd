@@ -786,7 +786,7 @@ export default function ActivityGraph({
                   type="monotoneX"
                   dataKey="glucose"
                   name="Glucose"
-                  stroke="rgba(255,255,255,0.25)"
+                  stroke="rgba(255,255,255,0.95)"
                   strokeWidth={1.5}
                   dot={(props) => {
                     const { cx, cy, payload } = props;
