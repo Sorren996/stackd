@@ -11,6 +11,9 @@ import { Slider } from "@/components/ui/slider";
 import { motion } from "framer-motion";
 import CarbsTab from "@/components/CarbsTab";
 
+const [glucoseValue, setGlucoseValue] = useState("");
+
+
 const CATEGORY_ORDER = ["Rapid-Acting", "Short-Acting", "Intermediate", "Long-Acting", "Ultra Long-Acting"];
 
 const groupedInsulins = CATEGORY_ORDER.reduce((acc, cat) => {
@@ -344,7 +347,6 @@ export default function DoseForm({ open, onOpenChange }) {
           ) : (
             <>
 
-const [glucoseValue, setGlucoseValue] = useState("");
 
 <div className="overflow-y-auto h-[500px] px-5 pb-6 space-y-6">
   <div>
