@@ -343,27 +343,36 @@ export default function DoseForm({ open, onOpenChange }) {
             </>
           ) : (
             <>
-              <div className="overflow-y-auto h-[500px] px-5 pb-6 space-y-6">
-                <div>
-                  <p className="text-sm font-bold tracking-widest text-white/40 uppercase mb-3">Blood Glucose (mg/dL)</p>
-                  <div className="bg-white/5 border border-white/10 rounded-2xl px-6 py-6 flex items-center justify-between mb-4">
-                    <button onClick={() => adjustGlucose(-1)} className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white text-xl flex items-center justify-center transition-colors">−</button>
-                    <div className="text-center">
-                      <span className="text-5xl font-bold" style={{ color: "#e9e9e9" }}>{glucoseValue}</span>
-                      <p className="text-white/40 text-sm mt-1">mg/dL</p>
-                    </div>
-                    <button onClick={() => adjustGlucose(1)} className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white text-xl flex items-center justify-center transition-colors">+</button>
-                  </div>
 
-                  <Slider
-                    min={40}
-                    max={400}
-                    step={1}
-                    value={[glucoseValue]}
-                    onValueChange={([v]) => setGlucoseValue(v)}
-                    className="my-4 cursor-pointer [&_span]:bg-[#c2611c]/20 [&_span_span]:bg-[#c2611c] [&_[role=slider]]:border-[#c2611c] [&_[role=slider]]:bg-white overflow-visible"
-                  />
-                </div>
+const [glucoseValue, setGlucoseValue] = useState("");
+
+<div className="overflow-y-auto h-[500px] px-5 pb-6 space-y-6">
+  <div>
+    <label
+      htmlFor="glucose-log"
+      className="block text-sm font-bold tracking-widest text-white/40 uppercase mb-3"
+    >
+      Blood Glucose Log (mg/dL)
+    </label>
+
+    <div className="bg-white/5 border border-white/10 rounded-2xl px-6 py-6 mb-4">
+      <input
+        id="glucose-log"
+        type="number"
+        inputMode="numeric"
+        min="0"
+        value={glucoseValue}
+        onChange={(e) => setGlucoseValue(e.target.value)}
+        placeholder="Enter reading"
+        className="w-full bg-transparent text-center text-[48px] font-bold text-[#e9e9e9] outline-none placeholder:text-white/20 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+        style={{ fontSize: "48px" }}
+      />
+
+      <p className="text-white/40 text-sm mt-1 text-center">mg/dL</p>
+    </div>
+  </div>
+
+
 
                 {/* Time */}
                 <div>
