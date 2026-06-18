@@ -357,7 +357,6 @@ export default function DoseForm({ open, onOpenChange }) {
     </label>
 
     <div className="bg-white/5 border border-white/10 rounded-2xl px-6 py-6 mb-4">
-const [glucoseValue, setGlucoseValue] = useState("");
 
       <input
 
@@ -374,6 +373,7 @@ const [glucoseValue, setGlucoseValue] = useState("");
         className="w-full bg-transparent text-center text-[48px] font-bold text-[#e9e9e9] outline-none placeholder:text-white/20 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
         style={{ fontSize: "48px" }}
       />
+const [glucoseValue, setGlucoseValue] = useState("");
 
       <p className="text-white/40 text-sm mt-1 text-center">mg/dL</p>
     </div>
