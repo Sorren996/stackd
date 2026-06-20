@@ -388,8 +388,32 @@ export function getActiveCarbsNow(entries) {
     }
     const hi = Math.min(lo + 1, curve.length - 1);
     const ratio = hi === lo ? 0 : (now - curve[lo].time) / (curve[hi].time - curve[lo].time);
-    const activity = curve[lo].activity + ratio * (curve[hi].activity - curve[lo].activity);
-    return sum + activity * entry.carbs;
+const riseSpeed = 1.4 - giNormalized * 0.8; // high GI = steep rise
+const fallSpeed = 0.8 + giNormalized * 0.6; // high GI = faster drop
+
+if (elapsed < onsetMs) {
+  activity =
+    Math.pow(elapsed / onsetMs, riseSpeed) * 0.15;
+} else if (elapsed <= peakMs) {
+  activity =
+    0.15 +
+    0.85 *
+      Math.pow(
+        (elapsed - onsetMs) / (peakMs - onsetMs),
+        riseSpeed
+      );
+} else {
+  activity =
+    Math.max(
+      0,
+      1 -
+        Math.pow(
+          (elapsed - peakMs) /
+            (durationMs - peakMs),
+          fallSpeed
+        )
+    );
+}    return sum + activity * entry.carbs;
   }, 0);
 }
 
