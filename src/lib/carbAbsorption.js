@@ -306,48 +306,69 @@ export const FOOD_DATABASE = [
 
 ];
 
-/** Generate a time-series absorption activity curve (0–1) for a carb entry */
 export function generateCarbCurve(entry) {
   if (entry.is_custom || !entry.absorption_profile) return [];
-const profileKey = entry.absorption_profile || entry.profile;
-const profile = ABSORPTION_PROFILES[profileKey];  if (!profile) return [];
-const gi =
-  typeof entry.gi === "number"
-    ? entry.gi
-    : 55;
 
-const baseOnset = profile.onsetMin * 60000;
-const basePeak = profile.peakMin * 60000;
-const baseDuration = profile.durationMin * 60000;
+  const profileKey = entry.absorption_profile || entry.profile;
+  const profile = ABSORPTION_PROFILES[profileKey];
+  if (!profile) return [];
 
-// GI factor
-const giNormalized = Math.max(0, Math.min(100, gi)) / 100;
-const giTimingFactor = 1.35 - giNormalized * 0.7;
+  const gi =
+    typeof entry.gi === "number" ? entry.gi : 55;
 
-// ONLY shift onset + peak, NOT full duration
-const onsetMs = baseOnset * giTimingFactor;
+  const giNormalized =
+    Math.max(0, Math.min(100, gi)) / 100;
 
-// pull peak closer or further relative to onset
-const peakMs =
-  onsetMs +
-  (basePeak - baseOnset) * giTimingFactor;
+  const giTimingFactor =
+    1.35 - giNormalized * 0.7;
 
-// keep duration mostly stable (slight adjustment only)
-const durationMs =
-  baseDuration * (0.9 + (1 - giNormalized) * 0.2);
+  const start = new Date(entry.consumed_at).getTime();
+  const step = 3 * 60000;
+
+  const baseOnset = profile.onsetMin * 60000;
+  const basePeak = profile.peakMin * 60000;
+  const baseDuration = profile.durationMin * 60000;
+
+  const onsetMs = baseOnset * giTimingFactor;
+
+  const peakMs =
+    onsetMs +
+    (basePeak - baseOnset) * giTimingFactor;
+
+  const durationMs =
+    baseDuration * (0.9 + (1 - giNormalized) * 0.2);
+
+  const end = start + durationMs;
+
+  const result = [];
 
   for (let t = start; t <= end; t += step) {
     const elapsed = t - start;
     let activity;
+
     if (elapsed < onsetMs) {
       activity = (elapsed / onsetMs) * 0.15;
     } else if (elapsed <= peakMs) {
-      activity = 0.15 + 0.85 * ((elapsed - onsetMs) / (peakMs - onsetMs));
+      activity =
+        0.15 +
+        0.85 *
+          ((elapsed - onsetMs) /
+            (peakMs - onsetMs));
     } else {
-      activity = Math.max(0, 1 - ((elapsed - peakMs) / (durationMs - peakMs)));
+      activity = Math.max(
+        0,
+        1 -
+          (elapsed - peakMs) /
+            (durationMs - peakMs)
+      );
     }
-    result.push({ time: t, activity: Math.max(0, Math.min(1, activity)) });
+
+    result.push({
+      time: t,
+      activity: Math.max(0, Math.min(1, activity)),
+    });
   }
+
   return result;
 }
 
