@@ -244,7 +244,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           const hi = Math.min(lo + 1, curve.length - 1);
           const ratio = hi === lo ? 0 : (t - curve[lo].time) / (curve[hi].time - curve[lo].time);
           const activity = curve[lo].activity + ratio * (curve[hi].activity - curve[lo].activity);
-          point[key] = activity * (entry.carbs / maxCarbGrams) * 50;
+          point[key] = activity * 50;
           point[`${key}_carbs`] = entry.carbs;
           point[`${key}_food`] = entry.food_name;
         }
@@ -264,7 +264,11 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     })),
     [filteredDoses]
   );
+const x = elapsed / durationMs;
+const steepness = 1.2 + giNormalized * 2.2;
 
+activity =
+  Math.pow(x, steepness) * Math.exp(-2.5 * x);
   const carbKeys = useMemo(() =>
     filteredCarbEntries
       .filter((e) => !e.is_custom)
@@ -431,7 +435,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               <Area
                 key={k.key}
                 yAxisId="carbs"
-                type="monotoneX"
+                type="linear"
                 dataKey={k.key}
                 name={k.label}
                 stroke={k.color}
