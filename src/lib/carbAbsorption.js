@@ -311,7 +311,6 @@ export const FOOD_DATABASE = [
  */
 export function generateCarbCurve(entry) {
   const durationMs = (entry.duration || 180) * 60000;
-
   const start = new Date(entry.consumed_at).getTime();
   const step = 5 * 60000;
 
@@ -323,16 +322,14 @@ export function generateCarbCurve(entry) {
     const elapsed = t - start;
     const x = elapsed / Math.max(durationMs, 1);
 
-    const activity =
+    const shape =
       Math.pow(x, steepness) * Math.exp(-2.5 * x);
 
     curve.push({
       time: t,
-      activity,
+      activity: shape * entry.carbs, // ✅ CRITICAL FIX
     });
   }
-
-  point[key] = activity * entry.carbs * 1.2;
 
   return curve;
 }
