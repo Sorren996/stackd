@@ -313,7 +313,6 @@ export function generateCarbCurve(entry) {
   const durationMs = (entry.duration || 180) * 60000;
   const start = new Date(entry.consumed_at).getTime();
   const step = 5 * 60000;
-
   const steepness = 1.2;
 
   const curve = [];
@@ -322,14 +321,20 @@ export function generateCarbCurve(entry) {
     const elapsed = t - start;
     const x = elapsed / Math.max(durationMs, 1);
 
-    const shape =
+    let activity =
       Math.pow(x, steepness) * Math.exp(-2.5 * x);
 
     curve.push({
       time: t,
-      activity: shape * entry.carbs, // ✅ CRITICAL FIX
+      activity,
     });
   }
+
+  // 🔥 FORCE RETURN TO ZERO (fixes truncation visually)
+  curve.push({
+    time: start + durationMs,
+    activity: 0,
+  });
 
   return curve;
 }
