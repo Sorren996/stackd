@@ -242,39 +242,43 @@ allCarbCurvesMeta.forEach(({ entry, curve }) => {
 
   if (!curve.length) {
     point[key] = 0;
-    point[`${key}_carbs`] = entry.carbs;
-    point[`${key}_food`] = entry.food_name;
     return;
   }
 
-  if (t < curve[0].time) {
-    point[key] = 0;
-  } else if (t > curve[curve.length - 1].time) {
-    point[key] = 0;
-  } else {
-    // DO NOT redeclare lo
-    lo = 0;
+  const start = curve[0].time;
+  const end = curve[curve.length - 1].time;
 
-    for (let j = 0; j < curve.length - 1; j++) {
-      if (curve[j].time <= t && curve[j + 1].time >= t) {
-        lo = j;
-        break;
-      }
+  // 🔥 HARD GATE (critical)
+  if (t < start || t > end) {
+    point[key] = 0;
+    return;
+  }
+
+  let lo = 0;
+
+  for (let j = 0; j < curve.length - 1; j++) {
+    if (curve[j].time <= t && curve[j + 1].time >= t) {
+      lo = j;
+      break;
     }
+  }
 
-    const hi = Math.min(lo + 1, curve.length - 1);
+  const hi = Math.min(lo + 1, curve.length - 1);
 
-    const ratio =
-      hi === lo
-        ? 0
-        : (t - curve[lo].time) / (curve[hi].time - curve[lo].time);
+  const ratio =
+    hi === lo
+      ? 0
+      : (t - curve[lo].time) / (curve[hi].time - curve[lo].time);
 
-    const activity =
-      curve[lo].activity +
-      ratio * (curve[hi].activity - curve[lo].activity);
+  const activity =
+    curve[lo].activity +
+    ratio * (curve[hi].activity - curve[lo].activity);
 
-const scaled = activity * 50;
-point[key] = scaled < 0.01 ? 0 : scaled;  }
+  const scaled = activity * entry.carbs * 0.6;
+
+  // 🔥 SECONDARY CLAMP (prevents “infinite tail look”)
+  point[key] = scaled < 0.005 ? 0 : scaled;
+
 
   point[`${key}_carbs`] = entry.carbs;
   point[`${key}_food`] = entry.food_name;
