@@ -322,11 +322,7 @@ const giNormalized =
 const giTimingFactor =
   1.35 - giNormalized * 0.7;
 
-  console.log(
-  entry.name,
-  "GI:", gi,
-  "Factor:", giTimingFactor
-);
+  
 
   const start     = new Date(entry.consumed_at).getTime();
   const step      = 3 * 60000;
@@ -340,7 +336,9 @@ const peakMs =
   giTimingFactor *
   60000;
 
-const durationMs =
+const durationMs = 30 * 60000;
+
+//const durationMs =
   profile.durationMin *
   giTimingFactor *
   60000;
