@@ -336,7 +336,7 @@ const peakMs =
   giTimingFactor *
   60000;
 
-const durationMs = 30 * 60000;
+
 
 
 
