@@ -316,36 +316,25 @@ const gi =
     ? entry.gi
     : 55;
 
-const giNormalized =
-  Math.max(0, Math.min(100, gi)) / 100;
+const baseOnset = profile.onsetMin * 60000;
+const basePeak = profile.peakMin * 60000;
+const baseDuration = profile.durationMin * 60000;
 
-const giTimingFactor =
-  1.35 - giNormalized * 0.7;
+// GI factor
+const giNormalized = Math.max(0, Math.min(100, gi)) / 100;
+const giTimingFactor = 1.35 - giNormalized * 0.7;
 
-  
+// ONLY shift onset + peak, NOT full duration
+const onsetMs = baseOnset * giTimingFactor;
 
-  const start     = new Date(entry.consumed_at).getTime();
-  const step      = 3 * 60000;
-const onsetMs =
-  profile.onsetMin *
-  giTimingFactor *
-  60000;
-
+// pull peak closer or further relative to onset
 const peakMs =
-  profile.peakMin *
-  giTimingFactor *
-  60000;
+  onsetMs +
+  (basePeak - baseOnset) * giTimingFactor;
 
-
-
-
-
+// keep duration mostly stable (slight adjustment only)
 const durationMs =
-  profile.durationMin *
-  giTimingFactor *
-  60000;
-  const end = start + durationMs;
-  const result = [];
+  baseDuration * (0.9 + (1 - giNormalized) * 0.2);
 
   for (let t = start; t <= end; t += step) {
     const elapsed = t - start;
