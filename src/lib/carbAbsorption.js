@@ -340,7 +340,7 @@ const peakMs =
 
 
 
-//const durationMs =
+const durationMs =
   profile.durationMin *
   giTimingFactor *
   60000;
