@@ -310,9 +310,20 @@ const giTimingFactor =
 
   const start     = new Date(entry.consumed_at).getTime();
   const step      = 3 * 60000;
-  const onsetMs   = profile.onsetMin   * 60000;
-  const peakMs    = profile.peakMin    * 60000;
-  const durationMs = profile.durationMin * 60000;
+const onsetMs =
+  profile.onsetMin *
+  giTimingFactor *
+  60000;
+
+const peakMs =
+  profile.peakMin *
+  giTimingFactor *
+  60000;
+
+const durationMs =
+  profile.durationMin *
+  giTimingFactor *
+  60000;
   const end = start + durationMs;
   const result = [];
 
