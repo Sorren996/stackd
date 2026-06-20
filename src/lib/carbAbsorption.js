@@ -306,7 +306,8 @@ export const FOOD_DATABASE = [
 
 ];
 
-
+const gi =
+  typeof entry.gi === "number" ? entry.gi : 55;
 
 const giNormalized =
   Math.max(0, Math.min(100, gi)) / 100;
@@ -316,9 +317,6 @@ const fallSpeed = 0.8 + giNormalized * 0.6;
 
 export function generateCarbCurve(entry) {
   if (entry.is_custom || !entry.absorption_profile) return [];
-
-const gi =
-  typeof entry.gi === "number" ? entry.gi : 55;
 
   const profileKey = entry.absorption_profile || entry.profile;
   const profile = ABSORPTION_PROFILES[profileKey];
