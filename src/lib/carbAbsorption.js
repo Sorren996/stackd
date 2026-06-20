@@ -313,8 +313,8 @@ export function generateCarbCurve(entry) {
   const durationMs = (entry.duration || 180) * 60000;
   const start = new Date(entry.consumed_at).getTime();
   const step = 5 * 60000;
-
   const steepness = 1.2;
+
   const curve = [];
 
   for (let t = start; t <= start + durationMs; t += step) {
@@ -324,8 +324,11 @@ export function generateCarbCurve(entry) {
     let activity =
       Math.pow(x, steepness) * Math.exp(-2.5 * x);
 
-    // 🔥 HARD CUTOFF (critical fix)
-    if (x > 1) activity = 0;
+    // 🔥 HARD CLAMP END BEHAVIOR
+    if (x >= 0.98) activity = 0;
+
+    // 🔥 ZERO OUT TAIL NOISE
+    if (activity < 0.003) activity = 0;
 
     curve.push({
       time: t,
