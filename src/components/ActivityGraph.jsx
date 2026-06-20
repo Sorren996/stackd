@@ -212,6 +212,9 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     if (!doses.length && !glucoseReadings.length && !carbEntries.length) return [];
     const step = 3 * 60000;
     const result = [];
+    const elapsed = t - start;
+const x = elapsed / Math.max(durationMs, 1);
+const steepness = 1.2 + giNormalized * 2.5;
     for (let t = domainStart; t <= domainEnd; t += step) {
       const point = { time: t, bg: GLUCOSE_MAX };
       allCurvesMeta.forEach(({ dose, curve }) => {
