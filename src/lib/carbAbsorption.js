@@ -312,74 +312,37 @@ export const FOOD_DATABASE = [
 export function generateCarbCurve(entry) {
   if (entry.is_custom || !entry.absorption_profile) return [];
 
-  const profileKey = entry.absorption_profile || entry.profile;
-  const profile = ABSORPTION_PROFILES[profileKey];
-  if (!profile) return [];
-
-  // =========================
-  // GI MODEL (clean + scoped)
-  // =========================
   const gi = typeof entry.gi === "number" ? entry.gi : 55;
   const giNormalized = Math.max(0, Math.min(100, gi)) / 100;
 
-  // High GI = faster + sharper
-  const riseSpeed = 1.4 - giNormalized * 0.8;
-  const fallSpeed = 0.8 + giNormalized * 0.6;
+  const riseExponent = 1.2 + giNormalized * 2.5;
+  const fallExponent = 1.0 + giNormalized * 2.2;
 
-  // =========================
-  // TIME BASE
-  // =========================
   const start = new Date(entry.consumed_at).getTime();
   const step = 3 * 60000;
 
-  const baseOnset = profile.onsetMin * 60000;
-  const basePeak = profile.peakMin * 60000;
-  const baseDuration = profile.durationMin * 60000;
-
-  // GI slightly shifts timing WITHOUT collapsing shape
-  const timingFactor = 1.2 - giNormalized * 0.5;
-
-  const onsetMs = baseOnset * timingFactor;
-
-  const peakMs =
-    onsetMs + (basePeak - baseOnset) * timingFactor;
-
-  const durationMs =
-    baseDuration * (0.85 + (1 - giNormalized) * 0.25);
+  const durationMs = 3 * 60 * 60 * 1000; // 3 hours default window
+  const onsetMs = 15 * 60000;
+  const peakMs = 45 * 60000;
 
   const end = start + durationMs;
 
-  // =========================
-  // CURVE GENERATION
-  // =========================
   const result = [];
 
   for (let t = start; t <= end; t += step) {
     const elapsed = t - start;
+
     let activity = 0;
 
     if (elapsed < onsetMs) {
-      activity =
-        Math.pow(elapsed / Math.max(onsetMs, 1), riseSpeed) * 0.15;
+      const p = elapsed / onsetMs;
+      activity = Math.pow(p, riseExponent) * 0.15;
     } else if (elapsed <= peakMs) {
-      activity =
-        0.15 +
-        0.85 *
-          Math.pow(
-            (elapsed - onsetMs) /
-              Math.max(peakMs - onsetMs, 1),
-            riseSpeed
-          );
+      const p = (elapsed - onsetMs) / (peakMs - onsetMs);
+      activity = 0.15 + 0.85 * Math.pow(p, riseExponent);
     } else {
-      activity = Math.max(
-        0,
-        1 -
-          Math.pow(
-            (elapsed - peakMs) /
-              Math.max(durationMs - peakMs, 1),
-            fallSpeed
-          )
-      );
+      const p = (elapsed - peakMs) / (durationMs - peakMs);
+      activity = Math.max(0, 1 - Math.pow(p, fallExponent));
     }
 
     result.push({
