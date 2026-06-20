@@ -273,8 +273,8 @@ allCarbCurvesMeta.forEach(({ entry, curve }) => {
       curve[lo].activity +
       ratio * (curve[hi].activity - curve[lo].activity);
 
-    point[key] = activity * 50;
-  }
+const scaled = activity * 50;
+point[key] = scaled < 0.01 ? 0 : scaled;  }
 
   point[`${key}_carbs`] = entry.carbs;
   point[`${key}_food`] = entry.food_name;
@@ -288,8 +288,8 @@ allCarbCurvesMeta.forEach(({ entry, curve }) => {
   const activity =
     curve[lo].activity +
     ratio * (curve[hi].activity - curve[lo].activity);
-
-  point[key] = activity * 50;
+const scaled = activity * 50;
+point[key] = scaled < 0.01 ? 0 : scaled;
   point[`${key}_carbs`] = entry.carbs;
   point[`${key}_food`] = entry.food_name;
 }
