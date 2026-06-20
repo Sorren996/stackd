@@ -295,8 +295,8 @@ export const FOOD_DATABASE = [
 /** Generate a time-series absorption activity curve (0–1) for a carb entry */
 export function generateCarbCurve(entry) {
   if (entry.is_custom || !entry.absorption_profile) return [];
-  const profile = ABSORPTION_PROFILES[entry.absorption_profile];
-  if (!profile) return [];
+const profileKey = entry.absorption_profile || entry.profile;
+const profile = ABSORPTION_PROFILES[profileKey];  if (!profile) return [];
 
   const start     = new Date(entry.consumed_at).getTime();
   const step      = 3 * 60000;
