@@ -332,6 +332,8 @@ export function generateCarbCurve(entry) {
     });
   }
 
+  point[key] = activity * entry.carbs * 1.2;
+
   return curve;
 }
 
