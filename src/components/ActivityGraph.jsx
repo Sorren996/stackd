@@ -267,8 +267,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   );
 
 
-activity =
-  Math.pow(x, steepness) * Math.exp(-2.5 * x);
   const carbKeys = useMemo(() =>
     filteredCarbEntries
       .filter((e) => !e.is_custom)
