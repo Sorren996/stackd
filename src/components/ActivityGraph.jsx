@@ -241,19 +241,16 @@ allCarbCurvesMeta.forEach(({ entry, curve }) => {
   return;
 }
 
+  const start = curve[0].time;
+  const end = curve[curve.length - 1].time;
+
 if (t < start || t > end) {
   point[key] = null;
   return;
 }
 
-  const start = curve[0].time;
-  const end = curve[curve.length - 1].time;
 
-  // hard bounds
-  if (t < start || t > end) {
-    point[key] = 0;
-    return;
-  }
+
 
   let lo = 0;
 
