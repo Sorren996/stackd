@@ -233,10 +233,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           point[`${key}_total`] = dose.units;
         }
       });
-      allCarbCurvesMeta.forEach(({ entry, curve }) => {
-        const key = `carb_${entry.id}`;
-if (!curve.length) {let lo = 0;
-
 allCarbCurvesMeta.forEach(({ entry, curve }) => {
   const key = `carb_${entry.id}`;
 
@@ -248,7 +244,7 @@ allCarbCurvesMeta.forEach(({ entry, curve }) => {
   const start = curve[0].time;
   const end = curve[curve.length - 1].time;
 
-  // 🔥 HARD GATE (critical)
+  // hard bounds
   if (t < start || t > end) {
     point[key] = 0;
     return;
@@ -266,9 +262,7 @@ allCarbCurvesMeta.forEach(({ entry, curve }) => {
   const hi = Math.min(lo + 1, curve.length - 1);
 
   const ratio =
-    hi === lo
-      ? 0
-      : (t - curve[lo].time) / (curve[hi].time - curve[lo].time);
+    hi === lo ? 0 : (t - curve[lo].time) / (curve[hi].time - curve[lo].time);
 
   const activity =
     curve[lo].activity +
@@ -276,37 +270,12 @@ allCarbCurvesMeta.forEach(({ entry, curve }) => {
 
   const scaled = activity * entry.carbs * 0.6;
 
-  // 🔥 SECONDARY CLAMP (prevents “infinite tail look”)
-  point[key] = scaled < 0.005 ? 0 : scaled;
-
+  // clamp tail so it visually ends
+  point[key] = scaled < 0.01 ? 0 : scaled;
 
   point[`${key}_carbs`] = entry.carbs;
   point[`${key}_food`] = entry.food_name;
-});
-  
-  const hi = Math.min(lo + 1, curve.length - 1);
 
-  const ratio =
-    hi === lo ? 0 : (t - curve[lo].time) / (curve[hi].time - curve[lo].time);
-
-  const activity =
-    curve[lo].activity +
-    ratio * (curve[hi].activity - curve[lo].activity);
-const scaled = activity * 50;
-point[key] = scaled < 0.01 ? 0 : scaled;
-  point[`${key}_carbs`] = entry.carbs;
-  point[`${key}_food`] = entry.food_name;
-}
-          let lo = 0;
-          for (let j = 0; j < curve.length - 1; j++) {
-            if (curve[j].time <= t && curve[j + 1].time >= t) { lo = j; break; }
-          }
-          const hi = Math.min(lo + 1, curve.length - 1);
-          const ratio = hi === lo ? 0 : (t - curve[lo].time) / (curve[hi].time - curve[lo].time);
-          const activity = curve[lo].activity + ratio * (curve[hi].activity - curve[lo].activity);
-point[key] = activity * entry.carbs * 1.2;         
-point[`${key}_carbs`] = entry.carbs;
-          point[`${key}_food`] = entry.food_name;
         
       });
       if (glucoseMap[t] !== undefined) point.glucose = glucoseMap[t];
