@@ -302,6 +302,12 @@ const gi =
     ? entry.gi
     : 55;
 
+const giNormalized =
+  Math.max(0, Math.min(100, gi)) / 100;
+
+const giTimingFactor =
+  1.35 - giNormalized * 0.7;
+
   const start     = new Date(entry.consumed_at).getTime();
   const step      = 3 * 60000;
   const onsetMs   = profile.onsetMin   * 60000;
