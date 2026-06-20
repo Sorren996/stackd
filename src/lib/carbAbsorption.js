@@ -336,8 +336,20 @@ for (let t = start; t <= end; t += step) {
 
   const steepness = 1.2 + giNormalized * 2.5;
 
-  const activity =
-    Math.pow(x, steepness) * Math.exp(-2.5 * x);
+  let activity;
+
+  if (elapsed < onsetMs) {
+    activity = Math.pow(x, steepness) * 0.15;
+  } else if (elapsed <= peakMs) {
+    activity =
+      0.15 +
+      0.85 * Math.pow(x, steepness);
+  } else {
+    activity = Math.max(
+      0,
+      Math.pow(1 - x, 1.2 + giNormalized * 2.0)
+    );
+  }
 
   result.push({
     time: t,
