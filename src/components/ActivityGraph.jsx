@@ -273,7 +273,7 @@ if (t < start || t > end) {
   const scaled = activity * entry.carbs * 1.2;
 
   // clamp tail so it visually ends
-point[key] = scaled < 0.005 ? null : scaled;
+point[key] = scaled < 0.005 ? 0 : scaled;
   point[`${key}_carbs`] = entry.carbs;
   point[`${key}_food`] = entry.food_name;
 
