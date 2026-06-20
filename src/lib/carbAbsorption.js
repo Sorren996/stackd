@@ -306,15 +306,9 @@ export const FOOD_DATABASE = [
 
 ];
 
-const gi =
-  typeof entry.gi === "number" ? entry.gi : 55;
-
-const giNormalized =
-  Math.max(0, Math.min(100, gi)) / 100;
-
-const riseSpeed = 1.4 - giNormalized * 0.8;
-const fallSpeed = 0.8 + giNormalized * 0.6;
-
+/**
+ * Generate carb absorption curve for a single food entry
+ */
 export function generateCarbCurve(entry) {
   if (entry.is_custom || !entry.absorption_profile) return [];
 
@@ -322,13 +316,19 @@ export function generateCarbCurve(entry) {
   const profile = ABSORPTION_PROFILES[profileKey];
   if (!profile) return [];
 
-  // ✅ entry is valid ONLY inside here
+  // =========================
+  // GI MODEL (clean + scoped)
+  // =========================
   const gi = typeof entry.gi === "number" ? entry.gi : 55;
   const giNormalized = Math.max(0, Math.min(100, gi)) / 100;
 
+  // High GI = faster + sharper
   const riseSpeed = 1.4 - giNormalized * 0.8;
   const fallSpeed = 0.8 + giNormalized * 0.6;
 
+  // =========================
+  // TIME BASE
+  // =========================
   const start = new Date(entry.consumed_at).getTime();
   const step = 3 * 60000;
 
@@ -336,31 +336,38 @@ export function generateCarbCurve(entry) {
   const basePeak = profile.peakMin * 60000;
   const baseDuration = profile.durationMin * 60000;
 
-  const onsetMs = baseOnset * (1.35 - giNormalized * 0.7);
+  // GI slightly shifts timing WITHOUT collapsing shape
+  const timingFactor = 1.2 - giNormalized * 0.5;
+
+  const onsetMs = baseOnset * timingFactor;
 
   const peakMs =
-    onsetMs +
-    (basePeak - baseOnset) * (1.35 - giNormalized * 0.7);
+    onsetMs + (basePeak - baseOnset) * timingFactor;
 
   const durationMs =
-    baseDuration * (0.9 + (1 - giNormalized) * 0.2);
+    baseDuration * (0.85 + (1 - giNormalized) * 0.25);
 
   const end = start + durationMs;
 
+  // =========================
+  // CURVE GENERATION
+  // =========================
   const result = [];
 
   for (let t = start; t <= end; t += step) {
     const elapsed = t - start;
-    let activity;
+    let activity = 0;
 
     if (elapsed < onsetMs) {
-      activity = Math.pow(elapsed / onsetMs, riseSpeed) * 0.15;
+      activity =
+        Math.pow(elapsed / Math.max(onsetMs, 1), riseSpeed) * 0.15;
     } else if (elapsed <= peakMs) {
       activity =
         0.15 +
         0.85 *
           Math.pow(
-            (elapsed - onsetMs) / (peakMs - onsetMs),
+            (elapsed - onsetMs) /
+              Math.max(peakMs - onsetMs, 1),
             riseSpeed
           );
     } else {
@@ -368,7 +375,8 @@ export function generateCarbCurve(entry) {
         0,
         1 -
           Math.pow(
-            (elapsed - peakMs) / (durationMs - peakMs),
+            (elapsed - peakMs) /
+              Math.max(durationMs - peakMs, 1),
             fallSpeed
           )
       );
@@ -383,53 +391,49 @@ export function generateCarbCurve(entry) {
   return result;
 }
 
-/** Total carbohydrates currently being absorbed (grams) */
+/**
+ * Active carbs currently being absorbed (grams)
+ */
 export function getActiveCarbsNow(entries) {
   const now = Date.now();
+
   return entries.reduce((sum, entry) => {
     if (entry.is_custom) return sum;
+
     const curve = generateCarbCurve(entry);
     if (!curve.length) return sum;
-    if (now < curve[0].time || now > curve[curve.length - 1].time) return sum;
-    let lo = 0;
-    for (let i = 0; i < curve.length - 1; i++) {
-      if (curve[i].time <= now && curve[i + 1].time >= now) { lo = i; break; }
-    }
-    const hi = Math.min(lo + 1, curve.length - 1);
-    const ratio = hi === lo ? 0 : (now - curve[lo].time) / (curve[hi].time - curve[lo].time);
-const riseSpeed = 1.4 - giNormalized * 0.8; // high GI = steep rise
-const fallSpeed = 0.8 + giNormalized * 0.6; // high GI = faster drop
 
-if (elapsed < onsetMs) {
-  activity =
-    Math.pow(elapsed / onsetMs, riseSpeed) * 0.15;
-} else if (elapsed <= peakMs) {
-  activity =
-    0.15 +
-    0.85 *
-      Math.pow(
-        (elapsed - onsetMs) / (peakMs - onsetMs),
-        riseSpeed
-      );
-} else {
-  activity =
-    Math.max(
-      0,
-      1 -
-        Math.pow(
-          (elapsed - peakMs) /
-            (durationMs - peakMs),
-          fallSpeed
-        )
-    );
-}    return sum + activity * entry.carbs;
+    const first = curve[0].time;
+    const last = curve[curve.length - 1].time;
+
+    if (now < first || now > last) return sum;
+
+    // Find segment
+    let i = 0;
+    while (i < curve.length - 1 && curve[i + 1].time < now) {
+      i++;
+    }
+
+    const a = curve[i];
+    const b = curve[Math.min(i + 1, curve.length - 1)];
+
+    const ratio =
+      b.time === a.time ? 0 : (now - a.time) / (b.time - a.time);
+
+    const activity =
+      a.activity + (b.activity - a.activity) * ratio;
+
+    return sum + activity * entry.carbs;
   }, 0);
 }
 
-/** Sum of all carbs consumed today */
+/**
+ * Total carbs consumed today
+ */
 export function getTotalCarbsToday(entries) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+
   return entries
     .filter((e) => new Date(e.consumed_at) >= today)
     .reduce((sum, e) => sum + e.carbs, 0);
