@@ -322,14 +322,12 @@ export function generateCarbCurve(entry) {
   const profile = ABSORPTION_PROFILES[profileKey];
   if (!profile) return [];
 
-  const gi =
-    typeof entry.gi === "number" ? entry.gi : 55;
+  // ✅ entry is valid ONLY inside here
+  const gi = typeof entry.gi === "number" ? entry.gi : 55;
+  const giNormalized = Math.max(0, Math.min(100, gi)) / 100;
 
-  const giNormalized =
-    Math.max(0, Math.min(100, gi)) / 100;
-
-  const giTimingFactor =
-    1.35 - giNormalized * 0.7;
+  const riseSpeed = 1.4 - giNormalized * 0.8;
+  const fallSpeed = 0.8 + giNormalized * 0.6;
 
   const start = new Date(entry.consumed_at).getTime();
   const step = 3 * 60000;
@@ -338,11 +336,11 @@ export function generateCarbCurve(entry) {
   const basePeak = profile.peakMin * 60000;
   const baseDuration = profile.durationMin * 60000;
 
-  const onsetMs = baseOnset * giTimingFactor;
+  const onsetMs = baseOnset * (1.35 - giNormalized * 0.7);
 
   const peakMs =
     onsetMs +
-    (basePeak - baseOnset) * giTimingFactor;
+    (basePeak - baseOnset) * (1.35 - giNormalized * 0.7);
 
   const durationMs =
     baseDuration * (0.9 + (1 - giNormalized) * 0.2);
@@ -356,19 +354,23 @@ export function generateCarbCurve(entry) {
     let activity;
 
     if (elapsed < onsetMs) {
-      activity = (elapsed / onsetMs) * 0.15;
+      activity = Math.pow(elapsed / onsetMs, riseSpeed) * 0.15;
     } else if (elapsed <= peakMs) {
       activity =
         0.15 +
         0.85 *
-          ((elapsed - onsetMs) /
-            (peakMs - onsetMs));
+          Math.pow(
+            (elapsed - onsetMs) / (peakMs - onsetMs),
+            riseSpeed
+          );
     } else {
       activity = Math.max(
         0,
         1 -
-          (elapsed - peakMs) /
-            (durationMs - peakMs)
+          Math.pow(
+            (elapsed - peakMs) / (durationMs - peakMs),
+            fallSpeed
+          )
       );
     }
 
