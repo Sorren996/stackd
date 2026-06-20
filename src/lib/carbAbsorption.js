@@ -329,27 +329,21 @@ export function generateCarbCurve(entry) {
 
   const result = [];
 
-  for (let t = start; t <= end; t += step) {
-    const elapsed = t - start;
+for (let t = start; t <= end; t += step) {
+  const elapsed = t - start;
 
-    let activity = 0;
+  const x = elapsed / Math.max(durationMs, 1);
 
-    if (elapsed < onsetMs) {
-      const p = elapsed / onsetMs;
-      activity = Math.pow(p, riseExponent) * 0.15;
-    } else if (elapsed <= peakMs) {
-      const p = (elapsed - onsetMs) / (peakMs - onsetMs);
-      activity = 0.15 + 0.85 * Math.pow(p, riseExponent);
-    } else {
-      const p = (elapsed - peakMs) / (durationMs - peakMs);
-      activity = Math.max(0, 1 - Math.pow(p, fallExponent));
-    }
+  const steepness = 1.2 + giNormalized * 2.5;
 
-    result.push({
-      time: t,
-      activity: Math.max(0, Math.min(1, activity)),
-    });
-  }
+  const activity =
+    Math.pow(x, steepness) * Math.exp(-2.5 * x);
+
+  result.push({
+    time: t,
+    activity: Math.max(0, Math.min(1, activity)),
+  });
+}
 
   return result;
 }
