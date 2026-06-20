@@ -306,9 +306,7 @@ export const FOOD_DATABASE = [
 
 ];
 
-const start = new Date(entry.consumed_at).getTime();
-const step = 3 * 60000;
-const end = start + durationMs;
+
 
 export function generateCarbCurve(entry) {
   if (entry.is_custom || !entry.absorption_profile) return [];
