@@ -235,9 +235,40 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       });
       allCarbCurvesMeta.forEach(({ entry, curve }) => {
         const key = `carb_${entry.id}`;
-        if (!curve.length || t < curve[0].time || t > curve[curve.length - 1].time) {
-          point[key] = null;
-        } else {
+if (!curve.length) {
+  point[key] = 0;
+  point[`${key}_carbs`] = entry.carbs;
+  point[`${key}_food`] = entry.food_name;
+} else if (t < curve[0].time) {
+  point[key] = 0;
+  point[`${key}_carbs`] = entry.carbs;
+  point[`${key}_food`] = entry.food_name;
+} else if (t > curve[curve.length - 1].time) {
+  point[key] = 0;
+  point[`${key}_carbs`] = entry.carbs;
+  point[`${key}_food`] = entry.food_name;
+} else {
+  let lo = 0;
+
+  for (let j = 0; j < curve.length - 1; j++) {
+    if (curve[j].time <= t && curve[j + 1].time >= t) {
+      lo = j;
+      break;
+    }
+  
+  const hi = Math.min(lo + 1, curve.length - 1);
+
+  const ratio =
+    hi === lo ? 0 : (t - curve[lo].time) / (curve[hi].time - curve[lo].time);
+
+  const activity =
+    curve[lo].activity +
+    ratio * (curve[hi].activity - curve[lo].activity);
+
+  point[key] = activity * 50;
+  point[`${key}_carbs`] = entry.carbs;
+  point[`${key}_food`] = entry.food_name;
+}
           let lo = 0;
           for (let j = 0; j < curve.length - 1; j++) {
             if (curve[j].time <= t && curve[j + 1].time >= t) { lo = j; break; }
