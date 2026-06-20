@@ -270,10 +270,10 @@ if (t < start || t > end) {
     curve[lo].activity +
     ratio * (curve[hi].activity - curve[lo].activity);
 
-point[key] = scaled < 0.005 ? null : scaled;
-  // clamp tail so it visually ends
-  point[key] = scaled < 0.01 ? 0 : scaled;
+  const scaled = activity * entry.carbs * 0.6;
 
+  // clamp tail so it visually ends
+point[key] = scaled < 0.005 ? null : scaled;
   point[`${key}_carbs`] = entry.carbs;
   point[`${key}_food`] = entry.food_name;
 
