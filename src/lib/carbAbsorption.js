@@ -288,7 +288,21 @@ export const FOOD_DATABASE = [
 { name: "French Dip Sandwich with Au Jus", carbs: 32, gi: 46, category: "Slow Absorbing", profile: "slow" },
 //Party Platter / Appetizers
 { name: "Spinach & Artichoke Dip with Chips", carbs: 24, gi: 42, category: "Slow Absorbing", profile: "slow" },
-{ name: "Cobb Salad with Blue Cheese Dressing", carbs: 8, gi: 25, category: "Slow Absorbing", profile: "slow" }
+{ name: "Cobb Salad with Blue Cheese Dressing", carbs: 8, gi: 25, category: "Slow Absorbing", profile: "slow" },
+
+
+{
+  name: "Test Fast",
+  carbs: 24,
+  gi: 100,
+  profile: "slow"
+},
+{
+  name: "Test Slow",
+  carbs: 24,
+  gi: 15,
+  profile: "slow"
+}
 
 ];
 
