@@ -310,55 +310,31 @@ export const FOOD_DATABASE = [
  * Generate carb absorption curve for a single food entry
  */
 export function generateCarbCurve(entry) {
-  if (entry.is_custom || !entry.absorption_profile) return [];
-
-  const gi = typeof entry.gi === "number" ? entry.gi : 55;
-  const giNormalized = Math.max(0, Math.min(100, gi)) / 100;
-
-  const riseExponent = 1.2 + giNormalized * 2.5;
-  const fallExponent = 1.0 + giNormalized * 2.2;
+  const durationMs = (entry.duration || 180) * 60000;
 
   const start = new Date(entry.consumed_at).getTime();
-  const step = 3 * 60000;
+  const step = 5 * 60000;
 
-  const durationMs = 3 * 60 * 60 * 1000; // 3 hours default window
-  const onsetMs = 15 * 60000;
-  const peakMs = 45 * 60000;
+  const steepness = 1.2;
 
-  const end = start + durationMs;
+  const curve = [];
 
-  const result = [];
+  for (let t = start; t <= start + durationMs; t += step) {
+    const elapsed = t - start;
+    const x = elapsed / Math.max(durationMs, 1);
 
-for (let t = start; t <= end; t += step) {
-  const elapsed = t - start;
+    const activity =
+      Math.pow(x, steepness) * Math.exp(-2.5 * x);
 
-  const x = elapsed / Math.max(durationMs, 1);
-
-  const steepness = 1.2 + giNormalized * 2.5;
-
-  let activity;
-
-  if (elapsed < onsetMs) {
-    activity = Math.pow(x, steepness) * 0.15;
-  } else if (elapsed <= peakMs) {
-    activity =
-      0.15 +
-      0.85 * Math.pow(x, steepness);
-  } else {
-    activity = Math.max(
-      0,
-      Math.pow(1 - x, 1.2 + giNormalized * 2.0)
-    );
+    curve.push({
+      time: t,
+      activity,
+    });
   }
 
-  result.push({
-    time: t,
-    activity: Math.max(0, Math.min(1, activity)),
-  });
+  return curve;
 }
 
-  return result;
-}
 
 /**
  * Active carbs currently being absorbed (grams)
