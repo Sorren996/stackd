@@ -236,10 +236,15 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 allCarbCurvesMeta.forEach(({ entry, curve }) => {
   const key = `carb_${entry.id}`;
 
-  if (!curve.length) {
-    point[key] = 0;
-    return;
-  }
+ if (!curve.length) {
+  point[key] = null;
+  return;
+}
+
+if (t < start || t > end) {
+  point[key] = null;
+  return;
+}
 
   const start = curve[0].time;
   const end = curve[curve.length - 1].time;
