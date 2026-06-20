@@ -245,7 +245,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           const hi = Math.min(lo + 1, curve.length - 1);
           const ratio = hi === lo ? 0 : (t - curve[lo].time) / (curve[hi].time - curve[lo].time);
           const activity = curve[lo].activity + ratio * (curve[hi].activity - curve[lo].activity);
-point[key] = activity * entry.carbs * 1.2;         
+point[key] = null;         
 point[`${key}_carbs`] = entry.carbs;
           point[`${key}_food`] = entry.food_name;
         }
