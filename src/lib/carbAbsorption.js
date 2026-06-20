@@ -297,6 +297,10 @@ export function generateCarbCurve(entry) {
   if (entry.is_custom || !entry.absorption_profile) return [];
 const profileKey = entry.absorption_profile || entry.profile;
 const profile = ABSORPTION_PROFILES[profileKey];  if (!profile) return [];
+const gi =
+  typeof entry.gi === "number"
+    ? entry.gi
+    : 55;
 
   const start     = new Date(entry.consumed_at).getTime();
   const step      = 3 * 60000;
