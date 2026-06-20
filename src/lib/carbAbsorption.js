@@ -338,15 +338,7 @@ const peakMs =
 
 const durationMs = 30 * 60000;
 
-console.log({
-  name: entry.name,
-  gi,
-  giTimingFactor,
-  onset: profile.onsetMin,
-  peak: profile.peakMin,
-  duration: profile.durationMin,
-  adjustedDuration: profile.durationMin * giTimingFactor
-});
+
 
 //const durationMs =
   profile.durationMin *
