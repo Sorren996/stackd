@@ -316,6 +316,27 @@ const chartWidth =
     ? containerWidth
     : totalTimelineHours * 60 * selectedRange.pxPerMin;
 
+    const [scrollLeft, setScrollLeft] = useState(0);
+
+const centerTimestamp =
+  viewStart +
+  ((scrollLeft + containerWidth / 2) / chartWidth) *
+  (viewEnd - viewStart);
+
+const currentPoint = chartData.reduce(
+  (closest, p) => {
+    if (p.glucose == null) return closest;
+
+    if (!closest) return p;
+
+    return Math.abs(p.time - centerTimestamp) <
+      Math.abs(closest.time - centerTimestamp)
+      ? p
+      : closest;
+  },
+  null
+);
+
 const initialCentered = useRef(false);
 
 useEffect(() => {
@@ -389,7 +410,8 @@ useEffect(() => {
 
     <div className="relative">
       <div
-        ref={scrollRef}
+        ref={scrollRef} onScroll={(e) => setScrollLeft(e.currentTarget.scrollLeft)}
+  className={is24h ? "" : "overflow-x-auto"}
         className={is24h ? "" : "overflow-x-auto"}
         style={{ WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
         <div style={{ width: chartWidth, height: 240 }}>
@@ -534,14 +556,15 @@ useEffect(() => {
             )}
           </ComposedChart>
         </div>
-        <div
-  className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 pointer-events-none z-20"
-  style={{
-    width: "1px",
-    background: "rgba(255,255,255,0.25)",
-    borderLeft: "1px dashed rgba(255,255,255,0.25)"
-  }}
-/>
+          <div
+    className="absolute top-0 bottom-0 pointer-events-none"
+    style={{
+      left: "50%",
+      width: "1px",
+      background: "rgba(255,255,255,.25)",
+      transform: "translateX(-50%)"
+    }}
+  />
         </div>
       </div>
     </div>
