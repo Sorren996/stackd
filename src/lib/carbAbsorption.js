@@ -330,6 +330,8 @@ export function generateCarbCurve(entry) {
     // 🔥 ZERO OUT TAIL NOISE
     if (activity < 0.003) activity = 0;
 
+const taperedActivity = activity * (1 - x);
+
     curve.push({
       time: t,
       activity,
