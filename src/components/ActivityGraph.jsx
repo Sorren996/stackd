@@ -236,49 +236,45 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 allCarbCurvesMeta.forEach(({ entry, curve }) => {
   const key = `carb_${entry.id}`;
 
- if (!curve.length) {
-  point[key] = null;
-  return;
-}
+  if (!curve.length) {
+    point[key] = null;
+    return;
+  }
 
   const start = curve[0].time;
   const end = curve[curve.length - 1].time;
 
-if (t < start || t > end) {
-  point[key] = null;
-  return;
-}
+  if (t < start || t > end) {
+    point[key] = null;
+    return;
+  }
 
-
-
-
-  let lo = 0;
+  let idx = 0;
 
   for (let j = 0; j < curve.length - 1; j++) {
     if (curve[j].time <= t && curve[j + 1].time >= t) {
-      lo = j;
+      idx = j;
       break;
     }
   }
 
-  const hi = Math.min(lo + 1, curve.length - 1);
+  const next = Math.min(idx + 1, curve.length - 1);
 
   const ratio =
-    hi === lo ? 0 : (t - curve[lo].time) / (curve[hi].time - curve[lo].time);
+    next === idx
+      ? 0
+      : (t - curve[idx].time) /
+        (curve[next].time - curve[idx].time);
 
   const activity =
-    curve[lo].activity +
-    ratio * (curve[hi].activity - curve[lo].activity);
+    curve[idx].activity +
+    ratio * (curve[next].activity - curve[idx].activity);
 
-  const scaled = activity * entry.carbs * 50;
+  point[key] = activity * 50;
 
-  // clamp tail so it visually ends
-point[key] = scaled < 0.005 ? 0 : scaled;
   point[`${key}_carbs`] = entry.carbs;
   point[`${key}_food`] = entry.food_name;
-
-        
-      });
+});
       if (glucoseMap[t] !== undefined) point.glucose = glucoseMap[t];
       result.push(point);
     }
