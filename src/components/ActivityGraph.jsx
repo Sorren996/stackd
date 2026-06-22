@@ -172,14 +172,15 @@ const domainStart =
   const viewStart = snappedNow - selectedRange.hours * 60 * 60 * 1000;
 const viewEnd =
   latestGlucoseTime + 30 * 60 * 1000;
-const latestGlucoseTime = useMemo(() => {
-  if (!glucoseReadings.length) return snappedNow;
 
   // Only include doses/carbs if their filter is on
   const filteredDoses = filters.insulin ? doses : [];
   const filteredCarbEntries = filters.carbs ? carbEntries : [];
   const filteredGlucoseReadings = filters.glucose ? glucoseReadings : [];
 
+
+const latestGlucoseTime = useMemo(() => {
+  if (!glucoseReadings.length) return snappedNow;
 
 
   return Math.max(
@@ -190,22 +191,23 @@ const latestGlucoseTime = useMemo(() => {
 }, [glucoseReadings]);
 
 const latestGlucosePosition =
-  ((latestGlucoseTime - viewStart) /
-    (viewEnd - viewStart)) *
-  chartWidth;
+  viewEnd > viewStart
+    ? ((latestGlucoseTime - viewStart) / (viewEnd - viewStart)) * chartWidth
+    : 0;
 
   const maxScrollLeft =
   latestGlucosePosition -
   containerWidth / 2;
 
-  const handleScroll = (e) => {
+const handleScroll = (e) => {
   const maxAllowed = Math.max(0, maxScrollLeft);
 
   if (e.currentTarget.scrollLeft > maxAllowed) {
     e.currentTarget.scrollLeft = maxAllowed;
   }
 
-onScroll={handleScroll}};
+  setScrollLeft(e.currentTarget.scrollLeft);
+};;
 
   const allCurvesMeta = useMemo(() =>
     filteredDoses.map((dose) => ({
