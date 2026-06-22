@@ -139,6 +139,9 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const containerRef = useRef(null);
   const [containerWidth, setContainerWidth] = useState(600);
 
+
+const latestGlucoseTime = useMemo(() => {
+  if (!glucoseReadings.length) return snappedNow;
   useEffect(() => {
     if (!containerRef.current) return;
     const ro = new ResizeObserver(([e]) => setContainerWidth(e.contentRect.width));
