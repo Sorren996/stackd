@@ -156,20 +156,18 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const rangeTotal = GLUCOSE_MAX - GLUCOSE_MIN;
   const highPct = ((GLUCOSE_MAX - targetHigh) / rangeTotal * 100).toFixed(1);
   const lowPct = ((GLUCOSE_MAX - targetLow) / rangeTotal * 100).toFixed(1);
-
+const snappedNow = Math.round(now / 180000) * 180000;
   const selectedRange = TIME_RANGES[rangeIdx];
   const now = Date.now();
-  const snappedNow = Math.round(now / 180000) * 180000;
+  
 const domainStart =
   snappedNow - 24 * 60 * 60 * 1000;
-
-  const viewStart = snappedNow - selectedRange.hours * 60 * 60 * 1000;
-
 
 const latestGlucoseTime = useMemo(() => {
   if (!glucoseReadings.length) return snappedNow;
 
 
+  const viewStart = snappedNow - selectedRange.hours * 60 * 60 * 1000;
 const viewEnd =
   latestGlucoseTime +
   30 * 60 * 1000;
