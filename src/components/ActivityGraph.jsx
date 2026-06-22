@@ -166,8 +166,6 @@ const domainStart =
 const latestGlucoseTime = useMemo(() => {
   if (!glucoseReadings.length) return snappedNow;
 
-const latestGlucoseTime = useMemo(() => {
-  if (!glucoseReadings.length) return snappedNow;
 
   const viewStart = snappedNow - selectedRange.hours * 60 * 60 * 1000;
 const viewEnd =
@@ -599,5 +597,6 @@ useEffect(() => {
         </div>
       </div>
     </div>
+    
   );
 }
