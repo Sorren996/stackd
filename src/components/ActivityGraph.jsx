@@ -458,7 +458,7 @@ allCarbCurvesMeta.forEach(({ entry, curve }) => {
               <Area
                 key={k.key}
                 yAxisId="carbs"
-                type="linear"
+                type="basis"
                 dataKey={k.key}
                 name={k.label}
                 stroke={k.color}
