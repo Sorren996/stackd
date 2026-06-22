@@ -409,12 +409,17 @@ useEffect(() => {
 
 
     <div className="relative">
-      <div
-        ref={scrollRef} onScroll={(e) => setScrollLeft(e.currentTarget.scrollLeft)}
-  className={is24h ? "" : "overflow-x-auto"}
-        className={is24h ? "" : "overflow-x-auto"}
-        style={{ WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
-        <div style={{ width: chartWidth, height: 240 }}>
+<div className="relative">
+
+  <div
+    ref={scrollRef}
+    className={is24h ? "" : "overflow-x-auto"}
+    style={{
+      WebkitOverflowScrolling: "touch",
+      scrollbarWidth: "none"
+    }}
+  >
+    <div style={{ width: chartWidth, height: 240 }}>
           <ComposedChart
             width={chartWidth}
             height={240}
@@ -514,17 +519,6 @@ useEffect(() => {
               />
             ))}
 
-            {customCarbEvents.map(({ time, entry }) => (
-              <ReferenceLine
-                key={`custom_${entry.id}`}
-                yAxisId="carbs"
-                x={time}
-                stroke="#6b7280"
-                strokeDasharray="3 3"
-                strokeWidth={1.5}
-                label={{ value: `${entry.carbs}g`, position: "insideTopRight", fill: "#9ca3af", fontSize: 9 }}
-              />
-            ))}
 
             {filters.glucose && filteredGlucoseReadings.length > 0 && (
               <Line
@@ -555,14 +549,17 @@ useEffect(() => {
               />
             )}
           </ComposedChart>
-        </div>
-          <div
+            </div>
+          </div>
+          {/* Fixed center viewport line */}
+  <div
     className="absolute top-0 bottom-0 pointer-events-none"
     style={{
       left: "50%",
       width: "1px",
-      background: "rgba(255,255,255,.25)",
-      transform: "translateX(-50%)"
+      background: "rgba(255,255,255,0.25)",
+      transform: "translateX(-50%)",
+      zIndex: 50
     }}
   />
         </div>
