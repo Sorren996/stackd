@@ -161,15 +161,45 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 const domainStart =
   snappedNow - 24 * 60 * 60 * 1000;
 
-const domainEnd =
-  snappedNow + 6 * 60 * 60 * 1000;
+const viewEnd =
+  latestGlucoseTime +
+  30 * 60 * 1000;
   const viewStart = snappedNow - selectedRange.hours * 60 * 60 * 1000;
-  const viewEnd = snappedNow + selectedRange.hours * 0.1 * 60 * 60 * 1000;
-
+const viewEnd =
+  latestGlucoseTime +
+  30 * 60 * 1000;
   // Only include doses/carbs if their filter is on
   const filteredDoses = filters.insulin ? doses : [];
   const filteredCarbEntries = filters.carbs ? carbEntries : [];
   const filteredGlucoseReadings = filters.glucose ? glucoseReadings : [];
+
+const latestGlucoseTime = useMemo(() => {
+  if (!glucoseReadings.length) return snappedNow;
+
+  return Math.max(
+    ...glucoseReadings.map(g =>
+      new Date(g.recorded_at).getTime()
+    )
+  );
+}, [glucoseReadings]);
+
+const latestGlucosePosition =
+  ((latestGlucoseTime - viewStart) /
+    (viewEnd - viewStart)) *
+  chartWidth;
+
+  const maxScrollLeft =
+  latestGlucosePosition -
+  containerWidth / 2;
+
+  const handleScroll = (e) => {
+  const maxAllowed = Math.max(0, maxScrollLeft);
+
+  if (e.currentTarget.scrollLeft > maxAllowed) {
+    e.currentTarget.scrollLeft = maxAllowed;
+  }
+
+onScroll={handleScroll}};
 
   const allCurvesMeta = useMemo(() =>
     filteredDoses.map((dose) => ({
