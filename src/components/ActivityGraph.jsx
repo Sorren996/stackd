@@ -158,8 +158,11 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const selectedRange = TIME_RANGES[rangeIdx];
   const now = Date.now();
   const snappedNow = Math.round(now / 180000) * 180000;
-  const domainStart = snappedNow - 24 * 60 * 60 * 1000;
-  const domainEnd = snappedNow + 2 * 60 * 60 * 1000;
+const domainStart =
+  snappedNow - 24 * 60 * 60 * 1000;
+
+const domainEnd =
+  snappedNow + 6 * 60 * 60 * 1000;
   const viewStart = snappedNow - selectedRange.hours * 60 * 60 * 1000;
   const viewEnd = snappedNow + selectedRange.hours * 0.1 * 60 * 60 * 1000;
 
@@ -306,15 +309,36 @@ allCarbCurvesMeta.forEach(({ entry, curve }) => {
 
   const is24h = selectedRange.pxPerMin === null;
   const viewMinutes = selectedRange.hours * 60 * 1.1;
-  const chartWidth = is24h ? containerWidth : Math.round(viewMinutes * selectedRange.pxPerMin);
+const totalTimelineHours = 30;
 
-  useEffect(() => {
-    if (!scrollRef.current || is24h) return;
-    const totalViewMs = viewEnd - viewStart;
-    const nowOffset = (snappedNow - viewStart) / totalViewMs * chartWidth;
-    const halfContainer = scrollRef.current.clientWidth / 2;
-    scrollRef.current.scrollLeft = nowOffset - halfContainer;
-  }, [rangeIdx, doses]);
+const chartWidth =
+  is24h
+    ? containerWidth
+    : totalTimelineHours * 60 * selectedRange.pxPerMin;
+
+const initialCentered = useRef(false);
+
+useEffect(() => {
+  if (
+    !scrollRef.current ||
+    is24h ||
+    initialCentered.current
+  ) return;
+
+  initialCentered.current = true;
+
+  const totalMs =
+    domainEnd - domainStart;
+
+  const nowOffset =
+    ((snappedNow - domainStart) / totalMs) *
+    chartWidth;
+
+  scrollRef.current.scrollLeft =
+    nowOffset -
+    scrollRef.current.clientWidth / 2;
+
+}, [chartWidth]), [rangeIdx, doses];
 
   if (!doses.length && !glucoseReadings.length && !carbEntries.length) return null;
 
@@ -362,6 +386,8 @@ allCarbCurvesMeta.forEach(({ entry, curve }) => {
   
       </div>
 
+
+    <div className="relative">
       <div
         ref={scrollRef}
         className={is24h ? "" : "overflow-x-auto"}
@@ -401,10 +427,12 @@ allCarbCurvesMeta.forEach(({ entry, curve }) => {
             </defs>
 
             <XAxis
-              dataKey="time"
-              type="number"
-              domain={is24h ? [domainStart, domainEnd] : [viewStart, viewEnd]}
-              tickFormatter={(t) => format(new Date(t), "h:mma")}
+
+
+  dataKey="time"
+  type="number"
+  domain={[domainStart, domainEnd]}
+             tickFormatter={(t) => format(new Date(t), "h:mma")}
               tick={{ fontSize: 10, fill: "rgba(255,255,255,0.25)", textAnchor: "middle" }}
               axisLine={false}
               tickLine={false}
@@ -417,13 +445,6 @@ allCarbCurvesMeta.forEach(({ entry, curve }) => {
 
             <Tooltip active={isInteracting} content={<CustomTooltip />} cursor={{ stroke: "rgba(255,255,255,0.1)", strokeWidth: 1 }} />
 
-            <ReferenceLine
-              yAxisId="insulin"
-              x={snappedNow}
-              stroke="rgba(255,255,255,0.2)"
-              strokeDasharray="3 3"
-              strokeWidth={1}
-            />
 
             {filters.glucose && filteredGlucoseReadings.length > 0 && (
               <Area
@@ -512,6 +533,15 @@ allCarbCurvesMeta.forEach(({ entry, curve }) => {
               />
             )}
           </ComposedChart>
+        </div>
+        <div
+  className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 pointer-events-none z-20"
+  style={{
+    width: "1px",
+    background: "rgba(255,255,255,0.25)",
+    borderLeft: "1px dashed rgba(255,255,255,0.25)"
+  }}
+/>
         </div>
       </div>
     </div>
