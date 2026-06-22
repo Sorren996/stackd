@@ -140,8 +140,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const [containerWidth, setContainerWidth] = useState(600);
 
 
-const latestGlucoseTime = useMemo(() => {
-  if (!glucoseReadings.length) return snappedNow;
+
   useEffect(() => {
     if (!containerRef.current) return;
     const ro = new ResizeObserver(([e]) => setContainerWidth(e.contentRect.width));
@@ -163,6 +162,9 @@ const latestGlucoseTime = useMemo(() => {
   const snappedNow = Math.round(now / 180000) * 180000;
 const domainStart =
   snappedNow - 24 * 60 * 60 * 1000;
+
+const latestGlucoseTime = useMemo(() => {
+  if (!glucoseReadings.length) return snappedNow;
 
 const latestGlucoseTime = useMemo(() => {
   if (!glucoseReadings.length) return snappedNow;
