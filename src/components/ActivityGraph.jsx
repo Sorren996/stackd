@@ -161,7 +161,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 const snappedNow = Math.round(now / 180000) * 180000;
   const selectedRange = TIME_RANGES[rangeIdx];
   
-
+const latestGlucoseTime = useMemo(() => {
+  if (!glucoseReadings.length) return snappedNow;
 
 const domainStart =
   snappedNow - 24 * 60 * 60 * 1000;
@@ -179,8 +180,7 @@ const viewEnd =
   const filteredGlucoseReadings = filters.glucose ? glucoseReadings : [];
 
 
-const latestGlucoseTime = useMemo(() => {
-  if (!glucoseReadings.length) return snappedNow;
+
 
 
   return Math.max(
