@@ -344,7 +344,6 @@ const [glucoseValue, setGlucoseValue] = useState("");
           ) : (
             <>
 
-const [glucoseValue, setGlucoseValue] = useState("");
             
 <div className="overflow-y-auto h-[500px] px-5 pb-6 space-y-6">
   <div>
