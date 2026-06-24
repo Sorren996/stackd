@@ -32,11 +32,11 @@ export default function Layout() {
       {isLightMode && (
         <style>{`
           .app-light [class~="text-white"] {
-            color: #20332d !important;
+            color: #29433a !important;
           }
 
           .app-light [class*="text-white/"] {
-            color: rgba(32, 51, 45, 0.62) !important;
+            color: rgba(41, 67, 58, 0.6) !important;
           }
 
           .app-light [class*="border-white"] {
@@ -45,6 +45,40 @@ export default function Layout() {
 
           .app-light [class*="bg-white/"] {
             background-color: rgba(255, 255, 255, 0.62) !important;
+          }
+
+          .app-light label {
+            color: #29433a !important;
+          }
+
+          .app-light [class*="text-teal-"] {
+            color: #237b70 !important;
+          }
+
+          .app-light [class*="text-orange-"],
+          .app-light [class*="text-amber-"] {
+            color: #a96821 !important;
+          }
+
+          .app-light [class*="text-red-"] {
+            color: #b35b5d !important;
+          }
+
+          .app-light [class*="text-blue-"] {
+            color: #4a78a5 !important;
+          }
+
+          .app-light [class*="bg-teal-"] {
+            background-color: rgba(35, 123, 112, 0.1) !important;
+          }
+
+          .app-light [class*="bg-amber-"],
+          .app-light [class*="bg-orange-"] {
+            background-color: rgba(169, 104, 33, 0.1) !important;
+          }
+
+          .app-light [class*="bg-red-"] {
+            background-color: rgba(179, 91, 93, 0.1) !important;
           }
 
           .app-light .metric-card,
