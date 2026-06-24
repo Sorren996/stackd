@@ -559,13 +559,13 @@ description="This estimate compares active carbohydrate absorption with active f
                 setOpenTooltip={setOpenTooltip}
               />
 <MetricCard
-  label="Carb and Insulin Balance"
+  label="Insulin:Carb Ratio"
   value={netValue}
 sub={
   needsInsulinPlan
     ? "Enter your plan to calculate balance"
     : trajectory.glucoseAsOf
-      ? `glucose as of ${formatRelativeAge(trajectory.glucoseAsOf)}`
+      ? `Updated ${formatRelativeAge(trajectory.glucoseAsOf)}`
       : isPeakInFuture
         ? `peak ~${formatClockTime(netPeakTime)}`
         : "balance"
