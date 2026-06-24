@@ -116,7 +116,7 @@ export default function Dashboard() {
       {recentDoses.length === 0 && recentGlucose.length === 0 && recentCarbs.length === 0 ?
       <div className="flex flex-col items-center justify-center py-20 text-center">
           <Activity className="w-10 h-10 text-muted-foreground/40 mb-3" />
-          <h3 className="text-lg font-semibold text-[hsl(var(--popover))]">No active insulin</h3>
+          <h3 <h3 className="text-lg font-semibold text-white">No active insulin</h3>
           <p className="text-sm text-muted-foreground mt-1 max-w-sm">
             Log your first dose to see its pharmacokinetic curve — onset, peak, and duration — all visualized on a timeline.
           </p>
@@ -126,7 +126,7 @@ export default function Dashboard() {
           <ActiveInsulinBanner doses={recentDoses} latestGlucose={latestGlucose} glucoseReadings={glucoseReadings} carbEntries={recentCarbs} />
 
           {stackingAlertsEnabled && activeRapidCount > 1 && (
-            <div className="mx-0 pb-3 sm:mx-0 flex items-start gap-3 p-4 rounded-xl">
+            <div className="dashboard-stacking-alert mx-0 flex items-start gap-3 rounded-xl p-4 pb-3 sm:mx-0">
               <AlertTriangle className="w-5 h-5 mt-0.5 shrink-0 text-amber-500" />
               <div>
                 <p className="font-semibold text-sm">Insulin Stacking Detected</p>
