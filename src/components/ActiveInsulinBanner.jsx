@@ -5,6 +5,7 @@ import {
   getActiveCarbsNow,
   getTotalCarbsToday,
   getCarbAbsorptionAt,
+  generateCarbCurve,
 } from "@/lib/carbAbsorption";
 import { motion, AnimatePresence } from "framer-motion";
 
