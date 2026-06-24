@@ -314,9 +314,19 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
 
   const TrendIcon = TREND_ICONS[trendArrow] || ArrowRight;
 
-  const netValue = netActiveCarbs > 5 ? "Carbs lead" : netActiveCarbs < -5 ? "Insulin leads" : "Balanced";
-  const netLabel = netActiveCarbs > 5 ? "Glucose may rise" : netActiveCarbs < -5 ? "Glucose may fall" : "Carbs and insulin aligned";
-  const netColor = netActiveCarbs > 5 ? "#ef4444" : netActiveCarbs < -5 ? "#3b82f6" : "#35a879";
+const netValue =
+  netActiveCarbs > 5
+    ? "More carbs active"
+    : netActiveCarbs < -5
+      ? "More insulin active"
+      : "In balance";
+
+const netLabel =
+  netActiveCarbs > 5
+    ? "Glucose may rise"
+    : netActiveCarbs < -5
+      ? "Glucose may fall"
+      : "Carbs and insulin are aligned";  const netColor = netActiveCarbs > 5 ? "#ef4444" : netActiveCarbs < -5 ? "#3b82f6" : "#35a879";
 
 
   const getGlucoseStatus = (val) => {
