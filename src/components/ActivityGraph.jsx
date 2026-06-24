@@ -471,7 +471,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                   return (
                     <circle
                       key={`dot-${payload.time}`}
-                      cx={cx} cy={cy} r={3.5}
+                      cx={cx} cy={cy} r={1.5}
                       fill={color}
                       stroke="rgba(0,0,0,0.4)"
                       strokeWidth={1}
