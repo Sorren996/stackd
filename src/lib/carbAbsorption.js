@@ -25,8 +25,6 @@ export const ABSORPTION_PROFILES = {
 };
 
 
-
-
 export const PROFILE_COLORS = {
   fast:   "#ef4444",
   medium: "#f59e0b",
