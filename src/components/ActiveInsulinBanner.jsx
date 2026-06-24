@@ -314,8 +314,8 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
 
   const TrendIcon = TREND_ICONS[trendArrow] || ArrowRight;
 
-  const netPct = Math.round(Math.min(100, Math.max(-100, (netActiveCarbs / 50) * 100)));
-  const netLabel = netActiveCarbs > 5 ? "Rising Risk" : netActiveCarbs < -5 ? "Falling Risk" : "Balanced";
+  const netValue = netActiveCarbs > 5 ? "Carbs lead" : netActiveCarbs < -5 ? "Insulin leads" : "Balanced";
+  const netLabel = netActiveCarbs > 5 ? "Glucose may rise" : netActiveCarbs < -5 ? "Glucose may fall" : "Carbs and insulin aligned";
   const netColor = netActiveCarbs > 5 ? "#ef4444" : netActiveCarbs < -5 ? "#3b82f6" : "#35a879";
 
 
@@ -336,8 +336,8 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
     <>
       <AnimatePresence>
         {openTooltip === "active-carbs" && (
-          <TooltipPopover key="active-carbs-tip" title="Active Carbs"
-            description="Active Carbs estimates the amount of carbohydrates currently being absorbed from recent meals. This value decreases as food absorption progresses."
+          <TooltipPopover key="net-carbs-tip" title="Carb and Insulin Balance"
+            description="This estimate compares active carbohydrate absorption with active food-coverage insulin across their remaining duration. It uses your most recent glucose reading for correction insulin. It is a balance estimate, not a glucose prediction or dosing recommendation."
             onClose={() => setOpenTooltip(null)} />
         )}
         {openTooltip === "net-carbs" && (
@@ -354,7 +354,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
                 </div>
                 {netPeakTime && (
                   <p className="text-[11px] text-white/40 mt-2">
-                    {netActiveCarbs > 5 ? "Peak risk" : netActiveCarbs < -5 ? "Lowest point" : "Most notable point"}
+                    {netActiveCarbs > 5 ? "Largest carb lead" : netActiveCarbs < -5 ? "Largest insulin lead" : "Most notable balance point"}
                     {isPeakInFuture ? " expected " : " was "}
                     <span className="font-semibold" style={{ color: netColor }}>
                       {formatClockTime(netPeakTime)}
@@ -473,8 +473,8 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
                 setOpenTooltip={setOpenTooltip}
               />
 <MetricCard
-  label="Net Carbs"
-  value={`${Math.abs(netPct)}%`}
+  label="Carb / Insulin"
+  value={netValue}
   sub={
     trajectory.glucoseAsOf
       ? `glucose as of ${formatRelativeAge(trajectory.glucoseAsOf)}`
