@@ -479,7 +479,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                     />
                   );
                 }}
-                activeDot={{ r: 5, stroke: "rgba(0,0,0,0.4)", strokeWidth: 1 }}
+                activeDot={{ r: 1.5, stroke: "rgba(0,0,0,0.4)", strokeWidth: 1 }}
                 connectNulls={true}
                 isAnimationActive={false}
               />
