@@ -62,7 +62,7 @@ function computeNetCarbTrajectory(doses, carbEntries, latestGlucose) {
   });
 
   if (horizon <= now) {
-    return { points: [], peak: null, trough: null, atNow: 0 };
+    return { points: [], peak: null, trough: null, atNow: 0, glucoseAsOf: null };
   }
 
   const currentGlucose = latestGlucose ? latestGlucose.value : 100;
@@ -75,7 +75,7 @@ function computeNetCarbTrajectory(doses, carbEntries, latestGlucose) {
     const activeUnits = getTotalActiveUnits(doses, t);
     const activeCarbs = getActiveCarbsAt(carbEntries, t);
     const activeFoodUnits = Math.max(0, activeUnits - correctionUnits);
-    const net = activeCarbs - activeFoodUnits * 10; // 10g carb ≈ 1 unit, same ratio as before
+    const net = activeCarbs - activeFoodUnits * 10;
     points.push({ time: t, net, activeUnits, activeCarbs });
   }
 
@@ -83,10 +83,57 @@ function computeNetCarbTrajectory(doses, carbEntries, latestGlucose) {
   const peak = points.reduce((a, b) => (b.net > a.net ? b : a), points[0]);
   const trough = points.reduce((a, b) => (b.net < a.net ? b : a), points[0]);
 
-  return { points, peak, trough, atNow };
+  // Surface when the glucose reading used for the correction offset was
+  // taken, so the UI can make clear this isn't a live/predictive value.
+  const glucoseAsOf = latestGlucose?.recorded_at ? new Date(latestGlucose.recorded_at).getTime() : null;
+
+  return { points, peak, trough, atNow, glucoseAsOf };
+}
+
+function formatRelativeAge(ms) {
+  if (!ms) return null;
+  const diffMin = Math.round((Date.now() - ms) / 60000);
+  if (diffMin < 1) return "just now";
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const h = Math.floor(diffMin / 60);
+  const m = diffMin % 60;
+  return m > 0 ? `${h}h ${m}m ago` : `${h}h ago`;
 }
 
 function TooltipPopover({ title, description, onClose, children }) {
+{openTooltip === "net-carbs" && (
+  <TooltipPopover key="net-carbs-tip" title="Net Active Carbs"
+    description="Net Active Carbs compares the full carbohydrate absorption curve against insulin dedicated to food coverage across its entire active duration — after accounting for correction insulin based on your most recent glucose reading. The status shown reflects the single worst point across that whole window, not just the next 30 minutes, so slower meals or insulin still rising toward its peak are accounted for."
+    onClose={() => setOpenTooltip(null)}
+  >
+    {trajectory.glucoseAsOf && (
+      <p className="text-[11px] text-white/40 mt-3 pt-3 border-t border-white/10">
+        Based on glucose reading from{" "}
+        <span className="font-semibold text-white/60">{formatRelativeAge(trajectory.glucoseAsOf)}</span>
+        {" "}({formatClockTime(trajectory.glucoseAsOf)}). This offset is held constant across the projection — it does not predict future glucose.
+      </p>
+    )}
+    {trajectory.points.length > 1 && (
+      <div className="mt-3">
+        <RiskSparkline points={trajectory.points} color={netColor} />
+        <div className="flex justify-between text-[10px] text-white/30 mt-1">
+          <span>Now</span>
+          <span>{formatClockTime(trajectory.points[trajectory.points.length - 1].time)}</span>
+        </div>
+        {netPeakTime && (
+          <p className="text-[11px] text-white/40 mt-2">
+            {netActiveCarbs > 5 ? "Peak risk" : netActiveCarbs < -5 ? "Lowest point" : "Most notable point"}
+            {isPeakInFuture ? " expected " : " was "}
+            <span className="font-semibold" style={{ color: netColor }}>
+              {formatClockTime(netPeakTime)}
+            </span>
+          </p>
+        )}
+      </div>
+    )}
+  </TooltipPopover>
+)}
+
   return (
     <AnimatePresence>
       <motion.div
