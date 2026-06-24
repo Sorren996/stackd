@@ -366,7 +366,7 @@ const [glucoseValue, setGlucoseValue] = useState("");
     const nextValue = e.target.value.replace(/\D/g, "").slice(0, 3);
     setGlucoseValue(nextValue);
   }}
-  placeholder="Enter reading"
+  placeholder="--"
   className="w-full bg-transparent text-center text-[48px] font-bold text-[#e9e9e9] outline-none placeholder:text-white/20"
   style={{ fontSize: "48px" }}
 />
