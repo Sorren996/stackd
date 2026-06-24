@@ -344,40 +344,45 @@ export function getCarbAbsorptionAt(entry, targetTime = Date.now()) {
     };
   }
 
-const activeDuration = durationMin - onsetMin;
-const progress = (elapsedMin - onsetMin) / activeDuration;
-const peakProgress = Math.min(
-  0.95,
-  Math.max(0.05, (peakMin - onsetMin) / activeDuration)
+const activeElapsed = elapsedMin - onsetMin;
+const riseDuration = peakMin - onsetMin;
+const plateauDuration = Math.min(
+  profile.plateauMin ?? 0,
+  durationMin - peakMin
 );
+const taperDuration = durationMin - peakMin - plateauDuration;
 
-const riseExponent = profile.riseExponent ?? 0.5;
+const riseExponent = profile.riseExponent ?? 1.5;
 const taperExponent = profile.taperExponent ?? 0.6;
 
-const riseArea = peakProgress / (riseExponent + 1);
-const taperArea = (1 - peakProgress) / (taperExponent + 1);
-const totalArea = riseArea + taperArea;
+const riseArea = riseDuration / (riseExponent + 1);
+const plateauArea = plateauDuration;
+const taperArea = taperDuration / (taperExponent + 1);
+const totalArea = riseArea + plateauArea + taperArea;
 
-let absorbedFraction;
 let relativeRate;
+let absorbedArea;
 
-if (progress <= peakProgress) {
-  const riseProgress = progress / peakProgress;
+if (activeElapsed <= riseDuration) {
+  const progress = activeElapsed / riseDuration;
 
-  relativeRate = riseProgress ** riseExponent;
-  absorbedFraction =
-    (riseArea * riseProgress ** (riseExponent + 1)) / totalArea;
+  relativeRate = progress ** riseExponent;
+  absorbedArea = riseArea * progress ** (riseExponent + 1);
+} else if (activeElapsed <= riseDuration + plateauDuration) {
+  relativeRate = 1;
+  absorbedArea = riseArea + (activeElapsed - riseDuration);
 } else {
-  const taperProgress = (progress - peakProgress) / (1 - peakProgress);
+  const afterPlateau = activeElapsed - riseDuration - plateauDuration;
+  const progress = afterPlateau / taperDuration;
 
-  relativeRate = (1 - taperProgress) ** taperExponent;
-  absorbedFraction =
-    (riseArea +
-      taperArea * (1 - (1 - taperProgress) ** (taperExponent + 1))) /
-    totalArea;
+  relativeRate = (1 - progress) ** taperExponent;
+  absorbedArea =
+    riseArea +
+    plateauArea +
+    taperArea * (1 - (1 - progress) ** (taperExponent + 1));
 }
 
-const safeFraction = Math.max(0, Math.min(1, absorbedFraction));
+const safeFraction = Math.max(0, Math.min(1, absorbedArea / totalArea));
 const absorbedGrams = entry.carbs * safeFraction;
 
 return {
