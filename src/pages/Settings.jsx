@@ -28,6 +28,28 @@ export default function Settings() {
     const saved = localStorage.getItem("target_range_high");
     return saved ? parseInt(saved, 10) : 180;
   });
+
+const [insulinSensitivity, setInsulinSensitivity] = useState(() => {
+  return localStorage.getItem("insulin_sensitivity_mgdl_per_unit") || "";
+});
+
+const [unitsPer5g, setUnitsPer5g] = useState(() => {
+  return localStorage.getItem("meal_insulin_units_per_5g") || "";
+});
+
+const handleInsulinSettingChange = (key, setValue) => (event) => {
+  const value = event.target.value;
+  setValue(value);
+
+  if (value === "") {
+    localStorage.removeItem(key);
+  } else {
+    localStorage.setItem(key, value);
+  }
+
+  window.dispatchEvent(new Event("insulin-settings-updated"));
+};
+
   const isRecommended = targetLow === 70 && targetHigh === 180;
 
   const queryClient = useQueryClient();
