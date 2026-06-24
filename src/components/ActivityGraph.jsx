@@ -7,11 +7,11 @@ import { HelpCircle, SlidersHorizontal, Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const TIME_RANGES = [
-  { label: "1h", hours: 1, pxPerMin: 18 },
-  { label: "3h", hours: 3, pxPerMin: 8 },
-  { label: "12h", hours: 12, pxPerMin: 2.5 },
-  { label: "24h", hours: 24, pxPerMin: null },
-];
+{ label: "1h", hours: 1, pxPerMin: 18 },
+{ label: "3h", hours: 3, pxPerMin: 8 },
+{ label: "12h", hours: 12, pxPerMin: 2.5 },
+{ label: "24h", hours: 24, pxPerMin: null }];
+
 
 function getGlucoseColor(mgdl) {
   return "hsla(0, 0%, 93%, 1.00)";
@@ -36,8 +36,8 @@ function CustomTooltip({ active, payload, label }) {
             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
             <span className="text-white/80">Glucose</span>
             <span className="ml-auto pl-3 font-medium" style={{ color }}>{mgdl} mg/dL</span>
-          </div>
-        );
+          </div>);
+
       })()}
       {insulinEntries.map((p) => {
         const actual = p.payload[`${p.dataKey}_actual`];
@@ -50,8 +50,8 @@ function CustomTooltip({ active, payload, label }) {
               <span className="text-white font-medium">{actual != null ? actual.toFixed(1) : p.value.toFixed(1)}u</span>
               {total != null && <span className="text-white/30 text-[10px]"> / {total}u</span>}
             </span>
-          </div>
-        );
+          </div>);
+
       })}
       {carbCurveEntries.map((p) => {
         const carbs = p.payload[`${p.dataKey}_carbs`];
@@ -63,20 +63,20 @@ function CustomTooltip({ active, payload, label }) {
             <span className="ml-auto pl-3">
               <span className="font-medium" style={{ color: p.color }}>{carbs}g carbs</span>
             </span>
-          </div>
-        );
+          </div>);
+
       })}
-    </div>
-  );
+    </div>);
+
 }
 
 // Filter dropdown — portal-rendered with smart viewport positioning
 function FilterDropdown({ filters, onChange, anchorRect }) {
   const items = [
-    { key: "glucose", label: "Glucose", color: "rgba(255,255,255,0.6)" },
-    { key: "insulin", label: "Insulin", color: "#35a879" },
-    { key: "carbs", label: "Carbs", color: "#f59e0b" },
-  ];
+  { key: "glucose", label: "Glucose", color: "rgba(255,255,255,0.6)" },
+  { key: "insulin", label: "Insulin", color: "#35a879" },
+  { key: "carbs", label: "Carbs", color: "#f59e0b" }];
+
 
   const MARGIN = 8;
   const DROPDOWN_W = 140;
@@ -92,9 +92,9 @@ function FilterDropdown({ filters, onChange, anchorRect }) {
   // Vertical: prefer below button, flip above if not enough space
   const spaceBelow = vh - anchorRect.bottom;
   const openBelow = spaceBelow >= DROPDOWN_H + MARGIN;
-  const top = openBelow
-    ? anchorRect.bottom + MARGIN
-    : anchorRect.top - DROPDOWN_H - MARGIN;
+  const top = openBelow ?
+  anchorRect.bottom + MARGIN :
+  anchorRect.top - DROPDOWN_H - MARGIN;
 
   const initY = openBelow ? -8 : 8;
 
@@ -104,28 +104,28 @@ function FilterDropdown({ filters, onChange, anchorRect }) {
       animate={{ opacity: 1, y: 0, scale: 1, transition: { type: "spring", stiffness: 380, damping: 28 } }}
       exit={{ opacity: 0, y: initY * 0.7, scale: 0.96, transition: { duration: 0.13 } }}
       className="fixed z-[200] rounded-2xl border border-white/10 shadow-2xl py-1.5"
-      style={{ background: "hsl(162,10%,10%)", width: DROPDOWN_W, left, top }}
-    >
-      {items.map((item) => (
-        <button
-          key={item.key}
-          onClick={() => onChange(item.key)}
-          className="w-full flex items-center gap-2.5 px-3.5 py-2 hover:bg-white/5 transition-colors text-left"
-        >
+      style={{ background: "hsl(162,10%,10%)", width: DROPDOWN_W, left, top }}>
+      
+      {items.map((item) =>
+      <button
+        key={item.key}
+        onClick={() => onChange(item.key)}
+        className="w-full flex items-center gap-2.5 px-3.5 py-2 hover:bg-white/5 transition-colors text-left">
+        
           <div className="w-4 h-4 rounded-md border flex items-center justify-center shrink-0 transition-all"
-            style={{
-              borderColor: filters[item.key] ? item.color : "rgba(255,255,255,0.15)",
-              backgroundColor: filters[item.key] ? item.color + "22" : "transparent",
-            }}>
+        style={{
+          borderColor: filters[item.key] ? item.color : "rgba(255,255,255,0.15)",
+          backgroundColor: filters[item.key] ? item.color + "22" : "transparent"
+        }}>
             {filters[item.key] && <Check className="w-2.5 h-2.5" style={{ color: item.color }} />}
           </div>
           <span className="text-sm font-medium" style={{ color: filters[item.key] ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.35)" }}>
             {item.label}
           </span>
         </button>
-      ))}
-    </motion.div>
-  );
+      )}
+    </motion.div>);
+
 }
 
 export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries = [] }) {
@@ -169,30 +169,30 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const filteredGlucoseReadings = filters.glucose ? glucoseReadings : [];
 
   const allCurvesMeta = useMemo(() =>
-    filteredDoses.map((dose) => ({
-      dose,
-      curve: generateActivityCurve(dose, 3),
-      profile: INSULIN_PROFILES[dose.insulin_type],
-    })),
-    [filteredDoses]
+  filteredDoses.map((dose) => ({
+    dose,
+    curve: generateActivityCurve(dose, 3),
+    profile: INSULIN_PROFILES[dose.insulin_type]
+  })),
+  [filteredDoses]
   );
 
   const allCarbCurvesMeta = useMemo(() =>
-    filteredCarbEntries
-      .filter((e) => !e.is_custom)
-      .map((entry) => ({
-        entry,
-        curve: generateCarbCurve(entry),
-        color: PROFILE_COLORS[entry.absorption_profile] || "#f59e0b",
-      })),
-    [filteredCarbEntries]
+  filteredCarbEntries.
+  filter((e) => !e.is_custom).
+  map((entry) => ({
+    entry,
+    curve: generateCarbCurve(entry),
+    color: PROFILE_COLORS[entry.absorption_profile] || "#f59e0b"
+  })),
+  [filteredCarbEntries]
   );
 
   const customCarbEvents = useMemo(() =>
-    filteredCarbEntries
-      .filter((e) => e.is_custom)
-      .map((e) => ({ time: new Date(e.consumed_at).getTime(), entry: e })),
-    [filteredCarbEntries]
+  filteredCarbEntries.
+  filter((e) => e.is_custom).
+  map((e) => ({ time: new Date(e.consumed_at).getTime(), entry: e })),
+  [filteredCarbEntries]
   );
 
   const glucoseMap = useMemo(() => {
@@ -206,7 +206,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   }, [filteredGlucoseReadings]);
 
   const maxDoseUnits = useMemo(() => Math.max(...filteredDoses.map((d) => d.units), 1), [filteredDoses]);
-  const maxCarbGrams = useMemo(() => Math.max(...filteredCarbEntries.filter(e => !e.is_custom).map((e) => e.carbs), 1), [filteredCarbEntries]);
+  const maxCarbGrams = useMemo(() => Math.max(...filteredCarbEntries.filter((e) => !e.is_custom).map((e) => e.carbs), 1), [filteredCarbEntries]);
 
   const chartData = useMemo(() => {
     if (!doses.length && !glucoseReadings.length && !carbEntries.length) return [];
@@ -222,7 +222,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         } else {
           let lo = 0;
           for (let j = 0; j < curve.length - 1; j++) {
-            if (curve[j].time <= t && curve[j + 1].time >= t) { lo = j; break; }
+            if (curve[j].time <= t && curve[j + 1].time >= t) {lo = j;break;}
           }
           const hi = Math.min(lo + 1, curve.length - 1);
           const ratio = hi === lo ? 0 : (t - curve[lo].time) / (curve[hi].time - curve[lo].time);
@@ -239,7 +239,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         } else {
           let lo = 0;
           for (let j = 0; j < curve.length - 1; j++) {
-            if (curve[j].time <= t && curve[j + 1].time >= t) { lo = j; break; }
+            if (curve[j].time <= t && curve[j + 1].time >= t) {lo = j;break;}
           }
           const hi = Math.min(lo + 1, curve.length - 1);
           const ratio = hi === lo ? 0 : (t - curve[lo].time) / (curve[hi].time - curve[lo].time);
@@ -256,25 +256,25 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   }, [doses, glucoseReadings, carbEntries, filters, domainStart, domainEnd, allCurvesMeta, allCarbCurvesMeta, glucoseMap, maxCarbGrams]);
 
   const doseKeys = useMemo(() =>
-    filteredDoses.map((dose) => ({
-      key: `dose_${dose.id}`,
-      label: dose.insulin_type.split(" ")[0],
-      units: dose.units,
-      color: INSULIN_PROFILES[dose.insulin_type]?.color || "#888",
-    })),
-    [filteredDoses]
+  filteredDoses.map((dose) => ({
+    key: `dose_${dose.id}`,
+    label: dose.insulin_type.split(" ")[0],
+    units: dose.units,
+    color: INSULIN_PROFILES[dose.insulin_type]?.color || "#888"
+  })),
+  [filteredDoses]
   );
 
   const carbKeys = useMemo(() =>
-    filteredCarbEntries
-      .filter((e) => !e.is_custom)
-      .map((entry) => ({
-        key: `carb_${entry.id}`,
-        label: entry.food_name,
-        carbs: entry.carbs,
-        color: PROFILE_COLORS[entry.absorption_profile] || "#f59e0b",
-      })),
-    [filteredCarbEntries]
+  filteredCarbEntries.
+  filter((e) => !e.is_custom).
+  map((entry) => ({
+    key: `carb_${entry.id}`,
+    label: entry.food_name,
+    carbs: entry.carbs,
+    color: PROFILE_COLORS[entry.absorption_profile] || "#f59e0b"
+  })),
+  [filteredCarbEntries]
   );
 
   const is24h = selectedRange.pxPerMin === null;
@@ -309,26 +309,26 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               setFilterAnchorRect(rect);
               setShowFilter((v) => !v);
             }}
-            className={`w-8 h-8 flex items-center justify-center rounded-xl border transition-all relative ${
-              showFilter
-                ? "bg-teal-500/10 border-teal-500/30 text-teal-400"
-                : "border-white/5 bg-white/[0.03] text-white/40 hover:text-white/80 hover:bg-white/[0.08]"
-            }`}
-          >
+            className={`w-8 h-8 flex items-center rounded-xl border transition-all relative hidden justify-center ${
+            showFilter ?
+            "bg-teal-500/10 border-teal-500/30 text-teal-400" :
+            "border-white/5 bg-white/[0.03] text-white/40 hover:text-white/80 hover:bg-white/[0.08]"}`
+            }>
+            
             <SlidersHorizontal className="w-4 h-4" />
-            {activeFilterCount < 3 && (
-              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-teal-400" />
-            )}
+            {activeFilterCount < 3 &&
+            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-teal-400" />
+            }
           </button>
         </div>
         {/* Portal-style backdrop + dropdown rendered outside flow */}
         <AnimatePresence>
-          {showFilter && filterAnchorRect && (
-            <>
+          {showFilter && filterAnchorRect &&
+          <>
               <div className="fixed inset-0 z-[199]" onClick={() => setShowFilter(false)} />
               <FilterDropdown filters={filters} onChange={toggleFilter} anchorRect={filterAnchorRect} />
             </>
-          )}
+          }
         </AnimatePresence>
 </div>
 
@@ -347,22 +347,22 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             margin={{ top: 12, right: 0, left: -20, bottom: 0 }}
             onMouseMove={(state) => setIsInteracting(!!(state && state.activePayload))}
             onMouseLeave={() => setIsInteracting(false)}
-            onTouchStart={(state) => { if (state && state.activePayload) setIsInteracting(true); }}
-            onTouchMove={(state) => { if (state && state.activePayload) setIsInteracting(true); }}
+            onTouchStart={(state) => {if (state && state.activePayload) setIsInteracting(true);}}
+            onTouchMove={(state) => {if (state && state.activePayload) setIsInteracting(true);}}
             onTouchEnd={() => setIsInteracting(false)}>
             <defs>
-              {doseKeys.map((k) => (
-                <linearGradient key={k.key} id={`grad_${k.key}`} x1="0" y1="0" x2="0" y2="1">
+              {doseKeys.map((k) =>
+              <linearGradient key={k.key} id={`grad_${k.key}`} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor={k.color} stopOpacity={0.35} />
                   <stop offset="100%" stopColor={k.color} stopOpacity={0.0} />
                 </linearGradient>
-              ))}
-              {carbKeys.map((k) => (
-                <linearGradient key={k.key} id={`grad_${k.key}`} x1="0" y1="0" x2="0" y2="1">
+              )}
+              {carbKeys.map((k) =>
+              <linearGradient key={k.key} id={`grad_${k.key}`} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor={k.color} stopOpacity={0.28} />
                   <stop offset="100%" stopColor={k.color} stopOpacity={0.0} />
                 </linearGradient>
-              ))}
+              )}
               <linearGradient id="glucose_range_grad" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#78350f" stopOpacity={0} />
                 <stop offset={`${highPct}%`} stopColor="#78350f" stopOpacity={0} />
@@ -381,8 +381,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               tick={{ fontSize: 10, fill: "rgba(255,255,255,0.25)", textAnchor: "middle" }}
               axisLine={false}
               tickLine={false}
-              tickCount={tickCount}
-            />
+              tickCount={tickCount} />
+            
 
             <YAxis yAxisId="insulin" domain={[0, 75]} hide />
             <YAxis yAxisId="carbs" domain={[0, 55]} hide />
@@ -395,98 +395,98 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               x={snappedNow}
               stroke="rgba(255,255,255,0.2)"
               strokeDasharray="3 3"
-              strokeWidth={1}
-            />
+              strokeWidth={1} />
+            
 
-            {filters.glucose && filteredGlucoseReadings.length > 0 && (
-              <Area
-                yAxisId="glucose"
-                type="monotoneX"
-                dataKey="bg"
-                stroke="none"
-                fill="url(#glucose_range_grad)"
-                isAnimationActive={false}
-                dot={false}
-                activeDot={false}
-                legendType="none"
-              />
+            {filters.glucose && filteredGlucoseReadings.length > 0 &&
+            <Area
+              yAxisId="glucose"
+              type="monotoneX"
+              dataKey="bg"
+              stroke="none"
+              fill="url(#glucose_range_grad)"
+              isAnimationActive={false}
+              dot={false}
+              activeDot={false}
+              legendType="none" />
+
+            }
+
+            {doseKeys.map((k) =>
+            <Area
+              key={k.key}
+              yAxisId="insulin"
+              type="monotoneX"
+              dataKey={k.key}
+              name={k.label}
+              stroke={k.color}
+              strokeWidth={2.5}
+              fill={`url(#grad_${k.key})`}
+              dot={false}
+              isAnimationActive={false} />
+
             )}
 
-            {doseKeys.map((k) => (
-              <Area
-                key={k.key}
-                yAxisId="insulin"
-                type="monotoneX"
-                dataKey={k.key}
-                name={k.label}
-                stroke={k.color}
-                strokeWidth={2.5}
-                fill={`url(#grad_${k.key})`}
-                dot={false}
-                isAnimationActive={false}
-              />
-            ))}
+            {carbKeys.map((k) =>
+            <Area
+              key={k.key}
+              yAxisId="carbs"
+              type="monotoneX"
+              dataKey={k.key}
+              name={k.label}
+              stroke={k.color}
+              strokeWidth={2}
+              strokeDasharray="5 3"
+              fill={`url(#grad_${k.key})`}
+              dot={false}
+              isAnimationActive={false}
+              opacity={0.85} />
 
-            {carbKeys.map((k) => (
-              <Area
-                key={k.key}
-                yAxisId="carbs"
-                type="monotoneX"
-                dataKey={k.key}
-                name={k.label}
-                stroke={k.color}
-                strokeWidth={2}
-                strokeDasharray="5 3"
-                fill={`url(#grad_${k.key})`}
-                dot={false}
-                isAnimationActive={false}
-                opacity={0.85}
-              />
-            ))}
-
-            {customCarbEvents.map(({ time, entry }) => (
-              <ReferenceLine
-                key={`custom_${entry.id}`}
-                yAxisId="carbs"
-                x={time}
-                stroke="#6b7280"
-                strokeDasharray="3 3"
-                strokeWidth={1.5}
-                label={{ value: `${entry.carbs}g`, position: "insideTopRight", fill: "#9ca3af", fontSize: 9 }}
-              />
-            ))}
-
-            {filters.glucose && filteredGlucoseReadings.length > 0 && (
-              <Line
-                yAxisId="glucose"
-                type="monotoneX"
-                dataKey="glucose"
-                name="Glucose"
-                stroke="rgba(255,255,255,0.25)"
-                strokeWidth={1.5}
-                dot={(props) => {
-                  const { cx, cy, payload } = props;
-                  if (payload.glucose == null) return <g key={`dot-${payload.time}`} />;
-                  const color = getGlucoseColor(payload.glucose);
-                  return (
-                    <circle
-                      key={`dot-${payload.time}`}
-                      cx={cx} cy={cy} r={1.5}
-                      fill={color}
-                      stroke="rgba(0,0,0,0.4)"
-                      strokeWidth={1}
-                      style={{ filter: `drop-shadow(0 0 3px ${color}99)` }}
-                    />
-                  );
-                }}
-                activeDot={{ r: 1.5, stroke: "rgba(0,0,0,0.4)", strokeWidth: 1 }}
-                connectNulls={true}
-                isAnimationActive={false}
-              />
             )}
+
+            {customCarbEvents.map(({ time, entry }) =>
+            <ReferenceLine
+              key={`custom_${entry.id}`}
+              yAxisId="carbs"
+              x={time}
+              stroke="#6b7280"
+              strokeDasharray="3 3"
+              strokeWidth={1.5}
+              label={{ value: `${entry.carbs}g`, position: "insideTopRight", fill: "#9ca3af", fontSize: 9 }} />
+
+            )}
+
+            {filters.glucose && filteredGlucoseReadings.length > 0 &&
+            <Line
+              yAxisId="glucose"
+              type="monotoneX"
+              dataKey="glucose"
+              name="Glucose"
+              stroke="rgba(255,255,255,0.25)"
+              strokeWidth={1.5}
+              dot={(props) => {
+                const { cx, cy, payload } = props;
+                if (payload.glucose == null) return <g key={`dot-${payload.time}`} />;
+                const color = getGlucoseColor(payload.glucose);
+                return (
+                  <circle
+                    key={`dot-${payload.time}`}
+                    cx={cx} cy={cy} r={1.5}
+                    fill={color}
+                    stroke="rgba(0,0,0,0.4)"
+                    strokeWidth={1}
+                    style={{ filter: `drop-shadow(0 0 3px ${color}99)` }} />);
+
+
+              }}
+              activeDot={{ r: 1.5, stroke: "rgba(0,0,0,0.4)", strokeWidth: 1 }}
+              connectNulls={true}
+              isAnimationActive={false} />
+
+            }
           </ComposedChart>
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 }
