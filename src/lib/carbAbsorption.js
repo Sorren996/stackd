@@ -297,6 +297,34 @@ export function getCarbAbsorptionAt(entry, targetTime = Date.now()) {
     return { absorbedGrams: 0, remainingGrams: 0, absorptionRateGPerMin: 0 };
   }
 
+  export function generateCarbCurve(entry) {
+  if (entry.is_custom || !entry.absorption_profile) return [];
+
+  const profile = ABSORPTION_PROFILES[entry.absorption_profile];
+  if (!profile) return [];
+
+  const start = new Date(entry.consumed_at).getTime();
+  const end = start + profile.durationMin * 60000;
+  const step = 3 * 60000;
+  const result = [];
+
+  for (let time = start; time <= end; time += step) {
+    const absorption = getCarbAbsorptionAt(entry, time);
+
+    result.push({
+      time,
+      // Keeps older code compatible: activity now means the fraction
+      // of this meal's carbs that is still digesting.
+      activity: entry.carbs > 0
+        ? absorption.remainingGrams / entry.carbs
+        : 0,
+      ...absorption,
+    });
+  }
+
+  return result;
+}
+
   const profile = ABSORPTION_PROFILES[entry.absorption_profile];
   if (!profile) {
     return { absorbedGrams: 0, remainingGrams: 0, absorptionRateGPerMin: 0 };
