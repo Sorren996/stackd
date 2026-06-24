@@ -57,10 +57,6 @@ function getActiveCarbsAt(entries, targetTime) {
   }, 0);
 }
 
-const trajectory = useMemo(
-  () => computeNetCarbTrajectory(doses, carbEntries, latestGlucose, insulinSettings),
-  [doses, carbEntries, latestGlucose, insulinSettings]
-);
 
 /**
  * Sweep the entire overlap window of all active insulin doses and carb
@@ -291,6 +287,11 @@ function formatClockTime(ms) {
 export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadings = [], carbEntries = [] }) {
   const [openTooltip, setOpenTooltip] = useState(null);
 const [insulinSettings, setInsulinSettings] = useState(readInsulinSettings);
+const trajectory = useMemo(
+  () => computeNetCarbTrajectory(doses, carbEntries, latestGlucose, insulinSettings),
+  [doses, carbEntries, latestGlucose, insulinSettings]
+);
+
 
 useEffect(() => {
   const refreshSettings = () => setInsulinSettings(readInsulinSettings);
