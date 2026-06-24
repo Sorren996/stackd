@@ -332,7 +332,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         </AnimatePresence>
 
         {/* Range selector */}
-        <div className="flex gap-0.5 rounded-xl p-1" style={{ background: "rgba(255,255,255,0.05)" }}>
+        {/*<div className="flex gap-0.5 rounded-xl p-1" style={{ background: "rgba(255,255,255,0.05)" }}>
           {TIME_RANGES.map((r, i) => (
             <button
               key={r.label}
@@ -351,7 +351,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               <span className="relative z-10">{r.label}</span>
             </button>
           ))}
-        </div>
+        </div>*/}
 
         {/* Help icon */}
         <div className="relative">
