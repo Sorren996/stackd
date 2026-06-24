@@ -368,18 +368,27 @@ export function generateCarbCurve(entry) {
   const end = start + profile.durationMin * 60000;
   const step = 3 * 60000;
   const result = [];
+for (let time = start; time <= end; time += step) {
+  const absorption = getCarbAbsorptionAt(entry, time);
+  const activeDuration = profile.durationMin - profile.onsetMin;
+  const peakRateGPerMin = entry.carbs * (2 / activeDuration);
 
-  for (let time = start; time <= end; time += step) {
-    const absorption = getCarbAbsorptionAt(entry, time);
+  const activity = peakRateGPerMin > 0
+    ? absorption.absorptionRateGPerMin / peakRateGPerMin
+    : 0;
 
-    result.push({
-      time,
-      activity: entry.carbs > 0
-        ? absorption.remainingGrams / entry.carbs
-        : 0,
-      ...absorption,
-    });
-  }
+  result.push({
+    time,
+    activity,
+    absorbedFraction: entry.carbs > 0
+      ? absorption.absorbedGrams / entry.carbs
+      : 0,
+    remainingFraction: entry.carbs > 0
+      ? absorption.remainingGrams / entry.carbs
+      : 0,
+    ...absorption,
+  });
+}
 
   return result;
 }
