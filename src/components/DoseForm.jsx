@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
@@ -33,8 +33,13 @@ function createInsulinRow(defaults = {}) {
   };
 }
 
+function readLightMode() {
+  return localStorage.getItem("theme") === "light";
+}
+
 export default function DoseForm({ open, onOpenChange }) {
   const [tab, setTab] = useState("insulin");
+  const [isLightMode, setIsLightMode] = useState(readLightMode);
   const [insulinRows, setInsulinRows] = useState(() => [createInsulinRow()]);
   const [insulinNotes, setInsulinNotes] = useState("");
   const [insulinTime, setInsulinTime] = useState(() => new Date().toTimeString().slice(0, 5));
@@ -44,6 +49,17 @@ export default function DoseForm({ open, onOpenChange }) {
 
   const queryClient = useQueryClient();
   const nowTimeString = new Date().toTimeString().slice(0, 5);
+
+  useEffect(() => {
+    const refreshTheme = () => setIsLightMode(readLightMode());
+    window.addEventListener("app-theme-changed", refreshTheme);
+    window.addEventListener("storage", refreshTheme);
+
+    return () => {
+      window.removeEventListener("app-theme-changed", refreshTheme);
+      window.removeEventListener("storage", refreshTheme);
+    };
+  }, []);
 
   const createDoses = useMutation({
     mutationFn: (doses) => base44.entities.InsulinDose.bulkCreate(doses),
@@ -166,10 +182,36 @@ export default function DoseForm({ open, onOpenChange }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogPortal>
-        <DialogOverlay className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm" />
+        {isLightMode && (
+          <style>{`
+            .dose-form-light [class~="text-white"] { color: #29433a !important; }
+            .dose-form-light [class*="text-white/"] { color: rgba(41, 67, 58, 0.6) !important; }
+            .dose-form-light [class*="border-white"] { border-color: rgba(32, 90, 76, 0.14) !important; }
+            .dose-form-light [class*="bg-white/"] { background-color: rgba(255,255,255,0.64) !important; }
+            .dose-form-light input,
+            .dose-form-light select,
+            .dose-form-light textarea { color: #29433a !important; }
+            .dose-form-light input::placeholder,
+            .dose-form-light textarea::placeholder { color: rgba(41, 67, 58, 0.42) !important; }
+            .dose-form-light select option,
+            .dose-form-light select optgroup { background: #edf5f2; color: #29433a; }
+            .dose-form-light [class*="text-teal-"] { color: #237b70 !important; }
+            .dose-form-light [class*="text-orange-"],
+            .dose-form-light [class*="text-amber-"] { color: #a96821 !important; }
+          `}</style>
+        )}
+        <DialogOverlay
+          className="fixed inset-0 z-50 backdrop-blur-sm"
+          style={{ background: isLightMode ? "rgba(30, 63, 53, 0.18)" : "rgba(0, 0, 0, 0.75)" }}
+        />
         <DialogPrimitive.Content
-          className="fixed bottom-0 left-0 right-0 z-50 flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl border border-white/5 shadow-2xl sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl"
-          style={{ background: "hsl(162,10%,8%)" }}
+          className={`fixed bottom-0 left-0 right-0 z-50 flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl border border-white/5 shadow-2xl sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl ${isLightMode ? "dose-form-light" : ""}`}
+          style={{
+            background: isLightMode
+              ? "linear-gradient(145deg, rgba(255,255,255,0.98), rgba(236,246,242,0.96))"
+              : "hsl(162,10%,8%)",
+            borderColor: isLightMode ? "rgba(32,90,76,0.16)" : undefined,
+          }}
         >
           <div className="flex items-center justify-between px-6 pb-3 pt-5">
             <div className="w-8" />
@@ -288,7 +330,7 @@ export default function DoseForm({ open, onOpenChange }) {
                         if (event.target.value <= nowTimeString) setInsulinTime(event.target.value);
                       }}
                       className="cursor-pointer bg-transparent text-sm font-medium text-white outline-none"
-                      style={{ colorScheme: "dark" }}
+                      style={{ colorScheme: isLightMode ? "light" : "dark" }}
                     />
                   </div>
                 </div>
@@ -328,7 +370,7 @@ export default function DoseForm({ open, onOpenChange }) {
                     ? "Logging..."
                     : totalUnits
                       ? `Log ${totalUnits % 1 === 0 ? totalUnits : totalUnits.toFixed(1)} units`
-                      : "Log dose(s)"}
+                      : "Add insulin units"}
                 </button>
               </div>
             </>
@@ -365,7 +407,7 @@ export default function DoseForm({ open, onOpenChange }) {
                         if (event.target.value <= nowTimeString) setGlucoseTime(event.target.value);
                       }}
                       className="cursor-pointer bg-transparent text-sm font-medium text-white outline-none"
-                      style={{ colorScheme: "dark" }}
+                      style={{ colorScheme: isLightMode ? "light" : "dark" }}
                     />
                   </div>
                 </div>
