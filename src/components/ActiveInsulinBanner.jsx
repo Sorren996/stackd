@@ -47,11 +47,23 @@ function getCurveActivityAt(curve, t) {
   return curve[lo].activity + ratio * (curve[hi].activity - curve[lo].activity);
 }
 
-function getTotalActiveUnits(doses, targetTime = Date.now()) {
+function getTotalActiveUnits(doses, targetTime = Date.now(), selectUnits = (dose) => dose.units) {
   return doses.reduce((sum, dose) => {
+    const units = Number(selectUnits(dose));
+    if (!Number.isFinite(units) || units <= 0) return sum;
+
     const curve = generateActivityCurve(dose, 3);
-    return sum + getCurveActivityAt(curve, targetTime) * dose.units;
+    return sum + getCurveActivityAt(curve, targetTime) * units;
   }, 0);
+}
+
+function getTotalActiveMealUnits(doses, targetTime = Date.now()) {
+  // Older logs did not contain a split, so preserve their previous behavior.
+  return getTotalActiveUnits(doses, targetTime, (dose) => dose.meal_units ?? dose.units);
+}
+
+function getTotalActiveCorrectionUnits(doses, targetTime = Date.now()) {
+  return getTotalActiveUnits(doses, targetTime, (dose) => dose.correction_units ?? 0);
 }
 
 function getActiveCarbsAt(entries, targetTime) {
@@ -93,23 +105,26 @@ function computeNetCarbTrajectory(doses, carbEntries, latestGlucose, insulinSett
     return { points: [], peak: null, trough: null, atNow: 0, glucoseAsOf: null };
   }
 
-  const currentGlucose = latestGlucose ? latestGlucose.value : 100;
-  const targetGlucose = 110;
+
  if (!insulinSettings.isComplete) {
   return { points: [], peak: null, trough: null, atNow: 0, glucoseAsOf: null };
 }
-
-const isf = insulinSettings.insulinSensitivityMgDlPerUnit;
 const gramsPerUnit = 5 / insulinSettings.mealInsulinUnitsPer5g;
-const correctionUnits = Math.max(0, currentGlucose - targetGlucose) / isf;
 
   const points = [];
   for (let t = now; t <= horizon; t += SAMPLE_STEP_MS) {
-    const activeUnits = getTotalActiveUnits(doses, t);
-    const activeCarbs = getActiveCarbsAt(carbEntries, t);
-    const activeFoodUnits = Math.max(0, activeUnits - correctionUnits);
-const net = activeCarbs - activeFoodUnits * gramsPerUnit;
-    points.push({ time: t, net, activeUnits, activeCarbs });
+const activeUnits = getTotalActiveUnits(doses, t);
+const activeMealUnits = getTotalActiveMealUnits(doses, t);
+const activeCarbs = getActiveCarbsAt(carbEntries, t);
+const net = activeCarbs - activeMealUnits * gramsPerUnit;
+
+points.push({
+  time: t,
+  net,
+  activeUnits,
+  activeMealUnits,
+  activeCarbs,
+});
   }
 
   const atNow = points.length ? points[0].net : 0;
@@ -313,7 +328,12 @@ useEffect(() => {
     window.removeEventListener("storage", refreshSettings);
   };
 }, []);
-  const activeUnits = useMemo(() => getTotalActiveUnits(doses), [doses]);
+const activeMealUnits = useMemo(() => getTotalActiveMealUnits(doses), [doses]);
+
+const activeCorrectionUnits = useMemo(
+  () => getTotalActiveCorrectionUnits(doses),
+  [doses]
+);
   const hasActive = activeUnits > 0.01;
 
   const activeCarbs = useMemo(() => getActiveCarbsNow(carbEntries), [carbEntries]);
@@ -375,29 +395,40 @@ useEffect(() => {
 
 const needsInsulinPlan = !insulinSettings.isComplete;
 
+const correctionOnlyActive =
+  activeCorrectionUnits > 0.01 &&
+  activeMealUnits <= 0.01 &&
+  activeCarbs <= 0.5;
+
 const netValue = needsInsulinPlan
   ? "Setup needed"
-  : netActiveCarbs > 5
-    ? "High carb activity"
-    : netActiveCarbs < -5
-      ? "High insulin activity"
-      : "Balanced";
+  : correctionOnlyActive
+    ? "Correction active"
+    : netActiveCarbs > 5
+      ? "More carbs active"
+      : netActiveCarbs < -5
+        ? "More insulin active"
+        : "In balance";
 
 const netLabel = needsInsulinPlan
   ? "Add insulin plan in Settings"
-  : netActiveCarbs > 5
-    ? "Glucose may rise"
-    : netActiveCarbs < -5
-      ? "Glucose may fall"
-      : "Carbs and insulin are aligned";
+  : correctionOnlyActive
+    ? "No meal carbs digesting"
+    : netActiveCarbs > 5
+      ? "Glucose may rise"
+      : netActiveCarbs < -5
+        ? "Glucose may fall"
+        : "Carbs and insulin are aligned";
 
 const netColor = needsInsulinPlan
   ? "#f59e0b"
-  : netActiveCarbs > 5
-    ? "#ef4444"
-    : netActiveCarbs < -5
-      ? "#3b82f6"
-      : "#35a879";
+  : correctionOnlyActive
+    ? "#f59e0b"
+    : netActiveCarbs > 5
+      ? "#ef4444"
+      : netActiveCarbs < -5
+        ? "#3b82f6"
+        : "#35a879";
 
   const getGlucoseStatus = (val) => {
     if (!val) return "—";
