@@ -1,10 +1,33 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowUp, ArrowDown, ArrowRight, ArrowUpRight, ArrowDownRight, Info, X, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { INSULIN_PROFILES, generateActivityCurve } from "@/lib/insulinPharmacology";
 import { getActiveCarbsNow, getTotalCarbsToday, generateCarbCurve } from "@/lib/carbAbsorption";
 import { motion, AnimatePresence } from "framer-motion";
 
+
+
+
+function readInsulinSettings() {
+  const insulinSensitivityMgDlPerUnit = Number(
+    localStorage.getItem("insulin_sensitivity_mgdl_per_unit")
+  );
+  const mealInsulinUnitsPer5g = Number(
+    localStorage.getItem("meal_insulin_units_per_5g")
+  );
+
+  return {
+    insulinSensitivityMgDlPerUnit,
+    mealInsulinUnitsPer5g,
+    isComplete:
+      insulinSensitivityMgDlPerUnit > 0 &&
+      mealInsulinUnitsPer5g > 0,
+  };
+}
+
+
 const SAMPLE_STEP_MS = 5 * 60 * 1000; // 5 min resolution for the trajectory sweep
+
+
 
 function getCurveActivityAt(curve, t) {
   if (!curve.length) return 0;
@@ -193,6 +216,22 @@ function RiskSparkline({ points, color, height = 36 }) {
 
 // Glassmorphic metric card
 function MetricCard({ label, value, sub, status, orbColor, orbDuration = 6, tooltipId, openTooltip, setOpenTooltip }) {
+  
+  
+  const [insulinSettings, setInsulinSettings] = useState(readInsulinSettings);
+
+useEffect(() => {
+  const refreshSettings = () => setInsulinSettings(readInsulinSettings);
+
+  window.addEventListener("insulin-settings-updated", refreshSettings);
+  window.addEventListener("storage", refreshSettings);
+
+  return () => {
+    window.removeEventListener("insulin-settings-updated", refreshSettings);
+    window.removeEventListener("storage", refreshSettings);
+  };
+}, []);
+  
   return (
     <motion.div
       whileTap={{ scale: 0.97 }}
@@ -205,6 +244,8 @@ function MetricCard({ label, value, sub, status, orbColor, orbDuration = 6, tool
         minHeight: 100,
       }}
     >
+
+    
       <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none">
         <AmbientOrb color={orbColor} duration={orbDuration} size={56} />
       </div>
