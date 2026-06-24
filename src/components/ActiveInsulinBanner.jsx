@@ -4,22 +4,25 @@ import { INSULIN_PROFILES, generateActivityCurve } from "@/lib/insulinPharmacolo
 import { getActiveCarbsNow, getTotalCarbsToday, generateCarbCurve } from "@/lib/carbAbsorption";
 import { motion, AnimatePresence } from "framer-motion";
 
+const SAMPLE_STEP_MS = 5 * 60 * 1000; // 5 min resolution for the trajectory sweep
+
+function getCurveActivityAt(curve, t) {
+  if (!curve.length) return 0;
+  const first = curve[0], last = curve[curve.length - 1];
+  if (t < first.time || t > last.time) return 0;
+  let lo = 0;
+  for (let i = 0; i < curve.length - 1; i++) {
+    if (curve[i].time <= t && curve[i + 1].time >= t) { lo = i; break; }
+  }
+  const hi = Math.min(lo + 1, curve.length - 1);
+  const ratio = hi === lo ? 0 : (t - curve[lo].time) / (curve[hi].time - curve[lo].time);
+  return curve[lo].activity + ratio * (curve[hi].activity - curve[lo].activity);
+}
+
 function getTotalActiveUnits(doses, targetTime = Date.now()) {
-  const now = targetTime;
   return doses.reduce((sum, dose) => {
     const curve = generateActivityCurve(dose, 3);
-    if (!curve.length) return sum;
-    const last = curve[curve.length - 1];
-    const first = curve[0];
-    if (now < first.time || now > last.time) return sum;
-    let lo = 0;
-    for (let i = 0; i < curve.length - 1; i++) {
-      if (curve[i].time <= now && curve[i + 1].time >= now) { lo = i; break; }
-    }
-    const hi = lo + 1;
-    const ratio = hi >= curve.length ? 0 : (now - curve[lo].time) / (curve[hi].time - curve[lo].time);
-    const activity = curve[lo].activity + ratio * (curve[hi].activity - curve[lo].activity);
-    return sum + activity * dose.units;
+    return sum + getCurveActivityAt(curve, targetTime) * dose.units;
   }, 0);
 }
 
@@ -27,20 +30,63 @@ function getActiveCarbsAt(entries, targetTime) {
   return entries.reduce((sum, entry) => {
     if (entry.is_custom) return sum;
     const curve = generateCarbCurve(entry);
-    if (!curve.length) return sum;
-    if (targetTime < curve[0].time || targetTime > curve[curve.length - 1].time) return sum;
-    let lo = 0;
-    for (let i = 0; i < curve.length - 1; i++) {
-      if (curve[i].time <= targetTime && curve[i + 1].time >= targetTime) { lo = i; break; }
-    }
-    const hi = Math.min(lo + 1, curve.length - 1);
-    const ratio = hi === lo ? 0 : (targetTime - curve[lo].time) / (curve[hi].time - curve[lo].time);
-    const activity = curve[lo].activity + ratio * (curve[hi].activity - curve[lo].activity);
-    return sum + activity * entry.carbs;
+    return sum + getCurveActivityAt(curve, targetTime) * entry.carbs;
   }, 0);
 }
 
-function TooltipPopover({ title, description, onClose }) {
+/**
+ * Sweep the entire overlap window of all active insulin doses and carb
+ * entries, computing net carbs-vs-food-insulin at each sample point.
+ *
+ * This replaces a fixed 30-minute lookahead, which missed risk developing
+ * later in the IOB/COB curve — e.g. a slow-absorbing meal peaking at 2hrs,
+ * or insulin still climbing toward its own peak past the 30-min mark.
+ *
+ * Note: the glucose-based correction offset is a static snapshot taken from
+ * the latest reading and applied at every sample point. It is NOT a glucose
+ * prediction — it won't reflect a real glucose change until a new reading
+ * is logged.
+ */
+function computeNetCarbTrajectory(doses, carbEntries, latestGlucose) {
+  const now = Date.now();
+
+  let horizon = now;
+  doses.forEach((dose) => {
+    const curve = generateActivityCurve(dose, 3);
+    if (curve.length) horizon = Math.max(horizon, curve[curve.length - 1].time);
+  });
+  carbEntries.forEach((entry) => {
+    if (entry.is_custom) return;
+    const curve = generateCarbCurve(entry);
+    if (curve.length) horizon = Math.max(horizon, curve[curve.length - 1].time);
+  });
+
+  if (horizon <= now) {
+    return { points: [], peak: null, trough: null, atNow: 0 };
+  }
+
+  const currentGlucose = latestGlucose ? latestGlucose.value : 100;
+  const targetGlucose = 110;
+  const isf = 50;
+  const correctionUnits = Math.max(0, currentGlucose - targetGlucose) / isf;
+
+  const points = [];
+  for (let t = now; t <= horizon; t += SAMPLE_STEP_MS) {
+    const activeUnits = getTotalActiveUnits(doses, t);
+    const activeCarbs = getActiveCarbsAt(carbEntries, t);
+    const activeFoodUnits = Math.max(0, activeUnits - correctionUnits);
+    const net = activeCarbs - activeFoodUnits * 10; // 10g carb ≈ 1 unit, same ratio as before
+    points.push({ time: t, net, activeUnits, activeCarbs });
+  }
+
+  const atNow = points.length ? points[0].net : 0;
+  const peak = points.reduce((a, b) => (b.net > a.net ? b : a), points[0]);
+  const trough = points.reduce((a, b) => (b.net < a.net ? b : a), points[0]);
+
+  return { points, peak, trough, atNow };
+}
+
+function TooltipPopover({ title, description, onClose, children }) {
   return (
     <AnimatePresence>
       <motion.div
@@ -68,6 +114,7 @@ function TooltipPopover({ title, description, onClose }) {
             </button>
           </div>
           <p className="text-xs text-white/50 leading-relaxed">{description}</p>
+          {children}
         </motion.div>
       </motion.div>
     </AnimatePresence>
@@ -91,6 +138,39 @@ function AmbientOrb({ color, duration = 6, size = 48 }) {
   );
 }
 
+// Tiny inline sparkline for the net-carbs risk trajectory
+function RiskSparkline({ points, color, height = 36 }) {
+  if (!points || points.length < 2) return null;
+
+  const width = 240;
+  const values = points.map((p) => p.net);
+  const min = Math.min(...values, 0);
+  const max = Math.max(...values, 0);
+  const range = max - min || 1;
+
+  const toXY = (p, i) => {
+    const x = (i / (points.length - 1)) * width;
+    const y = height - ((p.net - min) / range) * height;
+    return [x, y];
+  };
+
+  const pathD = points
+    .map((p, i) => {
+      const [x, y] = toXY(p, i);
+      return `${i === 0 ? "M" : "L"} ${x.toFixed(1)} ${y.toFixed(1)}`;
+    })
+    .join(" ");
+
+  const zeroY = height - ((0 - min) / range) * height;
+
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} width="100%" height={height} preserveAspectRatio="none">
+      <line x1="0" y1={zeroY} x2={width} y2={zeroY} stroke="rgba(255,255,255,0.15)" strokeWidth="1" strokeDasharray="3,3" />
+      <path d={pathD} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 // Glassmorphic metric card
 function MetricCard({ label, value, sub, status, orbColor, orbDuration = 6, tooltipId, openTooltip, setOpenTooltip }) {
   return (
@@ -105,7 +185,6 @@ function MetricCard({ label, value, sub, status, orbColor, orbDuration = 6, tool
         minHeight: 100,
       }}
     >
-      {/* Ambient orb background */}
       <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none">
         <AmbientOrb color={orbColor} duration={orbDuration} size={56} />
       </div>
@@ -142,6 +221,11 @@ const TREND_ICONS = {
   "down": ArrowDown,
 };
 
+function formatClockTime(ms) {
+  if (!ms) return null;
+  return new Date(ms).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}
+
 export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadings = [], carbEntries = [] }) {
   const [openTooltip, setOpenTooltip] = useState(null);
 
@@ -151,18 +235,24 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
   const activeCarbs = useMemo(() => getActiveCarbsNow(carbEntries), [carbEntries]);
   const totalCarbsToday = useMemo(() => getTotalCarbsToday(carbEntries), [carbEntries]);
 
-  const futureTime = Date.now() + 30 * 60 * 1000;
-  const activeUnitsFuture = useMemo(() => getTotalActiveUnits(doses, futureTime), [doses]);
-  const activeCarbsFuture = useMemo(() => getActiveCarbsAt(carbEntries, futureTime), [carbEntries]);
+  // Full IOB/COB trajectory sweep, replacing the old fixed 30-min lookahead.
+  const trajectory = useMemo(
+    () => computeNetCarbTrajectory(doses, carbEntries, latestGlucose),
+    [doses, carbEntries, latestGlucose]
+  );
 
-  const netActiveCarbs = useMemo(() => {
-    const currentGlucose = latestGlucose ? latestGlucose.value : 100;
-    const targetGlucose = 110;
-    const isf = 50;
-    const activeCorrectionUnits = Math.max(0, currentGlucose - targetGlucose) / isf;
-    const activeFoodUnitsFuture = Math.max(0, activeUnitsFuture - activeCorrectionUnits);
-    return activeCarbsFuture - activeFoodUnitsFuture * 10;
-  }, [activeCarbsFuture, activeUnitsFuture, latestGlucose]);
+  // The worst point (largest magnitude, either direction) across the whole
+  // window drives the displayed risk status — not an arbitrary single point.
+  const worstPoint = useMemo(() => {
+    if (!trajectory.peak && !trajectory.trough) return null;
+    const peakMag = Math.abs(trajectory.peak?.net ?? 0);
+    const troughMag = Math.abs(trajectory.trough?.net ?? 0);
+    return peakMag >= troughMag ? trajectory.peak : trajectory.trough;
+  }, [trajectory]);
+
+  const netActiveCarbs = worstPoint?.net ?? 0;
+  const netPeakTime = worstPoint?.time ?? null;
+  const isPeakInFuture = netPeakTime && netPeakTime > Date.now() + 60000;
 
   const totalAdministered = useMemo(() => doses.reduce((sum, d) => sum + d.units, 0) || 1, [doses]);
 
@@ -197,7 +287,6 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
   const glucoseVal = latestGlucose?.value;
   const glucoseColor = !glucoseVal ? "#35a879" : glucoseVal < 70 ? "#3b82f6" : glucoseVal > 180 ? "#f59e0b" : "#35a879";
 
-  // Ambient background color based on glucose state
   const ambientColor = !glucoseVal ? "#0d4a2e" : glucoseVal < 55 ? "#7f1d1d" : glucoseVal < 70 ? "#1e3a5f" : glucoseVal > 250 ? "#7c2d12" : glucoseVal > 180 ? "#78350f" : "#0d4a2e";
 
   const TrendIcon = TREND_ICONS[trendArrow] || ArrowRight;
@@ -215,7 +304,6 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
 
   const hasCarbData = carbEntries.length > 0;
 
-  // Target range check
   const targetLow = parseInt(localStorage.getItem("target_range_low") || "70", 10);
   const targetHigh = parseInt(localStorage.getItem("target_range_high") || "180", 10);
   const inRange = glucoseVal ? (glucoseVal >= targetLow && glucoseVal <= targetHigh) : null;
@@ -230,13 +318,32 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
         )}
         {openTooltip === "net-carbs" && (
           <TooltipPopover key="net-carbs-tip" title="Net Active Carbs"
-            description="Net Active Carbs compares carbohydrate absorption against insulin dedicated to food coverage — after accounting for correction insulin based on your current glucose level. A positive % means carbs may be outpacing insulin (rising risk), a negative % means insulin may be stronger (falling risk)."
-            onClose={() => setOpenTooltip(null)} />
+            description="Net Active Carbs compares the full carbohydrate absorption curve against insulin dedicated to food coverage across its entire active duration — after accounting for correction insulin based on your most recent glucose reading. The status shown reflects the single worst point across that whole window, not just the next 30 minutes, so slower meals or insulin still rising toward its peak are accounted for."
+            onClose={() => setOpenTooltip(null)}
+          >
+            {trajectory.points.length > 1 && (
+              <div className="mt-3">
+                <RiskSparkline points={trajectory.points} color={netColor} />
+                <div className="flex justify-between text-[10px] text-white/30 mt-1">
+                  <span>Now</span>
+                  <span>{formatClockTime(trajectory.points[trajectory.points.length - 1].time)}</span>
+                </div>
+                {netPeakTime && (
+                  <p className="text-[11px] text-white/40 mt-2">
+                    {netActiveCarbs > 5 ? "Peak risk" : netActiveCarbs < -5 ? "Lowest point" : "Most notable point"}
+                    {isPeakInFuture ? " expected " : " was "}
+                    <span className="font-semibold" style={{ color: netColor }}>
+                      {formatClockTime(netPeakTime)}
+                    </span>
+                  </p>
+                )}
+              </div>
+            )}
+          </TooltipPopover>
         )}
       </AnimatePresence>
 
       <div className="pt-2 pb-6 -mx-4 px-4">
-        {/* Ambient breathing background orb */}
         <div className="absolute left-1/2 -translate-x-1/2 top-16 w-72 h-72 pointer-events-none -z-10 overflow-hidden">
           <motion.div
             animate={{ scale: [1, 1.08, 1], opacity: [0.25, 0.4, 0.25] }}
@@ -270,7 +377,6 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
 
           <span className="text-sm text-white/35 font-medium mb-4">mg/dL</span>
 
-          {/* Status capsule */}
           <motion.div
             whileTap={{ scale: 0.96 }}
             className="flex items-center gap-2 px-4 py-2 rounded-full"
@@ -343,7 +449,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
               <MetricCard
                 label="Net Carbs"
                 value={`${Math.abs(netPct)}%`}
-                sub="balance"
+                sub={isPeakInFuture ? `peak ~${formatClockTime(netPeakTime)}` : "balance"}
                 status={netLabel}
                 orbColor={netColor}
                 orbDuration={8}
@@ -362,7 +468,6 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
             </div>
           </>
         ) : (
-          /* No carb data: just 2 cards */
           <div className="grid grid-cols-2 gap-3">
             <MetricCard
               label="Active Insulin"
