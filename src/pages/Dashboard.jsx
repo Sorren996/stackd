@@ -116,7 +116,7 @@ export default function Dashboard() {
       {recentDoses.length === 0 && recentGlucose.length === 0 && recentCarbs.length === 0 ?
       <div className="flex flex-col items-center justify-center py-20 text-center">
           <Activity className="w-10 h-10 text-muted-foreground/40 mb-3" />
-          <h3 <h3 className="text-lg font-semibold text-white">No active insulin</h3>
+          <h3 className="text-lg font-semibold text-white">No active insulin</h3>
           <p className="text-sm text-muted-foreground mt-1 max-w-sm">
             Log your first dose to see its pharmacokinetic curve — onset, peak, and duration — all visualized on a timeline.
           </p>
