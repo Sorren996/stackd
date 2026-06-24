@@ -88,6 +88,12 @@ export default function Layout() {
             box-shadow: 0 14px 34px rgba(31, 70, 59, 0.08), inset 0 1px 0 rgba(255,255,255,0.88) !important;
           }
 
+          .app-light .active-alert-row {
+            background: rgba(255,255,255,0.68) !important;
+            border-color: rgba(32, 90, 76, 0.13) !important;
+            box-shadow: 0 8px 22px rgba(31, 70, 59, 0.05), inset 0 1px 0 rgba(255,255,255,0.9);
+          }
+
           .app-light .theme-popover {
             background: rgba(255,255,255,0.96) !important;
             border-color: rgba(32, 90, 76, 0.16) !important;
