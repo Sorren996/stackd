@@ -4,7 +4,7 @@ import { INSULIN_PROFILES, generateActivityCurve } from "@/lib/insulinPharmacolo
 import { getActiveCarbsNow, getTotalCarbsToday, generateCarbCurve } from "@/lib/carbAbsorption";
 import { motion, AnimatePresence } from "framer-motion";
 
-function getTotalActiveUnits(doses, targetTime = Date.now()) {
+function getTotalActiveUnits(doses = [], targetTime = Date.now()) {
   const now = targetTime;
   return doses.reduce((sum, dose) => {
     const curve = generateActivityCurve(dose, 3);
@@ -23,7 +23,7 @@ function getTotalActiveUnits(doses, targetTime = Date.now()) {
   }, 0);
 }
 
-function getActiveCarbsAt(entries, targetTime) {
+function getActiveCarbsAt(entries = [], targetTime) {
   return entries.reduce((sum, entry) => {
     if (entry.is_custom) return sum;
     const curve = generateCarbCurve(entry);
@@ -155,7 +155,7 @@ const TREND_ICONS = {
   "down": ArrowDown,
 };
 
-export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadings = [], carbEntries = [] }) {
+export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucoseReadings = [], carbEntries = [] }) {
   const [openTooltip, setOpenTooltip] = useState(null);
   const [now, setNow] = useState(Date.now());
 
