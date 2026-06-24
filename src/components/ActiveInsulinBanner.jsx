@@ -166,7 +166,7 @@ function TooltipPopover({ title, description, onClose, children }) {
           exit={{ opacity: 0, scale: 0.94, y: -8 }}
           transition={{ type: "spring", stiffness: 360, damping: 26 }}
           onClick={(event) => event.stopPropagation()}
-          className="w-full max-w-xs rounded-2xl border border-white/10 p-4 shadow-2xl"
+          className="theme-popover w-full max-w-xs rounded-2xl border border-white/10 p-4 shadow-2xl"
           style={{ background: "hsl(162,10%,10%)" }}
         >
           <div className="mb-2 flex items-start justify-between gap-3">
@@ -218,7 +218,7 @@ function RiskSparkline({ points, color }) {
   const zeroY = height - ((0 - min) / range) * height;
 
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} width="100%" height={height} preserveAspectRatio="none">
+    <svg className="balance-sparkline" viewBox={`0 0 ${width} ${height}`} width="100%" height={height} preserveAspectRatio="none">
       <line x1="0" y1={zeroY} x2={width} y2={zeroY} stroke="rgba(255,255,255,0.15)" strokeWidth="1" strokeDasharray="3,3" />
       <path d={path} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
@@ -229,7 +229,7 @@ function MetricCard({ label, value, sub, status, color, tooltipId, openTooltip, 
   return (
     <motion.div
       whileTap={{ scale: 0.97 }}
-      className="relative flex min-h-[112px] flex-col justify-between overflow-hidden rounded-2xl p-4"
+      className="metric-card relative flex min-h-[112px] flex-col justify-between overflow-hidden rounded-2xl p-4"
       style={{
         background: "rgba(255,255,255,0.04)",
         border: "1px solid rgba(255,255,255,0.08)",
@@ -444,7 +444,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
         </div>
 
         {latestGlucose && (
-          <div className="mb-6 flex items-center gap-3 rounded-2xl border border-white/[0.07] bg-white/[0.04] px-4 py-3">
+          <div className="dashboard-surface mb-6 flex items-center gap-3 rounded-2xl border border-white/[0.07] bg-white/[0.04] px-4 py-3">
             <div className="flex h-5 items-end gap-0.5">
               {[3, 4, 3, 5, 4, 3, 4, 5, 3].map((height, index) => (
                 <span
