@@ -318,23 +318,6 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
   const netLabel = netActiveCarbs > 5 ? "Rising Risk" : netActiveCarbs < -5 ? "Falling Risk" : "Balanced";
   const netColor = netActiveCarbs > 5 ? "#ef4444" : netActiveCarbs < -5 ? "#3b82f6" : "#35a879";
 
-  <MetricCard
-  label="Net Carbs"
-  value={`${Math.abs(netPct)}%`}
-  sub={
-    trajectory.glucoseAsOf
-      ? `glucose as of ${formatRelativeAge(trajectory.glucoseAsOf)}`
-      : isPeakInFuture
-      ? `peak ~${formatClockTime(netPeakTime)}`
-      : "balance"
-  }
-  status={netLabel}
-  orbColor={netColor}
-  orbDuration={8}
-  tooltipId="net-carbs"
-  openTooltip={openTooltip}
-  setOpenTooltip={setOpenTooltip}
-/>
 
   const getGlucoseStatus = (val) => {
     if (!val) return "—";
@@ -468,6 +451,8 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
           <>
             <p className="text-[10px] font-bold text-white/25 uppercase tracking-[0.18em] mb-3">At a Glance</p>
             <div className="grid grid-cols-2 gap-3">
+
+
               <MetricCard
                 label="Active Insulin"
                 value={`${activeUnits.toFixed(1)}`}
@@ -487,17 +472,23 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
                 openTooltip={openTooltip}
                 setOpenTooltip={setOpenTooltip}
               />
-              <MetricCard
-                label="Net Carbs"
-                value={`${Math.abs(netPct)}%`}
-                sub={isPeakInFuture ? `peak ~${formatClockTime(netPeakTime)}` : "balance"}
-                status={netLabel}
-                orbColor={netColor}
-                orbDuration={8}
-                tooltipId="net-carbs"
-                openTooltip={openTooltip}
-                setOpenTooltip={setOpenTooltip}
-              />
+<MetricCard
+  label="Net Carbs"
+  value={`${Math.abs(netPct)}%`}
+  sub={
+    trajectory.glucoseAsOf
+      ? `glucose as of ${formatRelativeAge(trajectory.glucoseAsOf)}`
+      : isPeakInFuture
+        ? `peak ~${formatClockTime(netPeakTime)}`
+        : "balance"
+  }
+  status={netLabel}
+  orbColor={netColor}
+  orbDuration={8}
+  tooltipId="net-carbs"
+  openTooltip={openTooltip}
+  setOpenTooltip={setOpenTooltip}
+/>
               <MetricCard
                 label="Daily Average"
                 value={avgDailyGlucose ? `${avgDailyGlucose}` : "—"}
