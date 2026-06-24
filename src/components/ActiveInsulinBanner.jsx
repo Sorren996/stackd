@@ -50,11 +50,10 @@ function getTotalActiveUnits(doses, targetTime = Date.now()) {
 }
 
 function getActiveCarbsAt(entries, targetTime) {
-  return entries.reduce((sum, entry) => {
-    if (entry.is_custom) return sum;
-    const curve = generateCarbCurve(entry);
-    return sum + getCurveActivityAt(curve, targetTime) * entry.carbs;
-  }, 0);
+  return entries.reduce(
+    (sum, entry) => sum + getCarbAbsorptionAt(entry, targetTime).remainingGrams,
+    0
+  );
 }
 
 
