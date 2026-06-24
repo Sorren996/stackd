@@ -13,7 +13,7 @@ export const ABSORPTION_PROFILES = {
     peakMin: 65,
     durationMin: 150,
     riseExponent: 1.6,
-    taperExponent: 1.2,
+    taperExponent: 0,
   },
   slow: {
     onsetMin: 25,
