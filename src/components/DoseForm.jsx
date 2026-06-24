@@ -28,8 +28,10 @@ export default function DoseForm({ open, onOpenChange }) {
   const [insulinNotes, setInsulinNotes] = useState("");
   const [insulinTime, setInsulinTime] = useState(() => new Date().toTimeString().slice(0, 5));
 const [glucoseValue, setGlucoseValue] = useState("");
-  const [glucoseNotes, setGlucoseNotes] = useState("--");
+  const [glucoseNotes, setGlucoseNotes] = useState("");
   const [glucoseTime, setGlucoseTime] = useState(() => new Date().toTimeString().slice(0, 5));
+const [glucoseUpdatedAt, setGlucoseUpdatedAt] = useState(null);
+const [now, setNow] = useState(Date.now());
 
   const nowTimeString = new Date().toTimeString().slice(0, 5);
   const queryClient = useQueryClient();
