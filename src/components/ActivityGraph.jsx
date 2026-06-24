@@ -303,23 +303,23 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
         {/* Filter button */}
         <div className="relative justify-start">
-          <button
-            onClick={(e) => {
-              const rect = e.currentTarget.getBoundingClientRect();
-              setFilterAnchorRect(rect);
-              setShowFilter((v) => !v);
-            }}
-            className={`w-8 h-8 flex items-center rounded-xl border transition-all relative hidden justify-center ${
-            showFilter ?
-            "bg-teal-500/10 border-teal-500/30 text-teal-400" :
-            "border-white/5 bg-white/[0.03] text-white/40 hover:text-white/80 hover:bg-white/[0.08]"}`
-            }>
-            
-            <SlidersHorizontal className="w-4 h-4" />
-            {activeFilterCount < 3 &&
-            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-teal-400" />
-            }
-          </button>
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          
         </div>
         {/* Portal-style backdrop + dropdown rendered outside flow */}
         <AnimatePresence>
