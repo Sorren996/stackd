@@ -70,8 +70,8 @@ function getActiveCarbsAt(entries, targetTime) {
  * prediction — it won't reflect a real glucose change until a new reading
  * is logged.
  */
-function computeNetCarbTrajectory(doses, carbEntries, latestGlucose) {
-  const now = Date.now();
+function computeNetCarbTrajectory(doses, carbEntries, latestGlucose, insulinSettings) {
+    const now = Date.now();
 
   let horizon = now;
   doses.forEach((dose) => {
@@ -90,15 +90,20 @@ function computeNetCarbTrajectory(doses, carbEntries, latestGlucose) {
 
   const currentGlucose = latestGlucose ? latestGlucose.value : 100;
   const targetGlucose = 110;
-  const isf = 50;
-  const correctionUnits = Math.max(0, currentGlucose - targetGlucose) / isf;
+ if (!insulinSettings.isComplete) {
+  return { points: [], peak: null, trough: null, atNow: 0, glucoseAsOf: null };
+}
+
+const isf = insulinSettings.insulinSensitivityMgDlPerUnit;
+const gramsPerUnit = 5 / insulinSettings.mealInsulinUnitsPer5g;
+const correctionUnits = Math.max(0, currentGlucose - targetGlucose) / isf;
 
   const points = [];
   for (let t = now; t <= horizon; t += SAMPLE_STEP_MS) {
     const activeUnits = getTotalActiveUnits(doses, t);
     const activeCarbs = getActiveCarbsAt(carbEntries, t);
     const activeFoodUnits = Math.max(0, activeUnits - correctionUnits);
-    const net = activeCarbs - activeFoodUnits * 10;
+const net = activeCarbs - activeFoodUnits * gramsPerUnit;
     points.push({ time: t, net, activeUnits, activeCarbs });
   }
 
@@ -218,19 +223,7 @@ function RiskSparkline({ points, color, height = 36 }) {
 function MetricCard({ label, value, sub, status, orbColor, orbDuration = 6, tooltipId, openTooltip, setOpenTooltip }) {
   
   
-  const [insulinSettings, setInsulinSettings] = useState(readInsulinSettings);
-
-useEffect(() => {
-  const refreshSettings = () => setInsulinSettings(readInsulinSettings);
-
-  window.addEventListener("insulin-settings-updated", refreshSettings);
-  window.addEventListener("storage", refreshSettings);
-
-  return () => {
-    window.removeEventListener("insulin-settings-updated", refreshSettings);
-    window.removeEventListener("storage", refreshSettings);
-  };
-}, []);
+  
   
   return (
     <motion.div
@@ -292,7 +285,19 @@ function formatClockTime(ms) {
 
 export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadings = [], carbEntries = [] }) {
   const [openTooltip, setOpenTooltip] = useState(null);
+const [insulinSettings, setInsulinSettings] = useState(readInsulinSettings);
 
+useEffect(() => {
+  const refreshSettings = () => setInsulinSettings(readInsulinSettings);
+
+  window.addEventListener("insulin-settings-updated", refreshSettings);
+  window.addEventListener("storage", refreshSettings);
+
+  return () => {
+    window.removeEventListener("insulin-settings-updated", refreshSettings);
+    window.removeEventListener("storage", refreshSettings);
+  };
+}, []);
   const activeUnits = useMemo(() => getTotalActiveUnits(doses), [doses]);
   const hasActive = activeUnits > 0.01;
 
@@ -300,10 +305,8 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
   const totalCarbsToday = useMemo(() => getTotalCarbsToday(carbEntries), [carbEntries]);
 
   // Full IOB/COB trajectory sweep, replacing the old fixed 30-min lookahead.
-  const trajectory = useMemo(
-    () => computeNetCarbTrajectory(doses, carbEntries, latestGlucose),
-    [doses, carbEntries, latestGlucose]
-  );
+() => computeNetCarbTrajectory(doses, carbEntries, latestGlucose, insulinSettings),
+[doses, carbEntries, latestGlucose, insulinSettings]
 
   // The worst point (largest magnitude, either direction) across the whole
   // window drives the displayed risk status — not an arbitrary single point.
@@ -355,20 +358,31 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
 
   const TrendIcon = TREND_ICONS[trendArrow] || ArrowRight;
 
-const netValue =
-  netActiveCarbs > 5
+const needsInsulinPlan = !insulinSettings.isComplete;
+
+const netValue = needsInsulinPlan
+  ? "Setup needed"
+  : netActiveCarbs > 5
     ? "More carbs active"
     : netActiveCarbs < -5
       ? "More insulin active"
       : "In balance";
 
-const netLabel =
-  netActiveCarbs > 5
+const netLabel = needsInsulinPlan
+  ? "Add insulin plan in Settings"
+  : netActiveCarbs > 5
     ? "Glucose may rise"
     : netActiveCarbs < -5
       ? "Glucose may fall"
-      : "Carbs and insulin are aligned";  const netColor = netActiveCarbs > 5 ? "#ef4444" : netActiveCarbs < -5 ? "#3b82f6" : "#35a879";
+      : "Carbs and insulin are aligned";
 
+const netColor = needsInsulinPlan
+  ? "#f59e0b"
+  : netActiveCarbs > 5
+    ? "#ef4444"
+    : netActiveCarbs < -5
+      ? "#3b82f6"
+      : "#35a879";
 
   const getGlucoseStatus = (val) => {
     if (!val) return "—";
@@ -525,13 +539,15 @@ description="This estimate compares active carbohydrate absorption with active f
 <MetricCard
   label="Carb and Insulin Balance"
   value={netValue}
-  sub={
-    trajectory.glucoseAsOf
+sub={
+  needsInsulinPlan
+    ? "Enter your plan to calculate balance"
+    : trajectory.glucoseAsOf
       ? `glucose as of ${formatRelativeAge(trajectory.glucoseAsOf)}`
       : isPeakInFuture
         ? `peak ~${formatClockTime(netPeakTime)}`
         : "balance"
-  }
+}
   status={netLabel}
   orbColor={netColor}
   orbDuration={8}
