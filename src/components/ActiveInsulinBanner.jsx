@@ -125,9 +125,14 @@ const net = activeCarbs - activeFoodUnits * gramsPerUnit;
 
 function formatRelativeAge(ms) {
   if (!ms) return null;
-  const diffMin = Math.round((Date.now() - ms) / 60000);
+
+  const diffMin = Math.max(0, Math.round((Date.now() - ms) / 60000));
+
   if (diffMin < 1) return "just now";
-  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffMin < 60) {
+    return `${diffMin} ${diffMin === 1 ? "minute" : "minutes"} ago`;
+  }
+
   const h = Math.floor(diffMin / 60);
   const m = diffMin % 60;
   return m > 0 ? `${h}h ${m}m ago` : `${h}h ago`;
@@ -475,6 +480,12 @@ description="This estimate compares active carbohydrate absorption with active f
 
           <span className="text-sm text-white/35 font-medium mb-4">mg/dL</span>
 
+          {latestGlucose?.recorded_at && (
+  <span className="text-xs text-white/35 -mt-2 mb-4">
+    {formatRelativeAge(new Date(latestGlucose.recorded_at).getTime())}
+  </span>
+)}
+
           <motion.div
             whileTap={{ scale: 0.96 }}
             className="flex items-center gap-2 px-4 py-2 rounded-full"
@@ -490,6 +501,7 @@ description="This estimate compares active carbohydrate absorption with active f
 
         {/* ── Target Range Banner ── */}
         {latestGlucose && (
+          
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
