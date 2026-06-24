@@ -28,7 +28,26 @@ export default function Layout() {
   const mutedText = isLightMode ? "text-zinc-500" : "text-white/50";
 
   return (
-    <div className={`relative min-h-screen transition-colors duration-500 ${pageText}`}>
+    <div className={`relative min-h-screen overflow-x-hidden transition-colors duration-500 ${pageText} ${isLightMode ? "app-light" : "app-dark"}`}>
+      {isLightMode && (
+        <style>{`
+          .app-light [class~="text-white"] {
+            color: #18181b !important;
+          }
+
+          .app-light [class*="text-white/"] {
+            color: rgba(24, 24, 27, 0.62) !important;
+          }
+
+          .app-light [class*="border-white"] {
+            border-color: rgba(24, 24, 27, 0.12) !important;
+          }
+
+          .app-light [class*="bg-white/"] {
+            background-color: rgba(24, 24, 27, 0.05) !important;
+          }
+        `}</style>
+      )}
       <div
         className="pointer-events-none fixed inset-0 -z-50 transition-colors duration-500"
         style={{
@@ -105,8 +124,10 @@ export default function Layout() {
         </div>
       </header>
 
-      <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 px-4 pb-28 pt-0">
-        <Outlet />
+      <main className="relative z-10 mx-auto w-full max-w-6xl px-4 pb-28 pt-0">
+        <div className="min-w-0 w-full">
+          <Outlet />
+        </div>
       </main>
 
       <AnimatePresence>
