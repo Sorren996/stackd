@@ -292,52 +292,79 @@ export const FOOD_DATABASE = [
 
 ];
 
-/** Generate a time-series absorption activity curve (0–1) for a carb entry */
-export function generateCarbCurve(entry) {
-  if (entry.is_custom || !entry.absorption_profile) return [];
-  const profile = ABSORPTION_PROFILES[entry.absorption_profile];
-  if (!profile) return [];
-
-  const start     = new Date(entry.consumed_at).getTime();
-  const step      = 3 * 60000;
-  const onsetMs   = profile.onsetMin   * 60000;
-  const peakMs    = profile.peakMin    * 60000;
-  const durationMs = profile.durationMin * 60000;
-  const end = start + durationMs;
-  const result = [];
-
-  for (let t = start; t <= end; t += step) {
-    const elapsed = t - start;
-    let activity;
-    if (elapsed < onsetMs) {
-      activity = (elapsed / onsetMs) * 0.15;
-    } else if (elapsed <= peakMs) {
-      activity = 0.15 + 0.85 * ((elapsed - onsetMs) / (peakMs - onsetMs));
-    } else {
-      activity = Math.max(0, 1 - ((elapsed - peakMs) / (durationMs - peakMs)));
-    }
-    result.push({ time: t, activity: Math.max(0, Math.min(1, activity)) });
+function getCarbAbsorptionAt(entry, targetTime = Date.now()) {
+  if (entry.is_custom || !entry.absorption_profile) {
+    return { absorbedGrams: 0, remainingGrams: 0, absorptionRateGPerMin: 0 };
   }
-  return result;
+
+  const profile = ABSORPTION_PROFILES[entry.absorption_profile];
+  if (!profile) {
+    return { absorbedGrams: 0, remainingGrams: 0, absorptionRateGPerMin: 0 };
+  }
+
+  const mealTime = new Date(entry.consumed_at).getTime();
+  const elapsedMin = (targetTime - mealTime) / 60000;
+  const { onsetMin, peakMin, durationMin } = profile;
+
+  if (elapsedMin <= onsetMin) {
+    return {
+      absorbedGrams: 0,
+      remainingGrams: entry.carbs,
+      absorptionRateGPerMin: 0,
+    };
+  }
+
+  if (elapsedMin >= durationMin) {
+    return {
+      absorbedGrams: entry.carbs,
+      remainingGrams: 0,
+      absorptionRateGPerMin: 0,
+    };
+  }
+
+  // A triangular absorption-rate curve: gradual onset, fastest near peak,
+  // then a gradual taper. Its total area always equals the meal's carbs.
+  const activeDuration = durationMin - onsetMin;
+  const timeToPeak = peakMin - onsetMin;
+  const timeAfterPeak = durationMin - peakMin;
+  const activeElapsed = elapsedMin - onsetMin;
+  const peakRateFraction = 2 / activeDuration;
+
+  let absorbedFraction;
+  let rateFractionPerMin;
+
+  if (activeElapsed <= timeToPeak) {
+    rateFractionPerMin = peakRateFraction * (activeElapsed / timeToPeak);
+    absorbedFraction =
+      0.5 * peakRateFraction * (activeElapsed ** 2 / timeToPeak);
+  } else {
+    const afterPeak = activeElapsed - timeToPeak;
+    const fractionAtPeak = timeToPeak / activeDuration;
+
+    rateFractionPerMin =
+      peakRateFraction * (1 - afterPeak / timeAfterPeak);
+
+    absorbedFraction =
+      fractionAtPeak +
+      peakRateFraction *
+        (afterPeak - (afterPeak ** 2) / (2 * timeAfterPeak));
+  }
+
+  const safeFraction = Math.max(0, Math.min(1, absorbedFraction));
+  const absorbedGrams = entry.carbs * safeFraction;
+
+  return {
+    absorbedGrams,
+    remainingGrams: entry.carbs - absorbedGrams,
+    absorptionRateGPerMin: Math.max(0, rateFractionPerMin * entry.carbs),
+  };
 }
 
-/** Total carbohydrates currently being absorbed (grams) */
 export function getActiveCarbsNow(entries) {
-  const now = Date.now();
-  return entries.reduce((sum, entry) => {
-    if (entry.is_custom) return sum;
-    const curve = generateCarbCurve(entry);
-    if (!curve.length) return sum;
-    if (now < curve[0].time || now > curve[curve.length - 1].time) return sum;
-    let lo = 0;
-    for (let i = 0; i < curve.length - 1; i++) {
-      if (curve[i].time <= now && curve[i + 1].time >= now) { lo = i; break; }
-    }
-    const hi = Math.min(lo + 1, curve.length - 1);
-    const ratio = hi === lo ? 0 : (now - curve[lo].time) / (curve[hi].time - curve[lo].time);
-    const activity = curve[lo].activity + ratio * (curve[hi].activity - curve[lo].activity);
-    return sum + activity * entry.carbs;
-  }, 0);
+  return entries.reduce(
+    (sum, entry) => sum + getCarbAbsorptionAt(entry).remainingGrams,
+    0
+  );
 }
 
 /** Sum of all carbs consumed today */
