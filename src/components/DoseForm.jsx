@@ -1,414 +1,424 @@
-import { useEffect, useMemo, useState } from "react";
-import { ArrowUp, ArrowDown, ArrowRight, ArrowUpRight, ArrowDownRight, Info, X, TrendingUp, TrendingDown, Minus } from "lucide-react";
-import { INSULIN_PROFILES, generateActivityCurve } from "@/lib/insulinPharmacology";
-import { getActiveCarbsNow, getTotalCarbsToday, generateCarbCurve } from "@/lib/carbAbsorption";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
+import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
+import { Dialog, DialogPortal, DialogOverlay, DialogClose } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { X, Syringe, Droplets, Wheat } from "lucide-react";
+import { toast } from "sonner";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { Slider } from "@/components/ui/slider";
+import { motion } from "framer-motion";
+import CarbsTab from "@/components/CarbsTab";
 
-function getTotalActiveUnits(doses = [], targetTime = Date.now()) {
-  const now = targetTime;
-  return doses.reduce((sum, dose) => {
-    const curve = generateActivityCurve(dose, 3);
-    if (!curve.length) return sum;
-    const last = curve[curve.length - 1];
-    const first = curve[0];
-    if (now < first.time || now > last.time) return sum;
-    let lo = 0;
-    for (let i = 0; i < curve.length - 1; i++) {
-      if (curve[i].time <= now && curve[i + 1].time >= now) { lo = i; break; }
+const CATEGORY_ORDER = ["Rapid-Acting", "Short-Acting", "Intermediate", "Long-Acting", "Ultra Long-Acting"];
+
+const groupedInsulins = CATEGORY_ORDER.reduce((acc, cat) => {
+  const items = Object.entries(INSULIN_PROFILES).filter(([, p]) => p.category === cat);
+  if (items.length) acc.push({ category: cat, items });
+  return acc;
+}, []);
+
+const GLUCOSE_PRESETS = [70, 100, 120, 140, 180, 200, 250];
+
+export default function DoseForm({ open, onOpenChange }) {
+  const [tab, setTab] = useState("insulin");
+  const [insulinType, setInsulinType] = useState("");
+  const [units, setUnits] = useState(10);
+  const [insulinNotes, setInsulinNotes] = useState("");
+  const [insulinTime, setInsulinTime] = useState(() => new Date().toTimeString().slice(0, 5));
+const [glucoseValue, setGlucoseValue] = useState("");
+  const [glucoseNotes, setGlucoseNotes] = useState("");
+  const [glucoseTime, setGlucoseTime] = useState(() => new Date().toTimeString().slice(0, 5));
+const [glucoseUpdatedAt, setGlucoseUpdatedAt] = useState(null);
+const [now, setNow] = useState(Date.now());
+
+  const nowTimeString = new Date().toTimeString().slice(0, 5);
+  const queryClient = useQueryClient();
+
+  const createDose = useMutation({
+    mutationFn: (data) => base44.entities.InsulinDose.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["insulin-doses"] });
+      toast.success("Dose logged — tracking activity now");
+      onOpenChange(false);
+      setInsulinType(""); setUnits(10); setInsulinNotes("");
+      setInsulinTime(new Date().toTimeString().slice(0, 5));
     }
-    const hi = lo + 1;
-    const ratio = hi >= curve.length ? 0 : (now - curve[lo].time) / (curve[hi].time - curve[lo].time);
-    const activity = curve[lo].activity + ratio * (curve[hi].activity - curve[lo].activity);
-    return sum + activity * dose.units;
-  }, 0);
-}
+  });
 
-function getActiveCarbsAt(entries = [], targetTime) {
-  return entries.reduce((sum, entry) => {
-    if (entry.is_custom) return sum;
-    const curve = generateCarbCurve(entry);
-    if (!curve.length) return sum;
-    if (targetTime < curve[0].time || targetTime > curve[curve.length - 1].time) return sum;
-    let lo = 0;
-    for (let i = 0; i < curve.length - 1; i++) {
-      if (curve[i].time <= targetTime && curve[i + 1].time >= targetTime) { lo = i; break; }
+  const createGlucose = useMutation({
+    mutationFn: (data) => base44.entities.GlucoseReading.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["glucose-readings"] });
+      toast.success("Glucose logged");
+      onOpenChange(false);
+      setGlucoseValue(100); setGlucoseNotes("");
+      setGlucoseTime(new Date().toTimeString().slice(0, 5));
     }
-    const hi = Math.min(lo + 1, curve.length - 1);
-    const ratio = hi === lo ? 0 : (targetTime - curve[lo].time) / (curve[hi].time - curve[lo].time);
-    const activity = curve[lo].activity + ratio * (curve[hi].activity - curve[lo].activity);
-    return sum + activity * entry.carbs;
-  }, 0);
-}
+  });
 
-function getGlucoseTimeLabel(latestGlucose, now) {
-  const recordedAt = latestGlucose?.recorded_at || latestGlucose?.created_at || latestGlucose?.timestamp;
-  if (!recordedAt) return "No recent reading";
+  const createCarb = useMutation({
+    mutationFn: (entries) => base44.entities.CarbEntry.bulkCreate(entries),
+    onSuccess: (_, entries) => {
+      queryClient.invalidateQueries({ queryKey: ["carb-entries"] });
+      toast.success(`Logged ${entries.length} food item${entries.length > 1 ? "s" : ""}`);
+      onOpenChange(false);
+    }
+  });
 
-  const recordedTime = new Date(recordedAt).getTime();
-  if (Number.isNaN(recordedTime)) return "No recent reading";
+  const profile = insulinType ? INSULIN_PROFILES[insulinType] : null;
+  const rawAccentColor = profile?.color || "#2dd4bf";
+  const accentColor = rawAccentColor.slice(0, 7);
+  
+  const infoColor = profile ? accentColor : "rgba(255,255,255,0.3)";
+  const infoBg = profile ? accentColor + "11" : "rgba(255,255,255,0.02)";
+  const infoBorder = profile ? accentColor + "22" : "rgba(255,255,255,0.05)";
+  
+  const glucoseColor = "#c2611c";
 
-  const minutesAgo = Math.max(0, Math.floor((now - recordedTime) / 60000));
-  if (minutesAgo === 0) return "Just now";
-
-  return `${minutesAgo} minute${minutesAgo === 1 ? "" : "s"} ago`;
-}
-
-function TooltipPopover({ title, description, onClose }) {
-  return (
-    <AnimatePresence>
-      <motion.div
-        key="tooltip-backdrop"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.15 }}
-        className="fixed inset-0 z-[300] flex items-center justify-center p-6"
-        onClick={onClose}
-      >
-        <motion.div
-          key="tooltip-card"
-          initial={{ opacity: 0, scale: 0.90, y: -16 }}
-          animate={{ opacity: 1, scale: 1, y: 0, transition: { type: "spring", stiffness: 360, damping: 26 } }}
-          exit={{ opacity: 0, scale: 0.93, y: -10, transition: { duration: 0.13 } }}
-          onClick={(e) => e.stopPropagation()}
-          className="w-full max-w-xs rounded-2xl p-4 border border-white/10 shadow-2xl"
-          style={{ background: "hsl(162,10%,10%)" }}
-        >
-          <div className="flex items-start justify-between gap-3 mb-2">
-            <p className="text-sm font-semibold text-white">{title}</p>
-            <button onClick={onClose} className="text-white/40 hover:text-white/80 transition-colors shrink-0 mt-0.5">
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-          <p className="text-xs text-white/50 leading-relaxed">{description}</p>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
-  );
-}
-
-// Ambient orb with breathing animation
-function AmbientOrb({ color, duration = 6, size = 48 }) {
-  return (
-    <motion.div
-      animate={{ scale: [1, 1.18, 1], opacity: [0.45, 0.7, 0.45] }}
-      transition={{ duration, repeat: Infinity, ease: "easeInOut" }}
-      className="rounded-full shrink-0"
-      style={{
-        width: size,
-        height: size,
-        background: `radial-gradient(circle, ${color}cc 0%, ${color}44 50%, transparent 75%)`,
-        filter: `blur(8px)`,
-      }}
-    />
-  );
-}
-
-// Glassmorphic metric card
-function MetricCard({ label, value, sub, status, orbColor, orbDuration = 6, tooltipId, openTooltip, setOpenTooltip }) {
-  return (
-    <motion.div
-      whileTap={{ scale: 0.97 }}
-      className="relative rounded-2xl p-4 flex flex-col justify-between overflow-hidden"
-      style={{
-        background: "rgba(255,255,255,0.04)",
-        border: "1px solid rgba(255,255,255,0.08)",
-        backdropFilter: "blur(12px)",
-        WebkitBackdropFilter: "blur(12px)",
-        minHeight: 100,
-      }}
-    >
-      {/* Ambient orb background */}
-      <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none">
-        <AmbientOrb color={orbColor} duration={orbDuration} size={56} />
-      </div>
-
-      <div className="flex items-start justify-between mb-1">
-        <span className="text-[10px] font-semibold text-white/35 uppercase tracking-wider">{label}</span>
-        {tooltipId && (
-          <button
-            onClick={() => setOpenTooltip(openTooltip === tooltipId ? null : tooltipId)}
-            className="text-white/20 hover:text-white/50 transition-colors"
-          >
-            <Info className="w-3 h-3" />
-          </button>
-        )}
-      </div>
-
-      <div className="mt-1">
-        <span className="text-2xl font-bold text-white leading-none">{value}</span>
-        {sub && <p className="text-[11px] text-white/35 mt-1">{sub}</p>}
-      </div>
-
-      <div className="mt-2">
-        <span className="text-xs font-semibold" style={{ color: orbColor }}>{status}</span>
-      </div>
-    </motion.div>
-  );
-}
-
-const TREND_ICONS = {
-  "up": ArrowUp,
-  "up-right": ArrowUpRight,
-  "right": ArrowRight,
-  "down-right": ArrowDownRight,
-  "down": ArrowDown,
-};
-
-export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucoseReadings = [], carbEntries = [] }) {
-  const [openTooltip, setOpenTooltip] = useState(null);
-  const [now, setNow] = useState(Date.now());
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setNow(Date.now());
-    }, 60000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  const activeUnits = useMemo(() => getTotalActiveUnits(doses), [doses]);
-  const hasActive = activeUnits > 0.01;
-
-  const activeCarbs = useMemo(() => getActiveCarbsNow(carbEntries), [carbEntries]);
-  const totalCarbsToday = useMemo(() => getTotalCarbsToday(carbEntries), [carbEntries]);
-
-  const futureTime = Date.now() + 30 * 60 * 1000;
-  const activeUnitsFuture = useMemo(() => getTotalActiveUnits(doses, futureTime), [doses]);
-  const activeCarbsFuture = useMemo(() => getActiveCarbsAt(carbEntries, futureTime), [carbEntries]);
-
-  const netActiveCarbs = useMemo(() => {
-    const currentGlucose = latestGlucose ? latestGlucose.value : 100;
-    const targetGlucose = 110;
-    const isf = 50;
-    const activeCorrectionUnits = Math.max(0, currentGlucose - targetGlucose) / isf;
-    const activeFoodUnitsFuture = Math.max(0, activeUnitsFuture - activeCorrectionUnits);
-    return activeCarbsFuture - activeFoodUnitsFuture * 10;
-  }, [activeCarbsFuture, activeUnitsFuture, latestGlucose]);
-
-  const totalAdministered = useMemo(() => doses.reduce((sum, d) => sum + d.units, 0) || 1, [doses]);
-
-  const avgDailyGlucose = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todaysReadings = glucoseReadings.filter((g) => new Date(g.recorded_at) >= today);
-    if (!todaysReadings.length) return null;
-    return Math.round(todaysReadings.reduce((acc, c) => acc + c.value, 0) / todaysReadings.length);
-  }, [glucoseReadings]);
-
-  const trendArrow = useMemo(() => {
-    if (glucoseReadings.length < 2) return "right";
-    const diff = glucoseReadings[0].value - glucoseReadings[1].value;
-    if (diff >= 7) return "up";
-    if (diff >= 4) return "up-right";
-    if (diff >= -3) return "right";
-    if (diff >= -6) return "down-right";
-    return "down";
-  }, [glucoseReadings]);
-
-  const trendLabel = useMemo(() => {
-    if (glucoseReadings.length < 2) return "Stable";
-    const diff = glucoseReadings[0].value - glucoseReadings[1].value;
-    if (diff >= 7) return "Rising";
-    if (diff >= 4) return "Slowly Rising";
-    if (diff >= -3) return "Stable";
-    if (diff >= -6) return "Slowly Falling";
-    return "Falling";
-  }, [glucoseReadings]);
-
-  const glucoseVal = latestGlucose?.value;
-  const glucoseColor = !glucoseVal ? "#35a879" : glucoseVal < 70 ? "#3b82f6" : glucoseVal > 180 ? "#f59e0b" : "#35a879";
-  const glucoseTimeLabel = getGlucoseTimeLabel(latestGlucose, now);
-
-  // Ambient background color based on glucose state
-  const ambientColor = !glucoseVal ? "#0d4a2e" : glucoseVal < 55 ? "#7f1d1d" : glucoseVal < 70 ? "#1e3a5f" : glucoseVal > 250 ? "#7c2d12" : glucoseVal > 180 ? "#78350f" : "#0d4a2e";
-
-  const TrendIcon = TREND_ICONS[trendArrow] || ArrowRight;
-
-  const netPct = Math.round(Math.min(100, Math.max(-100, (netActiveCarbs / 50) * 100)));
-  const netLabel = netActiveCarbs > 5 ? "Rising Risk" : netActiveCarbs < -5 ? "Falling Risk" : "Balanced";
-  const netColor = netActiveCarbs > 5 ? "#ef4444" : netActiveCarbs < -5 ? "#3b82f6" : "#35a879";
-
-  const getGlucoseStatus = (val) => {
-    if (!val) return "—";
-    if (val < 70) return "Low";
-    if (val > 180) return "High";
-    return "Stable";
+  const handleSubmitInsulin = () => {
+    if (!insulinType || !units) return;
+    const [h, m] = insulinTime.split(":").map(Number);
+    const dt = new Date();
+    dt.setHours(h, m, 0, 0);
+    createDose.mutate({
+      insulin_type: insulinType,
+      units: parseFloat(units),
+      administered_at: dt.toISOString(),
+      notes: insulinNotes || undefined
+    });
   };
 
-  const hasCarbData = carbEntries.length > 0;
+  const handleSubmitGlucose = () => {
+    if (!glucoseValue) return;
+    const [h, m] = glucoseTime.split(":").map(Number);
+    const dt = new Date();
+    dt.setHours(h, m, 0, 0);
+    createGlucose.mutate({
+      value: parseFloat(glucoseValue),
+      recorded_at: dt.toISOString(),
+      notes: glucoseNotes || undefined
+    });
+  };
 
-  // Target range check
-  const targetLow = parseInt(localStorage.getItem("target_range_low") || "70", 10);
-  const targetHigh = parseInt(localStorage.getItem("target_range_high") || "180", 10);
-  const inRange = glucoseVal ? (glucoseVal >= targetLow && glucoseVal <= targetHigh) : null;
+  const adjust = (delta) => setUnits((u) => Math.max(0.5, Math.round((u + delta) * 2) / 2));
+  const adjustGlucose = (delta) => setGlucoseValue((v) => Math.min(400, Math.max(40, v + delta)));
+  const shortName = insulinType ? insulinType.split(" ")[0] : "";
 
-  return (
-    <>
-      <AnimatePresence>
-        {openTooltip === "active-carbs" && (
-          <TooltipPopover key="active-carbs-tip" title="Active Carbs"
-            description="Active Carbs estimates the amount of carbohydrates currently being absorbed from recent meals. This value decreases as food absorption progresses."
-            onClose={() => setOpenTooltip(null)} />
-        )}
-        {openTooltip === "net-carbs" && (
-          <TooltipPopover key="net-carbs-tip" title="Net Active Carbs"
-            description="Net Active Carbs compares carbohydrate absorption against insulin dedicated to food coverage — after accounting for correction insulin based on your current glucose level. A positive % means carbs may be outpacing insulin (rising risk), a negative % means insulin may be stronger (falling risk)."
-            onClose={() => setOpenTooltip(null)} />
-        )}
-      </AnimatePresence>
+    return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogPortal>
+        {/* local hardware-accelerated custom spring animations */}
+        <style>{`
+          @keyframes custom-backdrop-fade {
+            from { opacity: 0; backdrop-filter: blur(0px); }
+            to { opacity: 1; backdrop-filter: blur(4px); }
+          }
+          @keyframes custom-backdrop-fade-out {
+            from { opacity: 1; backdrop-filter: blur(4px); }
+            to { opacity: 0; backdrop-filter: blur(0px); }
+          }
+          
+          /* Mobile Bottom Sheet Spring */
+          @keyframes mobile-spring-up {
+            0% { transform: translateY(100%); }
+            60% { transform: translateY(-10px); }
+            85% { transform: translateY(3px); }
+            100% { transform: translateY(0); }
+          }
+          @keyframes mobile-slide-down {
+            from { transform: translateY(0); }
+            to { transform: translateY(100%); }
+          }
 
-      <div className="pt-2 pb-6 -mx-4 px-4">
-        {/* Ambient breathing background orb */}
-        <div className="absolute left-1/2 -translate-x-1/2 top-16 w-72 h-72 pointer-events-none -z-10 overflow-hidden">
-          <motion.div
-            animate={{ scale: [1, 1.08, 1], opacity: [0.25, 0.4, 0.25] }}
-            transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-            className="w-full h-full rounded-full"
-            style={{
-              background: `radial-gradient(circle, ${ambientColor} 0%, transparent 70%)`,
-              filter: "blur(40px)",
-            }}
-          />
-        </div>
+          /* Desktop Centered Scale Spring */
+          @keyframes desktop-spring-scale {
+            0% { transform: translate(-50%, -42%) scale(0.92); opacity: 0; }
+            55% { transform: translate(-50%, -51.5%) scale(1.02); opacity: 1; }
+            80% { transform: translate(-50%, -49.5%) scale(0.995); }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+          }
+          @keyframes desktop-scale-out {
+            from { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+            to { transform: translate(-50%, -47%) scale(0.95); opacity: 0; }
+          }
+        `}</style>
 
-        {/* ── Primary Glucose Hero ── */}
-        <div className="flex flex-col items-center text-center mb-6 pt-2">
-          <span className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] mb-3">Current Glucose</span>
+        {/* Backdrop with Smooth CSS Blur Transition */}
+        <DialogOverlay className="fixed inset-0 z-50 bg-black/75 data-[state=open]:animate-[custom-backdrop-fade_0.3s_ease-out] data-[state=closed]:animate-[custom-backdrop-fade-out_0.2s_ease-in]" />
 
-          <motion.div
-            key={glucoseVal}
-            initial={{ scale: 0.94, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: "spring", stiffness: 300, damping: 22 }}
-            className="flex items-end gap-3 mb-1"
-          >
-            <span className="text-[72px] sm:text-[88px] font-black leading-none tracking-tight text-white">
-              {glucoseVal ?? "—"}
-            </span>
-            {latestGlucose && (
-              <TrendIcon className="w-8 h-8 mb-3 shrink-0" style={{ color: glucoseColor }} />
-            )}
-          </motion.div>
-
-          <div className="mb-4">
-            <span className="block text-sm text-white/35 font-medium">mg/dL</span>
-            <span className="block text-xs text-white/25 mt-1">{glucoseTimeLabel}</span>
+        {/* Responsive Sheet & Modal with Spring Physics */}
+        <DialogPrimitive.Content 
+          className="fixed bottom-0 sm:bottom-auto left-0 right-0 sm:left-1/2 sm:top-1/2 z-50 w-full sm:max-w-md flex flex-col overflow-hidden rounded-t-[2rem] sm:rounded-3xl border border-white/5 shadow-2xl origin-bottom sm:origin-center
+            /* Mobile Springs */
+            data-[state=open]:animate-[mobile-spring-up_0.42s_cubic-bezier(0.215,0.61,0.355,1)] 
+            data-[state=closed]:animate-[mobile-slide-down_0.24s_cubic-bezier(0.25,1,0.5,1)]
+            /* Desktop Springs */
+            sm:data-[state=open]:animate-[desktop-spring-scale_0.44s_cubic-bezier(0.25,1,0.5,1)]
+            sm:data-[state=closed]:animate-[desktop-scale-out_0.22s_cubic-bezier(0.25,1,0.5,1)]"
+          style={{ background: "hsl(162,10%,8%)", maxHeight: "92vh" }}
+        >
+        {/* Header */}
+          <div className="flex items-center justify-between relative px-6 pt-5 pb-3 shrink-0">
+            <div className="w-8" />
+            <span className="text-white text-lg font-semibold">Log Entry</span>
+            {/* Wrapped in DialogClose for native lifecycle cleanup */}
+            <DialogClose asChild>
+              <button
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 border border-white/10 text-white/60 hover:text-white active:scale-95 transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </DialogClose>
           </div>
 
-          {/* Status capsule */}
-          <motion.div
-            whileTap={{ scale: 0.96 }}
-            className="flex items-center gap-2 px-4 py-2 rounded-full"
-            style={{
-              background: `${glucoseColor}18`,
-              border: `1px solid ${glucoseColor}40`,
-            }}
-          >
-            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: glucoseColor }} />
-            <span className="text-sm font-semibold" style={{ color: glucoseColor }}>{trendLabel}</span>
-          </motion.div>
-        </div>
+          {/* Tabs with Springs */}
+          {(() => {
+            const tabs = [
+              { id: "insulin", label: "Insulin", Icon: Syringe, activeClass: "text-white", activeBg: "rgba(255,255,255,0.10)" },
+              { id: "glucose", label: "Glucose", Icon: Droplets, activeClass: "text-orange-400", activeBg: `${glucoseColor}33` },
+              { id: "carbs", label: "Carbs", Icon: Wheat, activeClass: "text-amber-400", activeBg: "rgba(217,119,6,0.2)" },
+            ];
+            return (
+              <div className="flex mx-5 mb-2 rounded-2xl p-1 shrink-0 relative" style={{ background: "rgba(255,255,255,0.06)" }}>
+                {tabs.map(({ id, label, Icon, activeClass, activeBg }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setTab(id)}
+                    className={`relative flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-medium transition-colors duration-200 ${
+                      tab === id ? activeClass : "text-white/40 hover:text-white/60"
+                    }`}
+                  >
+                    {tab === id && (
+                      <motion.div
+                        layoutId="active-form-tab"
+                        className="absolute inset-0 rounded-xl"
+                        style={{ backgroundColor: activeBg }}
+                        transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                      />
+                    )}
+                    <span className="relative z-10 flex items-center gap-2">
+                      <Icon className="w-3.5 h-3.5" />
+                      {label}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            );
+          })()}
 
-        {/* ── Target Range Banner ── */}
-        {latestGlucose && (
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="rounded-2xl px-4 py-3 flex items-center gap-3 mb-6"
-            style={{
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.07)",
-            }}
-          >
-            <div className="flex gap-0.5 items-end h-5 shrink-0">
-              {[3,4,3,5,4,3,4,5,3].map((h, i) => (
-                <div key={i} className="w-0.5 rounded-full" style={{
-                  height: h * 3,
-                  backgroundColor: inRange ? "#35a87988" : "#f59e0b88"
-                }} />
-              ))}
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-white/80">
-                {inRange === null ? "No data" : inRange ? "In range" : "Out of range"}
-              </p>
-              <p className="text-xs text-white/35">Target: {targetLow} – {targetHigh} mg/dL</p>
-            </div>
-            <span className="text-xs font-medium" style={{ color: inRange ? "#35a879" : "#f59e0b" }}>
-              {inRange === null ? "" : inRange ? "✓" : "↑"}
-            </span>
-          </motion.div>
-        )}
+          <div className="flex-1 flex flex-col" style={{ minHeight: 580 }}>
+          {tab === "carbs" ? (
+            <CarbsTab onSubmit={(entries) => createCarb.mutate(entries)} isPending={createCarb.isPending} />
+          ) : tab === "insulin" ? (
+            <>
+              <div className="overflow-y-auto h-[500px] px-5 pb-6 space-y-6">
+                {/* Insulin Type */}
+                <div>
+                  <p className="text-sm font-bold tracking-widest text-white/40 uppercase mb-3">Insulin Type</p>
+                  <div className="space-y-3">
+                    {groupedInsulins.map(({ category, items }) => (
+                      <div key={category}>
+                        <p className="text-sm text-white/40 mb-2">{category}</p>
+                        <div className="flex flex-wrap gap-2">
+                           {items.map(([name, p]) => {
+                            const shortLabel = name.split(" ")[0];
+                            const subLabel = name.match(/\(([^)]+)\)/)?.[1] || "";
+                            const isSelected = insulinType === name;
+                            const basePColor = p.color.slice(0, 7);
+                            
+                            return (
+                              <button
+                                key={name}
+                                onClick={() => setInsulinType(name)}
+                                className="flex flex-col items-start px-3 py-2 rounded-xl border transition-all text-left text-white"
+                                style={{
+                                  minWidth: "72px",
+                                  borderColor: isSelected ? basePColor + "aa" : "rgba(255,255,255,0.1)",
+                                  backgroundColor: isSelected ? basePColor + "22" : "rgba(255, 255, 255, 0)",
+                                }}>
+                                <div className="flex items-center gap-1.5">
+                                  <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: p.color }} />
+                                  <span className="text-sm font-semibold">{shortLabel}</span>
+                                </div>
+                                {subLabel && <span className="text-sm text-white/40 mt-0.5 ml-3.5">{subLabel}</span>}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
 
-        {/* ── Metric Cards Grid ── */}
-        {hasCarbData ? (
-          <>
-            <p className="text-[10px] font-bold text-white/25 uppercase tracking-[0.18em] mb-3">At a Glance</p>
-            <div className="grid grid-cols-2 gap-3">
-              <MetricCard
-                label="Active Insulin"
-                value={`${activeUnits.toFixed(1)}`}
-                sub="units"
-                status={hasActive ? "Active" : "Cleared"}
-                orbColor="#06b6d4"
-                orbDuration={6}
-              />
-              <MetricCard
-                label="Active Carbs"
-                value={activeCarbs > 0 ? `${Math.round(activeCarbs)}g` : "0g"}
-                sub={`${totalCarbsToday}g today`}
-                status={activeCarbs > 0 ? "Absorbing" : "Cleared"}
-                orbColor="#f59e0b"
-                orbDuration={activeCarbs > 0 ? 4 : 8}
-                tooltipId="active-carbs"
-                openTooltip={openTooltip}
-                setOpenTooltip={setOpenTooltip}
-              />
-              <MetricCard
-                label="Net Carbs"
-                value={`${Math.abs(netPct)}%`}
-                sub="balance"
-                status={netLabel}
-                orbColor={netColor}
-                orbDuration={8}
-                tooltipId="net-carbs"
-                openTooltip={openTooltip}
-                setOpenTooltip={setOpenTooltip}
-              />
-              <MetricCard
-                label="Daily Average"
-                value={avgDailyGlucose ? `${avgDailyGlucose}` : "—"}
-                sub={avgDailyGlucose ? "mg/dL" : "No data today"}
-                status={getGlucoseStatus(avgDailyGlucose)}
-                orbColor={!avgDailyGlucose ? "#35a879" : avgDailyGlucose < 70 ? "#3b82f6" : avgDailyGlucose > 180 ? "#f59e0b" : "#10b981"}
-                orbDuration={9}
-              />
-            </div>
-          </>
-        ) : (
-          /* No carb data: just 2 cards */
-          <div className="grid grid-cols-2 gap-3">
-            <MetricCard
-              label="Active Insulin"
-              value={`${activeUnits.toFixed(1)}`}
-              sub="units"
-              status={hasActive ? "Active" : "Cleared"}
-              orbColor="#06b6d4"
-              orbDuration={6}
-            />
-            <MetricCard
-              label="Daily Average"
-              value={avgDailyGlucose ? `${avgDailyGlucose}` : "—"}
-              sub={avgDailyGlucose ? "mg/dL" : "No data today"}
-              status={getGlucoseStatus(avgDailyGlucose)}
-              orbColor={!avgDailyGlucose ? "#35a879" : avgDailyGlucose < 70 ? "#3b82f6" : avgDailyGlucose > 180 ? "#f59e0b" : "#10b981"}
-              orbDuration={9}
-            />
+                {/* Pharmacokinetics */}
+                <div 
+                  className="border rounded-2xl px-4 py-3 grid grid-cols-3 divide-x divide-white/10 transition-all duration-300"
+                  style={{ backgroundColor: infoBg, borderColor: infoBorder }}
+                >
+                  <div className="text-center pr-4">
+                    <p className="font-bold text-base transition-colors" style={{ color: infoColor }}>
+                      {profile 
+                        ? (profile.onsetMin < 60 ? `${profile.onsetMin}m` : `${Math.round(profile.onsetMin / 60)}h`) 
+                        : "—"
+                      }
+                    </p>
+                    <p className="text-white/40 text-sm mt-0.5 uppercase tracking-wider">Onset</p>
+                  </div>
+                  <div className="text-center px-4">
+                    <p className="font-bold text-base transition-colors" style={{ color: infoColor }}>
+                      {profile 
+                        ? (profile.peakMin 
+                            ? `${Math.round(profile.peakMin / 60)}h${profile.peakMin % 60 ? ` ${profile.peakMin % 60}m` : ""}` 
+                            : "—") 
+                        : "—"
+                      }
+                    </p>
+                    <p className="text-white/40 text-sm mt-0.5 uppercase tracking-wider">Peak</p>
+                  </div>
+                  <div className="text-center pl-4">
+                    <p className="font-bold text-base transition-colors" style={{ color: infoColor }}>
+                      {profile ? `${Math.round(profile.durationMin / 60)}h` : "—"}
+                    </p>
+                    <p className="text-white/40 text-sm mt-0.5 uppercase tracking-wider">Duration</p>
+                  </div>
+                </div>
+
+                {/* Units */}
+                <div>
+                  <p className="text-sm font-bold tracking-widest text-white/40 uppercase mb-3">Units</p>
+                  <div className="bg-white/5 border border-white/10 rounded-2xl px-6 py-4 flex items-center justify-between mb-3">
+                    <button onClick={() => adjust(-1)} className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white text-xl flex items-center justify-center transition-colors">−</button>
+                    <div className="text-center">
+                      <span className="text-4xl font-bold text-white">{units}</span>
+                      <p className="text-white/40 text-sm mt-1">units</p>
+                    </div>
+                    <button onClick={() => adjust(1)} className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white text-xl flex items-center justify-center transition-colors">+</button>
+                  </div>
+                  <div className="flex gap-2">
+                    {[5, 10, 15, 20, 25].map((v) => (
+                      <button key={v} onClick={() => setUnits(v)}
+                        className="flex-1 py-2 rounded-xl text-sm font-medium transition-all border text-white"
+                        style={{ borderColor: units === v ? accentColor + "99" : "rgba(255,255,255,0.1)", backgroundColor: units === v ? accentColor + "2a" : "rgba(255,255,255,0.05)" }}>
+                        {v}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Time */}
+                <div>
+                  <p className="text-sm font-bold tracking-widest text-white/40 uppercase mb-3">Time Administered</p>
+                  <div className="bg-white/5 border border-white/10 rounded-2xl px-4 py-3 flex items-center justify-between">
+                    <span className="text-sm text-white/40">Administered at</span>
+                    <input
+                      type="time"
+                      value={insulinTime}
+                      max={nowTimeString}
+                      onChange={(e) => { if (e.target.value <= nowTimeString) setInsulinTime(e.target.value); }}
+                      className="bg-transparent text-white text-sm font-medium outline-none cursor-pointer"
+                      style={{ colorScheme: "dark" }}
+                    />
+                  </div>
+                </div>
+
+                {/* Notes */}
+                <div>
+                  <p className="text-sm font-bold tracking-widest text-white/40 uppercase mb-3">Notes (Optional)</p>
+                  <Textarea value={insulinNotes} onChange={(e) => setInsulinNotes(e.target.value)}
+                    placeholder="e.g. before lunch, correction dose..." rows={2}
+                    className="bg-white/5 border-white/10 text-white placeholder:text-white/30 rounded-2xl resize-none" />
+                </div>
+              </div>
+
+              <div className="px-5 pb-6 pt-2 shrink-0">
+                <button onClick={handleSubmitInsulin} disabled={!insulinType || !units || createDose.isPending}
+                  className="w-full py-4 rounded-2xl disabled:opacity-40 text-white font-semibold text-base transition-all"
+                  style={{ backgroundColor: accentColor, filter: "brightness(0.85)" }}
+                  onMouseEnter={(e) => { e.currentTarget.style.filter = "brightness(1)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.filter = "brightness(0.85)"; }}>
+                  {createDose.isPending ? "Logging..." : insulinType ? `Log ${units}u ${shortName} Now` : "Select an insulin type"}
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+
+            
+<div className="overflow-y-auto h-[500px] px-5 pb-6 space-y-6">
+  <div>
+    <label
+      htmlFor="glucose-log"
+      className="block text-sm font-bold tracking-widest text-white/40 uppercase mb-3"
+    >
+      Blood Glucose Log (mg/dL)
+    </label>
+
+    <div className="bg-white/5 border border-white/10 rounded-2xl px-6 py-6 mb-4">
+<input
+  id="glucose-log"
+  type="text"
+  inputMode="numeric"
+  pattern="[0-9]*"
+  maxLength={3}
+  value={glucoseValue}
+  onChange={(e) => {
+    const nextValue = e.target.value.replace(/\D/g, "").slice(0, 3);
+    setGlucoseValue(nextValue);
+  }}
+  placeholder="--"
+  className="w-full bg-transparent text-center text-[48px] font-bold text-[#e9e9e9] outline-none placeholder:text-white/20"
+  style={{ fontSize: "48px" }}
+/>
+
+      <p className="text-white/40 text-sm mt-1 text-center">mg/dL</p>
+    </div>
+  </div>
+
+
+
+
+                {/* Time */}
+                <div>
+                  <p className="text-sm font-bold tracking-widest text-white/40 uppercase mb-3">Time</p>
+                  <div className="bg-white/5 border border-white/10 rounded-2xl px-4 py-3 flex items-center justify-between">
+                    <span className="text-sm text-white/40">Reading time</span>
+                    <input
+                      type="time"
+                      value={glucoseTime}
+                      max={nowTimeString}
+                      onChange={(e) => { if (e.target.value <= nowTimeString) setGlucoseTime(e.target.value); }}
+                      className="bg-transparent text-white text-sm font-medium outline-none cursor-pointer"
+                      style={{ colorScheme: "dark" }}
+                    />
+                  </div>
+                </div>
+
+                {/* Notes */}
+                <div>
+                  <p className="text-sm font-bold tracking-widest text-white/40 uppercase mb-3">Notes (Optional)</p>
+                  <Textarea value={glucoseNotes} onChange={(e) => setGlucoseNotes(e.target.value)}
+                    placeholder="e.g. fasting, after meal..." rows={2}
+                    className="bg-white/5 border-white/10 text-white placeholder:text-white/30 rounded-2xl resize-none" />
+                </div>
+              </div>
+
+              <div className="px-5 pb-6 pt-2 shrink-0">
+                <button onClick={handleSubmitGlucose} disabled={!glucoseValue || createGlucose.isPending}
+                  className="w-full py-4 rounded-2xl disabled:opacity-40 text-white font-semibold text-base transition-all"
+                  style={{ backgroundColor: glucoseColor, filter: "brightness(0.85)" }}
+                  onMouseEnter={(e) => { e.currentTarget.style.filter = "brightness(1)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.filter = "brightness(0.85)"; }}>
+                  {createGlucose.isPending ? "Logging..." : `Log ${glucoseValue} mg/dL`}
+                </button>
+              </div>
+            </>
+          )}
           </div>
-        )}
-      </div>
-    </>
+        </DialogPrimitive.Content>
+      </DialogPortal>
+    </Dialog>
   );
 }
