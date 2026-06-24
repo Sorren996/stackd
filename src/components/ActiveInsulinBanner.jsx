@@ -337,8 +337,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
       <AnimatePresence>
         {openTooltip === "active-carbs" && (
           <TooltipPopover key="net-carbs-tip" title="Carb and Insulin Balance"
-            description="This estimate compares active carbohydrate absorption with active food-coverage insulin across their remaining duration. It uses your most recent glucose reading for correction insulin. It is a balance estimate, not a glucose prediction or dosing recommendation."
-            onClose={() => setOpenTooltip(null)} />
+description="This estimate compares active carbohydrate absorption with active food-coverage insulin across their remaining duration. It is a balance estimate, not a glucose prediction or dosing recommendation."            onClose={() => setOpenTooltip(null)} />
         )}
         {openTooltip === "net-carbs" && (
           <TooltipPopover key="net-carbs-tip" title="Net Active Carbs"
@@ -473,7 +472,7 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
                 setOpenTooltip={setOpenTooltip}
               />
 <MetricCard
-  label="Carb / Insulin"
+  label="Carb and Insulin Balance"
   value={netValue}
   sub={
     trajectory.glucoseAsOf
