@@ -390,7 +390,7 @@ return {
   remainingGrams: entry.carbs - absorbedGrams,
   absorptionRateGPerMin: Math.max(
     0,
-    (entry.carbs * relativeRate) / (activeDuration * totalArea)
+    (entry.carbs * relativeRate) / ((durationMin - onsetMin) * totalArea)
   ),
   relativeRate,
 };
