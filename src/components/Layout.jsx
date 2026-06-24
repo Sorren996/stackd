@@ -132,13 +132,21 @@ export default function Layout() {
           }
         `}</style>
       )}
-      <div
-        className="pointer-events-none fixed inset-0 -z-50 transition-colors duration-500"
-        style={{
-          background: isLightMode
-            ? "linear-gradient(to bottom, #fbfdfc, #eef6f3, #dceae5)"
-            : "linear-gradient(to bottom, #042f2e, #18181b, #000000)",
-        }}
+      <motion.div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-0 -z-50"
+        initial={false}
+        animate={{ opacity: isLightMode ? 0 : 1 }}
+        transition={{ duration: 1.2, ease: "easeInOut" }}
+        style={{ background: "linear-gradient(to bottom, #042f2e, #18181b, #000000)" }}
+      />
+      <motion.div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-0 -z-40"
+        initial={false}
+        animate={{ opacity: isLightMode ? 1 : 0 }}
+        transition={{ duration: 1.2, ease: "easeInOut" }}
+        style={{ background: "linear-gradient(to bottom, #fbfdfc, #eef6f3, #dceae5)" }}
       />
 
       <header className="fixed inset-x-0 top-0 z-50 bg-transparent">
