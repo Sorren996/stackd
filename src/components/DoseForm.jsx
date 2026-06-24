@@ -27,8 +27,8 @@ export default function DoseForm({ open, onOpenChange }) {
   const [units, setUnits] = useState(10);
   const [insulinNotes, setInsulinNotes] = useState("");
   const [insulinTime, setInsulinTime] = useState(() => new Date().toTimeString().slice(0, 5));
-  const [glucoseValue, setGlucoseValue] = useState(100);
-  const [glucoseNotes, setGlucoseNotes] = useState("");
+const [glucoseValue, setGlucoseValue] = useState("");
+  const [glucoseNotes, setGlucoseNotes] = useState("--");
   const [glucoseTime, setGlucoseTime] = useState(() => new Date().toTimeString().slice(0, 5));
 
   const nowTimeString = new Date().toTimeString().slice(0, 5);
@@ -343,6 +343,9 @@ export default function DoseForm({ open, onOpenChange }) {
             </>
           ) : (
             <>
+
+const [glucoseValue, setGlucoseValue] = useState("");
+            
 <div className="overflow-y-auto h-[500px] px-5 pb-6 space-y-6">
   <div>
     <label
@@ -353,17 +356,21 @@ export default function DoseForm({ open, onOpenChange }) {
     </label>
 
     <div className="bg-white/5 border border-white/10 rounded-2xl px-6 py-6 mb-4">
-      <input
-        id="glucose-log"
-        type="number"
-        inputMode="numeric"
-        min="0"
-        value={glucoseValue}
-        onChange={(e) => setGlucoseValue(e.target.value)}
-        placeholder="Enter reading"
-        className="w-full bg-transparent text-center text-[48px] font-bold text-[#e9e9e9] outline-none placeholder:text-white/20 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-        style={{ fontSize: "48px" }}
-      />
+<input
+  id="glucose-log"
+  type="text"
+  inputMode="numeric"
+  pattern="[0-9]*"
+  maxLength={3}
+  value={glucoseValue}
+  onChange={(e) => {
+    const nextValue = e.target.value.replace(/\D/g, "").slice(0, 3);
+    setGlucoseValue(nextValue);
+  }}
+  placeholder="Enter reading"
+  className="w-full bg-transparent text-center text-[48px] font-bold text-[#e9e9e9] outline-none placeholder:text-white/20"
+  style={{ fontSize: "48px" }}
+/>
 
       <p className="text-white/40 text-sm mt-1 text-center">mg/dL</p>
     </div>
