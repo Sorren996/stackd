@@ -25,11 +25,7 @@ export const ABSORPTION_PROFILES = {
 };
 
 
-export const ABSORPTION_PROFILES = {
-  fast:   { onsetMin: 5,  peakMin: 30,  durationMin: 90  },
-  medium: { onsetMin: 15, peakMin: 65,  durationMin: 150 },
-  slow:   { onsetMin: 25, peakMin: 120, durationMin: 300 },
-};
+
 
 export const PROFILE_COLORS = {
   fast:   "#ef4444",
