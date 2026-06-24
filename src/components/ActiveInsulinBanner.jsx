@@ -373,7 +373,7 @@ const needsInsulinPlan = !insulinSettings.isComplete;
 const netValue = needsInsulinPlan
   ? "Setup needed"
   : netActiveCarbs > 5
-    ? "High carb activity"
+    ? "High carbohydrate activity"
     : netActiveCarbs < -5
       ? "High insulin activity"
       : "In balance";
