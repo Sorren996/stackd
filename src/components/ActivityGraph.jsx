@@ -332,7 +332,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         </AnimatePresence>
 
         {/* Range selector */}
-        {/*<div className="flex gap-0.5 rounded-xl p-1" style={{ background: "rgba(255,255,255,0.05)" }}>
+        *<div className="flex gap-0.5 rounded-xl p-1" style={{ background: "rgba(255,255,255,0.05)" }}>
           {TIME_RANGES.map((r, i) => (
             <button
               key={r.label}
@@ -351,46 +351,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               <span className="relative z-10">{r.label}</span>
             </button>
           ))}
-        </div>*/}
-
-        {/* Help icon */}
-        <div className="relative">
-          <button
-            onClick={() => setShowInfo(!showInfo)}
-            className={`w-8 h-8 flex items-center justify-center rounded-xl border transition-all ${
-              showInfo
-                ? "bg-teal-500/10 border-teal-500/30 text-teal-400"
-                : "border-white/5 bg-white/[0.03] text-white/40 hover:text-white/80 hover:bg-white/[0.08]"
-            }`}
-          >
-            <HelpCircle className="w-4 h-4" />
-          </button>
-          <AnimatePresence>
-            {showInfo && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                onClick={() => setShowInfo(false)}
-                className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 cursor-pointer"
-              >
-                <motion.div
-                  initial={{ opacity: 0, y: -100, scale: 0.9 }}
-                  animate={{ opacity: 1, y: 0, scale: 1, transition: { type: "spring", stiffness: 280, damping: 22 } }}
-                  exit={{ opacity: 0, y: 60, scale: 0.9, transition: { duration: 0.15 } }}
-                  onClick={(e) => e.stopPropagation()}
-                  className="relative max-w-4xl w-full rounded-2xl overflow-hidden bg-black border border-teal-500/20 p-0.5"
-                >
-                  <img
-                    src="https://media.base44.com/images/public/6a1b93f234a8611ee1595134/1005e28fb_graphinfotooltip.png"
-                    alt="Graph Information Details"
-                    className="w-full h-auto rounded-xl object-contain block max-h-[85vh] mx-auto"
-                  />
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
       </div>
 
