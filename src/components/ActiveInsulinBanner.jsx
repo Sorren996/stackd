@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowUp, ArrowDown, ArrowRight, ArrowUpRight, ArrowDownRight, Info, X, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { INSULIN_PROFILES, generateActivityCurve } from "@/lib/insulinPharmacology";
-import { getActiveCarbsNow, getTotalCarbsToday, generateCarbCurve } from "@/lib/carbAbsorption";
+import {
+  getActiveCarbsNow,
+  getTotalCarbsToday,
+  getCarbAbsorptionAt,
+} from "@/lib/carbAbsorption";
 import { motion, AnimatePresence } from "framer-motion";
 
 
