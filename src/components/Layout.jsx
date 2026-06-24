@@ -32,19 +32,36 @@ export default function Layout() {
       {isLightMode && (
         <style>{`
           .app-light [class~="text-white"] {
-            color: #18181b !important;
+            color: #20332d !important;
           }
 
           .app-light [class*="text-white/"] {
-            color: rgba(24, 24, 27, 0.62) !important;
+            color: rgba(32, 51, 45, 0.62) !important;
           }
 
           .app-light [class*="border-white"] {
-            border-color: rgba(24, 24, 27, 0.12) !important;
+            border-color: rgba(32, 51, 45, 0.13) !important;
           }
 
           .app-light [class*="bg-white/"] {
-            background-color: rgba(24, 24, 27, 0.05) !important;
+            background-color: rgba(255, 255, 255, 0.62) !important;
+          }
+
+          .app-light .metric-card,
+          .app-light .dashboard-surface {
+            background: linear-gradient(145deg, rgba(255,255,255,0.92), rgba(237,247,243,0.72)) !important;
+            border-color: rgba(32, 90, 76, 0.15) !important;
+            box-shadow: 0 14px 34px rgba(31, 70, 59, 0.08), inset 0 1px 0 rgba(255,255,255,0.88) !important;
+          }
+
+          .app-light .theme-popover {
+            background: rgba(255,255,255,0.96) !important;
+            border-color: rgba(32, 90, 76, 0.16) !important;
+            box-shadow: 0 18px 48px rgba(31, 70, 59, 0.16) !important;
+          }
+
+          .app-light .balance-sparkline line {
+            stroke: rgba(32, 51, 45, 0.18) !important;
           }
         `}</style>
       )}
@@ -52,7 +69,7 @@ export default function Layout() {
         className="pointer-events-none fixed inset-0 -z-50 transition-colors duration-500"
         style={{
           background: isLightMode
-            ? "linear-gradient(to bottom, #ffffff, #f4f4f5, #e4e4e7)"
+            ? "linear-gradient(to bottom, #fbfdfc, #eef6f3, #dceae5)"
             : "linear-gradient(to bottom, #042f2e, #18181b, #000000)",
         }}
       />
