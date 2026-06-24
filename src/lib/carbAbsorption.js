@@ -1,6 +1,31 @@
 export const FOOD_CATEGORIES = ["Fast Absorbing", "Medium Absorbing", "Slow Absorbing"];
 
 export const ABSORPTION_PROFILES = {
+  fast: {
+    onsetMin: 5,
+    peakMin: 30,
+    durationMin: 90,
+    riseExponent: 0.4,
+    taperExponent: 0.65,
+  },
+  medium: {
+    onsetMin: 15,
+    peakMin: 65,
+    durationMin: 150,
+    riseExponent: 0.5,
+    taperExponent: 0.6,
+  },
+  slow: {
+    onsetMin: 25,
+    peakMin: 120,
+    durationMin: 300,
+    riseExponent: 0.6,
+    taperExponent: 0.5,
+  },
+};
+
+
+export const ABSORPTION_PROFILES = {
   fast:   { onsetMin: 5,  peakMin: 30,  durationMin: 90  },
   medium: { onsetMin: 15, peakMin: 65,  durationMin: 150 },
   slow:   { onsetMin: 25, peakMin: 120, durationMin: 300 },
@@ -322,40 +347,51 @@ export function getCarbAbsorptionAt(entry, targetTime = Date.now()) {
     };
   }
 
-  const activeDuration = durationMin - onsetMin;
-  const timeToPeak = peakMin - onsetMin;
-  const timeAfterPeak = durationMin - peakMin;
-  const activeElapsed = elapsedMin - onsetMin;
-  const peakRateFraction = 2 / activeDuration;
+const activeDuration = durationMin - onsetMin;
+const progress = (elapsedMin - onsetMin) / activeDuration;
+const peakProgress = Math.min(
+  0.95,
+  Math.max(0.05, (peakMin - onsetMin) / activeDuration)
+);
 
-  let absorbedFraction;
-  let rateFractionPerMin;
+const riseExponent = profile.riseExponent ?? 0.5;
+const taperExponent = profile.taperExponent ?? 0.6;
 
-  if (activeElapsed <= timeToPeak) {
-    rateFractionPerMin = peakRateFraction * (activeElapsed / timeToPeak);
-    absorbedFraction =
-      0.5 * peakRateFraction * (activeElapsed ** 2 / timeToPeak);
-  } else {
-    const afterPeak = activeElapsed - timeToPeak;
-    const fractionAtPeak = timeToPeak / activeDuration;
+const riseArea = peakProgress / (riseExponent + 1);
+const taperArea = (1 - peakProgress) / (taperExponent + 1);
+const totalArea = riseArea + taperArea;
 
-    rateFractionPerMin =
-      peakRateFraction * (1 - afterPeak / timeAfterPeak);
+let absorbedFraction;
+let relativeRate;
 
-    absorbedFraction =
-      fractionAtPeak +
-      peakRateFraction *
-        (afterPeak - (afterPeak ** 2) / (2 * timeAfterPeak));
-  }
+if (progress <= peakProgress) {
+  const riseProgress = progress / peakProgress;
 
-  const safeFraction = Math.max(0, Math.min(1, absorbedFraction));
-  const absorbedGrams = entry.carbs * safeFraction;
+  relativeRate = riseProgress ** riseExponent;
+  absorbedFraction =
+    (riseArea * riseProgress ** (riseExponent + 1)) / totalArea;
+} else {
+  const taperProgress = (progress - peakProgress) / (1 - peakProgress);
 
-  return {
-    absorbedGrams,
-    remainingGrams: entry.carbs - absorbedGrams,
-    absorptionRateGPerMin: Math.max(0, rateFractionPerMin * entry.carbs),
-  };
+  relativeRate = (1 - taperProgress) ** taperExponent;
+  absorbedFraction =
+    (riseArea +
+      taperArea * (1 - (1 - taperProgress) ** (taperExponent + 1))) /
+    totalArea;
+}
+
+const safeFraction = Math.max(0, Math.min(1, absorbedFraction));
+const absorbedGrams = entry.carbs * safeFraction;
+
+return {
+  absorbedGrams,
+  remainingGrams: entry.carbs - absorbedGrams,
+  absorptionRateGPerMin: Math.max(
+    0,
+    (entry.carbs * relativeRate) / (activeDuration * totalArea)
+  ),
+  relativeRate,
+};
 }
 
 export function generateCarbCurve(entry) {
@@ -379,7 +415,7 @@ for (let time = start; time <= end; time += step) {
 
   result.push({
     time,
-    activity,
+    activity: absorption.relativeRate,
     absorbedFraction: entry.carbs > 0
       ? absorption.absorbedGrams / entry.carbs
       : 0,
