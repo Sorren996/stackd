@@ -292,7 +292,7 @@ export const FOOD_DATABASE = [
 
 ];
 
-function getCarbAbsorptionAt(entry, targetTime = Date.now()) {
+export function getCarbAbsorptionAt(entry, targetTime = Date.now()) {
   if (entry.is_custom || !entry.absorption_profile) {
     return { absorbedGrams: 0, remainingGrams: 0, absorptionRateGPerMin: 0 };
   }
