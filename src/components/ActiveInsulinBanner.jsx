@@ -371,7 +371,7 @@ const netValue = needsInsulinPlan
   : netActiveCarbs > 5
     ? "More carbs active"
     : netActiveCarbs < -5
-      ? "More insulin active"
+      ? "High insulin activity"
       : "In balance";
 
 const netLabel = needsInsulinPlan
