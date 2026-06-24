@@ -141,23 +141,23 @@ export default function Layout() {
         }}
       />
 
-      <header className="sticky top-0 z-50 bg-transparent">
+      <header className="fixed inset-x-0 top-0 z-50 bg-transparent">
         <div
-          className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4"
+          className="mx-auto grid h-14 max-w-6xl grid-cols-[1fr_auto_1fr] items-center px-4"
           style={{
             background: isLightMode
               ? "linear-gradient(to bottom, rgba(255,255,255,0.92), rgba(255,255,255,0.45), transparent)"
               : "linear-gradient(to bottom, rgba(0,0,0,0.8), rgba(0,0,0,0.4), transparent)",
           }}
         >
-          <div className="w-9" />
+          <div />
           <img
             src="https://media.base44.com/images/public/6a1b93f234a8611ee1595134/9cd3c84cf_stackdappiconver3tran.png"
             alt="Stackd Logo"
             className="h-9 w-auto object-contain"
           />
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-self-end gap-2">
             <button
               type="button"
               onClick={toggleTheme}
@@ -208,7 +208,7 @@ export default function Layout() {
         </div>
       </header>
 
-      <main className="relative z-10 mx-auto w-full max-w-6xl px-4 pb-28 pt-0">
+      <main className="relative z-10 mx-auto w-full max-w-6xl px-4 pb-28 pt-14">
         <div className="min-w-0 w-full">
           <Outlet />
         </div>
