@@ -243,6 +243,71 @@ export default function Settings() {
         </div>
       </div>
 
+
+{/* Insulin Plan */}
+<div className="space-y-3">
+  <h3 className="text-sm font-bold text-white/35 uppercase tracking-wider px-1">
+    Insulin Plan
+  </h3>
+
+  <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-4 space-y-5">
+    <p className="text-xs text-white/40">
+      Enter the values from your established insulin plan.
+    </p>
+
+    <div className="space-y-2">
+      <Label htmlFor="insulin-sensitivity" className="text-sm font-semibold text-white/90">
+        Insulin sensitivity
+      </Label>
+      <p className="text-xs text-white/40">
+        How much 1 unit of insulin typically lowers your glucose.
+      </p>
+      <div className="flex items-center gap-3">
+        <input
+          id="insulin-sensitivity"
+          type="number"
+          min="1"
+          step="1"
+          inputMode="decimal"
+          value={insulinSensitivity}
+          onChange={handleInsulinSettingChange(
+            "insulin_sensitivity_mgdl_per_unit",
+            setInsulinSensitivity
+          )}
+          className="w-24 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-teal-400"
+        />
+        <span className="text-xs text-white/40">mg/dL per unit</span>
+      </div>
+    </div>
+
+    <div className="space-y-2">
+      <Label htmlFor="meal-insulin" className="text-sm font-semibold text-white/90">
+        Meal insulin
+      </Label>
+      <p className="text-xs text-white/40">
+        Insulin units used to cover 5 grams of carbohydrates.
+      </p>
+      <div className="flex items-center gap-3">
+        <input
+          id="meal-insulin"
+          type="number"
+          min="0.05"
+          step="0.05"
+          inputMode="decimal"
+          value={unitsPer5g}
+          onChange={handleInsulinSettingChange(
+            "meal_insulin_units_per_5g",
+            setUnitsPer5g
+          )}
+          className="w-24 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-teal-400"
+        />
+        <span className="text-xs text-white/40">units per 5 g</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+
       {/* Alerts & Preferences */}
       <div className="space-y-3">
         <h3 className="text-sm font-bold text-white/35 uppercase tracking-wider px-1">Alerts & Preferences</h3>
