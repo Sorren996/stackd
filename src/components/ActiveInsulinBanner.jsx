@@ -57,6 +57,11 @@ function getActiveCarbsAt(entries, targetTime) {
   }, 0);
 }
 
+const trajectory = useMemo(
+  () => computeNetCarbTrajectory(doses, carbEntries, latestGlucose, insulinSettings),
+  [doses, carbEntries, latestGlucose, insulinSettings]
+);
+
 /**
  * Sweep the entire overlap window of all active insulin doses and carb
  * entries, computing net carbs-vs-food-insulin at each sample point.
