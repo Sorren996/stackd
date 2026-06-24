@@ -297,34 +297,6 @@ export function getCarbAbsorptionAt(entry, targetTime = Date.now()) {
     return { absorbedGrams: 0, remainingGrams: 0, absorptionRateGPerMin: 0 };
   }
 
-  export function generateCarbCurve(entry) {
-  if (entry.is_custom || !entry.absorption_profile) return [];
-
-  const profile = ABSORPTION_PROFILES[entry.absorption_profile];
-  if (!profile) return [];
-
-  const start = new Date(entry.consumed_at).getTime();
-  const end = start + profile.durationMin * 60000;
-  const step = 3 * 60000;
-  const result = [];
-
-  for (let time = start; time <= end; time += step) {
-    const absorption = getCarbAbsorptionAt(entry, time);
-
-    result.push({
-      time,
-      // Keeps older code compatible: activity now means the fraction
-      // of this meal's carbs that is still digesting.
-      activity: entry.carbs > 0
-        ? absorption.remainingGrams / entry.carbs
-        : 0,
-      ...absorption,
-    });
-  }
-
-  return result;
-}
-
   const profile = ABSORPTION_PROFILES[entry.absorption_profile];
   if (!profile) {
     return { absorbedGrams: 0, remainingGrams: 0, absorptionRateGPerMin: 0 };
@@ -350,8 +322,6 @@ export function getCarbAbsorptionAt(entry, targetTime = Date.now()) {
     };
   }
 
-  // A triangular absorption-rate curve: gradual onset, fastest near peak,
-  // then a gradual taper. Its total area always equals the meal's carbs.
   const activeDuration = durationMin - onsetMin;
   const timeToPeak = peakMin - onsetMin;
   const timeAfterPeak = durationMin - peakMin;
@@ -386,6 +356,32 @@ export function getCarbAbsorptionAt(entry, targetTime = Date.now()) {
     remainingGrams: entry.carbs - absorbedGrams,
     absorptionRateGPerMin: Math.max(0, rateFractionPerMin * entry.carbs),
   };
+}
+
+export function generateCarbCurve(entry) {
+  if (entry.is_custom || !entry.absorption_profile) return [];
+
+  const profile = ABSORPTION_PROFILES[entry.absorption_profile];
+  if (!profile) return [];
+
+  const start = new Date(entry.consumed_at).getTime();
+  const end = start + profile.durationMin * 60000;
+  const step = 3 * 60000;
+  const result = [];
+
+  for (let time = start; time <= end; time += step) {
+    const absorption = getCarbAbsorptionAt(entry, time);
+
+    result.push({
+      time,
+      activity: entry.carbs > 0
+        ? absorption.remainingGrams / entry.carbs
+        : 0,
+      ...absorption,
+    });
+  }
+
+  return result;
 }
 
 export function getActiveCarbsNow(entries) {
