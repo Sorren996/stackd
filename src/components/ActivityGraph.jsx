@@ -299,7 +299,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   return (
     <div ref={containerRef} className="-mx-4 overflow-hidden">
       {/* Controls row */}
-      <div className="flex py-3 items-center mb-4 justify-start gap-2">
+      <div className="flex py-3 items-center mb-4 justify-start pl-4 gap-2">
 
         {/* Filter button */}
         <div className="relative justify-start">
