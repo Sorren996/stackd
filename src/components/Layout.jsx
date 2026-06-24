@@ -24,6 +24,15 @@ export default function Layout() {
     navigate(isSettingsOpen ? "/" : "/settings");
   };
 
+  const toggleTheme = () => {
+    setIsLightMode((current) => {
+      const next = !current;
+      localStorage.setItem("theme", next ? "light" : "dark");
+      window.dispatchEvent(new Event("app-theme-changed"));
+      return next;
+    });
+  };
+
   const pageText = isLightMode ? "text-zinc-900" : "text-white";
   const mutedText = isLightMode ? "text-zinc-500" : "text-white/50";
 
@@ -94,6 +103,24 @@ export default function Layout() {
             box-shadow: 0 8px 22px rgba(31, 70, 59, 0.05), inset 0 1px 0 rgba(255,255,255,0.9);
           }
 
+          .app-light .dashboard-stacking-alert {
+            background: linear-gradient(135deg, rgba(255,248,230,0.88), rgba(255,255,255,0.74)) !important;
+            border: 1px solid rgba(169, 104, 33, 0.22) !important;
+            box-shadow: 0 10px 24px rgba(126, 83, 31, 0.07), inset 0 1px 0 rgba(255,255,255,0.9);
+          }
+
+          .app-light .settings-page input:not([type="file"]),
+          .app-light .settings-page textarea {
+            background: rgba(255,255,255,0.72) !important;
+            border-color: rgba(32, 90, 76, 0.16) !important;
+            color: #29433a !important;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.9);
+          }
+
+          .app-light .settings-page [class*="bg-red-950"] {
+            background: rgba(255,241,241,0.78) !important;
+          }
+
           .app-light .theme-popover {
             background: rgba(255,255,255,0.96) !important;
             border-color: rgba(32, 90, 76, 0.16) !important;
@@ -133,7 +160,7 @@ export default function Layout() {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => setIsLightMode((value) => !value)}
+              onClick={toggleTheme}
               aria-label={isLightMode ? "Switch to dark mode" : "Switch to light mode"}
               title={isLightMode ? "Switch to dark mode" : "Switch to light mode"}
               className="flex h-9 w-9 items-center justify-center rounded-full border transition-all"
