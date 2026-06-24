@@ -328,7 +328,7 @@ export default function DoseForm({ open, onOpenChange }) {
                     ? "Logging..."
                     : totalUnits
                       ? `Log ${totalUnits % 1 === 0 ? totalUnits : totalUnits.toFixed(1)} units`
-                      : "Add insulin units"}
+                      : "Log dose(s)"}
                 </button>
               </div>
             </>
