@@ -154,56 +154,9 @@ function AmbientOrb({ color, duration = 6, size = 48 }) {
   );
 }
 
-{openTooltip === "net-carbs" && (
-  <TooltipPopover key="net-carbs-tip" title="Net Active Carbs"
-    description="Net Active Carbs compares the full carbohydrate absorption curve against insulin dedicated to food coverage across its entire active duration — after accounting for correction insulin based on your most recent glucose reading. The status shown reflects the single worst point across that whole window, not just the next 30 minutes, so slower meals or insulin still rising toward its peak are accounted for."
-    onClose={() => setOpenTooltip(null)}
-  >
-    {trajectory.glucoseAsOf && (
-      <p className="text-[11px] text-white/40 mt-3 pt-3 border-t border-white/10">
-        Based on glucose reading from{" "}
-        <span className="font-semibold text-white/60">{formatRelativeAge(trajectory.glucoseAsOf)}</span>
-        {" "}({formatClockTime(trajectory.glucoseAsOf)}). This offset is held constant across the projection — it does not predict future glucose.
-      </p>
-    )}
-    {trajectory.points.length > 1 && (
-      <div className="mt-3">
-        <RiskSparkline points={trajectory.points} color={netColor} />
-        <div className="flex justify-between text-[10px] text-white/30 mt-1">
-          <span>Now</span>
-          <span>{formatClockTime(trajectory.points[trajectory.points.length - 1].time)}</span>
-        </div>
-        {netPeakTime && (
-          <p className="text-[11px] text-white/40 mt-2">
-            {netActiveCarbs > 5 ? "Peak risk" : netActiveCarbs < -5 ? "Lowest point" : "Most notable point"}
-            {isPeakInFuture ? " expected " : " was "}
-            <span className="font-semibold" style={{ color: netColor }}>
-              {formatClockTime(netPeakTime)}
-            </span>
-          </p>
-        )}
-      </div>
-    )}
-  </TooltipPopover>
-)}
 
-<MetricCard
-  label="Net Carbs"
-  value={`${Math.abs(netPct)}%`}
-  sub={
-    trajectory.glucoseAsOf
-      ? `glucose as of ${formatRelativeAge(trajectory.glucoseAsOf)}`
-      : isPeakInFuture
-      ? `peak ~${formatClockTime(netPeakTime)}`
-      : "balance"
-  }
-  status={netLabel}
-  orbColor={netColor}
-  orbDuration={8}
-  tooltipId="net-carbs"
-  openTooltip={openTooltip}
-  setOpenTooltip={setOpenTooltip}
-/>
+
+
 
 // Tiny inline sparkline for the net-carbs risk trajectory
 function RiskSparkline({ points, color, height = 36 }) {
@@ -267,6 +220,24 @@ function MetricCard({ label, value, sub, status, orbColor, orbDuration = 6, tool
           </button>
         )}
       </div>
+
+<MetricCard
+  label="Net Carbs"
+  value={`${Math.abs(netPct)}%`}
+  sub={
+    trajectory.glucoseAsOf
+      ? `glucose as of ${formatRelativeAge(trajectory.glucoseAsOf)}`
+      : isPeakInFuture
+      ? `peak ~${formatClockTime(netPeakTime)}`
+      : "balance"
+  }
+  status={netLabel}
+  orbColor={netColor}
+  orbDuration={8}
+  tooltipId="net-carbs"
+  openTooltip={openTooltip}
+  setOpenTooltip={setOpenTooltip}
+/>
 
       <div className="mt-1">
         <span className="text-2xl font-bold text-white leading-none">{value}</span>
@@ -377,6 +348,40 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
 
   return (
     <>
+
+{openTooltip === "net-carbs" && (
+  <TooltipPopover key="net-carbs-tip" title="Net Active Carbs"
+    description="Net Active Carbs compares the full carbohydrate absorption curve against insulin dedicated to food coverage across its entire active duration — after accounting for correction insulin based on your most recent glucose reading. The status shown reflects the single worst point across that whole window, not just the next 30 minutes, so slower meals or insulin still rising toward its peak are accounted for."
+    onClose={() => setOpenTooltip(null)}
+  >
+    {trajectory.glucoseAsOf && (
+      <p className="text-[11px] text-white/40 mt-3 pt-3 border-t border-white/10">
+        Based on glucose reading from{" "}
+        <span className="font-semibold text-white/60">{formatRelativeAge(trajectory.glucoseAsOf)}</span>
+        {" "}({formatClockTime(trajectory.glucoseAsOf)}). This offset is held constant across the projection — it does not predict future glucose.
+      </p>
+    )}
+    {trajectory.points.length > 1 && (
+      <div className="mt-3">
+        <RiskSparkline points={trajectory.points} color={netColor} />
+        <div className="flex justify-between text-[10px] text-white/30 mt-1">
+          <span>Now</span>
+          <span>{formatClockTime(trajectory.points[trajectory.points.length - 1].time)}</span>
+        </div>
+        {netPeakTime && (
+          <p className="text-[11px] text-white/40 mt-2">
+            {netActiveCarbs > 5 ? "Peak risk" : netActiveCarbs < -5 ? "Lowest point" : "Most notable point"}
+            {isPeakInFuture ? " expected " : " was "}
+            <span className="font-semibold" style={{ color: netColor }}>
+              {formatClockTime(netPeakTime)}
+            </span>
+          </p>
+        )}
+      </div>
+    )}
+  </TooltipPopover>
+)}
+
       <AnimatePresence>
         {openTooltip === "active-carbs" && (
           <TooltipPopover key="active-carbs-tip" title="Active Carbs"
