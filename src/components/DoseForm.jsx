@@ -4,45 +4,58 @@ import { base44 } from "@/api/base44Client";
 import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
 import { Dialog, DialogPortal, DialogOverlay, DialogClose } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { X, Syringe, Droplets, Wheat } from "lucide-react";
+import { X, Syringe, Droplets, Wheat, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { Slider } from "@/components/ui/slider";
-import { motion } from "framer-motion";
 import CarbsTab from "@/components/CarbsTab";
 
-const CATEGORY_ORDER = ["Rapid-Acting", "Short-Acting", "Intermediate", "Long-Acting", "Ultra Long-Acting"];
+const CATEGORY_ORDER = [
+  "Rapid-Acting",
+  "Short-Acting",
+  "Intermediate",
+  "Long-Acting",
+  "Ultra Long-Acting",
+];
 
-const groupedInsulins = CATEGORY_ORDER.reduce((acc, cat) => {
-  const items = Object.entries(INSULIN_PROFILES).filter(([, p]) => p.category === cat);
-  if (items.length) acc.push({ category: cat, items });
-  return acc;
+const groupedInsulins = CATEGORY_ORDER.reduce((groups, category) => {
+  const items = Object.entries(INSULIN_PROFILES).filter(([, profile]) => profile.category === category);
+  if (items.length) groups.push({ category, items });
+  return groups;
 }, []);
 
-const GLUCOSE_PRESETS = [70, 100, 120, 140, 180, 200, 250];
+function createInsulinRow(defaults = {}) {
+  return {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    insulinType: "",
+    units: "",
+    purpose: "meal",
+    ...defaults,
+  };
+}
 
 export default function DoseForm({ open, onOpenChange }) {
   const [tab, setTab] = useState("insulin");
-  const [insulinType, setInsulinType] = useState("");
-  const [units, setUnits] = useState(10);
+  const [insulinRows, setInsulinRows] = useState(() => [createInsulinRow()]);
   const [insulinNotes, setInsulinNotes] = useState("");
   const [insulinTime, setInsulinTime] = useState(() => new Date().toTimeString().slice(0, 5));
-const [glucoseValue, setGlucoseValue] = useState("");
-  const [glucoseNotes, setGlucoseNotes] = useState("--");
+  const [glucoseValue, setGlucoseValue] = useState("");
+  const [glucoseNotes, setGlucoseNotes] = useState("");
   const [glucoseTime, setGlucoseTime] = useState(() => new Date().toTimeString().slice(0, 5));
 
-  const nowTimeString = new Date().toTimeString().slice(0, 5);
   const queryClient = useQueryClient();
+  const nowTimeString = new Date().toTimeString().slice(0, 5);
 
-  const createDose = useMutation({
-    mutationFn: (data) => base44.entities.InsulinDose.create(data),
+  const createDoses = useMutation({
+    mutationFn: (doses) => base44.entities.InsulinDose.bulkCreate(doses),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["insulin-doses"] });
-      toast.success("Dose logged — tracking activity now");
+      toast.success("Insulin logged - tracking activity now");
       onOpenChange(false);
-      setInsulinType(""); setUnits(10); setInsulinNotes("");
+      setInsulinRows([createInsulinRow()]);
+      setInsulinNotes("");
       setInsulinTime(new Date().toTimeString().slice(0, 5));
-    }
+    },
+    onError: () => toast.error("Unable to log insulin. Please try again."),
   });
 
   const createGlucose = useMutation({
@@ -51,370 +64,336 @@ const [glucoseValue, setGlucoseValue] = useState("");
       queryClient.invalidateQueries({ queryKey: ["glucose-readings"] });
       toast.success("Glucose logged");
       onOpenChange(false);
-      setGlucoseValue(100); setGlucoseNotes("");
+      setGlucoseValue("");
+      setGlucoseNotes("");
       setGlucoseTime(new Date().toTimeString().slice(0, 5));
-    }
+    },
   });
 
   const createCarb = useMutation({
     mutationFn: (entries) => base44.entities.CarbEntry.bulkCreate(entries),
     onSuccess: (_, entries) => {
       queryClient.invalidateQueries({ queryKey: ["carb-entries"] });
-      toast.success(`Logged ${entries.length} food item${entries.length > 1 ? "s" : ""}`);
+      toast.success(`Logged ${entries.length} food item${entries.length === 1 ? "" : "s"}`);
       onOpenChange(false);
-    }
+    },
   });
 
-  const profile = insulinType ? INSULIN_PROFILES[insulinType] : null;
-  const rawAccentColor = profile?.color || "#2dd4bf";
-  const accentColor = rawAccentColor.slice(0, 7);
-  
-  const infoColor = profile ? accentColor : "rgba(255,255,255,0.3)";
-  const infoBg = profile ? accentColor + "11" : "rgba(255,255,255,0.02)";
-  const infoBorder = profile ? accentColor + "22" : "rgba(255,255,255,0.05)";
-  
-  const glucoseColor = "#c2611c";
+  const updateInsulinRow = (id, patch) => {
+    setInsulinRows((rows) => rows.map((row) => (row.id === id ? { ...row, ...patch } : row)));
+  };
+
+  const addInsulinRow = () => {
+    const previous = insulinRows[insulinRows.length - 1];
+    setInsulinRows((rows) => [
+      ...rows,
+      createInsulinRow({
+        insulinType: previous?.insulinType || "",
+        purpose: previous?.purpose || "meal",
+      }),
+    ]);
+  };
+
+  const removeInsulinRow = (id) => {
+    setInsulinRows((rows) => (rows.length === 1 ? rows : rows.filter((row) => row.id !== id)));
+  };
+
+  const insulinTotals = insulinRows.reduce((totals, row) => {
+    const units = Number(row.units);
+    if (!row.insulinType || !Number.isFinite(units) || units <= 0) return totals;
+
+    totals[row.insulinType] = (totals[row.insulinType] || 0) + units;
+    return totals;
+  }, {});
+
+  const totalUnits = Object.values(insulinTotals).reduce((sum, units) => sum + units, 0);
 
   const handleSubmitInsulin = () => {
-    if (!insulinType || !units) return;
-    const [h, m] = insulinTime.split(":").map(Number);
-    const dt = new Date();
-    dt.setHours(h, m, 0, 0);
-    createDose.mutate({
-      insulin_type: insulinType,
-      units: parseFloat(units),
-      administered_at: dt.toISOString(),
-      notes: insulinNotes || undefined
+    const invalidRow = insulinRows.find((row) => {
+      const units = Number(row.units);
+      return !row.insulinType || !Number.isFinite(units) || units <= 0;
     });
+
+    if (invalidRow) {
+      toast.error("Choose an insulin type and enter units for every row.");
+      return;
+    }
+
+    const [hours, minutes] = insulinTime.split(":").map(Number);
+    const administeredAt = new Date();
+    administeredAt.setHours(hours, minutes, 0, 0);
+
+    const groupedDoses = insulinRows.reduce((groups, row) => {
+      const units = Number(row.units);
+      const existing = groups[row.insulinType] || {
+        insulin_type: row.insulinType,
+        units: 0,
+        meal_units: 0,
+        correction_units: 0,
+        administered_at: administeredAt.toISOString(),
+        notes: insulinNotes || undefined,
+      };
+
+      existing.units += units;
+      if (row.purpose === "correction") {
+        existing.correction_units += units;
+      } else {
+        existing.meal_units += units;
+      }
+
+      groups[row.insulinType] = existing;
+      return groups;
+    }, {});
+
+    createDoses.mutate(Object.values(groupedDoses));
   };
 
   const handleSubmitGlucose = () => {
-    if (!glucoseValue) return;
-    const [h, m] = glucoseTime.split(":").map(Number);
-    const dt = new Date();
-    dt.setHours(h, m, 0, 0);
+    const value = Number(glucoseValue);
+    if (!Number.isFinite(value) || value <= 0) return;
+
+    const [hours, minutes] = glucoseTime.split(":").map(Number);
+    const recordedAt = new Date();
+    recordedAt.setHours(hours, minutes, 0, 0);
+
     createGlucose.mutate({
-      value: parseFloat(glucoseValue),
-      recorded_at: dt.toISOString(),
-      notes: glucoseNotes || undefined
+      value,
+      recorded_at: recordedAt.toISOString(),
+      notes: glucoseNotes || undefined,
     });
   };
 
-  const adjust = (delta) => setUnits((u) => Math.max(0.5, Math.round((u + delta) * 2) / 2));
-  const adjustGlucose = (delta) => setGlucoseValue((v) => Math.min(400, Math.max(40, v + delta)));
-  const shortName = insulinType ? insulinType.split(" ")[0] : "";
-
-    return (
+  return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogPortal>
-        {/* local hardware-accelerated custom spring animations */}
-        <style>{`
-          @keyframes custom-backdrop-fade {
-            from { opacity: 0; backdrop-filter: blur(0px); }
-            to { opacity: 1; backdrop-filter: blur(4px); }
-          }
-          @keyframes custom-backdrop-fade-out {
-            from { opacity: 1; backdrop-filter: blur(4px); }
-            to { opacity: 0; backdrop-filter: blur(0px); }
-          }
-          
-          /* Mobile Bottom Sheet Spring */
-          @keyframes mobile-spring-up {
-            0% { transform: translateY(100%); }
-            60% { transform: translateY(-10px); }
-            85% { transform: translateY(3px); }
-            100% { transform: translateY(0); }
-          }
-          @keyframes mobile-slide-down {
-            from { transform: translateY(0); }
-            to { transform: translateY(100%); }
-          }
-
-          /* Desktop Centered Scale Spring */
-          @keyframes desktop-spring-scale {
-            0% { transform: translate(-50%, -42%) scale(0.92); opacity: 0; }
-            55% { transform: translate(-50%, -51.5%) scale(1.02); opacity: 1; }
-            80% { transform: translate(-50%, -49.5%) scale(0.995); }
-            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-          }
-          @keyframes desktop-scale-out {
-            from { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-            to { transform: translate(-50%, -47%) scale(0.95); opacity: 0; }
-          }
-        `}</style>
-
-        {/* Backdrop with Smooth CSS Blur Transition */}
-        <DialogOverlay className="fixed inset-0 z-50 bg-black/75 data-[state=open]:animate-[custom-backdrop-fade_0.3s_ease-out] data-[state=closed]:animate-[custom-backdrop-fade-out_0.2s_ease-in]" />
-
-        {/* Responsive Sheet & Modal with Spring Physics */}
-        <DialogPrimitive.Content 
-          className="fixed bottom-0 sm:bottom-auto left-0 right-0 sm:left-1/2 sm:top-1/2 z-50 w-full sm:max-w-md flex flex-col overflow-hidden rounded-t-[2rem] sm:rounded-3xl border border-white/5 shadow-2xl origin-bottom sm:origin-center
-            /* Mobile Springs */
-            data-[state=open]:animate-[mobile-spring-up_0.42s_cubic-bezier(0.215,0.61,0.355,1)] 
-            data-[state=closed]:animate-[mobile-slide-down_0.24s_cubic-bezier(0.25,1,0.5,1)]
-            /* Desktop Springs */
-            sm:data-[state=open]:animate-[desktop-spring-scale_0.44s_cubic-bezier(0.25,1,0.5,1)]
-            sm:data-[state=closed]:animate-[desktop-scale-out_0.22s_cubic-bezier(0.25,1,0.5,1)]"
-          style={{ background: "hsl(162,10%,8%)", maxHeight: "92vh" }}
+        <DialogOverlay className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm" />
+        <DialogPrimitive.Content
+          className="fixed bottom-0 left-0 right-0 z-50 flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl border border-white/5 shadow-2xl sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl"
+          style={{ background: "hsl(162,10%,8%)" }}
         >
-        {/* Header */}
-          <div className="flex items-center justify-between relative px-6 pt-5 pb-3 shrink-0">
+          <div className="flex items-center justify-between px-6 pb-3 pt-5">
             <div className="w-8" />
-            <span className="text-white text-lg font-semibold">Log Entry</span>
-            {/* Wrapped in DialogClose for native lifecycle cleanup */}
+            <span className="text-lg font-semibold text-white">Log Entry</span>
             <DialogClose asChild>
-              <button
-                className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 border border-white/10 text-white/60 hover:text-white active:scale-95 transition"
-              >
-                <X className="w-4 h-4" />
+              <button className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/60 transition hover:text-white">
+                <X className="h-4 w-4" />
               </button>
             </DialogClose>
           </div>
 
-          {/* Tabs with Springs */}
-          {(() => {
-            const tabs = [
-              { id: "insulin", label: "Insulin", Icon: Syringe, activeClass: "text-white", activeBg: "rgba(255,255,255,0.10)" },
-              { id: "glucose", label: "Glucose", Icon: Droplets, activeClass: "text-orange-400", activeBg: `${glucoseColor}33` },
-              { id: "carbs", label: "Carbs", Icon: Wheat, activeClass: "text-amber-400", activeBg: "rgba(217,119,6,0.2)" },
-            ];
-            return (
-              <div className="flex mx-5 mb-2 rounded-2xl p-1 shrink-0 relative" style={{ background: "rgba(255,255,255,0.06)" }}>
-                {tabs.map(({ id, label, Icon, activeClass, activeBg }) => (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => setTab(id)}
-                    className={`relative flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-medium transition-colors duration-200 ${
-                      tab === id ? activeClass : "text-white/40 hover:text-white/60"
-                    }`}
-                  >
-                    {tab === id && (
-                      <motion.div
-                        layoutId="active-form-tab"
-                        className="absolute inset-0 rounded-xl"
-                        style={{ backgroundColor: activeBg }}
-                        transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                      />
-                    )}
-                    <span className="relative z-10 flex items-center gap-2">
-                      <Icon className="w-3.5 h-3.5" />
-                      {label}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            );
-          })()}
+          <div className="mx-5 mb-2 flex rounded-2xl bg-white/[0.06] p-1">
+            {[
+              { id: "insulin", label: "Insulin", Icon: Syringe },
+              { id: "glucose", label: "Glucose", Icon: Droplets },
+              { id: "carbs", label: "Carbs", Icon: Wheat },
+            ].map(({ id, label, Icon }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setTab(id)}
+                className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2 text-sm font-medium transition-colors ${
+                  tab === id ? "bg-white/10 text-white" : "text-white/40 hover:text-white/60"
+                }`}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {label}
+              </button>
+            ))}
+          </div>
 
-          <div className="flex-1 flex flex-col" style={{ minHeight: 580 }}>
           {tab === "carbs" ? (
-            <CarbsTab onSubmit={(entries) => createCarb.mutate(entries)} isPending={createCarb.isPending} />
+            <div className="min-h-[580px]">
+              <CarbsTab onSubmit={(entries) => createCarb.mutate(entries)} isPending={createCarb.isPending} />
+            </div>
           ) : tab === "insulin" ? (
             <>
-              <div className="overflow-y-auto h-[500px] px-5 pb-6 space-y-6">
-                {/* Insulin Type */}
-                <div>
-                  <p className="text-sm font-bold tracking-widest text-white/40 uppercase mb-3">Insulin Type</p>
-                  <div className="space-y-3">
-                    {groupedInsulins.map(({ category, items }) => (
-                      <div key={category}>
-                        <p className="text-sm text-white/40 mb-2">{category}</p>
-                        <div className="flex flex-wrap gap-2">
-                           {items.map(([name, p]) => {
-                            const shortLabel = name.split(" ")[0];
-                            const subLabel = name.match(/\(([^)]+)\)/)?.[1] || "";
-                            const isSelected = insulinType === name;
-                            const basePColor = p.color.slice(0, 7);
-                            
-                            return (
-                              <button
-                                key={name}
-                                onClick={() => setInsulinType(name)}
-                                className="flex flex-col items-start px-3 py-2 rounded-xl border transition-all text-left text-white"
-                                style={{
-                                  minWidth: "72px",
-                                  borderColor: isSelected ? basePColor + "aa" : "rgba(255,255,255,0.1)",
-                                  backgroundColor: isSelected ? basePColor + "22" : "rgba(255, 255, 255, 0)",
-                                }}>
-                                <div className="flex items-center gap-1.5">
-                                  <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: p.color }} />
-                                  <span className="text-sm font-semibold">{shortLabel}</span>
-                                </div>
-                                {subLabel && <span className="text-sm text-white/40 mt-0.5 ml-3.5">{subLabel}</span>}
-                              </button>
-                            );
-                          })}
-                        </div>
+              <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-6 pt-4">
+                <div className="space-y-3">
+                  <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/40">Insulin doses</p>
+
+                  {insulinRows.map((row, index) => (
+                    <div key={row.id} className="space-y-2">
+                      <div className="grid grid-cols-[minmax(0,1fr)_4.5rem_6.75rem] gap-2">
+                        <select
+                          aria-label={`Insulin type for dose ${index + 1}`}
+                          value={row.insulinType}
+                          onChange={(event) => updateInsulinRow(row.id, { insulinType: event.target.value })}
+                          className="min-w-0 rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-teal-400"
+                        >
+                          <option value="" className="bg-[#18211f]">Insulin type</option>
+                          {groupedInsulins.map(({ category, items }) => (
+                            <optgroup key={category} label={category} className="bg-[#18211f]">
+                              {items.map(([name]) => (
+                                <option key={name} value={name}>{name}</option>
+                              ))}
+                            </optgroup>
+                          ))}
+                        </select>
+
+                        <input
+                          aria-label={`Units for dose ${index + 1}`}
+                          type="number"
+                          min="0.1"
+                          step="0.1"
+                          inputMode="decimal"
+                          placeholder="Units"
+                          value={row.units}
+                          onChange={(event) => updateInsulinRow(row.id, { units: event.target.value })}
+                          className="min-w-0 rounded-xl border border-white/10 bg-white/5 px-2 py-3 text-center text-sm text-white outline-none placeholder:text-white/30 focus:border-teal-400"
+                        />
+
+                        <select
+                          aria-label={`Purpose for dose ${index + 1}`}
+                          value={row.purpose}
+                          onChange={(event) => updateInsulinRow(row.id, { purpose: event.target.value })}
+                          className="rounded-xl border border-white/10 bg-white/5 px-2 py-3 text-sm text-white outline-none focus:border-teal-400"
+                        >
+                          <option value="meal" className="bg-[#18211f]">Meal</option>
+                          <option value="correction" className="bg-[#18211f]">Correction</option>
+                        </select>
                       </div>
-                    ))}
-                  </div>
-                </div>
 
-                {/* Pharmacokinetics */}
-                <div 
-                  className="border rounded-2xl px-4 py-3 grid grid-cols-3 divide-x divide-white/10 transition-all duration-300"
-                  style={{ backgroundColor: infoBg, borderColor: infoBorder }}
-                >
-                  <div className="text-center pr-4">
-                    <p className="font-bold text-base transition-colors" style={{ color: infoColor }}>
-                      {profile 
-                        ? (profile.onsetMin < 60 ? `${profile.onsetMin}m` : `${Math.round(profile.onsetMin / 60)}h`) 
-                        : "—"
-                      }
-                    </p>
-                    <p className="text-white/40 text-sm mt-0.5 uppercase tracking-wider">Onset</p>
-                  </div>
-                  <div className="text-center px-4">
-                    <p className="font-bold text-base transition-colors" style={{ color: infoColor }}>
-                      {profile 
-                        ? (profile.peakMin 
-                            ? `${Math.round(profile.peakMin / 60)}h${profile.peakMin % 60 ? ` ${profile.peakMin % 60}m` : ""}` 
-                            : "—") 
-                        : "—"
-                      }
-                    </p>
-                    <p className="text-white/40 text-sm mt-0.5 uppercase tracking-wider">Peak</p>
-                  </div>
-                  <div className="text-center pl-4">
-                    <p className="font-bold text-base transition-colors" style={{ color: infoColor }}>
-                      {profile ? `${Math.round(profile.durationMin / 60)}h` : "—"}
-                    </p>
-                    <p className="text-white/40 text-sm mt-0.5 uppercase tracking-wider">Duration</p>
-                  </div>
-                </div>
-
-                {/* Units */}
-                <div>
-                  <p className="text-sm font-bold tracking-widest text-white/40 uppercase mb-3">Units</p>
-                  <div className="bg-white/5 border border-white/10 rounded-2xl px-6 py-4 flex items-center justify-between mb-3">
-                    <button onClick={() => adjust(-1)} className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white text-xl flex items-center justify-center transition-colors">−</button>
-                    <div className="text-center">
-                      <span className="text-4xl font-bold text-white">{units}</span>
-                      <p className="text-white/40 text-sm mt-1">units</p>
+                      {insulinRows.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeInsulinRow(row.id)}
+                          className="flex items-center gap-1 px-1 text-xs text-white/35 transition hover:text-red-300"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                          Remove this row
+                        </button>
+                      )}
                     </div>
-                    <button onClick={() => adjust(1)} className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white text-xl flex items-center justify-center transition-colors">+</button>
-                  </div>
-                  <div className="flex gap-2">
-                    {[5, 10, 15, 20, 25].map((v) => (
-                      <button key={v} onClick={() => setUnits(v)}
-                        className="flex-1 py-2 rounded-xl text-sm font-medium transition-all border text-white"
-                        style={{ borderColor: units === v ? accentColor + "99" : "rgba(255,255,255,0.1)", backgroundColor: units === v ? accentColor + "2a" : "rgba(255,255,255,0.05)" }}>
-                        {v}
-                      </button>
-                    ))}
-                  </div>
+                  ))}
+
+                  <button
+                    type="button"
+                    onClick={addInsulinRow}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 py-3 text-sm font-medium text-white/60 transition hover:border-teal-400/50 hover:bg-teal-400/5 hover:text-teal-300"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add more insulin
+                  </button>
                 </div>
 
-                {/* Time */}
-                <div>
-                  <p className="text-sm font-bold tracking-widest text-white/40 uppercase mb-3">Time Administered</p>
-                  <div className="bg-white/5 border border-white/10 rounded-2xl px-4 py-3 flex items-center justify-between">
+                <div className="mt-6 space-y-3">
+                  <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/40">Time administered</p>
+                  <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
                     <span className="text-sm text-white/40">Administered at</span>
                     <input
                       type="time"
                       value={insulinTime}
                       max={nowTimeString}
-                      onChange={(e) => { if (e.target.value <= nowTimeString) setInsulinTime(e.target.value); }}
-                      className="bg-transparent text-white text-sm font-medium outline-none cursor-pointer"
+                      onChange={(event) => {
+                        if (event.target.value <= nowTimeString) setInsulinTime(event.target.value);
+                      }}
+                      className="cursor-pointer bg-transparent text-sm font-medium text-white outline-none"
                       style={{ colorScheme: "dark" }}
                     />
                   </div>
                 </div>
 
-                {/* Notes */}
-                <div>
-                  <p className="text-sm font-bold tracking-widest text-white/40 uppercase mb-3">Notes (Optional)</p>
-                  <Textarea value={insulinNotes} onChange={(e) => setInsulinNotes(e.target.value)}
-                    placeholder="e.g. before lunch, correction dose..." rows={2}
-                    className="bg-white/5 border-white/10 text-white placeholder:text-white/30 rounded-2xl resize-none" />
+                <div className="mt-6 space-y-3">
+                  <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/40">Notes (optional)</p>
+                  <Textarea
+                    value={insulinNotes}
+                    onChange={(event) => setInsulinNotes(event.target.value)}
+                    placeholder="e.g. before lunch"
+                    rows={2}
+                    className="resize-none rounded-2xl border-white/10 bg-white/5 text-white placeholder:text-white/30"
+                  />
+                </div>
+
+                <div className="mt-6 space-y-2 border-t border-white/10 pt-4">
+                  {Object.entries(insulinTotals).length ? (
+                    Object.entries(insulinTotals).map(([type, units]) => (
+                      <p key={type} className="text-sm font-semibold text-white/85">
+                        {type.split(" ")[0]} {units % 1 === 0 ? units : units.toFixed(1)} units total
+                      </p>
+                    ))
+                  ) : (
+                    <p className="text-sm text-white/35">Add an insulin dose to see the total.</p>
+                  )}
                 </div>
               </div>
 
-              <div className="px-5 pb-6 pt-2 shrink-0">
-                <button onClick={handleSubmitInsulin} disabled={!insulinType || !units || createDose.isPending}
-                  className="w-full py-4 rounded-2xl disabled:opacity-40 text-white font-semibold text-base transition-all"
-                  style={{ backgroundColor: accentColor, filter: "brightness(0.85)" }}
-                  onMouseEnter={(e) => { e.currentTarget.style.filter = "brightness(1)"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.filter = "brightness(0.85)"; }}>
-                  {createDose.isPending ? "Logging..." : insulinType ? `Log ${units}u ${shortName} Now` : "Select an insulin type"}
+              <div className="shrink-0 px-5 pb-6 pt-3">
+                <button
+                  type="button"
+                  onClick={handleSubmitInsulin}
+                  disabled={!totalUnits || createDoses.isPending}
+                  className="w-full rounded-2xl bg-teal-500 py-4 text-base font-semibold text-white transition hover:bg-teal-400 disabled:opacity-40"
+                >
+                  {createDoses.isPending
+                    ? "Logging..."
+                    : totalUnits
+                      ? `Log ${totalUnits % 1 === 0 ? totalUnits : totalUnits.toFixed(1)} units`
+                      : "Add insulin units"}
                 </button>
               </div>
             </>
           ) : (
             <>
+              <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-6 pt-4">
+                <label htmlFor="glucose-log" className="block text-sm font-bold uppercase tracking-widest text-white/40">
+                  Blood glucose (mg/dL)
+                </label>
+                <div className="mt-3 rounded-2xl border border-white/10 bg-white/5 px-6 py-6">
+                  <input
+                    id="glucose-log"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={3}
+                    value={glucoseValue}
+                    onChange={(event) => setGlucoseValue(event.target.value.replace(/\D/g, "").slice(0, 3))}
+                    placeholder="--"
+                    className="w-full bg-transparent text-center text-5xl font-bold text-white outline-none placeholder:text-white/20"
+                  />
+                  <p className="mt-1 text-center text-sm text-white/40">mg/dL</p>
+                </div>
 
-            
-<div className="overflow-y-auto h-[500px] px-5 pb-6 space-y-6">
-  <div>
-    <label
-      htmlFor="glucose-log"
-      className="block text-sm font-bold tracking-widest text-white/40 uppercase mb-3"
-    >
-      Blood Glucose Log (mg/dL)
-    </label>
-
-    <div className="bg-white/5 border border-white/10 rounded-2xl px-6 py-6 mb-4">
-<input
-  id="glucose-log"
-  type="text"
-  inputMode="numeric"
-  pattern="[0-9]*"
-  maxLength={3}
-  value={glucoseValue}
-  onChange={(e) => {
-    const nextValue = e.target.value.replace(/\D/g, "").slice(0, 3);
-    setGlucoseValue(nextValue);
-  }}
-  placeholder="--"
-  className="w-full bg-transparent text-center text-[48px] font-bold text-[#e9e9e9] outline-none placeholder:text-white/20"
-  style={{ fontSize: "48px" }}
-/>
-
-      <p className="text-white/40 text-sm mt-1 text-center">mg/dL</p>
-    </div>
-  </div>
-
-
-
-
-                {/* Time */}
-                <div>
-                  <p className="text-sm font-bold tracking-widest text-white/40 uppercase mb-3">Time</p>
-                  <div className="bg-white/5 border border-white/10 rounded-2xl px-4 py-3 flex items-center justify-between">
+                <div className="mt-6 space-y-3">
+                  <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/40">Time</p>
+                  <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
                     <span className="text-sm text-white/40">Reading time</span>
                     <input
                       type="time"
                       value={glucoseTime}
                       max={nowTimeString}
-                      onChange={(e) => { if (e.target.value <= nowTimeString) setGlucoseTime(e.target.value); }}
-                      className="bg-transparent text-white text-sm font-medium outline-none cursor-pointer"
+                      onChange={(event) => {
+                        if (event.target.value <= nowTimeString) setGlucoseTime(event.target.value);
+                      }}
+                      className="cursor-pointer bg-transparent text-sm font-medium text-white outline-none"
                       style={{ colorScheme: "dark" }}
                     />
                   </div>
                 </div>
 
-                {/* Notes */}
-                <div>
-                  <p className="text-sm font-bold tracking-widest text-white/40 uppercase mb-3">Notes (Optional)</p>
-                  <Textarea value={glucoseNotes} onChange={(e) => setGlucoseNotes(e.target.value)}
-                    placeholder="e.g. fasting, after meal..." rows={2}
-                    className="bg-white/5 border-white/10 text-white placeholder:text-white/30 rounded-2xl resize-none" />
+                <div className="mt-6 space-y-3">
+                  <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/40">Notes (optional)</p>
+                  <Textarea
+                    value={glucoseNotes}
+                    onChange={(event) => setGlucoseNotes(event.target.value)}
+                    placeholder="e.g. fasting, after meal"
+                    rows={2}
+                    className="resize-none rounded-2xl border-white/10 bg-white/5 text-white placeholder:text-white/30"
+                  />
                 </div>
               </div>
 
-              <div className="px-5 pb-6 pt-2 shrink-0">
-                <button onClick={handleSubmitGlucose} disabled={!glucoseValue || createGlucose.isPending}
-                  className="w-full py-4 rounded-2xl disabled:opacity-40 text-white font-semibold text-base transition-all"
-                  style={{ backgroundColor: glucoseColor, filter: "brightness(0.85)" }}
-                  onMouseEnter={(e) => { e.currentTarget.style.filter = "brightness(1)"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.filter = "brightness(0.85)"; }}>
-                  {createGlucose.isPending ? "Logging..." : `Log ${glucoseValue} mg/dL`}
+              <div className="shrink-0 px-5 pb-6 pt-3">
+                <button
+                  type="button"
+                  onClick={handleSubmitGlucose}
+                  disabled={!glucoseValue || createGlucose.isPending}
+                  className="w-full rounded-2xl bg-orange-600 py-4 text-base font-semibold text-white transition hover:bg-orange-500 disabled:opacity-40"
+                >
+                  {createGlucose.isPending ? "Logging..." : `Log ${glucoseValue || "--"} mg/dL`}
                 </button>
               </div>
             </>
           )}
-          </div>
         </DialogPrimitive.Content>
       </DialogPortal>
     </Dialog>
