@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { ArrowUp, ArrowDown, ArrowRight, ArrowUpRight, ArrowDownRight, Info, X, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { useMemo, useState } from "react";
+import { ArrowUp, ArrowDown, ArrowRight, ArrowUpRight, ArrowDownRight, Info, X } from "lucide-react";
 import { INSULIN_PROFILES, generateActivityCurve } from "@/lib/insulinPharmacology";
 import { getActiveCarbsNow, getTotalCarbsToday, generateCarbCurve } from "@/lib/carbAbsorption";
 import { motion, AnimatePresence } from "framer-motion";
@@ -40,19 +40,6 @@ function getActiveCarbsAt(entries, targetTime) {
   }, 0);
 }
 
-function getGlucoseTimeLabel(latestGlucose, now) {
-  const recordedAt = latestGlucose?.recorded_at || latestGlucose?.created_at || latestGlucose?.timestamp;
-  if (!recordedAt) return "No recent reading";
-
-  const recordedTime = new Date(recordedAt).getTime();
-  if (Number.isNaN(recordedTime)) return "No recent reading";
-
-  const minutesAgo = Math.max(0, Math.floor((now - recordedTime) / 60000));
-  if (minutesAgo === 0) return "Just now";
-
-  return `${minutesAgo} minute${minutesAgo === 1 ? "" : "s"} ago`;
-}
-
 function TooltipPopover({ title, description, onClose }) {
   return (
     <AnimatePresence>
@@ -63,6 +50,7 @@ function TooltipPopover({ title, description, onClose }) {
         exit={{ opacity: 0 }}
         transition={{ duration: 0.15 }}
         className="fixed inset-0 z-[300] flex items-center justify-center p-6"
+        style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom, 1.5rem))" }}
         onClick={onClose}
       >
         <motion.div
@@ -87,85 +75,8 @@ function TooltipPopover({ title, description, onClose }) {
   );
 }
 
-// Ambient orb with breathing animation
-function AmbientOrb({ color, duration = 6, size = 48 }) {
-  return (
-    <motion.div
-      animate={{ scale: [1, 1.18, 1], opacity: [0.45, 0.7, 0.45] }}
-      transition={{ duration, repeat: Infinity, ease: "easeInOut" }}
-      className="rounded-full shrink-0"
-      style={{
-        width: size,
-        height: size,
-        background: `radial-gradient(circle, ${color}cc 0%, ${color}44 50%, transparent 75%)`,
-        filter: `blur(8px)`,
-      }}
-    />
-  );
-}
-
-// Glassmorphic metric card
-function MetricCard({ label, value, sub, status, orbColor, orbDuration = 6, tooltipId, openTooltip, setOpenTooltip }) {
-  return (
-    <motion.div
-      whileTap={{ scale: 0.97 }}
-      className="relative rounded-2xl p-4 flex flex-col justify-between overflow-hidden"
-      style={{
-        background: "rgba(255,255,255,0.04)",
-        border: "1px solid rgba(255,255,255,0.08)",
-        backdropFilter: "blur(12px)",
-        WebkitBackdropFilter: "blur(12px)",
-        minHeight: 100,
-      }}
-    >
-      {/* Ambient orb background */}
-      <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none">
-        <AmbientOrb color={orbColor} duration={orbDuration} size={56} />
-      </div>
-
-      <div className="flex items-start justify-between mb-1">
-        <span className="text-[10px] font-semibold text-white/35 uppercase tracking-wider">{label}</span>
-        {tooltipId && (
-          <button
-            onClick={() => setOpenTooltip(openTooltip === tooltipId ? null : tooltipId)}
-            className="text-white/20 hover:text-white/50 transition-colors"
-          >
-            <Info className="w-3 h-3" />
-          </button>
-        )}
-      </div>
-
-      <div className="mt-1">
-        <span className="text-2xl font-bold text-white leading-none">{value}</span>
-        {sub && <p className="text-[11px] text-white/35 mt-1">{sub}</p>}
-      </div>
-
-      <div className="mt-2">
-        <span className="text-xs font-semibold" style={{ color: orbColor }}>{status}</span>
-      </div>
-    </motion.div>
-  );
-}
-
-const TREND_ICONS = {
-  "up": ArrowUp,
-  "up-right": ArrowUpRight,
-  "right": ArrowRight,
-  "down-right": ArrowDownRight,
-  "down": ArrowDown,
-};
-
 export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadings = [], carbEntries = [] }) {
   const [openTooltip, setOpenTooltip] = useState(null);
-  const [now, setNow] = useState(Date.now());
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setNow(Date.now());
-    }, 60000);
-
-    return () => clearInterval(interval);
-  }, []);
 
   const activeUnits = useMemo(() => getTotalActiveUnits(doses), [doses]);
   const hasActive = activeUnits > 0.01;
@@ -186,15 +97,26 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
     return activeCarbsFuture - activeFoodUnitsFuture * 10;
   }, [activeCarbsFuture, activeUnitsFuture, latestGlucose]);
 
-  const totalAdministered = useMemo(() => doses.reduce((sum, d) => sum + d.units, 0) || 1, [doses]);
+
+  const totalAdministered = useMemo(() => {
+    return doses.reduce((sum, d) => sum + d.units, 0) || 1;
+  }, [doses]);
 
   const avgDailyGlucose = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todaysReadings = glucoseReadings.filter((g) => new Date(g.recorded_at) >= today);
     if (!todaysReadings.length) return null;
-    return Math.round(todaysReadings.reduce((acc, c) => acc + c.value, 0) / todaysReadings.length);
+    const sum = todaysReadings.reduce((acc, curr) => acc + curr.value, 0);
+    return Math.round(sum / todaysReadings.length);
   }, [glucoseReadings]);
+
+  const getGlucoseColor = (val) => {
+    if (!val) return "rgba(255,255,255,0.1)";
+    if (val < 70) return "#d19422";
+    if (val > 180) return "#c54d16";
+    return "#149142";
+  };
 
   const trendArrow = useMemo(() => {
     if (glucoseReadings.length < 2) return "right";
@@ -216,19 +138,6 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
     return "Falling";
   }, [glucoseReadings]);
 
-  const glucoseVal = latestGlucose?.value;
-  const glucoseColor = !glucoseVal ? "#35a879" : glucoseVal < 70 ? "#3b82f6" : glucoseVal > 180 ? "#f59e0b" : "#35a879";
-  const glucoseTimeLabel = getGlucoseTimeLabel(latestGlucose, now);
-
-  // Ambient background color based on glucose state
-  const ambientColor = !glucoseVal ? "#0d4a2e" : glucoseVal < 55 ? "#7f1d1d" : glucoseVal < 70 ? "#1e3a5f" : glucoseVal > 250 ? "#7c2d12" : glucoseVal > 180 ? "#78350f" : "#0d4a2e";
-
-  const TrendIcon = TREND_ICONS[trendArrow] || ArrowRight;
-
-  const netPct = Math.round(Math.min(100, Math.max(-100, (netActiveCarbs / 50) * 100)));
-  const netLabel = netActiveCarbs > 5 ? "Rising Risk" : netActiveCarbs < -5 ? "Falling Risk" : "Balanced";
-  const netColor = netActiveCarbs > 5 ? "#ef4444" : netActiveCarbs < -5 ? "#3b82f6" : "#35a879";
-
   const getGlucoseStatus = (val) => {
     if (!val) return "—";
     if (val < 70) return "Low";
@@ -236,176 +145,217 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
     return "Stable";
   };
 
+  const TREND_ICONS = {
+    "up": ArrowUp,
+    "up-right": ArrowUpRight,
+    "right": ArrowRight,
+    "down-right": ArrowDownRight,
+    "down": ArrowDown,
+  };
+
+  // Convert netActiveCarbs to a clamped percentage (-100% to +100%) for display
+  const netPct = Math.round(Math.min(100, Math.max(-100, (netActiveCarbs / 50) * 100)));
+ const netLabel = netActiveCarbs > 5
+  ? "Rising Risk"
+  : netActiveCarbs < -5
+  ? "Falling Risk"
+  : "Balanced";
+  
+   const netColor = netActiveCarbs > 5 ? "#ef4444" : netActiveCarbs < -5 ? "#3b82f6" : "#35a879";
+
   const hasCarbData = carbEntries.length > 0;
 
-  // Target range check
-  const targetLow = parseInt(localStorage.getItem("target_range_low") || "70", 10);
-  const targetHigh = parseInt(localStorage.getItem("target_range_high") || "180", 10);
-  const inRange = glucoseVal ? (glucoseVal >= targetLow && glucoseVal <= targetHigh) : null;
+  const renderLargeGauge = (label, val, unit, percentage, color, trend = null) => {
+    const activeColor = color || "rgba(255,255,255,0.15)";
+    const TrendIcon = trend ? TREND_ICONS[trend] : null;
+    return (
+      <div className="flex flex-col items-center text-center shrink-0">
+        <span className="text-[10px] font-bold text-white/35 uppercase tracking-wider mb-3.5">{label}</span>
+        <div className="relative flex items-center justify-center w-36 h-36 sm:w-48 sm:h-48">
+          <svg width="100%" height="100%" viewBox="0 0 192 192" className="overflow-visible w-full h-full">
+            <defs>
+              <filter id="glow-large" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="4" result="blur1" />
+                <feGaussianBlur stdDeviation="10" result="blur2" />
+                <feMerge>
+                  <feMergeNode in="blur2" />
+                  <feMergeNode in="blur1" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+            <circle cx={96} cy={96} r={80} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={8} />
+            {percentage > 0 && (
+              <circle cx={96} cy={96} r={80} fill="none" stroke={activeColor} strokeWidth={8}
+                strokeDasharray={`${2 * Math.PI * 80 * percentage} ${2 * Math.PI * 80}`}
+                strokeDashoffset={0} strokeLinecap="round" transform="rotate(-90 96 96)"
+                filter="url(#glow-large)" />
+            )}
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <div className="flex items-center gap-1.5 justify-center">
+              <span className="text-3xl sm:text-4xl font-extrabold leading-none tracking-tight text-white">{val}</span>
+              {TrendIcon && <TrendIcon className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 text-white" />}
+            </div>
+            <span className="text-xs sm:text-sm text-white/40 font-medium mt-1.5">{unit}</span>
+          </div>
+        </div>
+        <span className="text-sm font-bold mt-3" style={{ color: activeColor }}>
+          {trendLabel}
+        </span>
+      </div>
+    );
+  };
+
+  const renderSmallGauge = (label, val, unit, percentage, color, statusLabel, tooltipId = null) => {
+  const activeColor = color || "rgba(255,255,255,0.15)";
+  return (
+    <div className="flex flex-col items-center text-center relative">
+      <div className="relative flex items-center justify-center mb-1.5">
+        <span className="text-[10px] font-bold text-white/35 uppercase tracking-wider">{label}</span>
+        {tooltipId && (
+          <button
+            onClick={() => setOpenTooltip(openTooltip === tooltipId ? null : tooltipId)}
+            className="absolute left-full ml-1 text-white/20 hover:text-white/50 transition-colors"
+            aria-label={`Info about ${label}`}
+          >
+            <Info className="w-3 h-3" />
+          </button>
+        )}
+      </div>
+        <div className="relative flex items-center justify-center w-20 h-20 sm:w-24 sm:h-24">
+          <svg width="100%" height="100%" viewBox="0 0 80 80" className="overflow-visible w-full h-full">
+            <defs>
+              <filter id="glow-small" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="2.5" result="blur1" />
+                <feGaussianBlur stdDeviation="6" result="blur2" />
+                <feMerge>
+                  <feMergeNode in="blur2" />
+                  <feMergeNode in="blur1" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+            <circle cx={40} cy={40} r={33} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={5.5} />
+            {percentage > 0 && (
+              <circle cx={40} cy={40} r={33} fill="none" stroke={activeColor} strokeWidth={5.5}
+                strokeDasharray={`${2 * Math.PI * 33 * percentage} ${2 * Math.PI * 33}`}
+                strokeDashoffset={0} strokeLinecap="round" transform="rotate(-90 40 40)"
+                filter="url(#glow-small)" />
+            )}
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <span className="text-base sm:text-lg font-extrabold leading-none text-white">{val}</span>
+            <span className="text-[8px] sm:text-[9px] text-white/40 font-medium mt-0.5">{unit}</span>
+          </div>
+        </div>
+        <span className="text-xs sm:text-sm font-bold mt-1.5 sm:mt-2" style={{ color: activeColor }}>{statusLabel}</span>
+      </div>
+    );
+  };
 
   return (
     <>
+      {/* Tooltip Popovers — z-[300] clears nav bar and all overlays */}
       <AnimatePresence>
         {openTooltip === "active-carbs" && (
-          <TooltipPopover key="active-carbs-tip" title="Active Carbs"
+          <TooltipPopover
+            key="active-carbs-tip"
+            title="Active Carbs"
             description="Active Carbs estimates the amount of carbohydrates currently being absorbed from recent meals. This value decreases as food absorption progresses."
-            onClose={() => setOpenTooltip(null)} />
+            onClose={() => setOpenTooltip(null)}
+          />
         )}
         {openTooltip === "net-carbs" && (
-          <TooltipPopover key="net-carbs-tip" title="Net Active Carbs"
+          <TooltipPopover
+            key="net-carbs-tip"
+            title="Net Active Carbs"
             description="Net Active Carbs compares carbohydrate absorption against insulin dedicated to food coverage — after accounting for correction insulin based on your current glucose level. A positive % means carbs may be outpacing insulin (rising risk), a negative % means insulin may be stronger (falling risk)."
-            onClose={() => setOpenTooltip(null)} />
+            onClose={() => setOpenTooltip(null)}
+          />
         )}
       </AnimatePresence>
 
-      <div className="pt-2 pb-6 -mx-4 px-4">
-        {/* Ambient breathing background orb */}
-        <div className="absolute left-1/2 -translate-x-1/2 top-16 w-72 h-72 pointer-events-none -z-10 overflow-visible">
-          <motion.div
-            animate={{ scale: [1, 1.08, 1], opacity: [0.25, 0.7, 0.25] }}
-            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-            className="w-full h-full rounded-full"
-            style={{
-              background: `radial-gradient(circle, ${ambientColor} 0%, transparent 70%)`,
-              filter: "blur(20px)",
-            }}
-          />
-        </div>
-
-        {/* ── Primary Glucose Hero ── */}
-        <div className="flex flex-col items-center text-center mb-6 pt-2">
-          <span className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] mb-3">Current Glucose</span>
-
-          <motion.div
-            key={glucoseVal}
-            initial={{ scale: 0.94, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: "spring", stiffness: 300, damping: 22 }}
-            className="flex items-end gap-3 mb-1"
-          >
-            <span className="text-[72px] sm:text-[88px] font-black leading-none tracking-tight text-white">
-              {glucoseVal ?? "—"}
-            </span>
-            {latestGlucose && (
-              <TrendIcon className="w-8 h-8 mb-3 shrink-0" style={{ color: glucoseColor }} />
+      <div className="p-6 sm:p-9 rounded-none md:rounded-3xl border-0 -mx-4 md:mx-0">
+        {/* Without carb data: original single-row layout */}
+        {!hasCarbData ? (
+          <div className="flex justify-center items-center gap-6">
+            {renderLargeGauge(
+              "Last Reading",
+              latestGlucose ? latestGlucose.value : "—",
+              "mg/dL",
+              latestGlucose ? Math.min(1, (latestGlucose.value - 40) / 360) : 0,
+              getGlucoseColor(latestGlucose?.value),
+              latestGlucose ? trendArrow : null
             )}
-          </motion.div>
-
-          <div className="mb-4">
-            <span className="block text-sm text-white/35 font-medium">mg/dL</span>
-            <span className="block text-xs text-white/25 mt-1">{glucoseTimeLabel}</span>
+            <div className="flex flex-col gap-4 pb-1">
+              {renderSmallGauge(
+                "Daily Avg",
+                avgDailyGlucose || "—",
+                "mg/dL",
+                avgDailyGlucose ? Math.min(1, (avgDailyGlucose - 40) / 360) : 0,
+                getGlucoseColor(avgDailyGlucose),
+                getGlucoseStatus(avgDailyGlucose)
+              )}
+              {renderSmallGauge(
+                "Active Insulin",
+                activeUnits.toFixed(1),
+                "units",
+                Math.min(1, activeUnits / totalAdministered),
+                "#35a879",
+                hasActive ? "Active" : "Cleared"
+              )}
+            </div>
           </div>
-
-          {/* Status capsule */}
-          <motion.div
-            whileTap={{ scale: 0.96 }}
-            className="flex items-center gap-2 px-4 py-2 rounded-full"
-            style={{
-              background: `${glucoseColor}18`,
-              border: `1px solid ${glucoseColor}40`,
-            }}
-          >
-            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: glucoseColor }} />
-            <span className="text-sm font-semibold" style={{ color: glucoseColor }}>{trendLabel}</span>
-          </motion.div>
-        </div>
-
-        {/* ── Target Range Banner ── */}
-        {latestGlucose && (
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="rounded-2xl px-4 py-3 flex items-center gap-3 mb-6"
-            style={{
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.07)",
-            }}
-          >
-            <div className="flex gap-0.5 items-end h-5 shrink-0">
-              {[3,4,3,5,4,3,4,5,3].map((h, i) => (
-                <div key={i} className="w-0.5 rounded-full" style={{
-                  height: h * 3,
-                  backgroundColor: inRange ? "#35a87988" : "#f59e0b88"
-                }} />
-              ))}
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-white/80">
-                {inRange === null ? "No data" : inRange ? "In range" : "Out of range"}
-              </p>
-              <p className="text-xs text-white/35">Target: {targetLow} – {targetHigh} mg/dL</p>
-            </div>
-            <span className="text-xs font-medium" style={{ color: inRange ? "#35a879" : "#f59e0b" }}>
-              {inRange === null ? "" : inRange ? "✓" : "↑"}
-            </span>
-          </motion.div>
-        )}
-
-        {/* ── Metric Cards Grid ── */}
-        {hasCarbData ? (
-          <>
-            <p className="text-[10px] font-bold text-white/25 uppercase tracking-[0.18em] mb-3">At a Glance</p>
-            <div className="grid grid-cols-2 gap-3">
-              <MetricCard
-                label="Active Insulin"
-                value={`${activeUnits.toFixed(1)}`}
-                sub="units"
-                status={hasActive ? "Active" : "Cleared"}
-                orbColor="#06b6d4"
-                orbDuration={6}
-              />
-              <MetricCard
-                label="Active Carbs"
-                value={activeCarbs > 0 ? `${Math.round(activeCarbs)}g` : "0g"}
-                sub={`${totalCarbsToday}g today`}
-                status={activeCarbs > 0 ? "Absorbing" : "Cleared"}
-                orbColor="#f59e0b"
-                orbDuration={activeCarbs > 0 ? 4 : 8}
-                tooltipId="active-carbs"
-                openTooltip={openTooltip}
-                setOpenTooltip={setOpenTooltip}
-              />
-              <MetricCard
-                label="Net Carbs"
-                value={`${Math.abs(netPct)}%`}
-                sub="balance"
-                status={netLabel}
-                orbColor={netColor}
-                orbDuration={8}
-                tooltipId="net-carbs"
-                openTooltip={openTooltip}
-                setOpenTooltip={setOpenTooltip}
-              />
-              <MetricCard
-                label="Daily Average"
-                value={avgDailyGlucose ? `${avgDailyGlucose}` : "—"}
-                sub={avgDailyGlucose ? "mg/dL" : "No data today"}
-                status={getGlucoseStatus(avgDailyGlucose)}
-                orbColor={!avgDailyGlucose ? "#35a879" : avgDailyGlucose < 70 ? "#3b82f6" : avgDailyGlucose > 180 ? "#f59e0b" : "#10b981"}
-                orbDuration={9}
-              />
-            </div>
-          </>
         ) : (
-          /* No carb data: just 2 cards */
-          <div className="grid grid-cols-2 gap-3">
-            <MetricCard
-              label="Active Insulin"
-              value={`${activeUnits.toFixed(1)}`}
-              sub="units"
-              status={hasActive ? "Active" : "Cleared"}
-              orbColor="#06b6d4"
-              orbDuration={6}
-            />
-            <MetricCard
-              label="Daily Average"
-              value={avgDailyGlucose ? `${avgDailyGlucose}` : "—"}
-              sub={avgDailyGlucose ? "mg/dL" : "No data today"}
-              status={getGlucoseStatus(avgDailyGlucose)}
-              orbColor={!avgDailyGlucose ? "#35a879" : avgDailyGlucose < 70 ? "#3b82f6" : avgDailyGlucose > 180 ? "#f59e0b" : "#10b981"}
-              orbDuration={9}
-            />
+          /* With carb data: 2x2 grid of small gauges + large glucose gauge */
+          <div className="flex justify-center items-center gap-4 sm:gap-6">
+            {/* Large glucose gauge */}
+            {renderLargeGauge(
+              "Last Reading",
+              latestGlucose ? latestGlucose.value : "—",
+              "mg/dL",
+              latestGlucose ? Math.min(1, (latestGlucose.value - 40) / 360) : 0,
+              getGlucoseColor(latestGlucose?.value),
+              latestGlucose ? trendArrow : null
+            )}
+            {/* 2x2 grid */}
+            <div className="grid grid-cols-2 gap-x-4 gap-y-5 sm:gap-x-6 sm:gap-y-6">
+              {renderSmallGauge(
+                "Daily Avg",
+                avgDailyGlucose || "—",
+                "mg/dL",
+                avgDailyGlucose ? Math.min(1, (avgDailyGlucose - 40) / 360) : 0,
+                getGlucoseColor(avgDailyGlucose),
+                getGlucoseStatus(avgDailyGlucose)
+              )}
+              {renderSmallGauge(
+                "Act Insulin",
+                activeUnits.toFixed(1),
+                "units",
+                Math.min(1, activeUnits / totalAdministered),
+                "#35a879",
+                hasActive ? "Active" : "Cleared"
+              )}
+              {renderSmallGauge(
+                "Act. Carbs",
+                activeCarbs > 0 ? `${Math.round(activeCarbs)}g` : "0g",
+                `${totalCarbsToday}g today`,
+                Math.min(1, activeCarbs / Math.max(totalCarbsToday, 1)),
+                "#f59e0b",
+                activeCarbs > 0 ? "Absorbing" : "Cleared",
+                "active-carbs"
+              )}
+              {renderSmallGauge(
+  "Net Carbs",
+  Math.abs(netPct) + "%", // Displays positive value only
+  "balance",
+  Math.min(1, Math.abs(netPct) / 100),
+  netColor,
+  netLabel, // Caption underneath with no numbers
+  "net-carbs"
+)}
+            </div>
           </div>
         )}
       </div>

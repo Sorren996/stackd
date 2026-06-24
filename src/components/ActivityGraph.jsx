@@ -139,8 +139,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const containerRef = useRef(null);
   const [containerWidth, setContainerWidth] = useState(600);
 
-
-
   useEffect(() => {
     if (!containerRef.current) return;
     const ro = new ResizeObserver(([e]) => setContainerWidth(e.contentRect.width));
@@ -156,58 +154,19 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const rangeTotal = GLUCOSE_MAX - GLUCOSE_MIN;
   const highPct = ((GLUCOSE_MAX - targetHigh) / rangeTotal * 100).toFixed(1);
   const lowPct = ((GLUCOSE_MAX - targetLow) / rangeTotal * 100).toFixed(1);
-  const now = Date.now();
 
-const snappedNow = Math.round(now / 180000) * 180000;
   const selectedRange = TIME_RANGES[rangeIdx];
-  
-const latestGlucoseTime = useMemo(() => {
-  if (!glucoseReadings.length) return snappedNow;
-
-const domainStart =
-  snappedNow - 24 * 60 * 60 * 1000;
-
-
-
-
+  const now = Date.now();
+  const snappedNow = Math.round(now / 180000) * 180000;
+  const domainStart = snappedNow - 24 * 60 * 60 * 1000;
+  const domainEnd = snappedNow + 2 * 60 * 60 * 1000;
   const viewStart = snappedNow - selectedRange.hours * 60 * 60 * 1000;
-const viewEnd =
-  latestGlucoseTime + 30 * 60 * 1000;
+  const viewEnd = snappedNow + selectedRange.hours * 0.1 * 60 * 60 * 1000;
 
   // Only include doses/carbs if their filter is on
   const filteredDoses = filters.insulin ? doses : [];
   const filteredCarbEntries = filters.carbs ? carbEntries : [];
   const filteredGlucoseReadings = filters.glucose ? glucoseReadings : [];
-
-
-
-
-
-  return Math.max(
-    ...glucoseReadings.map(g =>
-      new Date(g.recorded_at).getTime()
-    )
-  );
-}, [glucoseReadings]);
-
-const latestGlucosePosition =
-  viewEnd > viewStart
-    ? ((latestGlucoseTime - viewStart) / (viewEnd - viewStart)) * chartWidth
-    : 0;
-
-  const maxScrollLeft =
-  latestGlucosePosition -
-  containerWidth / 2;
-
-const handleScroll = (e) => {
-  const maxAllowed = Math.max(0, maxScrollLeft);
-
-  if (e.currentTarget.scrollLeft > maxAllowed) {
-    e.currentTarget.scrollLeft = maxAllowed;
-  }
-
-  setScrollLeft(e.currentTarget.scrollLeft);
-};;
 
   const allCurvesMeta = useMemo(() =>
     filteredDoses.map((dose) => ({
@@ -253,7 +212,6 @@ const handleScroll = (e) => {
     if (!doses.length && !glucoseReadings.length && !carbEntries.length) return [];
     const step = 3 * 60000;
     const result = [];
-
     for (let t = domainStart; t <= domainEnd; t += step) {
       const point = { time: t, bg: GLUCOSE_MAX };
       allCurvesMeta.forEach(({ dose, curve }) => {
@@ -274,48 +232,23 @@ const handleScroll = (e) => {
           point[`${key}_total`] = dose.units;
         }
       });
-allCarbCurvesMeta.forEach(({ entry, curve }) => {
-  const key = `carb_${entry.id}`;
-
-  if (!curve.length) {
-    point[key] = null;
-    return;
-  }
-
-  const start = curve[0].time;
-  const end = curve[curve.length - 1].time;
-
-  if (t < start || t > end) {
-    point[key] = null;
-    return;
-  }
-
-  let idx = 0;
-
-  for (let j = 0; j < curve.length - 1; j++) {
-    if (curve[j].time <= t && curve[j + 1].time >= t) {
-      idx = j;
-      break;
-    }
-  }
-
-  const next = Math.min(idx + 1, curve.length - 1);
-
-  const ratio =
-    next === idx
-      ? 0
-      : (t - curve[idx].time) /
-        (curve[next].time - curve[idx].time);
-
-  const activity =
-    curve[idx].activity +
-    ratio * (curve[next].activity - curve[idx].activity);
-
-  point[key] = activity * 50;
-
-  point[`${key}_carbs`] = entry.carbs;
-  point[`${key}_food`] = entry.food_name;
-});
+      allCarbCurvesMeta.forEach(({ entry, curve }) => {
+        const key = `carb_${entry.id}`;
+        if (!curve.length || t < curve[0].time || t > curve[curve.length - 1].time) {
+          point[key] = null;
+        } else {
+          let lo = 0;
+          for (let j = 0; j < curve.length - 1; j++) {
+            if (curve[j].time <= t && curve[j + 1].time >= t) { lo = j; break; }
+          }
+          const hi = Math.min(lo + 1, curve.length - 1);
+          const ratio = hi === lo ? 0 : (t - curve[lo].time) / (curve[hi].time - curve[lo].time);
+          const activity = curve[lo].activity + ratio * (curve[hi].activity - curve[lo].activity);
+          point[key] = activity * (entry.carbs / maxCarbGrams) * 50;
+          point[`${key}_carbs`] = entry.carbs;
+          point[`${key}_food`] = entry.food_name;
+        }
+      });
       if (glucoseMap[t] !== undefined) point.glucose = glucoseMap[t];
       result.push(point);
     }
@@ -332,7 +265,6 @@ allCarbCurvesMeta.forEach(({ entry, curve }) => {
     [filteredDoses]
   );
 
-
   const carbKeys = useMemo(() =>
     filteredCarbEntries
       .filter((e) => !e.is_custom)
@@ -347,57 +279,15 @@ allCarbCurvesMeta.forEach(({ entry, curve }) => {
 
   const is24h = selectedRange.pxPerMin === null;
   const viewMinutes = selectedRange.hours * 60 * 1.1;
-const totalTimelineHours = 30;
+  const chartWidth = is24h ? containerWidth : Math.round(viewMinutes * selectedRange.pxPerMin);
 
-const chartWidth =
-  is24h
-    ? containerWidth
-    : totalTimelineHours * 60 * selectedRange.pxPerMin;
-
-    const [scrollLeft, setScrollLeft] = useState(0);
-
-const centerTimestamp =
-  viewStart +
-  ((scrollLeft + containerWidth / 2) / chartWidth) *
-  (viewEnd - viewStart);
-
-const currentPoint = chartData.reduce(
-  (closest, p) => {
-    if (p.glucose == null) return closest;
-
-    if (!closest) return p;
-
-    return Math.abs(p.time - centerTimestamp) <
-      Math.abs(closest.time - centerTimestamp)
-      ? p
-      : closest;
-  },
-  null
-);
-
-const initialCentered = useRef(false);
-
-useEffect(() => {
-  if (
-    !scrollRef.current ||
-    is24h ||
-    initialCentered.current
-  ) return;
-
-  initialCentered.current = true;
-
-  const totalMs =
-    domainEnd - domainStart;
-
-  const nowOffset =
-    ((snappedNow - domainStart) / totalMs) *
-    chartWidth;
-
-  scrollRef.current.scrollLeft =
-    nowOffset -
-    scrollRef.current.clientWidth / 2;
-
-}, [chartWidth]), [rangeIdx, doses];
+  useEffect(() => {
+    if (!scrollRef.current || is24h) return;
+    const totalViewMs = viewEnd - viewStart;
+    const nowOffset = (snappedNow - viewStart) / totalViewMs * chartWidth;
+    const halfContainer = scrollRef.current.clientWidth / 2;
+    scrollRef.current.scrollLeft = nowOffset - halfContainer;
+  }, [rangeIdx, doses]);
 
   if (!doses.length && !glucoseReadings.length && !carbEntries.length) return null;
 
@@ -409,7 +299,7 @@ useEffect(() => {
   return (
     <div ref={containerRef} className="-mx-4 overflow-hidden">
       {/* Controls row */}
-      <div className="flex py-3 items-center mb-0 pl-4 justify-start gap-2">
+      <div className="flex py-3 items-center mb-4 justify-center gap-2">
 
         {/* Filter button */}
         <div className="relative">
@@ -441,23 +331,74 @@ useEffect(() => {
           )}
         </AnimatePresence>
 
-    
-  
+        {/* Range selector */}
+        <div className="flex gap-0.5 rounded-xl p-1" style={{ background: "rgba(255,255,255,0.05)" }}>
+          {TIME_RANGES.map((r, i) => (
+            <button
+              key={r.label}
+              onClick={() => setRangeIdx(i)}
+              className={`relative px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                rangeIdx === i ? "text-white" : "text-white/40 hover:text-white/70"
+              }`}
+            >
+              {rangeIdx === i && (
+                <motion.div
+                  layoutId="active-range-tab"
+                  className="absolute inset-0 bg-white/10 rounded-lg -z-10"
+                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                />
+              )}
+              <span className="relative z-10">{r.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Help icon */}
+        <div className="relative">
+          <button
+            onClick={() => setShowInfo(!showInfo)}
+            className={`w-8 h-8 flex items-center justify-center rounded-xl border transition-all ${
+              showInfo
+                ? "bg-teal-500/10 border-teal-500/30 text-teal-400"
+                : "border-white/5 bg-white/[0.03] text-white/40 hover:text-white/80 hover:bg-white/[0.08]"
+            }`}
+          >
+            <HelpCircle className="w-4 h-4" />
+          </button>
+          <AnimatePresence>
+            {showInfo && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                onClick={() => setShowInfo(false)}
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 cursor-pointer"
+              >
+                <motion.div
+                  initial={{ opacity: 0, y: -100, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1, transition: { type: "spring", stiffness: 280, damping: 22 } }}
+                  exit={{ opacity: 0, y: 60, scale: 0.9, transition: { duration: 0.15 } }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="relative max-w-4xl w-full rounded-2xl overflow-hidden bg-black border border-teal-500/20 p-0.5"
+                >
+                  <img
+                    src="https://media.base44.com/images/public/6a1b93f234a8611ee1595134/1005e28fb_graphinfotooltip.png"
+                    alt="Graph Information Details"
+                    className="w-full h-auto rounded-xl object-contain block max-h-[85vh] mx-auto"
+                  />
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
 
-
-    <div className="relative">
-<div className="relative">
-
-  <div
-    ref={scrollRef}
-    className={is24h ? "" : "overflow-x-auto"}
-    style={{
-      WebkitOverflowScrolling: "touch",
-      scrollbarWidth: "none"
-    }}
-  >
-    <div style={{ width: chartWidth, height: 240 }}>
+      <div
+        ref={scrollRef}
+        className={is24h ? "" : "overflow-x-auto"}
+        style={{ WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
+        <div style={{ width: chartWidth, height: 240 }}>
           <ComposedChart
             width={chartWidth}
             height={240}
@@ -492,12 +433,10 @@ useEffect(() => {
             </defs>
 
             <XAxis
-
-
-  dataKey="time"
-  type="number"
-  domain={[domainStart, domainEnd]}
-             tickFormatter={(t) => format(new Date(t), "h:mma")}
+              dataKey="time"
+              type="number"
+              domain={is24h ? [domainStart, domainEnd] : [viewStart, viewEnd]}
+              tickFormatter={(t) => format(new Date(t), "h:mma")}
               tick={{ fontSize: 10, fill: "rgba(255,255,255,0.25)", textAnchor: "middle" }}
               axisLine={false}
               tickLine={false}
@@ -510,6 +449,13 @@ useEffect(() => {
 
             <Tooltip active={isInteracting} content={<CustomTooltip />} cursor={{ stroke: "rgba(255,255,255,0.1)", strokeWidth: 1 }} />
 
+            <ReferenceLine
+              yAxisId="insulin"
+              x={snappedNow}
+              stroke="rgba(255,255,255,0.2)"
+              strokeDasharray="3 3"
+              strokeWidth={1}
+            />
 
             {filters.glucose && filteredGlucoseReadings.length > 0 && (
               <Area
@@ -557,6 +503,17 @@ useEffect(() => {
               />
             ))}
 
+            {customCarbEvents.map(({ time, entry }) => (
+              <ReferenceLine
+                key={`custom_${entry.id}`}
+                yAxisId="carbs"
+                x={time}
+                stroke="#6b7280"
+                strokeDasharray="3 3"
+                strokeWidth={1.5}
+                label={{ value: `${entry.carbs}g`, position: "insideTopRight", fill: "#9ca3af", fontSize: 9 }}
+              />
+            ))}
 
             {filters.glucose && filteredGlucoseReadings.length > 0 && (
               <Line
@@ -587,22 +544,8 @@ useEffect(() => {
               />
             )}
           </ComposedChart>
-            </div>
-          </div>
-          {/* Fixed center viewport line */}
-  <div
-    className="absolute top-0 bottom-0 pointer-events-none"
-    style={{
-      left: "50%",
-      width: "1px",
-      background: "rgba(255,255,255,0.25)",
-      transform: "translateX(-50%)",
-      zIndex: 50
-    }}
-  />
         </div>
       </div>
     </div>
-    
   );
 }

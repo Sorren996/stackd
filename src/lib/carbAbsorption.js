@@ -288,103 +288,62 @@ export const FOOD_DATABASE = [
 { name: "French Dip Sandwich with Au Jus", carbs: 32, gi: 46, category: "Slow Absorbing", profile: "slow" },
 //Party Platter / Appetizers
 { name: "Spinach & Artichoke Dip with Chips", carbs: 24, gi: 42, category: "Slow Absorbing", profile: "slow" },
-{ name: "Cobb Salad with Blue Cheese Dressing", carbs: 8, gi: 25, category: "Slow Absorbing", profile: "slow" },
-
-
-{
-  name: "Test Fast",
-  carbs: 24,
-  gi: 100,
-  profile: "slow"
-},
-{
-  name: "Test Slow",
-  carbs: 24,
-  gi: 15,
-  profile: "slow"
-}
+{ name: "Cobb Salad with Blue Cheese Dressing", carbs: 8, gi: 25, category: "Slow Absorbing", profile: "slow" }
 
 ];
 
-/**
- * Generate carb absorption curve for a single food entry
- */
+/** Generate a time-series absorption activity curve (0–1) for a carb entry */
 export function generateCarbCurve(entry) {
-  const durationMs = (entry.duration || 180) * 60000;
-  const start = new Date(entry.consumed_at).getTime();
-  const step = 5 * 60000;
-  const steepness = 1.2;
+  if (entry.is_custom || !entry.absorption_profile) return [];
+  const profile = ABSORPTION_PROFILES[entry.absorption_profile];
+  if (!profile) return [];
 
-  const curve = [];
+  const start     = new Date(entry.consumed_at).getTime();
+  const step      = 3 * 60000;
+  const onsetMs   = profile.onsetMin   * 60000;
+  const peakMs    = profile.peakMin    * 60000;
+  const durationMs = profile.durationMin * 60000;
+  const end = start + durationMs;
+  const result = [];
 
-  for (let t = start; t <= start + durationMs; t += step) {
+  for (let t = start; t <= end; t += step) {
     const elapsed = t - start;
-    const x = elapsed / Math.max(durationMs, 1);
-
-    let activity =
-      Math.pow(x, steepness) * Math.exp(-2.5 * x);
-
-    // 🔥 HARD CLAMP END BEHAVIOR
-    if (x >= 0.98) activity = 0;
-
-    // 🔥 ZERO OUT TAIL NOISE
-    if (activity < 0.003) activity = 0;
-
-const taperedActivity = activity * (1 - x);
-
-    curve.push({
-      time: t,
-      activity,
-    });
+    let activity;
+    if (elapsed < onsetMs) {
+      activity = (elapsed / onsetMs) * 0.15;
+    } else if (elapsed <= peakMs) {
+      activity = 0.15 + 0.85 * ((elapsed - onsetMs) / (peakMs - onsetMs));
+    } else {
+      activity = Math.max(0, 1 - ((elapsed - peakMs) / (durationMs - peakMs)));
+    }
+    result.push({ time: t, activity: Math.max(0, Math.min(1, activity)) });
   }
-
-  return curve;
+  return result;
 }
 
-
-/**
- * Active carbs currently being absorbed (grams)
- */
+/** Total carbohydrates currently being absorbed (grams) */
 export function getActiveCarbsNow(entries) {
   const now = Date.now();
-
   return entries.reduce((sum, entry) => {
     if (entry.is_custom) return sum;
-
     const curve = generateCarbCurve(entry);
     if (!curve.length) return sum;
-
-    const first = curve[0].time;
-    const last = curve[curve.length - 1].time;
-
-    if (now < first || now > last) return sum;
-
-    // Find segment
-    let i = 0;
-    while (i < curve.length - 1 && curve[i + 1].time < now) {
-      i++;
+    if (now < curve[0].time || now > curve[curve.length - 1].time) return sum;
+    let lo = 0;
+    for (let i = 0; i < curve.length - 1; i++) {
+      if (curve[i].time <= now && curve[i + 1].time >= now) { lo = i; break; }
     }
-
-    const a = curve[i];
-    const b = curve[Math.min(i + 1, curve.length - 1)];
-
-    const ratio =
-      b.time === a.time ? 0 : (now - a.time) / (b.time - a.time);
-
-    const activity =
-      a.activity + (b.activity - a.activity) * ratio;
-
+    const hi = Math.min(lo + 1, curve.length - 1);
+    const ratio = hi === lo ? 0 : (now - curve[lo].time) / (curve[hi].time - curve[lo].time);
+    const activity = curve[lo].activity + ratio * (curve[hi].activity - curve[lo].activity);
     return sum + activity * entry.carbs;
   }, 0);
 }
 
-/**
- * Total carbs consumed today
- */
+/** Sum of all carbs consumed today */
 export function getTotalCarbsToday(entries) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-
   return entries
     .filter((e) => new Date(e.consumed_at) >= today)
     .reduce((sum, e) => sum + e.carbs, 0);
