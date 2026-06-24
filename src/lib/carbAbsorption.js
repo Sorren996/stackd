@@ -4,6 +4,7 @@ export const ABSORPTION_PROFILES = {
   fast: {
     onsetMin: 5,
     peakMin: 30,
+        plateauMin: 8,
     durationMin: 90,
     riseExponent: 1.4,
     taperExponent: 0.65,
@@ -11,6 +12,7 @@ export const ABSORPTION_PROFILES = {
   medium: {
     onsetMin: 15,
     peakMin: 65,
+        plateauMin: 15,
     durationMin: 150,
     riseExponent: 1.6,
     taperExponent: 0.6,
@@ -18,6 +20,7 @@ export const ABSORPTION_PROFILES = {
   slow: {
     onsetMin: 25,
     peakMin: 120,
+        plateauMin: 25,
     durationMin: 300,
     riseExponent: 1.8,
     taperExponent: 0.5,
