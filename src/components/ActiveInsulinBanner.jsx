@@ -221,23 +221,8 @@ function MetricCard({ label, value, sub, status, orbColor, orbDuration = 6, tool
         )}
       </div>
 
-<MetricCard
-  label="Net Carbs"
-  value={`${Math.abs(netPct)}%`}
-  sub={
-    trajectory.glucoseAsOf
-      ? `glucose as of ${formatRelativeAge(trajectory.glucoseAsOf)}`
-      : isPeakInFuture
-      ? `peak ~${formatClockTime(netPeakTime)}`
-      : "balance"
-  }
-  status={netLabel}
-  orbColor={netColor}
-  orbDuration={8}
-  tooltipId="net-carbs"
-  openTooltip={openTooltip}
-  setOpenTooltip={setOpenTooltip}
-/>
+
+
 
       <div className="mt-1">
         <span className="text-2xl font-bold text-white leading-none">{value}</span>
@@ -333,6 +318,24 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
   const netLabel = netActiveCarbs > 5 ? "Rising Risk" : netActiveCarbs < -5 ? "Falling Risk" : "Balanced";
   const netColor = netActiveCarbs > 5 ? "#ef4444" : netActiveCarbs < -5 ? "#3b82f6" : "#35a879";
 
+  <MetricCard
+  label="Net Carbs"
+  value={`${Math.abs(netPct)}%`}
+  sub={
+    trajectory.glucoseAsOf
+      ? `glucose as of ${formatRelativeAge(trajectory.glucoseAsOf)}`
+      : isPeakInFuture
+      ? `peak ~${formatClockTime(netPeakTime)}`
+      : "balance"
+  }
+  status={netLabel}
+  orbColor={netColor}
+  orbDuration={8}
+  tooltipId="net-carbs"
+  openTooltip={openTooltip}
+  setOpenTooltip={setOpenTooltip}
+/>
+
   const getGlucoseStatus = (val) => {
     if (!val) return "—";
     if (val < 70) return "Low";
@@ -348,8 +351,6 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
 
   return (
     <>
-
-    
       <AnimatePresence>
         {openTooltip === "active-carbs" && (
           <TooltipPopover key="active-carbs-tip" title="Active Carbs"
