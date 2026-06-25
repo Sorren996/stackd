@@ -112,7 +112,7 @@ Do not give insulin dosing advice.
 
   const handleSubmitEstimate = () => {
     if (!estimatedMeal) return;
-
+toast.message("Log button clicked");
     const carbs = Number(estimatedMeal.carbs);
     if (!Number.isFinite(carbs) || carbs <= 0) {
       toast.error("Enter estimated carbs before logging.");
@@ -334,6 +334,7 @@ onSubmit([
         onClick={handleSubmitEstimate}
         disabled={!estimatedMeal || isPending}
         className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-orange-600 py-4 text-base font-semibold text-white transition hover:bg-orange-500 disabled:opacity-40"
+      
       >
         <Check className="h-4 w-4" />
         {isPending ? "Logging..." : "Log meal estimate"}
