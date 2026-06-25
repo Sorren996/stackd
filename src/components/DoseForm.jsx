@@ -119,8 +119,11 @@ const createCarb = useMutation({
   },
   onSuccess: (result, entries) => {
     console.log("Carb entries saved", result);
-    queryClient.invalidateQueries({ queryKey: ["carb-entries"] });
-    toast.success(`Logged ${entries.length} food item${entries.length === 1 ? "" : "s"}`);
+queryClient.invalidateQueries({ queryKey: ["carb-entries"] });
+queryClient.invalidateQueries({ queryKey: ["carbs"] });
+queryClient.invalidateQueries({ queryKey: ["CarbEntry"] });
+queryClient.invalidateQueries();    toast.success(`Logged ${entries.length} food item${entries.length === 1 ? "" : "s"}`);
+    toast.success(`Logged ${entries[0]?.carbs ?? "?"}g carbs`);
     onOpenChange(false);
   },
   onError: (error) => {
