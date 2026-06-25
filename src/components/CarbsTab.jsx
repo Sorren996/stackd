@@ -517,4 +517,4 @@ export function getDoseRemainingEffectFraction(
   const usedArea = integrateCurveArea(curve, targetTime);
   return Math.max(0, Math.min(1, 1 - usedArea / totalArea));
 }
-export default CarbsTab;
+export default getCarbAbsorptionAt;
