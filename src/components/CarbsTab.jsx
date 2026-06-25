@@ -148,8 +148,14 @@ Do not give insulin dosing advice.
   return (
     <div className="flex h-full flex-col px-5 pb-6 pt-4">
       <style>{`
+        @property --ai-estimate-angle {
+          syntax: "<angle>";
+          inherits: false;
+          initial-value: 0deg;
+        }
+
         @keyframes ai-estimate-spin {
-          to { transform: rotate(360deg); }
+          to { --ai-estimate-angle: 360deg; }
         }
 
         @keyframes ai-estimate-pulse {
@@ -172,46 +178,31 @@ Do not give insulin dosing advice.
           border-radius: 1rem;
           border: 1px solid rgba(255, 255, 255, 0.1);
           overflow: hidden;
-        }
-
-        .ai-estimate-field::before {
-          content: "";
-          position: absolute;
-          inset: 0;
-          border-radius: inherit;
-          padding: 2px;
-          background: conic-gradient(
-            from 0deg,
-            rgba(45, 212, 191, 0),
-            rgba(45, 212, 191, 0.9),
-            rgba(59, 130, 246, 0.95),
-            rgba(168, 85, 247, 0.95),
-            rgba(45, 212, 191, 0)
-          );
-          opacity: 0;
-          transition: opacity 180ms ease;
-          pointer-events: none;
-          z-index: 2;
-          -webkit-mask:
-            linear-gradient(#000 0 0) content-box,
-            linear-gradient(#000 0 0);
-          -webkit-mask-composite: xor;
-          mask-composite: exclude;
+          background: rgba(255, 255, 255, 0.08);
         }
 
         .ai-estimate-field-active {
-          animation: ai-estimate-pulse 1.65s ease-in-out infinite;
-        }
-
-        .ai-estimate-field-active::before {
-          opacity: 1;
-          animation: ai-estimate-spin 1.25s linear infinite;
+          border: 0;
+          padding: 2px;
+          background: conic-gradient(
+            from var(--ai-estimate-angle, 0deg),
+            #2dd4bf,
+            #3b82f6,
+            #8b5cf6,
+            #d946ef,
+            #3b82f6,
+            #2dd4bf
+          );
+          animation:
+            ai-estimate-spin 1.25s linear infinite,
+            ai-estimate-pulse 1.65s ease-in-out infinite;
         }
 
         .ai-estimate-field-inner {
           position: relative;
           z-index: 1;
-          border-radius: inherit;
+          border-radius: calc(1rem - 2px);
+          background: hsl(162,10%,8%);
         }
       `}</style>
 
