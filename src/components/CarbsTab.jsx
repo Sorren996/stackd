@@ -119,20 +119,19 @@ Do not give insulin dosing advice.
       return;
     }
 
-    const absorptionProfile = estimatedMeal.absorptionProfile || "medium";
+const absorptionProfile = estimatedMeal.absorptionProfile || "medium";
 
-    onSubmit([
-      {
-        name: estimatedMeal.mealName || "Estimated meal",
-        carbs,
-        gi: Number(estimatedMeal.gi) || 50,
-        category: ABSORPTION_CATEGORY[absorptionProfile],
-        profile: absorptionProfile,
-        absorption_profile: absorptionProfile,
-        consumed_at: new Date().toISOString(),
-        is_custom: false,
-      },
-    ]);
+onSubmit([
+  {
+    name: estimatedMeal.mealName || "Estimated meal",
+    carbs,
+    gi: Number(estimatedMeal.gi) || 50,
+    category: ABSORPTION_CATEGORY[absorptionProfile],
+    absorption_profile: absorptionProfile,
+    consumed_at: new Date().toISOString(),
+    is_custom: false,
+  },
+]);
   };
 
   return (
