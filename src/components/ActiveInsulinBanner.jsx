@@ -9,8 +9,13 @@ import {
   X,
 } from "lucide-react";
 import { generateActivityCurve } from "@/lib/insulinPharmacology";
-import {generateCarbCurve, getActiveCarbsNow, getCarbAbsorptionAt, getTotalCarbsToday,  } from "@/lib/carbAbsorption";
-import { AnimatePresence, motion } from "framer-motion";
+import {
+  generateCarbCurve,
+  getActiveCarbsNow,
+  getCarbAbsorptionAt,
+  getTotalCarbsToday,
+  getDoseRemainingEffectFraction,
+} from "@/lib/carbAbsorption";import { AnimatePresence, motion } from "framer-motion";
 
 const SAMPLE_STEP_MS = 5 * 60 * 1000;
 
