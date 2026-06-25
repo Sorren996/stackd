@@ -60,6 +60,33 @@ export default function DoseForm({ open, onOpenChange }) {
     };
   }, []);
 
+const handleSubmitCarbs = async (entries) => {
+  const entry = entries[0];
+
+  const payload = {
+    name: entry.name || "Estimated meal",
+    carbs: Number(entry.carbs),
+    gi: Number(entry.gi) || 50,
+    category: entry.category || "Medium Absorbing",
+    absorption_profile: entry.absorption_profile || entry.profile || "medium",
+    consumed_at: entry.consumed_at || new Date().toISOString(),
+  };
+
+  toast.message(`Sending ${payload.carbs}g carbs...`);
+
+  try {
+    await base44.entities.CarbEntry.create(payload);
+
+    toast.success(`Saved ${payload.carbs}g carbs`);
+
+    queryClient.invalidateQueries({ queryKey: ["carb-entries"] });
+    queryClient.invalidateQueries();
+    onOpenChange(false);
+  } catch (error) {
+    toast.error(`Carb save failed: ${error?.message || "Unknown error"}`);
+  }
+};
+
   const createDoses = useMutation({
     mutationFn: (doses) => base44.entities.InsulinDose.bulkCreate(doses),
     onSuccess: () => {
