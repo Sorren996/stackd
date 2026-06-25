@@ -1,232 +1,661 @@
-import { useState, useMemo, useEffect } from "react";
-import { FOOD_DATABASE, FOOD_CATEGORIES } from "@/lib/carbAbsorption";
+import { useEffect, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { X, Clock } from "lucide-react";
+import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
+import { Dialog, DialogPortal, DialogOverlay, DialogClose } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Check,
+  Loader2,
+  Plus,
+  Sparkles,
+  Syringe,
+  Droplets,
+  Trash2,
+  Wheat,
+  X,
+} from "lucide-react";
+import { toast } from "sonner";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
+import CarbsTab from "@/components/CarbsTab";
 
-const CARB_COLOR = "#d97706";
-const PROFILE_COLORS = { fast: "#ef4444", medium: "#f59e0b", slow: "#a78bfa" };
+const CATEGORY_ORDER = [
+  "Rapid-Acting",
+  "Short-Acting",
+  "Intermediate",
+  "Long-Acting",
+  "Ultra Long-Acting",
+];
 
-export default function CarbsTab({ onSubmit, isPending }) {
-  const [carbSearch, setCarbSearch] = useState("");
-  const [selectedFoods, setSelectedFoods] = useState([]); // [{ food, carbs }]
-  const [recentFoods, setRecentFoods] = useState([]);
-  const [carbTime, setCarbTime] = useState(() => new Date().toTimeString().slice(0, 5));
+const groupedInsulins = CATEGORY_ORDER.reduce((groups, category) => {
+  const items = Object.entries(INSULIN_PROFILES).filter(
+    ([, profile]) => profile.category === category
+  );
+  if (items.length) groups.push({ category, items });
+  return groups;
+}, []);
 
+function createInsulinRow(defaults = {}) {
+  return {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    insulinType: "",
+    units: "",
+    purpose: "meal",
+    ...defaults,
+  };
+}
+
+function readLightMode() {
+  return localStorage.getItem("theme") === "light";
+}
+
+function normalizeEstimatedMeal(data, fallbackName) {
+  return {
+    mealName: data.mealName || data.name || fallbackName || "Estimated meal",
+    servingDescription: data.servingDescription || data.serving_description || "",
+    carbs: Number(data.carbs ?? 0),
+    protein: Number(data.protein ?? 0),
+    fat: Number(data.fat ?? 0),
+    calories: Number(data.calories ?? 0),
+    gi: Number(data.gi ?? 50),
+    absorptionProfile: data.absorptionProfile || data.absorption_profile || "medium",
+    confidence: Number(data.confidence ?? 0),
+    assumptions: Array.isArray(data.assumptions) ? data.assumptions : [],
+  };
+}
+
+export default function DoseForm({ open, onOpenChange }) {
+  const [tab, setTab] = useState("insulin");
+  const [isLightMode, setIsLightMode] = useState(readLightMode);
+  const [insulinRows, setInsulinRows] = useState(() => [createInsulinRow()]);
+  const [insulinNotes, setInsulinNotes] = useState("");
+  const [insulinTime, setInsulinTime] = useState(() => new Date().toTimeString().slice(0, 5));
+  const [glucoseValue, setGlucoseValue] = useState("");
+  const [glucoseNotes, setGlucoseNotes] = useState("");
+  const [glucoseTime, setGlucoseTime] = useState(() => new Date().toTimeString().slice(0, 5));
+  const [mealText, setMealText] = useState("");
+  const [estimatedMeal, setEstimatedMeal] = useState(null);
+  const [isEstimatingMeal, setIsEstimatingMeal] = useState(false);
+
+  const queryClient = useQueryClient();
   const nowTimeString = new Date().toTimeString().slice(0, 5);
 
-  // Load last 3 recently used foods from DB
   useEffect(() => {
-    base44.entities.CarbEntry.list("-consumed_at", 20).then((entries) => {
-      const seen = new Set();
-      const recent = [];
-      for (const e of entries) {
-        if (!e.is_custom && !seen.has(e.food_name)) {
-          seen.add(e.food_name);
-          const food = FOOD_DATABASE.find((f) => f.name === e.food_name);
-          if (food) recent.push(food);
-        }
-        if (recent.length >= 3) break;
-      }
-      setRecentFoods(recent);
-    }).catch(() => {});
+    const refreshTheme = () => setIsLightMode(readLightMode());
+    window.addEventListener("app-theme-changed", refreshTheme);
+    window.addEventListener("storage", refreshTheme);
+
+    return () => {
+      window.removeEventListener("app-theme-changed", refreshTheme);
+      window.removeEventListener("storage", refreshTheme);
+    };
   }, []);
 
-  const filteredFoods = useMemo(() => {
-    const q = carbSearch.toLowerCase().trim();
-    if (!q) return [];
-    return FOOD_DATABASE.filter((f) => f.name.toLowerCase().includes(q));
-  }, [carbSearch]);
+  const createDoses = useMutation({
+    mutationFn: (doses) => base44.entities.InsulinDose.bulkCreate(doses),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["insulin-doses"] });
+      toast.success("Insulin logged - tracking activity now");
+      onOpenChange(false);
+      setInsulinRows([createInsulinRow()]);
+           setInsulinNotes("");
+      setInsulinTime(new Date().toTimeString().slice(0, 5));
+    },
+    onError: () => toast.error("Unable to log insulin. Please try again."),
+  });
 
-  const addFood = (food) => {
-    if (selectedFoods.find((s) => s.food.name === food.name)) return;
-    setSelectedFoods((prev) => [...prev, { food, carbs: food.carbs }]);
-    setCarbSearch("");
+  const createGlucose = useMutation({
+    mutationFn: (data) => base44.entities.GlucoseReading.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["glucose-readings"] });
+      toast.success("Glucose logged");
+      onOpenChange(false);
+      setGlucoseValue("");
+      setGlucoseNotes("");
+      setGlucoseTime(new Date().toTimeString().slice(0, 5));
+    },
+  });
+
+  const createCarb = useMutation({
+    mutationFn: (entries) => base44.entities.CarbEntry.bulkCreate(entries),
+    onSuccess: (_, entries) => {
+      queryClient.invalidateQueries({ queryKey: ["carb-entries"] });
+      toast.success(`Logged ${entries.length} food item${entries.length === 1 ? "" : "s"}`);
+      onOpenChange(false);
+      setMealText("");
+      setEstimatedMeal(null);
+    },
+  });
+
+  const updateInsulinRow = (id, patch) => {
+    setInsulinRows((rows) => rows.map((row) => (row.id === id ? { ...row, ...patch } : row)));
   };
 
-  const removeFood = (name) => setSelectedFoods((prev) => prev.filter((s) => s.food.name !== name));
-
-  const updateCarbs = (name, val) => {
-    const n = parseFloat(val);
-    setSelectedFoods((prev) =>
-      prev.map((s) => s.food.name === name ? { ...s, carbs: isNaN(n) ? "" : n } : s)
-    );
+  const updateEstimatedMeal = (patch) => {
+    setEstimatedMeal((meal) => (meal ? { ...meal, ...patch } : meal));
   };
 
-  const totalCarbs = selectedFoods.reduce((sum, s) => sum + (parseFloat(s.carbs) || 0), 0);
-  const canSubmit = selectedFoods.length > 0 && selectedFoods.every((s) => parseFloat(s.carbs) > 0);
+  const addInsulinRow = () => {
+    const previous = insulinRows[insulinRows.length - 1];
+    setInsulinRows((rows) => [
+      ...rows,
+      createInsulinRow({
+        insulinType: previous?.insulinType || "",
+        purpose: previous?.purpose || "meal",
+      }),
+    ]);
+  };
 
-  const handleSubmit = () => {
-    if (!canSubmit) return;
-    const [h, m] = carbTime.split(":").map(Number);
-    const dt = new Date();
-    dt.setHours(h, m, 0, 0);
-    const entries = selectedFoods.map((s) => ({
-      food_name: s.food.name,
-      is_custom: false,
-      carbs: parseFloat(s.carbs),
-      serving_amount: 1,
-      glycemic_index: s.food.gi,
-      absorption_profile: s.food.profile,
-      consumed_at: dt.toISOString(),
-    }));
-    onSubmit(entries);
+  const removeInsulinRow = (id) => {
+    setInsulinRows((rows) => (rows.length === 1 ? rows : rows.filter((row) => row.id !== id)));
+  };
+
+  const insulinTotals = insulinRows.reduce((totals, row) => {
+    const units = Number(row.units);
+    if (!row.insulinType || !Number.isFinite(units) || units <= 0) return totals;
+
+    totals[row.insulinType] = (totals[row.insulinType] || 0) + units;
+    return totals;
+  }, {});
+
+  const totalUnits = Object.values(insulinTotals).reduce((sum, units) => sum + units, 0);
+
+  const handleEstimateMeal = async () => {
+    const description = mealText.trim();
+    if (!description) {
+      toast.error("Describe the meal first.");
+      return;
+    }
+
+    setIsEstimatingMeal(true);
+
+    try {
+      const response = await fetch("/api/estimate-meal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mealText: description }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Meal estimate failed");
+      }
+
+      const data = await response.json();
+      setEstimatedMeal(normalizeEstimatedMeal(data, description));
+    } catch (error) {
+      toast.error("Unable to estimate that meal yet.");
+    } finally {
+      setIsEstimatingMeal(false);
+    }
+  };
+
+  const handleUseEstimatedMeal = () => {
+    if (!estimatedMeal) return;
+
+    const carbs = Number(estimatedMeal.carbs);
+    if (!Number.isFinite(carbs) || carbs <= 0) {
+      toast.error("Enter estimated carbs before logging.");
+      return;
+    }
+   createCarb.mutate([
+      {
+        name: estimatedMeal.mealName || "Estimated meal",
+        carbs,
+        protein: Number(estimatedMeal.protein) || 0,
+        fat: Number(estimatedMeal.fat) || 0,
+        calories: Number(estimatedMeal.calories) || 0,
+        gi: Number(estimatedMeal.gi) || 50,
+        category: "AI Estimated",
+        profile: estimatedMeal.absorptionProfile || "medium",
+        absorption_profile: estimatedMeal.absorptionProfile || "medium",
+        consumed_at: new Date().toISOString(),
+        is_custom: false,
+        notes: [
+          estimatedMeal.servingDescription
+            ? `Serving: ${estimatedMeal.servingDescription}`
+            : null,
+          estimatedMeal.confidence
+            ? `AI confidence: ${Math.round(estimatedMeal.confidence * 100)}%`
+            : null,
+          estimatedMeal.assumptions?.length
+            ? `Assumptions: ${estimatedMeal.assumptions.join("; ")}`
+            : null,
+        ]
+          .filter(Boolean)
+          .join("\n") || undefined,
+      },
+    ]);
+  };
+
+  const handleSubmitInsulin = () => {
+    const invalidRow = insulinRows.find((row) => {
+      const units = Number(row.units);
+      return !row.insulinType || !Number.isFinite(units) || units <= 0;
+    });
+
+    if (invalidRow) {
+      toast.error("Choose an insulin type and enter units for every row.");
+      return;
+    }
+
+    const [hours, minutes] = insulinTime.split(":").map(Number);
+    const administeredAt = new Date();
+    administeredAt.setHours(hours, minutes, 0, 0);
+
+    const groupedDoses = insulinRows.reduce((groups, row) => {
+      const units = Number(row.units);
+      const existing = groups[row.insulinType] || {
+        insulin_type: row.insulinType,
+        units: 0,
+        meal_units: 0,
+        correction_units: 0,
+        administered_at: administeredAt.toISOString(),
+        notes: insulinNotes || undefined,
+      };
+
+      existing.units += units;
+      if (row.purpose === "correction") {
+        existing.correction_units += units;
+      } else {
+        existing.meal_units += units;
+      }
+
+      groups[row.insulinType] = existing;
+      return groups;
+    }, {});
+
+    createDoses.mutate(Object.values(groupedDoses));
+  };
+
+  const handleSubmitGlucose = () => {
+    const value = Number(glucoseValue);
+    if (!Number.isFinite(value) || value <= 0) return;
+
+    const [hours, minutes] = glucoseTime.split(":").map(Number);
+    const recordedAt = new Date();
+    recordedAt.setHours(hours, minutes, 0, 0);
+
+    createGlucose.mutate({
+      value,
+      recorded_at: recordedAt.toISOString(),
+      notes: glucoseNotes || undefined,
+    });
   };
 
   return (
-    <>
-      <div className="overflow-y-auto h-[500px] px-5 pb-6 space-y-5">
-
-        {/* Search Bar */}
-        <div className="relative">
-          <p className="text-sm font-bold tracking-widest text-white/40 uppercase mb-3">Search Foods</p>
-          <input
-            type="text"
-            value={carbSearch}
-            onChange={(e) => setCarbSearch(e.target.value)}
-            placeholder="Search foods..."
-            className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm placeholder:text-white/30 outline-none focus:border-amber-500/30 transition-colors"
-          />
-
-          {/* Search Results Dropdown */}
-          {filteredFoods.length > 0 && (
-            <div className="mt-2 bg-[hsl(162,10%,12%)] border border-white/10 rounded-2xl overflow-hidden shadow-xl">
-              {filteredFoods.map((food) => {
-                const already = !!selectedFoods.find((s) => s.food.name === food.name);
-                return (
-                  <button
-                    key={food.name}
-                    onClick={() => addFood(food)}
-                    disabled={already}
-                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors text-left border-b border-white/5 last:border-0 disabled:opacity-40"
-                  >
-                    <div>
-                      <p className="text-sm font-medium text-white">{food.name}</p>
-                      <p className="text-xs text-white/40">{food.carbs}g · GI {food.gi}</p>
-                    </div>
-                    <span
-                      className="text-xs font-bold px-2 py-0.5 rounded-full"
-                      style={{ backgroundColor: PROFILE_COLORS[food.profile] + "22", color: PROFILE_COLORS[food.profile] }}
-                    >
-                      {food.profile}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Recently Used */}
-        {recentFoods.length > 0 && carbSearch === "" && (
-          <div>
-            <p className="text-sm font-bold tracking-widest text-white/40 uppercase mb-3 flex items-center gap-2">
-              <Clock className="w-3.5 h-3.5" /> Recently Used
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {recentFoods.map((food) => {
-                const already = !!selectedFoods.find((s) => s.food.name === food.name);
-                return (
-                  <button
-                    key={food.name}
-                    onClick={() => addFood(food)}
-                    disabled={already}
-                    className="flex flex-col items-start px-3 py-2 rounded-xl border transition-all text-left disabled:opacity-40"
-                    style={{
-                      borderColor: already ? PROFILE_COLORS[food.profile] + "99" : "rgba(255,255,255,0.1)",
-                      backgroundColor: already ? PROFILE_COLORS[food.profile] + "22" : "transparent",
-                    }}
-                  >
-                    <span className="text-sm font-medium text-white">{food.name}</span>
-                    <span className="text-xs text-white/40">{food.carbs}g · {food.profile}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogPortal>
+        {isLightMode && (
+          <style>{`
+            .dose-form-light [class~="text-white"] { color: #29433a !important; }
+            .dose-form-light [class*="text-white/"] { color: rgba(41, 67, 58, 0.6) !important; }
+            .dose-form-light [class*="border-white"] { border-color: rgba(32, 90, 76, 0.14) !important; }
+            .dose-form-light [class*="bg-white/"] { background-color: rgba(255,255,255,0.64) !important; }
+            .dose-form-light input,
+            .dose-form-light select,
+            .dose-form-light textarea { color: #29433a !important; }
+            .dose-form-light input::placeholder,
+            .dose-form-light textarea::placeholder { color: rgba(41, 67, 58, 0.42) !important; }
+            .dose-form-light select option,
+           .dose-form-light select optgroup { background: #edf5f2; color: #29433a; }
+            .dose-form-light [class*="text-teal-"] { color: #237b70 !important; }
+            .dose-form-light [class*="text-orange-"],
+            .dose-form-light [class*="text-amber-"] { color: #a96821 !important; }
+          `}</style>
         )}
-
-        {/* Selected Foods */}
-        {selectedFoods.length > 0 && (
-          <div>
-            <p className="text-sm font-bold tracking-widest text-white/40 uppercase mb-3">Selected Foods</p>
-            <div className="space-y-2">
-              {selectedFoods.map(({ food, carbs }) => (
-                <div
-                  key={food.name}
-                  className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl px-4 py-3"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-white truncate">{food.name}</p>
-                    <p className="text-xs text-white/40">GI {food.gi} ·{" "}
-                      <span style={{ color: PROFILE_COLORS[food.profile] }}>{food.profile}</span>
-                    </p>
-                  </div>
-                  {/* Carbs Input */}
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <input
-                      type="number"
-                      min="1"
-                      max="500"
-                      value={carbs}
-                      onChange={(e) => updateCarbs(food.name, e.target.value)}
-                      className="w-16 text-center bg-black/20 border border-white/10 rounded-xl px-2 py-1.5 text-white text-sm font-bold outline-none focus:border-amber-500/40 transition-colors"
-                    />
-                    <span className="text-xs text-white/40">g</span>
-                  </div>
-                  <button
-                    onClick={() => removeFood(food.name)}
-                    className="text-white/30 hover:text-white/70 transition-colors shrink-0"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
-
-              {/* Total */}
-              {selectedFoods.length > 1 && (
-                <div className="flex items-center justify-between bg-amber-500/10 border border-amber-500/20 rounded-2xl px-4 py-2.5">
-                  <span className="text-sm text-white/60">Total Carbs</span>
-                  <span className="text-lg font-bold text-amber-400">{Math.round(totalCarbs * 10) / 10}g</span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Time */}
-        <div>
-          <p className="text-sm font-bold tracking-widest text-white/40 uppercase mb-3">Time Consumed</p>
-          <div className="bg-white/5 border border-white/10 rounded-2xl px-4 py-3 flex items-center justify-between">
-            <span className="text-sm text-white/40">Consumed at</span>
-            <input
-              type="time"
-              value={carbTime}
-              max={nowTimeString}
-              onChange={(e) => { if (e.target.value <= nowTimeString) setCarbTime(e.target.value); }}
-              className="bg-transparent text-white text-sm font-medium outline-none cursor-pointer"
-              style={{ colorScheme: "dark" }}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Submit */}
-      <div className="px-5 pb-6 pt-2 shrink-0">
-        <button
-          onClick={handleSubmit}
-          disabled={!canSubmit || isPending}
-          className="w-full py-4 rounded-2xl disabled:opacity-40 text-white font-semibold text-base transition-all"
-          style={{ backgroundColor: CARB_COLOR, filter: "brightness(0.85)" }}
-          onMouseEnter={(e) => { e.currentTarget.style.filter = "brightness(1)"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.filter = "brightness(0.85)"; }}
+        <DialogOverlay
+          className="fixed inset-0 z-50 backdrop-blur-sm"
+          style={{ background: isLightMode ? "rgba(30, 63, 53, 0.18)" : "rgba(0, 0, 0, 0.75)" }}
+        />
+        <DialogPrimitive.Content
+          className={`fixed bottom-0 left-0 right-0 z-50 flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl border border-white/5 shadow-2xl sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl ${isLightMode ? "dose-form-light" : ""}`}
+          style={{
+            background: isLightMode
+              ? "linear-gradient(145deg, rgba(255,255,255,0.98), rgba(236,246,242,0.96))"
+              : "hsl(162,10%,8%)",
+            borderColor: isLightMode ? "rgba(32,90,76,0.16)" : undefined,
+          }}
         >
-          {isPending
-            ? "Logging..."
-            : canSubmit
-              ? `Log ${Math.round(totalCarbs * 10) / 10}g across ${selectedFoods.length} food${selectedFoods.length > 1 ? "s" : ""}`
-              : "Select a food to log"}
-        </button>
-      </div>
-    </>
+          <div className="flex items-center justify-between px-6 pb-3 pt-5">
+            <div className="w-8" />
+            <span className="text-lg font-semibold text-white">Log Entry</span>
+            <DialogClose asChild>
+              <button className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/60 transition hover:text-white">
+                <X className="h-4 w-4" />
+              </button>
+            </DialogClose>
+          </div>
+
+          <div className="mx-5 mb-2 flex rounded-2xl bg-white/[0.06] p-1">
+            {[
+              { id: "insulin", label: "Insulin", Icon: Syringe },
+              { id: "glucose", label: "Glucose", Icon: Droplets },
+              { id: "carbs", label: "Carbs", Icon: Wheat },
+            ].map(({ id, label, Icon }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setTab(id)}
+                className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2 text-sm font-medium transition-colors ${
+                  tab === id ? "bg-white/10 text-white" : "text-white/40 hover:text-white/60"
+                }`}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {tab === "carbs" ? (
+            <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-6 pt-4">
+              <div className="mb-5 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                <div className="mb-3 flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-teal-300" />
+                  <p className="text-sm font-bold uppercase tracking-widest text-white/40">
+                    Estimate a meal
+                  </p>
+                </div>
+
+                <Textarea
+                  value={mealText}
+                  onChange={(event) => setMealText(event.target.value)}
+                  placeholder="e.g. 2 slices pepperoni pizza and a 12 oz coke"
+                  rows={3}
+                  className="resize-none rounded-2xl border-white/10 bg-white/5 text-white placeholder:text-white/30"
+                />
+
+                <button
+                  type="button"
+                  onClick={handleEstimateMeal}
+                  disabled={!mealText.trim() || isEstimatingMeal}
+                  className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-teal-500 py-3 text-sm font-semibold text-white transition hover:bg-teal-400 disabled:opacity-40"
+                >
+                  {isEstimatingMeal ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Estimating...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4" />
+                      Estimate meal
+                    </>
+                  )}
+                </button>
+
+                {estimatedMeal && (
+                  <div className="mt-4 space-y-3 border-t border-white/10 pt-4">
+                    <input
+                      value={estimatedMeal.mealName}
+                      onChange={(event) => updateEstimatedMeal({ mealName: event.target.value })}
+                      className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm font-semibold text-white outline-none focus:border-teal-400"
+                    />
+
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        ["carbs", "Carbs", "g"],
+                        ["protein", "Protein", "g"],
+                        ["fat", "Fat", "g"],
+                         ["gi", "GI", ""],
+                      ].map(([key, label, unit]) => (
+                        <label key={key} className={key === "gi" ? "col-span-2" : ""}>
+                          <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-white/35">
+                            {label}
+                          </span>
+                          <div className="flex items-center rounded-xl border border-white/10 bg-white/5 px-3 py-2">
+                            <input
+                              type="number"
+                              min="0"
+                              inputMode="decimal"
+                              value={estimatedMeal[key]}
+                              onChange={(event) =>
+                                updateEstimatedMeal({ [key]: event.target.value })
+                              }
+                              className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none"
+                            />
+                            {unit && <span className="text-xs text-white/35">{unit}</span>}
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+
+                    <label>
+                      <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-white/35">
+                        Absorption
+                      </span>
+                      <select
+                        value={estimatedMeal.absorptionProfile}
+                        onChange={(event) =>
+                          updateEstimatedMeal({ absorptionProfile: event.target.value })
+                        }
+                        className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-teal-400"
+                      >
+                        <option value="fast" className="bg-[#18211f]">Fast</option>
+                        <option value="medium" className="bg-[#18211f]">Medium</option>
+                        <option value="slow" className="bg-[#18211f]">Slow</option>
+                      </select>
+                    </label>
+
+                    {estimatedMeal.assumptions?.length > 0 && (
+                      <div className="rounded-xl bg-white/[0.04] px-3 py-2">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-white/35">
+                          Assumptions
+                        </p>
+                        <p className="mt-1 text-xs leading-relaxed text-white/45">
+                          {estimatedMeal.assumptions.join("; ")}
+                        </p>
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={handleUseEstimatedMeal}
+                      disabled={createCarb.isPending}
+                      className="flex w-full items-center justify-center gap-2 rounded-2xl bg-orange-600 py-3 text-sm font-semibold text-white transition hover:bg-orange-500 disabled:opacity-40"
+                    >
+                      <Check className="h-4 w-4" />
+                      Use this estimate
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <CarbsTab
+                onSubmit={(entries) => createCarb.mutate(entries)}
+                isPending={createCarb.isPending}
+              />
+            </div>
+          ) : tab === "insulin" ? (
+            <>
+              <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-6 pt-4">
+                <div className="space-y-3">
+                  <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/40">Insulin doses</p>
+
+                  {insulinRows.map((row, index) => (
+                    <div key={row.id} className="space-y-2">
+                      <div className="grid grid-cols-[minmax(0,1fr)_4.5rem_6.75rem] gap-2">
+                        <select
+                          aria-label={`Insulin type for dose ${index + 1}`}
+                          value={row.insulinType}
+                          onChange={(event) => updateInsulinRow(row.id, { insulinType: event.target.value })}
+                          className="min-w-0 rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-teal-400"
+                        >
+                          <option value="" className="bg-[#18211f]">Insulin type</option>
+                          {groupedInsulins.map(({ category, items }) => (
+                            <optgroup key={category} label={category} className="bg-[#18211f]">
+                              {items.map(([name]) => (
+                                <option key={name} value={name}>{name}</option>
+                              ))}
+                            </optgroup>
+                          ))}
+                        </select>
+
+                        <input
+                          aria-label={`Units for dose ${index + 1}`}
+                          type="number"
+                          min="0.1"
+                          step="0.1"
+                          inputMode="decimal"
+                                                 placeholder="Units"
+                          value={row.units}
+                          onChange={(event) => updateInsulinRow(row.id, { units: event.target.value })}
+                          className="min-w-0 rounded-xl border border-white/10 bg-white/5 px-2 py-3 text-center text-sm text-white outline-none placeholder:text-white/30 focus:border-teal-400"
+                        />
+
+                        <select
+                          aria-label={`Purpose for dose ${index + 1}`}
+                          value={row.purpose}
+                          onChange={(event) => updateInsulinRow(row.id, { purpose: event.target.value })}
+                          className="rounded-xl border border-white/10 bg-white/5 px-2 py-3 text-sm text-white outline-none focus:border-teal-400"
+                        >
+                          <option value="meal" className="bg-[#18211f]">Meal</option>
+                          <option value="correction" className="bg-[#18211f]">Correction</option>
+                        </select>
+                      </div>
+
+                      {insulinRows.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeInsulinRow(row.id)}
+                          className="flex items-center gap-1 px-1 text-xs text-white/35 transition hover:text-red-300"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                          Remove this row
+                        </button>
+                      )}
+                    </div>
+                  ))}
+
+                  <button
+                    type="button"
+                    onClick={addInsulinRow}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 py-3 text-sm font-medium text-white/60 transition hover:border-teal-400/50 hover:bg-teal-400/5 hover:text-teal-300"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add more insulin
+                  </button>
+                </div>
+
+                <div className="mt-6 space-y-3">
+                  <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/40">Time administered</p>
+                  <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                    <span className="text-sm text-white/40">Administered at</span>
+                    <input
+                      type="time"
+                      value={insulinTime}
+                      max={nowTimeString}
+                      onChange={(event) => {
+                        if (event.target.value <= nowTimeString) setInsulinTime(event.target.value);
+                      }}
+                      className="cursor-pointer bg-transparent text-sm font-medium text-white outline-none"
+                      style={{ colorScheme: isLightMode ? "light" : "dark" }}
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-6 space-y-3">
+                  <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/40">Notes (optional)</p>
+                  <Textarea
+                    value={insulinNotes}
+                    onChange={(event) => setInsulinNotes(event.target.value)}
+                    placeholder="e.g. before lunch"
+                    rows={2}
+                    className="resize-none rounded-2xl border-white/10 bg-white/5 text-white placeholder:text-white/30"
+                  />
+                </div>
+
+                <div className="mt-6 space-y-2 border-t border-white/10 pt-4">
+                  {Object.entries(insulinTotals).length ? (
+                    Object.entries(insulinTotals).map(([type, units]) => (
+                      <p key={type} className="text-sm font-semibold text-white/85">
+                        {type.split(" ")[0]} {units % 1 === 0 ? units : units.toFixed(1)} units total
+                      </p>
+                    ))
+                  ) : (
+                    <p className="text-sm text-white/35">Add an insulin dose to see the total.</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="shrink-0 px-5 pb-6 pt-3">
+                <button
+                  type="button"
+                  onClick={handleSubmitInsulin}
+                  disabled={!totalUnits || createDoses.isPending}
+                  className="w-full rounded-2xl bg-teal-500 py-4 text-base font-semibold text-white transition hover:bg-teal-400 disabled:opacity-40"
+                >
+                  {createDoses.isPending
+                    ? "Logging..."
+                    : totalUnits
+                      ? `Log ${totalUnits % 1 === 0 ? totalUnits : totalUnits.toFixed(1)} units`
+                      : "Add insulin units"}
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-6 pt-4">
+                <label htmlFor="glucose-log" className="block text-sm font-bold uppercase tracking-widest text-white/40">
+                  Blood glucose (mg/dL)
+                </label>
+                <div className="mt-3 rounded-2xl border border-white/10 bg-white/5 px-6 py-6">
+                  <input
+                    id="glucose-log"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={3}
+                    value={glucoseValue}
+                    onChange={(event) => setGlucoseValue(event.target.value.replace(/\D/g, "").slice(0, 3))}
+                    placeholder="--"
+                    className="w-full bg-transparent text-center text-5xl font-bold text-white outline-none placeholder:text-white/20"
+                  />
+                  <p className="mt-1 text-center text-sm text-white/40">mg/dL</p>
+                </div>
+
+                <div className="mt-6 space-y-3">
+                  <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/40">Time</p>
+                  <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                    <span className="text-sm text-white/40">Reading time</span>
+                    <input
+                      type="time"
+                      value={glucoseTime}
+                      max={nowTimeString}
+                      onChange={(event) => {
+                        if (event.target.value <= nowTimeString) setGlucoseTime(event.target.value);
+                      }}
+                      className="cursor-pointer bg-transparent text-sm font-medium text-white outline-none"
+                      style={{ colorScheme: isLightMode ? "light" : "dark" }}
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-6 space-y-3">
+                  <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/40">Notes (optional)</p>
+                  <Textarea
+                    value={glucoseNotes}
+                    onChange={(event) => setGlucoseNotes(event.target.value)}
+                    placeholder="e.g. fasting, after meal"
+                    rows={2}
+                    className="resize-none rounded-2xl border-white/10 bg-white/5 text-white placeholder:text-white/30"
+                  />
+                </div>
+              </div>
+
+              <div className="shrink-0 px-5 pb-6 pt-3">
+                <button
+                  type="button"
+                  onClick={handleSubmitGlucose}
+                  disabled={!glucoseValue || createGlucose.isPending}
+                  className="w-full rounded-2xl bg-orange-600 py-4 text-base font-semibold text-white transition hover:bg-orange-500 disabled:opacity-40"
+                >
+                  {createGlucose.isPending ? "Logging..." : `Log ${glucoseValue || "--"} mg/dL`}
+                </button>
+              </div>
+            </>
+          )}
+        </DialogPrimitive.Content>
+      </DialogPortal>
+    </Dialog>
   );
 }
