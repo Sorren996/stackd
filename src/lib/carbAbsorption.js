@@ -318,9 +318,9 @@ export const FOOD_DATABASE = [
 ];
 
 export function getCarbAbsorptionAt(entry, targetTime = Date.now()) {
-  if (entry.is_custom || !entry.absorption_profile) {
-    return { absorbedGrams: 0, remainingGrams: 0, absorptionRateGPerMin: 0 };
-  }
+if (!entry.absorption_profile) {
+  return { absorbedGrams: 0, remainingGrams: 0, absorptionRateGPerMin: 0 };
+}    
 
   const profile = ABSORPTION_PROFILES[entry.absorption_profile];
   if (!profile) {
@@ -400,8 +400,7 @@ return {
 }
 
 export function generateCarbCurve(entry) {
-  if (entry.is_custom || !entry.absorption_profile) return [];
-
+if (!entry.absorption_profile) return [];
   const profile = ABSORPTION_PROFILES[entry.absorption_profile];
   if (!profile) return [];
 
