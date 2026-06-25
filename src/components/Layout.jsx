@@ -229,7 +229,7 @@ export default function Layout() {
         </div>
       </header>
 
-      <main className="relative z-10 mx-auto w-full max-w-6xl min-w-0 overflow-x-hidden px-4 pb-28 pt-14">
+      <main className="relative z-10 mx-auto w-full max-w-6xl min-w-0 px-4 pb-28 pt-14">
         <div className="min-w-0 w-full max-w-full">
           <Outlet />
         </div>
