@@ -37,7 +37,11 @@ export default function Layout() {
   const mutedText = isLightMode ? "text-zinc-500" : "text-white/50";
 
   return (
-    <div className={`relative min-h-screen overflow-x-hidden transition-colors duration-500 ${pageText} ${isLightMode ? "app-light" : "app-dark"}`}>
+    <div
+      className={`relative min-h-screen w-full max-w-full overflow-x-hidden transition-colors duration-500 ${pageText} ${
+        isLightMode ? "app-light" : "app-dark"
+      }`}
+    >
       {isLightMode && (
         <style>{`
           .app-light [class~="text-white"] {
@@ -132,6 +136,7 @@ export default function Layout() {
           }
         `}</style>
       )}
+
       <motion.div
         aria-hidden="true"
         className="pointer-events-none fixed inset-0 -z-50"
@@ -149,29 +154,29 @@ export default function Layout() {
         style={{ background: "linear-gradient(to bottom, #fbfdfc, #eef6f3, #dceae5)" }}
       />
 
-      <header className="fixed inset-x-0 top-0 z-50 bg-transparent">
+      <header className="fixed inset-x-0 top-0 z-50 max-w-full overflow-x-hidden bg-transparent">
         <div
-          className="mx-auto grid h-14 max-w-6xl grid-cols-[1fr_auto_1fr] items-center px-4"
+          className="mx-auto grid h-14 w-full max-w-6xl grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center px-4"
           style={{
             background: isLightMode
               ? "linear-gradient(to bottom, rgba(255,255,255,0.92), rgba(255,255,255,0.45), transparent)"
               : "linear-gradient(to bottom, rgba(0,0,0,0.8), rgba(0,0,0,0.4), transparent)",
           }}
         >
-          <div />
+          <div className="min-w-0" />
           <img
             src="https://media.base44.com/images/public/6a1b93f234a8611ee1595134/9cd3c84cf_stackdappiconver3tran.png"
             alt="Stackd Logo"
-            className="h-9 w-auto object-contain"
+            className="h-9 max-w-full object-contain"
           />
 
-          <div className="flex items-center justify-self-end gap-2">
+          <div className="flex min-w-0 items-center justify-self-end gap-2">
             <button
               type="button"
               onClick={toggleTheme}
               aria-label={isLightMode ? "Switch to dark mode" : "Switch to light mode"}
               title={isLightMode ? "Switch to dark mode" : "Switch to light mode"}
-              className="flex h-9 w-9 items-center justify-center rounded-full border transition-all"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition-all"
               style={{
                 background: isLightMode ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.05)",
                 borderColor: isLightMode ? "rgba(234,179,8,0.45)" : "rgba(255,255,255,0.08)",
@@ -197,10 +202,18 @@ export default function Layout() {
               type="button"
               onClick={toggleSettings}
               aria-label="Open settings"
-              className="flex h-9 w-9 items-center justify-center rounded-full border transition-all"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition-all"
               style={{
-                background: isSettingsOpen ? "rgba(20,184,166,0.1)" : isLightMode ? "rgba(24,24,27,0.06)" : "rgba(255,255,255,0.05)",
-                borderColor: isSettingsOpen ? "rgba(20,184,166,0.35)" : isLightMode ? "rgba(24,24,27,0.1)" : "rgba(255,255,255,0.05)",
+                background: isSettingsOpen
+                  ? "rgba(20,184,166,0.1)"
+                  : isLightMode
+                    ? "rgba(24,24,27,0.06)"
+                    : "rgba(255,255,255,0.05)",
+                borderColor: isSettingsOpen
+                  ? "rgba(20,184,166,0.35)"
+                  : isLightMode
+                    ? "rgba(24,24,27,0.1)"
+                    : "rgba(255,255,255,0.05)",
                 boxShadow: isSettingsOpen ? "0 0 18px rgba(20,184,166,0.35)" : "none",
               }}
             >
@@ -216,8 +229,8 @@ export default function Layout() {
         </div>
       </header>
 
-      <main className="relative z-10 mx-auto w-full max-w-6xl px-4 pb-28 pt-14">
-        <div className="min-w-0 w-full">
+      <main className="relative z-10 mx-auto w-full max-w-6xl min-w-0 overflow-x-hidden px-4 pb-28 pt-14">
+        <div className="min-w-0 w-full max-w-full">
           <Outlet />
         </div>
       </main>
@@ -230,22 +243,22 @@ export default function Layout() {
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: "-100%", opacity: 0 }}
             transition={{ type: "spring", stiffness: 220, damping: 28 }}
-            className="fixed inset-0 z-40 overflow-y-auto pb-28 pt-16"
+            className="fixed inset-0 z-40 w-full max-w-full overflow-x-hidden overflow-y-auto pb-28 pt-16"
             style={{
               background: isLightMode ? "rgba(250,250,250,0.97)" : "rgba(8,14,11,0.97)",
               backdropFilter: "blur(16px)",
             }}
           >
-            <div className="px-4">
+            <div className="mx-auto w-full max-w-6xl min-w-0 px-4">
               <SettingsContent />
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 flex justify-center pb-safe">
+      <nav className="fixed inset-x-0 bottom-0 z-30 flex max-w-full justify-center overflow-x-hidden pb-safe">
         <div
-          className="mx-4 mb-4 flex items-center gap-1 rounded-3xl border px-4 py-1 backdrop-blur-sm"
+          className="mx-4 mb-4 flex max-w-[calc(100vw-2rem)] items-center gap-1 overflow-x-auto rounded-3xl border px-4 py-1 backdrop-blur-sm"
           style={{
             background: isLightMode ? "rgba(255,255,255,0.72)" : "rgba(8,14,10,0.4)",
             borderColor: isLightMode ? "rgba(24,24,27,0.15)" : "rgba(255,255,255,0.4)",
@@ -260,8 +273,14 @@ export default function Layout() {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`relative flex flex-col items-center gap-1 rounded-2xl px-4 py-1.5 transition-colors ${
-                  isActive ? (isLightMode ? "text-zinc-900" : "text-white") : isLightMode ? "text-zinc-500 hover:text-zinc-900" : "text-white/40 hover:text-white/70"
+                className={`relative flex shrink-0 flex-col items-center gap-1 rounded-2xl px-4 py-1.5 transition-colors ${
+                  isActive
+                    ? isLightMode
+                      ? "text-zinc-900"
+                      : "text-white"
+                    : isLightMode
+                      ? "text-zinc-500 hover:text-zinc-900"
+                      : "text-white/40 hover:text-white/70"
                 }`}
               >
                 {isActive && (
