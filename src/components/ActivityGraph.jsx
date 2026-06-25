@@ -344,7 +344,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             width={chartWidth}
             height={240}
             data={chartData}
-            margin={{ top: 12, right: 0, left: -20, bottom: 0 }}
+            margin={{ top: 12, right: 0, left: 0, bottom: 0 }}
             onMouseMove={(state) => setIsInteracting(!!(state && state.activePayload))}
             onMouseLeave={() => setIsInteracting(false)}
             onTouchStart={(state) => {if (state && state.activePayload) setIsInteracting(true);}}
