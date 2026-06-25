@@ -59,57 +59,11 @@ function getCurveActivityAt(curve, time) {
   return last.activity;
 }
 
-function integrateCurveArea(curve, endTime = null) {
-  if (curve.length < 2) return 0;
-
-  let area = 0;
-
-  for (let index = 0; index < curve.length - 1; index += 1) {
-    const current = curve[index];
-    const next = curve[index + 1];
-
-    if (endTime !== null && endTime <= current.time) break;
-
-    const segmentEndTime =
-      endTime !== null && endTime < next.time ? endTime : next.time;
-
-    const startActivity = current.activity;
-    const endActivity =
-      segmentEndTime === next.time
-        ? next.activity
-        : getCurveActivityAt(curve, segmentEndTime);
-
-    const durationMinutes = (segmentEndTime - current.time) / 60000;
-    area += ((startActivity + endActivity) / 2) * durationMinutes;
-
-    if (endTime !== null && endTime <= next.time) break;
-  }
-
-  return area;
-}
-
-export function getDoseRemainingEffectFraction(
-  dose,
+function getTotalActiveUnits(
+  doses,
   targetTime = Date.now(),
-  intervalMinutes = 3
+  selectUnits = (dose) => dose.units
 ) {
-  const curve = generateActivityCurve(dose, intervalMinutes);
-  if (curve.length < 2) return 0;
-
-  const first = curve[0];
-  const last = curve[curve.length - 1];
-
-  if (targetTime <= first.time) return 1;
-  if (targetTime >= last.time) return 0;
-
-  const totalArea = integrateCurveArea(curve);
-  if (totalArea <= 0) return 0;
-
-  const usedArea = integrateCurveArea(curve, targetTime);
-  return Math.max(0, Math.min(1, 1 - usedArea / totalArea));
-}
-
-function getTotalActiveUnits(doses, targetTime = Date.now(), selectUnits = (dose) => dose.units) {
   return doses.reduce((sum, dose) => {
     const units = Number(selectUnits(dose));
     if (!Number.isFinite(units) || units <= 0) return sum;
@@ -121,10 +75,20 @@ function getTotalActiveUnits(doses, targetTime = Date.now(), selectUnits = (dose
 
 function getTotalActiveMealUnits(doses, targetTime = Date.now()) {
   // Older records predate the meal/correction split, so retain their prior behavior.
-  return getTotalActiveUnits(doses, targetTime, (dose) => dose.meal_units ?? dose.units);
+  return getTotalActiveUnits(
+    doses,
+    targetTime,
+    (dose) => dose.meal_units ?? dose.units
+  );
 }
 
 function getTotalActiveCorrectionUnits(doses, targetTime = Date.now()) {
+  return getTotalActiveUnits(
+    doses,
+    targetTime,
+    (dose) => dose.correction_units ?? 0
+  );
+}
 
 function getTotalRemainingMealCoverageGrams(
   doses,
@@ -147,9 +111,6 @@ function getTotalRemainingMealCoverageGrams(
   }, 0);
 }
 
-  return getTotalActiveUnits(doses, targetTime, (dose) => dose.correction_units ?? 0);
-}
-
 function getActiveCarbsAt(entries, targetTime) {
   return entries.reduce(
     (sum, entry) => sum + getCarbAbsorptionAt(entry, targetTime).remainingGrams,
@@ -157,7 +118,12 @@ function getActiveCarbsAt(entries, targetTime) {
   );
 }
 
-function computeNetCarbTrajectory(doses, carbEntries, latestGlucose, insulinSettings) {
+function computeNetCarbTrajectory(
+  doses,
+  carbEntries,
+  latestGlucose,
+  insulinSettings
+) {
   const now = Date.now();
   let horizon = now;
 
@@ -183,27 +149,33 @@ function computeNetCarbTrajectory(doses, carbEntries, latestGlucose, insulinSett
   const points = [];
 
   for (let time = now; time <= horizon; time += SAMPLE_STEP_MS) {
-const activeUnits = getTotalActiveUnits(doses, time);
-const activeMealUnits = getTotalActiveMealUnits(doses, time);
-const activeCarbs = getActiveCarbsAt(carbEntries, time);
-const remainingMealCoverageGrams = getTotalRemainingMealCoverageGrams(
-  doses,
-  gramsPerUnit,
-  time
-);
+    const activeUnits = getTotalActiveUnits(doses, time);
+    const activeMealUnits = getTotalActiveMealUnits(doses, time);
+    const activeCarbs = getActiveCarbsAt(carbEntries, time);
+    const remainingMealCoverageGrams = getTotalRemainingMealCoverageGrams(
+      doses,
+      gramsPerUnit,
+      time
+    );
 
-points.push({
-  time,
-  activeUnits,
-  activeMealUnits,
-  activeCarbs,
-  remainingMealCoverageGrams,
-  net: activeCarbs - remainingMealCoverageGrams,
-});
+    points.push({
+      time,
+      activeUnits,
+      activeMealUnits,
+      activeCarbs,
+      remainingMealCoverageGrams,
+      net: activeCarbs - remainingMealCoverageGrams,
+    });
   }
 
-  const peak = points.reduce((highest, point) => (point.net > highest.net ? point : highest), points[0]);
-  const trough = points.reduce((lowest, point) => (point.net < lowest.net ? point : lowest), points[0]);
+  const peak = points.reduce(
+    (highest, point) => (point.net > highest.net ? point : highest),
+    points[0]
+  );
+  const trough = points.reduce(
+    (lowest, point) => (point.net < lowest.net ? point : lowest),
+    points[0]
+  );
 
   return {
     points,
@@ -228,7 +200,10 @@ function formatRelativeAge(time) {
 
 function formatClockTime(time) {
   if (!time) return null;
-  return new Date(time).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  return new Date(time).toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 function TooltipPopover({ title, description, onClose, children }) {
@@ -252,7 +227,10 @@ function TooltipPopover({ title, description, onClose, children }) {
         >
           <div className="mb-2 flex items-start justify-between gap-3">
             <p className="text-sm font-semibold text-white">{title}</p>
-            <button onClick={onClose} className="text-white/40 transition-colors hover:text-white/80">
+            <button
+              onClick={onClose}
+              className="text-white/40 transition-colors hover:text-white/80"
+            >
               <X className="h-3.5 w-3.5" />
             </button>
           </div>
@@ -299,14 +277,44 @@ function RiskSparkline({ points, color }) {
   const zeroY = height - ((0 - min) / range) * height;
 
   return (
-    <svg className="balance-sparkline" viewBox={`0 0 ${width} ${height}`} width="100%" height={height} preserveAspectRatio="none">
-      <line x1="0" y1={zeroY} x2={width} y2={zeroY} stroke="rgba(255,255,255,0.15)" strokeWidth="1" strokeDasharray="3,3" />
-      <path d={path} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    <svg
+      className="balance-sparkline"
+      viewBox={`0 0 ${width} ${height}`}
+      width="100%"
+      height={height}
+      preserveAspectRatio="none"
+    >
+      <line
+        x1="0"
+        y1={zeroY}
+        x2={width}
+        y2={zeroY}
+        stroke="rgba(255,255,255,0.15)"
+        strokeWidth="1"
+        strokeDasharray="3,3"
+      />
+      <path
+        d={path}
+        fill="none"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
 
-function MetricCard({ label, value, sub, status, color, tooltipId, openTooltip, setOpenTooltip }) {
+function MetricCard({
+  label,
+  value,
+  sub,
+  status,
+  color,
+  tooltipId,
+  openTooltip,
+  setOpenTooltip,
+}) {
   return (
     <motion.div
       whileTap={{ scale: 0.97 }}
@@ -321,7 +329,9 @@ function MetricCard({ label, value, sub, status, color, tooltipId, openTooltip, 
       </div>
 
       <div className="relative z-10 mb-1 flex items-start justify-between gap-2">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-white/35">{label}</span>
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-white/35">
+          {label}
+        </span>
         {tooltipId && (
           <button
             onClick={() => setOpenTooltip(openTooltip === tooltipId ? null : tooltipId)}
@@ -352,7 +362,12 @@ const TREND_ICONS = {
   down: ArrowDown,
 };
 
-export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadings = [], carbEntries = [] }) {
+export default function ActiveInsulinBanner({
+  doses,
+  latestGlucose,
+  glucoseReadings = [],
+  carbEntries = [],
+}) {
   const [openTooltip, setOpenTooltip] = useState(null);
   const [insulinSettings, setInsulinSettings] = useState(readInsulinSettings);
 
@@ -369,9 +384,15 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
 
   const activeUnits = useMemo(() => getTotalActiveUnits(doses), [doses]);
   const activeMealUnits = useMemo(() => getTotalActiveMealUnits(doses), [doses]);
-  const activeCorrectionUnits = useMemo(() => getTotalActiveCorrectionUnits(doses), [doses]);
+  const activeCorrectionUnits = useMemo(
+    () => getTotalActiveCorrectionUnits(doses),
+    [doses]
+  );
   const activeCarbs = useMemo(() => getActiveCarbsNow(carbEntries), [carbEntries]);
-  const totalCarbsToday = useMemo(() => getTotalCarbsToday(carbEntries), [carbEntries]);
+  const totalCarbsToday = useMemo(
+    () => getTotalCarbsToday(carbEntries),
+    [carbEntries]
+  );
 
   const trajectory = useMemo(
     () => computeNetCarbTrajectory(doses, carbEntries, latestGlucose, insulinSettings),
@@ -389,22 +410,23 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
   const netPeakTime = worstPoint?.time ?? null;
   const isPeakInFuture = Boolean(netPeakTime && netPeakTime > Date.now() + 60000);
   const needsInsulinPlan = !insulinSettings.isComplete;
+  const balanceToleranceGrams = insulinSettings.isComplete
+    ? Math.max(10, (5 / insulinSettings.mealInsulinUnitsPer5g) * 0.5)
+    : 10;
+  const hasCarbLead = netActiveCarbs > balanceToleranceGrams;
+  const hasInsulinLead = netActiveCarbs < -balanceToleranceGrams;
   const correctionOnlyActive =
     activeCorrectionUnits > 0.01 &&
     activeMealUnits <= 0.01 &&
     activeCarbs <= 0.5;
 
-const balanceToleranceGrams = insulinSettings.isComplete
-  ? Math.max(10, (5 / insulinSettings.mealInsulinUnitsPer5g) * 0.5)
-  : 10;
-
   const netValue = needsInsulinPlan
     ? "Setup needed"
     : correctionOnlyActive
       ? "Correction active"
-      : netActiveCarbs > 5
+      : hasCarbLead
         ? "More carbs active"
-        : netActiveCarbs < -5
+        : hasInsulinLead
           ? "More insulin active"
           : "In balance";
 
@@ -412,26 +434,31 @@ const balanceToleranceGrams = insulinSettings.isComplete
     ? "Add insulin plan in Settings"
     : correctionOnlyActive
       ? "No meal carbs digesting"
-      : netActiveCarbs > 5
+      : hasCarbLead
         ? "Glucose may rise"
-        : netActiveCarbs < -5
+        : hasInsulinLead
           ? "Glucose may fall"
           : "Carbs and insulin are aligned";
 
   const netColor = needsInsulinPlan || correctionOnlyActive
     ? "#f59e0b"
-    : netActiveCarbs > 5
+    : hasCarbLead
       ? "#ef4444"
-      : netActiveCarbs < -5
+      : hasInsulinLead
         ? "#3b82f6"
         : "#35a879";
 
   const dailyAverage = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const readingsToday = glucoseReadings.filter((reading) => new Date(reading.recorded_at) >= today);
+    const readingsToday = glucoseReadings.filter(
+      (reading) => new Date(reading.recorded_at) >= today
+    );
     if (!readingsToday.length) return null;
-    return Math.round(readingsToday.reduce((sum, reading) => sum + reading.value, 0) / readingsToday.length);
+    return Math.round(
+      readingsToday.reduce((sum, reading) => sum + reading.value, 0) /
+        readingsToday.length
+    );
   }, [glucoseReadings]);
 
   const trend = useMemo(() => {
@@ -455,7 +482,8 @@ const balanceToleranceGrams = insulinSettings.isComplete
 
   const targetLow = Number(localStorage.getItem("target_range_low") || 70);
   const targetHigh = Number(localStorage.getItem("target_range_high") || 180);
-  const inRange = glucoseValue == null ? null : glucoseValue >= targetLow && glucoseValue <= targetHigh;
+  const inRange =
+    glucoseValue == null ? null : glucoseValue >= targetLow && glucoseValue <= targetHigh;
   const TrendIcon = TREND_ICONS[trend.icon] || ArrowRight;
 
   const glucoseStatus = (value) => {
@@ -479,7 +507,7 @@ const balanceToleranceGrams = insulinSettings.isComplete
         {openTooltip === "net-carbs" && (
           <TooltipPopover
             title="Insulin and Carb Balance"
-            description="This estimate compares carbs still digesting with insulin logged as meal insulin. Correction insulin remains part of insulin on board but is not treated as meal coverage. It is an estimate, not a glucose prediction or dosing recommendation."
+            description="This estimate compares carbs still digesting with the meal coverage remaining from logged insulin. Correction insulin remains part of insulin on board but is not treated as meal coverage. It is an estimate, not a glucose prediction or dosing recommendation."
             onClose={() => setOpenTooltip(null)}
           >
             {trajectory.points.length > 1 && (
@@ -487,11 +515,17 @@ const balanceToleranceGrams = insulinSettings.isComplete
                 <RiskSparkline points={trajectory.points} color={netColor} />
                 <div className="mt-1 flex justify-between text-[10px] text-white/30">
                   <span>Now</span>
-                  <span>{formatClockTime(trajectory.points[trajectory.points.length - 1].time)}</span>
+                  <span>
+                    {formatClockTime(trajectory.points[trajectory.points.length - 1].time)}
+                  </span>
                 </div>
                 {netPeakTime && (
                   <p className="mt-2 text-[11px] text-white/40">
-                    {netActiveCarbs > 5 ? "Largest carb lead" : netActiveCarbs < -5 ? "Largest insulin lead" : "Most notable balance point"}
+                    {hasCarbLead
+                      ? "Largest carb lead"
+                      : hasInsulinLead
+                        ? "Largest insulin lead"
+                        : "Most notable balance point"}
                     {isPeakInFuture ? " expected " : " was "}
                     <span className="font-semibold" style={{ color: netColor }}>
                       {formatClockTime(netPeakTime)}
@@ -506,12 +540,16 @@ const balanceToleranceGrams = insulinSettings.isComplete
 
       <div className="relative -mx-4 px-4 pb-6 pt-2">
         <div className="mb-6 flex flex-col items-center pt-2 text-center">
-          <span className="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-white/30">Current Glucose</span>
+          <span className="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-white/30">
+            Current Glucose
+          </span>
           <div className="flex items-end gap-3">
             <span className="text-[72px] font-black leading-none text-white sm:text-[88px]">
               {glucoseValue ?? "--"}
             </span>
-            {latestGlucose && <TrendIcon className="mb-3 h-8 w-8" style={{ color: glucoseColor }} />}
+            {latestGlucose && (
+              <TrendIcon className="mb-3 h-8 w-8" style={{ color: glucoseColor }} />
+            )}
           </div>
           <span className="mb-2 text-sm font-medium text-white/35">mg/dL</span>
           {latestGlucose?.recorded_at && (
@@ -523,8 +561,13 @@ const balanceToleranceGrams = insulinSettings.isComplete
             className="flex items-center gap-2 rounded-full border px-4 py-2"
             style={{ background: `${glucoseColor}18`, borderColor: `${glucoseColor}40` }}
           >
-            <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: glucoseColor }} />
-            <span className="text-sm font-semibold" style={{ color: glucoseColor }}>{trend.label}</span>
+            <span
+              className="h-1.5 w-1.5 rounded-full"
+              style={{ backgroundColor: glucoseColor }}
+            />
+            <span className="text-sm font-semibold" style={{ color: glucoseColor }}>
+              {trend.label}
+            </span>
           </div>
         </div>
 
@@ -535,18 +578,27 @@ const balanceToleranceGrams = insulinSettings.isComplete
                 <span
                   key={index}
                   className="w-0.5 rounded-full"
-                  style={{ height: height * 3, backgroundColor: inRange ? "#35a87988" : "#f59e0b88" }}
+                  style={{
+                    height: height * 3,
+                    backgroundColor: inRange ? "#35a87988" : "#f59e0b88",
+                  }}
                 />
               ))}
             </div>
             <div className="flex-1">
-              <p className="text-sm font-semibold text-white/80">{inRange ? "In range" : "Out of range"}</p>
-              <p className="text-xs text-white/35">Target: {targetLow}-{targetHigh} mg/dL</p>
+              <p className="text-sm font-semibold text-white/80">
+                {inRange ? "In range" : "Out of range"}
+              </p>
+              <p className="text-xs text-white/35">
+                Target: {targetLow}-{targetHigh} mg/dL
+              </p>
             </div>
           </div>
         )}
 
-        <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-white/25">At a Glance</p>
+        <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-white/25">
+          At a Glance
+        </p>
         <div className="grid grid-cols-2 gap-3">
           <MetricCard
             label="Active Insulin"
@@ -568,7 +620,13 @@ const balanceToleranceGrams = insulinSettings.isComplete
           <MetricCard
             label="Insulin:Carb Ratio"
             value={netValue}
-            sub={needsInsulinPlan ? "Enter your plan to calculate balance" : isPeakInFuture ? `peak ~${formatClockTime(netPeakTime)}` : "Meal insulin only"}
+            sub={
+              needsInsulinPlan
+                ? "Enter your plan to calculate balance"
+                : isPeakInFuture
+                  ? `peak ~${formatClockTime(netPeakTime)}`
+                  : "Meal insulin only"
+            }
             status={netLabel}
             color={netColor}
             tooltipId="net-carbs"
@@ -580,7 +638,15 @@ const balanceToleranceGrams = insulinSettings.isComplete
             value={dailyAverage ? `${dailyAverage}` : "--"}
             sub={dailyAverage ? "mg/dL" : "No data today"}
             status={glucoseStatus(dailyAverage)}
-            color={!dailyAverage ? "#35a879" : dailyAverage < 70 ? "#3b82f6" : dailyAverage > 180 ? "#f59e0b" : "#10b981"}
+            color={
+              !dailyAverage
+                ? "#35a879"
+                : dailyAverage < 70
+                  ? "#3b82f6"
+                  : dailyAverage > 180
+                    ? "#f59e0b"
+                    : "#10b981"
+            }
           />
         </div>
       </div>
