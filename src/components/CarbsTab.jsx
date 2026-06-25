@@ -4,6 +4,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { InvokeLLM } from "@/api/integrations";
 
+const ABSORPTION_CATEGORY = {
+  fast: "Fast Absorbing",
+  medium: "Medium Absorbing",
+  slow: "Slow Absorbing",
+};
+
 function normalizeEstimatedMeal(data, fallbackName) {
   return {
     mealName: data.mealName || data.name || fallbackName || "Estimated meal",
@@ -23,12 +29,6 @@ export default function CarbsTab({ onSubmit, isPending }) {
   const [mealText, setMealText] = useState("");
   const [estimatedMeal, setEstimatedMeal] = useState(null);
   const [isEstimatingMeal, setIsEstimatingMeal] = useState(false);
-
-const ABSORPTION_CATEGORY = {
-  fast: "Fast Absorbing",
-  medium: "Medium Absorbing",
-  slow: "Slow Absorbing",
-};
 
   const updateEstimatedMeal = (patch) => {
     setEstimatedMeal((meal) => (meal ? { ...meal, ...patch } : meal));
@@ -119,34 +119,17 @@ Do not give insulin dosing advice.
       return;
     }
 
+    const absorptionProfile = estimatedMeal.absorptionProfile || "medium";
+
     onSubmit([
       {
         name: estimatedMeal.mealName || "Estimated meal",
         carbs,
-        protein: Number(estimatedMeal.protein) || 0,
-        fat: Number(estimatedMeal.fat) || 0,
-        calories: Number(estimatedMeal.calories) || 0,
         gi: Number(estimatedMeal.gi) || 50,
-category: ABSORPTION_CATEGORY[estimatedMeal.absorptionProfile || "medium"],
-profile: estimatedMeal.absorptionProfile || "medium",
-absorption_profile: estimatedMeal.absorptionProfile || "medium",
+        category: ABSORPTION_CATEGORY[absorptionProfile],
+        absorption_profile: absorptionProfile,
         consumed_at: new Date().toISOString(),
         is_custom: false,
-        notes:
-          [
-            mealText.trim() ? `Input: ${mealText.trim()}` : null,
-            estimatedMeal.servingDescription
-              ? `Serving: ${estimatedMeal.servingDescription}`
-              : null,
-            estimatedMeal.confidence
-              ? `AI confidence: ${Math.round(estimatedMeal.confidence * 100)}%`
-              : null,
-            estimatedMeal.assumptions?.length
-              ? `Assumptions: ${estimatedMeal.assumptions.join("; ")}`
-              : null,
-          ]
-            .filter(Boolean)
-            .join("\n") || undefined,
       },
     ]);
   };
