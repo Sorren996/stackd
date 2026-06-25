@@ -24,6 +24,12 @@ export default function CarbsTab({ onSubmit, isPending }) {
   const [estimatedMeal, setEstimatedMeal] = useState(null);
   const [isEstimatingMeal, setIsEstimatingMeal] = useState(false);
 
+const ABSORPTION_CATEGORY = {
+  fast: "Fast Absorbing",
+  medium: "Medium Absorbing",
+  slow: "Slow Absorbing",
+};
+
   const updateEstimatedMeal = (patch) => {
     setEstimatedMeal((meal) => (meal ? { ...meal, ...patch } : meal));
   };
@@ -121,9 +127,9 @@ Do not give insulin dosing advice.
         fat: Number(estimatedMeal.fat) || 0,
         calories: Number(estimatedMeal.calories) || 0,
         gi: Number(estimatedMeal.gi) || 50,
-        category: "AI Estimated",
-        profile: estimatedMeal.absorptionProfile || "medium",
-        absorption_profile: estimatedMeal.absorptionProfile || "medium",
+category: ABSORPTION_CATEGORY[estimatedMeal.absorptionProfile || "medium"],
+profile: estimatedMeal.absorptionProfile || "medium",
+absorption_profile: estimatedMeal.absorptionProfile || "medium",
         consumed_at: new Date().toISOString(),
         is_custom: false,
         notes:
