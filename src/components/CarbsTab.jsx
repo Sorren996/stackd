@@ -1,209 +1,236 @@
-import { useMemo, useState } from "react";
-import { Plus, Search } from "lucide-react";
-import {
-  FOOD_CATEGORIES,
-  FOOD_DATABASE,
-} from "@/lib/carbAbsorption";
+import { useState } from "react";
+import { Check, Loader2, Sparkles } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
+
+function normalizeEstimatedMeal(data, fallbackName) {
+  return {
+    mealName: data.mealName || data.name || fallbackName || "Estimated meal",
+    servingDescription: data.servingDescription || data.serving_description || "",
+    carbs: Number(data.carbs ?? 0),
+    protein: Number(data.protein ?? 0),
+    fat: Number(data.fat ?? 0),
+    calories: Number(data.calories ?? 0),
+    gi: Number(data.gi ?? 50),
+    absorptionProfile: data.absorptionProfile || data.absorption_profile || "medium",
+    confidence: Number(data.confidence ?? 0),
+    assumptions: Array.isArray(data.assumptions) ? data.assumptions : [],
+  };
+}
 
 export default function CarbsTab({ onSubmit, isPending }) {
-  const [query, setQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("All");
-  const [selectedFoods, setSelectedFoods] = useState([]);
+  const [mealText, setMealText] = useState("");
+  const [estimatedMeal, setEstimatedMeal] = useState(null);
+  const [isEstimatingMeal, setIsEstimatingMeal] = useState(false);
 
-  const filteredFoods = useMemo(() => {
-    const search = query.trim().toLowerCase();
+  const updateEstimatedMeal = (patch) => {
+    setEstimatedMeal((meal) => (meal ? { ...meal, ...patch } : meal));
+  };
 
-    return FOOD_DATABASE.filter((food) => {
-      const matchesCategory =
-        selectedCategory === "All" || food.category === selectedCategory;
-      const matchesSearch =
-        !search || food.name.toLowerCase().includes(search);
+  const handleEstimateMeal = async () => {
+    const description = mealText.trim();
+    if (!description) {
+      toast.error("Describe the meal first.");
+      return;
+    }
 
-      return matchesCategory && matchesSearch;
-    });
-  }, [query, selectedCategory]);
+    setIsEstimatingMeal(true);
 
-  const addFood = (food) => {
-    setSelectedFoods((foods) => [
-      ...foods,
+    try {
+      const response = await fetch("/api/estimate-meal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mealText: description }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Meal estimate failed");
+      }
+
+      const data = await response.json();
+      setEstimatedMeal(normalizeEstimatedMeal(data, description));
+    } catch (error) {
+      toast.error("Unable to estimate that meal yet.");
+    } finally {
+      setIsEstimatingMeal(false);
+    }
+  };
+
+  const handleSubmitEstimate = () => {
+    if (!estimatedMeal) return;
+
+    const carbs = Number(estimatedMeal.carbs);
+    if (!Number.isFinite(carbs) || carbs <= 0) {
+      toast.error("Enter estimated carbs before logging.");
+      return;
+    }
+
+    onSubmit([
       {
-        id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-        name: food.name,
-        carbs: food.carbs,
-        gi: food.gi,
-        category: food.category,
-        profile: food.profile,
-        absorption_profile: food.profile,
+        name: estimatedMeal.mealName || "Estimated meal",
+        carbs,
+        protein: Number(estimatedMeal.protein) || 0,
+        fat: Number(estimatedMeal.fat) || 0,
+        calories: Number(estimatedMeal.calories) || 0,
+        gi: Number(estimatedMeal.gi) || 50,
+        category: "AI Estimated",
+        profile: estimatedMeal.absorptionProfile || "medium",
+        absorption_profile: estimatedMeal.absorptionProfile || "medium",
+        consumed_at: new Date().toISOString(),
+        is_custom: false,
+        notes:
+          [
+            mealText.trim() ? `Input: ${mealText.trim()}` : null,
+            estimatedMeal.servingDescription
+              ? `Serving: ${estimatedMeal.servingDescription}`
+              : null,
+            estimatedMeal.confidence
+              ? `AI confidence: ${Math.round(estimatedMeal.confidence * 100)}%`
+              : null,
+            estimatedMeal.assumptions?.length
+              ? `Assumptions: ${estimatedMeal.assumptions.join("; ")}`
+              : null,
+          ]
+            .filter(Boolean)
+            .join("\n") || undefined,
       },
     ]);
   };
 
-  const updateFood = (id, patch) => {
-    setSelectedFoods((foods) =>
-      foods.map((food) => (food.id === id ? { ...food, ...patch } : food))
-    );
-  };
-
-  const removeFood = (id) => {
-    setSelectedFoods((foods) => foods.filter((food) => food.id !== id));
-  };
-
-  const handleSubmit = () => {
-    if (!selectedFoods.length) return;
-
-    const consumedAt = new Date().toISOString();
-    const entries = selectedFoods.map(({ id, profile, ...food }) => ({
-      ...food,
-      carbs: Number(food.carbs) || 0,
-      gi: Number(food.gi) || 50,
-      consumed_at: consumedAt,
-      is_custom: false,
-    }));
-
-    onSubmit(entries);
-  };
-
-  const totalCarbs = selectedFoods.reduce(
-    (sum, food) => sum + (Number(food.carbs) || 0),
-    0
-  );
-
   return (
     <div className="flex h-full flex-col px-5 pb-6 pt-4">
-      <div className="space-y-3">
-        <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/40">
-          Preset foods
-        </p>
-
-        <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-3 py-2">
-          <Search className="h-4 w-4 text-white/35" />
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search foods"
-            className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/30"
-          />
+      <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+        <div className="mb-3 flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-teal-300" />
+          <p className="text-sm font-bold uppercase tracking-widest text-white/40">
+            Estimate a meal
+          </p>
         </div>
 
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          {["All", ...FOOD_CATEGORIES].map((category) => (
-            <button
-              key={category}
-              type="button"
-              onClick={() => setSelectedCategory(category)}
-              className={`shrink-0 rounded-full border px-3 py-2 text-xs font-semibold transition ${
-                selectedCategory === category
-                  ? "border-teal-400/50 bg-teal-400/15 text-teal-200"
-                  : "border-white/10 bg-white/5 text-white/45"
-              }`}
-            >
-              {category}
-            </button>
-          ))}
-        </div>
+        <Textarea
+          value={mealText}
+          onChange={(event) => setMealText(event.target.value)}
+          placeholder="e.g. 2 slices pepperoni pizza and a 12 oz coke"
+          rows={4}
+          className="resize-none rounded-2xl border-white/10 bg-white/5 text-white placeholder:text-white/30"
+        />
+
+        <button
+          type="button"
+          onClick={handleEstimateMeal}
+          disabled={!mealText.trim() || isEstimatingMeal}
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-teal-500 py-3 text-sm font-semibold text-white transition hover:bg-teal-400 disabled:opacity-40"
+        >
+          {isEstimatingMeal ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Estimating...
+            </>
+          ) : (
+            <>
+              <Sparkles className="h-4 w-4" />
+              Estimate meal
+            </>
+          )}
+        </button>
       </div>
 
-      <div className="mt-4 max-h-56 space-y-2 overflow-y-auto pr-1">
-        {filteredFoods.slice(0, 80).map((food) => (
-          <button
-            key={`${food.name}-${food.category}`}
-            type="button"
-            onClick={() => addFood(food)}
-            className="flex w-full items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-left transition hover:border-teal-400/40 hover:bg-teal-400/5"
-          >
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-white">
-                {food.name}
-              </p>
-              <p className="text-xs text-white/35">
-                {food.carbs}g carbs · GI {food.gi}
-              </p>
-            </div>
-            <Plus className="h-4 w-4 shrink-0 text-white/40" />
-          </button>
-        ))}
-      </div>
+      {estimatedMeal ? (
+        <div className="mt-5 min-h-0 flex-1 overflow-y-auto rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+          <p className="mb-3 text-sm font-bold uppercase tracking-widest text-white/40">
+            Review estimate
+          </p>
 
-      <div className="mt-5 space-y-3 border-t border-white/10 pt-4">
-        <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/40">
-          Selected
-        </p>
+          <label>
+            <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-white/35">
+              Meal name
+            </span>
+            <input
+              value={estimatedMeal.mealName}
+              onChange={(event) => updateEstimatedMeal({ mealName: event.target.value })}
+              className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm font-semibold text-white outline-none focus:border-teal-400"
+            />
+          </label>
 
-        {selectedFoods.length ? (
-          <div className="space-y-2">
-            {selectedFoods.map((food) => (
-              <div
-                key={food.id}
-                className="rounded-2xl border border-white/10 bg-white/[0.04] p-3"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <p className="min-w-0 flex-1 text-sm font-semibold text-white">
-                    {food.name}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => removeFood(food.id)}
-                    className="text-xs text-white/35 transition hover:text-red-300"
-                  >
-                    Remove
-                  </button>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            {[
+              ["carbs", "Carbs", "g"],
+              ["protein", "Protein", "g"],
+              ["fat", "Fat", "g"],
+              ["calories", "Calories", ""],
+              ["gi", "GI", ""],
+            ].map(([key, label, unit]) => (
+              <label key={key} className={key === "gi" ? "col-span-2" : ""}>
+                <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-white/35">
+                  {label}
+                </span>
+                <div className="flex items-center rounded-xl border border-white/10 bg-white/5 px-3 py-2">
+                  <input
+                    type="number"
+                    min="0"
+                    inputMode="decimal"
+                    value={estimatedMeal[key]}
+                    onChange={(event) =>
+                      updateEstimatedMeal({ [key]: event.target.value })
+                    }
+                    className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none"
+                  />
+                  {unit && <span className="text-xs text-white/35">{unit}</span>}
                 </div>
-
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  <label>
-                    <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-white/35">
-                      Carbs
-                    </span>
-                    <input
-                      type="number"
-                      min="0"
-                      inputMode="decimal"
-                      value={food.carbs}
-                      onChange={(event) =>
-                        updateFood(food.id, { carbs: event.target.value })
-                      }
-                      className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-teal-400"
-                    />
-                  </label>
-
-                  <label>
-                    <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-white/35">
-                      GI
-                    </span>
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      inputMode="decimal"
-                      value={food.gi}
-                      onChange={(event) =>
-                        updateFood(food.id, { gi: event.target.value })
-                      }
-                      className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-teal-400"
-                    />
-                  </label>
-                </div>
-              </div>
+              </label>
             ))}
           </div>
-        ) : (
-          <p className="text-sm text-white/35">
-            Choose a food above to log carbs.
+
+          <label className="mt-3 block">
+            <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-white/35">
+              Absorption
+            </span>
+            <select
+              value={estimatedMeal.absorptionProfile}
+              onChange={(event) =>
+                updateEstimatedMeal({ absorptionProfile: event.target.value })
+              }
+              className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-teal-400"
+            >
+              <option value="fast" className="bg-[#18211f]">
+                Fast
+              </option>
+              <option value="medium" className="bg-[#18211f]">
+                Medium
+              </option>
+              <option value="slow" className="bg-[#18211f]">
+                Slow
+              </option>
+            </select>
+          </label>
+
+          {estimatedMeal.assumptions?.length > 0 && (
+            <div className="mt-3 rounded-xl bg-white/[0.04] px-3 py-2">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-white/35">
+                Assumptions
+              </p>
+              <p className="mt-1 text-xs leading-relaxed text-white/45">
+                {estimatedMeal.assumptions.join("; ")}
+              </p>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="mt-5 flex min-h-[180px] flex-1 items-center justify-center rounded-2xl border border-dashed border-white/10 px-6 text-center">
+          <p className="text-sm leading-relaxed text-white/35">
+            Enter a meal description above to estimate carbs, GI, calories, protein, fat, and absorption speed.
           </p>
-        )}
-      </div>
+        </div>
+      )}
 
       <button
         type="button"
-        onClick={handleSubmit}
-        disabled={!selectedFoods.length || isPending}
-        className="mt-5 w-full rounded-2xl bg-orange-600 py-4 text-base font-semibold text-white transition hover:bg-orange-500 disabled:opacity-40"
+        onClick={handleSubmitEstimate}
+        disabled={!estimatedMeal || isPending}
+        className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-orange-600 py-4 text-base font-semibold text-white transition hover:bg-orange-500 disabled:opacity-40"
       >
-        {isPending
-          ? "Logging..."
-          : selectedFoods.length
-            ? `Log ${Math.round(totalCarbs)}g carbs`
-            : "Select food"}
+        <Check className="h-4 w-4" />
+        {isPending ? "Logging..." : "Log meal estimate"}
       </button>
     </div>
   );
