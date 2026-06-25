@@ -85,15 +85,15 @@ export default function DoseForm({ open, onOpenChange }) {
     },
   });
 
-  const createCarb = useMutation({
-    mutationFn: (entries) => base44.entities.CarbEntry.bulkCreate(entries),
-    onSuccess: (_, entries) => {
-      queryClient.invalidateQueries({ queryKey: ["carb-entries"] });
-      toast.success(`Logged ${entries.length} food item${entries.length === 1 ? "" : "s"}`);
-      onOpenChange(false);
-    },
-  });
-
+const createCarb = useMutation({
+  mutationFn: (entries) => base44.entities.CarbEntry.bulkCreate(entries),
+  onSuccess: (_, entries) => {
+    queryClient.invalidateQueries({ queryKey: ["carb-entries"] });
+    toast.success(`Logged ${entries.length} food item${entries.length === 1 ? "" : "s"}`);
+    onOpenChange(false);
+  },
+  onError: () => toast.error("Unable to log carbs. Please check the carb entry fields."),
+});
   const updateInsulinRow = (id, patch) => {
     setInsulinRows((rows) => rows.map((row) => (row.id === id ? { ...row, ...patch } : row)));
   };
