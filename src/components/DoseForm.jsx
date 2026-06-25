@@ -308,8 +308,7 @@ queryClient.invalidateQueries();    toast.success(`Logged ${entries.length} food
 
           {tab === "carbs" ? (
             <div className="min-h-[580px]">
-<CarbsTab onSubmit={(entries) => createCarb.mutate(entries)} isPending={createCarb.isPending} />
-            </div>
+<CarbsTab onSubmit={handleSubmitCarbs} isPending={false} />            </div>
           ) : tab === "insulin" ? (
             <>
               <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-6 pt-4">
