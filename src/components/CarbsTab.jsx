@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Check, Loader2, Sparkles } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { InvokeLLM } from "@/api/integrations";
 
 function normalizeEstimatedMeal(data, fallbackName) {
   return {
@@ -29,6 +30,7 @@ export default function CarbsTab({ onSubmit, isPending }) {
 
   const handleEstimateMeal = async () => {
     const description = mealText.trim();
+
     if (!description) {
       toast.error("Describe the meal first.");
       return;
@@ -37,17 +39,63 @@ export default function CarbsTab({ onSubmit, isPending }) {
     setIsEstimatingMeal(true);
 
     try {
-      const response = await fetch("/api/estimate-meal", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mealText: description }),
+      const data = await InvokeLLM({
+        prompt: `
+Estimate nutrition for this meal:
+
+"${description}"
+
+Return a cautious estimate using typical US serving sizes when exact serving sizes are missing.
+
+Estimate:
+- meal name
+- serving description
+- carbs in grams
+- protein in grams
+- fat in grams
+- calories
+- glycemic index from 0-100
+- absorption profile: fast, medium, or slow
+- confidence from 0 to 1
+- assumptions
+
+Do not give insulin dosing advice.
+        `,
+        response_json_schema: {
+          type: "object",
+          properties: {
+            mealName: { type: "string" },
+            servingDescription: { type: "string" },
+            carbs: { type: "number" },
+            protein: { type: "number" },
+            fat: { type: "number" },
+            calories: { type: "number" },
+            gi: { type: "number" },
+            absorptionProfile: {
+              type: "string",
+              enum: ["fast", "medium", "slow"],
+            },
+            confidence: { type: "number" },
+            assumptions: {
+              type: "array",
+              items: { type: "string" },
+            },
+          },
+          required: [
+            "mealName",
+            "servingDescription",
+            "carbs",
+            "protein",
+            "fat",
+            "calories",
+            "gi",
+            "absorptionProfile",
+            "confidence",
+            "assumptions",
+          ],
+        },
       });
 
-      if (!response.ok) {
-        throw new Error("Meal estimate failed");
-      }
-
-      const data = await response.json();
       setEstimatedMeal(normalizeEstimatedMeal(data, description));
     } catch (error) {
       toast.error("Unable to estimate that meal yet.");
