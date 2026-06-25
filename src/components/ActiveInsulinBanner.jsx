@@ -425,22 +425,7 @@ export default function ActiveInsulinBanner({
     activeMealUnits <= 0.01 &&
     activeCarbs <= 0.5;
 
-{worstPoint && netPeakTime && (
-  <p className="text-[12px] text-white/50 mt-3">
-    {worstPoint.net > 5
-      ? "Carbs were most ahead of insulin "
-      : worstPoint.net < -5
-      ? "Insulin coverage was strongest "
-      : "Stayed close to balanced "}
-    {isPeakInFuture ? "around " : "at "}
-    <span
-      className="font-semibold"
-      style={{ color: worstPoint.net > 5 ? CARB_LEAD_COLOR : worstPoint.net < -5 ? INSULIN_LEAD_COLOR : "#35a879" }}
-    >
-      {formatClockTime(netPeakTime)}
-    </span>
-  </p>
-)}
+
 
 const CARB_LEAD_COLOR = "#f59e0b";
 const INSULIN_LEAD_COLOR = "#3b82f6";
@@ -470,6 +455,23 @@ const worstPointText = useMemo(() => {
   }
   return { text: `Stayed close to balanced ${isPeakInFuture ? "around" : "at"} ${time}`, color: "#35a879" };
 }, [worstPoint, netPeakTime, isPeakInFuture]);
+
+{worstPoint && netPeakTime && (
+  <p className="text-[12px] text-white/50 mt-3">
+    {worstPoint.net > 5
+      ? "Carbs were most ahead of insulin "
+      : worstPoint.net < -5
+      ? "Insulin coverage was strongest "
+      : "Stayed close to balanced "}
+    {isPeakInFuture ? "around " : "at "}
+    <span
+      className="font-semibold"
+      style={{ color: worstPoint.net > 5 ? CARB_LEAD_COLOR : worstPoint.net < -5 ? INSULIN_LEAD_COLOR : "#35a879" }}
+    >
+      {formatClockTime(netPeakTime)}
+    </span>
+  </p>
+)}
 
   const netValue = needsInsulinPlan
     ? "Setup needed"
