@@ -409,6 +409,22 @@ export default function ActiveInsulinBanner({
     [doses, carbEntries, latestGlucose, insulinSettings]
   );
 
+
+
+  const netActiveCarbs = worstPoint?.net ?? 0;
+  const netPeakTime = worstPoint?.time ?? null;
+  const isPeakInFuture = Boolean(netPeakTime && netPeakTime > Date.now() + 60000);
+  const needsInsulinPlan = !insulinSettings.isComplete;
+  const balanceToleranceGrams = insulinSettings.isComplete
+    ? Math.max(10, (5 / insulinSettings.mealInsulinUnitsPer5g) * 0.5)
+    : 10;
+  const hasCarbLead = netActiveCarbs > balanceToleranceGrams;
+  const hasInsulinLead = netActiveCarbs < -balanceToleranceGrams;
+  const correctionOnlyActive =
+    activeCorrectionUnits > 0.01 &&
+    activeMealUnits <= 0.01 &&
+    activeCarbs <= 0.5;
+
 {worstPoint && netPeakTime && (
   <p className="text-[12px] text-white/50 mt-3">
     {worstPoint.net > 5
@@ -425,20 +441,6 @@ export default function ActiveInsulinBanner({
     </span>
   </p>
 )}
-
-  const netActiveCarbs = worstPoint?.net ?? 0;
-  const netPeakTime = worstPoint?.time ?? null;
-  const isPeakInFuture = Boolean(netPeakTime && netPeakTime > Date.now() + 60000);
-  const needsInsulinPlan = !insulinSettings.isComplete;
-  const balanceToleranceGrams = insulinSettings.isComplete
-    ? Math.max(10, (5 / insulinSettings.mealInsulinUnitsPer5g) * 0.5)
-    : 10;
-  const hasCarbLead = netActiveCarbs > balanceToleranceGrams;
-  const hasInsulinLead = netActiveCarbs < -balanceToleranceGrams;
-  const correctionOnlyActive =
-    activeCorrectionUnits > 0.01 &&
-    activeMealUnits <= 0.01 &&
-    activeCarbs <= 0.5;
 
 const CARB_LEAD_COLOR = "#f59e0b";
 const INSULIN_LEAD_COLOR = "#3b82f6";
