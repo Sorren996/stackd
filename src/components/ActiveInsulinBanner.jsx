@@ -8,7 +8,10 @@ import {
   Info,
   X,
 } from "lucide-react";
-import { generateActivityCurve } from "@/lib/insulinPharmacology";
+import {
+  generateActivityCurve,
+  getDoseRemainingEffectFraction,
+} from "@/lib/insulinPharmacology";
 import {
   generateCarbCurve,
   getActiveCarbsNow,
@@ -56,6 +59,56 @@ function getCurveActivityAt(curve, time) {
   return last.activity;
 }
 
+function integrateCurveArea(curve, endTime = null) {
+  if (curve.length < 2) return 0;
+
+  let area = 0;
+
+  for (let index = 0; index < curve.length - 1; index += 1) {
+    const current = curve[index];
+    const next = curve[index + 1];
+
+    if (endTime !== null && endTime <= current.time) break;
+
+    const segmentEndTime =
+      endTime !== null && endTime < next.time ? endTime : next.time;
+
+    const startActivity = current.activity;
+    const endActivity =
+      segmentEndTime === next.time
+        ? next.activity
+        : getCurveActivityAt(curve, segmentEndTime);
+
+    const durationMinutes = (segmentEndTime - current.time) / 60000;
+    area += ((startActivity + endActivity) / 2) * durationMinutes;
+
+    if (endTime !== null && endTime <= next.time) break;
+  }
+
+  return area;
+}
+
+export function getDoseRemainingEffectFraction(
+  dose,
+  targetTime = Date.now(),
+  intervalMinutes = 3
+) {
+  const curve = generateActivityCurve(dose, intervalMinutes);
+  if (curve.length < 2) return 0;
+
+  const first = curve[0];
+  const last = curve[curve.length - 1];
+
+  if (targetTime <= first.time) return 1;
+  if (targetTime >= last.time) return 0;
+
+  const totalArea = integrateCurveArea(curve);
+  if (totalArea <= 0) return 0;
+
+  const usedArea = integrateCurveArea(curve, targetTime);
+  return Math.max(0, Math.min(1, 1 - usedArea / totalArea));
+}
+
 function getTotalActiveUnits(doses, targetTime = Date.now(), selectUnits = (dose) => dose.units) {
   return doses.reduce((sum, dose) => {
     const units = Number(selectUnits(dose));
@@ -72,6 +125,28 @@ function getTotalActiveMealUnits(doses, targetTime = Date.now()) {
 }
 
 function getTotalActiveCorrectionUnits(doses, targetTime = Date.now()) {
+
+function getTotalRemainingMealCoverageGrams(
+  doses,
+  gramsPerUnit,
+  targetTime = Date.now()
+) {
+  if (!Number.isFinite(gramsPerUnit) || gramsPerUnit <= 0) return 0;
+
+  return doses.reduce((sum, dose) => {
+    const mealUnits = Number(dose.meal_units ?? dose.units);
+    if (!Number.isFinite(mealUnits) || mealUnits <= 0) return sum;
+
+    const remainingEffectFraction = getDoseRemainingEffectFraction(
+      dose,
+      targetTime,
+      3
+    );
+
+    return sum + mealUnits * gramsPerUnit * remainingEffectFraction;
+  }, 0);
+}
+
   return getTotalActiveUnits(doses, targetTime, (dose) => dose.correction_units ?? 0);
 }
 
@@ -108,17 +183,23 @@ function computeNetCarbTrajectory(doses, carbEntries, latestGlucose, insulinSett
   const points = [];
 
   for (let time = now; time <= horizon; time += SAMPLE_STEP_MS) {
-    const activeUnits = getTotalActiveUnits(doses, time);
-    const activeMealUnits = getTotalActiveMealUnits(doses, time);
-    const activeCarbs = getActiveCarbsAt(carbEntries, time);
+const activeUnits = getTotalActiveUnits(doses, time);
+const activeMealUnits = getTotalActiveMealUnits(doses, time);
+const activeCarbs = getActiveCarbsAt(carbEntries, time);
+const remainingMealCoverageGrams = getTotalRemainingMealCoverageGrams(
+  doses,
+  gramsPerUnit,
+  time
+);
 
-    points.push({
-      time,
-      activeUnits,
-      activeMealUnits,
-      activeCarbs,
-      net: activeCarbs - activeMealUnits * gramsPerUnit,
-    });
+points.push({
+  time,
+  activeUnits,
+  activeMealUnits,
+  activeCarbs,
+  remainingMealCoverageGrams,
+  net: activeCarbs - remainingMealCoverageGrams,
+});
   }
 
   const peak = points.reduce((highest, point) => (point.net > highest.net ? point : highest), points[0]);
@@ -312,6 +393,10 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
     activeCorrectionUnits > 0.01 &&
     activeMealUnits <= 0.01 &&
     activeCarbs <= 0.5;
+
+const balanceToleranceGrams = insulinSettings.isComplete
+  ? Math.max(10, (5 / insulinSettings.mealInsulinUnitsPer5g) * 0.5)
+  : 10;
 
   const netValue = needsInsulinPlan
     ? "Setup needed"
