@@ -329,15 +329,15 @@ disabled={!estimatedMeal}
         </div>
       )}
 
-      <button
-        type="button"
-        onClick={handleSubmitEstimate}
-        disabled={!estimatedMeal || isPending}
-        className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-orange-600 py-4 text-base font-semibold text-white transition hover:bg-orange-500 disabled:opacity-40"
-      
-      >
-        <Check className="h-4 w-4" />
-Log meal estimate      </button>
+<button
+  type="button"
+  onClick={handleSubmitEstimate}
+  disabled={!estimatedMeal}
+  className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-orange-600 py-4 text-base font-semibold text-white transition hover:bg-orange-500 disabled:opacity-40"
+>
+  <Check className="h-4 w-4" />
+  Log meal estimate
+</button>
     </div>
   );
 }
