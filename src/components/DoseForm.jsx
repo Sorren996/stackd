@@ -87,47 +87,47 @@ export default function DoseForm({ open, onOpenChange }) {
 
 const createCarb = useMutation({
   mutationFn: async (entries) => {
-    const normalizedEntries = entries.map((entry) => ({
-      name: entry.name || "Estimated meal",
-      carbs: Number(entry.carbs) || 0,
-      gi: Number(entry.gi) || 50,
-      category: entry.category || "Medium Absorbing",
-      absorption_profile: entry.absorption_profile || entry.profile || "medium",
-      consumed_at: entry.consumed_at || new Date().toISOString(),
-      is_custom: false,
-    }));
+    const normalizedEntries = entries.map((entry) => {
+      const absorptionProfile = entry.absorption_profile || entry.profile || "medium";
+      const categoryByProfile = {
+        fast: "Fast Absorbing",
+        medium: "Medium Absorbing",
+        slow: "Slow Absorbing",
+      };
 
-    const saveOne = (entry) => base44.entities.CarbEntry.create(entry);
+      return {
+        name: entry.name || "Estimated meal",
+        carbs: Number(entry.carbs) || 0,
+        gi: Number(entry.gi) || 50,
+        category: entry.category || categoryByProfile[absorptionProfile] || "Medium Absorbing",
+        profile: absorptionProfile,
+        absorption_profile: absorptionProfile,
+        consumed_at: entry.consumed_at || new Date().toISOString(),
+        is_custom: false,
+      };
+    });
 
-    const savePromise =
-      normalizedEntries.length === 1
-        ? saveOne(normalizedEntries[0])
-        : Promise.all(normalizedEntries.map(saveOne));
+    console.log("Saving carb entries", normalizedEntries);
+    toast.message("Sending carb entry...");
 
+    const savePromise = base44.entities.CarbEntry.bulkCreate(normalizedEntries);
     const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => {
-        reject(new Error("Carb save timed out after 10 seconds"));
-      }, 10000);
+      setTimeout(() => reject(new Error("Carb save timed out after 10 seconds")), 10000);
     });
 
     return Promise.race([savePromise, timeoutPromise]);
   },
-  
-});
-
-const handleSubmitCarbs = async (entries) => {
-  try {
-    await createCarb.mutateAsync(entries);
-
+  onSuccess: (result, entries) => {
+    console.log("Carb entries saved", result);
     queryClient.invalidateQueries({ queryKey: ["carb-entries"] });
     toast.success(`Logged ${entries.length} food item${entries.length === 1 ? "" : "s"}`);
     onOpenChange(false);
-  } catch (error) {
+  },
+  onError: (error) => {
     console.error("Unable to log carbs", error);
-    toast.error(error?.message || "Unable to log carbs");
-  }
-};
-
+    toast.error(error?.message || "Unable to log carbs. Please check the carb entry fields.");
+  },
+});
   const updateInsulinRow = (id, patch) => {
     setInsulinRows((rows) => rows.map((row) => (row.id === id ? { ...row, ...patch } : row)));
   };
@@ -278,7 +278,7 @@ const handleSubmitCarbs = async (entries) => {
 
           {tab === "carbs" ? (
             <div className="min-h-[580px]">
-<CarbsTab onSubmit={handleSubmitCarbs} isPending={createCarb.isPending} />
+<CarbsTab onSubmit={(entries) => createCarb.mutate(entries)} isPending={createCarb.isPending} />
             </div>
           ) : tab === "insulin" ? (
             <>
