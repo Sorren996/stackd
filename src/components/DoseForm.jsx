@@ -7,8 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { X, Syringe, Droplets, Wheat, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { CarbsTab } from "@/components/CarbsTab";
-
+import CarbsTab from "@/components/CarbsTab";
 const CATEGORY_ORDER = [
   "Rapid-Acting",
   "Short-Acting",
