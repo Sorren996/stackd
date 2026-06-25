@@ -1,200 +1,3 @@
-import { useState } from "react";
-import { Check, Loader2, Sparkles } from "lucide-react";
-import { Textarea } from "@/components/ui/textarea";
-import { toast } from "sonner";
-import { InvokeLLM } from "@/api/integrations";
-
-function normalizeEstimatedMeal(data, fallbackName) {
-  return {
-    mealName: data.mealName || data.name || fallbackName || "Estimated meal",
-    servingDescription: data.servingDescription || data.serving_description || "",
-    carbs: Number(data.carbs ?? 0),
-    protein: Number(data.protein ?? 0),
-    fat: Number(data.fat ?? 0),
-    calories: Number(data.calories ?? 0),
-    gi: Number(data.gi ?? 50),
-    absorptionProfile: data.absorptionProfile || data.absorption_profile || "medium",
-    confidence: Number(data.confidence ?? 0),
-    assumptions: Array.isArray(data.assumptions) ? data.assumptions : [],
-  };
-}
-
-export default function CarbsTab({ onSubmit, isPending }) {
-  const [mealText, setMealText] = useState("");
-  const [estimatedMeal, setEstimatedMeal] = useState(null);
-  const [isEstimatingMeal, setIsEstimatingMeal] = useState(false);
-
-  const updateEstimatedMeal = (patch) => {
-    setEstimatedMeal((meal) => (meal ? { ...meal, ...patch } : meal));
-  };
-
-  const handleEstimateMeal = async () => {
-    const description = mealText.trim();
-
-    if (!description) {
-      toast.error("Describe the meal first.");
-      return;
-    }
-
-    setIsEstimatingMeal(true);
-
-    try {
-      const data = await InvokeLLM({
-        prompt: `
-Estimate nutrition for this meal:
-
-"${description}"
-
-Return a cautious estimate using typical US serving sizes when exact serving sizes are missing.
-
-Estimate:
-- meal name
-- serving description
-- carbs in grams
-- protein in grams
-- fat in grams
-- calories
-- glycemic index from 0-100
-- absorption profile: fast, medium, or slow
-- confidence from 0 to 1
-- assumptions
-
-Do not give insulin dosing advice.
-        `,
-        response_json_schema: {
-          type: "object",
-          properties: {
-            mealName: { type: "string" },
-            servingDescription: { type: "string" },
-            carbs: { type: "number" },
-            protein: { type: "number" },
-            fat: { type: "number" },
-            calories: { type: "number" },
-            gi: { type: "number" },
-            absorptionProfile: {
-              type: "string",
-              enum: ["fast", "medium", "slow"],
-            },
-            confidence: { type: "number" },
-            assumptions: {
-              type: "array",
-              items: { type: "string" },
-            },
-          },
-          required: [
-            "mealName",
-            "servingDescription",
-            "carbs",
-            "protein",
-            "fat",
-            "calories",
-            "gi",
-            "absorptionProfile",
-            "confidence",
-            "assumptions",
-          ],
-        },
-      });
-
-      setEstimatedMeal(normalizeEstimatedMeal(data, description));
-    } catch (error) {
-      toast.error("Unable to estimate that meal yet.");
-    } finally {
-      setIsEstimatingMeal(false);
-    }
-  };
-
-  const handleSubmitEstimate = () => {
-    if (!estimatedMeal) return;
-
-    const carbs = Number(estimatedMeal.carbs);
-    if (!Number.isFinite(carbs) || carbs <= 0) {
-      toast.error("Enter estimated carbs before logging.");
-      return;
-    }
-
-    onSubmit([
-      {
-        name: estimatedMeal.mealName || "Estimated meal",
-        carbs,
-        protein: Number(estimatedMeal.protein) || 0,
-        fat: Number(estimatedMeal.fat) || 0,
-        calories: Number(estimatedMeal.calories) || 0,
-        gi: Number(estimatedMeal.gi) || 50,
-        category: "AI Estimated",
-        profile: estimatedMeal.absorptionProfile || "medium",
-        absorption_profile: estimatedMeal.absorptionProfile || "medium",
-        consumed_at: new Date().toISOString(),
-        is_custom: false,
-        notes:
-          [
-            mealText.trim() ? `Input: ${mealText.trim()}` : null,
-            estimatedMeal.servingDescription
-              ? `Serving: ${estimatedMeal.servingDescription}`
-              : null,
-            estimatedMeal.confidence
-              ? `AI confidence: ${Math.round(estimatedMeal.confidence * 100)}%`
-              : null,
-            estimatedMeal.assumptions?.length
-              ? `Assumptions: ${estimatedMeal.assumptions.join("; ")}`
-              : null,
-          ]
-            .filter(Boolean)
-            .join("\n") || undefined,
-      },
-    ]);
-  };
-
-  return (
-    <div className="flex h-full flex-col px-5 pb-6 pt-4">
-      <style>{`
-        @keyframes ai-estimate-spin {
-          to { transform: rotate(360deg); }
-        }
-
-        @keyframes ai-estimate-pulse {
-          0%, 100% {
-            box-shadow:
-              0 0 0 1px rgba(45, 212, 191, 0.22),
-              0 0 22px rgba(59, 130, 246, 0.18),
-              0 0 34px rgba(168, 85, 247, 0.14);
-          }
-          50% {
-            box-shadow:
-              0 0 0 1px rgba(168, 85, 247, 0.38),
-              0 0 28px rgba(59, 130, 246, 0.32),
-              0 0 46px rgba(168, 85, 247, 0.28);
-          }
-        }
-
-        .ai-estimate-field {
-          position: relative;
-          border-radius: 1rem;
-          overflow: hidden;
-        }
-
-        .ai-estimate-field::before {
-          content: "";
-          position: absolute;
-          inset: -2px;
-          border-radius: inherit;
-          background: conic-gradient(
-            from 0deg,
-            rgba(45, 212, 191, 0),
-            rgba(45, 212, 191, 0.9),
-            rgba(59, 130, 246, 0.95),
-            rgba(168, 85, 247, 0.95),
-            rgba(45, 212, 191, 0)
-          );
-          opacity: 0;
-          transition: opacity 180ms ease;
-          pointer-events: none;
-        }
-
-        .ai-estimate-field-active {
-          animation: ai-estimate-pulse 1.65s ease-in-out infinite;
-        }
-
         .ai-estimate-field-active::before {
           opacity: 1;
           animation: ai-estimate-spin 1.25s linear infinite;
@@ -203,8 +6,9 @@ Do not give insulin dosing advice.
         .ai-estimate-field-inner {
           position: relative;
           z-index: 1;
-          border-radius: 0.9rem;
-          background: rgba(255, 255, 255, 0.035);
+          border-radius: 0.875rem;
+          background: hsl(162,10%,8%);
+          overflow: hidden;
         }
       `}</style>
 
@@ -218,7 +22,7 @@ Do not give insulin dosing advice.
 
         <div
           className={`ai-estimate-field ${
-            isEstimatingMeal ? "ai-estimate-field-active p-[2px]" : ""
+            isEstimatingMeal ? "ai-estimate-field-active" : ""
           }`}
         >
           <div className="ai-estimate-field-inner">
@@ -228,7 +32,7 @@ Do not give insulin dosing advice.
               placeholder="e.g. 2 slices pepperoni pizza and a 12 oz coke"
               rows={4}
               className={`resize-none rounded-2xl border-white/10 bg-white/5 text-white placeholder:text-white/30 ${
-                isEstimatingMeal ? "border-transparent bg-black/20" : ""
+                isEstimatingMeal ? "border-transparent bg-white/5" : ""
               }`}
             />
           </div>
