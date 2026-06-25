@@ -13,11 +13,13 @@ import {
   generateCarbCurve,
   getActiveCarbsNow,
   getCarbAbsorptionAt,
-  getTotalCarbsToday,
   getDoseRemainingEffectFraction,
-} from "@/lib/carbAbsorption";import { AnimatePresence, motion } from "framer-motion";
+  getTotalCarbsToday,
+} from "@/lib/carbAbsorption";
+import { AnimatePresence, motion } from "framer-motion";
 
 const SAMPLE_STEP_MS = 5 * 60 * 1000;
+const BALANCE_TOLERANCE_UNITS = 0.5;
 
 function readInsulinSettings() {
   const insulinSensitivityMgDlPerUnit = Number(
@@ -87,13 +89,7 @@ function getTotalActiveCorrectionUnits(doses, targetTime = Date.now()) {
   );
 }
 
-function getTotalRemainingMealCoverageGrams(
-  doses,
-  gramsPerUnit,
-  targetTime = Date.now()
-) {
-  if (!Number.isFinite(gramsPerUnit) || gramsPerUnit <= 0) return 0;
-
+function getTotalRemainingMealUnits(doses, targetTime = Date.now()) {
   return doses.reduce((sum, dose) => {
     const mealUnits = Number(dose.meal_units ?? dose.units);
     if (!Number.isFinite(mealUnits) || mealUnits <= 0) return sum;
@@ -104,7 +100,7 @@ function getTotalRemainingMealCoverageGrams(
       3
     );
 
-    return sum + mealUnits * gramsPerUnit * remainingEffectFraction;
+    return sum + mealUnits * remainingEffectFraction;
   }, 0);
 }
 
@@ -142,26 +138,24 @@ function computeNetCarbTrajectory(
     return { points: [], peak: null, trough: null, atNow: 0, glucoseAsOf };
   }
 
-  const gramsPerUnit = 5 / insulinSettings.mealInsulinUnitsPer5g;
+  const unitsPerGram = insulinSettings.mealInsulinUnitsPer5g / 5;
   const points = [];
 
   for (let time = now; time <= horizon; time += SAMPLE_STEP_MS) {
     const activeUnits = getTotalActiveUnits(doses, time);
     const activeMealUnits = getTotalActiveMealUnits(doses, time);
     const activeCarbs = getActiveCarbsAt(carbEntries, time);
-    const remainingMealCoverageGrams = getTotalRemainingMealCoverageGrams(
-      doses,
-      gramsPerUnit,
-      time
-    );
+    const remainingMealUnits = getTotalRemainingMealUnits(doses, time);
+    const requiredMealUnits = activeCarbs * unitsPerGram;
 
     points.push({
       time,
       activeUnits,
       activeMealUnits,
       activeCarbs,
-      remainingMealCoverageGrams,
-      net: activeCarbs - remainingMealCoverageGrams,
+      remainingMealUnits,
+      requiredMealUnits,
+      net: requiredMealUnits - remainingMealUnits,
     });
   }
 
@@ -253,64 +247,51 @@ function AmbientOrb({ color, duration = 6 }) {
   );
 }
 
-function RiskSparkline({ points, height = 60 }) {
-  if (!points || points.length < 2) return null;
+function RiskSparkline({ points, color }) {
+  if (points.length < 2) return null;
 
   const width = 240;
-  const values = points.map((p) => p.net);
+  const height = 36;
+  const values = points.map((point) => point.net);
   const min = Math.min(...values, 0);
   const max = Math.max(...values, 0);
   const range = max - min || 1;
 
-  const toXY = (p, i) => {
-    const x = (i / (points.length - 1)) * width;
-    const y = height - ((p.net - min) / range) * height;
-    return [x, y];
-  };
+  const path = points
+    .map((point, index) => {
+      const x = (index / (points.length - 1)) * width;
+      const y = height - ((point.net - min) / range) * height;
+      return `${index ? "L" : "M"} ${x.toFixed(1)} ${y.toFixed(1)}`;
+    })
+    .join(" ");
 
   const zeroY = height - ((0 - min) / range) * height;
 
-  // Split the line into above-zero (carb lead) and below-zero (insulin lead)
-  // segments so each can be colored independently.
-  const segments = [];
-  let current = [];
-  let currentSign = null;
-
-  points.forEach((p, i) => {
-    const sign = p.net >= 0 ? "carb" : "insulin";
-    const [x, y] = toXY(p, i);
-    if (currentSign !== null && sign !== currentSign) {
-      segments.push({ sign: currentSign, path: current });
-      current = [current[current.length - 1]]; // overlap point for continuity
-    }
-    current.push([x, y]);
-    currentSign = sign;
-  });
-  if (current.length) segments.push({ sign: currentSign, path: current });
-
-  const CARB_COLOR = "#f59e0b";
-  const INSULIN_COLOR = "#3b82f6";
-
   return (
-    <svg viewBox={`0 0 ${width} ${height + 14}`} width="100%" height={height + 14} preserveAspectRatio="none">
-      {/* Zero line */}
-      <line x1="0" y1={zeroY} x2={width} y2={zeroY} stroke="rgba(255,255,255,0.2)" strokeWidth="1" strokeDasharray="3,3" />
-      <text x={width} y={zeroY - 4} textAnchor="end" fontSize="9" fill="rgba(255,255,255,0.4)">
-        Balanced
-      </text>
-
-      {/* Colored segments */}
-      {segments.map((seg, i) => (
-        <path
-          key={i}
-          d={seg.path.map(([x, y], j) => `${j === 0 ? "M" : "L"} ${x.toFixed(1)} ${y.toFixed(1)}`).join(" ")}
-          fill="none"
-          stroke={seg.sign === "carb" ? CARB_COLOR : INSULIN_COLOR}
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      ))}
+    <svg
+      className="balance-sparkline"
+      viewBox={`0 0 ${width} ${height}`}
+      width="100%"
+      height={height}
+      preserveAspectRatio="none"
+    >
+      <line
+        x1="0"
+        y1={zeroY}
+        x2={width}
+        y2={zeroY}
+        stroke="rgba(255,255,255,0.15)"
+        strokeWidth="1"
+        strokeDasharray="3,3"
+      />
+      <path
+        d={path}
+        fill="none"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -409,69 +390,23 @@ export default function ActiveInsulinBanner({
     [doses, carbEntries, latestGlucose, insulinSettings]
   );
 
+  const worstPoint = useMemo(() => {
+    if (!trajectory.peak || !trajectory.trough) return null;
+    return Math.abs(trajectory.peak.net) >= Math.abs(trajectory.trough.net)
+      ? trajectory.peak
+      : trajectory.trough;
+  }, [trajectory]);
 
-
-  const netActiveCarbs = worstPoint?.net ?? 0;
+  const netMealUnits = worstPoint?.net ?? 0;
   const netPeakTime = worstPoint?.time ?? null;
   const isPeakInFuture = Boolean(netPeakTime && netPeakTime > Date.now() + 60000);
   const needsInsulinPlan = !insulinSettings.isComplete;
-  const balanceToleranceGrams = insulinSettings.isComplete
-    ? Math.max(10, (5 / insulinSettings.mealInsulinUnitsPer5g) * 0.5)
-    : 10;
-  const hasCarbLead = netActiveCarbs > balanceToleranceGrams;
-  const hasInsulinLead = netActiveCarbs < -balanceToleranceGrams;
+  const hasCarbLead = netMealUnits > BALANCE_TOLERANCE_UNITS;
+  const hasInsulinLead = netMealUnits < -BALANCE_TOLERANCE_UNITS;
   const correctionOnlyActive =
     activeCorrectionUnits > 0.01 &&
     activeMealUnits <= 0.01 &&
     activeCarbs <= 0.5;
-
-
-
-const CARB_LEAD_COLOR = "#f59e0b";
-const INSULIN_LEAD_COLOR = "#3b82f6";
-
-const nowStatusText = useMemo(() => {
-  if (!trajectory.points.length) return null;
-  const v = trajectory.atNow;
-  if (v > 5) return { text: "Carbs are currently ahead of insulin", color: CARB_LEAD_COLOR };
-  if (v < -5) return { text: "Insulin is currently ahead of carbs", color: INSULIN_LEAD_COLOR };
-  return { text: "Currently balanced", color: "#35a879" };
-}, [trajectory]);
-
-const worstPointText = useMemo(() => {
-  if (!worstPoint || !netPeakTime) return null;
-  const time = formatClockTime(netPeakTime);
-  if (worstPoint.net > 5) {
-    return {
-      text: `Carbs were most ahead of insulin ${isPeakInFuture ? "around" : "at"} ${time}`,
-      color: CARB_LEAD_COLOR,
-    };
-  }
-  if (worstPoint.net < -5) {
-    return {
-      text: `Insulin coverage was strongest ${isPeakInFuture ? "around" : "at"} ${time}`,
-      color: INSULIN_LEAD_COLOR,
-    };
-  }
-  return { text: `Stayed close to balanced ${isPeakInFuture ? "around" : "at"} ${time}`, color: "#35a879" };
-}, [worstPoint, netPeakTime, isPeakInFuture]);
-
-{worstPoint && netPeakTime && (
-  <p className="text-[12px] text-white/50 mt-3">
-    {worstPoint.net > 5
-      ? "Carbs were most ahead of insulin "
-      : worstPoint.net < -5
-      ? "Insulin coverage was strongest "
-      : "Stayed close to balanced "}
-    {isPeakInFuture ? "around " : "at "}
-    <span
-      className="font-semibold"
-      style={{ color: worstPoint.net > 5 ? CARB_LEAD_COLOR : worstPoint.net < -5 ? INSULIN_LEAD_COLOR : "#35a879" }}
-    >
-      {formatClockTime(netPeakTime)}
-    </span>
-  </p>
-)}
 
   const netValue = needsInsulinPlan
     ? "Setup needed"
@@ -557,45 +492,37 @@ const worstPointText = useMemo(() => {
           />
         )}
 
-{openTooltip === "net-carbs" && (
-  <TooltipPopover key="net-carbs-tip" title="Insulin and Carb Balance"
-    description="This estimate compares carbs still digesting with the meal coverage remaining from logged insulin. Correction insulin remains part of insulin on board but is not treated as meal coverage. It is an estimate, not a glucose prediction or dosing recommendation."
-    onClose={() => setOpenTooltip(null)}
-  >
-    {nowStatusText && (
-      <p className="text-sm font-semibold mt-3" style={{ color: nowStatusText.color }}>
-        {nowStatusText.text}
-      </p>
-    )}
-
-    {trajectory.points.length > 1 && (
-      <div className="mt-2">
-        <RiskSparkline points={trajectory.points} />
-        <div className="flex justify-between text-[10px] text-white/30 mt-1">
-          <span>Now</span>
-          <span>{formatClockTime(trajectory.points[trajectory.points.length - 1].time)}</span>
-        </div>
-      </div>
-    )}
-
-    {worstPointText && (
-      <p className="text-[12px] text-white/50 mt-3">
-        {worstPointText.text.replace(worstPointText.text.match(/\d{1,2}:\d{2}\s?[AP]M/)?.[0] ?? "", "")}
-        <span className="font-semibold" style={{ color: worstPointText.color }}>
-          {worstPointText.text.match(/\d{1,2}:\d{2}\s?[AP]M/)?.[0]}
-        </span>
-      </p>
-    )}
-
-    {trajectory.glucoseAsOf && (
-      <p className="text-[11px] text-white/35 mt-3 pt-3 border-t border-white/10">
-        Based on glucose reading from{" "}
-        <span className="font-semibold text-white/55">{formatRelativeAge(trajectory.glucoseAsOf)}</span>
-        {" "}({formatClockTime(trajectory.glucoseAsOf)}). Held constant across this estimate — does not predict future glucose.
-      </p>
-    )}
-  </TooltipPopover>
-
+        {openTooltip === "net-carbs" && (
+          <TooltipPopover
+            title="Insulin and Carb Balance"
+            description="This estimate compares insulin needed for carbs still digesting with the meal insulin effect still remaining. Correction insulin remains part of insulin on board but is not treated as meal coverage. It is an estimate, not a glucose prediction or dosing recommendation."
+            onClose={() => setOpenTooltip(null)}
+          >
+            {trajectory.points.length > 1 && (
+              <div className="mt-3">
+                <RiskSparkline points={trajectory.points} color={netColor} />
+                <div className="mt-1 flex justify-between text-[10px] text-white/30">
+                  <span>Now</span>
+                  <span>
+                    {formatClockTime(trajectory.points[trajectory.points.length - 1].time)}
+                  </span>
+                </div>
+                {netPeakTime && (
+                  <p className="mt-2 text-[11px] text-white/40">
+                    {hasCarbLead
+                      ? "Largest carb lead"
+                      : hasInsulinLead
+                        ? "Largest insulin lead"
+                        : "Most notable balance point"}
+                    {isPeakInFuture ? " expected " : " was "}
+                    <span className="font-semibold" style={{ color: netColor }}>
+                      {formatClockTime(netPeakTime)}
+                    </span>
+                  </p>
+                )}
+              </div>
+            )}
+          </TooltipPopover>
         )}
       </AnimatePresence>
 
