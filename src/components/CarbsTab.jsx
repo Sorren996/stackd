@@ -25,7 +25,7 @@ function normalizeEstimatedMeal(data, fallbackName) {
   };
 }
 
-export default function CarbsTab({ onSubmit, isPending }) {
+export default function CarbsTab({ onSubmit }) {
   const [mealText, setMealText] = useState("");
   const [estimatedMeal, setEstimatedMeal] = useState(null);
   const [isEstimatingMeal, setIsEstimatingMeal] = useState(false);
@@ -42,6 +42,7 @@ export default function CarbsTab({ onSubmit, isPending }) {
       return;
     }
 
+    toast.message("Estimating meal...");
     setIsEstimatingMeal(true);
 
     try {
@@ -103,6 +104,7 @@ Do not give insulin dosing advice.
       });
 
       setEstimatedMeal(normalizeEstimatedMeal(data, description));
+      toast.success("Meal estimate ready");
     } catch (error) {
       toast.error("Unable to estimate that meal yet.");
     } finally {
@@ -111,85 +113,59 @@ Do not give insulin dosing advice.
   };
 
   const handleSubmitEstimate = () => {
-    if (!estimatedMeal) return;
-toast.message("Log button clicked");
+    toast.message("Log button clicked");
+
+    if (!estimatedMeal) {
+      toast.error("Estimate the meal first.");
+      return;
+    }
+
     const carbs = Number(estimatedMeal.carbs);
     if (!Number.isFinite(carbs) || carbs <= 0) {
       toast.error("Enter estimated carbs before logging.");
       return;
     }
 
-const absorptionProfile = estimatedMeal.absorptionProfile || "medium";
+    const absorptionProfile = estimatedMeal.absorptionProfile || "medium";
 
-onSubmit([
-  {
-    name: estimatedMeal.mealName || "Estimated meal",
-    carbs,
-    gi: Number(estimatedMeal.gi) || 50,
-    category: ABSORPTION_CATEGORY[absorptionProfile],
-    absorption_profile: absorptionProfile,
-    consumed_at: new Date().toISOString(),
-    is_custom: false,
-  },
-]);
+    onSubmit([
+      {
+        name: estimatedMeal.mealName || "Estimated meal",
+        carbs,
+        gi: Number(estimatedMeal.gi) || 50,
+        category: ABSORPTION_CATEGORY[absorptionProfile],
+        profile: absorptionProfile,
+        absorption_profile: absorptionProfile,
+        consumed_at: new Date().toISOString(),
+        is_custom: false,
+      },
+    ]);
   };
 
   return (
     <div className="flex h-full flex-col px-5 pb-6 pt-4">
       <style>{`
-        @property --ai-estimate-angle {
-          syntax: "<angle>";
-          inherits: false;
-          initial-value: 0deg;
+        @keyframes ai-border-shift {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
         }
 
-        @keyframes ai-estimate-spin {
-          to { --ai-estimate-angle: 360deg; }
-        }
-
-        @keyframes ai-estimate-pulse {
-          0%, 100% {
-            box-shadow:
-              0 0 0 1px rgba(45, 212, 191, 0.22),
-              0 0 22px rgba(59, 130, 246, 0.18),
-              0 0 34px rgba(168, 85, 247, 0.14);
-          }
-          50% {
-            box-shadow:
-              0 0 0 1px rgba(168, 85, 247, 0.38),
-              0 0 28px rgba(59, 130, 246, 0.32),
-              0 0 46px rgba(168, 85, 247, 0.28);
-          }
-        }
-
-        .ai-estimate-field {
-          position: relative;
+        .ai-estimate-border {
           border-radius: 1rem;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          overflow: hidden;
-          background: rgba(255, 255, 255, 0.08);
+          padding: 1px;
+          background: rgba(255,255,255,0.10);
         }
 
-        .ai-estimate-field-active {
-          border: 0;
+        .ai-estimate-border-active {
           padding: 2px;
-          background: conic-gradient(
-            from var(--ai-estimate-angle, 0deg),
-            #2dd4bf,
-            #3b82f6,
-            #8b5cf6,
-            #d946ef,
-            #3b82f6,
-            #2dd4bf
-          );
-          animation:
-            ai-estimate-spin 1.25s linear infinite,
-            ai-estimate-pulse 1.65s ease-in-out infinite;
+          background: linear-gradient(90deg, #2dd4bf, #3b82f6, #8b5cf6, #d946ef, #3b82f6, #2dd4bf);
+          background-size: 300% 300%;
+          animation: ai-border-shift 1.35s linear infinite;
+          box-shadow: 0 0 24px rgba(59, 130, 246, 0.22), 0 0 32px rgba(139, 92, 246, 0.18);
         }
 
-        .ai-estimate-field-inner {
-          position: relative;
-          z-index: 1;
+        .ai-estimate-inner {
           border-radius: calc(1rem - 2px);
           background: hsl(162,10%,8%);
         }
@@ -203,20 +179,14 @@ onSubmit([
           </p>
         </div>
 
-        <div
-          className={`ai-estimate-field ${
-            isEstimatingMeal ? "ai-estimate-field-active" : ""
-          }`}
-        >
-          <div className="ai-estimate-field-inner">
+        <div className={`ai-estimate-border ${isEstimatingMeal ? "ai-estimate-border-active" : ""}`}>
+          <div className="ai-estimate-inner">
             <Textarea
               value={mealText}
               onChange={(event) => setMealText(event.target.value)}
               placeholder="e.g. 2 slices pepperoni pizza and a 12 oz coke"
               rows={4}
-              className={`resize-none rounded-2xl border-white/10 bg-white/5 text-white placeholder:text-white/30 ${
-                isEstimatingMeal ? "border-transparent" : ""
-              }`}
+              className="resize-none rounded-2xl border-transparent bg-white/5 text-white placeholder:text-white/30"
             />
           </div>
         </div>
@@ -224,8 +194,8 @@ onSubmit([
         <button
           type="button"
           onClick={handleEstimateMeal}
-disabled={!estimatedMeal}
-           className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-teal-500 py-3 text-sm font-semibold text-white transition hover:bg-teal-400 disabled:opacity-40"
+          disabled={!mealText.trim() || isEstimatingMeal}
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-teal-500 py-3 text-sm font-semibold text-white transition hover:bg-teal-400 disabled:opacity-40"
         >
           {isEstimatingMeal ? (
             <>
@@ -276,9 +246,7 @@ disabled={!estimatedMeal}
                     min="0"
                     inputMode="decimal"
                     value={estimatedMeal[key]}
-                    onChange={(event) =>
-                      updateEstimatedMeal({ [key]: event.target.value })
-                    }
+                    onChange={(event) => updateEstimatedMeal({ [key]: event.target.value })}
                     className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none"
                   />
                   {unit && <span className="text-xs text-white/35">{unit}</span>}
@@ -293,20 +261,12 @@ disabled={!estimatedMeal}
             </span>
             <select
               value={estimatedMeal.absorptionProfile}
-              onChange={(event) =>
-                updateEstimatedMeal({ absorptionProfile: event.target.value })
-              }
+              onChange={(event) => updateEstimatedMeal({ absorptionProfile: event.target.value })}
               className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-teal-400"
             >
-              <option value="fast" className="bg-[#18211f]">
-                Fast
-              </option>
-              <option value="medium" className="bg-[#18211f]">
-                Medium
-              </option>
-              <option value="slow" className="bg-[#18211f]">
-                Slow
-              </option>
+              <option value="fast" className="bg-[#18211f]">Fast</option>
+              <option value="medium" className="bg-[#18211f]">Medium</option>
+              <option value="slow" className="bg-[#18211f]">Slow</option>
             </select>
           </label>
 
@@ -329,15 +289,15 @@ disabled={!estimatedMeal}
         </div>
       )}
 
-<button
-  type="button"
-  onClick={handleSubmitEstimate}
-  disabled={!estimatedMeal}
-  className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-orange-600 py-4 text-base font-semibold text-white transition hover:bg-orange-500 disabled:opacity-40"
->
-  <Check className="h-4 w-4" />
-  Log meal estimate
-</button>
+      <button
+        type="button"
+        onClick={handleSubmitEstimate}
+        disabled={!estimatedMeal}
+        className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-orange-600 py-4 text-base font-semibold text-white transition hover:bg-orange-500 disabled:opacity-40"
+      >
+        <Check className="h-4 w-4" />
+        Log meal estimate
+      </button>
     </div>
   );
 }
