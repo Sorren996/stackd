@@ -99,6 +99,67 @@ export default function CarbsTab({ onSubmit, isPending }) {
 
   return (
     <div className="flex h-full flex-col px-5 pb-6 pt-4">
+      <style>{`
+        @keyframes ai-estimate-spin {
+          to { transform: rotate(360deg); }
+        }
+
+        @keyframes ai-estimate-pulse {
+          0%, 100% {
+            box-shadow:
+              0 0 0 1px rgba(45, 212, 191, 0.22),
+              0 0 22px rgba(59, 130, 246, 0.18),
+              0 0 34px rgba(168, 85, 247, 0.14);
+          }
+          50% {
+            box-shadow:
+              0 0 0 1px rgba(168, 85, 247, 0.38),
+              0 0 28px rgba(59, 130, 246, 0.32),
+              0 0 46px rgba(168, 85, 247, 0.28);
+          }
+        }
+
+        .ai-estimate-field {
+          position: relative;
+          border-radius: 1rem;
+          overflow: hidden;
+        }
+
+        .ai-estimate-field::before {
+          content: "";
+          position: absolute;
+          inset: -2px;
+          border-radius: inherit;
+          background: conic-gradient(
+            from 0deg,
+            rgba(45, 212, 191, 0),
+            rgba(45, 212, 191, 0.9),
+            rgba(59, 130, 246, 0.95),
+            rgba(168, 85, 247, 0.95),
+            rgba(45, 212, 191, 0)
+          );
+          opacity: 0;
+          transition: opacity 180ms ease;
+          pointer-events: none;
+        }
+
+        .ai-estimate-field-active {
+          animation: ai-estimate-pulse 1.65s ease-in-out infinite;
+        }
+
+        .ai-estimate-field-active::before {
+          opacity: 1;
+          animation: ai-estimate-spin 1.25s linear infinite;
+        }
+
+        .ai-estimate-field-inner {
+          position: relative;
+          z-index: 1;
+          border-radius: 0.9rem;
+          background: rgba(255, 255, 255, 0.035);
+        }
+      `}</style>
+
       <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
         <div className="mb-3 flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-teal-300" />
@@ -107,13 +168,23 @@ export default function CarbsTab({ onSubmit, isPending }) {
           </p>
         </div>
 
-        <Textarea
-          value={mealText}
-          onChange={(event) => setMealText(event.target.value)}
-          placeholder="e.g. 2 slices pepperoni pizza and a 12 oz coke"
-          rows={4}
-          className="resize-none rounded-2xl border-white/10 bg-white/5 text-white placeholder:text-white/30"
-        />
+        <div
+          className={`ai-estimate-field ${
+            isEstimatingMeal ? "ai-estimate-field-active p-[2px]" : ""
+          }`}
+        >
+          <div className="ai-estimate-field-inner">
+            <Textarea
+              value={mealText}
+              onChange={(event) => setMealText(event.target.value)}
+              placeholder="e.g. 2 slices pepperoni pizza and a 12 oz coke"
+              rows={4}
+              className={`resize-none rounded-2xl border-white/10 bg-white/5 text-white placeholder:text-white/30 ${
+                isEstimatingMeal ? "border-transparent bg-black/20" : ""
+              }`}
+            />
+          </div>
+        </div>
 
         <button
           type="button"
