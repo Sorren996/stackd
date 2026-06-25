@@ -86,13 +86,32 @@ export default function DoseForm({ open, onOpenChange }) {
   });
 
 const createCarb = useMutation({
-  mutationFn: (entries) => base44.entities.CarbEntry.bulkCreate(entries),
-  onSuccess: (_, entries) => {
-    queryClient.invalidateQueries({ queryKey: ["carb-entries"] });
-    toast.success(`Logged ${entries.length} food item${entries.length === 1 ? "" : "s"}`);
-    onOpenChange(false);
+  mutationFn: async (entries) => {
+    const normalizedEntries = entries.map((entry) => ({
+      name: entry.name || "Estimated meal",
+      carbs: Number(entry.carbs) || 0,
+      gi: Number(entry.gi) || 50,
+      category: entry.category || "Medium Absorbing",
+      absorption_profile: entry.absorption_profile || entry.profile || "medium",
+      consumed_at: entry.consumed_at || new Date().toISOString(),
+      is_custom: false,
+    }));
+
+    const saveOne = (entry) => base44.entities.CarbEntry.create(entry);
+
+    const savePromise =
+      normalizedEntries.length === 1
+        ? saveOne(normalizedEntries[0])
+        : Promise.all(normalizedEntries.map(saveOne));
+
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => {
+        reject(new Error("Carb save timed out after 10 seconds"));
+      }, 10000);
+    });
+
+    return Promise.race([savePromise, timeoutPromise]);
   },
-  onError: () => toast.error("Unable to log carbs. Please check the carb entry fields."),
 });
   const updateInsulinRow = (id, patch) => {
     setInsulinRows((rows) => rows.map((row) => (row.id === id ? { ...row, ...patch } : row)));
