@@ -127,6 +127,7 @@ Do not give insulin dosing advice.
         carbs,
         gi: Number(estimatedMeal.gi) || 50,
         category: ABSORPTION_CATEGORY[absorptionProfile],
+        profile: absorptionProfile,
         absorption_profile: absorptionProfile,
         consumed_at: new Date().toISOString(),
         is_custom: false,
