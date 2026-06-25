@@ -316,8 +316,8 @@ export const FOOD_DATABASE = [
 
 ];
 
-export default function getCarbAbsorptionAt(entry, targetTime = Date.now()) {
-  if (!entry.absorption_profile) {
+export function getCarbAbsorptionAt(entry, targetTime = Date.now()) {
+    if (!entry.absorption_profile) {
     return { absorbedGrams: 0, remainingGrams: 0, absorptionRateGPerMin: 0 };
   }
 
