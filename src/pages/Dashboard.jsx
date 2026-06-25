@@ -160,7 +160,7 @@ export default function Dashboard() {
             <p className="mb-2 px-0 text-[10px] font-bold uppercase tracking-[0.18em] text-white/25">
               Glucose Trend
             </p>
-            <div className="w-full max-w-full min-w-0 overflow-hidden">
+            <div className="-mx-4 w-[calc(100%+2rem)] max-w-none min-w-0 overflow-hidden sm:mx-0 sm:w-full sm:max-w-full">
               <ActivityGraph doses={recentDoses} glucoseReadings={recentGlucose} carbEntries={recentCarbs} />
             </div>
           </div>
