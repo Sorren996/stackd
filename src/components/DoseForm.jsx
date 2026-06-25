@@ -112,7 +112,22 @@ const createCarb = useMutation({
 
     return Promise.race([savePromise, timeoutPromise]);
   },
+  
 });
+
+const handleSubmitCarbs = async (entries) => {
+  try {
+    await createCarb.mutateAsync(entries);
+
+    queryClient.invalidateQueries({ queryKey: ["carb-entries"] });
+    toast.success(`Logged ${entries.length} food item${entries.length === 1 ? "" : "s"}`);
+    onOpenChange(false);
+  } catch (error) {
+    console.error("Unable to log carbs", error);
+    toast.error(error?.message || "Unable to log carbs");
+  }
+};
+
   const updateInsulinRow = (id, patch) => {
     setInsulinRows((rows) => rows.map((row) => (row.id === id ? { ...row, ...patch } : row)));
   };
@@ -263,7 +278,7 @@ const createCarb = useMutation({
 
           {tab === "carbs" ? (
             <div className="min-h-[580px]">
-              <CarbsTab onSubmit={(entries) => createCarb.mutate(entries)} isPending={createCarb.isPending} />
+<CarbsTab onSubmit={handleSubmitCarbs} isPending={createCarb.isPending} />
             </div>
           ) : tab === "insulin" ? (
             <>
