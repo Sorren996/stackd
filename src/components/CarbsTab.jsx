@@ -170,8 +170,8 @@ Do not give insulin dosing advice.
         .ai-estimate-field {
           position: relative;
           border-radius: 1rem;
-          padding: 1px;
-          background: rgba(255, 255, 255, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          overflow: hidden;
         }
 
         .ai-estimate-field::before {
@@ -179,6 +179,7 @@ Do not give insulin dosing advice.
           position: absolute;
           inset: 0;
           border-radius: inherit;
+          padding: 2px;
           background: conic-gradient(
             from 0deg,
             rgba(45, 212, 191, 0),
@@ -190,11 +191,15 @@ Do not give insulin dosing advice.
           opacity: 0;
           transition: opacity 180ms ease;
           pointer-events: none;
-          z-index: 0;
+          z-index: 2;
+          -webkit-mask:
+            linear-gradient(#000 0 0) content-box,
+            linear-gradient(#000 0 0);
+          -webkit-mask-composite: xor;
+          mask-composite: exclude;
         }
 
         .ai-estimate-field-active {
-          padding: 2px;
           animation: ai-estimate-pulse 1.65s ease-in-out infinite;
         }
 
@@ -206,9 +211,7 @@ Do not give insulin dosing advice.
         .ai-estimate-field-inner {
           position: relative;
           z-index: 1;
-          border-radius: 0.875rem;
-          background: hsl(162,10%,8%);
-          overflow: hidden;
+          border-radius: inherit;
         }
       `}</style>
 
@@ -232,7 +235,7 @@ Do not give insulin dosing advice.
               placeholder="e.g. 2 slices pepperoni pizza and a 12 oz coke"
               rows={4}
               className={`resize-none rounded-2xl border-white/10 bg-white/5 text-white placeholder:text-white/30 ${
-                isEstimatingMeal ? "border-transparent bg-white/5" : ""
+                isEstimatingMeal ? "border-transparent" : ""
               }`}
             />
           </div>
