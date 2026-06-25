@@ -224,8 +224,8 @@ onSubmit([
         <button
           type="button"
           onClick={handleEstimateMeal}
-          disabled={!mealText.trim() || isEstimatingMeal}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-teal-500 py-3 text-sm font-semibold text-white transition hover:bg-teal-400 disabled:opacity-40"
+ disabled={!estimatedMeal || isPending}
+           className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-teal-500 py-3 text-sm font-semibold text-white transition hover:bg-teal-400 disabled:opacity-40"
         >
           {isEstimatingMeal ? (
             <>
