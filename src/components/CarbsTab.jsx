@@ -224,7 +224,7 @@ onSubmit([
         <button
           type="button"
           onClick={handleEstimateMeal}
- disabled={!estimatedMeal || isPending}
+disabled={!estimatedMeal}
            className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-teal-500 py-3 text-sm font-semibold text-white transition hover:bg-teal-400 disabled:opacity-40"
         >
           {isEstimatingMeal ? (
@@ -337,8 +337,7 @@ onSubmit([
       
       >
         <Check className="h-4 w-4" />
-        {isPending ? "Logging..." : "Log meal estimate"}
-      </button>
+Log meal estimate      </button>
     </div>
   );
 }
