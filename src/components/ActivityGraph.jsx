@@ -24,14 +24,21 @@ function getCarbGrams(entry) {
   const value =
     entry.carbs ??
     entry.carbs_grams ??
+    entry.carb_grams ??
+    entry.carbohydrate_grams ??
     entry.total_carbs ??
     entry.total_carbs_grams ??
+    entry.totalCarbs ??
+    entry.totalCarbsGrams ??
     entry.carbohydrates ??
+    entry.nutrition?.carbs ??
+    entry.nutrition?.carbs_grams ??
+    entry.nutrition?.carbohydrates ??
     entry.amount ??
     entry.grams ??
     0;
 
-  const carbs = Number(value);
+  const carbs = typeof value === "string" ? Number(value.match(/[\d.]+/)?.[0]) : Number(value);
   return Number.isFinite(carbs) && carbs > 0 ? carbs : 0;
 }
 
@@ -41,12 +48,36 @@ function normalizeCarbEntry(entry) {
 
   return {
     ...entry,
+    id: entry.id || entry._id || `${entry.consumed_at || entry.created_date || entry.created_at}-${carbs}`,
     food_name: entry.food_name || entry.name || "Food",
     carbs,
     consumed_at: entry.consumed_at || entry.recorded_at || entry.created_date || entry.created_at,
     absorption_profile: entry.absorption_profile || defaultProfile,
     is_custom: entry.is_custom === true,
   };
+}
+
+function buildCarbCurve(entry) {
+  const generated = generateCarbCurve(entry);
+  if (Array.isArray(generated) && generated.length > 0) return generated;
+
+  const start = new Date(entry.consumed_at).getTime();
+  if (!Number.isFinite(start)) return [];
+
+  const durationMs = 4 * 60 * 60 * 1000;
+  const stepMs = 3 * 60 * 1000;
+  const points = [];
+
+  for (let offset = 0; offset <= durationMs; offset += stepMs) {
+    const progress = offset / durationMs;
+    const activity = Math.sin(progress * Math.PI);
+    points.push({
+      time: start + offset,
+      activity: Math.max(0, activity),
+    });
+  }
+
+  return points;
 }
 
 function CustomTooltip({ active, payload, label }) {
@@ -211,7 +242,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   filter((e) => !e.is_custom).
   map((entry) => ({
     entry,
-    curve: generateCarbCurve(entry),
+    curve: buildCarbCurve(entry),
     color: PROFILE_COLORS[entry.absorption_profile] || "#f59e0b"
   })),
   [filteredCarbEntries]
