@@ -390,20 +390,10 @@ export default function DoseForm({ open, onOpenChange }) {
             to { opacity: 1; }
           }
 
-          @keyframes dose-form-overlay-out {
-            from { opacity: 1; }
-            to { opacity: 0; }
-          }
-
           @keyframes dose-form-sheet-in {
             0% { opacity: 0; transform: translateY(105%) scale(0.985); }
             68% { opacity: 1; transform: translateY(-1.8%) scale(1); }
             100% { opacity: 1; transform: translateY(0) scale(1); }
-          }
-
-          @keyframes dose-form-sheet-out {
-            0% { opacity: 1; transform: translateY(0) scale(1); }
-            100% { opacity: 0; transform: translateY(105%) scale(0.985); }
           }
 
           @keyframes dose-form-modal-in {
@@ -412,34 +402,17 @@ export default function DoseForm({ open, onOpenChange }) {
             100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
           }
 
-          @keyframes dose-form-modal-out {
-            0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-            100% { opacity: 0; transform: translate(-50%, -38%) scale(0.985); }
-          }
-
           .dose-form-overlay[data-state="open"] {
             animation: dose-form-overlay-in 180ms ease-out;
-          }
-
-          .dose-form-overlay[data-state="closed"] {
-            animation: dose-form-overlay-out 160ms ease-out;
           }
 
           .dose-form-panel[data-state="open"] {
             animation: dose-form-sheet-in 420ms cubic-bezier(0.22, 1.28, 0.36, 1);
           }
 
-          .dose-form-panel[data-state="closed"] {
-            animation: dose-form-sheet-out 260ms cubic-bezier(0.32, 0, 0.67, 0);
-          }
-
           @media (min-width: 640px) {
             .dose-form-panel[data-state="open"] {
               animation-name: dose-form-modal-in;
-            }
-
-            .dose-form-panel[data-state="closed"] {
-              animation-name: dose-form-modal-out;
             }
           }
         `}</style>
@@ -465,7 +438,11 @@ export default function DoseForm({ open, onOpenChange }) {
             <div className="w-8" />
             <span className="text-lg font-semibold text-white">Log Entry</span>
             <DialogClose asChild>
-              <button className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/60 transition hover:text-white">
+              <button
+                type="button"
+                onClick={() => onOpenChange(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/60 transition hover:text-white"
+              >
                 <X className="h-4 w-4" />
               </button>
             </DialogClose>
