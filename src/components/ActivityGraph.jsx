@@ -19,6 +19,27 @@ function getGlucoseColor(mgdl) {
 
 const GLUCOSE_MIN = 40;
 const GLUCOSE_MAX = 400;
+const CARB_PROFILE_COLORS = {
+  fast: "#fb923c",
+  medium: "#f59e0b",
+  slow: "#22c55e",
+  delayed: "#a78bfa",
+};
+
+const CARB_PROFILE_LABELS = {
+  fast: "Fast",
+  medium: "Mixed",
+  slow: "Slow",
+  delayed: "Delayed",
+};
+
+function normalizeAbsorptionProfile(value) {
+  const profile = String(value || "").toLowerCase();
+  if (["fast", "rapid", "juice", "sugar", "high_gi"].includes(profile)) return "fast";
+  if (["slow", "low_gi", "protein", "fiber"].includes(profile)) return "slow";
+  if (["delayed", "fatty", "high_fat", "burger", "pizza"].includes(profile)) return "delayed";
+  return "medium";
+}
 
 function getCarbGrams(entry) {
   const value =
@@ -44,7 +65,7 @@ function getCarbGrams(entry) {
 
 function normalizeCarbEntry(entry) {
   const carbs = getCarbGrams(entry);
-  const defaultProfile = Object.keys(PROFILE_COLORS)[0] || "medium";
+  const absorptionProfile = normalizeAbsorptionProfile(entry.absorption_profile ?? entry.glycemic_pace ?? entry.pace);
 
   return {
     ...entry,
@@ -52,7 +73,7 @@ function normalizeCarbEntry(entry) {
     food_name: entry.food_name || entry.name || "Food",
     carbs,
     consumed_at: entry.consumed_at || entry.recorded_at || entry.created_date || entry.created_at,
-    absorption_profile: entry.absorption_profile || defaultProfile,
+    absorption_profile: absorptionProfile,
     is_custom: entry.is_custom === true,
   };
 }
@@ -64,16 +85,38 @@ function buildCarbCurve(entry) {
   const start = new Date(entry.consumed_at).getTime();
   if (!Number.isFinite(start)) return [];
 
-  const durationMs = 4 * 60 * 60 * 1000;
+  const profile = normalizeAbsorptionProfile(entry.absorption_profile);
+  const settings = {
+    fast: { delayMin: 0, durationMin: 110, peak: 0.2, skew: 1.45 },
+    medium: { delayMin: 10, durationMin: 210, peak: 0.35, skew: 1 },
+    slow: { delayMin: 20, durationMin: 300, peak: 0.48, skew: 0.72 },
+    delayed: { delayMin: 35, durationMin: 420, peak: 0.58, skew: 0.58 },
+  }[profile];
+
+  const curveStart = start + settings.delayMin * 60 * 1000;
+  const durationMs = settings.durationMin * 60 * 1000;
   const stepMs = 3 * 60 * 1000;
   const points = [];
 
   for (let offset = 0; offset <= durationMs; offset += stepMs) {
     const progress = offset / durationMs;
-    const activity = Math.sin(progress * Math.PI);
+    let activity;
+
+    if (profile === "slow") {
+      activity = progress < 0.25 ? progress / 0.25 : progress < 0.72 ? 1 : (1 - progress) / 0.28;
+    } else if (profile === "delayed") {
+      activity = progress < settings.peak
+        ? Math.pow(progress / settings.peak, 1.8)
+        : Math.pow((1 - progress) / (1 - settings.peak), 0.65);
+    } else {
+      const rise = Math.pow(Math.min(progress / settings.peak, 1), profile === "fast" ? 0.65 : 1.15);
+      const fall = Math.pow(Math.max((1 - progress) / (1 - settings.peak), 0), settings.skew);
+      activity = progress <= settings.peak ? rise : fall;
+    }
+
     points.push({
-      time: start + offset,
-      activity: Math.max(0, activity),
+      time: curveStart + offset,
+      activity: Math.max(0, Math.min(1, activity)),
     });
   }
 
@@ -116,10 +159,11 @@ function CustomTooltip({ active, payload, label }) {
       {carbCurveEntries.map((p) => {
         const carbs = p.payload[`${p.dataKey}_carbs`];
         const food = p.payload[`${p.dataKey}_food`];
+        const pace = p.payload[`${p.dataKey}_pace`];
         return (
           <div key={p.dataKey} className="flex items-center gap-2 text-sm">
             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />
-            <span className="text-white/80">{food}</span>
+            <span className="text-white/80">{food}{pace ? ` (${pace})` : ""}</span>
             <span className="ml-auto pl-3">
               <span className="font-medium" style={{ color: p.color }}>{carbs}g carbs</span>
             </span>
@@ -243,7 +287,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   map((entry) => ({
     entry,
     curve: buildCarbCurve(entry),
-    color: PROFILE_COLORS[entry.absorption_profile] || "#f59e0b"
+    color: CARB_PROFILE_COLORS[entry.absorption_profile] || PROFILE_COLORS[entry.absorption_profile] || "#f59e0b"
   })),
   [filteredCarbEntries]
   );
@@ -307,6 +351,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           point[key] = activity * (entry.carbs / maxCarbGrams) * 50;
           point[`${key}_carbs`] = entry.carbs;
           point[`${key}_food`] = entry.food_name;
+          point[`${key}_pace`] = CARB_PROFILE_LABELS[entry.absorption_profile] || "Mixed";
         }
       });
       if (glucoseMap[t] !== undefined) point.glucose = glucoseMap[t];
@@ -332,7 +377,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     key: `carb_${entry.id}`,
     label: entry.food_name,
     carbs: entry.carbs,
-    color: PROFILE_COLORS[entry.absorption_profile] || "#f59e0b"
+    color: CARB_PROFILE_COLORS[entry.absorption_profile] || PROFILE_COLORS[entry.absorption_profile] || "#f59e0b"
   })),
   [filteredCarbEntries]
   );
