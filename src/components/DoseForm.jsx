@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
-import { Dialog, DialogPortal, DialogOverlay, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogPortal, DialogClose } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { X, Syringe, Droplets, Wheat, Plus, Trash2, Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -154,6 +154,7 @@ Rules:
 export default function DoseForm({ open, onOpenChange }) {
   const [tab, setTab] = useState("insulin");
   const [isLightMode, setIsLightMode] = useState(readLightMode);
+  const [isDesktopDialog, setIsDesktopDialog] = useState(false);
   const [insulinRows, setInsulinRows] = useState(() => [createInsulinRow()]);
   const [insulinNotes, setInsulinNotes] = useState("");
   const [insulinTime, setInsulinTime] = useState(() => new Date().toTimeString().slice(0, 5));
@@ -176,6 +177,15 @@ export default function DoseForm({ open, onOpenChange }) {
       window.removeEventListener("app-theme-changed", refreshTheme);
       window.removeEventListener("storage", refreshTheme);
     };
+  }, []);
+
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 640px)");
+    const updateDialogMode = () => setIsDesktopDialog(media.matches);
+
+    updateDialogMode();
+    media.addEventListener("change", updateDialogMode);
+    return () => media.removeEventListener("change", updateDialogMode);
   }, []);
 
   const estimateCarbs = useMutation({
@@ -365,7 +375,7 @@ export default function DoseForm({ open, onOpenChange }) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogPortal>
+      <DialogPortal forceMount>
         {isLightMode && (
           <style>{`
             .dose-form-light [class~="text-white"] { color: #29433a !important; }
@@ -384,14 +394,42 @@ export default function DoseForm({ open, onOpenChange }) {
             .dose-form-light [class*="text-amber-"] { color: #a96821 !important; }
           `}</style>
         )}
-        <DialogOverlay
-          className="fixed inset-0 z-50 backdrop-blur-sm"
-          style={{ background: isLightMode ? "rgba(30, 63, 53, 0.18)" : "rgba(0, 0, 0, 0.75)" }}
-        />
+        <DialogPrimitive.Overlay forceMount asChild>
+          <motion.div
+            className="fixed inset-0 z-50 backdrop-blur-sm"
+            initial={false}
+            animate={{
+              opacity: open ? 1 : 0,
+              pointerEvents: open ? "auto" : "none",
+            }}
+            transition={{ duration: open ? 0.18 : 0.16, ease: "easeOut" }}
+            style={{ background: isLightMode ? "rgba(30, 63, 53, 0.18)" : "rgba(0, 0, 0, 0.75)" }}
+          />
+        </DialogPrimitive.Overlay>
         <DialogPrimitive.Content
-          className={`fixed bottom-0 left-0 right-0 z-50 flex h-[92vh] max-h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl border border-white/5 shadow-2xl sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:h-[min(720px,92vh)] sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl ${
+          forceMount
+          asChild
+        >
+          <motion.div
+          className={`fixed bottom-0 left-0 right-0 z-50 flex h-[92vh] max-h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl border border-white/5 shadow-2xl sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:h-[min(720px,92vh)] sm:w-full sm:max-w-md sm:rounded-3xl ${
             isLightMode ? "dose-form-light" : ""
           }`}
+          initial={false}
+          animate={
+            open
+              ? isDesktopDialog
+                ? { x: "-50%", y: "-50%", opacity: 1, scale: 1, pointerEvents: "auto" }
+                : { x: 0, y: 0, opacity: 1, scale: 1, pointerEvents: "auto" }
+              : isDesktopDialog
+                ? { x: "-50%", y: "-38%", opacity: 0, scale: 0.985, pointerEvents: "none" }
+                : { x: 0, y: "105%", opacity: 0, scale: 0.985, pointerEvents: "none" }
+          }
+          transition={{
+            type: "spring",
+            stiffness: open ? 320 : 360,
+            damping: open ? 32 : 38,
+            mass: 0.9,
+          }}
           style={{
             background: isLightMode
               ? "linear-gradient(145deg, rgba(255,255,255,0.98), rgba(236,246,242,0.96))"
@@ -401,9 +439,6 @@ export default function DoseForm({ open, onOpenChange }) {
         >
           <motion.div
             className="flex min-h-0 flex-1 flex-col"
-            initial={{ y: 48, opacity: 0, scale: 0.985 }}
-            animate={{ y: 0, opacity: 1, scale: 1 }}
-            transition={{ type: "spring", stiffness: 360, damping: 34, mass: 0.9 }}
           >
           <div className="flex items-center justify-between px-6 pb-3 pt-5">
             <div className="w-8" />
@@ -772,6 +807,7 @@ export default function DoseForm({ open, onOpenChange }) {
           )}
             </motion.div>
           </AnimatePresence>
+          </motion.div>
           </motion.div>
         </DialogPrimitive.Content>
       </DialogPortal>
