@@ -330,6 +330,8 @@ export default function DoseForm({ open, onOpenChange }) {
         carbohydrates: getNumber(item.carbs_grams),
         amount: getNumber(item.carbs_grams),
         grams: getNumber(item.carbs_grams),
+        absorption_profile: "mixed",
+        is_custom: false,
         calories: getNumber(item.calories) || undefined,
         protein_grams: getNumber(item.protein_grams) || undefined,
         fat_grams: getNumber(item.fat_grams) || undefined,
