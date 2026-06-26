@@ -1,50 +1,37 @@
 import { getDoseStatus, formatMinutes, INSULIN_PROFILES } from "@/lib/insulinPharmacology";
-import { Clock, TrendingUp, TrendingDown, CheckCircle2, Zap } from "lucide-react";
+import { Clock, TrendingUp, TrendingDown, CheckCircle2, AlertTriangle, Zap } from "lucide-react";
 
 const phaseConfig = {
-  waiting: {
-    icon: Clock,
-    className: "border-amber-200 bg-amber-50 text-amber-600",
-    label: "Waiting",
-  },
-  rising: {
-    icon: TrendingUp,
-    className: "border-blue-200 bg-blue-50 text-blue-600",
-    label: "Rising",
-  },
-  active: {
-    icon: Zap,
-    className: "border-emerald-200 bg-emerald-50 text-emerald-600",
-    label: "Active",
-  },
-  declining: {
-    icon: TrendingDown,
-    className: "border-violet-200 bg-violet-50 text-violet-600",
-    label: "Declining",
-  },
-  expired: {
-    icon: CheckCircle2,
-    className: "border-white/10 bg-white/5 text-white/40",
-    label: "Complete",
-  },
+  waiting: { icon: Clock, className: "text-amber-600 bg-amber-50 border-amber-200" },
+  rising: { icon: TrendingUp, className: "text-blue-600 bg-blue-50 border-blue-200" },
+  active: { icon: Zap, className: "text-emerald-600 bg-emerald-50 border-emerald-200" },
+  declining: { icon: TrendingDown, className: "text-violet-600 bg-violet-50 border-violet-200" },
+  expired: { icon: CheckCircle2, className: "text-muted-foreground bg-muted border-border" }
 };
 
-export default function ActiveAlerts({ doses = [] }) {
-  const activeDoses = doses
-    .map((dose) => ({ dose, status: getDoseStatus(dose) }))
-    .filter(({ status }) => status.phase !== "expired")
-    .sort((left, right) => {
-      const order = { rising: 0, active: 0, waiting: 1, declining: 2 };
-      return (order[left.status.phase] ?? 3) - (order[right.status.phase] ?? 3);
-    });
+export default function ActiveAlerts({ doses }) {
+  const activeDoses = doses.
+  map((dose) => ({ dose, status: getDoseStatus(dose) })).
+  filter((d) => d.status.phase !== "expired").
+  sort((a, b) => {
+    const order = { rising: 0, active: 0, waiting: 1, declining: 2 };
+    return (order[a.status.phase] ?? 3) - (order[b.status.phase] ?? 3);
+  });
+
+  // Stacking warning: multiple active rapid/short-acting insulins
+  const activeRapid = activeDoses.filter(
+    (d) =>
+    ["rising", "active", "declining"].includes(d.status.phase) &&
+    ["Rapid-Acting", "Short-Acting"].includes(INSULIN_PROFILES[d.dose.insulin_type]?.category)
+  );
 
   if (!activeDoses.length) return null;
 
   return (
-    <section className="active-alerts w-full space-y-3 overflow-hidden">
-      <h2 className="active-alerts-title px-1 text-sm font-bold uppercase tracking-[0.18em] text-white/35">
-        Active Alerts
-      </h2>
+    <div className="space-y-3 w-full overflow-hidden">
+      <h1 className="text-lg font-semibold text-[hsl(var(--popover))] mx-4 text-[hsl(var(--card-foreground))] px-0 py-1 font-medium opacity-65 rounded-full opacity-65 rounded-full">Active Alerts</h1>
+
+
 
       <div className="space-y-2">
         {activeDoses.map(({ dose, status }) => {
@@ -53,33 +40,29 @@ export default function ActiveAlerts({ doses = [] }) {
           const profile = INSULIN_PROFILES[dose.insulin_type];
 
           return (
-            <div key={dose.id} className="active-alert-row flex items-center gap-3 rounded-xl border p-3">
-              <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border ${config.className}`}>
-                <Icon className="h-4 w-4" />
+            <div
+              key={dose.id}
+              className="flex items-center gap-3 p-3 rounded-xl transition-all">
+              
+              <div className="p-1.5 rounded-lg bg-0">
+                <Icon className="w-4 h-4" />
               </div>
-
-              <div className="min-w-0 flex-1">
+              <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: profile?.color || "#35a879" }} />
-                  <p className="truncate text-sm font-semibold text-white">
-                    {dose.insulin_type} - {dose.units}u
+                  <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: profile?.color }} />
+                  <p className="text-sm font-medium truncate text-[hsl(var(--card-foreground))] px-0 py-1 text-sm font-medium opacity-65 rounded-full opacity-65 rounded-full">
+                    {dose.insulin_type} — {dose.units}u
                   </p>
                 </div>
-                <p className="mt-0.5 text-xs text-white/55">{status.message}</p>
-                {status.minutesUntil !== undefined && (
-                  <p className="mt-1 text-xs font-semibold text-white/70">
-                    {formatMinutes(status.minutesUntil)} left
-                  </p>
-                )}
+                <p className="text-sm opacity-75 mt-0.5">{status.message}</p>
+                {status.minutesUntil !== undefined &&
+                <p className="text-sm font-medium mt-0.5 text-[hsl(var(--card-foreground))] px-0 py-1 text-sm font-medium opacity-65 rounded-full opacity-65 rounded-full">{formatMinutes(status.minutesUntil)} left</p>
+                }
               </div>
+            </div>);
 
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-white/35">
-                {config.label}
-              </span>
-            </div>
-          );
         })}
       </div>
-    </section>
-  );
+    </div>);
+
 }

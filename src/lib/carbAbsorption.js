@@ -1,6 +1,3 @@
-import { generateActivityCurve } from "@/lib/insulinPharmacology";
-
-
 export const FOOD_CATEGORIES = ["Fast Absorbing", "Medium Absorbing", "Slow Absorbing"];
 
 export const ABSORPTION_PROFILES = {
@@ -318,9 +315,9 @@ export const FOOD_DATABASE = [
 ];
 
 export function getCarbAbsorptionAt(entry, targetTime = Date.now()) {
-if (!entry.absorption_profile) {
-  return { absorbedGrams: 0, remainingGrams: 0, absorptionRateGPerMin: 0 };
-}    
+  if (entry.is_custom || !entry.absorption_profile) {
+    return { absorbedGrams: 0, remainingGrams: 0, absorptionRateGPerMin: 0 };
+  }
 
   const profile = ABSORPTION_PROFILES[entry.absorption_profile];
   if (!profile) {
@@ -400,7 +397,8 @@ return {
 }
 
 export function generateCarbCurve(entry) {
-if (!entry.absorption_profile) return [];
+  if (entry.is_custom || !entry.absorption_profile) return [];
+
   const profile = ABSORPTION_PROFILES[entry.absorption_profile];
   if (!profile) return [];
 
@@ -447,74 +445,4 @@ export function getTotalCarbsToday(entries) {
   return entries
     .filter((e) => new Date(e.consumed_at) >= today)
     .reduce((sum, e) => sum + e.carbs, 0);
-}
-
-function getCurveActivityAt(curve, time) {
-  if (!curve.length) return 0;
-
-  const first = curve[0];
-  const last = curve[curve.length - 1];
-  if (time < first.time || time > last.time) return 0;
-
-  for (let index = 0; index < curve.length - 1; index += 1) {
-    const current = curve[index];
-    const next = curve[index + 1];
-
-    if (current.time <= time && next.time >= time) {
-      const ratio = (time - current.time) / (next.time - current.time);
-      return current.activity + ratio * (next.activity - current.activity);
-    }
-  }
-
-  return last.activity;
-}
-
-function integrateCurveArea(curve, endTime = null) {
-  if (curve.length < 2) return 0;
-
-  let area = 0;
-
-  for (let index = 0; index < curve.length - 1; index += 1) {
-    const current = curve[index];
-    const next = curve[index + 1];
-
-    if (endTime !== null && endTime <= current.time) break;
-
-    const segmentEndTime =
-      endTime !== null && endTime < next.time ? endTime : next.time;
-
-    const startActivity = current.activity;
-    const endActivity =
-      segmentEndTime === next.time
-        ? next.activity
-        : getCurveActivityAt(curve, segmentEndTime);
-
-    const durationMinutes = (segmentEndTime - current.time) / 60000;
-    area += ((startActivity + endActivity) / 2) * durationMinutes;
-
-    if (endTime !== null && endTime <= next.time) break;
-  }
-
-  return area;
-}
-
-export function getDoseRemainingEffectFraction(
-  dose,
-  targetTime = Date.now(),
-  intervalMinutes = 3
-) {
-  const curve = generateActivityCurve(dose, intervalMinutes);
-  if (curve.length < 2) return 0;
-
-  const first = curve[0];
-  const last = curve[curve.length - 1];
-
-  if (targetTime <= first.time) return 1;
-  if (targetTime >= last.time) return 0;
-
-  const totalArea = integrateCurveArea(curve);
-  if (totalArea <= 0) return 0;
-
-  const usedArea = integrateCurveArea(curve, targetTime);
-  return Math.max(0, Math.min(1, 1 - usedArea / totalArea));
 }
