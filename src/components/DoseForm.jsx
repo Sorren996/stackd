@@ -8,6 +8,7 @@ import { X, Syringe, Droplets, Wheat, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import CarbsTab from "@/components/CarbsTab";
+import { InvokeLLM } from "@/api/integrations";
 
 const CATEGORY_ORDER = [
   "Rapid-Acting",
