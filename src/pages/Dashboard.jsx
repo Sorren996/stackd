@@ -142,7 +142,7 @@ export default function Dashboard() {
             <ActivityGraph doses={recentDoses} glucoseReadings={recentGlucose} carbEntries={recentCarbs} />
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-3 overflow-hidden border:0 -mx-4">
+          <div className="grid gap-6 lg:grid-cols-3 overflow-hidden border:1 -mx-4">
             <div className="lg:col-span-2 space-y-2">
               <p className="text-[10px] font-bold text-white/25 uppercase tracking-[0.18em] mb-3 mx-4">Recent Activity</p>
               <div className="space-y-2">
