@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { X, Syringe, Droplets, Wheat, Plus, Trash2, Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { AnimatePresence, motion } from "framer-motion";
 
 const CATEGORY_ORDER = [
   "Rapid-Acting",
@@ -388,7 +389,7 @@ export default function DoseForm({ open, onOpenChange }) {
           style={{ background: isLightMode ? "rgba(30, 63, 53, 0.18)" : "rgba(0, 0, 0, 0.75)" }}
         />
         <DialogPrimitive.Content
-          className={`fixed bottom-0 left-0 right-0 z-50 flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl border border-white/5 shadow-2xl sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl ${
+          className={`fixed bottom-0 left-0 right-0 z-50 flex h-[92vh] max-h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl border border-white/5 shadow-2xl sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:h-[min(720px,92vh)] sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl ${
             isLightMode ? "dose-form-light" : ""
           }`}
           style={{
@@ -398,6 +399,12 @@ export default function DoseForm({ open, onOpenChange }) {
             borderColor: isLightMode ? "rgba(32,90,76,0.16)" : undefined,
           }}
         >
+          <motion.div
+            className="flex min-h-0 flex-1 flex-col"
+            initial={{ y: 48, opacity: 0, scale: 0.985 }}
+            animate={{ y: 0, opacity: 1, scale: 1 }}
+            transition={{ type: "spring", stiffness: 360, damping: 34, mass: 0.9 }}
+          >
           <div className="flex items-center justify-between px-6 pb-3 pt-5">
             <div className="w-8" />
             <span className="text-lg font-semibold text-white">Log Entry</span>
@@ -408,7 +415,7 @@ export default function DoseForm({ open, onOpenChange }) {
             </DialogClose>
           </div>
 
-          <div className="mx-5 mb-2 flex rounded-2xl bg-white/[0.06] p-1">
+          <div className="relative mx-5 mb-2 grid grid-cols-3 rounded-2xl bg-white/[0.06] p-1">
             {[
               { id: "insulin", label: "Insulin", Icon: Syringe },
               { id: "glucose", label: "Glucose", Icon: Droplets },
@@ -418,16 +425,32 @@ export default function DoseForm({ open, onOpenChange }) {
                 key={id}
                 type="button"
                 onClick={() => setTab(id)}
-                className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2 text-sm font-medium transition-colors ${
-                  tab === id ? "bg-white/10 text-white" : "text-white/40 hover:text-white/60"
+                className={`relative flex min-w-0 items-center justify-center gap-2 rounded-xl py-2 text-sm font-medium transition-colors ${
+                  tab === id ? "text-white" : "text-white/40 hover:text-white/60"
                 }`}
               >
-                <Icon className="h-3.5 w-3.5" />
-                {label}
+                {tab === id && (
+                  <motion.div
+                    layoutId="dose-form-active-tab"
+                    className="absolute inset-0 rounded-xl bg-white/10"
+                    transition={{ type: "spring", stiffness: 480, damping: 36 }}
+                  />
+                )}
+                <Icon className="relative z-10 h-3.5 w-3.5" />
+                <span className="relative z-10 truncate">{label}</span>
               </button>
             ))}
           </div>
 
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={tab}
+              className="min-h-0 flex flex-1 flex-col"
+              initial={{ opacity: 0, x: 18 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -18 }}
+              transition={{ type: "spring", stiffness: 360, damping: 34 }}
+            >
           {tab === "carbs" ? (
             <>
               <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-6 pt-4">
@@ -747,6 +770,9 @@ export default function DoseForm({ open, onOpenChange }) {
               </div>
             </>
           )}
+            </motion.div>
+          </AnimatePresence>
+          </motion.div>
         </DialogPrimitive.Content>
       </DialogPortal>
     </Dialog>
