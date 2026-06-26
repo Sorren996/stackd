@@ -41,6 +41,14 @@ function getNumber(value) {
   return Number.isFinite(number) && number >= 0 ? number : 0;
 }
 
+function normalizeAbsorptionProfile(value) {
+  const profile = String(value || "").toLowerCase();
+  if (["fast", "rapid", "juice", "sugar", "high_gi"].includes(profile)) return "fast";
+  if (["slow", "low_gi", "protein", "fiber"].includes(profile)) return "slow";
+  if (["delayed", "fatty", "high_fat", "burger", "pizza"].includes(profile)) return "delayed";
+  return "medium";
+}
+
 function normalizeNutritionEstimate(result, fallbackDescription) {
   const rawItems = Array.isArray(result?.items) ? result.items : [];
   const items = rawItems.map((item, index) => ({
@@ -52,6 +60,8 @@ function normalizeNutritionEstimate(result, fallbackDescription) {
     protein_grams: getNumber(item.protein_grams ?? item.protein),
     fat_grams: getNumber(item.fat_grams ?? item.fat),
     fiber_grams: getNumber(item.fiber_grams ?? item.fiber),
+    absorption_profile: normalizeAbsorptionProfile(item.absorption_profile ?? item.glycemic_pace ?? item.pace),
+    absorption_reason: item.absorption_reason || "",
   }));
 
   return items.length
@@ -66,6 +76,8 @@ function normalizeNutritionEstimate(result, fallbackDescription) {
           protein_grams: getNumber(result?.protein_grams),
           fat_grams: getNumber(result?.fat_grams),
           fiber_grams: getNumber(result?.fiber_grams),
+          absorption_profile: normalizeAbsorptionProfile(result?.absorption_profile ?? result?.glycemic_pace ?? result?.pace),
+          absorption_reason: result?.absorption_reason || "",
         },
       ];
 }
@@ -81,6 +93,11 @@ Rules:
 - Estimate total digestible carbohydrates in grams for each food item.
 - Include calories, protein, fat, and fiber when reasonably inferable.
 - If portion size is vague, make a conservative common-serving estimate.
+- Choose absorption_profile using exactly one of: fast, medium, slow, delayed.
+- Use fast for juice/soda/candy/low-fiber refined sugar.
+- Use medium for typical mixed meals.
+- Use slow for higher fiber/protein/lower glycemic meals.
+- Use delayed for high-fat meals like burgers, pizza, fried foods, or meals likely to plateau and fall off later.
 - Do not include medical advice.
 `;
 
@@ -99,8 +116,10 @@ Rules:
             protein_grams: { type: "number" },
             fat_grams: { type: "number" },
             fiber_grams: { type: "number" },
+            absorption_profile: { type: "string" },
+            absorption_reason: { type: "string" },
           },
-          required: ["food_name", "carbs_grams"],
+          required: ["food_name", "carbs_grams", "absorption_profile"],
         },
       },
     },
@@ -330,7 +349,8 @@ export default function DoseForm({ open, onOpenChange }) {
         carbohydrates: getNumber(item.carbs_grams),
         amount: getNumber(item.carbs_grams),
         grams: getNumber(item.carbs_grams),
-        absorption_profile: "mixed",
+        absorption_profile: normalizeAbsorptionProfile(item.absorption_profile),
+        absorption_reason: item.absorption_reason || undefined,
         is_custom: false,
         calories: getNumber(item.calories) || undefined,
         protein_grams: getNumber(item.protein_grams) || undefined,
@@ -475,6 +495,30 @@ export default function DoseForm({ open, onOpenChange }) {
                           placeholder="Serving"
                           className="mt-1 w-full bg-transparent text-xs text-white/45 outline-none placeholder:text-white/25"
                         />
+                        <div className="mt-3 grid grid-cols-4 gap-1 rounded-xl bg-black/10 p-1">
+                          {[
+                            ["fast", "Fast"],
+                            ["medium", "Mixed"],
+                            ["slow", "Slow"],
+                            ["delayed", "Delayed"],
+                          ].map(([profile, label]) => (
+                            <button
+                              key={profile}
+                              type="button"
+                              onClick={() => updateCarbItem(item.id, { absorption_profile: profile })}
+                              className={`rounded-lg px-1.5 py-2 text-[11px] font-semibold transition ${
+                                normalizeAbsorptionProfile(item.absorption_profile) === profile
+                                  ? "bg-amber-500/20 text-amber-200"
+                                  : "text-white/35 hover:bg-white/5 hover:text-white/70"
+                              }`}
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                        {item.absorption_reason && (
+                          <p className="mt-2 px-1 text-xs leading-relaxed text-white/40">{item.absorption_reason}</p>
+                        )}
                         <div className="mt-3 grid grid-cols-2 gap-2">
                           {[
                             ["carbs_grams", "Carbs g"],
