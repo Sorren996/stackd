@@ -42,7 +42,7 @@ export default function ActiveAlerts({ doses = [] }) {
 
   return (
     <section className="active-alerts w-full space-y-3 overflow-hidden">
-      <h2 className="active-alerts-title px-1 text-sm font-bold uppercase tracking-[0.18em] text-white/35">
+      <h2 className="active-alerts-title px-1 text-[10px] font-bold uppercase tracking-[0.18em] text-white/35">
         Active Alerts
       </h2>
 
