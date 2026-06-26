@@ -19,6 +19,8 @@ function getGlucoseColor(mgdl) {
 
 const GLUCOSE_MIN = 40;
 const GLUCOSE_MAX = 400;
+const CARB_VISUAL_MAX_GRAMS = 120;
+const CARB_VISUAL_MAX_HEIGHT = 44;
 const CARB_PROFILE_COLORS = {
   fast: "#fb923c",
   medium: "#f59e0b",
@@ -310,8 +312,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   }, [filteredGlucoseReadings]);
 
   const maxDoseUnits = useMemo(() => Math.max(...filteredDoses.map((d) => d.units), 1), [filteredDoses]);
-  const maxCarbGrams = useMemo(() => Math.max(...filteredCarbEntries.filter((e) => !e.is_custom).map((e) => e.carbs), 1), [filteredCarbEntries]);
-
   const chartData = useMemo(() => {
     if (!doses.length && !glucoseReadings.length && !carbEntries.length) return [];
     const step = 3 * 60000;
@@ -348,7 +348,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           const hi = Math.min(lo + 1, curve.length - 1);
           const ratio = hi === lo ? 0 : (t - curve[lo].time) / (curve[hi].time - curve[lo].time);
           const activity = curve[lo].activity + ratio * (curve[hi].activity - curve[lo].activity);
-          point[key] = activity * (entry.carbs / maxCarbGrams) * 50;
+          const carbVisualRatio = Math.min(entry.carbs, CARB_VISUAL_MAX_GRAMS) / CARB_VISUAL_MAX_GRAMS;
+          point[key] = activity * carbVisualRatio * CARB_VISUAL_MAX_HEIGHT;
           point[`${key}_carbs`] = entry.carbs;
           point[`${key}_food`] = entry.food_name;
           point[`${key}_pace`] = CARB_PROFILE_LABELS[entry.absorption_profile] || "Mixed";
@@ -358,7 +359,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       result.push(point);
     }
     return result;
-  }, [doses, glucoseReadings, carbEntries, filters, domainStart, domainEnd, allCurvesMeta, allCarbCurvesMeta, glucoseMap, maxCarbGrams]);
+  }, [doses, glucoseReadings, carbEntries, filters, domainStart, domainEnd, allCurvesMeta, allCarbCurvesMeta, glucoseMap]);
 
   const doseKeys = useMemo(() =>
   filteredDoses.map((dose) => ({
@@ -490,7 +491,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             
 
             <YAxis yAxisId="insulin" domain={[0, 75]} hide />
-            <YAxis yAxisId="carbs" domain={[0, 55]} hide />
+            <YAxis yAxisId="carbs" domain={[0, CARB_VISUAL_MAX_HEIGHT]} hide />
             <YAxis yAxisId="glucose" domain={[GLUCOSE_MIN, GLUCOSE_MAX]} hide />
 
             <Tooltip active={isInteracting} content={<CustomTooltip />} cursor={{ stroke: "rgba(255,255,255,0.1)", strokeWidth: 1 }} />
@@ -545,7 +546,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               fill={`url(#grad_${k.key})`}
               dot={false}
               isAnimationActive={false}
-              opacity={0.85} />
+              opacity={0.72} />
 
             )}
 
