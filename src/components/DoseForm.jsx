@@ -79,27 +79,6 @@ export default function Dashboard() {
     return age < 24 * 60 * 60 * 1000;
   });
 
-  const graphCarbs = recentCarbs.map((entry) => {
-    const carbs = Number(
-      entry.carbs ??
-        entry.carbs_grams ??
-        entry.total_carbs ??
-        entry.total_carbs_grams ??
-        entry.carbohydrates ??
-        0,
-    );
-
-    return {
-      ...entry,
-      carbs,
-      carbs_grams: carbs,
-      total_carbs: carbs,
-      total_carbs_grams: carbs,
-      carbohydrates: carbs,
-      consumed_at: entry.consumed_at || entry.recorded_at || entry.created_date || entry.created_at,
-    };
-  });
-
   const latestGlucose = glucoseReadings[0] || null;
 
   const activeRapidCount = useMemo(() => {
@@ -125,14 +104,27 @@ export default function Dashboard() {
       feedType: "glucose",
       timestamp: new Date(reading.recorded_at).getTime(),
     }));
-    const carbLogs = graphCarbs.map((entry) => ({
+    const carbLogs = recentCarbs.map((entry) => ({
       ...entry,
       feedType: "carbs",
       timestamp: new Date(entry.consumed_at).getTime(),
     }));
 
     return [...doseLogs, ...glucoseLogs, ...carbLogs].sort((a, b) => b.timestamp - a.timestamp);
-  }, [recentDoses, recentGlucose, graphCarbs]);
+  }, [recentDoses, recentGlucose, recentCarbs]);
+
+  const normalizedCarbsForGraph = recentCarbs.map((entry) => {
+    const carbs = Number(entry.carbs ?? entry.carbs_grams ?? entry.total_carbs ?? entry.total_carbs_grams ?? entry.carbohydrates ?? 0);
+
+    return {
+      ...entry,
+      carbs,
+      carbs_grams: carbs,
+      total_carbs: carbs,
+      total_carbs_grams: carbs,
+      carbohydrates: carbs,
+    };
+  });
 
   if (isLoading) {
     return (
@@ -162,7 +154,7 @@ export default function Dashboard() {
               doses={recentDoses}
               latestGlucose={latestGlucose}
               glucoseReadings={glucoseReadings}
-              carbEntries={graphCarbs}
+              carbEntries={recentCarbs}
             />
           </div>
 
@@ -183,7 +175,7 @@ export default function Dashboard() {
               Glucose Trend
             </p>
             <div className="relative left-1/2 w-screen max-w-none -translate-x-1/2 overflow-hidden">
-              <ActivityGraph doses={recentDoses} glucoseReadings={recentGlucose} carbEntries={graphCarbs} />
+              <ActivityGraph doses={recentDoses} glucoseReadings={recentGlucose} carbEntries={normalizedCarbsForGraph} />
             </div>
           </div>
 
