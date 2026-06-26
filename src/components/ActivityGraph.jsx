@@ -20,6 +20,35 @@ function getGlucoseColor(mgdl) {
 const GLUCOSE_MIN = 40;
 const GLUCOSE_MAX = 400;
 
+function getCarbGrams(entry) {
+  const value =
+    entry.carbs ??
+    entry.carbs_grams ??
+    entry.total_carbs ??
+    entry.total_carbs_grams ??
+    entry.carbohydrates ??
+    entry.amount ??
+    entry.grams ??
+    0;
+
+  const carbs = Number(value);
+  return Number.isFinite(carbs) && carbs > 0 ? carbs : 0;
+}
+
+function normalizeCarbEntry(entry) {
+  const carbs = getCarbGrams(entry);
+  const defaultProfile = Object.keys(PROFILE_COLORS)[0] || "medium";
+
+  return {
+    ...entry,
+    food_name: entry.food_name || entry.name || "Food",
+    carbs,
+    consumed_at: entry.consumed_at || entry.recorded_at || entry.created_date || entry.created_at,
+    absorption_profile: entry.absorption_profile || defaultProfile,
+    is_custom: entry.is_custom === true,
+  };
+}
+
 function CustomTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   const insulinEntries = payload.filter((p) => p.dataKey?.startsWith("dose_") && !p.dataKey.includes("_actual") && !p.dataKey.includes("_total") && p.value != null && p.value > 0);
@@ -165,7 +194,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
   // Only include doses/carbs if their filter is on
   const filteredDoses = filters.insulin ? doses : [];
-  const filteredCarbEntries = filters.carbs ? carbEntries : [];
+  const filteredCarbEntries = filters.carbs ? carbEntries.map(normalizeCarbEntry).filter((entry) => entry.carbs > 0 && entry.consumed_at) : [];
   const filteredGlucoseReadings = filters.glucose ? glucoseReadings : [];
 
   const allCurvesMeta = useMemo(() =>
