@@ -154,7 +154,6 @@ Rules:
 export default function DoseForm({ open, onOpenChange }) {
   const [tab, setTab] = useState("insulin");
   const [isLightMode, setIsLightMode] = useState(readLightMode);
-  const [isDesktopDialog, setIsDesktopDialog] = useState(false);
   const [insulinRows, setInsulinRows] = useState(() => [createInsulinRow()]);
   const [insulinNotes, setInsulinNotes] = useState("");
   const [insulinTime, setInsulinTime] = useState(() => new Date().toTimeString().slice(0, 5));
@@ -177,15 +176,6 @@ export default function DoseForm({ open, onOpenChange }) {
       window.removeEventListener("app-theme-changed", refreshTheme);
       window.removeEventListener("storage", refreshTheme);
     };
-  }, []);
-
-  useEffect(() => {
-    const media = window.matchMedia("(min-width: 640px)");
-    const updateDialogMode = () => setIsDesktopDialog(media.matches);
-
-    updateDialogMode();
-    media.addEventListener("change", updateDialogMode);
-    return () => media.removeEventListener("change", updateDialogMode);
   }, []);
 
   const estimateCarbs = useMutation({
@@ -375,7 +365,7 @@ export default function DoseForm({ open, onOpenChange }) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogPortal forceMount>
+      <DialogPortal>
         {isLightMode && (
           <style>{`
             .dose-form-light [class~="text-white"] { color: #29433a !important; }
@@ -394,42 +384,73 @@ export default function DoseForm({ open, onOpenChange }) {
             .dose-form-light [class*="text-amber-"] { color: #a96821 !important; }
           `}</style>
         )}
-        <DialogPrimitive.Overlay forceMount asChild>
-          <motion.div
-            className="fixed inset-0 z-50 backdrop-blur-sm"
-            initial={false}
-            animate={{
-              opacity: open ? 1 : 0,
-              pointerEvents: open ? "auto" : "none",
-            }}
-            transition={{ duration: open ? 0.18 : 0.16, ease: "easeOut" }}
-            style={{ background: isLightMode ? "rgba(30, 63, 53, 0.18)" : "rgba(0, 0, 0, 0.75)" }}
-          />
-        </DialogPrimitive.Overlay>
+        <style>{`
+          @keyframes dose-form-overlay-in {
+            from { opacity: 0; }
+            to { opacity: 1; }
+          }
+
+          @keyframes dose-form-overlay-out {
+            from { opacity: 1; }
+            to { opacity: 0; }
+          }
+
+          @keyframes dose-form-sheet-in {
+            0% { opacity: 0; transform: translateY(105%) scale(0.985); }
+            68% { opacity: 1; transform: translateY(-1.8%) scale(1); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+          }
+
+          @keyframes dose-form-sheet-out {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(105%) scale(0.985); }
+          }
+
+          @keyframes dose-form-modal-in {
+            0% { opacity: 0; transform: translate(-50%, -38%) scale(0.985); }
+            68% { opacity: 1; transform: translate(-50%, -51.5%) scale(1); }
+            100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+          }
+
+          @keyframes dose-form-modal-out {
+            0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -38%) scale(0.985); }
+          }
+
+          .dose-form-overlay[data-state="open"] {
+            animation: dose-form-overlay-in 180ms ease-out;
+          }
+
+          .dose-form-overlay[data-state="closed"] {
+            animation: dose-form-overlay-out 160ms ease-out;
+          }
+
+          .dose-form-panel[data-state="open"] {
+            animation: dose-form-sheet-in 420ms cubic-bezier(0.22, 1.28, 0.36, 1);
+          }
+
+          .dose-form-panel[data-state="closed"] {
+            animation: dose-form-sheet-out 260ms cubic-bezier(0.32, 0, 0.67, 0);
+          }
+
+          @media (min-width: 640px) {
+            .dose-form-panel[data-state="open"] {
+              animation-name: dose-form-modal-in;
+            }
+
+            .dose-form-panel[data-state="closed"] {
+              animation-name: dose-form-modal-out;
+            }
+          }
+        `}</style>
+        <DialogPrimitive.Overlay
+          className="dose-form-overlay fixed inset-0 z-50 backdrop-blur-sm"
+          style={{ background: isLightMode ? "rgba(30, 63, 53, 0.18)" : "rgba(0, 0, 0, 0.75)" }}
+        />
         <DialogPrimitive.Content
-          forceMount
-          asChild
-        >
-          <motion.div
-          className={`fixed bottom-0 left-0 right-0 z-50 flex h-[92vh] max-h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl border border-white/5 shadow-2xl sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:h-[min(720px,92vh)] sm:w-full sm:max-w-md sm:rounded-3xl ${
+          className={`dose-form-panel fixed bottom-0 left-0 right-0 z-50 flex h-[92vh] max-h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl border border-white/5 shadow-2xl sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:h-[min(720px,92vh)] sm:w-full sm:max-w-md sm:rounded-3xl ${
             isLightMode ? "dose-form-light" : ""
           }`}
-          initial={false}
-          animate={
-            open
-              ? isDesktopDialog
-                ? { x: "-50%", y: "-50%", opacity: 1, scale: 1, pointerEvents: "auto" }
-                : { x: 0, y: 0, opacity: 1, scale: 1, pointerEvents: "auto" }
-              : isDesktopDialog
-                ? { x: "-50%", y: "-38%", opacity: 0, scale: 0.985, pointerEvents: "none" }
-                : { x: 0, y: "105%", opacity: 0, scale: 0.985, pointerEvents: "none" }
-          }
-          transition={{
-            type: "spring",
-            stiffness: open ? 320 : 360,
-            damping: open ? 32 : 38,
-            mass: 0.9,
-          }}
           style={{
             background: isLightMode
               ? "linear-gradient(145deg, rgba(255,255,255,0.98), rgba(236,246,242,0.96))"
@@ -807,7 +828,6 @@ export default function DoseForm({ open, onOpenChange }) {
           )}
             </motion.div>
           </AnimatePresence>
-          </motion.div>
           </motion.div>
         </DialogPrimitive.Content>
       </DialogPortal>
