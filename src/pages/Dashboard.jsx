@@ -11,6 +11,7 @@ import CarbCard from "../components/CarbCard";
 import { getDoseStatus, INSULIN_PROFILES } from "@/lib/insulinPharmacology";
 import { Activity, Plus, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
+import { formatDistanceToNow } from "date-fns";
 
 export default function Dashboard() {
   const queryClient = useQueryClient();
@@ -121,7 +122,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="dashboard-page w-full max-w-full min-w-0 space-y-0 overflow-x-hidden">
+    <div className="dashboard-page w-full max-w-full min-w-0 space-y-0 overflow-visible">
       <DoseForm open={doseFormOpen} onOpenChange={setDoseFormOpen} />
 
       {recentDoses.length === 0 && recentGlucose.length === 0 && recentCarbs.length === 0 ? (
@@ -156,11 +157,11 @@ export default function Dashboard() {
             </div>
           )}
 
-          <div className="mb-2 w-full max-w-full min-w-0 overflow-x-hidden">
+          <div className="mb-2 w-full max-w-full min-w-0 overflow-visible">
             <p className="mb-2 px-0 text-[10px] font-bold uppercase tracking-[0.18em] text-white/25">
               Glucose Trend
             </p>
-            <div className="-mx-4 w-[calc(100%+2rem)] max-w-none min-w-0 overflow-hidden sm:mx-0 sm:w-full sm:max-w-full">
+            <div className="relative left-1/2 w-screen max-w-none -translate-x-1/2 overflow-hidden">
               <ActivityGraph doses={recentDoses} glucoseReadings={recentGlucose} carbEntries={recentCarbs} />
             </div>
           </div>
