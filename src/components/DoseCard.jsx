@@ -52,7 +52,7 @@ export default function DoseCard({ dose, onDelete, onEdit }) {
   <div
     className="w-7 h-7 rounded-full flex items-center justify-center"
     style={{
-      backgroundColor: `${color}`,
+      backgroundColor: `${color}20`,
       borderColor: `${color}`,
       borderWidth: 1,
       borderStyle: "solid",
