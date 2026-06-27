@@ -62,7 +62,7 @@ export default function ActiveAlerts({ doses = [] }) {
 
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: profile?.color || "#35a879" }} />
+                  <span className="h-2 w-2 shrink-0 rounded-full bg-transparent" style={{ backgroundColor: profile?.color || "#35a879" }} />
                   <p className="truncate text-sm font-semibold text-white">
                     {dose.insulin_type} - {dose.units}u
                   </p>
