@@ -1,17 +1,15 @@
-import { INSULIN_PROFILES, getDoseStatus } from "@/lib/insulinPharmacology";
-import { formatDistanceToNow, format } from "date-fns";
-import { Trash2, Syringe } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { motion } from "framer-motion";
+export default function DoseCard({ dose, onDelete, onEdit }) {
+  if (!dose) return null;
 
-export default function DoseCard({ dose, onDelete }) {
-  const profile = INSULIN_PROFILES[dose.insulin_type];
+  const insulinType = dose.insulin_type || "";
+  const profile = INSULIN_PROFILES[insulinType];
   const status = getDoseStatus(dose);
   const color = profile?.color || "#888888";
   const isExpired = status.phase === "expired";
-  const shortName = dose.insulin_type.split(" ")[0];
-  const timeAgo = formatDistanceToNow(new Date(dose.administered_at), { addSuffix: true });
+  const shortName = insulinType.split(" ")[0] || "Insulin";
+  const timeAgo = formatDistanceToNow(new Date(dose.administered_at), {
+    addSuffix: true,
+  });
 
   const statusText = isExpired
     ? "Activity cleared"
