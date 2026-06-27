@@ -30,6 +30,8 @@ const phaseConfig = {
 };
 
 export default function ActiveAlerts({ doses = [] }) {
+    const color = profile?.color || "#888888";
+
   const activeDoses = doses
     .map((dose) => ({ dose, status: getDoseStatus(dose) }))
     .filter(({ status }) => status.phase !== "expired")
