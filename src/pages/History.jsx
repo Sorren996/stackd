@@ -45,7 +45,7 @@ function CollapsibleDateGroup({ label, count, isOpen, onToggle, children }) {
         transition={{ type: "spring", stiffness: 220, damping: 26 }}
         className="overflow-hidden"
       >
-        <div className="border-t border-white/5 divide-y divide-white/5">
+        <div className="border-t border-white/5 divide-y divide-white/5 p-4">
           {children}
         </div>
       </motion.div>
