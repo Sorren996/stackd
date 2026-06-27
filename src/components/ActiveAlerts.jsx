@@ -53,7 +53,7 @@ export default function ActiveAlerts({ doses = [] }) {
           const profile = INSULIN_PROFILES[dose.insulin_type];
 
           return (
-            <div key={dose.id} className="active-alert-row flex items-center gap-3 rounded-xl p-3">
+            <div key={dose.id} className="active-alert-row transparent flex items-center gap-3 rounded-xl p-3">
               <div className={`flex h-8 w-8 shrink-0 items-center justify-center transparent rounded-lg  ${config.className}`}>
                 <Icon className="h-4 w-4" />
               </div>
