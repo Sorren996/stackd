@@ -23,7 +23,7 @@ function CollapsibleDateGroup({ label, count, isOpen, onToggle, children }) {
     >
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between px-4 py-3 space-y-7 hover:bg-white/[0.04] transition-colors"
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/[0.04] transition-colors"
       >
         <div className="flex items-center gap-3">
           <span className="text-sm font-semibold text-white/90">{label}</span>
