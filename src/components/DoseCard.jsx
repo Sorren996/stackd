@@ -51,7 +51,7 @@ export default function DoseCard({ dose, onDelete, onEdit }) {
 <div className="flex flex-col items-center pt-1 shrink-0">
   <div
     className="w-7 h-7 rounded-full flex items-center justify-center"
-   style={{ background: `${color}70`, border: `1px solid ${color}` }}>
+   style={{ background: `${color}500/20`, border: `1px solid ${color}` }}>
   
     <Syringe className="w-3.5 h-3.5" style={{ color }} />
   </div>
