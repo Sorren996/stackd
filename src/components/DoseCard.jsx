@@ -46,19 +46,27 @@ export default function DoseCard({ dose, onDelete, onEdit }) {
       }}
     >
 
-
+const color = profile?.color || "#35a879";
 
 <div className="flex flex-col items-center pt-1 shrink-0">
   <div
     className="w-7 h-7 rounded-full flex items-center justify-center"
-    style={{ background: `${color}20`, border: `1px solid ${color}50` }}
+    style={{
+      backgroundColor: `${color}20`,
+      borderColor: `${color}50`,
+      borderWidth: 1,
+      borderStyle: "solid",
+    }}
   >
     <Syringe className="w-3.5 h-3.5" style={{ color }} />
   </div>
 
   <div
     className="w-px flex-1 mt-2"
-    style={{ background: `${color}25`, minHeight: 12 }}
+    style={{
+      backgroundColor: `${color}25`,
+      minHeight: 12,
+    }}
   />
 </div>
 
