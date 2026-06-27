@@ -83,7 +83,16 @@ export default function DoseCard({ dose, onDelete, onEdit }) {
         )}
       </div>
 
-
+      <div className="mt-0.5 flex shrink-0 items-center gap-1">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={() => onEdit?.(dose)}
+          className="h-7 w-7 text-white/25 hover:bg-white/10 hover:text-white/80"
+        >
+        
+        </Button>
 
         <AlertDialog>
           <AlertDialogTrigger asChild>
