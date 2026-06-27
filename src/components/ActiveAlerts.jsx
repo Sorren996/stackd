@@ -47,7 +47,7 @@ export default function ActiveAlerts({ doses = [] }) {
         Active Alerts
       </h2>
 
-      <div className="space-y-2">
+      <div className="space-y-2 bg-transparent">
         {activeDoses.map(({ dose, status }) => {
           const config = phaseConfig[status.phase] || phaseConfig.expired;
           const Icon = config.icon;
