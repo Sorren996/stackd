@@ -4,27 +4,27 @@ import { Clock, TrendingUp, TrendingDown, CheckCircle2, Zap } from "lucide-react
 const phaseConfig = {
   waiting: {
     icon: Clock,
-    className: "border-amber-200 text-amber-600",
+    className: "border border-amber-200 text-amber-600",
     label: "Waiting",
   },
   rising: {
     icon: TrendingUp,
-    className: "border-blue-200 text-blue-600",
+    className: "border border-blue-200 text-blue-600",
     label: "Rising",
   },
   active: {
     icon: Zap,
-    className: "border-emerald-200 text-emerald-600",
+    className: "border border-emerald-200 text-emerald-600",
     label: "Active",
   },
   declining: {
     icon: TrendingDown,
-    className: "border-violet-200 text-violet-600",
+    className: "border border-violet-200 text-violet-600",
     label: "Declining",
   },
   expired: {
     icon: CheckCircle2,
-    className: "border-white/10 text-white/40",
+    className: "border border-white/10 text-white/40",
     label: "Complete",
   },
 };
