@@ -46,7 +46,7 @@ export default function DoseCard({ dose, onDelete, onEdit }) {
       }}
     >
 
-const color = profile?.color || "#35a879";
+
 
 <div className="flex flex-col items-center pt-1 shrink-0">
   <div
