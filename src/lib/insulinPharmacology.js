@@ -116,8 +116,8 @@ function getDosePeakMultiplier(units) {
   const onset = (profile.onsetMin + profile.onsetMax) / 2;
 const baseDuration = (profile.durationMin + profile.durationMax) / 2;
 const duration = baseDuration * getDoseDurationMultiplier(dose.units);  const hasPeak = profile.peakMin !== null;
-  const peak = hasPeak ? (profile.peakMin + profile.peakMax) / 2 : duration / 2;
-
+const basePeak = hasPeak ? (profile.peakMin + profile.peakMax) / 2 : duration / 2;
+const peak = hasPeak ? basePeak * getDosePeakMultiplier(dose.units) : duration / 2;
   const points = [];
   const totalMinutes = duration + 30; // add buffer
 
