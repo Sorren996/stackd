@@ -18,7 +18,7 @@ import { motion } from "framer-motion";
 export default function DoseCard({ dose, onDelete, onEdit }) {
   const profile = INSULIN_PROFILES[dose.insulin_type];
   const status = getDoseStatus(dose);
-  const color = profile?.color || "#888888";
+  const color = profile?.color || "#b3b3b3ff";
   const isExpired = status.phase === "expired";
   const shortName = dose.insulin_type.split(" ")[0];
   const timeAgo = formatDistanceToNow(new Date(dose.administered_at), {
