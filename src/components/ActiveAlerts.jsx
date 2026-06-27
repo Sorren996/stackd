@@ -9,7 +9,7 @@ const phaseConfig = {
   },
   rising: {
     icon: TrendingUp,
-    className: "border border-blue-200 bg-blue-20 text-blue-600",
+    className: "border border-blue-200 bg-blue-500/20 text-blue-600",
     label: "Rising",
   },
   active: {
