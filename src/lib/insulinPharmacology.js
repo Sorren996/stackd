@@ -10,7 +10,7 @@ export const INSULIN_PROFILES = {
     peakMax: 180,
     durationMin: 180,
     durationMax: 300,
-    color: "#284575ff", // blue
+    color: "#284575ff",
   },
   "Humalog (Lispro)": {
     category: "Rapid-Acting",
@@ -20,7 +20,7 @@ export const INSULIN_PROFILES = {
     peakMax: 150,
     durationMin: 180,
     durationMax: 390,
-    color: "#402976ff", // violet
+    color: "#402976ff",
   },
   "Apidra (Glulisine)": {
     category: "Rapid-Acting",
@@ -30,7 +30,7 @@ export const INSULIN_PROFILES = {
     peakMax: 90,
     durationMin: 180,
     durationMax: 300,
-    color: "#712049ff", // pink
+    color: "#712049ff",
   },
   "Regular (Novolin R / Humulin R)": {
     category: "Short-Acting",
@@ -40,7 +40,7 @@ export const INSULIN_PROFILES = {
     peakMax: 240,
     durationMin: 300,
     durationMax: 480,
-    color: "#b97807ff", // amber
+    color: "#b97807ff",
   },
   "NPH (Novolin N / Humulin N)": {
     category: "Intermediate-Acting",
@@ -50,17 +50,17 @@ export const INSULIN_PROFILES = {
     peakMax: 720,
     durationMin: 720,
     durationMax: 1080,
-    color: "#157152ff", // emerald
+    color: "#157152ff",
   },
   "Lantus (Glargine)": {
     category: "Long-Acting",
     onsetMin: 60,
     onsetMax: 120,
-    peakMin: null, // relatively peakless
+    peakMin: null,
     peakMax: null,
     durationMin: 1200,
     durationMax: 1440,
-    color: "#1f207fff", // indigo
+    color: "#1f207fff",
   },
   "Levemir (Detemir)": {
     category: "Long-Acting",
@@ -70,7 +70,7 @@ export const INSULIN_PROFILES = {
     peakMax: 480,
     durationMin: 720,
     durationMax: 1440,
-    color: "#166c62ff", // teal
+    color: "#166c62ff",
   },
   "Tresiba (Degludec)": {
     category: "Ultra-Long-Acting",
@@ -80,17 +80,11 @@ export const INSULIN_PROFILES = {
     peakMax: null,
     durationMin: 2520,
     durationMax: 2520,
-    color: "#045a82ff", // sky
+    color: "#045a82ff",
   },
 };
 
-// Generate an activity curve for a dose
-// Returns an array of { time (Date), activity (0-1) } points
-export function generateActivityCurve(dose, intervalMinutes = 5) {
-  const profile = INSULIN_PROFILES[dose.insulin_type];
-  if (!profile) return [];
-
-  function getDoseDurationMultiplier(units) {
+function getDoseDurationMultiplier(units) {
   const doseUnits = Number(units) || 0;
 
   if (doseUnits <= 5) return 0.75;
@@ -112,36 +106,57 @@ function getDosePeakMultiplier(units) {
   return 1.3;
 }
 
-  const startTime = new Date(dose.administered_at).getTime();
+function getDoseTiming(dose) {
+  const profile = INSULIN_PROFILES[dose.insulin_type];
+  if (!profile) return null;
+
   const onset = (profile.onsetMin + profile.onsetMax) / 2;
-const baseDuration = (profile.durationMin + profile.durationMax) / 2;
-const duration = baseDuration * getDoseDurationMultiplier(dose.units);  const hasPeak = profile.peakMin !== null;
-const basePeak = hasPeak ? (profile.peakMin + profile.peakMax) / 2 : duration / 2;
-const peak = hasPeak ? basePeak * getDosePeakMultiplier(dose.units) : duration / 2;
+
+  const baseDuration = (profile.durationMin + profile.durationMax) / 2;
+  const duration = baseDuration * getDoseDurationMultiplier(dose.units);
+
+  const hasPeak = profile.peakMin !== null && profile.peakMax !== null;
+  const basePeak = hasPeak ? (profile.peakMin + profile.peakMax) / 2 : null;
+  const peak = hasPeak ? basePeak * getDosePeakMultiplier(dose.units) : duration / 2;
+
+  return {
+    profile,
+    onset,
+    peak: Math.min(peak, duration * 0.85),
+    duration,
+    hasPeak,
+  };
+}
+
+// Generate an activity curve for a dose
+// Returns an array of { time, activity } points
+export function generateActivityCurve(dose, intervalMinutes = 5) {
+  const timing = getDoseTiming(dose);
+  if (!timing) return [];
+
+  const { onset, peak, duration, hasPeak } = timing;
+  const startTime = new Date(dose.administered_at).getTime();
+
   const points = [];
-  const totalMinutes = duration + 30; // add buffer
+  const totalMinutes = duration + 30;
 
   for (let m = 0; m <= totalMinutes; m += intervalMinutes) {
     const time = new Date(startTime + m * 60000);
     let activity = 0;
 
     if (m < onset) {
-      // Ramp up from 0 to small value
       activity = 0.05 * (m / onset);
     } else if (m < peak) {
-      // Rising phase: onset to peak
       const progress = (m - onset) / (peak - onset);
       activity = 0.05 + 0.95 * Math.sin((progress * Math.PI) / 2);
     } else if (m < duration) {
-      // Declining phase: peak to end
       if (hasPeak) {
         const progress = (m - peak) / (duration - peak);
         activity = Math.cos((progress * Math.PI) / 2);
       } else {
-        // Peakless (like Lantus/Tresiba) — flat then taper
         const flatEnd = duration * 0.75;
+
         if (m < flatEnd) {
-          activity = 0.85 + 0.15 * Math.random() * 0; // steady ~0.85
           activity = 0.85;
         } else {
           const progress = (m - flatEnd) / (duration - flatEnd);
@@ -150,7 +165,10 @@ const peak = hasPeak ? basePeak * getDosePeakMultiplier(dose.units) : duration /
       }
     }
 
-    points.push({ time: time.getTime(), activity: Math.round(Math.max(0, activity) * 100) / 100 });
+    points.push({
+      time: time.getTime(),
+      activity: Math.round(Math.max(0, activity) * 100) / 100,
+    });
   }
 
   return points;
@@ -158,40 +176,68 @@ const peak = hasPeak ? basePeak * getDosePeakMultiplier(dose.units) : duration /
 
 // Get the current status of a dose
 export function getDoseStatus(dose) {
-  const profile = INSULIN_PROFILES[dose.insulin_type];
-  if (!profile) return { phase: "unknown", message: "" };
+  const timing = getDoseTiming(dose);
+  if (!timing) return { phase: "unknown", message: "" };
+
+  const { onset, peak, duration, hasPeak } = timing;
 
   const now = Date.now();
   const start = new Date(dose.administered_at).getTime();
-  const elapsed = (now - start) / 60000; // minutes
+  const elapsed = (now - start) / 60000;
 
-  const onset = (profile.onsetMin + profile.onsetMax) / 2;
-  const hasPeak = profile.peakMin !== null;
-  const peak = hasPeak ? (profile.peakMin + profile.peakMax) / 2 : null;
-const baseDuration = (profile.durationMin + profile.durationMax) / 2;
-const duration = baseDuration * getDoseDurationMultiplier(dose.units);
   if (elapsed < 0) {
-    return { phase: "scheduled", message: "Scheduled", minutesUntil: Math.abs(elapsed) };
+    return {
+      phase: "scheduled",
+      message: "Scheduled",
+      minutesUntil: Math.abs(elapsed),
+    };
   }
+
   if (elapsed < onset) {
-    return { phase: "waiting", message: "Absorbing — not yet active", minutesUntil: onset - elapsed };
+    return {
+      phase: "waiting",
+      message: "Absorbing - not yet active",
+      minutesUntil: onset - elapsed,
+    };
   }
+
   if (hasPeak && elapsed < peak) {
-    return { phase: "rising", message: "Active — rising toward peak", minutesUntil: peak - elapsed };
+    return {
+      phase: "rising",
+      message: "Active - rising toward peak",
+      minutesUntil: peak - elapsed,
+    };
   }
+
   if (elapsed < duration) {
     if (hasPeak) {
-      return { phase: "declining", message: "Past peak — activity declining", minutesUntil: duration - elapsed };
+      return {
+        phase: "declining",
+        message: "Past peak - activity declining",
+        minutesUntil: duration - elapsed,
+      };
     }
-    return { phase: "active", message: "Active — steady level", minutesUntil: duration - elapsed };
+
+    return {
+      phase: "active",
+      message: "Active - steady level",
+      minutesUntil: duration - elapsed,
+    };
   }
-  return { phase: "expired", message: "No longer active" };
+
+  return {
+    phase: "expired",
+    message: "No longer active",
+  };
 }
 
 export function formatMinutes(mins) {
   const m = Math.round(mins);
+
   if (m < 60) return `${m}m`;
+
   const h = Math.floor(m / 60);
   const remainder = m % 60;
+
   return remainder > 0 ? `${h}h ${remainder}m` : `${h}h`;
 }
