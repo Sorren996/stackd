@@ -24,7 +24,7 @@ const phaseConfig = {
   },
   expired: {
     icon: CheckCircle2,
-    className: "border-white/10 bg-white/5 text-white/40",
+    className: "border-white/10 text-white/40",
     label: "Complete",
   },
 };
