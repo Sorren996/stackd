@@ -10,7 +10,7 @@ export const INSULIN_PROFILES = {
     peakMax: 180,
     durationMin: 180,
     durationMax: 300,
-    color: "#284575ff",
+    color: "#1f547f",
   },
   "Humalog (Lispro)": {
     category: "Rapid-Acting",
