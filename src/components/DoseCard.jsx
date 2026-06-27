@@ -24,7 +24,7 @@ export default function DoseCard({ dose, onDelete }) {
     <motion.div
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex items-start gap-3.5 px-4 py-3.5 rounded-2xl transition-all"
+      className="flex items-start gap-3.5 px-4 py-3.5 rounded-2xl transition-all p-4"
       style={{
         background: "rgba(255,255,255,0.03)",
         border: "1px solid rgba(255,255,255,0.06)",
