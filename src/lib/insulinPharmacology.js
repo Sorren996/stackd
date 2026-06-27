@@ -90,10 +90,32 @@ export function generateActivityCurve(dose, intervalMinutes = 5) {
   const profile = INSULIN_PROFILES[dose.insulin_type];
   if (!profile) return [];
 
+  function getDoseDurationMultiplier(units) {
+  const doseUnits = Number(units) || 0;
+
+  if (doseUnits <= 5) return 0.75;
+  if (doseUnits <= 15) return 1;
+  if (doseUnits <= 30) return 1.2;
+  if (doseUnits <= 50) return 1.4;
+
+  return 1.6;
+}
+
+function getDosePeakMultiplier(units) {
+  const doseUnits = Number(units) || 0;
+
+  if (doseUnits <= 5) return 0.9;
+  if (doseUnits <= 15) return 1;
+  if (doseUnits <= 30) return 1.1;
+  if (doseUnits <= 50) return 1.2;
+
+  return 1.3;
+}
+
   const startTime = new Date(dose.administered_at).getTime();
   const onset = (profile.onsetMin + profile.onsetMax) / 2;
-  const duration = (profile.durationMin + profile.durationMax) / 2;
-  const hasPeak = profile.peakMin !== null;
+const baseDuration = (profile.durationMin + profile.durationMax) / 2;
+const duration = baseDuration * getDoseDurationMultiplier(dose.units);  const hasPeak = profile.peakMin !== null;
   const peak = hasPeak ? (profile.peakMin + profile.peakMax) / 2 : duration / 2;
 
   const points = [];
@@ -146,8 +168,8 @@ export function getDoseStatus(dose) {
   const onset = (profile.onsetMin + profile.onsetMax) / 2;
   const hasPeak = profile.peakMin !== null;
   const peak = hasPeak ? (profile.peakMin + profile.peakMax) / 2 : null;
-  const duration = (profile.durationMin + profile.durationMax) / 2;
-
+const baseDuration = (profile.durationMin + profile.durationMax) / 2;
+const duration = baseDuration * getDoseDurationMultiplier(dose.units);
   if (elapsed < 0) {
     return { phase: "scheduled", message: "Scheduled", minutesUntil: Math.abs(elapsed) };
   }
