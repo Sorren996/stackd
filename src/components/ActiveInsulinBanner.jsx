@@ -318,9 +318,9 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
     : correctionOnlyActive
       ? "Correction active"
       : netActiveCarbs > 5
-        ? "More carbs active"
+        ? "High Carb Activity"
         : netActiveCarbs < -5
-          ? "More insulin active"
+          ? "High Insulin Activity"
           : "In balance";
 
   const netLabel = needsInsulinPlan
