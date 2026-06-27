@@ -41,8 +41,8 @@ export default function DoseCard({ dose, onDelete, onEdit }) {
       animate={{ opacity: 1, y: 0 }}
       className="flex items-start gap-3.5 rounded-2xl px-4 py-3.5 transition-all"
       style={{
-        background: "rgba(255,255,255,0.03)",
-        border: "1px solid rgba(255,255,255,0.06)",
+        background: "rgba(255, 255, 255, 0)",
+        border: "1px solid rgba(255, 255, 255, 0)",
       }}
     >
       <div className="flex shrink-0 flex-col items-center pt-1">
