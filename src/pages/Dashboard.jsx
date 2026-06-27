@@ -199,7 +199,7 @@ export default function Dashboard() {
       <button
         type="button"
         onClick={() => setDoseFormOpen(true)}
-        className="fixed bottom-24 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full border border-white/10 bg-white/10 shadow-lg backdrop-blur-xl transition active:scale-95"
+        className="fixed bottom-24 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full border  bg-white/10 shadow-lg backdrop-blur-xl transition active:scale-95"
       >
         <Plus className="h-7 w-7 text-white/80" />
       </button>
