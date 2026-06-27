@@ -73,7 +73,7 @@ export default function DoseCard({ dose, onDelete, onEdit }) {
 
         <p
           className="mt-1.5 text-xs font-medium"
-          style={{ color: isExpired ? "rgba(255,255,255,0.25)" : color }}
+          style={{ color: isExpired ? "rgba(255, 255, 255, 0)" : color }}
         >
           {statusText}
         </p>
