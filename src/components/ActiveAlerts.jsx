@@ -55,6 +55,8 @@ export default function ActiveAlerts({ doses = [] }) {
           return (
             <div key={dose.id} className="active-alert-row transparent flex items-center gap-3 rounded-xl p-3">
               <div className={`flex h-8 w-8 shrink-0 items-center justify-center bg-transparent rounded-lg  ${config.className}`}>
+                 style={{ background: `${color}70`, border: `1px solid ${color}` }}
+
                 <Icon className="h-4 w-4" />
               </div>
 
