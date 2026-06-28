@@ -57,7 +57,7 @@ function getCurveActivityAt(curve, time) {
 }
 
 function getTotalActiveUnits(doses, targetTime = Date.now(), selectUnits = (dose) => dose.units) {
-  return doses.reduce((sum, dose) => {
+  return (Array.isArray(doses) ? doses : []).reduce((sum, dose) => {
     const units = Number(selectUnits(dose));
     if (!Number.isFinite(units) || units <= 0) return sum;
 
@@ -76,7 +76,7 @@ function getTotalActiveCorrectionUnits(doses, targetTime = Date.now()) {
 }
 
 function getActiveCarbsAt(entries, targetTime) {
-  return entries.reduce(
+  return (Array.isArray(entries) ? entries : []).reduce(
     (sum, entry) => sum + getCarbAbsorptionAt(entry, targetTime).remainingGrams,
     0
   );
@@ -85,13 +85,15 @@ function getActiveCarbsAt(entries, targetTime) {
 function computeNetCarbTrajectory(doses, carbEntries, latestGlucose, insulinSettings) {
   const now = Date.now();
   let horizon = now;
+  const safeDoses = Array.isArray(doses) ? doses : [];
+  const safeCarbEntries = Array.isArray(carbEntries) ? carbEntries : [];
 
-  doses.forEach((dose) => {
+  safeDoses.forEach((dose) => {
     const curve = generateActivityCurve(dose, 3);
     if (curve.length) horizon = Math.max(horizon, curve[curve.length - 1].time);
   });
 
-  carbEntries.forEach((entry) => {
+  safeCarbEntries.forEach((entry) => {
     const curve = generateCarbCurve(entry);
     if (curve.length) horizon = Math.max(horizon, curve[curve.length - 1].time);
   });
@@ -108,9 +110,9 @@ function computeNetCarbTrajectory(doses, carbEntries, latestGlucose, insulinSett
   const points = [];
 
   for (let time = now; time <= horizon; time += SAMPLE_STEP_MS) {
-    const activeUnits = getTotalActiveUnits(doses, time);
-    const activeMealUnits = getTotalActiveMealUnits(doses, time);
-    const activeCarbs = getActiveCarbsAt(carbEntries, time);
+    const activeUnits = getTotalActiveUnits(safeDoses, time);
+    const activeMealUnits = getTotalActiveMealUnits(safeDoses, time);
+    const activeCarbs = getActiveCarbsAt(safeCarbEntries, time);
 
     points.push({
       time,
@@ -173,11 +175,6 @@ function TooltipPopover({ title, description, onClose, children }) {
             boxShadow: "0 18px 50px rgba(0,0,0,0.38), inset 0 1px 1px rgba(255,255,255,0.34), inset 0 -1px 1px rgba(255,255,255,0.08)",
           }}
         >
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-x-4 top-1 h-px"
-            style={{ background: "linear-gradient(to right, transparent, rgba(255,255,255,0.72), transparent)" }}
-          />
           <div
             aria-hidden="true"
             className="pointer-events-none absolute -inset-8 opacity-70"
@@ -256,11 +253,6 @@ function MetricCard({ label, value, sub, status, color, tooltipId, openTooltip, 
     >
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-3 top-1 h-px"
-        style={{ background: "linear-gradient(to right, transparent, rgba(255,255,255,0.5), transparent)" }}
-      />
-      <div
-        aria-hidden="true"
         className="pointer-events-none absolute -inset-6 opacity-60"
         style={{
           background: "radial-gradient(circle at 25% 0%, rgba(255,255,255,0.18), transparent 34%), radial-gradient(circle at 92% 118%, rgba(45,212,191,0.08), transparent 42%)",
@@ -302,9 +294,12 @@ const TREND_ICONS = {
   down: ArrowDown,
 };
 
-export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadings = [], carbEntries = [] }) {
+export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucoseReadings = [], carbEntries = [] }) {
   const [openTooltip, setOpenTooltip] = useState(null);
   const [insulinSettings, setInsulinSettings] = useState(readInsulinSettings);
+  const safeDoses = Array.isArray(doses) ? doses : [];
+  const safeGlucoseReadings = Array.isArray(glucoseReadings) ? glucoseReadings : [];
+  const safeCarbEntries = Array.isArray(carbEntries) ? carbEntries : [];
 
   useEffect(() => {
     const refreshSettings = () => setInsulinSettings(readInsulinSettings());
@@ -317,15 +312,15 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
     };
   }, []);
 
-  const activeUnits = useMemo(() => getTotalActiveUnits(doses), [doses]);
-  const activeMealUnits = useMemo(() => getTotalActiveMealUnits(doses), [doses]);
-  const activeCorrectionUnits = useMemo(() => getTotalActiveCorrectionUnits(doses), [doses]);
-  const activeCarbs = useMemo(() => getActiveCarbsNow(carbEntries), [carbEntries]);
-  const totalCarbsToday = useMemo(() => getTotalCarbsToday(carbEntries), [carbEntries]);
+  const activeUnits = useMemo(() => getTotalActiveUnits(safeDoses), [safeDoses]);
+  const activeMealUnits = useMemo(() => getTotalActiveMealUnits(safeDoses), [safeDoses]);
+  const activeCorrectionUnits = useMemo(() => getTotalActiveCorrectionUnits(safeDoses), [safeDoses]);
+  const activeCarbs = useMemo(() => getActiveCarbsNow(safeCarbEntries), [safeCarbEntries]);
+  const totalCarbsToday = useMemo(() => getTotalCarbsToday(safeCarbEntries), [safeCarbEntries]);
 
   const trajectory = useMemo(
-    () => computeNetCarbTrajectory(doses, carbEntries, latestGlucose, insulinSettings),
-    [doses, carbEntries, latestGlucose, insulinSettings]
+    () => computeNetCarbTrajectory(safeDoses, safeCarbEntries, latestGlucose, insulinSettings),
+    [safeDoses, safeCarbEntries, latestGlucose, insulinSettings]
   );
 
   const worstPoint = useMemo(() => {
@@ -375,20 +370,20 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
   const dailyAverage = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const readingsToday = glucoseReadings.filter((reading) => new Date(reading.recorded_at) >= today);
+    const readingsToday = safeGlucoseReadings.filter((reading) => new Date(reading.recorded_at) >= today);
     if (!readingsToday.length) return null;
     return Math.round(readingsToday.reduce((sum, reading) => sum + reading.value, 0) / readingsToday.length);
-  }, [glucoseReadings]);
+  }, [safeGlucoseReadings]);
 
   const trend = useMemo(() => {
-    if (glucoseReadings.length < 2) return { icon: "right", label: "Stable" };
-    const difference = glucoseReadings[0].value - glucoseReadings[1].value;
+    if (safeGlucoseReadings.length < 2) return { icon: "right", label: "Stable" };
+    const difference = safeGlucoseReadings[0].value - safeGlucoseReadings[1].value;
     if (difference >= 7) return { icon: "up", label: "Rising" };
     if (difference >= 4) return { icon: "up-right", label: "Slowly rising" };
     if (difference >= -3) return { icon: "right", label: "Stable" };
     if (difference >= -6) return { icon: "down-right", label: "Slowly falling" };
     return { icon: "down", label: "Falling" };
-  }, [glucoseReadings]);
+  }, [safeGlucoseReadings]);
 
   const glucoseValue = latestGlucose?.value;
   const glucoseColor = !glucoseValue
@@ -473,11 +468,6 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
               boxShadow: "0 10px 28px rgba(0,0,0,0.16), inset 0 1px 1px rgba(255,255,255,0.22), inset 0 -1px 1px rgba(255,255,255,0.06)",
             }}
           >
-            <span
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-x-3 top-1 h-px"
-              style={{ background: "linear-gradient(to right, transparent, rgba(255,255,255,0.42), transparent)" }}
-            />
             <span className="relative z-10 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: glucoseColor }} />
             <span className="relative z-10 text-sm font-semibold" style={{ color: glucoseColor }}>{trend.label}</span>
           </div>
@@ -492,11 +482,6 @@ export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadi
               boxShadow: "0 14px 36px rgba(0,0,0,0.18), inset 0 1px 1px rgba(255,255,255,0.24), inset 0 -1px 1px rgba(255,255,255,0.06)",
             }}
           >
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-x-4 top-1 h-px"
-              style={{ background: "linear-gradient(to right, transparent, rgba(255,255,255,0.5), transparent)" }}
-            />
             <div
               aria-hidden="true"
               className="pointer-events-none absolute -inset-6 opacity-50"
