@@ -87,7 +87,7 @@ export default function Dashboard() {
 
   const { data: glucoseReadings = [] } = useQuery({
     queryKey: ["glucose-readings", "graph"],
-    queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", 500),
+    queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", 300),
     enabled: loadGraphData,
     staleTime: GRAPH_DATA_MS,
     gcTime: 30 * 60 * 1000,
@@ -96,14 +96,14 @@ export default function Dashboard() {
 
   const { data: carbEntries = [], isLoading: loadingCarbs } = useQuery({
     queryKey: ["carb-entries"],
-    queryFn: () => base44.entities.CarbEntry.list("-consumed_at", 100),
+    queryFn: () => base44.entities.CarbEntry.list("-consumed_at", 50),
     staleTime: FRESH_DATA_MS,
     gcTime: GRAPH_DATA_MS,
   });
 
   const { data: graphCarbsSource = [] } = useQuery({
     queryKey: ["carb-entries", "graph"],
-    queryFn: () => base44.entities.CarbEntry.list("-consumed_at", 100),
+    queryFn: () => base44.entities.CarbEntry.list("-consumed_at", 50),
     enabled: loadGraphData,
     staleTime: GRAPH_DATA_MS,
     gcTime: 30 * 60 * 1000,
@@ -112,7 +112,7 @@ export default function Dashboard() {
 
   const { data: graphDosesSource = [] } = useQuery({
     queryKey: ["insulin-doses", "graph"],
-    queryFn: () => base44.entities.InsulinDose.list("-administered_at", 1000),
+    queryFn: () => base44.entities.InsulinDose.list("-administered_at", 100),
     enabled: loadGraphData,
     staleTime: GRAPH_DATA_MS,
     gcTime: 30 * 60 * 1000,
