@@ -258,11 +258,6 @@ export default function Layout() {
         >
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute inset-x-3 top-1 h-px"
-            style={{ background: "linear-gradient(to right, transparent, rgba(255,255,255,0.72), transparent)" }}
-          />
-          <div
-            aria-hidden="true"
             className="pointer-events-none absolute -inset-8 opacity-70"
             style={{
               background: isLightMode
@@ -295,15 +290,6 @@ export default function Layout() {
                         ? "0 8px 22px rgba(31,70,59,0.12), inset 0 1px 1px rgba(255,255,255,0.95), inset 0 -1px 1px rgba(32,51,45,0.06)"
                         : "0 10px 24px rgba(0,0,0,0.22), inset 0 1px 1px rgba(255,255,255,0.38), inset 0 -1px 1px rgba(255,255,255,0.1)",
                     }}
-                    transition={{ type: "spring", stiffness: 460, damping: 34, mass: 0.8 }}
-                  />
-                )}
-                {isActive && (
-                  <motion.div
-                    aria-hidden="true"
-                    layoutId="active-nav-glint"
-                    className="absolute left-3 right-3 top-1 h-px rounded-full"
-                    style={{ background: "linear-gradient(to right, transparent, rgba(255,255,255,0.8), transparent)" }}
                     transition={{ type: "spring", stiffness: 460, damping: 34, mass: 0.8 }}
                   />
                 )}
