@@ -13,6 +13,7 @@ const VISIBLE_HOURS = 6;
 const CHART_HEIGHT = 260;
 const CHART_MARGIN_TOP = 70;
 const CHART_MARGIN_BOTTOM = 0;
+const X_AXIS_HEIGHT = 30;
 const GLUCOSE_MIN = 40;
 const GLUCOSE_MAX = 250;
 const CARB_VISUAL_MAX_GRAMS = 120;
@@ -197,6 +198,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const [filters, setFilters] = useState({ glucose: true, insulin: true, carbs: true });
   const [centerGlucose, setCenterGlucose] = useState(null);
   const scrollRef = useRef(null);
+  const centerMarkerRef = useRef(null);
   const containerRef = useRef(null);
   const [containerWidth, setContainerWidth] = useState(600);
 
@@ -278,6 +280,14 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     return map;
   }, [filteredGlucoseReadings]);
 
+  const glucoseLinePoints = useMemo(() =>
+  Object.entries(glucoseMap).
+  map(([time, value]) => ({ time: Number(time), value })).
+  filter((point) => Number.isFinite(point.time) && Number.isFinite(point.value)).
+  sort((a, b) => a.time - b.time),
+  [glucoseMap]
+  );
+
   const maxDoseUnits = useMemo(() => Math.max(...filteredDoses.map((d) => d.units), 1), [filteredDoses]);
   const chartData = useMemo(() => {
     if (!doses.length && !glucoseReadings.length && !carbEntries.length) return [];
@@ -357,31 +367,48 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const chartWidth = Math.max(containerWidth, Math.round(totalMs / 60000 * pxPerMin));
   const latestGlucoseX = (latestGlucoseBucket - domainStart) / totalMs * chartWidth;
   const maxScrollLeft = Math.max(0, Math.min(chartWidth - containerWidth, latestGlucoseX - containerWidth / 2));
-  const plotHeight = CHART_HEIGHT - CHART_MARGIN_TOP - CHART_MARGIN_BOTTOM;
+  const plotHeight = CHART_HEIGHT - CHART_MARGIN_TOP - CHART_MARGIN_BOTTOM - X_AXIS_HEIGHT;
   const centerGlucoseClamped = centerGlucose ? Math.min(Math.max(centerGlucose.value, GLUCOSE_MIN), GLUCOSE_MAX) : null;
   const centerMarkerY = centerGlucoseClamped == null ?
   null :
   CHART_MARGIN_TOP + (GLUCOSE_MAX - centerGlucoseClamped) / (GLUCOSE_MAX - GLUCOSE_MIN) * plotHeight;
   const centerMarkerOpacity = centerGlucose?.value > GLUCOSE_MAX ? 0 : 1;
 
+  const getGlucoseY = (value) => {
+    const clamped = Math.min(Math.max(value, GLUCOSE_MIN), GLUCOSE_MAX);
+    return CHART_MARGIN_TOP + (GLUCOSE_MAX - clamped) / (GLUCOSE_MAX - GLUCOSE_MIN) * plotHeight;
+  };
+
+  const syncCenterMarker = (glucose) => {
+    if (!centerMarkerRef.current) return;
+
+    if (!glucose) {
+      centerMarkerRef.current.style.opacity = "0";
+      return;
+    }
+
+    centerMarkerRef.current.style.top = `${getGlucoseY(glucose.value)}px`;
+    centerMarkerRef.current.style.opacity = glucose.value > GLUCOSE_MAX ? "0" : "1";
+  };
+
   const getCenterTimeForScroll = (scrollLeft) =>
   domainStart + (scrollLeft + containerWidth / 2) / chartWidth * totalMs;
 
   const getGlucoseAt = (time) => {
-    if (!sortedGlucoseReadings.length) return null;
+    if (!glucoseLinePoints.length) return null;
 
-    if (time <= sortedGlucoseReadings[0].time) {
-      return { value: sortedGlucoseReadings[0].value, time, sourceTime: sortedGlucoseReadings[0].time };
+    if (time <= glucoseLinePoints[0].time) {
+      return { value: glucoseLinePoints[0].value, time, sourceTime: glucoseLinePoints[0].time };
     }
 
-    const lastReading = sortedGlucoseReadings[sortedGlucoseReadings.length - 1];
+    const lastReading = glucoseLinePoints[glucoseLinePoints.length - 1];
     if (time >= lastReading.time) {
       return { value: lastReading.value, time, sourceTime: lastReading.time };
     }
 
-    for (let i = 1; i < sortedGlucoseReadings.length; i++) {
-      const previous = sortedGlucoseReadings[i - 1];
-      const next = sortedGlucoseReadings[i];
+    for (let i = 1; i < glucoseLinePoints.length; i++) {
+      const previous = glucoseLinePoints[i - 1];
+      const next = glucoseLinePoints[i];
       if (time > next.time) continue;
 
       const span = next.time - previous.time;
@@ -398,18 +425,21 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const updateCenterGlucose = (scrollLeft) => {
     if (!filters.glucose) {
       setCenterGlucose(null);
+      syncCenterMarker(null);
       return;
     }
 
     const centerTime = getCenterTimeForScroll(scrollLeft);
-    setCenterGlucose(getGlucoseAt(centerTime));
+    const glucose = getGlucoseAt(centerTime);
+    syncCenterMarker(glucose);
+    setCenterGlucose(glucose);
   };
 
   useEffect(() => {
     if (!scrollRef.current) return;
     scrollRef.current.scrollLeft = maxScrollLeft;
     updateCenterGlucose(maxScrollLeft);
-  }, [maxScrollLeft, latestGlucoseBucket, filters.glucose, sortedGlucoseReadings.length]);
+  }, [maxScrollLeft, latestGlucoseBucket, filters.glucose, glucoseLinePoints.length]);
 
   if (!doses.length && !glucoseReadings.length && !carbEntries.length) return null;
 
@@ -464,7 +494,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       }
       {centerMarkerY != null &&
       <div
-        className="pointer-events-none absolute left-1/2 z-10 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white transition-opacity"
+        ref={centerMarkerRef}
+        className="pointer-events-none absolute left-1/2 z-10 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white"
         style={{
           top: centerMarkerY,
           opacity: centerMarkerOpacity,
@@ -479,6 +510,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           const el = event.currentTarget;
           if (el.scrollLeft > maxScrollLeft) {
             el.scrollLeft = maxScrollLeft;
+            updateCenterGlucose(maxScrollLeft);
             return;
           }
           updateCenterGlucose(el.scrollLeft);
@@ -517,7 +549,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                 x1="0"
                 y1={CHART_MARGIN_TOP}
                 x2="0"
-                y2={CHART_HEIGHT - CHART_MARGIN_BOTTOM}>
+                y2={CHART_HEIGHT - CHART_MARGIN_BOTTOM - X_AXIS_HEIGHT}>
                 <stop offset="0%" stopColor="rgba(255,255,255,0.72)" stopOpacity={0} />
                 <stop offset="10%" stopColor="rgba(255,255,255,0.72)" stopOpacity={0.18} />
                 <stop offset="24%" stopColor="rgba(255,255,255,0.72)" stopOpacity={0.72} />
@@ -533,6 +565,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               tick={{ fontSize: 10, fill: "rgba(255,255,255,0.25)", textAnchor: "middle" }}
               axisLine={false}
               tickLine={false}
+              height={X_AXIS_HEIGHT}
               minTickGap={42}
               tickCount={tickCount} />
             
@@ -602,7 +635,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             {filters.glucose && filteredGlucoseReadings.length > 0 &&
             <Line
               yAxisId="glucose"
-              type="monotoneX"
+              type="linear"
               dataKey="glucose"
               name="Glucose"
               stroke="url(#glucose_line_grad)"
