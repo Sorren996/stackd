@@ -3,7 +3,7 @@ import { Area, XAxis, YAxis, ReferenceLine, Line, ComposedChart } from "recharts
 import { generateActivityCurve, INSULIN_PROFILES } from "@/lib/insulinPharmacology";
 import { generateCarbCurve, PROFILE_COLORS } from "@/lib/carbAbsorption";
 import { format } from "date-fns";
-import { SlidersHorizontal, Check } from "lucide-react";
+import { LocateFixed, SlidersHorizontal, Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const STEP_MS = 3 * 60 * 1000;
@@ -200,6 +200,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const centerMarkerRef = useRef(null);
   const tooltipValueRef = useRef(null);
   const tooltipTimeRef = useRef(null);
+  const tooltipDateRef = useRef(null);
   const scrollFrameRef = useRef(null);
   const pendingScrollLeftRef = useRef(0);
   const containerRef = useRef(null);
@@ -443,6 +444,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     const marker = centerMarkerRef.current;
     const valueEl = tooltipValueRef.current;
     const timeEl = tooltipTimeRef.current;
+    const dateEl = tooltipDateRef.current;
 
     if (!filters.glucose || !glucoseLinePoints.length) {
       if (marker) marker.style.opacity = "0";
@@ -463,6 +465,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
     if (valueEl) valueEl.textContent = formatGlucoseDisplay(glucose.value);
     if (timeEl) timeEl.textContent = format(new Date(glucose.time), "h:mm a");
+    if (dateEl) dateEl.textContent = format(new Date(glucose.time), "EEEE, MMM d");
   };
 
   const scheduleCenterGlucoseUpdate = (scrollLeft) => {
@@ -473,6 +476,13 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       scrollFrameRef.current = null;
       drawCenterGlucose(pendingScrollLeftRef.current);
     });
+  };
+
+  const scrollToLatestGlucose = () => {
+    if (!scrollRef.current) return;
+
+    scrollRef.current.scrollTo({ left: maxScrollLeft, behavior: "smooth" });
+    scheduleCenterGlucoseUpdate(maxScrollLeft);
   };
 
   useEffect(() => {
@@ -534,8 +544,16 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             <span ref={tooltipValueRef}>{formatGlucoseDisplay(glucoseLinePoints[glucoseLinePoints.length - 1].value)}</span> <span className="text-[10px] font-medium text-sky-100/60">mg/dL</span>
           </div>
           <div ref={tooltipTimeRef} className="mt-0.5 text-[10px] font-semibold text-white/45">{format(new Date(glucoseLinePoints[glucoseLinePoints.length - 1].time), "h:mm a")}</div>
+          <div ref={tooltipDateRef} className="mt-0.5 text-[10px] font-semibold text-white/35">{format(new Date(glucoseLinePoints[glucoseLinePoints.length - 1].time), "EEEE, MMM d")}</div>
         </div>
       }
+      <button
+        type="button"
+        onClick={scrollToLatestGlucose}
+        className="absolute right-4 top-0 z-30 flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-white/55 shadow-lg transition-colors hover:bg-white/[0.1] hover:text-white/85"
+        aria-label="Scroll to latest glucose">
+          <LocateFixed className="h-4 w-4" />
+        </button>
       {filters.glucose && glucoseLinePoints.length > 0 &&
       <div
         ref={centerMarkerRef}
