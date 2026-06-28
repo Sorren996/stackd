@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
-import { Activity, History, BarChart2, Settings, Moon, Sun } from "lucide-react";
+import { Activity, History, BarChart2, Settings } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import SettingsContent from "../pages/Settings";
 
@@ -14,148 +13,27 @@ export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
   const isSettingsOpen = location.pathname === "/settings";
-  const [isLightMode, setIsLightMode] = useState(() => localStorage.getItem("theme") === "light");
-
-  useEffect(() => {
-    localStorage.setItem("theme", isLightMode ? "light" : "dark");
-  }, [isLightMode]);
 
   const toggleSettings = () => {
     navigate(isSettingsOpen ? "/" : "/settings");
   };
 
-  const toggleTheme = () => {
-    setIsLightMode((current) => {
-      const next = !current;
-      localStorage.setItem("theme", next ? "light" : "dark");
-      window.dispatchEvent(new Event("app-theme-changed"));
-      return next;
-    });
-  };
-
-  const pageText = isLightMode ? "text-zinc-900" : "text-white";
-  const mutedText = isLightMode ? "text-zinc-500" : "text-white/50";
-
   return (
-    <div className={`relative min-h-screen overflow-x-hidden transition-colors duration-500 ${pageText} ${isLightMode ? "app-light" : "app-dark"}`}>
-      {isLightMode && (
-        <style>{`
-          .app-light [class~="text-white"] {
-            color: #29433a !important;
-          }
-
-          .app-light [class*="text-white/"] {
-            color: rgba(41, 67, 58, 0.6) !important;
-          }
-
-          .app-light [class*="border-white"] {
-            border-color: rgba(32, 51, 45, 0.13) !important;
-          }
-
-          .app-light [class*="bg-white/"] {
-            background-color: rgba(255, 255, 255, 0.62) !important;
-          }
-
-          .app-light label {
-            color: #29433a !important;
-          }
-
-          .app-light [class*="text-teal-"] {
-            color: #237b70 !important;
-          }
-
-          .app-light [class*="text-orange-"],
-          .app-light [class*="text-amber-"] {
-            color: #a96821 !important;
-          }
-
-          .app-light [class*="text-red-"] {
-            color: #b35b5d !important;
-          }
-
-          .app-light [class*="text-blue-"] {
-            color: #4a78a5 !important;
-          }
-
-          .app-light [class*="bg-teal-"] {
-            background-color: rgba(35, 123, 112, 0.1) !important;
-          }
-
-          .app-light [class*="bg-amber-"],
-          .app-light [class*="bg-orange-"] {
-            background-color: rgba(169, 104, 33, 0.1) !important;
-          }
-
-          .app-light [class*="bg-red-"] {
-            background-color: rgba(179, 91, 93, 0.1) !important;
-          }
-
-          .app-light .metric-card,
-          .app-light .dashboard-surface {
-            background: linear-gradient(145deg, rgba(255,255,255,0.92), rgba(237,247,243,0.72)) !important;
-            border-color: rgba(32, 90, 76, 0.15) !important;
-            box-shadow: 0 14px 34px rgba(31, 70, 59, 0.08), inset 0 1px 0 rgba(255,255,255,0.88) !important;
-          }
-
-          .app-light .active-alert-row {
-            background: rgba(255,255,255,0.68) !important;
-            border-color: rgba(32, 90, 76, 0.13) !important;
-            box-shadow: 0 8px 22px rgba(31, 70, 59, 0.05), inset 0 1px 0 rgba(255,255,255,0.9);
-          }
-
-          .app-light .dashboard-stacking-alert {
-            background: linear-gradient(135deg, rgba(255,248,230,0.88), rgba(255,255,255,0.74)) !important;
-            border: 1px solid rgba(169, 104, 33, 0.22) !important;
-            box-shadow: 0 10px 24px rgba(126, 83, 31, 0.07), inset 0 1px 0 rgba(255,255,255,0.9);
-          }
-
-          .app-light .settings-page input:not([type="file"]),
-          .app-light .settings-page textarea {
-            background: rgba(255,255,255,0.72) !important;
-            border-color: rgba(32, 90, 76, 0.16) !important;
-            color: #29433a !important;
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.9);
-          }
-
-          .app-light .settings-page [class*="bg-red-950"] {
-            background: rgba(255,241,241,0.78) !important;
-          }
-
-          .app-light .theme-popover {
-            background: rgba(255,255,255,0.96) !important;
-            border-color: rgba(32, 90, 76, 0.16) !important;
-            box-shadow: 0 18px 48px rgba(31, 70, 59, 0.16) !important;
-          }
-
-          .app-light .balance-sparkline line {
-            stroke: rgba(32, 51, 45, 0.18) !important;
-          }
-        `}</style>
-      )}
+    <div className="relative min-h-screen overflow-x-hidden text-white">
       <motion.div
         aria-hidden="true"
         className="pointer-events-none fixed inset-0 -z-50"
         initial={false}
-        animate={{ opacity: isLightMode ? 0 : 1 }}
+        animate={{ opacity: 1 }}
         transition={{ duration: 1.2, ease: "easeInOut" }}
         style={{ background: "linear-gradient(to bottom, #042f2e, #18181b, #000000)" }}
-      />
-      <motion.div
-        aria-hidden="true"
-        className="pointer-events-none fixed inset-0 -z-40"
-        initial={false}
-        animate={{ opacity: isLightMode ? 1 : 0 }}
-        transition={{ duration: 1.2, ease: "easeInOut" }}
-        style={{ background: "linear-gradient(to bottom, #fbfdfc, #eef6f3, #dceae5)" }}
       />
 
       <header className="fixed inset-x-0 top-0 z-50 bg-transparent">
         <div
           className="mx-auto grid h-14 max-w-6xl grid-cols-[1fr_auto_1fr] items-center px-4"
           style={{
-            background: isLightMode
-              ? "linear-gradient(to bottom, rgba(255,255,255,0.92), rgba(255,255,255,0.45), transparent)"
-              : "linear-gradient(to bottom, rgba(0,0,0,0.8), rgba(0,0,0,0.4), transparent)",
+            background: "linear-gradient(to bottom, rgba(0,0,0,0.8), rgba(0,0,0,0.4), transparent)",
           }}
         >
           <div />
@@ -168,39 +46,12 @@ export default function Layout() {
           <div className="flex items-center justify-self-end gap-2">
             <button
               type="button"
-              onClick={toggleTheme}
-              aria-label={isLightMode ? "Switch to dark mode" : "Switch to light mode"}
-              title={isLightMode ? "Switch to dark mode" : "Switch to light mode"}
-              className="flex h-9 w-9 items-center justify-center rounded-full border transition-all"
-              style={{
-                background: isLightMode ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.05)",
-                borderColor: isLightMode ? "rgba(234,179,8,0.45)" : "rgba(255,255,255,0.08)",
-                boxShadow: isLightMode ? "0 0 16px rgba(234,179,8,0.3)" : "none",
-              }}
-            >
-              <motion.span
-                key={isLightMode ? "sun" : "moon"}
-                initial={{ opacity: 0, rotate: -90, scale: 0.7 }}
-                animate={{ opacity: 1, rotate: 0, scale: 1 }}
-                transition={{ duration: 0.2 }}
-                className="flex"
-              >
-                {isLightMode ? (
-                  <Sun className="h-4 w-4 text-amber-500" />
-                ) : (
-                  <Moon className="h-4 w-4 text-white/60" />
-                )}
-              </motion.span>
-            </button>
-
-            <button
-              type="button"
               onClick={toggleSettings}
               aria-label="Open settings"
               className="flex h-9 w-9 items-center justify-center rounded-full border transition-all"
               style={{
-                background: isSettingsOpen ? "rgba(20,184,166,0.1)" : isLightMode ? "rgba(24,24,27,0.06)" : "rgba(255,255,255,0.05)",
-                borderColor: isSettingsOpen ? "rgba(20,184,166,0.35)" : isLightMode ? "rgba(24,24,27,0.1)" : "rgba(255,255,255,0.05)",
+                background: isSettingsOpen ? "rgba(20,184,166,0.1)" : "rgba(255,255,255,0.05)",
+                borderColor: isSettingsOpen ? "rgba(20,184,166,0.35)" : "rgba(255,255,255,0.05)",
                 boxShadow: isSettingsOpen ? "0 0 18px rgba(20,184,166,0.35)" : "none",
               }}
             >
@@ -209,7 +60,7 @@ export default function Layout() {
                 transition={{ type: "spring", stiffness: 260, damping: 18 }}
                 className="flex"
               >
-                <Settings className={`h-4 w-4 ${isSettingsOpen ? "text-teal-400" : mutedText}`} />
+                <Settings className={`h-4 w-4 ${isSettingsOpen ? "text-teal-400" : "text-white/50"}`} />
               </motion.span>
             </button>
           </div>
@@ -232,7 +83,7 @@ export default function Layout() {
             transition={{ type: "spring", stiffness: 220, damping: 28 }}
             className="fixed inset-0 z-40 overflow-y-auto pb-28 pt-16"
             style={{
-              background: isLightMode ? "rgba(250,250,250,0.97)" : "rgba(8,14,11,0.97)",
+              background: "rgba(8,14,11,0.97)",
               backdropFilter: "blur(16px)",
             }}
           >
@@ -247,22 +98,16 @@ export default function Layout() {
         <div
           className="relative mx-4 mb-4 flex items-center gap-1 overflow-hidden rounded-[2rem] border px-2 py-1.5 backdrop-blur-2xl"
           style={{
-            background: isLightMode
-              ? "linear-gradient(135deg, rgba(255,255,255,0.82), rgba(255,255,255,0.48))"
-              : "linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.06))",
-            borderColor: isLightMode ? "rgba(255,255,255,0.72)" : "rgba(255,255,255,0.24)",
-            boxShadow: isLightMode
-              ? "0 18px 45px rgba(31,70,59,0.16), inset 0 1px 1px rgba(255,255,255,0.95), inset 0 -1px 1px rgba(32,51,45,0.08)"
-              : "0 18px 50px rgba(0,0,0,0.38), inset 0 1px 1px rgba(255,255,255,0.32), inset 0 -1px 1px rgba(255,255,255,0.08)",
+            background: "linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.06))",
+            borderColor: "rgba(255,255,255,0.24)",
+            boxShadow: "0 18px 50px rgba(0,0,0,0.38), inset 0 1px 1px rgba(255,255,255,0.32), inset 0 -1px 1px rgba(255,255,255,0.08)",
           }}
         >
           <div
             aria-hidden="true"
             className="pointer-events-none absolute -inset-8 opacity-70"
             style={{
-              background: isLightMode
-                ? "radial-gradient(circle at 30% 0%, rgba(255,255,255,0.9), transparent 34%), radial-gradient(circle at 80% 120%, rgba(35,123,112,0.14), transparent 38%)"
-                : "radial-gradient(circle at 25% 0%, rgba(255,255,255,0.26), transparent 34%), radial-gradient(circle at 85% 130%, rgba(45,212,191,0.16), transparent 42%)",
+              background: "radial-gradient(circle at 25% 0%, rgba(255,255,255,0.26), transparent 34%), radial-gradient(circle at 85% 130%, rgba(45,212,191,0.16), transparent 42%)",
             }}
           />
           {navItems.map((item) => {
@@ -274,7 +119,7 @@ export default function Layout() {
                 key={item.path}
                 to={item.path}
                 className={`relative flex min-w-[72px] flex-col items-center gap-1 rounded-[1.55rem] px-3 py-2 transition-colors ${
-                  isActive ? (isLightMode ? "text-zinc-900" : "text-white") : isLightMode ? "text-zinc-500 hover:text-zinc-800" : "text-white/45 hover:text-white/75"
+                  isActive ? "text-white" : "text-white/45 hover:text-white/75"
                 }`}
               >
                 {isActive && (
@@ -282,13 +127,9 @@ export default function Layout() {
                     layoutId="active-nav-tab"
                     className="absolute inset-0 rounded-[1.55rem]"
                     style={{
-                      background: isLightMode
-                        ? "linear-gradient(145deg, rgba(255,255,255,0.92), rgba(255,255,255,0.5))"
-                        : "linear-gradient(145deg, rgba(255,255,255,0.28), rgba(255,255,255,0.09))",
+                      background: "linear-gradient(145deg, rgba(255,255,255,0.28), rgba(255,255,255,0.09))",
                       border: "1px solid rgba(255,255,255,0.34)",
-                      boxShadow: isLightMode
-                        ? "0 8px 22px rgba(31,70,59,0.12), inset 0 1px 1px rgba(255,255,255,0.95), inset 0 -1px 1px rgba(32,51,45,0.06)"
-                        : "0 10px 24px rgba(0,0,0,0.22), inset 0 1px 1px rgba(255,255,255,0.38), inset 0 -1px 1px rgba(255,255,255,0.1)",
+                      boxShadow: "0 10px 24px rgba(0,0,0,0.22), inset 0 1px 1px rgba(255,255,255,0.38), inset 0 -1px 1px rgba(255,255,255,0.1)",
                     }}
                     transition={{ type: "spring", stiffness: 460, damping: 34, mass: 0.8 }}
                   />
