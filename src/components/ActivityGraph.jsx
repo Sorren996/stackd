@@ -6,19 +6,17 @@ import { format } from "date-fns";
 import { HelpCircle, SlidersHorizontal, Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-const TIME_RANGES = [
-{ label: "1h", hours: 1, pxPerMin: 18 },
-{ label: "3h", hours: 3, pxPerMin: 8 },
-{ label: "12h", hours: 12, pxPerMin: 2.5 },
-{ label: "24h", hours: 24, pxPerMin: null }];
-
-
 function getGlucoseColor(mgdl) {
   return "hsla(0, 0%, 93%, 1.00)";
 }
 
+const STEP_MS = 3 * 60 * 1000;
+const HISTORY_DAYS = 14;
+const FUTURE_HOURS = 3;
+const VISIBLE_HOURS = 6;
 const GLUCOSE_MIN = 40;
-const GLUCOSE_MAX = 400;
+const GLUCOSE_MAX = 250;
+const GLUCOSE_ABOVE_MAX_LABEL = "250+";
 const CARB_VISUAL_MAX_GRAMS = 120;
 const CARB_VISUAL_MAX_HEIGHT = 44;
 const CARB_PROFILE_COLORS = {
@@ -41,6 +39,14 @@ function normalizeAbsorptionProfile(value) {
   if (["slow", "low_gi", "protein", "fiber"].includes(profile)) return "slow";
   if (["delayed", "fatty", "high_fat", "burger", "pizza"].includes(profile)) return "delayed";
   return "medium";
+}
+
+function getReadingTime(reading) {
+  return new Date(reading.recorded_at || reading.created_at || reading.created_date).getTime();
+}
+
+function getReadingValue(reading) {
+  return reading.value ?? reading.glucose ?? reading.mgdl ?? reading.mg_dL;
 }
 
 function getCarbGrams(entry) {
@@ -132,15 +138,13 @@ function CustomTooltip({ active, payload, label }) {
   const glucoseEntry = payload.find((p) => p.dataKey === "glucose");
   return (
     <div className="rounded-xl px-3 py-2 shadow-xl" style={{ background: "rgba(20,30,25,0.92)", border: "1px solid rgba(255,255,255,0.08)" }}>
-      <p className="text-[10px] text-white/40 mb-1">{format(new Date(label), "h:mm a")}</p>
       {glucoseEntry && glucoseEntry.value != null && (() => {
-        const mgdl = Math.round(glucoseEntry.value);
+        const mgdl = Math.round(glucoseEntry.payload.glucoseActual ?? glucoseEntry.value);
         const color = getGlucoseColor(mgdl);
         return (
-          <div className="flex items-center gap-2 text-sm mb-1">
-            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
-            <span className="text-white/80">Glucose</span>
-            <span className="ml-auto pl-3 font-medium" style={{ color }}>{mgdl} mg/dL</span>
+          <div className="text-center mb-1">
+            <div className="font-semibold leading-tight" style={{ color }}>{mgdl} <span className="text-[10px] font-medium text-white/45">mg/dL</span></div>
+            <div className="text-[10px] font-medium text-white/45 mt-0.5">{format(new Date(label), "h:mm a")}</div>
           </div>);
 
       })()}
@@ -235,12 +239,11 @@ function FilterDropdown({ filters, onChange, anchorRect }) {
 }
 
 export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries = [] }) {
-  const [rangeIdx, setRangeIdx] = useState(1);
-  const [showInfo, setShowInfo] = useState(false);
   const [showFilter, setShowFilter] = useState(false);
   const [filterAnchorRect, setFilterAnchorRect] = useState(null);
   const [filters, setFilters] = useState({ glucose: true, insulin: true, carbs: true });
   const [isInteracting, setIsInteracting] = useState(false);
+  const [centerGlucose, setCenterGlucose] = useState(null);
   const scrollRef = useRef(null);
   const containerRef = useRef(null);
   const [containerWidth, setContainerWidth] = useState(600);
@@ -261,18 +264,28 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const highPct = ((GLUCOSE_MAX - targetHigh) / rangeTotal * 100).toFixed(1);
   const lowPct = ((GLUCOSE_MAX - targetLow) / rangeTotal * 100).toFixed(1);
 
-  const selectedRange = TIME_RANGES[rangeIdx];
-  const now = Date.now();
-  const snappedNow = Math.round(now / 180000) * 180000;
-  const domainStart = snappedNow - 24 * 60 * 60 * 1000;
-  const domainEnd = snappedNow + 2 * 60 * 60 * 1000;
-  const viewStart = snappedNow - selectedRange.hours * 60 * 60 * 1000;
-  const viewEnd = snappedNow + selectedRange.hours * 0.1 * 60 * 60 * 1000;
-
   // Only include doses/carbs if their filter is on
   const filteredDoses = filters.insulin ? doses : [];
   const filteredCarbEntries = filters.carbs ? carbEntries.map(normalizeCarbEntry).filter((entry) => entry.carbs > 0 && entry.consumed_at) : [];
   const filteredGlucoseReadings = filters.glucose ? glucoseReadings : [];
+
+  const sortedGlucoseReadings = useMemo(() =>
+  glucoseReadings.
+  map((reading) => ({
+    ...reading,
+    time: getReadingTime(reading),
+    value: Number(getReadingValue(reading))
+  })).
+  filter((reading) => Number.isFinite(reading.time) && Number.isFinite(reading.value)).
+  sort((a, b) => a.time - b.time),
+  [glucoseReadings]
+  );
+
+  const latestGlucoseReading = sortedGlucoseReadings[sortedGlucoseReadings.length - 1];
+  const latestGlucoseTime = latestGlucoseReading?.time ?? Math.round(Date.now() / STEP_MS) * STEP_MS;
+  const latestGlucoseBucket = Math.round(latestGlucoseTime / STEP_MS) * STEP_MS;
+  const domainStart = latestGlucoseBucket - HISTORY_DAYS * 24 * 60 * 60 * 1000;
+  const domainEnd = latestGlucoseBucket + FUTURE_HOURS * 60 * 60 * 1000;
 
   const allCurvesMeta = useMemo(() =>
   filteredDoses.map((dose) => ({
@@ -304,9 +317,11 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const glucoseMap = useMemo(() => {
     const map = {};
     filteredGlucoseReadings.forEach((g) => {
-      const t = new Date(g.recorded_at).getTime();
-      const bucket = Math.round(t / (3 * 60000)) * (3 * 60000);
-      map[bucket] = g.value;
+      const t = getReadingTime(g);
+      const value = Number(getReadingValue(g));
+      if (!Number.isFinite(t) || !Number.isFinite(value)) return;
+      const bucket = Math.round(t / STEP_MS) * STEP_MS;
+      map[bucket] = value;
     });
     return map;
   }, [filteredGlucoseReadings]);
@@ -314,9 +329,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const maxDoseUnits = useMemo(() => Math.max(...filteredDoses.map((d) => d.units), 1), [filteredDoses]);
   const chartData = useMemo(() => {
     if (!doses.length && !glucoseReadings.length && !carbEntries.length) return [];
-    const step = 3 * 60000;
     const result = [];
-    for (let t = domainStart; t <= domainEnd; t += step) {
+    for (let t = domainStart; t <= domainEnd; t += STEP_MS) {
       const point = { time: t, bg: GLUCOSE_MAX };
       allCurvesMeta.forEach(({ dose, curve }) => {
         const key = `dose_${dose.id}`;
@@ -355,7 +369,11 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           point[`${key}_pace`] = CARB_PROFILE_LABELS[entry.absorption_profile] || "Mixed";
         }
       });
-      if (glucoseMap[t] !== undefined) point.glucose = glucoseMap[t];
+      if (glucoseMap[t] !== undefined) {
+        point.glucoseActual = glucoseMap[t];
+        point.glucose = Math.min(glucoseMap[t], GLUCOSE_MAX);
+        point.glucoseIsAboveMax = glucoseMap[t] > GLUCOSE_MAX;
+      }
       result.push(point);
     }
     return result;
@@ -383,17 +401,50 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   [filteredCarbEntries]
   );
 
-  const is24h = selectedRange.pxPerMin === null;
-  const viewMinutes = selectedRange.hours * 60 * 1.1;
-  const chartWidth = is24h ? containerWidth : Math.round(viewMinutes * selectedRange.pxPerMin);
+  const totalMs = domainEnd - domainStart;
+  const visibleMs = VISIBLE_HOURS * 60 * 60 * 1000;
+  const pxPerMin = containerWidth / (visibleMs / 60000);
+  const chartWidth = Math.max(containerWidth, Math.round(totalMs / 60000 * pxPerMin));
+  const latestGlucoseX = (latestGlucoseBucket - domainStart) / totalMs * chartWidth;
+  const maxScrollLeft = Math.max(0, Math.min(chartWidth - containerWidth, latestGlucoseX - containerWidth / 2));
+
+  const getCenterTimeForScroll = (scrollLeft) =>
+  domainStart + (scrollLeft + containerWidth / 2) / chartWidth * totalMs;
+
+  const getClosestGlucoseAt = (time) => {
+    if (!sortedGlucoseReadings.length) return null;
+
+    let closest = sortedGlucoseReadings[0];
+    let closestDelta = Math.abs(time - closest.time);
+
+    for (let i = 1; i < sortedGlucoseReadings.length; i++) {
+      const delta = Math.abs(time - sortedGlucoseReadings[i].time);
+      if (delta > closestDelta && sortedGlucoseReadings[i].time > time) break;
+      if (delta < closestDelta) {
+        closest = sortedGlucoseReadings[i];
+        closestDelta = delta;
+      }
+    }
+
+    return closest;
+  };
+
+  const updateCenterGlucose = (scrollLeft) => {
+    if (!filters.glucose) {
+      setCenterGlucose(null);
+      return;
+    }
+
+    const centerTime = getCenterTimeForScroll(scrollLeft);
+    const closest = getClosestGlucoseAt(centerTime);
+    setCenterGlucose(closest ? { value: closest.value, time: closest.time } : null);
+  };
 
   useEffect(() => {
-    if (!scrollRef.current || is24h) return;
-    const totalViewMs = viewEnd - viewStart;
-    const nowOffset = (snappedNow - viewStart) / totalViewMs * chartWidth;
-    const halfContainer = scrollRef.current.clientWidth / 2;
-    scrollRef.current.scrollLeft = nowOffset - halfContainer;
-  }, [rangeIdx, doses]);
+    if (!scrollRef.current) return;
+    scrollRef.current.scrollLeft = maxScrollLeft;
+    updateCenterGlucose(maxScrollLeft);
+  }, [maxScrollLeft, latestGlucoseBucket, filters.glucose, sortedGlucoseReadings.length]);
 
   if (!doses.length && !glucoseReadings.length && !carbEntries.length) return null;
 
@@ -403,7 +454,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const activeFilterCount = Object.values(filters).filter(Boolean).length;
 
   return (
-    <div ref={containerRef} className="-mx-4 overflow-hidden">
+    <div ref={containerRef} className="-mx-4 overflow-hidden relative">
       {/* Controls row */}
       <div className="flex py-3 items-center mb-4 justify-start pl-4 gap-2">
 
@@ -437,20 +488,33 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           }
         </AnimatePresence>
 </div>
-
-
-
+      {centerGlucose &&
+      <div className="pointer-events-none absolute left-1/2 top-12 z-10 -translate-x-1/2 rounded-lg px-3 py-2 text-center shadow-lg" style={{ background: "rgba(20, 64, 92, 0.82)", border: "1px solid rgba(125, 211, 252, 0.14)" }}>
+          <div className="text-sm font-semibold leading-tight text-sky-200">
+            {Math.round(centerGlucose.value)} <span className="text-[10px] font-medium text-sky-100/60">mg/dL</span>
+          </div>
+          <div className="mt-0.5 text-[10px] font-semibold text-white/45">{format(new Date(centerGlucose.time), "h:mm a")}</div>
+        </div>
+      }
 
       <div
         ref={scrollRef}
-        className={is24h ? "" : "overflow-x-auto"}
+        className="overflow-x-auto"
+        onScroll={(event) => {
+          const el = event.currentTarget;
+          if (el.scrollLeft > maxScrollLeft) {
+            el.scrollLeft = maxScrollLeft;
+            return;
+          }
+          updateCenterGlucose(el.scrollLeft);
+        }}
         style={{ WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
-        <div style={{ width: chartWidth, height: 240 }}>
+        <div style={{ width: chartWidth, height: 260 }}>
           <ComposedChart
             width={chartWidth}
-            height={240}
+            height={260}
             data={chartData}
-            margin={{ top: 12, right: 0, left: -20, bottom: 0 }}
+            margin={{ top: 70, right: 0, left: -20, bottom: 0 }}
             onMouseMove={(state) => setIsInteracting(!!(state && state.activePayload))}
             onMouseLeave={() => setIsInteracting(false)}
             onTouchStart={(state) => {if (state && state.activePayload) setIsInteracting(true);}}
@@ -482,27 +546,21 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             <XAxis
               dataKey="time"
               type="number"
-              domain={is24h ? [domainStart, domainEnd] : [viewStart, viewEnd]}
+              domain={[domainStart, domainEnd]}
               tickFormatter={(t) => format(new Date(t), "h:mma")}
               tick={{ fontSize: 10, fill: "rgba(255,255,255,0.25)", textAnchor: "middle" }}
               axisLine={false}
               tickLine={false}
+              minTickGap={42}
               tickCount={tickCount} />
             
 
             <YAxis yAxisId="insulin" domain={[0, 75]} hide />
             <YAxis yAxisId="carbs" domain={[0, CARB_VISUAL_MAX_HEIGHT]} hide />
-            <YAxis yAxisId="glucose" domain={[GLUCOSE_MIN, GLUCOSE_MAX]} hide />
+            <YAxis yAxisId="glucose" domain={[GLUCOSE_MIN, GLUCOSE_MAX]} allowDataOverflow hide />
 
-            <Tooltip active={isInteracting} content={<CustomTooltip />} cursor={{ stroke: "rgba(255,255,255,0.1)", strokeWidth: 1 }} />
+            <Tooltip active={isInteracting} content={<CustomTooltip />} cursor={false} />
 
-            <ReferenceLine
-              yAxisId="insulin"
-              x={snappedNow}
-              stroke="rgba(255,255,255,0.2)"
-              strokeDasharray="3 3"
-              strokeWidth={1} />
-            
 
             {filters.glucose && filteredGlucoseReadings.length > 0 &&
             <Area
@@ -573,19 +631,33 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               dot={(props) => {
                 const { cx, cy, payload } = props;
                 if (payload.glucose == null) return <g key={`dot-${payload.time}`} />;
-                const color = getGlucoseColor(payload.glucose);
+                if (payload.time !== latestGlucoseBucket) return <g key={`dot-${payload.time}`} />;
+                const actualGlucose = payload.glucoseActual ?? payload.glucose;
+                const color = getGlucoseColor(actualGlucose);
                 return (
-                  <circle
-                    key={`dot-${payload.time}`}
-                    cx={cx} cy={cy} r={1.5}
-                    fill={color}
-                    stroke="rgba(0,0,0,0.4)"
-                    strokeWidth={1}
-                    style={{ filter: `drop-shadow(0 0 3px ${color}99)` }} />);
+                  <g key={`dot-${payload.time}`}>
+                    {payload.glucoseIsAboveMax &&
+                    <text
+                      x={cx}
+                      y={cy - 12}
+                      textAnchor="middle"
+                      fontSize={10}
+                      fontWeight={700}
+                      fill="rgba(255,255,255,0.72)">
+                        {GLUCOSE_ABOVE_MAX_LABEL}
+                      </text>
+                    }
+                    <circle
+                      cx={cx} cy={cy} r={5}
+                      fill={color}
+                      stroke="rgba(255,255,255,0.35)"
+                      strokeWidth={4}
+                      style={{ filter: `drop-shadow(0 0 5px ${color}88)` }} />
+                  </g>);
 
 
               }}
-              activeDot={{ r: 1.5, stroke: "rgba(0,0,0,0.4)", strokeWidth: 1 }}
+              activeDot={false}
               connectNulls={true}
               isAnimationActive={false} />
 
