@@ -549,7 +549,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         </button>
       <div
         ref={graphViewportRef}
-        className="relative w-screen overflow-hidden"
+        className="relative w-screen overflow-visible"
         style={{ marginLeft: "calc(50% - 50vw)", marginRight: "calc(50% - 50vw)" }}>
       {filters.glucose && glucoseLinePoints.length > 0 &&
       <div className="pointer-events-none absolute left-1/2 top-0 z-20 -translate-x-1/2 px-3 py-1 text-center">
