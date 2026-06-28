@@ -222,11 +222,6 @@ const graphCarbs = carbEntries.filter((entry) => {
       >
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute inset-x-3 top-1 h-px"
-          style={{ background: "linear-gradient(to right, transparent, rgba(255,255,255,0.82), transparent)" }}
-        />
-        <span
-          aria-hidden="true"
           className="pointer-events-none absolute -inset-5 opacity-80"
           style={{
             background: "radial-gradient(circle at 28% 0%, rgba(255,255,255,0.34), transparent 38%), radial-gradient(circle at 80% 120%, rgba(45,212,191,0.22), transparent 44%)",
