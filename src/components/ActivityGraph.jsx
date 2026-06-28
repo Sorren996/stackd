@@ -377,6 +377,14 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     return CHART_MARGIN_TOP + (GLUCOSE_MAX - clamped) / (GLUCOSE_MAX - GLUCOSE_MIN) * plotHeight;
   };
 
+  const getHighRangeOpacity = (value) => {
+    const pctFromTop = (GLUCOSE_MAX - Math.min(value, GLUCOSE_MAX)) / (GLUCOSE_MAX - GLUCOSE_MIN);
+    if (pctFromTop <= 0) return 0;
+    if (pctFromTop < 0.1) return pctFromTop / 0.1 * 0.18;
+    if (pctFromTop < 0.24) return 0.18 + (pctFromTop - 0.1) / 0.14 * 0.82;
+    return 1;
+  };
+
   const getCenterTimeForScroll = (scrollLeft) =>
   domainStart + (scrollLeft + containerWidth / 2) / chartWidth * totalMs;
 
@@ -384,12 +392,22 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     if (!glucoseLinePoints.length) return null;
 
     if (time <= glucoseLinePoints[0].time) {
-      return { value: glucoseLinePoints[0].value, time, sourceTime: glucoseLinePoints[0].time };
+      return {
+        value: glucoseLinePoints[0].value,
+        plotValue: Math.min(glucoseLinePoints[0].value, GLUCOSE_MAX),
+        time,
+        sourceTime: glucoseLinePoints[0].time
+      };
     }
 
     const lastReading = glucoseLinePoints[glucoseLinePoints.length - 1];
     if (time >= lastReading.time) {
-      return { value: lastReading.value, time, sourceTime: lastReading.time };
+      return {
+        value: lastReading.value,
+        plotValue: Math.min(lastReading.value, GLUCOSE_MAX),
+        time,
+        sourceTime: lastReading.time
+      };
     }
 
     for (let i = 1; i < glucoseLinePoints.length; i++) {
@@ -400,12 +418,20 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       const span = next.time - previous.time;
       const ratio = span > 0 ? (time - previous.time) / span : 0;
       const value = previous.value + (next.value - previous.value) * ratio;
+      const previousPlotValue = Math.min(previous.value, GLUCOSE_MAX);
+      const nextPlotValue = Math.min(next.value, GLUCOSE_MAX);
+      const plotValue = previousPlotValue + (nextPlotValue - previousPlotValue) * ratio;
       const sourceTime = Math.abs(time - previous.time) <= Math.abs(next.time - time) ? previous.time : next.time;
 
-      return { value, time, sourceTime };
+      return { value, plotValue, time, sourceTime };
     }
 
-    return { value: lastReading.value, time, sourceTime: lastReading.time };
+    return {
+      value: lastReading.value,
+      plotValue: Math.min(lastReading.value, GLUCOSE_MAX),
+      time,
+      sourceTime: lastReading.time
+    };
   };
 
   const drawCenterGlucose = (scrollLeft) => {
@@ -426,8 +452,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     }
 
     if (marker) {
-      marker.style.transform = `translate3d(-50%, ${getGlucoseY(glucose.value)}px, 0) translateY(-50%)`;
-      marker.style.opacity = glucose.value > GLUCOSE_MAX ? "0" : "1";
+      marker.style.transform = `translate3d(-50%, ${getGlucoseY(glucose.plotValue)}px, 0) translateY(-50%)`;
+      marker.style.opacity = String(getHighRangeOpacity(glucose.plotValue));
     }
 
     if (valueEl) valueEl.textContent = formatGlucoseDisplay(glucose.value);
