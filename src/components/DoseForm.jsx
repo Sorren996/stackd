@@ -8,6 +8,9 @@ import { X, Syringe, Droplets, Wheat, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import CarbsTab from "@/components/CarbsTab";
+
+const LATEST_GLUCOSE_CACHE_KEY = "latest_glucose_cache";
+
 const CATEGORY_ORDER = [
   "Rapid-Acting",
   "Short-Acting",
@@ -34,6 +37,16 @@ function createInsulinRow(defaults = {}) {
 
 function readLightMode() {
   return localStorage.getItem("theme") === "light";
+}
+
+function writeCachedLatestGlucose(reading) {
+  if (typeof window === "undefined" || !reading) return;
+
+  try {
+    window.localStorage.setItem(LATEST_GLUCOSE_CACHE_KEY, JSON.stringify(reading));
+  } catch {
+    // Cache is optional; React Query still refreshes from the backend.
+  }
 }
 
 export default function DoseForm({ open, onOpenChange }) {
@@ -111,6 +124,7 @@ export default function DoseForm({ open, onOpenChange }) {
     mutationFn: (data) => base44.entities.GlucoseReading.create(data),
     onSuccess: (createdReading, submittedReading) => {
       const savedReading = createdReading || submittedReading;
+      writeCachedLatestGlucose(savedReading);
       queryClient.setQueryData(["latest-glucose"], [savedReading]);
       queryClient.setQueryData(["glucose-readings", "graph"], (current = []) => [savedReading, ...current]);
       queryClient.invalidateQueries({ queryKey: ["latest-glucose"] });
@@ -258,6 +272,45 @@ export default function DoseForm({ open, onOpenChange }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogPortal>
+        <style>{`
+          .dose-form-content[data-state="open"] {
+            animation: dose-form-sheet-in 420ms cubic-bezier(0.22, 1, 0.36, 1);
+          }
+
+          .dose-form-content[data-state="closed"] {
+            animation: dose-form-sheet-out 180ms ease-in;
+          }
+
+          @keyframes dose-form-sheet-in {
+            from { opacity: 0.86; transform: translateY(100%) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+          }
+
+          @keyframes dose-form-sheet-out {
+            from { opacity: 1; transform: translateY(0) scale(1); }
+            to { opacity: 0; transform: translateY(100%) scale(0.98); }
+          }
+
+          @media (min-width: 640px) {
+            .dose-form-content[data-state="open"] {
+              animation-name: dose-form-dialog-in;
+            }
+
+            .dose-form-content[data-state="closed"] {
+              animation-name: dose-form-dialog-out;
+            }
+
+            @keyframes dose-form-dialog-in {
+              from { opacity: 0; transform: translate(-50%, calc(-50% + 24px)) scale(0.96); }
+              to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            }
+
+            @keyframes dose-form-dialog-out {
+              from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+              to { opacity: 0; transform: translate(-50%, calc(-50% + 16px)) scale(0.98); }
+            }
+          }
+        `}</style>
         {isLightMode && (
           <style>{`
             .dose-form-light [class~="text-white"] { color: #29433a !important; }
@@ -281,7 +334,7 @@ export default function DoseForm({ open, onOpenChange }) {
           style={{ background: isLightMode ? "rgba(30, 63, 53, 0.18)" : "rgba(0, 0, 0, 0.75)" }}
         />
         <DialogPrimitive.Content
-          className={`fixed bottom-0 left-0 right-0 z-50 flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl border border-white/5 shadow-2xl sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl ${isLightMode ? "dose-form-light" : ""}`}
+          className={`dose-form-content fixed bottom-0 left-0 right-0 z-50 flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl border border-white/5 shadow-2xl data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom data-[state=open]:duration-500 data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom data-[state=closed]:duration-200 sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl sm:data-[state=open]:fade-in-0 sm:data-[state=open]:zoom-in-95 sm:data-[state=open]:slide-in-from-bottom-4 ${isLightMode ? "dose-form-light" : ""}`}
           style={{
             background: isLightMode
               ? "linear-gradient(145deg, rgba(255,255,255,0.98), rgba(236,246,242,0.96))"
