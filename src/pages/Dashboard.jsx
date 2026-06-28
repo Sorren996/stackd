@@ -121,7 +121,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="dashboard-page w-full max-w-full min-w-0 space-y-0 overflow-x-hidden">
+    <div className="dashboard-page w-full max-w-full min-w-0 space-y-0 overflow-visible">
       <DoseForm open={doseFormOpen} onOpenChange={setDoseFormOpen} />
 
       {recentDoses.length === 0 && recentGlucose.length === 0 && recentCarbs.length === 0 ? (
