@@ -74,7 +74,7 @@ export default function Dashboard() {
 
   const { data: glucoseReadings = [] } = useQuery({
     queryKey: ["glucose-readings", "graph"],
-    queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", 5000),
+    queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", 500),
     staleTime: GRAPH_DATA_MS,
     gcTime: 30 * 60 * 1000,
     placeholderData: () => queryClient.getQueryData(["glucose-readings", "graph"]) ?? latestGlucoseRows,
@@ -89,7 +89,7 @@ export default function Dashboard() {
 
   const { data: graphCarbsSource = [] } = useQuery({
     queryKey: ["carb-entries", "graph"],
-    queryFn: () => base44.entities.CarbEntry.list("-consumed_at", 1000),
+    queryFn: () => base44.entities.CarbEntry.list("-consumed_at", 100),
     staleTime: GRAPH_DATA_MS,
     gcTime: 30 * 60 * 1000,
     placeholderData: () => queryClient.getQueryData(["carb-entries", "graph"]) ?? carbEntries,
@@ -97,7 +97,7 @@ export default function Dashboard() {
 
   const { data: graphDosesSource = [] } = useQuery({
     queryKey: ["insulin-doses", "graph"],
-    queryFn: () => base44.entities.InsulinDose.list("-administered_at", 1000),
+    queryFn: () => base44.entities.InsulinDose.list("-administered_at", 100),
     staleTime: GRAPH_DATA_MS,
     gcTime: 30 * 60 * 1000,
     placeholderData: () => queryClient.getQueryData(["insulin-doses", "graph"]) ?? doses,
