@@ -224,7 +224,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   // Only include doses/carbs if their filter is on
   const filteredDoses = filters.insulin ? doses : [];
   const filteredCarbEntries = filters.carbs ? carbEntries.map(normalizeCarbEntry).filter((entry) => entry.carbs > 0 && entry.consumed_at) : [];
-  const filteredGlucoseReadings = filters.glucose ? glucoseReadings : [];
 
   const sortedGlucoseReadings = useMemo(() =>
   glucoseReadings.
@@ -243,6 +242,12 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const latestGlucoseBucket = Math.round(latestGlucoseTime / STEP_MS) * STEP_MS;
   const domainStart = latestGlucoseBucket - HISTORY_DAYS * 24 * 60 * 60 * 1000;
   const domainEnd = latestGlucoseBucket + FUTURE_HOURS * 60 * 60 * 1000;
+  const filteredGlucoseReadings = useMemo(() =>
+  filters.glucose ?
+  sortedGlucoseReadings.filter((reading) => reading.time >= domainStart && reading.time <= domainEnd) :
+  [],
+  [filters.glucose, sortedGlucoseReadings, domainStart, domainEnd]
+  );
 
   const allCurvesMeta = useMemo(() =>
   filteredDoses.map((dose) => ({
