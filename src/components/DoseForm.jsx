@@ -279,6 +279,9 @@ export default function DoseForm({ open, onOpenChange }) {
 
           .dose-form-content[data-state="closed"] {
             animation: dose-form-sheet-out 180ms ease-in;
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(100%) scale(0.98);
           }
 
           @keyframes dose-form-sheet-in {
@@ -298,6 +301,7 @@ export default function DoseForm({ open, onOpenChange }) {
 
             .dose-form-content[data-state="closed"] {
               animation-name: dose-form-dialog-out;
+              transform: translate(-50%, calc(-50% + 16px)) scale(0.98);
             }
 
             @keyframes dose-form-dialog-in {
@@ -330,10 +334,12 @@ export default function DoseForm({ open, onOpenChange }) {
           `}</style>
         )}
         <DialogOverlay
-          className="fixed inset-0 z-50 backdrop-blur-sm"
+          forceMount
+          className="fixed inset-0 z-50 backdrop-blur-sm data-[state=closed]:pointer-events-none data-[state=closed]:opacity-0"
           style={{ background: isLightMode ? "rgba(30, 63, 53, 0.18)" : "rgba(0, 0, 0, 0.75)" }}
         />
         <DialogPrimitive.Content
+          forceMount
           className={`dose-form-content fixed bottom-0 left-0 right-0 z-50 flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl border border-white/5 shadow-2xl data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom data-[state=open]:duration-500 data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom data-[state=closed]:duration-200 sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl sm:data-[state=open]:fade-in-0 sm:data-[state=open]:zoom-in-95 sm:data-[state=open]:slide-in-from-bottom-4 ${isLightMode ? "dose-form-light" : ""}`}
           style={{
             background: isLightMode
