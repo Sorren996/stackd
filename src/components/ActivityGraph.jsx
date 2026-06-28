@@ -210,9 +210,20 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   useEffect(() => {
     const target = graphViewportRef.current || containerRef.current;
     if (!target) return;
-    const ro = new ResizeObserver(([e]) => setContainerWidth(e.contentRect.width));
+    const updateWidth = ([e]) => {
+      const visualViewportWidth = window.visualViewport?.width;
+      setContainerWidth(visualViewportWidth || e.contentRect.width);
+    };
+    const updateViewportWidth = () => {
+      if (window.visualViewport?.width) setContainerWidth(window.visualViewport.width);
+    };
+    const ro = new ResizeObserver(updateWidth);
     ro.observe(target);
-    return () => ro.disconnect();
+    window.visualViewport?.addEventListener("resize", updateViewportWidth);
+    return () => {
+      ro.disconnect();
+      window.visualViewport?.removeEventListener("resize", updateViewportWidth);
+    };
   }, []);
 
   const toggleFilter = (key) => setFilters((f) => ({ ...f, [key]: !f[key] }));
@@ -549,8 +560,15 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         </button>
       <div
         ref={graphViewportRef}
-        className="relative w-screen overflow-visible"
-        style={{ marginLeft: "calc(50% - 50vw)", marginRight: "calc(50% - 50vw)" }}>
+        className="relative overflow-hidden"
+        style={{
+          left: "50%",
+          right: "50%",
+          width: "100dvw",
+          maxWidth: "100dvw",
+          marginLeft: "-50dvw",
+          marginRight: "-50dvw"
+        }}>
       {filters.glucose && glucoseLinePoints.length > 0 &&
       <div className="pointer-events-none absolute left-1/2 top-0 z-20 -translate-x-1/2 px-3 py-1 text-center">
           <div className="text-2xl font-black leading-none text-white">
