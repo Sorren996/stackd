@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
@@ -35,10 +35,6 @@ function createInsulinRow(defaults = {}) {
   };
 }
 
-function readLightMode() {
-  return localStorage.getItem("theme") === "light";
-}
-
 function writeCachedLatestGlucose(reading) {
   if (typeof window === "undefined" || !reading) return;
 
@@ -51,7 +47,6 @@ function writeCachedLatestGlucose(reading) {
 
 export default function DoseForm({ open, onOpenChange }) {
   const [tab, setTab] = useState("insulin");
-  const [isLightMode, setIsLightMode] = useState(readLightMode);
   const [insulinRows, setInsulinRows] = useState(() => [createInsulinRow()]);
   const [insulinNotes, setInsulinNotes] = useState("");
   const [insulinTime, setInsulinTime] = useState(() => new Date().toTimeString().slice(0, 5));
@@ -61,17 +56,6 @@ export default function DoseForm({ open, onOpenChange }) {
 
   const queryClient = useQueryClient();
   const nowTimeString = new Date().toTimeString().slice(0, 5);
-
-  useEffect(() => {
-    const refreshTheme = () => setIsLightMode(readLightMode());
-    window.addEventListener("app-theme-changed", refreshTheme);
-    window.addEventListener("storage", refreshTheme);
-
-    return () => {
-      window.removeEventListener("app-theme-changed", refreshTheme);
-      window.removeEventListener("storage", refreshTheme);
-    };
-  }, []);
 
   const handleSubmitCarbs = async (entries) => {
     const entry = entries[0];
@@ -315,37 +299,16 @@ export default function DoseForm({ open, onOpenChange }) {
             }
           }
         `}</style>
-        {isLightMode && (
-          <style>{`
-            .dose-form-light [class~="text-white"] { color: #29433a !important; }
-            .dose-form-light [class*="text-white/"] { color: rgba(41, 67, 58, 0.6) !important; }
-            .dose-form-light [class*="border-white"] { border-color: rgba(32, 90, 76, 0.14) !important; }
-            .dose-form-light [class*="bg-white/"] { background-color: rgba(255,255,255,0.64) !important; }
-            .dose-form-light input,
-            .dose-form-light select,
-            .dose-form-light textarea { color: #29433a !important; }
-            .dose-form-light input::placeholder,
-            .dose-form-light textarea::placeholder { color: rgba(41, 67, 58, 0.42) !important; }
-            .dose-form-light select option,
-            .dose-form-light select optgroup { background: #edf5f2; color: #29433a; }
-            .dose-form-light [class*="text-teal-"] { color: #237b70 !important; }
-            .dose-form-light [class*="text-orange-"],
-            .dose-form-light [class*="text-amber-"] { color: #a96821 !important; }
-          `}</style>
-        )}
         <DialogOverlay
           forceMount
           className="fixed inset-0 z-50 backdrop-blur-sm data-[state=closed]:pointer-events-none data-[state=closed]:opacity-0"
-          style={{ background: isLightMode ? "rgba(30, 63, 53, 0.18)" : "rgba(0, 0, 0, 0.75)" }}
+          style={{ background: "rgba(0, 0, 0, 0.75)" }}
         />
         <DialogPrimitive.Content
           forceMount
-          className={`dose-form-content fixed bottom-0 left-0 right-0 z-50 flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl border border-white/5 shadow-2xl data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom data-[state=open]:duration-500 data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom data-[state=closed]:duration-200 sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl sm:data-[state=open]:fade-in-0 sm:data-[state=open]:zoom-in-95 sm:data-[state=open]:slide-in-from-bottom-4 ${isLightMode ? "dose-form-light" : ""}`}
+          className="dose-form-content fixed bottom-0 left-0 right-0 z-50 flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl border border-white/5 shadow-2xl data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom data-[state=open]:duration-500 data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom data-[state=closed]:duration-200 sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl sm:data-[state=open]:fade-in-0 sm:data-[state=open]:zoom-in-95 sm:data-[state=open]:slide-in-from-bottom-4"
           style={{
-            background: isLightMode
-              ? "linear-gradient(145deg, rgba(255,255,255,0.98), rgba(236,246,242,0.96))"
-              : "hsl(162,10%,8%)",
-            borderColor: isLightMode ? "rgba(32,90,76,0.16)" : undefined,
+            background: "hsl(162,10%,8%)",
           }}
         >
           <div className="flex items-center justify-between px-6 pb-3 pt-5">
@@ -464,7 +427,7 @@ export default function DoseForm({ open, onOpenChange }) {
                         if (event.target.value <= nowTimeString) setInsulinTime(event.target.value);
                       }}
                       className="cursor-pointer bg-transparent text-sm font-medium text-white outline-none"
-                      style={{ colorScheme: isLightMode ? "light" : "dark" }}
+                      style={{ colorScheme: "dark" }}
                     />
                   </div>
                 </div>
@@ -541,7 +504,7 @@ export default function DoseForm({ open, onOpenChange }) {
                         if (event.target.value <= nowTimeString) setGlucoseTime(event.target.value);
                       }}
                       className="cursor-pointer bg-transparent text-sm font-medium text-white outline-none"
-                      style={{ colorScheme: isLightMode ? "light" : "dark" }}
+                      style={{ colorScheme: "dark" }}
                     />
                   </div>
                 </div>
