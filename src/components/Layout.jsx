@@ -100,7 +100,7 @@ export default function Layout() {
           style={{
             background: "linear-gradient(135deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0))",
             borderColor: "rgba(255,255,255,0.24)",
-            boxShadow: "0 18px 50px rgba(0,0,0,0.38), inset 0 1px 1px rgba(255,255,255,0.32), inset 0 -1px 1px rgba(255,255,255,0.08)",
+            boxShadow: "0 18px 50px rgba(0, 0, 0, 0.17), inset 0 1px 1px rgba(255,255,255,0.32), inset 0 -1px 1px rgba(255,255,255,0.08)",
           }}
         >
           <div
