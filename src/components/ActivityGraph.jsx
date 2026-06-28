@@ -1,5 +1,5 @@
 import { useMemo, useRef, useEffect, useState } from "react";
-import { Area, XAxis, YAxis, ReferenceLine, Line, ComposedChart } from "recharts";
+import { Area, XAxis, YAxis, ReferenceLine, ReferenceDot, Line, ComposedChart } from "recharts";
 import { generateActivityCurve, INSULIN_PROFILES } from "@/lib/insulinPharmacology";
 import { generateCarbCurve, PROFILE_COLORS } from "@/lib/carbAbsorption";
 import { format } from "date-fns";
@@ -198,7 +198,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const [filters, setFilters] = useState({ glucose: true, insulin: true, carbs: true });
   const [centerGlucose, setCenterGlucose] = useState(null);
   const scrollRef = useRef(null);
-  const centerMarkerRef = useRef(null);
   const containerRef = useRef(null);
   const [containerWidth, setContainerWidth] = useState(600);
 
@@ -367,29 +366,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const chartWidth = Math.max(containerWidth, Math.round(totalMs / 60000 * pxPerMin));
   const latestGlucoseX = (latestGlucoseBucket - domainStart) / totalMs * chartWidth;
   const maxScrollLeft = Math.max(0, Math.min(chartWidth - containerWidth, latestGlucoseX - containerWidth / 2));
-  const plotHeight = CHART_HEIGHT - CHART_MARGIN_TOP - CHART_MARGIN_BOTTOM - X_AXIS_HEIGHT;
-  const centerGlucoseClamped = centerGlucose ? Math.min(Math.max(centerGlucose.value, GLUCOSE_MIN), GLUCOSE_MAX) : null;
-  const centerMarkerY = centerGlucoseClamped == null ?
-  null :
-  CHART_MARGIN_TOP + (GLUCOSE_MAX - centerGlucoseClamped) / (GLUCOSE_MAX - GLUCOSE_MIN) * plotHeight;
-  const centerMarkerOpacity = centerGlucose?.value > GLUCOSE_MAX ? 0 : 1;
-
-  const getGlucoseY = (value) => {
-    const clamped = Math.min(Math.max(value, GLUCOSE_MIN), GLUCOSE_MAX);
-    return CHART_MARGIN_TOP + (GLUCOSE_MAX - clamped) / (GLUCOSE_MAX - GLUCOSE_MIN) * plotHeight;
-  };
-
-  const syncCenterMarker = (glucose) => {
-    if (!centerMarkerRef.current) return;
-
-    if (!glucose) {
-      centerMarkerRef.current.style.opacity = "0";
-      return;
-    }
-
-    centerMarkerRef.current.style.top = `${getGlucoseY(glucose.value)}px`;
-    centerMarkerRef.current.style.opacity = glucose.value > GLUCOSE_MAX ? "0" : "1";
-  };
 
   const getCenterTimeForScroll = (scrollLeft) =>
   domainStart + (scrollLeft + containerWidth / 2) / chartWidth * totalMs;
@@ -425,14 +401,11 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const updateCenterGlucose = (scrollLeft) => {
     if (!filters.glucose) {
       setCenterGlucose(null);
-      syncCenterMarker(null);
       return;
     }
 
     const centerTime = getCenterTimeForScroll(scrollLeft);
-    const glucose = getGlucoseAt(centerTime);
-    syncCenterMarker(glucose);
-    setCenterGlucose(glucose);
+    setCenterGlucose(getGlucoseAt(centerTime));
   };
 
   useEffect(() => {
@@ -492,17 +465,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           <div className="mt-0.5 text-[10px] font-semibold text-white/45">{format(new Date(centerGlucose.time), "h:mm a")}</div>
         </div>
       }
-      {centerMarkerY != null &&
-      <div
-        ref={centerMarkerRef}
-        className="pointer-events-none absolute left-1/2 z-10 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white"
-        style={{
-          top: centerMarkerY,
-          opacity: centerMarkerOpacity,
-          boxShadow: "0 0 0 4px rgba(255,255,255,0.22), 0 0 10px rgba(255,255,255,0.38)"
-        }} />
-      }
-
       <div
         ref={scrollRef}
         className="overflow-x-auto"
@@ -644,6 +606,21 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               activeDot={false}
               connectNulls={true}
               isAnimationActive={false} />
+
+            }
+
+            {filters.glucose && centerGlucose &&
+            <ReferenceDot
+              yAxisId="glucose"
+              x={centerGlucose.time}
+              y={Math.min(Math.max(centerGlucose.value, GLUCOSE_MIN), GLUCOSE_MAX)}
+              r={5}
+              fill="rgba(255,255,255,0.95)"
+              stroke="rgba(255,255,255,0.28)"
+              strokeWidth={5}
+              opacity={centerGlucose.value > GLUCOSE_MAX ? 0 : 1}
+              isFront
+              ifOverflow="visible" />
 
             }
           </ComposedChart>
