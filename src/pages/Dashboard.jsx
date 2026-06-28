@@ -19,16 +19,6 @@ const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 const TWO_DAYS_MS = 48 * 60 * 60 * 1000;
 const LATEST_GLUCOSE_CACHE_KEY = "latest_glucose_cache";
 
-function scheduleIdleWork(callback) {
-  if (typeof window !== "undefined" && "requestIdleCallback" in window) {
-    const id = window.requestIdleCallback(callback, { timeout: 1200 });
-    return () => window.cancelIdleCallback(id);
-  }
-
-  const id = window.setTimeout(callback, 250);
-  return () => window.clearTimeout(id);
-}
-
 function readCachedLatestGlucose() {
   if (typeof window === "undefined") return [];
 
@@ -55,7 +45,7 @@ export default function Dashboard() {
   const [, setTick] = useState(0);
   const [showAllDoses, setShowAllDoses] = useState(false);
   const [doseFormOpen, setDoseFormOpen] = useState(false);
-  const [loadGraphData, setLoadGraphData] = useState(false);
+  const [renderGraph, setRenderGraph] = useState(false);
   const stackingAlertsEnabled = localStorage.getItem("stacking_alerts_enabled") !== "false";
 
   useEffect(() => {
@@ -63,7 +53,17 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, []);
 
-  useEffect(() => scheduleIdleWork(() => setLoadGraphData(true)), []);
+  useEffect(() => {
+    const scheduleFrame = typeof window !== "undefined" && window.requestAnimationFrame
+      ? window.requestAnimationFrame
+      : (callback) => window.setTimeout(callback, 16);
+    const cancelFrame = typeof window !== "undefined" && window.cancelAnimationFrame
+      ? window.cancelAnimationFrame
+      : window.clearTimeout;
+    const id = scheduleFrame(() => setRenderGraph(true));
+
+    return () => cancelFrame(id);
+  }, []);
 
   const { data: doses = [], isLoading: loadingDoses } = useQuery({
     queryKey: ["insulin-doses"],
@@ -87,8 +87,7 @@ export default function Dashboard() {
 
   const { data: glucoseReadings = [] } = useQuery({
     queryKey: ["glucose-readings", "graph"],
-    queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", 300),
-    enabled: loadGraphData,
+    queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", 5000),
     staleTime: GRAPH_DATA_MS,
     gcTime: 30 * 60 * 1000,
     placeholderData: () => queryClient.getQueryData(["glucose-readings", "graph"]) ?? latestGlucoseRows,
@@ -96,15 +95,14 @@ export default function Dashboard() {
 
   const { data: carbEntries = [], isLoading: loadingCarbs } = useQuery({
     queryKey: ["carb-entries"],
-    queryFn: () => base44.entities.CarbEntry.list("-consumed_at", 50),
+    queryFn: () => base44.entities.CarbEntry.list("-consumed_at", 100),
     staleTime: FRESH_DATA_MS,
     gcTime: GRAPH_DATA_MS,
   });
 
   const { data: graphCarbsSource = [] } = useQuery({
     queryKey: ["carb-entries", "graph"],
-    queryFn: () => base44.entities.CarbEntry.list("-consumed_at", 50),
-    enabled: loadGraphData,
+    queryFn: () => base44.entities.CarbEntry.list("-consumed_at", 1000),
     staleTime: GRAPH_DATA_MS,
     gcTime: 30 * 60 * 1000,
     placeholderData: () => queryClient.getQueryData(["carb-entries", "graph"]) ?? carbEntries,
@@ -112,8 +110,7 @@ export default function Dashboard() {
 
   const { data: graphDosesSource = [] } = useQuery({
     queryKey: ["insulin-doses", "graph"],
-    queryFn: () => base44.entities.InsulinDose.list("-administered_at", 100),
-    enabled: loadGraphData,
+    queryFn: () => base44.entities.InsulinDose.list("-administered_at", 1000),
     staleTime: GRAPH_DATA_MS,
     gcTime: 30 * 60 * 1000,
     placeholderData: () => queryClient.getQueryData(["insulin-doses", "graph"]) ?? doses,
@@ -260,7 +257,11 @@ export default function Dashboard() {
             <p className="mb-2 px-0 text-[10px] font-bold uppercase tracking-[0.18em] text-white/25">
               Glucose Trend
             </p>
-            <ActivityGraph doses={graphDoses} glucoseReadings={graphGlucose} carbEntries={graphCarbs} />
+            {renderGraph ? (
+              <ActivityGraph doses={graphDoses} glucoseReadings={graphGlucose} carbEntries={graphCarbs} />
+            ) : (
+              <div className="h-[320px] w-full" />
+            )}
           </div>
 
           <div className="grid w-full max-w-full min-w-0 grid-cols-1 gap-6 overflow-x-hidden border-0 px-0 py-4 lg:grid-cols-3">
