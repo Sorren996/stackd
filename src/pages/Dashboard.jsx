@@ -26,17 +26,17 @@ export default function Dashboard() {
 
   const { data: doses = [], isLoading } = useQuery({
     queryKey: ["insulin-doses"],
-    queryFn: () => base44.entities.InsulinDose.list("-administered_at", 50),
+    queryFn: () => base44.entities.InsulinDose.list("-administered_at", 1000),
   });
 
   const { data: glucoseReadings = [] } = useQuery({
     queryKey: ["glucose-readings"],
-    queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", 100),
+    queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", 5000),
   });
 
   const { data: carbEntries = [] } = useQuery({
     queryKey: ["carb-entries"],
-    queryFn: () => base44.entities.CarbEntry.list("-consumed_at", 100),
+    queryFn: () => base44.entities.CarbEntry.list("-consumed_at", 1000),
   });
 
   const deleteGlucose = useMutation({
@@ -175,8 +175,7 @@ const graphCarbs = carbEntries.filter((entry) => {
             <p className="mb-2 px-0 text-[10px] font-bold uppercase tracking-[0.18em] text-white/25">
               Glucose Trend
             </p>
-<ActivityGraph doses={recentDoses} glucoseReadings={graphGlucose} carbEntries={recentCarbs} />
-          </div>
+<ActivityGraph doses={graphDoses} glucoseReadings={graphGlucose} carbEntries={graphCarbs} />          </div>
 
           <div className="grid w-full max-w-full min-w-0 grid-cols-1 gap-6 overflow-x-hidden border-0 px-0 py-4 lg:grid-cols-3">
             <div className="min-w-0 max-w-full space-y-2 overflow-x-hidden lg:col-span-2">
