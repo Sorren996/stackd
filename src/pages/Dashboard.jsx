@@ -45,24 +45,11 @@ export default function Dashboard() {
   const [, setTick] = useState(0);
   const [showAllDoses, setShowAllDoses] = useState(false);
   const [doseFormOpen, setDoseFormOpen] = useState(false);
-  const [renderGraph, setRenderGraph] = useState(false);
   const stackingAlertsEnabled = localStorage.getItem("stacking_alerts_enabled") !== "false";
 
   useEffect(() => {
     const interval = setInterval(() => setTick((t) => t + 1), 60000);
     return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    const scheduleFrame = typeof window !== "undefined" && window.requestAnimationFrame
-      ? window.requestAnimationFrame
-      : (callback) => window.setTimeout(callback, 16);
-    const cancelFrame = typeof window !== "undefined" && window.cancelAnimationFrame
-      ? window.cancelAnimationFrame
-      : window.clearTimeout;
-    const id = scheduleFrame(() => setRenderGraph(true));
-
-    return () => cancelFrame(id);
   }, []);
 
   const { data: doses = [], isLoading: loadingDoses } = useQuery({
@@ -257,11 +244,7 @@ export default function Dashboard() {
             <p className="mb-2 px-0 text-[10px] font-bold uppercase tracking-[0.18em] text-white/25">
               Glucose Trend
             </p>
-            {renderGraph ? (
-              <ActivityGraph doses={graphDoses} glucoseReadings={graphGlucose} carbEntries={graphCarbs} />
-            ) : (
-              <div className="h-[320px] w-full" />
-            )}
+            <ActivityGraph doses={graphDoses} glucoseReadings={graphGlucose} carbEntries={graphCarbs} />
           </div>
 
           <div className="grid w-full max-w-full min-w-0 grid-cols-1 gap-6 overflow-x-hidden border-0 px-0 py-4 lg:grid-cols-3">
