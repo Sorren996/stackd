@@ -74,7 +74,7 @@ export default function Dashboard() {
 
   const { data: glucoseReadings = [] } = useQuery({
     queryKey: ["glucose-readings", "graph"],
-    queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", 500),
+    queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", 100),
     staleTime: GRAPH_DATA_MS,
     gcTime: 30 * 60 * 1000,
     placeholderData: () => queryClient.getQueryData(["glucose-readings", "graph"]) ?? latestGlucoseRows,
