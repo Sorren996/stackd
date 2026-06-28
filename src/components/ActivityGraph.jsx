@@ -3,7 +3,7 @@ import { Area, XAxis, YAxis, ReferenceLine, Line, ComposedChart } from "recharts
 import { generateActivityCurve, INSULIN_PROFILES } from "@/lib/insulinPharmacology";
 import { generateCarbCurve, PROFILE_COLORS } from "@/lib/carbAbsorption";
 import { format } from "date-fns";
-import { LocateFixed, SlidersHorizontal, Check } from "lucide-react";
+import { CornerUpLeft, SlidersHorizontal, Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const STEP_MS = 3 * 60 * 1000;
@@ -539,12 +539,12 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       </div>
       <div className="relative">
       {filters.glucose && glucoseLinePoints.length > 0 &&
-      <div className="pointer-events-none absolute left-1/2 top-0 z-20 -translate-x-1/2 rounded-lg px-3 py-2 text-center shadow-lg" style={{ background: "rgba(20, 64, 92, 0.86)", border: "1px solid rgba(125, 211, 252, 0.14)" }}>
-          <div className="text-sm font-semibold leading-tight text-sky-200">
-            <span ref={tooltipValueRef}>{formatGlucoseDisplay(glucoseLinePoints[glucoseLinePoints.length - 1].value)}</span> <span className="text-[10px] font-medium text-sky-100/60">mg/dL</span>
+      <div className="pointer-events-none absolute left-1/2 top-0 z-20 -translate-x-1/2 px-3 py-1 text-center">
+          <div className="text-2xl font-black leading-none text-white">
+            <span ref={tooltipValueRef}>{formatGlucoseDisplay(glucoseLinePoints[glucoseLinePoints.length - 1].value)}</span> <span className="text-xs font-medium text-white/35">mg/dL</span>
           </div>
-          <div ref={tooltipTimeRef} className="mt-0.5 text-[10px] font-semibold text-white/45">{format(new Date(glucoseLinePoints[glucoseLinePoints.length - 1].time), "h:mm a")}</div>
-          <div ref={tooltipDateRef} className="mt-0.5 text-[10px] font-semibold text-white/35">{format(new Date(glucoseLinePoints[glucoseLinePoints.length - 1].time), "EEEE, MMM d")}</div>
+          <div ref={tooltipTimeRef} className="mt-1 text-xs font-medium text-white/35">{format(new Date(glucoseLinePoints[glucoseLinePoints.length - 1].time), "h:mm a")}</div>
+          <div ref={tooltipDateRef} className="mt-0.5 text-[10px] font-medium text-white/30">{format(new Date(glucoseLinePoints[glucoseLinePoints.length - 1].time), "EEEE, MMM d")}</div>
         </div>
       }
       <button
@@ -552,7 +552,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         onClick={scrollToLatestGlucose}
         className="absolute right-4 top-0 z-30 flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-white/55 shadow-lg transition-colors hover:bg-white/[0.1] hover:text-white/85"
         aria-label="Scroll to latest glucose">
-          <LocateFixed className="h-4 w-4" />
+          <CornerUpLeft className="h-4 w-4" />
         </button>
       {filters.glucose && glucoseLinePoints.length > 0 &&
       <div
