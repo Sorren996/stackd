@@ -1,9 +1,10 @@
-import { lazy, Suspense, useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import ActivityGraph from "../components/ActivityGraph";
 import ActiveInsulinBanner from "../components/ActiveInsulinBanner";
 import ActiveAlerts from "../components/ActiveAlerts";
+import DoseForm from "../components/DoseForm";
 import DoseCard from "../components/DoseCard";
 import GlucoseCard from "../components/GlucoseCard";
 import CarbCard from "../components/CarbCard";
@@ -16,9 +17,7 @@ const GRAPH_DATA_MS = 5 * 60 * 1000;
 const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 const TWO_DAYS_MS = 48 * 60 * 60 * 1000;
-
-const loadDoseForm = () => import("../components/DoseForm");
-const DoseForm = lazy(loadDoseForm);
+const LATEST_GLUCOSE_CACHE_KEY = "latest_glucose_cache";
 
 function scheduleIdleWork(callback) {
   if (typeof window !== "undefined" && "requestIdleCallback" in window) {
@@ -30,12 +29,32 @@ function scheduleIdleWork(callback) {
   return () => window.clearTimeout(id);
 }
 
+function readCachedLatestGlucose() {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const cached = window.localStorage.getItem(LATEST_GLUCOSE_CACHE_KEY);
+    return cached ? [JSON.parse(cached)] : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeCachedLatestGlucose(reading) {
+  if (typeof window === "undefined" || !reading) return;
+
+  try {
+    window.localStorage.setItem(LATEST_GLUCOSE_CACHE_KEY, JSON.stringify(reading));
+  } catch {
+    // Ignore storage failures; the live query still owns the source of truth.
+  }
+}
+
 export default function Dashboard() {
   const queryClient = useQueryClient();
   const [, setTick] = useState(0);
   const [showAllDoses, setShowAllDoses] = useState(false);
   const [doseFormOpen, setDoseFormOpen] = useState(false);
-  const [doseFormPreloaded, setDoseFormPreloaded] = useState(false);
   const [loadGraphData, setLoadGraphData] = useState(false);
   const stackingAlertsEnabled = localStorage.getItem("stacking_alerts_enabled") !== "false";
 
@@ -45,14 +64,6 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => scheduleIdleWork(() => setLoadGraphData(true)), []);
-
-  useEffect(
-    () =>
-      scheduleIdleWork(() => {
-        loadDoseForm().finally(() => setDoseFormPreloaded(true));
-      }),
-    [],
-  );
 
   const { data: doses = [], isLoading: loadingDoses } = useQuery({
     queryKey: ["insulin-doses"],
@@ -66,8 +77,13 @@ export default function Dashboard() {
     queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", 1),
     staleTime: 30 * 1000,
     gcTime: GRAPH_DATA_MS,
+    initialData: readCachedLatestGlucose,
     placeholderData: () => queryClient.getQueryData(["glucose-readings", "graph"])?.slice(0, 1) ?? [],
   });
+
+  useEffect(() => {
+    writeCachedLatestGlucose(latestGlucoseRows[0]);
+  }, [latestGlucoseRows]);
 
   const { data: glucoseReadings = [] } = useQuery({
     queryKey: ["glucose-readings", "graph"],
@@ -196,7 +212,6 @@ export default function Dashboard() {
     return [...doseLogs, ...glucoseLogs, ...carbLogs].sort((a, b) => b.timestamp - a.timestamp);
   }, [recentDoses, recentGlucose, recentCarbs]);
 
-  const isPriming = loadingLatestGlucose;
   const shouldShowEmptyState =
     !loadingDoses &&
     !loadingLatestGlucose &&
@@ -205,19 +220,9 @@ export default function Dashboard() {
     recentGlucose.length === 0 &&
     recentCarbs.length === 0;
 
-  if (isPriming && !latestGlucose && recentDoses.length === 0 && recentCarbs.length === 0) {
-    return (
-      <div className="flex h-[60vh] w-full items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary/20 border-t-primary" />
-      </div>
-    );
-  }
-
   return (
     <div className="dashboard-page w-full max-w-full min-w-0 space-y-0 overflow-visible">
-      <Suspense fallback={null}>
-        {(doseFormOpen || doseFormPreloaded) && <DoseForm open={doseFormOpen} onOpenChange={setDoseFormOpen} />}
-      </Suspense>
+      <DoseForm open={doseFormOpen} onOpenChange={setDoseFormOpen} />
 
       {shouldShowEmptyState ? (
         <div className="flex flex-col items-center justify-center px-4 py-20 text-center">
@@ -293,10 +298,7 @@ export default function Dashboard() {
 
       <button
         type="button"
-        onClick={() => {
-          setDoseFormPreloaded(true);
-          setDoseFormOpen(true);
-        }}
+        onClick={() => setDoseFormOpen(true)}
         className="fixed bottom-24 right-5 z-40 flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border backdrop-blur-2xl transition active:scale-95"
         style={{
           background: "linear-gradient(145deg, rgba(255,255,255,0.24), rgba(255,255,255,0.08))",
