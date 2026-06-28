@@ -3,7 +3,7 @@ import { Area, XAxis, YAxis, ReferenceLine, Line, ComposedChart } from "recharts
 import { generateActivityCurve, INSULIN_PROFILES } from "@/lib/insulinPharmacology";
 import { generateCarbCurve, PROFILE_COLORS } from "@/lib/carbAbsorption";
 import { format } from "date-fns";
-import { CornerUpLeft, SlidersHorizontal, Check } from "lucide-react";
+import { CornerUpRight, SlidersHorizontal, Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const STEP_MS = 3 * 60 * 1000;
@@ -552,7 +552,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         onClick={scrollToLatestGlucose}
         className="absolute right-4 top-0 z-30 flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-white/55 shadow-lg transition-colors hover:bg-white/[0.1] hover:text-white/85"
         aria-label="Scroll to latest glucose">
-          <CornerUpLeft className="h-4 w-4" />
+          <CornerUpRight className="h-4 w-4" />
         </button>
       {filters.glucose && glucoseLinePoints.length > 0 &&
       <div
