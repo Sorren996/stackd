@@ -160,7 +160,7 @@ export default function Dashboard() {
             <p className="mb-2 px-0 text-[10px] font-bold uppercase tracking-[0.18em] text-white/25">
               Glucose Trend
             </p>
-            <ActivityGraph doses={recentDoses} glucoseReadings={recentGlucose} carbEntries={recentCarbs} />
+            <ActivityGraph doses={recentDoses} glucoseReadings={glucoseReadings} carbEntries={recentCarbs} />
           </div>
 
           <div className="grid w-full max-w-full min-w-0 grid-cols-1 gap-6 overflow-x-hidden border-0 px-0 py-4 lg:grid-cols-3">
