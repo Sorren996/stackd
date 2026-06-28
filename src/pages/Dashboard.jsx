@@ -293,7 +293,7 @@ export default function Dashboard() {
       <button
         type="button"
         onClick={() => setDoseFormOpen(true)}
-        className="fixed bottom-24 right-5 z-40 flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border backdrop-blur-2xl transition active:scale-95"
+        className="fixed bottom-24 right-5 z-40 flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border backdrop-blur-sm transition active:scale-95"
         style={{
           background: "linear-gradient(145deg, rgba(255,255,255,0.24), rgba(255,255,255,0.08))",
           borderColor: "rgba(255,255,255,0.28)",
