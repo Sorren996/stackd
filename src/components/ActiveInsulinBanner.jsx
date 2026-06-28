@@ -1,504 +1,717 @@
-import { useEffect, useMemo, useState } from "react";
-import {
-  ArrowDown,
-  ArrowDownRight,
-  ArrowRight,
-  ArrowUp,
-  ArrowUpRight,
-  Info,
-  X,
-} from "lucide-react";
-import { generateActivityCurve } from "@/lib/insulinPharmacology";
-import {
-  generateCarbCurve,
-  getActiveCarbsNow,
-  getCarbAbsorptionAt,
-  getTotalCarbsToday,
-} from "@/lib/carbAbsorption";
-import { AnimatePresence, motion } from "framer-motion";
+import { useMemo, useRef, useEffect, useState } from "react";
+import { Area, XAxis, YAxis, ReferenceLine, Line, ComposedChart } from "recharts";
+import { generateActivityCurve, INSULIN_PROFILES } from "@/lib/insulinPharmacology";
+import { generateCarbCurve, PROFILE_COLORS } from "@/lib/carbAbsorption";
+import { format } from "date-fns";
+import { CornerUpLeft, SlidersHorizontal, Check } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
-const SAMPLE_STEP_MS = 5 * 60 * 1000;
+const STEP_MS = 3 * 60 * 1000;
+const HISTORY_DAYS = 14;
+const FUTURE_HOURS = 3;
+const VISIBLE_HOURS = 6;
+const CHART_HEIGHT = 260;
+const CHART_MARGIN_TOP = 70;
+const CHART_MARGIN_BOTTOM = 0;
+const X_AXIS_HEIGHT = 30;
+const GLUCOSE_MIN = 40;
+const GLUCOSE_MAX = 250;
+const CARB_VISUAL_MAX_GRAMS = 120;
+const CARB_VISUAL_MAX_HEIGHT = 44;
+const CARB_PROFILE_COLORS = {
+  fast: "#fb923c",
+  medium: "#f59e0b",
+  slow: "#22c55e",
+  delayed: "#a78bfa",
+};
 
-function readInsulinSettings() {
-  const insulinSensitivityMgDlPerUnit = Number(
-    localStorage.getItem("insulin_sensitivity_mgdl_per_unit")
-  );
-  const mealInsulinUnitsPer5g = Number(
-    localStorage.getItem("meal_insulin_units_per_5g")
-  );
+const CARB_PROFILE_LABELS = {
+  fast: "Fast",
+  medium: "Mixed",
+  slow: "Slow",
+  delayed: "Delayed",
+};
+
+function normalizeAbsorptionProfile(value) {
+  const profile = String(value || "").toLowerCase();
+  if (["fast", "rapid", "juice", "sugar", "high_gi"].includes(profile)) return "fast";
+  if (["slow", "low_gi", "protein", "fiber"].includes(profile)) return "slow";
+  if (["delayed", "fatty", "high_fat", "burger", "pizza"].includes(profile)) return "delayed";
+  return "medium";
+}
+
+function getReadingTime(reading) {
+  return new Date(reading.recorded_at || reading.created_at || reading.created_date).getTime();
+}
+
+function getReadingValue(reading) {
+  return reading.value ?? reading.glucose ?? reading.mgdl ?? reading.mg_dL;
+}
+
+function formatGlucoseDisplay(value) {
+  return Math.round(value);
+}
+
+function getCarbGrams(entry) {
+  const value =
+    entry.carbs ??
+    entry.carbs_grams ??
+    entry.carb_grams ??
+    entry.carbohydrate_grams ??
+    entry.total_carbs ??
+    entry.total_carbs_grams ??
+    entry.totalCarbs ??
+    entry.totalCarbsGrams ??
+    entry.carbohydrates ??
+    entry.nutrition?.carbs ??
+    entry.nutrition?.carbs_grams ??
+    entry.nutrition?.carbohydrates ??
+    entry.amount ??
+    entry.grams ??
+    0;
+
+  const carbs = typeof value === "string" ? Number(value.match(/[\d.]+/)?.[0]) : Number(value);
+  return Number.isFinite(carbs) && carbs > 0 ? carbs : 0;
+}
+
+function normalizeCarbEntry(entry) {
+  const carbs = getCarbGrams(entry);
+  const absorptionProfile = normalizeAbsorptionProfile(entry.absorption_profile ?? entry.glycemic_pace ?? entry.pace);
 
   return {
-    insulinSensitivityMgDlPerUnit,
-    mealInsulinUnitsPer5g,
-    isComplete:
-      insulinSensitivityMgDlPerUnit > 0 &&
-      mealInsulinUnitsPer5g > 0,
+    ...entry,
+    id: entry.id || entry._id || `${entry.consumed_at || entry.created_date || entry.created_at}-${carbs}`,
+    food_name: entry.food_name || entry.name || "Food",
+    carbs,
+    consumed_at: entry.consumed_at || entry.recorded_at || entry.created_date || entry.created_at,
+    absorption_profile: absorptionProfile,
+    is_custom: entry.is_custom === true,
   };
 }
 
-function getCurveActivityAt(curve, time) {
-  if (!curve.length) return 0;
+function buildCarbCurve(entry) {
+  const generated = generateCarbCurve(entry);
+  if (Array.isArray(generated) && generated.length > 0) return generated;
 
-  const first = curve[0];
-  const last = curve[curve.length - 1];
-  if (time < first.time || time > last.time) return 0;
+  const start = new Date(entry.consumed_at).getTime();
+  if (!Number.isFinite(start)) return [];
 
-  for (let index = 0; index < curve.length - 1; index += 1) {
-    const current = curve[index];
-    const next = curve[index + 1];
+  const profile = normalizeAbsorptionProfile(entry.absorption_profile);
+  const settings = {
+    fast: { delayMin: 0, durationMin: 110, peak: 0.2, skew: 1.45 },
+    medium: { delayMin: 10, durationMin: 210, peak: 0.35, skew: 1 },
+    slow: { delayMin: 20, durationMin: 300, peak: 0.48, skew: 0.72 },
+    delayed: { delayMin: 35, durationMin: 420, peak: 0.58, skew: 0.58 },
+  }[profile];
 
-    if (current.time <= time && next.time >= time) {
-      const ratio = (time - current.time) / (next.time - current.time);
-      return current.activity + ratio * (next.activity - current.activity);
-    }
-  }
-
-  return last.activity;
-}
-
-function getTotalActiveUnits(doses, targetTime = Date.now(), selectUnits = (dose) => dose.units) {
-  return doses.reduce((sum, dose) => {
-    const units = Number(selectUnits(dose));
-    if (!Number.isFinite(units) || units <= 0) return sum;
-
-    const curve = generateActivityCurve(dose, 3);
-    return sum + getCurveActivityAt(curve, targetTime) * units;
-  }, 0);
-}
-
-function getTotalActiveMealUnits(doses, targetTime = Date.now()) {
-  // Older records predate the meal/correction split, so retain their prior behavior.
-  return getTotalActiveUnits(doses, targetTime, (dose) => dose.meal_units ?? dose.units);
-}
-
-function getTotalActiveCorrectionUnits(doses, targetTime = Date.now()) {
-  return getTotalActiveUnits(doses, targetTime, (dose) => dose.correction_units ?? 0);
-}
-
-function getActiveCarbsAt(entries, targetTime) {
-  return entries.reduce(
-    (sum, entry) => sum + getCarbAbsorptionAt(entry, targetTime).remainingGrams,
-    0
-  );
-}
-
-function computeNetCarbTrajectory(doses, carbEntries, latestGlucose, insulinSettings) {
-  const now = Date.now();
-  let horizon = now;
-
-  doses.forEach((dose) => {
-    const curve = generateActivityCurve(dose, 3);
-    if (curve.length) horizon = Math.max(horizon, curve[curve.length - 1].time);
-  });
-
-  carbEntries.forEach((entry) => {
-    const curve = generateCarbCurve(entry);
-    if (curve.length) horizon = Math.max(horizon, curve[curve.length - 1].time);
-  });
-
-  const glucoseAsOf = latestGlucose?.recorded_at
-    ? new Date(latestGlucose.recorded_at).getTime()
-    : null;
-
-  if (horizon <= now || !insulinSettings.isComplete) {
-    return { points: [], peak: null, trough: null, atNow: 0, glucoseAsOf };
-  }
-
-  const gramsPerUnit = 5 / insulinSettings.mealInsulinUnitsPer5g;
+  const curveStart = start + settings.delayMin * 60 * 1000;
+  const durationMs = settings.durationMin * 60 * 1000;
+  const stepMs = 3 * 60 * 1000;
   const points = [];
 
-  for (let time = now; time <= horizon; time += SAMPLE_STEP_MS) {
-    const activeUnits = getTotalActiveUnits(doses, time);
-    const activeMealUnits = getTotalActiveMealUnits(doses, time);
-    const activeCarbs = getActiveCarbsAt(carbEntries, time);
+  for (let offset = 0; offset <= durationMs; offset += stepMs) {
+    const progress = offset / durationMs;
+    let activity;
+
+    if (profile === "slow") {
+      activity = progress < 0.25 ? progress / 0.25 : progress < 0.72 ? 1 : (1 - progress) / 0.28;
+    } else if (profile === "delayed") {
+      activity = progress < settings.peak
+        ? Math.pow(progress / settings.peak, 1.8)
+        : Math.pow((1 - progress) / (1 - settings.peak), 0.65);
+    } else {
+      const rise = Math.pow(Math.min(progress / settings.peak, 1), profile === "fast" ? 0.65 : 1.15);
+      const fall = Math.pow(Math.max((1 - progress) / (1 - settings.peak), 0), settings.skew);
+      activity = progress <= settings.peak ? rise : fall;
+    }
 
     points.push({
-      time,
-      activeUnits,
-      activeMealUnits,
-      activeCarbs,
-      net: activeCarbs - activeMealUnits * gramsPerUnit,
+      time: curveStart + offset,
+      activity: Math.max(0, Math.min(1, activity)),
     });
   }
 
-  const peak = points.reduce((highest, point) => (point.net > highest.net ? point : highest), points[0]);
-  const trough = points.reduce((lowest, point) => (point.net < lowest.net ? point : lowest), points[0]);
-
-  return {
-    points,
-    peak,
-    trough,
-    atNow: points[0]?.net ?? 0,
-    glucoseAsOf,
-  };
+  return points;
 }
 
-function formatRelativeAge(time) {
-  if (!time) return null;
+// Filter dropdown — portal-rendered with smart viewport positioning
+function FilterDropdown({ filters, onChange, anchorRect }) {
+  const items = [
+  { key: "glucose", label: "Glucose", color: "rgba(255,255,255,0.6)" },
+  { key: "insulin", label: "Insulin", color: "#35a879" },
+  { key: "carbs", label: "Carbs", color: "#f59e0b" }];
 
-  const minutes = Math.max(0, Math.round((Date.now() - time) / 60000));
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes} ${minutes === 1 ? "minute" : "minutes"} ago`;
 
-  const hours = Math.floor(minutes / 60);
-  const remainingMinutes = minutes % 60;
-  return remainingMinutes ? `${hours}h ${remainingMinutes}m ago` : `${hours}h ago`;
-}
+  const MARGIN = 8;
+  const DROPDOWN_W = 140;
+  const DROPDOWN_H = 128; // approx height for 3 rows
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
 
-function formatClockTime(time) {
-  if (!time) return null;
-  return new Date(time).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-}
+  // Horizontal: align left edge to button left, but clamp to screen
+  let left = anchorRect.left;
+  if (left + DROPDOWN_W > vw - MARGIN) left = vw - DROPDOWN_W - MARGIN;
+  if (left < MARGIN) left = MARGIN;
 
-function TooltipPopover({ title, description, onClose, children }) {
+  // Vertical: prefer below button, flip above if not enough space
+  const spaceBelow = vh - anchorRect.bottom;
+  const openBelow = spaceBelow >= DROPDOWN_H + MARGIN;
+  const top = openBelow ?
+  anchorRect.bottom + MARGIN :
+  anchorRect.top - DROPDOWN_H - MARGIN;
+
+  const initY = openBelow ? -8 : 8;
+
   return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[300] flex items-center justify-center p-6"
-        onClick={onClose}
-      >
-        <motion.div
-          initial={{ opacity: 0, scale: 0.92, y: -12 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.94, y: -8 }}
-          transition={{ type: "spring", stiffness: 360, damping: 26 }}
-          onClick={(event) => event.stopPropagation()}
-          className="theme-popover w-full max-w-xs rounded-2xl border border-white/10 p-4 shadow-2xl"
-          style={{ background: "hsl(162,10%,10%)" }}
-        >
-          <div className="mb-2 flex items-start justify-between gap-3">
-            <p className="text-sm font-semibold text-white">{title}</p>
-            <button onClick={onClose} className="text-white/40 transition-colors hover:text-white/80">
-              <X className="h-3.5 w-3.5" />
-            </button>
+    <motion.div
+      initial={{ opacity: 0, y: initY, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1, transition: { type: "spring", stiffness: 380, damping: 28 } }}
+      exit={{ opacity: 0, y: initY * 0.7, scale: 0.96, transition: { duration: 0.13 } }}
+      className="fixed z-[200] rounded-2xl border border-white/10 shadow-2xl py-1.5"
+      style={{ background: "hsl(162,10%,10%)", width: DROPDOWN_W, left, top }}>
+      
+      {items.map((item) =>
+      <button
+        key={item.key}
+        onClick={() => onChange(item.key)}
+        className="w-full flex items-center gap-2.5 px-3.5 py-2 hover:bg-white/5 transition-colors text-left">
+        
+          <div className="w-4 h-4 rounded-md border flex items-center justify-center shrink-0 transition-all"
+        style={{
+          borderColor: filters[item.key] ? item.color : "rgba(255,255,255,0.15)",
+          backgroundColor: filters[item.key] ? item.color + "22" : "transparent"
+        }}>
+            {filters[item.key] && <Check className="w-2.5 h-2.5" style={{ color: item.color }} />}
           </div>
-          <p className="text-xs leading-relaxed text-white/50">{description}</p>
-          {children}
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
-  );
+          <span className="text-sm font-medium" style={{ color: filters[item.key] ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.35)" }}>
+            {item.label}
+          </span>
+        </button>
+      )}
+    </motion.div>);
+
 }
 
-function AmbientOrb({ color, duration = 6 }) {
-  return (
-    <motion.div
-      animate={{ scale: [1, 1.18, 1], opacity: [0.45, 0.7, 0.45] }}
-      transition={{ duration, repeat: Infinity, ease: "easeInOut" }}
-      className="h-14 w-14 rounded-full"
-      style={{
-        background: `radial-gradient(circle, ${color}cc 0%, ${color}44 50%, transparent 75%)`,
-        filter: "blur(8px)",
-      }}
-    />
-  );
-}
-
-function RiskSparkline({ points, color }) {
-  if (points.length < 2) return null;
-
-  const width = 240;
-  const height = 36;
-  const values = points.map((point) => point.net);
-  const min = Math.min(...values, 0);
-  const max = Math.max(...values, 0);
-  const range = max - min || 1;
-
-  const path = points
-    .map((point, index) => {
-      const x = (index / (points.length - 1)) * width;
-      const y = height - ((point.net - min) / range) * height;
-      return `${index ? "L" : "M"} ${x.toFixed(1)} ${y.toFixed(1)}`;
-    })
-    .join(" ");
-
-  const zeroY = height - ((0 - min) / range) * height;
-
-  return (
-    <svg className="balance-sparkline" viewBox={`0 0 ${width} ${height}`} width="100%" height={height} preserveAspectRatio="none">
-      <line x1="0" y1={zeroY} x2={width} y2={zeroY} stroke="rgba(255,255,255,0.15)" strokeWidth="1" strokeDasharray="3,3" />
-      <path d={path} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function MetricCard({ label, value, sub, status, color, tooltipId, openTooltip, setOpenTooltip }) {
-  return (
-    <motion.div
-      whileTap={{ scale: 0.97 }}
-      className="metric-card relative flex min-h-[112px] flex-col justify-between overflow-hidden rounded-2xl p-4"
-      style={{
-        background: "rgba(255,255,255,0.04)",
-        border: "1px solid rgba(255,255,255,0.08)",
-      }}
-    >
-      <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2">
-        <AmbientOrb color={color} />
-      </div>
-
-      <div className="relative z-10 mb-1 flex items-start justify-between gap-2">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-white/35">{label}</span>
-        {tooltipId && (
-          <button
-            onClick={() => setOpenTooltip(openTooltip === tooltipId ? null : tooltipId)}
-            className="text-white/20 transition-colors hover:text-white/50"
-          >
-            <Info className="h-3 w-3" />
-          </button>
-        )}
-      </div>
-
-      <div className="relative z-10 mt-1">
-        <span className="text-2xl font-bold leading-none text-white">{value}</span>
-        {sub && <p className="mt-1 text-[11px] text-white/35">{sub}</p>}
-      </div>
-
-      <span className="relative z-10 mt-2 text-xs font-semibold" style={{ color }}>
-        {status}
-      </span>
-    </motion.div>
-  );
-}
-
-const TREND_ICONS = {
-  up: ArrowUp,
-  "up-right": ArrowUpRight,
-  right: ArrowRight,
-  "down-right": ArrowDownRight,
-  down: ArrowDown,
-};
-
-export default function ActiveInsulinBanner({ doses, latestGlucose, glucoseReadings = [], carbEntries = [] }) {
-  const [openTooltip, setOpenTooltip] = useState(null);
-  const [insulinSettings, setInsulinSettings] = useState(readInsulinSettings);
+export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries = [] }) {
+  const [showFilter, setShowFilter] = useState(false);
+  const [filterAnchorRect, setFilterAnchorRect] = useState(null);
+  const [filters, setFilters] = useState({ glucose: true, insulin: true, carbs: true });
+  const scrollRef = useRef(null);
+  const centerMarkerRef = useRef(null);
+  const tooltipValueRef = useRef(null);
+  const tooltipTimeRef = useRef(null);
+  const tooltipDateRef = useRef(null);
+  const scrollFrameRef = useRef(null);
+  const pendingScrollLeftRef = useRef(0);
+  const containerRef = useRef(null);
+  const [containerWidth, setContainerWidth] = useState(600);
 
   useEffect(() => {
-    const refreshSettings = () => setInsulinSettings(readInsulinSettings());
-    window.addEventListener("insulin-settings-updated", refreshSettings);
-    window.addEventListener("storage", refreshSettings);
-
-    return () => {
-      window.removeEventListener("insulin-settings-updated", refreshSettings);
-      window.removeEventListener("storage", refreshSettings);
-    };
+    if (!containerRef.current) return;
+    const ro = new ResizeObserver(([e]) => setContainerWidth(e.contentRect.width));
+    ro.observe(containerRef.current);
+    return () => ro.disconnect();
   }, []);
 
-  const activeUnits = useMemo(() => getTotalActiveUnits(doses), [doses]);
-  const activeMealUnits = useMemo(() => getTotalActiveMealUnits(doses), [doses]);
-  const activeCorrectionUnits = useMemo(() => getTotalActiveCorrectionUnits(doses), [doses]);
-  const activeCarbs = useMemo(() => getActiveCarbsNow(carbEntries), [carbEntries]);
-  const totalCarbsToday = useMemo(() => getTotalCarbsToday(carbEntries), [carbEntries]);
+  const toggleFilter = (key) => setFilters((f) => ({ ...f, [key]: !f[key] }));
 
-  const trajectory = useMemo(
-    () => computeNetCarbTrajectory(doses, carbEntries, latestGlucose, insulinSettings),
-    [doses, carbEntries, latestGlucose, insulinSettings]
+  const targetLow = parseInt(localStorage.getItem("target_range_low") || "70", 10);
+  const targetHigh = parseInt(localStorage.getItem("target_range_high") || "180", 10);
+
+  const rangeTotal = GLUCOSE_MAX - GLUCOSE_MIN;
+  const highPct = ((GLUCOSE_MAX - targetHigh) / rangeTotal * 100).toFixed(1);
+  const lowPct = ((GLUCOSE_MAX - targetLow) / rangeTotal * 100).toFixed(1);
+
+  // Only include doses/carbs if their filter is on
+  const filteredDoses = filters.insulin ? doses : [];
+  const filteredCarbEntries = filters.carbs ? carbEntries.map(normalizeCarbEntry).filter((entry) => entry.carbs > 0 && entry.consumed_at) : [];
+
+  const sortedGlucoseReadings = useMemo(() =>
+  glucoseReadings.
+  map((reading) => ({
+    ...reading,
+    time: getReadingTime(reading),
+    value: Number(getReadingValue(reading))
+  })).
+  filter((reading) => Number.isFinite(reading.time) && Number.isFinite(reading.value)).
+  sort((a, b) => a.time - b.time),
+  [glucoseReadings]
   );
 
-  const worstPoint = useMemo(() => {
-    if (!trajectory.peak || !trajectory.trough) return null;
-    return Math.abs(trajectory.peak.net) >= Math.abs(trajectory.trough.net)
-      ? trajectory.peak
-      : trajectory.trough;
-  }, [trajectory]);
+  const latestGlucoseReading = sortedGlucoseReadings[sortedGlucoseReadings.length - 1];
+  const latestGlucoseTime = latestGlucoseReading?.time ?? Math.round(Date.now() / STEP_MS) * STEP_MS;
+  const latestGlucoseBucket = Math.round(latestGlucoseTime / STEP_MS) * STEP_MS;
+  const domainStart = latestGlucoseBucket - HISTORY_DAYS * 24 * 60 * 60 * 1000;
+  const domainEnd = latestGlucoseBucket + FUTURE_HOURS * 60 * 60 * 1000;
+  const filteredGlucoseReadings = useMemo(() =>
+  filters.glucose ?
+  sortedGlucoseReadings.filter((reading) => reading.time >= domainStart && reading.time <= domainEnd) :
+  [],
+  [filters.glucose, sortedGlucoseReadings, domainStart, domainEnd]
+  );
 
-  const netActiveCarbs = worstPoint?.net ?? 0;
-  const netPeakTime = worstPoint?.time ?? null;
-  const isPeakInFuture = Boolean(netPeakTime && netPeakTime > Date.now() + 60000);
-  const needsInsulinPlan = !insulinSettings.isComplete;
-  const correctionOnlyActive =
-    activeCorrectionUnits > 0.01 &&
-    activeMealUnits <= 0.01 &&
-    activeCarbs <= 0.5;
+  const allCurvesMeta = useMemo(() =>
+  filteredDoses.map((dose) => ({
+    dose,
+    curve: generateActivityCurve(dose, 3),
+    profile: INSULIN_PROFILES[dose.insulin_type]
+  })),
+  [filteredDoses]
+  );
 
-  const netValue = needsInsulinPlan
-    ? "Setup needed"
-    : correctionOnlyActive
-      ? "Correction active"
-      : netActiveCarbs > 5
-        ? "High Carb Activity"
-        : netActiveCarbs < -5
-          ? "High Insulin Activity"
-          : "In balance";
+  const allCarbCurvesMeta = useMemo(() =>
+  filteredCarbEntries.
+  filter((e) => !e.is_custom).
+  map((entry) => ({
+    entry,
+    curve: buildCarbCurve(entry),
+    color: CARB_PROFILE_COLORS[entry.absorption_profile] || PROFILE_COLORS[entry.absorption_profile] || "#f59e0b"
+  })),
+  [filteredCarbEntries]
+  );
 
-  const netLabel = needsInsulinPlan
-    ? "Add insulin plan in Settings"
-    : correctionOnlyActive
-      ? "No meal carbs digesting"
-      : netActiveCarbs > 5
-        ? "Glucose may rise"
-        : netActiveCarbs < -5
-          ? "Glucose may fall"
-          : "Carbs and insulin are aligned";
+  const customCarbEvents = useMemo(() =>
+  filteredCarbEntries.
+  filter((e) => e.is_custom).
+  map((e) => ({ time: new Date(e.consumed_at).getTime(), entry: e })),
+  [filteredCarbEntries]
+  );
 
-  const netColor = needsInsulinPlan || correctionOnlyActive
-    ? "#f59e0b"
-    : netActiveCarbs > 5
-      ? "#ef4444"
-      : netActiveCarbs < -5
-        ? "#3b82f6"
-        : "#35a879";
+  const glucoseMap = useMemo(() => {
+    const map = {};
+    filteredGlucoseReadings.forEach((g) => {
+      const t = getReadingTime(g);
+      const value = Number(getReadingValue(g));
+      if (!Number.isFinite(t) || !Number.isFinite(value)) return;
+      const bucket = Math.round(t / STEP_MS) * STEP_MS;
+      map[bucket] = value;
+    });
+    return map;
+  }, [filteredGlucoseReadings]);
 
-  const dailyAverage = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const readingsToday = glucoseReadings.filter((reading) => new Date(reading.recorded_at) >= today);
-    if (!readingsToday.length) return null;
-    return Math.round(readingsToday.reduce((sum, reading) => sum + reading.value, 0) / readingsToday.length);
-  }, [glucoseReadings]);
+  const glucoseLinePoints = useMemo(() =>
+  Object.entries(glucoseMap).
+  map(([time, value]) => ({ time: Number(time), value })).
+  filter((point) => Number.isFinite(point.time) && Number.isFinite(point.value)).
+  sort((a, b) => a.time - b.time),
+  [glucoseMap]
+  );
 
-  const trend = useMemo(() => {
-    if (glucoseReadings.length < 2) return { icon: "right", label: "Stable" };
-    const difference = glucoseReadings[0].value - glucoseReadings[1].value;
-    if (difference >= 7) return { icon: "up", label: "Rising" };
-    if (difference >= 4) return { icon: "up-right", label: "Slowly rising" };
-    if (difference >= -3) return { icon: "right", label: "Stable" };
-    if (difference >= -6) return { icon: "down-right", label: "Slowly falling" };
-    return { icon: "down", label: "Falling" };
-  }, [glucoseReadings]);
+  const maxDoseUnits = useMemo(() => Math.max(...filteredDoses.map((d) => d.units), 1), [filteredDoses]);
+  const chartData = useMemo(() => {
+    if (!doses.length && !glucoseReadings.length && !carbEntries.length) return [];
+    const result = [];
+    for (let t = domainStart; t <= domainEnd; t += STEP_MS) {
+      const point = { time: t, bg: GLUCOSE_MAX };
+      allCurvesMeta.forEach(({ dose, curve }) => {
+        const key = `dose_${dose.id}`;
+        if (!curve.length || t < curve[0].time || t > curve[curve.length - 1].time) {
+          point[key] = null;
+          point[`${key}_actual`] = null;
+        } else {
+          let lo = 0;
+          for (let j = 0; j < curve.length - 1; j++) {
+            if (curve[j].time <= t && curve[j + 1].time >= t) {lo = j;break;}
+          }
+          const hi = Math.min(lo + 1, curve.length - 1);
+          const ratio = hi === lo ? 0 : (t - curve[lo].time) / (curve[hi].time - curve[lo].time);
+          const activity = curve[lo].activity + ratio * (curve[hi].activity - curve[lo].activity);
+          point[key] = activity * (dose.units / maxDoseUnits) * 70;
+          point[`${key}_actual`] = activity * dose.units;
+          point[`${key}_total`] = dose.units;
+        }
+      });
+      allCarbCurvesMeta.forEach(({ entry, curve }) => {
+        const key = `carb_${entry.id}`;
+        if (!curve.length || t < curve[0].time || t > curve[curve.length - 1].time) {
+          point[key] = null;
+        } else {
+          let lo = 0;
+          for (let j = 0; j < curve.length - 1; j++) {
+            if (curve[j].time <= t && curve[j + 1].time >= t) {lo = j;break;}
+          }
+          const hi = Math.min(lo + 1, curve.length - 1);
+          const ratio = hi === lo ? 0 : (t - curve[lo].time) / (curve[hi].time - curve[lo].time);
+          const activity = curve[lo].activity + ratio * (curve[hi].activity - curve[lo].activity);
+          const carbVisualRatio = Math.min(entry.carbs, CARB_VISUAL_MAX_GRAMS) / CARB_VISUAL_MAX_GRAMS;
+          point[key] = activity * carbVisualRatio * CARB_VISUAL_MAX_HEIGHT;
+          point[`${key}_carbs`] = entry.carbs;
+          point[`${key}_food`] = entry.food_name;
+          point[`${key}_pace`] = CARB_PROFILE_LABELS[entry.absorption_profile] || "Mixed";
+        }
+      });
+      if (glucoseMap[t] !== undefined) {
+        point.glucose = Math.min(glucoseMap[t], GLUCOSE_MAX);
+      }
+      result.push(point);
+    }
+    return result;
+  }, [doses, glucoseReadings, carbEntries, filters, domainStart, domainEnd, allCurvesMeta, allCarbCurvesMeta, glucoseMap]);
 
-  const glucoseValue = latestGlucose?.value;
-  const glucoseColor = !glucoseValue
-    ? "#35a879"
-    : glucoseValue < 70
-      ? "#3b82f6"
-      : glucoseValue > 180
-        ? "#f59e0b"
-        : "#35a879";
+  const doseKeys = useMemo(() =>
+  filteredDoses.map((dose) => ({
+    key: `dose_${dose.id}`,
+    label: dose.insulin_type.split(" ")[0],
+    units: dose.units,
+    color: INSULIN_PROFILES[dose.insulin_type]?.color || "#888"
+  })),
+  [filteredDoses]
+  );
 
-  const targetLow = Number(localStorage.getItem("target_range_low") || 70);
-  const targetHigh = Number(localStorage.getItem("target_range_high") || 180);
-  const inRange = glucoseValue == null ? null : glucoseValue >= targetLow && glucoseValue <= targetHigh;
-  const TrendIcon = TREND_ICONS[trend.icon] || ArrowRight;
+  const carbKeys = useMemo(() =>
+  filteredCarbEntries.
+  filter((e) => !e.is_custom).
+  map((entry) => ({
+    key: `carb_${entry.id}`,
+    label: entry.food_name,
+    carbs: entry.carbs,
+    color: CARB_PROFILE_COLORS[entry.absorption_profile] || PROFILE_COLORS[entry.absorption_profile] || "#f59e0b"
+  })),
+  [filteredCarbEntries]
+  );
 
-  const glucoseStatus = (value) => {
-    if (!value) return "No data";
-    if (value < 70) return "Low";
-    if (value > 180) return "High";
-    return "In range";
+  const totalMs = domainEnd - domainStart;
+  const visibleMs = VISIBLE_HOURS * 60 * 60 * 1000;
+  const pxPerMin = containerWidth / (visibleMs / 60000);
+  const chartWidth = Math.max(containerWidth, Math.round(totalMs / 60000 * pxPerMin));
+  const latestGlucoseX = (latestGlucoseBucket - domainStart) / totalMs * chartWidth;
+  const maxScrollLeft = Math.max(0, Math.min(chartWidth - containerWidth, latestGlucoseX - containerWidth / 2));
+  const plotHeight = CHART_HEIGHT - CHART_MARGIN_TOP - CHART_MARGIN_BOTTOM - X_AXIS_HEIGHT;
+
+  const getGlucoseY = (value) => {
+    const clamped = Math.min(Math.max(value, GLUCOSE_MIN), GLUCOSE_MAX);
+    return CHART_MARGIN_TOP + (GLUCOSE_MAX - clamped) / (GLUCOSE_MAX - GLUCOSE_MIN) * plotHeight;
   };
 
+  const getHighRangeOpacity = (value) => {
+    const pctFromTop = (GLUCOSE_MAX - Math.min(value, GLUCOSE_MAX)) / (GLUCOSE_MAX - GLUCOSE_MIN);
+    if (pctFromTop <= 0) return 0;
+    if (pctFromTop < 0.1) return pctFromTop / 0.1 * 0.18;
+    if (pctFromTop < 0.24) return 0.18 + (pctFromTop - 0.1) / 0.14 * 0.82;
+    return 1;
+  };
+
+  const getCenterTimeForScroll = (scrollLeft) =>
+  domainStart + (scrollLeft + containerWidth / 2) / chartWidth * totalMs;
+
+  const getGlucoseAt = (time) => {
+    if (!glucoseLinePoints.length) return null;
+
+    if (time <= glucoseLinePoints[0].time) {
+      return {
+        value: glucoseLinePoints[0].value,
+        plotValue: Math.min(glucoseLinePoints[0].value, GLUCOSE_MAX),
+        time,
+        sourceTime: glucoseLinePoints[0].time
+      };
+    }
+
+    const lastReading = glucoseLinePoints[glucoseLinePoints.length - 1];
+    if (time >= lastReading.time) {
+      return {
+        value: lastReading.value,
+        plotValue: Math.min(lastReading.value, GLUCOSE_MAX),
+        time,
+        sourceTime: lastReading.time
+      };
+    }
+
+    for (let i = 1; i < glucoseLinePoints.length; i++) {
+      const previous = glucoseLinePoints[i - 1];
+      const next = glucoseLinePoints[i];
+      if (time > next.time) continue;
+
+      const span = next.time - previous.time;
+      const ratio = span > 0 ? (time - previous.time) / span : 0;
+      const value = previous.value + (next.value - previous.value) * ratio;
+      const previousPlotValue = Math.min(previous.value, GLUCOSE_MAX);
+      const nextPlotValue = Math.min(next.value, GLUCOSE_MAX);
+      const plotValue = previousPlotValue + (nextPlotValue - previousPlotValue) * ratio;
+      const sourceTime = Math.abs(time - previous.time) <= Math.abs(next.time - time) ? previous.time : next.time;
+
+      return { value, plotValue, time, sourceTime };
+    }
+
+    return {
+      value: lastReading.value,
+      plotValue: Math.min(lastReading.value, GLUCOSE_MAX),
+      time,
+      sourceTime: lastReading.time
+    };
+  };
+
+  const drawCenterGlucose = (scrollLeft) => {
+    const marker = centerMarkerRef.current;
+    const valueEl = tooltipValueRef.current;
+    const timeEl = tooltipTimeRef.current;
+    const dateEl = tooltipDateRef.current;
+
+    if (!filters.glucose || !glucoseLinePoints.length) {
+      if (marker) marker.style.opacity = "0";
+      return;
+    }
+
+    const centerTime = getCenterTimeForScroll(scrollLeft);
+    const glucose = getGlucoseAt(centerTime);
+    if (!glucose) {
+      if (marker) marker.style.opacity = "0";
+      return;
+    }
+
+    if (marker) {
+      marker.style.transform = `translate3d(-50%, ${getGlucoseY(glucose.plotValue)}px, 0) translateY(-50%)`;
+      marker.style.opacity = String(getHighRangeOpacity(glucose.plotValue));
+    }
+
+    if (valueEl) valueEl.textContent = formatGlucoseDisplay(glucose.value);
+    if (timeEl) timeEl.textContent = format(new Date(glucose.time), "h:mm a");
+    if (dateEl) dateEl.textContent = format(new Date(glucose.time), "EEEE, MMM d");
+  };
+
+  const scheduleCenterGlucoseUpdate = (scrollLeft) => {
+    pendingScrollLeftRef.current = scrollLeft;
+    if (scrollFrameRef.current) return;
+
+    scrollFrameRef.current = requestAnimationFrame(() => {
+      scrollFrameRef.current = null;
+      drawCenterGlucose(pendingScrollLeftRef.current);
+    });
+  };
+
+  const scrollToLatestGlucose = () => {
+    if (!scrollRef.current) return;
+
+    scrollRef.current.scrollTo({ left: maxScrollLeft, behavior: "smooth" });
+    scheduleCenterGlucoseUpdate(maxScrollLeft);
+  };
+
+  useEffect(() => {
+    if (!scrollRef.current) return;
+    scrollRef.current.scrollLeft = maxScrollLeft;
+    drawCenterGlucose(maxScrollLeft);
+
+    return () => {
+      if (scrollFrameRef.current) cancelAnimationFrame(scrollFrameRef.current);
+    };
+  }, [maxScrollLeft, latestGlucoseBucket, filters.glucose, glucoseLinePoints.length]);
+
+  if (!doses.length && !glucoseReadings.length && !carbEntries.length) return null;
+
+  const tickCount = Math.max(2, Math.floor(chartWidth / 90));
+
+  // How many filters are off (to show indicator dot)
+  const activeFilterCount = Object.values(filters).filter(Boolean).length;
+
   return (
-    <>
-      <AnimatePresence>
-        {openTooltip === "active-carbs" && (
-          <TooltipPopover
-            title="Carbs Digesting"
-            description="This is an estimate of carbohydrate from recent meals that is still digesting. It is not the number of grams absorbed at this moment."
-            onClose={() => setOpenTooltip(null)}
-          />
-        )}
+    <div ref={containerRef} className="-mx-4 overflow-hidden relative">
+      {/* Controls row */}
+      <div className="flex py-3 items-center mb-4 justify-start pl-4 gap-2">
 
-        {openTooltip === "net-carbs" && (
-          <TooltipPopover
-            title="Insulin and Carb Balance"
-            description="This estimate compares carbs still digesting with insulin logged as meal insulin. Correction insulin remains part of insulin on board but is not treated as meal coverage. It is an estimate, not a glucose prediction or dosing recommendation."
-            onClose={() => setOpenTooltip(null)}
-          >
-            {trajectory.points.length > 1 && (
-              <div className="mt-3">
-                <RiskSparkline points={trajectory.points} color={netColor} />
-                <div className="mt-1 flex justify-between text-[10px] text-white/30">
-                  <span>Now</span>
-                  <span>{formatClockTime(trajectory.points[trajectory.points.length - 1].time)}</span>
-                </div>
-                {netPeakTime && (
-                  <p className="mt-2 text-[11px] text-white/40">
-                    {netActiveCarbs > 5 ? "Largest carb lead" : netActiveCarbs < -5 ? "Largest insulin lead" : "Most notable balance point"}
-                    {isPeakInFuture ? " expected " : " was "}
-                    <span className="font-semibold" style={{ color: netColor }}>
-                      {formatClockTime(netPeakTime)}
-                    </span>
-                  </p>
-                )}
-              </div>
-            )}
-          </TooltipPopover>
-        )}
-      </AnimatePresence>
-
-      <div className="relative -mx-4 px-4 pb-6 pt-2">
-        <div className="mb-6 flex flex-col items-center pt-2 text-center">
-          <span className="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-white/30">Current Glucose</span>
-          <div className="flex items-end gap-3">
-            <span className="text-[72px] font-black leading-none text-white sm:text-[88px]">
-              {glucoseValue ?? "--"}
-            </span>
-            {latestGlucose && <TrendIcon className="mb-3 h-8 w-8" style={{ color: glucoseColor }} />}
-          </div>
-          <span className="mb-2 text-sm font-medium text-white/35">mg/dL</span>
-          {latestGlucose?.recorded_at && (
-            <span className="mb-3 text-xs text-white/35">
-              {formatRelativeAge(new Date(latestGlucose.recorded_at).getTime())}
-            </span>
-          )}
-          <div
-            className="flex items-center gap-2 rounded-full border px-4 py-2"
-            style={{ background: `${glucoseColor}18`, borderColor: `${glucoseColor}40` }}
-          >
-            <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: glucoseColor }} />
-            <span className="text-sm font-semibold" style={{ color: glucoseColor }}>{trend.label}</span>
-          </div>
+        {/* Filter button */}
+        <div className="relative justify-start">
+          <button
+            onClick={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              setFilterAnchorRect(rect);
+              setShowFilter((v) => !v);
+            }}
+            className={`w-8 h-8 flex items-center rounded-xl border transition-all relative hidden justify-center ${
+            showFilter ?
+            "bg-teal-500/10 border-teal-500/30 text-teal-400" :
+            "border-white/5 bg-white/[0.03] text-white/40 hover:text-white/80 hover:bg-white/[0.08]"}`
+            }>
+            
+            <SlidersHorizontal className="w-4 h-4" />
+            {activeFilterCount < 3 &&
+            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-teal-400" />
+            }
+          </button>
         </div>
-
-        {latestGlucose && (
-          <div className="dashboard-surface mb-6 flex items-center gap-3 rounded-2xl border border-white/[0.07] bg-white/[0.04] px-4 py-3">
-            <div className="flex h-5 items-end gap-0.5">
-              {[3, 4, 3, 5, 4, 3, 4, 5, 3].map((height, index) => (
-                <span
-                  key={index}
-                  className="w-0.5 rounded-full"
-                  style={{ height: height * 3, backgroundColor: inRange ? "#35a87988" : "#f59e0b88" }}
-                />
-              ))}
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-white/80">{inRange ? "In range" : "Out of range"}</p>
-              <p className="text-xs text-white/35">Target: {targetLow}-{targetHigh} mg/dL</p>
-            </div>
+        {/* Portal-style backdrop + dropdown rendered outside flow */}
+        <AnimatePresence>
+          {showFilter && filterAnchorRect &&
+          <>
+              <div className="fixed inset-0 z-[199]" onClick={() => setShowFilter(false)} />
+              <FilterDropdown filters={filters} onChange={toggleFilter} anchorRect={filterAnchorRect} />
+            </>
+          }
+        </AnimatePresence>
+      </div>
+      <div className="relative">
+      {filters.glucose && glucoseLinePoints.length > 0 &&
+      <div className="pointer-events-none absolute left-1/2 top-0 z-20 -translate-x-1/2 px-3 py-1 text-center">
+          <div className="text-2xl font-black leading-none text-white">
+            <span ref={tooltipValueRef}>{formatGlucoseDisplay(glucoseLinePoints[glucoseLinePoints.length - 1].value)}</span> <span className="text-xs font-medium text-white/35">mg/dL</span>
           </div>
-        )}
+          <div ref={tooltipTimeRef} className="mt-1 text-xs font-medium text-white/35">{format(new Date(glucoseLinePoints[glucoseLinePoints.length - 1].time), "h:mm a")}</div>
+          <div ref={tooltipDateRef} className="mt-0.5 text-[10px] font-medium text-white/30">{format(new Date(glucoseLinePoints[glucoseLinePoints.length - 1].time), "EEEE, MMM d")}</div>
+        </div>
+      }
+      <button
+        type="button"
+        onClick={scrollToLatestGlucose}
+        className="absolute right-4 top-0 z-30 flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-white/55 shadow-lg transition-colors hover:bg-white/[0.1] hover:text-white/85"
+        aria-label="Scroll to latest glucose">
+          <CornerUpLeft className="h-4 w-4" />
+        </button>
+      {filters.glucose && glucoseLinePoints.length > 0 &&
+      <div
+        ref={centerMarkerRef}
+        className="pointer-events-none absolute left-1/2 top-0 z-10 h-4 w-4 rounded-full bg-white opacity-0"
+        style={{
+          transform: "translate3d(-50%, 0, 0) translateY(-50%)",
+          boxShadow: "0 0 0 4px rgba(255,255,255,0.22), 0 0 10px rgba(255,255,255,0.38)",
+          willChange: "transform, opacity"
+        }} />
+      }
+      <div
+        ref={scrollRef}
+        className="overflow-x-auto"
+        onScroll={(event) => {
+          const el = event.currentTarget;
+          if (el.scrollLeft > maxScrollLeft) {
+            el.scrollLeft = maxScrollLeft;
+            scheduleCenterGlucoseUpdate(maxScrollLeft);
+            return;
+          }
+          scheduleCenterGlucoseUpdate(el.scrollLeft);
+        }}
+        style={{ WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
+        <div style={{ width: chartWidth, height: CHART_HEIGHT }}>
+          <ComposedChart
+            width={chartWidth}
+            height={CHART_HEIGHT}
+            data={chartData}
+            margin={{ top: CHART_MARGIN_TOP, right: 0, left: -20, bottom: CHART_MARGIN_BOTTOM }}>
+            <defs>
+              {doseKeys.map((k) =>
+              <linearGradient key={k.key} id={`grad_${k.key}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={k.color} stopOpacity={0.35} />
+                  <stop offset="100%" stopColor={k.color} stopOpacity={0.0} />
+                </linearGradient>
+              )}
+              {carbKeys.map((k) =>
+              <linearGradient key={k.key} id={`grad_${k.key}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={k.color} stopOpacity={0.28} />
+                  <stop offset="100%" stopColor={k.color} stopOpacity={0.0} />
+                </linearGradient>
+              )}
+              <linearGradient id="glucose_range_grad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#78350f" stopOpacity={0} />
+                <stop offset={`${highPct}%`} stopColor="#78350f" stopOpacity={0} />
+                <stop offset={`${highPct}%`} stopColor="#78350f" stopOpacity={0.4} />
+                <stop offset={`${lowPct}%`} stopColor="#78350f" stopOpacity={0.4} />
+                <stop offset={`${lowPct}%`} stopColor="#78350f" stopOpacity={0} />
+                <stop offset="100%" stopColor="#78350f" stopOpacity={0} />
+              </linearGradient>
+              <linearGradient
+                id="glucose_line_grad"
+                gradientUnits="userSpaceOnUse"
+                x1="0"
+                y1={CHART_MARGIN_TOP}
+                x2="0"
+                y2={CHART_HEIGHT - CHART_MARGIN_BOTTOM - X_AXIS_HEIGHT}>
+                <stop offset="0%" stopColor="rgba(255,255,255,0.72)" stopOpacity={0} />
+                <stop offset="10%" stopColor="rgba(255,255,255,0.72)" stopOpacity={0.18} />
+                <stop offset="24%" stopColor="rgba(255,255,255,0.72)" stopOpacity={0.72} />
+                <stop offset="100%" stopColor="rgba(255,255,255,0.72)" stopOpacity={0.72} />
+              </linearGradient>
+            </defs>
 
-        <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-white/25">At a Glance</p>
-        <div className="grid grid-cols-2 gap-3">
-          <MetricCard
-            label="Active Insulin"
-            value={activeUnits > 0 ? activeUnits.toFixed(1) : "0.0"}
-            sub="units"
-            status={activeUnits > 0.01 ? "Active" : "Cleared"}
-            color="#06b6d4"
-          />
-          <MetricCard
-            label="Carbs Digesting"
-            value={activeCarbs > 0 ? `${Math.round(activeCarbs)}g` : "0g"}
-            sub={`${totalCarbsToday}g today`}
-            status={activeCarbs > 0.5 ? "Digesting" : "Cleared"}
-            color="#f59e0b"
-            tooltipId="active-carbs"
-            openTooltip={openTooltip}
-            setOpenTooltip={setOpenTooltip}
-          />
-          <MetricCard
-            label="Insulin:Carb Ratio"
-            value={netValue}
-            sub={needsInsulinPlan ? "Enter your plan to calculate balance" : isPeakInFuture ? `peak ~${formatClockTime(netPeakTime)}` : "Meal insulin only"}
-            status={netLabel}
-            color={netColor}
-            tooltipId="net-carbs"
-            openTooltip={openTooltip}
-            setOpenTooltip={setOpenTooltip}
-          />
-          <MetricCard
-            label="Daily Average"
-            value={dailyAverage ? `${dailyAverage}` : "--"}
-            sub={dailyAverage ? "mg/dL" : "No data today"}
-            status={glucoseStatus(dailyAverage)}
-            color={!dailyAverage ? "#35a879" : dailyAverage < 70 ? "#3b82f6" : dailyAverage > 180 ? "#f59e0b" : "#10b981"}
-          />
+            <XAxis
+              dataKey="time"
+              type="number"
+              domain={[domainStart, domainEnd]}
+              tickFormatter={(t) => format(new Date(t), "h:mma")}
+              tick={{ fontSize: 10, fill: "rgba(255,255,255,0.25)", textAnchor: "middle" }}
+              axisLine={false}
+              tickLine={false}
+              height={X_AXIS_HEIGHT}
+              minTickGap={42}
+              tickCount={tickCount} />
+            
+
+            <YAxis yAxisId="insulin" domain={[0, 75]} hide />
+            <YAxis yAxisId="carbs" domain={[0, CARB_VISUAL_MAX_HEIGHT]} hide />
+            <YAxis yAxisId="glucose" domain={[GLUCOSE_MIN, GLUCOSE_MAX]} allowDataOverflow hide />
+
+            {filters.glucose && filteredGlucoseReadings.length > 0 &&
+            <Area
+              yAxisId="glucose"
+              type="monotoneX"
+              dataKey="bg"
+              stroke="none"
+              fill="url(#glucose_range_grad)"
+              isAnimationActive={false}
+              dot={false}
+              activeDot={false}
+              legendType="none" />
+
+            }
+
+            {doseKeys.map((k) =>
+            <Area
+              key={k.key}
+              yAxisId="insulin"
+              type="monotoneX"
+              dataKey={k.key}
+              name={k.label}
+              stroke={k.color}
+              strokeWidth={2.5}
+              fill={`url(#grad_${k.key})`}
+              dot={false}
+              isAnimationActive={false} />
+
+            )}
+
+            {carbKeys.map((k) =>
+            <Area
+              key={k.key}
+              yAxisId="carbs"
+              type="monotoneX"
+              dataKey={k.key}
+              name={k.label}
+              stroke={k.color}
+              strokeWidth={2}
+              strokeDasharray="5 3"
+              fill={`url(#grad_${k.key})`}
+              dot={false}
+              isAnimationActive={false}
+              opacity={0.72} />
+
+            )}
+
+            {customCarbEvents.map(({ time, entry }) =>
+            <ReferenceLine
+              key={`custom_${entry.id}`}
+              yAxisId="carbs"
+              x={time}
+              stroke="#6b7280"
+              strokeDasharray="3 3"
+              strokeWidth={1.5}
+              label={{ value: `${entry.carbs}g`, position: "insideTopRight", fill: "#9ca3af", fontSize: 9 }} />
+
+            )}
+
+            {filters.glucose && filteredGlucoseReadings.length > 0 &&
+            <Line
+              yAxisId="glucose"
+              type="linear"
+              dataKey="glucose"
+              name="Glucose"
+              stroke="url(#glucose_line_grad)"
+              strokeWidth={2.2}
+              dot={false}
+              activeDot={false}
+              connectNulls={true}
+              isAnimationActive={false} />
+
+            }
+
+          </ComposedChart>
         </div>
       </div>
-    </>
-  );
+      </div>
+    </div>);
+
 }
