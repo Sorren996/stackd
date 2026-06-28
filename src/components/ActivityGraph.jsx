@@ -204,12 +204,14 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const scrollFrameRef = useRef(null);
   const pendingScrollLeftRef = useRef(0);
   const containerRef = useRef(null);
+  const graphViewportRef = useRef(null);
   const [containerWidth, setContainerWidth] = useState(600);
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    const target = graphViewportRef.current || containerRef.current;
+    if (!target) return;
     const ro = new ResizeObserver(([e]) => setContainerWidth(e.contentRect.width));
-    ro.observe(containerRef.current);
+    ro.observe(target);
     return () => ro.disconnect();
   }, []);
 
@@ -503,7 +505,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const activeFilterCount = Object.values(filters).filter(Boolean).length;
 
   return (
-    <div ref={containerRef} className="-mx-4 overflow-hidden relative">
+    <div ref={containerRef} className="relative overflow-visible">
       {/* Controls row */}
       <div className="flex py-3 items-center mb-4 justify-start pl-4 gap-2">
 
@@ -537,7 +539,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           }
         </AnimatePresence>
       </div>
-      <div className="relative">
+      <div ref={graphViewportRef} className="relative left-1/2 w-screen -translate-x-1/2 overflow-hidden">
       {filters.glucose && glucoseLinePoints.length > 0 &&
       <div className="pointer-events-none absolute left-1/2 top-0 z-20 -translate-x-1/2 px-3 py-1 text-center">
           <div className="text-2xl font-black leading-none text-white">
@@ -711,6 +713,12 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           </ComposedChart>
         </div>
       </div>
+      <div
+        className="pointer-events-none absolute inset-y-0 left-0 z-20 w-12"
+        style={{ background: "linear-gradient(to right, hsl(162,10%,10%) 0%, rgba(20,28,25,0.75) 38%, rgba(20,28,25,0) 100%)" }} />
+      <div
+        className="pointer-events-none absolute inset-y-0 right-0 z-20 w-12"
+        style={{ background: "linear-gradient(to left, hsl(162,10%,10%) 0%, rgba(20,28,25,0.75) 38%, rgba(20,28,25,0) 100%)" }} />
       </div>
     </div>);
 
