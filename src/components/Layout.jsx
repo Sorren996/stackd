@@ -96,7 +96,7 @@ export default function Layout() {
 
       <nav className="fixed inset-x-0 bottom-0 z-30 flex justify-center pb-safe">
         <div
-          className="relative mx-4 mb-4 flex items-center gap-1 overflow-hidden rounded-[2rem] border px-2 py-1.5 backdrop-blur-2xl"
+          className="relative mx-4 mb-4 flex items-center gap-1 overflow-hidden rounded-[2rem] border px-2 py-1.5 backdrop-blur-xl"
           style={{
             background: "linear-gradient(135deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0))",
             borderColor: "rgba(255,255,255,0.24)",
