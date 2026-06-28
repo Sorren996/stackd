@@ -539,7 +539,18 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           }
         </AnimatePresence>
       </div>
-      <div ref={graphViewportRef} className="relative left-1/2 w-screen -translate-x-1/2 overflow-hidden">
+      <div className="relative">
+      <button
+        type="button"
+        onClick={scrollToLatestGlucose}
+        className="absolute right-0 top-0 z-30 flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-white/55 shadow-lg transition-colors hover:bg-white/[0.1] hover:text-white/85"
+        aria-label="Scroll to latest glucose">
+          <CornerUpRight className="h-4 w-4" />
+        </button>
+      <div
+        ref={graphViewportRef}
+        className="relative w-screen overflow-hidden"
+        style={{ marginLeft: "calc(50% - 50vw)", marginRight: "calc(50% - 50vw)" }}>
       {filters.glucose && glucoseLinePoints.length > 0 &&
       <div className="pointer-events-none absolute left-1/2 top-0 z-20 -translate-x-1/2 px-3 py-1 text-center">
           <div className="text-2xl font-black leading-none text-white">
@@ -549,13 +560,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           <div ref={tooltipDateRef} className="mt-0.5 text-[10px] font-medium text-white/30">{format(new Date(glucoseLinePoints[glucoseLinePoints.length - 1].time), "EEEE, MMM d")}</div>
         </div>
       }
-      <button
-        type="button"
-        onClick={scrollToLatestGlucose}
-        className="absolute right-4 top-0 z-30 flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-white/55 shadow-lg transition-colors hover:bg-white/[0.1] hover:text-white/85"
-        aria-label="Scroll to latest glucose">
-          <CornerUpRight className="h-4 w-4" />
-        </button>
       {filters.glucose && glucoseLinePoints.length > 0 &&
       <div
         ref={centerMarkerRef}
@@ -719,6 +723,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       <div
         className="pointer-events-none absolute inset-y-0 right-0 z-20 w-12"
         style={{ background: "linear-gradient(to left, hsl(162,10%,10%) 0%, rgba(20,28,25,0.75) 38%, rgba(20,28,25,0) 100%)" }} />
+      </div>
       </div>
     </div>);
 
