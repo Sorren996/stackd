@@ -1,10 +1,9 @@
-import { useState, useEffect, useMemo } from "react";
+import { lazy, Suspense, useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import ActivityGraph from "../components/ActivityGraph";
 import ActiveInsulinBanner from "../components/ActiveInsulinBanner";
 import ActiveAlerts from "../components/ActiveAlerts";
-import DoseForm from "../components/DoseForm";
 import DoseCard from "../components/DoseCard";
 import GlucoseCard from "../components/GlucoseCard";
 import CarbCard from "../components/CarbCard";
@@ -12,11 +11,32 @@ import { getDoseStatus, INSULIN_PROFILES } from "@/lib/insulinPharmacology";
 import { Activity, Plus, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
+const FRESH_DATA_MS = 60 * 1000;
+const GRAPH_DATA_MS = 5 * 60 * 1000;
+const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+const TWO_DAYS_MS = 48 * 60 * 60 * 1000;
+
+const loadDoseForm = () => import("../components/DoseForm");
+const DoseForm = lazy(loadDoseForm);
+
+function scheduleIdleWork(callback) {
+  if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+    const id = window.requestIdleCallback(callback, { timeout: 1200 });
+    return () => window.cancelIdleCallback(id);
+  }
+
+  const id = window.setTimeout(callback, 250);
+  return () => window.clearTimeout(id);
+}
+
 export default function Dashboard() {
   const queryClient = useQueryClient();
   const [, setTick] = useState(0);
   const [showAllDoses, setShowAllDoses] = useState(false);
   const [doseFormOpen, setDoseFormOpen] = useState(false);
+  const [doseFormPreloaded, setDoseFormPreloaded] = useState(false);
+  const [loadGraphData, setLoadGraphData] = useState(false);
   const stackingAlertsEnabled = localStorage.getItem("stacking_alerts_enabled") !== "false";
 
   useEffect(() => {
@@ -24,25 +44,70 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, []);
 
-  const { data: doses = [], isLoading } = useQuery({
+  useEffect(() => scheduleIdleWork(() => setLoadGraphData(true)), []);
+
+  useEffect(
+    () =>
+      scheduleIdleWork(() => {
+        loadDoseForm().finally(() => setDoseFormPreloaded(true));
+      }),
+    [],
+  );
+
+  const { data: doses = [], isLoading: loadingDoses } = useQuery({
     queryKey: ["insulin-doses"],
-    queryFn: () => base44.entities.InsulinDose.list("-administered_at", 1000),
+    queryFn: () => base44.entities.InsulinDose.list("-administered_at", 100),
+    staleTime: FRESH_DATA_MS,
+    gcTime: GRAPH_DATA_MS,
+  });
+
+  const { data: latestGlucoseRows = [], isLoading: loadingLatestGlucose } = useQuery({
+    queryKey: ["latest-glucose"],
+    queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", 1),
+    staleTime: 30 * 1000,
+    gcTime: GRAPH_DATA_MS,
+    placeholderData: () => queryClient.getQueryData(["glucose-readings", "graph"])?.slice(0, 1) ?? [],
   });
 
   const { data: glucoseReadings = [] } = useQuery({
-    queryKey: ["glucose-readings"],
+    queryKey: ["glucose-readings", "graph"],
     queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", 5000),
+    enabled: loadGraphData,
+    staleTime: GRAPH_DATA_MS,
+    gcTime: 30 * 60 * 1000,
+    placeholderData: () => queryClient.getQueryData(["glucose-readings", "graph"]) ?? latestGlucoseRows,
   });
 
-  const { data: carbEntries = [] } = useQuery({
+  const { data: carbEntries = [], isLoading: loadingCarbs } = useQuery({
     queryKey: ["carb-entries"],
+    queryFn: () => base44.entities.CarbEntry.list("-consumed_at", 100),
+    staleTime: FRESH_DATA_MS,
+    gcTime: GRAPH_DATA_MS,
+  });
+
+  const { data: graphCarbsSource = [] } = useQuery({
+    queryKey: ["carb-entries", "graph"],
     queryFn: () => base44.entities.CarbEntry.list("-consumed_at", 1000),
+    enabled: loadGraphData,
+    staleTime: GRAPH_DATA_MS,
+    gcTime: 30 * 60 * 1000,
+    placeholderData: () => queryClient.getQueryData(["carb-entries", "graph"]) ?? carbEntries,
+  });
+
+  const { data: graphDosesSource = [] } = useQuery({
+    queryKey: ["insulin-doses", "graph"],
+    queryFn: () => base44.entities.InsulinDose.list("-administered_at", 1000),
+    enabled: loadGraphData,
+    staleTime: GRAPH_DATA_MS,
+    gcTime: 30 * 60 * 1000,
+    placeholderData: () => queryClient.getQueryData(["insulin-doses", "graph"]) ?? doses,
   });
 
   const deleteGlucose = useMutation({
     mutationFn: (id) => base44.entities.GlucoseReading.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["glucose-readings"] });
+      queryClient.invalidateQueries({ queryKey: ["latest-glucose"] });
+      queryClient.invalidateQueries({ queryKey: ["glucose-readings", "graph"] });
       toast.success("Glucose reading removed");
     },
   });
@@ -51,6 +116,7 @@ export default function Dashboard() {
     mutationFn: (id) => base44.entities.CarbEntry.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["carb-entries"] });
+      queryClient.invalidateQueries({ queryKey: ["carb-entries", "graph"] });
       toast.success("Carb entry removed");
     },
   });
@@ -59,41 +125,44 @@ export default function Dashboard() {
     mutationFn: (id) => base44.entities.InsulinDose.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["insulin-doses"] });
+      queryClient.invalidateQueries({ queryKey: ["insulin-doses", "graph"] });
       toast.success("Dose removed");
     },
   });
 
   const recentDoses = doses.filter((dose) => {
     const age = Date.now() - new Date(dose.administered_at).getTime();
-    return age < 48 * 60 * 60 * 1000;
+    return age < TWO_DAYS_MS;
   });
 
-  const recentGlucose = glucoseReadings.filter((reading) => {
+  const heroGlucoseReadings = glucoseReadings.length ? glucoseReadings : latestGlucoseRows;
+
+  const recentGlucose = heroGlucoseReadings.filter((reading) => {
     const age = Date.now() - new Date(reading.recorded_at).getTime();
-    return age < 24 * 60 * 60 * 1000;
+    return age < ONE_DAY_MS;
   });
 
   const recentCarbs = carbEntries.filter((entry) => {
     const age = Date.now() - new Date(entry.consumed_at).getTime();
-    return age < 24 * 60 * 60 * 1000;
+    return age < ONE_DAY_MS;
   });
 
-const graphGlucose = glucoseReadings.filter((reading) => {
-  const age = Date.now() - new Date(reading.recorded_at).getTime();
-  return age < 14 * 24 * 60 * 60 * 1000;
-});
+  const graphGlucose = glucoseReadings.filter((reading) => {
+    const age = Date.now() - new Date(reading.recorded_at).getTime();
+    return age < FOURTEEN_DAYS_MS;
+  });
 
-const graphDoses = doses.filter((dose) => {
-  const age = Date.now() - new Date(dose.administered_at).getTime();
-  return age < 14 * 24 * 60 * 60 * 1000;
-});
+  const graphDoses = graphDosesSource.filter((dose) => {
+    const age = Date.now() - new Date(dose.administered_at).getTime();
+    return age < FOURTEEN_DAYS_MS;
+  });
 
-const graphCarbs = carbEntries.filter((entry) => {
-  const age = Date.now() - new Date(entry.consumed_at).getTime();
-  return age < 14 * 24 * 60 * 60 * 1000;
-});
+  const graphCarbs = graphCarbsSource.filter((entry) => {
+    const age = Date.now() - new Date(entry.consumed_at).getTime();
+    return age < FOURTEEN_DAYS_MS;
+  });
 
-  const latestGlucose = glucoseReadings[0] || null;
+  const latestGlucose = latestGlucoseRows[0] || glucoseReadings[0] || null;
 
   const activeRapidCount = useMemo(() => {
     const activeDoses = recentDoses
@@ -127,7 +196,16 @@ const graphCarbs = carbEntries.filter((entry) => {
     return [...doseLogs, ...glucoseLogs, ...carbLogs].sort((a, b) => b.timestamp - a.timestamp);
   }, [recentDoses, recentGlucose, recentCarbs]);
 
-  if (isLoading) {
+  const isPriming = loadingLatestGlucose;
+  const shouldShowEmptyState =
+    !loadingDoses &&
+    !loadingLatestGlucose &&
+    !loadingCarbs &&
+    recentDoses.length === 0 &&
+    recentGlucose.length === 0 &&
+    recentCarbs.length === 0;
+
+  if (isPriming && !latestGlucose && recentDoses.length === 0 && recentCarbs.length === 0) {
     return (
       <div className="flex h-[60vh] w-full items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary/20 border-t-primary" />
@@ -137,9 +215,11 @@ const graphCarbs = carbEntries.filter((entry) => {
 
   return (
     <div className="dashboard-page w-full max-w-full min-w-0 space-y-0 overflow-visible">
-      <DoseForm open={doseFormOpen} onOpenChange={setDoseFormOpen} />
+      <Suspense fallback={null}>
+        {(doseFormOpen || doseFormPreloaded) && <DoseForm open={doseFormOpen} onOpenChange={setDoseFormOpen} />}
+      </Suspense>
 
-      {recentDoses.length === 0 && recentGlucose.length === 0 && recentCarbs.length === 0 ? (
+      {shouldShowEmptyState ? (
         <div className="flex flex-col items-center justify-center px-4 py-20 text-center">
           <Activity className="mb-3 h-10 w-10 text-muted-foreground/40" />
           <h3 className="text-lg font-semibold text-white">No active insulin</h3>
@@ -154,7 +234,7 @@ const graphCarbs = carbEntries.filter((entry) => {
             <ActiveInsulinBanner
               doses={recentDoses}
               latestGlucose={latestGlucose}
-              glucoseReadings={glucoseReadings}
+              glucoseReadings={heroGlucoseReadings}
               carbEntries={recentCarbs}
             />
           </div>
@@ -175,7 +255,8 @@ const graphCarbs = carbEntries.filter((entry) => {
             <p className="mb-2 px-0 text-[10px] font-bold uppercase tracking-[0.18em] text-white/25">
               Glucose Trend
             </p>
-<ActivityGraph doses={graphDoses} glucoseReadings={graphGlucose} carbEntries={graphCarbs} />          </div>
+            <ActivityGraph doses={graphDoses} glucoseReadings={graphGlucose} carbEntries={graphCarbs} />
+          </div>
 
           <div className="grid w-full max-w-full min-w-0 grid-cols-1 gap-6 overflow-x-hidden border-0 px-0 py-4 lg:grid-cols-3">
             <div className="min-w-0 max-w-full space-y-2 overflow-x-hidden lg:col-span-2">
@@ -212,7 +293,10 @@ const graphCarbs = carbEntries.filter((entry) => {
 
       <button
         type="button"
-        onClick={() => setDoseFormOpen(true)}
+        onClick={() => {
+          setDoseFormPreloaded(true);
+          setDoseFormOpen(true);
+        }}
         className="fixed bottom-24 right-5 z-40 flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border backdrop-blur-2xl transition active:scale-95"
         style={{
           background: "linear-gradient(145deg, rgba(255,255,255,0.24), rgba(255,255,255,0.08))",
