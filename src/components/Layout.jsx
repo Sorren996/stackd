@@ -245,13 +245,31 @@ export default function Layout() {
 
       <nav className="fixed inset-x-0 bottom-0 z-30 flex justify-center pb-safe">
         <div
-          className="mx-4 mb-4 flex items-center gap-1 rounded-3xl border px-4 py-1 backdrop-blur-sm"
+          className="relative mx-4 mb-4 flex items-center gap-1 overflow-hidden rounded-[2rem] border px-2 py-1.5 backdrop-blur-2xl"
           style={{
-            background: isLightMode ? "rgba(255,255,255,0.72)" : "rgba(8,14,10,0.4)",
-            borderColor: isLightMode ? "rgba(24,24,27,0.15)" : "rgba(255,255,255,0.4)",
-            boxShadow: "0 8px 40px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.15)",
+            background: isLightMode
+              ? "linear-gradient(135deg, rgba(255,255,255,0.82), rgba(255,255,255,0.48))"
+              : "linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.06))",
+            borderColor: isLightMode ? "rgba(255,255,255,0.72)" : "rgba(255,255,255,0.24)",
+            boxShadow: isLightMode
+              ? "0 18px 45px rgba(31,70,59,0.16), inset 0 1px 1px rgba(255,255,255,0.95), inset 0 -1px 1px rgba(32,51,45,0.08)"
+              : "0 18px 50px rgba(0,0,0,0.38), inset 0 1px 1px rgba(255,255,255,0.32), inset 0 -1px 1px rgba(255,255,255,0.08)",
           }}
         >
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-3 top-1 h-px"
+            style={{ background: "linear-gradient(to right, transparent, rgba(255,255,255,0.72), transparent)" }}
+          />
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -inset-8 opacity-70"
+            style={{
+              background: isLightMode
+                ? "radial-gradient(circle at 30% 0%, rgba(255,255,255,0.9), transparent 34%), radial-gradient(circle at 80% 120%, rgba(35,123,112,0.14), transparent 38%)"
+                : "radial-gradient(circle at 25% 0%, rgba(255,255,255,0.26), transparent 34%), radial-gradient(circle at 85% 130%, rgba(45,212,191,0.16), transparent 42%)",
+            }}
+          />
           {navItems.map((item) => {
             const isActive = location.pathname === item.path && !isSettingsOpen;
             const Icon = item.icon;
@@ -260,20 +278,49 @@ export default function Layout() {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`relative flex flex-col items-center gap-1 rounded-2xl px-4 py-1.5 transition-colors ${
-                  isActive ? (isLightMode ? "text-zinc-900" : "text-white") : isLightMode ? "text-zinc-500 hover:text-zinc-900" : "text-white/40 hover:text-white/70"
+                className={`relative flex min-w-[72px] flex-col items-center gap-1 rounded-[1.55rem] px-3 py-2 transition-colors ${
+                  isActive ? (isLightMode ? "text-zinc-900" : "text-white") : isLightMode ? "text-zinc-500 hover:text-zinc-800" : "text-white/45 hover:text-white/75"
                 }`}
               >
                 {isActive && (
                   <motion.div
                     layoutId="active-nav-tab"
-                    className="absolute inset-0 -z-10 rounded-2xl"
-                    style={{ background: isLightMode ? "rgba(24,24,27,0.08)" : "rgba(255,255,255,0.15)" }}
-                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                    className="absolute inset-0 rounded-[1.55rem]"
+                    style={{
+                      background: isLightMode
+                        ? "linear-gradient(145deg, rgba(255,255,255,0.92), rgba(255,255,255,0.5))"
+                        : "linear-gradient(145deg, rgba(255,255,255,0.28), rgba(255,255,255,0.09))",
+                      border: "1px solid rgba(255,255,255,0.34)",
+                      boxShadow: isLightMode
+                        ? "0 8px 22px rgba(31,70,59,0.12), inset 0 1px 1px rgba(255,255,255,0.95), inset 0 -1px 1px rgba(32,51,45,0.06)"
+                        : "0 10px 24px rgba(0,0,0,0.22), inset 0 1px 1px rgba(255,255,255,0.38), inset 0 -1px 1px rgba(255,255,255,0.1)",
+                    }}
+                    transition={{ type: "spring", stiffness: 460, damping: 34, mass: 0.8 }}
                   />
                 )}
-                <Icon className="relative z-10 h-5 w-5" />
-                <span className="relative z-10 text-[10px] font-medium">{item.label}</span>
+                {isActive && (
+                  <motion.div
+                    aria-hidden="true"
+                    layoutId="active-nav-glint"
+                    className="absolute left-3 right-3 top-1 h-px rounded-full"
+                    style={{ background: "linear-gradient(to right, transparent, rgba(255,255,255,0.8), transparent)" }}
+                    transition={{ type: "spring", stiffness: 460, damping: 34, mass: 0.8 }}
+                  />
+                )}
+                <motion.span
+                  className="relative z-10 flex"
+                  animate={{ y: isActive ? -1 : 0, scale: isActive ? 1.07 : 1 }}
+                  transition={{ type: "spring", stiffness: 420, damping: 28 }}
+                >
+                  <Icon className="h-5 w-5" />
+                </motion.span>
+                <motion.span
+                  className="relative z-10 text-[10px] font-semibold"
+                  animate={{ opacity: isActive ? 1 : 0.64, y: isActive ? 0 : 1 }}
+                  transition={{ duration: 0.16 }}
+                >
+                  {item.label}
+                </motion.span>
               </Link>
             );
           })}
