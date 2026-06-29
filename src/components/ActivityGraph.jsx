@@ -7,7 +7,8 @@ import { CornerUpRight, SlidersHorizontal, Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const STEP_MS = 3 * 60 * 1000;
-const HISTORY_DAYS = 4;
+const HALF_HOUR_MS = 30 * 60 * 1000;
+const HISTORY_DAYS = 14;
 const FUTURE_HOURS = 3;
 const VISIBLE_HOURS = 6;
 const CHART_HEIGHT = 260;
@@ -50,6 +51,31 @@ function getReadingValue(reading) {
 
 function formatGlucoseDisplay(value) {
   return Math.round(value);
+}
+
+function TimeAxisTick({ x, y, payload }) {
+  const date = new Date(payload.value);
+  const minute = date.getMinutes();
+
+  if (minute === 30) {
+    return <circle cx={x} cy={y + 8} r={2} fill="rgba(255,255,255,0.28)" />;
+  }
+
+  if (minute === 0) {
+    return (
+      <text
+        x={x}
+        y={y + 13}
+        textAnchor="middle"
+        fill="rgba(255,255,255,0.28)"
+        fontSize={10}
+        fontWeight={600}>
+        {format(date, "h a")}
+      </text>
+    );
+  }
+
+  return null;
 }
 
 function getCarbGrams(entry) {
@@ -510,7 +536,11 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
   if (!doses.length && !glucoseReadings.length && !carbEntries.length) return null;
 
-  const tickCount = Math.max(2, Math.floor(chartWidth / 90));
+  const timeTicks = [];
+  const firstTick = Math.ceil(domainStart / HALF_HOUR_MS) * HALF_HOUR_MS;
+  for (let tick = firstTick; tick <= domainEnd; tick += HALF_HOUR_MS) {
+    timeTicks.push(tick);
+  }
 
   // How many filters are off (to show indicator dot)
   const activeFilterCount = Object.values(filters).filter(Boolean).length;
@@ -646,13 +676,12 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               dataKey="time"
               type="number"
               domain={[domainStart, domainEnd]}
-              tickFormatter={(t) => format(new Date(t), "h:mma")}
-              tick={{ fontSize: 10, fill: "rgba(255,255,255,0.25)", textAnchor: "middle" }}
+              ticks={timeTicks}
+              tick={<TimeAxisTick />}
               axisLine={false}
               tickLine={false}
               height={X_AXIS_HEIGHT}
-              minTickGap={42}
-              tickCount={tickCount} />
+              interval={0} />
             
 
             <YAxis yAxisId="insulin" domain={[0, 75]} hide />
@@ -736,11 +765,19 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         </div>
       </div>
       <div
-        className="pointer-events-none absolute inset-y-0 left-0 z-20 w-12"
-        style={{ background: "linear-gradient(to right, hsl(162,10%,10%) 0%, rgba(20,28,25,0.75) 38%, rgba(20,28,25,0) 100%)" }} />
+        className="pointer-events-none absolute inset-y-0 left-0 z-20 w-16"
+        style={{
+          background: "linear-gradient(to right, hsl(162,10%,10%) 0%, rgba(20,28,25,0.78) 42%, rgba(20,28,25,0) 100%)",
+          WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%)",
+          maskImage: "linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%)"
+        }} />
       <div
-        className="pointer-events-none absolute inset-y-0 right-0 z-20 w-12"
-        style={{ background: "linear-gradient(to left, hsl(162,10%,10%) 0%, rgba(20,28,25,0.75) 38%, rgba(20,28,25,0) 100%)" }} />
+        className="pointer-events-none absolute inset-y-0 right-0 z-20 w-16"
+        style={{
+          background: "linear-gradient(to left, hsl(162,10%,10%) 0%, rgba(20,28,25,0.78) 42%, rgba(20,28,25,0) 100%)",
+          WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%)",
+          maskImage: "linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%)"
+        }} />
       </div>
       </div>
     </div>);
