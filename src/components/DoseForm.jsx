@@ -8,8 +8,24 @@ import { X, Syringe, Droplets, Wheat, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import CarbsTab from "@/components/CarbsTab";
+import { AnimatePresence, motion } from "framer-motion";
 
 const LATEST_GLUCOSE_CACHE_KEY = "latest_glucose_cache";
+const TAB_ORDER = ["insulin", "glucose", "carbs"];
+const tabPanelVariants = {
+  enter: (direction) => ({
+    x: direction > 0 ? "100%" : "-100%",
+    opacity: 0,
+  }),
+  center: {
+    x: 0,
+    opacity: 1,
+  },
+  exit: (direction) => ({
+    x: direction > 0 ? "-100%" : "100%",
+    opacity: 0,
+  }),
+};
 
 const CATEGORY_ORDER = [
   "Rapid-Acting",
@@ -47,6 +63,7 @@ function writeCachedLatestGlucose(reading) {
 
 export default function DoseForm({ open, onOpenChange }) {
   const [tab, setTab] = useState("insulin");
+  const [tabDirection, setTabDirection] = useState(1);
   const [insulinRows, setInsulinRows] = useState(() => [createInsulinRow()]);
   const [insulinNotes, setInsulinNotes] = useState("");
   const [insulinTime, setInsulinTime] = useState(() => new Date().toTimeString().slice(0, 5));
@@ -56,6 +73,15 @@ export default function DoseForm({ open, onOpenChange }) {
 
   const queryClient = useQueryClient();
   const nowTimeString = new Date().toTimeString().slice(0, 5);
+
+  const handleTabChange = (nextTab) => {
+    if (nextTab === tab) return;
+
+    const currentIndex = TAB_ORDER.indexOf(tab);
+    const nextIndex = TAB_ORDER.indexOf(nextTab);
+    setTabDirection(nextIndex > currentIndex ? 1 : -1);
+    setTab(nextTab);
+  };
 
   const handleSubmitCarbs = async (entries) => {
     const entry = entries[0];
@@ -262,7 +288,7 @@ export default function DoseForm({ open, onOpenChange }) {
           }
 
           .dose-form-content[data-state="closed"] {
-            animation: dose-form-sheet-out 180ms ease-in;
+            animation: dose-form-sheet-out 260ms cubic-bezier(0.32, 0, 0.67, 0);
             opacity: 0;
             pointer-events: none;
             transform: translateY(100%) scale(0.98);
@@ -330,7 +356,7 @@ export default function DoseForm({ open, onOpenChange }) {
               <button
                 key={id}
                 type="button"
-                onClick={() => setTab(id)}
+                onClick={() => handleTabChange(id)}
                 className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2 text-sm font-medium transition-colors ${
                   tab === id ? "bg-white/10 text-white" : "text-white/40 hover:text-white/60"
                 }`}
@@ -341,198 +367,214 @@ export default function DoseForm({ open, onOpenChange }) {
             ))}
           </div>
 
-          {tab === "carbs" ? (
-            <div className="min-h-0 flex-1 overflow-y-auto">
-<CarbsTab onSubmit={handleSubmitCarbs} isPending={false} />            </div>
-          ) : tab === "insulin" ? (
-            <>
-              <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-6 pt-4">
-                <div className="space-y-3">
-                  <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/40">Insulin doses</p>
+          <div className="relative min-h-0 flex-1 overflow-hidden">
+            <AnimatePresence initial={false} custom={tabDirection} mode="popLayout">
+              <motion.div
+                key={tab}
+                custom={tabDirection}
+                variants={tabPanelVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={{ type: "spring", stiffness: 420, damping: 36, mass: 0.85 }}
+                className="absolute inset-0 flex min-h-0 flex-col"
+              >
+                {tab === "carbs" ? (
+                  <div className="min-h-0 flex-1 overflow-y-auto">
+                    <CarbsTab onSubmit={handleSubmitCarbs} isPending={false} />
+                  </div>
+                ) : tab === "insulin" ? (
+                  <>
+                    <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-6 pt-4">
+                      <div className="space-y-3">
+                        <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/40">Insulin doses</p>
 
-                  {insulinRows.map((row, index) => (
-                    <div key={row.id} className="space-y-2">
-                      <div className="grid grid-cols-[minmax(0,1fr)_4.5rem_6.75rem] gap-2">
-                        <select
-                          aria-label={`Insulin type for dose ${index + 1}`}
-                          value={row.insulinType}
-                          onChange={(event) => updateInsulinRow(row.id, { insulinType: event.target.value })}
-                          className="min-w-0 rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-teal-400"
-                        >
-                          <option value="" className="bg-[#18211f]">Insulin type</option>
-                          {groupedInsulins.map(({ category, items }) => (
-                            <optgroup key={category} label={category} className="bg-[#18211f]">
-                              {items.map(([name]) => (
-                                <option key={name} value={name}>{name}</option>
-                              ))}
-                            </optgroup>
-                          ))}
-                        </select>
+                        {insulinRows.map((row, index) => (
+                          <div key={row.id} className="space-y-2">
+                            <div className="grid grid-cols-[minmax(0,1fr)_4.5rem_6.75rem] gap-2">
+                              <select
+                                aria-label={`Insulin type for dose ${index + 1}`}
+                                value={row.insulinType}
+                                onChange={(event) => updateInsulinRow(row.id, { insulinType: event.target.value })}
+                                className="min-w-0 rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-teal-400"
+                              >
+                                <option value="" className="bg-[#18211f]">Insulin type</option>
+                                {groupedInsulins.map(({ category, items }) => (
+                                  <optgroup key={category} label={category} className="bg-[#18211f]">
+                                    {items.map(([name]) => (
+                                      <option key={name} value={name}>{name}</option>
+                                    ))}
+                                  </optgroup>
+                                ))}
+                              </select>
 
-                        <input
-                          aria-label={`Units for dose ${index + 1}`}
-                          type="number"
-                          min="0.1"
-                          step="0.1"
-                          inputMode="decimal"
-                          placeholder="Units"
-                          value={row.units}
-                          onChange={(event) => updateInsulinRow(row.id, { units: event.target.value })}
-                          className="min-w-0 rounded-xl border border-white/10 bg-white/5 px-2 py-3 text-center text-sm text-white outline-none placeholder:text-white/30 focus:border-teal-400"
-                        />
+                              <input
+                                aria-label={`Units for dose ${index + 1}`}
+                                type="number"
+                                min="0.1"
+                                step="0.1"
+                                inputMode="decimal"
+                                placeholder="Units"
+                                value={row.units}
+                                onChange={(event) => updateInsulinRow(row.id, { units: event.target.value })}
+                                className="min-w-0 rounded-xl border border-white/10 bg-white/5 px-2 py-3 text-center text-sm text-white outline-none placeholder:text-white/30 focus:border-teal-400"
+                              />
 
-                        <select
-                          aria-label={`Purpose for dose ${index + 1}`}
-                          value={row.purpose}
-                          onChange={(event) => updateInsulinRow(row.id, { purpose: event.target.value })}
-                          className="rounded-xl border border-white/10 bg-white/5 px-2 py-3 text-sm text-white outline-none focus:border-teal-400"
-                        >
-                          <option value="meal" className="bg-[#18211f]">Meal</option>
-                          <option value="correction" className="bg-[#18211f]">Correction</option>
-                        </select>
-                      </div>
+                              <select
+                                aria-label={`Purpose for dose ${index + 1}`}
+                                value={row.purpose}
+                                onChange={(event) => updateInsulinRow(row.id, { purpose: event.target.value })}
+                                className="rounded-xl border border-white/10 bg-white/5 px-2 py-3 text-sm text-white outline-none focus:border-teal-400"
+                              >
+                                <option value="meal" className="bg-[#18211f]">Meal</option>
+                                <option value="correction" className="bg-[#18211f]">Correction</option>
+                              </select>
+                            </div>
 
-                      {insulinRows.length > 1 && (
+                            {insulinRows.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => removeInsulinRow(row.id)}
+                                className="flex items-center gap-1 px-1 text-xs text-white/35 transition hover:text-red-300"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                                Remove this row
+                              </button>
+                            )}
+                          </div>
+                        ))}
+
                         <button
                           type="button"
-                          onClick={() => removeInsulinRow(row.id)}
-                          className="flex items-center gap-1 px-1 text-xs text-white/35 transition hover:text-red-300"
+                          onClick={addInsulinRow}
+                          className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 py-3 text-sm font-medium text-white/60 transition hover:border-teal-400/50 hover:bg-teal-400/5 hover:text-teal-300"
                         >
-                          <Trash2 className="h-3 w-3" />
-                          Remove this row
+                          <Plus className="h-4 w-4" />
+                          Add more insulin
                         </button>
-                      )}
+                      </div>
+
+                      <div className="mt-6 space-y-3">
+                        <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/40">Time administered</p>
+                        <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                          <span className="text-sm text-white/40">Administered at</span>
+                          <input
+                            type="time"
+                            value={insulinTime}
+                            max={nowTimeString}
+                            onChange={(event) => {
+                              if (event.target.value <= nowTimeString) setInsulinTime(event.target.value);
+                            }}
+                            className="cursor-pointer bg-transparent text-sm font-medium text-white outline-none"
+                            style={{ colorScheme: "dark" }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="mt-6 space-y-3">
+                        <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/40">Notes (optional)</p>
+                        <Textarea
+                          value={insulinNotes}
+                          onChange={(event) => setInsulinNotes(event.target.value)}
+                          placeholder="e.g. before lunch"
+                          rows={2}
+                          className="resize-none rounded-2xl border-white/10 bg-white/5 text-white placeholder:text-white/30"
+                        />
+                      </div>
+
+                      <div className="mt-6 space-y-2 border-t border-white/10 pt-4">
+                        {Object.entries(insulinTotals).length ? (
+                          Object.entries(insulinTotals).map(([type, units]) => (
+                            <p key={type} className="text-sm font-semibold text-white/85">
+                              {type.split(" ")[0]} {units % 1 === 0 ? units : units.toFixed(1)} units total
+                            </p>
+                          ))
+                        ) : (
+                          <p className="text-sm text-white/35">Add an insulin dose to see the total.</p>
+                        )}
+                      </div>
                     </div>
-                  ))}
 
-                  <button
-                    type="button"
-                    onClick={addInsulinRow}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 py-3 text-sm font-medium text-white/60 transition hover:border-teal-400/50 hover:bg-teal-400/5 hover:text-teal-300"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Add more insulin
-                  </button>
-                </div>
+                    <div className="shrink-0 px-5 pb-6 pt-3">
+                      <button
+                        type="button"
+                        onClick={handleSubmitInsulin}
+                        disabled={!totalUnits || createDoses.isPending}
+                        className="w-full rounded-2xl bg-teal-500 py-4 text-base font-semibold text-white transition hover:bg-teal-400 disabled:opacity-40"
+                      >
+                        {createDoses.isPending
+                          ? "Logging..."
+                          : totalUnits
+                            ? `Log ${totalUnits % 1 === 0 ? totalUnits : totalUnits.toFixed(1)} units`
+                            : "Add insulin units"}
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-6 pt-4">
+                      <label htmlFor="glucose-log" className="block text-sm font-bold uppercase tracking-widest text-white/40">
+                        Blood glucose (mg/dL)
+                      </label>
+                      <div className="mt-3 rounded-2xl border border-white/10 bg-white/5 px-6 py-6">
+                        <input
+                          id="glucose-log"
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          maxLength={3}
+                          value={glucoseValue}
+                          onChange={(event) => setGlucoseValue(event.target.value.replace(/\D/g, "").slice(0, 3))}
+                          placeholder="--"
+                          className="w-full bg-transparent text-center text-5xl font-bold text-white outline-none placeholder:text-white/20"
+                        />
+                        <p className="mt-1 text-center text-sm text-white/40">mg/dL</p>
+                      </div>
 
-                <div className="mt-6 space-y-3">
-                  <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/40">Time administered</p>
-                  <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                    <span className="text-sm text-white/40">Administered at</span>
-                    <input
-                      type="time"
-                      value={insulinTime}
-                      max={nowTimeString}
-                      onChange={(event) => {
-                        if (event.target.value <= nowTimeString) setInsulinTime(event.target.value);
-                      }}
-                      className="cursor-pointer bg-transparent text-sm font-medium text-white outline-none"
-                      style={{ colorScheme: "dark" }}
-                    />
-                  </div>
-                </div>
+                      <div className="mt-6 space-y-3">
+                        <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/40">Time</p>
+                        <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                          <span className="text-sm text-white/40">Reading time</span>
+                          <input
+                            type="time"
+                            value={glucoseTime}
+                            max={nowTimeString}
+                            onChange={(event) => {
+                              if (event.target.value <= nowTimeString) setGlucoseTime(event.target.value);
+                            }}
+                            className="cursor-pointer bg-transparent text-sm font-medium text-white outline-none"
+                            style={{ colorScheme: "dark" }}
+                          />
+                        </div>
+                      </div>
 
-                <div className="mt-6 space-y-3">
-                  <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/40">Notes (optional)</p>
-                  <Textarea
-                    value={insulinNotes}
-                    onChange={(event) => setInsulinNotes(event.target.value)}
-                    placeholder="e.g. before lunch"
-                    rows={2}
-                    className="resize-none rounded-2xl border-white/10 bg-white/5 text-white placeholder:text-white/30"
-                  />
-                </div>
+                      <div className="mt-6 space-y-3">
+                        <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/40">Notes (optional)</p>
+                        <Textarea
+                          value={glucoseNotes}
+                          onChange={(event) => setGlucoseNotes(event.target.value)}
+                          placeholder="e.g. fasting, after meal"
+                          rows={2}
+                          className="resize-none rounded-2xl border-white/10 bg-white/5 text-white placeholder:text-white/30"
+                        />
+                      </div>
+                    </div>
 
-                <div className="mt-6 space-y-2 border-t border-white/10 pt-4">
-                  {Object.entries(insulinTotals).length ? (
-                    Object.entries(insulinTotals).map(([type, units]) => (
-                      <p key={type} className="text-sm font-semibold text-white/85">
-                        {type.split(" ")[0]} {units % 1 === 0 ? units : units.toFixed(1)} units total
-                      </p>
-                    ))
-                  ) : (
-                    <p className="text-sm text-white/35">Add an insulin dose to see the total.</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="shrink-0 px-5 pb-6 pt-3">
-                <button
-                  type="button"
-                  onClick={handleSubmitInsulin}
-                  disabled={!totalUnits || createDoses.isPending}
-                  className="w-full rounded-2xl bg-teal-500 py-4 text-base font-semibold text-white transition hover:bg-teal-400 disabled:opacity-40"
-                >
-                  {createDoses.isPending
-                    ? "Logging..."
-                    : totalUnits
-                      ? `Log ${totalUnits % 1 === 0 ? totalUnits : totalUnits.toFixed(1)} units`
-                      : "Add insulin units"}
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-6 pt-4">
-                <label htmlFor="glucose-log" className="block text-sm font-bold uppercase tracking-widest text-white/40">
-                  Blood glucose (mg/dL)
-                </label>
-                <div className="mt-3 rounded-2xl border border-white/10 bg-white/5 px-6 py-6">
-                  <input
-                    id="glucose-log"
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    maxLength={3}
-                    value={glucoseValue}
-                    onChange={(event) => setGlucoseValue(event.target.value.replace(/\D/g, "").slice(0, 3))}
-                    placeholder="--"
-                    className="w-full bg-transparent text-center text-5xl font-bold text-white outline-none placeholder:text-white/20"
-                  />
-                  <p className="mt-1 text-center text-sm text-white/40">mg/dL</p>
-                </div>
-
-                <div className="mt-6 space-y-3">
-                  <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/40">Time</p>
-                  <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                    <span className="text-sm text-white/40">Reading time</span>
-                    <input
-                      type="time"
-                      value={glucoseTime}
-                      max={nowTimeString}
-                      onChange={(event) => {
-                        if (event.target.value <= nowTimeString) setGlucoseTime(event.target.value);
-                      }}
-                      className="cursor-pointer bg-transparent text-sm font-medium text-white outline-none"
-                      style={{ colorScheme: "dark" }}
-                    />
-                  </div>
-                </div>
-
-                <div className="mt-6 space-y-3">
-                  <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/40">Notes (optional)</p>
-                  <Textarea
-                    value={glucoseNotes}
-                    onChange={(event) => setGlucoseNotes(event.target.value)}
-                    placeholder="e.g. fasting, after meal"
-                    rows={2}
-                    className="resize-none rounded-2xl border-white/10 bg-white/5 text-white placeholder:text-white/30"
-                  />
-                </div>
-              </div>
-
-              <div className="shrink-0 px-5 pb-6 pt-3">
-                <button
-                  type="button"
-                  onClick={handleSubmitGlucose}
-                  disabled={!glucoseValue || createGlucose.isPending}
-                  className="w-full rounded-2xl bg-orange-600 py-4 text-base font-semibold text-white transition hover:bg-orange-500 disabled:opacity-40"
-                >
-                  {createGlucose.isPending ? "Logging..." : `Log ${glucoseValue || "--"} mg/dL`}
-                </button>
-              </div>
-            </>
-          )}
+                    <div className="shrink-0 px-5 pb-6 pt-3">
+                      <button
+                        type="button"
+                        onClick={handleSubmitGlucose}
+                        disabled={!glucoseValue || createGlucose.isPending}
+                        className="w-full rounded-2xl bg-orange-600 py-4 text-base font-semibold text-white transition hover:bg-orange-500 disabled:opacity-40"
+                      >
+                        {createGlucose.isPending ? "Logging..." : `Log ${glucoseValue || "--"} mg/dL`}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </motion.div>
+            </AnimatePresence>
+          </div>
         </DialogPrimitive.Content>
       </DialogPortal>
     </Dialog>
