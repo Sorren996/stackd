@@ -306,7 +306,7 @@ export default function DoseForm({ open, onOpenChange }) {
         />
         <DialogPrimitive.Content
           forceMount
-          className="dose-form-content fixed bottom-0 left-0 right-0 z-50 flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl border border-white/5 shadow-2xl data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom data-[state=open]:duration-500 data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom data-[state=closed]:duration-200 sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl sm:data-[state=open]:fade-in-0 sm:data-[state=open]:zoom-in-95 sm:data-[state=open]:slide-in-from-bottom-4"
+          className="dose-form-content fixed bottom-0 left-0 right-0 z-50 flex h-[92dvh] max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-3xl border border-white/5 shadow-2xl data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom data-[state=open]:duration-500 data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom data-[state=closed]:duration-200 sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:h-auto sm:max-h-[92vh] sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl sm:data-[state=open]:fade-in-0 sm:data-[state=open]:zoom-in-95 sm:data-[state=open]:slide-in-from-bottom-4"
           style={{
             background: "hsl(162,10%,8%)",
           }}
@@ -342,7 +342,7 @@ export default function DoseForm({ open, onOpenChange }) {
           </div>
 
           {tab === "carbs" ? (
-            <div className="min-h-[580px]">
+            <div className="min-h-0 flex-1 overflow-y-auto">
 <CarbsTab onSubmit={handleSubmitCarbs} isPending={false} />            </div>
           ) : tab === "insulin" ? (
             <>
