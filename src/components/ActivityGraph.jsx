@@ -7,7 +7,7 @@ import { CornerUpRight, SlidersHorizontal, Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const STEP_MS = 3 * 60 * 1000;
-const HISTORY_DAYS = 7;
+const HISTORY_DAYS = 4;
 const FUTURE_HOURS = 3;
 const VISIBLE_HOURS = 6;
 const CHART_HEIGHT = 260;
