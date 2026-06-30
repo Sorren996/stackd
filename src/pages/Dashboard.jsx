@@ -297,12 +297,12 @@ export default function Dashboard() {
         style={{
           background: "linear-gradient(145deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0))",
           borderColor: "rgba(255,255,255,0.28)",
-          boxShadow: "0 18px 48px rgba(0,0,0,0.34), inset 0 1px 1px rgba(255,255,255,0.42), inset 0 -1px 1px rgba(255,255,255,0.1)",
+          boxShadow: "0 18px 48px rgba(0, 0, 0, 0), inset 0 1px 1px rgba(255, 255, 255, 0), inset 0 -1px 1px rgba(255, 255, 255, 0)",
         }}
       >
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute -inset-5 opacity-80"
+          className="pointer-events-none absolute -inset-5 opacity-20"
           style={{
             background: "radial-gradient(circle at 28% 0%, rgba(255, 255, 255, 0), transparent 38%), radial-gradient(circle at 80% 120%, rgba(45,212,191,0.22), transparent 44%)",
           }}
