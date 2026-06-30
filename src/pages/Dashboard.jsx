@@ -304,7 +304,7 @@ export default function Dashboard() {
           aria-hidden="true"
           className="pointer-events-none absolute -inset-5 opacity-80"
           style={{
-            background: "radial-gradient(circle at 28% 0%, rgba(255,255,255,0.34), transparent 38%), radial-gradient(circle at 80% 120%, rgba(45,212,191,0.22), transparent 44%)",
+            background: "radial-gradient(circle at 28% 0%, rgba(255, 255, 255, 0), transparent 38%), radial-gradient(circle at 80% 120%, rgba(45,212,191,0.22), transparent 44%)",
           }}
         />
         <span
