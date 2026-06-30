@@ -2,7 +2,7 @@ import { lazy, Suspense, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
-import { Dialog, DialogPortal, DialogOverlay, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogPortal, DialogOverlay } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { X, Syringe, Droplets, Wheat, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -107,6 +107,10 @@ export default function DoseForm({ open, onOpenChange }) {
     onOpenChange(false);
     const scheduleReset = typeof window === "undefined" ? setTimeout : window.setTimeout;
     scheduleReset(resetForm, 320);
+  };
+  const closeAfterLoggingPaint = (resetForm) => {
+    const scheduleClose = typeof window === "undefined" ? setTimeout : window.setTimeout;
+    scheduleClose(() => closeWithSpring(resetForm), 140);
   };
 
   const handleTabChange = (nextTab) => {
@@ -285,7 +289,7 @@ export default function DoseForm({ open, onOpenChange }) {
     }));
 
     createDoses.mutate({ submittedDoses, optimisticDoses });
-    closeWithSpring(() => {
+    closeAfterLoggingPaint(() => {
       setInsulinRows([createInsulinRow()]);
       setInsulinNotes("");
       setInsulinTime(new Date().toTimeString().slice(0, 5));
@@ -312,7 +316,7 @@ export default function DoseForm({ open, onOpenChange }) {
     };
 
     createGlucose.mutate({ submittedReading, optimisticReading });
-    closeWithSpring(() => {
+    closeAfterLoggingPaint(() => {
       setGlucoseValue("");
       setGlucoseNotes("");
       setGlucoseTime(new Date().toTimeString().slice(0, 5));
@@ -334,7 +338,7 @@ export default function DoseForm({ open, onOpenChange }) {
     }));
 
     createCarb.mutate({ submittedEntries, optimisticEntries });
-    closeWithSpring(() => {});
+    closeAfterLoggingPaint(() => {});
   };
 
   return (
@@ -396,11 +400,14 @@ export default function DoseForm({ open, onOpenChange }) {
           <div className="flex items-center justify-between px-6 pb-3 pt-5">
             <div className="w-8" />
             <span className="text-lg font-semibold text-white">Log Entry</span>
-            <DialogClose asChild>
-              <button className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/60 transition hover:text-white">
-                <X className="h-4 w-4" />
-              </button>
-            </DialogClose>
+            <button
+              type="button"
+              onClick={() => onOpenChange(false)}
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/60 transition hover:text-white"
+              aria-label="Close log form"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
 
           <div className="mx-5 mb-2 flex rounded-2xl bg-white/[0.06] p-1">
