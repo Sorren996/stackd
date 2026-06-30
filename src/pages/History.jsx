@@ -207,8 +207,15 @@ function EditLogSheet({ log, onClose, onSave, isSaving }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-end justify-center overflow-y-auto bg-black/75 px-0 pb-28 pt-6 sm:items-center sm:px-4 sm:pb-6 sm:backdrop-blur-sm">
-      <div className="max-h-[calc(100dvh-8rem)] w-full max-w-md overflow-y-auto rounded-t-3xl border border-white/10 p-5 shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:rounded-3xl" style={{ background: "hsl(162,10%,8%)" }}>
+    <div className="fixed inset-0 z-[80] flex items-end justify-center overflow-y-auto bg-black/75 px-3 pb-24 pt-6 sm:items-center sm:px-4 sm:pb-6 sm:backdrop-blur-sm">
+      <div className="edit-log-sheet max-h-[calc(100dvh-8rem)] w-full max-w-md overflow-y-auto rounded-3xl border border-white/10 p-5 shadow-2xl sm:max-h-[calc(100dvh-3rem)]" style={{ background: "hsl(162,10%,8%)" }}>
+        <style>{`
+          .edit-log-sheet input,
+          .edit-log-sheet select,
+          .edit-log-sheet textarea {
+            font-size: 16px;
+          }
+        `}</style>
         <div className="mb-5 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-white">{title}</h2>
           <button type="button" onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/60">
@@ -251,7 +258,7 @@ function EditLogSheet({ log, onClose, onSave, isSaving }) {
 
           <input type="time" value={form.time} onChange={(event) => updateField("time", event.target.value)} className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-teal-400" style={{ colorScheme: "dark" }} />
           <Textarea value={form.notes} onChange={(event) => updateField("notes", event.target.value)} rows={2} placeholder="Notes" className="resize-none rounded-xl border-white/10 bg-white/5 text-white placeholder:text-white/30" />
-          <button type="button" onClick={submit} disabled={isSaving} className="w-full rounded-2xl bg-teal-500 py-4 text-base font-semibold text-white transition hover:bg-teal-400 disabled:opacity-40">
+          <button type="button" onClick={submit} disabled={isSaving} className="sticky bottom-0 w-full rounded-2xl bg-teal-500 py-4 text-base font-semibold text-white shadow-[0_-16px_24px_rgba(10,18,16,0.9)] transition hover:bg-teal-400 disabled:opacity-40">
             {isSaving ? "Saving..." : "Save changes"}
           </button>
         </div>
@@ -268,7 +275,7 @@ function EditableLog({ children, onEdit }) {
         type="button"
         onClick={onEdit}
         aria-label="Edit log"
-        className="absolute right-12 top-3 flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-white/35 transition hover:bg-white/10 hover:text-white/80"
+        className="absolute right-12 top-4 flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-white/35 transition hover:bg-white/10 hover:text-white/80"
       >
         <Pencil className="h-3.5 w-3.5" />
       </button>
