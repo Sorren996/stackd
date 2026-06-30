@@ -14,8 +14,6 @@ export default function Settings() {
     return saved !== null ? saved === "true" : true;
   });
   const [isExporting, setIsExporting] = useState(false);
-  const [steloConnected, setSteloConnected] = useState(false);
-  const [connectingStelo, setConnectingStelo] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
@@ -124,18 +122,8 @@ const handleInsulinSettingChange = (key, setValue) => (event) => {
     toast.success("Exported 30 days of data!");
   };
 
-  const handleSteloToggle = () => {
-    if (steloConnected) {
-      setSteloConnected(false);
-      toast.success("Disconnected from Dexcom Stelo");
-      return;
-    }
-    setConnectingStelo(true);
-    setTimeout(() => {
-      setConnectingStelo(false);
-      setSteloConnected(true);
-      toast.success("Connected to Dexcom Stelo Biosensor!");
-    }, 2200);
+  const handleSteloConnect = () => {
+    toast.info("Dexcom Stelo sync requires a backend connection before it can be enabled.");
   };
 
   const handleAppleHealthImport = async (e) => {
@@ -354,23 +342,15 @@ const handleInsulinSettingChange = (key, setValue) => (event) => {
           <div className="flex items-center justify-between gap-4">
             <div className="space-y-0.5">
               <Label className="text-sm font-semibold text-white/90 flex items-center gap-2">
-                <Radio className={`w-4 h-4 ${steloConnected ? "text-teal-400 animate-pulse" : "text-white/40"}`} />
+                <Radio className="w-4 h-4 text-white/40" />
                 Dexcom Stelo Biosensor
               </Label>
-              <p className="text-sm text-white/40">Sync CGM data automatically (coming soon)</p>
+              <p className="text-sm text-white/40">Automatic CGM sync requires backend support</p>
             </div>
             <button
-              onClick={handleSteloToggle}
-              disabled={connectingStelo}
-              className={`text-sm font-bold px-4 py-2 rounded-xl border transition-all ${
-              steloConnected ?
-              "bg-teal-500/10 border-teal-500/30 text-teal-400 hover:bg-teal-500/20" :
-              "bg-white/5 border-white/5 text-white/80 hover:bg-white/10"}`
-              }>
-              
-              {connectingStelo ?
-              <span className="flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Syncing...</span> :
-              steloConnected ? "Connected" : "Connect"}
+              onClick={handleSteloConnect}
+              className="text-sm font-bold px-4 py-2 rounded-xl border border-white/5 bg-white/5 text-white/80 hover:bg-white/10 transition-all">
+              Connect
             </button>
           </div>
         </div>
