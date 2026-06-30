@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
@@ -7,9 +7,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { X, Syringe, Droplets, Wheat, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import CarbsTab from "@/components/CarbsTab";
 import { AnimatePresence, motion } from "framer-motion";
 
+const CarbsTab = lazy(() => import("@/components/CarbsTab"));
 const LATEST_GLUCOSE_CACHE_KEY = "latest_glucose_cache";
 const TAB_ORDER = ["insulin", "glucose", "carbs"];
 const tabPanelVariants = {
@@ -349,17 +349,17 @@ export default function DoseForm({ open, onOpenChange }) {
             animation: dose-form-sheet-out 260ms cubic-bezier(0.32, 0, 0.67, 0);
             opacity: 0;
             pointer-events: none;
-            transform: translateY(100%) scale(0.98);
+            transform: translateY(100%);
           }
 
           @keyframes dose-form-sheet-in {
-            from { opacity: 0.86; transform: translateY(100%) scale(0.98); }
-            to { opacity: 1; transform: translateY(0) scale(1); }
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
           }
 
           @keyframes dose-form-sheet-out {
-            from { opacity: 1; transform: translateY(0) scale(1); }
-            to { opacity: 0; transform: translateY(100%) scale(0.98); }
+            from { transform: translateY(0); }
+            to { transform: translateY(100%); }
           }
 
           @media (min-width: 640px) {
@@ -384,13 +384,11 @@ export default function DoseForm({ open, onOpenChange }) {
           }
         `}</style>
         <DialogOverlay
-          forceMount
-          className="fixed inset-0 z-50 backdrop-blur-sm data-[state=closed]:pointer-events-none data-[state=closed]:opacity-0"
+          className="fixed inset-0 z-50 sm:backdrop-blur-sm data-[state=closed]:pointer-events-none data-[state=closed]:opacity-0"
           style={{ background: "rgba(0, 0, 0, 0.75)" }}
         />
         <DialogPrimitive.Content
-          forceMount
-          className="dose-form-content fixed bottom-0 left-0 right-0 z-50 flex h-[92dvh] max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-3xl border border-white/5 shadow-2xl data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom data-[state=open]:duration-500 data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom data-[state=closed]:duration-200 sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:h-auto sm:max-h-[92vh] sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl sm:data-[state=open]:fade-in-0 sm:data-[state=open]:zoom-in-95 sm:data-[state=open]:slide-in-from-bottom-4"
+          className="dose-form-content fixed bottom-0 left-0 right-0 z-50 flex h-[92dvh] max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-3xl border border-white/5 shadow-2xl sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:h-auto sm:max-h-[92vh] sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl"
           style={{
             background: "hsl(162,10%,8%)",
           }}
@@ -439,7 +437,9 @@ export default function DoseForm({ open, onOpenChange }) {
               >
                 {tab === "carbs" ? (
                   <div className="min-h-0 flex-1 overflow-y-auto">
-                    <CarbsTab onSubmit={handleSubmitCarbs} isPending={createCarb.isPending} />
+                    <Suspense fallback={<div className="flex h-full items-center justify-center text-sm text-white/35">Loading carbs...</div>}>
+                      <CarbsTab onSubmit={handleSubmitCarbs} isPending={createCarb.isPending} />
+                    </Suspense>
                   </div>
                 ) : tab === "insulin" ? (
                   <>
