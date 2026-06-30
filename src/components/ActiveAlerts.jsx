@@ -19,7 +19,7 @@ const phaseConfig = {
   },
   declining: {
     icon: TrendingDown,
-    className: "border border-violet-200 bg-violet-500/20 text-violet-600",
+    className: "border border-violet-600 bg-violet-500/20 text-violet-600",
     label: "Declining",
   },
   expired: {
