@@ -461,7 +461,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
             </span>
           )}
           <div
-            className="relative flex items-center gap-2 overflow-hidden rounded-full border px-4 py-2 backdrop-blur-2xl"
+            className="relative flex items-center gap-2 overflow-hidden rounded-full border px-4 py-2 backdrop-blur-sm"
             style={{
               backgroundColor: `${glucoseColor}18`,
               borderColor: `${glucoseColor}40`,
