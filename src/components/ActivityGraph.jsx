@@ -638,12 +638,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             data={chartData}
             margin={{ top: CHART_MARGIN_TOP, right: 0, left: -20, bottom: CHART_MARGIN_BOTTOM }}>
             <defs>
-              {doseKeys.map((k) =>
-              <linearGradient key={k.key} id={`grad_${k.key}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={k.color} stopOpacity={0.35} />
-                  <stop offset="100%" stopColor={k.color} stopOpacity={0.0} />
-                </linearGradient>
-              )}
               {carbKeys.map((k) =>
               <linearGradient key={k.key} id={`grad_${k.key}`} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor={k.color} stopOpacity={0.28} />
@@ -706,13 +700,14 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             <Area
               key={k.key}
               yAxisId="insulin"
-              type="monotoneX"
+              type="basis"
               dataKey={k.key}
               name={k.label}
-              stroke={k.color}
-              strokeWidth={2.5}
-              fill={`url(#grad_${k.key})`}
+              stroke="none"
+              fill={k.color}
+              fillOpacity={1}
               dot={false}
+              activeDot={false}
               isAnimationActive={false} />
 
             )}
