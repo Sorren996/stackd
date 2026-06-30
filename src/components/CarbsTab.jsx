@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 const CARB_COLOR = "#d97706";
 const PROFILE_COLORS = { fast: "#ef4444", medium: "#f59e0b", slow: "#a78bfa" };
+const FOOD_SEARCH_ENABLED = false;
 const ABSORPTION_CATEGORY = {
   fast: "Fast Absorbing",
   medium: "Medium Absorbing",
@@ -223,88 +224,72 @@ Do not give insulin dosing advice.
   return (
     <>
       <style>{`
-        @property --ai-estimate-angle {
-          syntax: "<angle>";
-          inherits: false;
-          initial-value: 0deg;
-        }
-
-        @keyframes ai-estimate-spin {
-          to { --ai-estimate-angle: 360deg; }
-        }
-
         @keyframes ai-estimate-pulse {
           0%, 100% {
             box-shadow:
-              0 0 0 1px rgba(45, 212, 191, 0.22),
-              0 0 22px rgba(59, 130, 246, 0.18),
-              0 0 34px rgba(168, 85, 247, 0.14);
+              0 0 0 1px rgba(20, 184, 166, 0.55),
+              0 0 14px rgba(20, 184, 166, 0.22),
+              inset 0 0 0 1px rgba(20, 184, 166, 0.2);
           }
           50% {
             box-shadow:
-              0 0 0 1px rgba(168, 85, 247, 0.38),
-              0 0 28px rgba(59, 130, 246, 0.32),
-              0 0 46px rgba(168, 85, 247, 0.28);
+              0 0 0 1px rgba(15, 118, 110, 0.9),
+              0 0 24px rgba(15, 118, 110, 0.42),
+              inset 0 0 0 1px rgba(20, 184, 166, 0.28);
           }
         }
 
         .ai-estimate-field {
           position: relative;
           border-radius: 1rem;
-          border: 1px solid rgba(255, 255, 255, 0.1);
+          border: 1px solid rgba(20, 184, 166, 0.42);
           overflow: hidden;
-          background: rgba(255, 255, 255, 0.08);
+          background: rgba(255, 255, 255, 0.05);
+          box-shadow:
+            0 0 0 1px rgba(20, 184, 166, 0.16),
+            0 0 16px rgba(20, 184, 166, 0.12);
+          transition: border-color 180ms ease, box-shadow 180ms ease;
         }
 
         .ai-estimate-field-active {
-          border: 0;
-          padding: 2px;
-          background: conic-gradient(
-            from var(--ai-estimate-angle, 0deg),
-            #2dd4bf,
-            #3b82f6,
-            #8b5cf6,
-            #d946ef,
-            #3b82f6,
-            #2dd4bf
-          );
-          animation:
-            ai-estimate-spin 1.25s linear infinite,
-            ai-estimate-pulse 1.65s ease-in-out infinite;
+          border-color: rgba(15, 118, 110, 0.95);
+          animation: ai-estimate-pulse 1.45s ease-in-out infinite;
         }
 
         .ai-estimate-field-inner {
           position: relative;
           z-index: 1;
-          border-radius: calc(1rem - 2px);
+          border-radius: 1rem;
           background: hsl(162,10%,8%);
         }
       `}</style>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <div className="px-5 pb-2 pt-4">
-          <div className="flex rounded-2xl bg-white/[0.06] p-1">
-            {[
-              ["estimate", "AI Estimate", Sparkles],
-              ["manual", "Food Search", Clock],
-            ].map(([id, label, Icon]) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setMode(id)}
-                className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2 text-sm font-medium transition-colors ${
-                  mode === id ? "bg-white/10 text-white" : "text-white/40 hover:text-white/60"
-                }`}
-              >
-                <Icon className="h-3.5 w-3.5" />
-                {label}
-              </button>
-            ))}
+        {FOOD_SEARCH_ENABLED && (
+          <div className="px-5 pb-2 pt-4">
+            <div className="flex rounded-2xl bg-white/[0.06] p-1">
+              {[
+                ["estimate", "AI Estimate", Sparkles],
+                ["manual", "Food Search", Clock],
+              ].map(([id, label, Icon]) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setMode(id)}
+                  className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2 text-sm font-medium transition-colors ${
+                    mode === id ? "bg-white/10 text-white" : "text-white/40 hover:text-white/60"
+                  }`}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-6 pt-2">
-          {mode === "estimate" ? (
+          {!FOOD_SEARCH_ENABLED || mode === "estimate" ? (
             <div className="space-y-5">
               <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
                 <div className="mb-3 flex items-center gap-2">
@@ -319,9 +304,7 @@ Do not give insulin dosing advice.
                       onChange={(event) => setMealText(event.target.value)}
                       placeholder="e.g. 2 slices pepperoni pizza and a 12 oz coke"
                       rows={4}
-                      className={`resize-none rounded-2xl border-white/10 bg-white/5 text-white placeholder:text-white/30 ${
-                        isEstimatingMeal ? "border-transparent" : ""
-                      }`}
+                      className="resize-none rounded-2xl border-transparent bg-white/5 text-white placeholder:text-white/30 focus-visible:ring-0 focus-visible:ring-offset-0"
                     />
                   </div>
                 </div>
@@ -549,8 +532,8 @@ Do not give insulin dosing advice.
         <div className="shrink-0 px-5 pb-6 pt-2">
           <button
             type="button"
-            onClick={mode === "estimate" ? handleSubmitEstimate : handleSubmitManual}
-            disabled={isPending || (mode === "estimate" ? !estimatedMeal : !canSubmitManual)}
+            onClick={!FOOD_SEARCH_ENABLED || mode === "estimate" ? handleSubmitEstimate : handleSubmitManual}
+            disabled={isPending || (!FOOD_SEARCH_ENABLED || mode === "estimate" ? !estimatedMeal : !canSubmitManual)}
             className="flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-base font-semibold text-white transition-all disabled:opacity-40"
             style={{ backgroundColor: CARB_COLOR, filter: "brightness(0.9)" }}
           >
@@ -559,7 +542,7 @@ Do not give insulin dosing advice.
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Logging...
               </>
-            ) : mode === "estimate" ? (
+            ) : !FOOD_SEARCH_ENABLED || mode === "estimate" ? (
               <>
                 <Check className="h-4 w-4" />
                 Log meal estimate
