@@ -366,6 +366,12 @@ export default function DoseForm({ open, onOpenChange }) {
             to { transform: translateY(100%); }
           }
 
+          .dose-form-content input,
+          .dose-form-content select,
+          .dose-form-content textarea {
+            font-size: 16px;
+          }
+
           @media (min-width: 640px) {
             .dose-form-content[data-state="open"] {
               animation-name: dose-form-dialog-in;
