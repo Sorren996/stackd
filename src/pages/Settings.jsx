@@ -35,6 +35,22 @@ const [unitsPer5g, setUnitsPer5g] = useState(() => {
   return localStorage.getItem("meal_insulin_units_per_5g") || "";
 });
 
+const [insulinDurationHours, setInsulinDurationHours] = useState(() => {
+  return localStorage.getItem("insulin_duration_hours") || "3";
+});
+
+const [preMealWindowMinutes, setPreMealWindowMinutes] = useState(() => {
+  return localStorage.getItem("meal_prebolus_window_minutes") || "45";
+});
+
+const [postMealWindowMinutes, setPostMealWindowMinutes] = useState(() => {
+  return localStorage.getItem("meal_postbolus_window_minutes") || "90";
+});
+
+const [outcomeWindowMinutes, setOutcomeWindowMinutes] = useState(() => {
+  return localStorage.getItem("meal_outcome_window_minutes") || "240";
+});
+
 const handleInsulinSettingChange = (key, setValue) => (event) => {
   const value = event.target.value;
   setValue(value);
@@ -312,6 +328,100 @@ const handleInsulinSettingChange = (key, setValue) => (event) => {
           className="w-24 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-teal-400"
         />
         <span className="text-xs text-white/40">units per 5 g</span>
+      </div>
+    </div>
+
+    <div className="grid grid-cols-2 gap-3 border-t border-white/10 pt-4">
+      <div className="space-y-2">
+        <Label htmlFor="insulin-duration" className="text-sm font-semibold text-white/90">
+          Insulin duration
+        </Label>
+        <div className="flex items-center gap-2">
+          <input
+            id="insulin-duration"
+            type="number"
+            min="1"
+            max="8"
+            step="0.25"
+            inputMode="decimal"
+            value={insulinDurationHours}
+            onChange={handleInsulinSettingChange(
+              "insulin_duration_hours",
+              setInsulinDurationHours
+            )}
+            className="w-20 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-teal-400"
+          />
+          <span className="text-xs text-white/40">hours</span>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="meal-outcome-window" className="text-sm font-semibold text-white/90">
+          Meal review
+        </Label>
+        <div className="flex items-center gap-2">
+          <input
+            id="meal-outcome-window"
+            type="number"
+            min="60"
+            max="360"
+            step="15"
+            inputMode="numeric"
+            value={outcomeWindowMinutes}
+            onChange={handleInsulinSettingChange(
+              "meal_outcome_window_minutes",
+              setOutcomeWindowMinutes
+            )}
+            className="w-20 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-teal-400"
+          />
+          <span className="text-xs text-white/40">min</span>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="pre-meal-window" className="text-sm font-semibold text-white/90">
+          Pre-meal insulin
+        </Label>
+        <div className="flex items-center gap-2">
+          <input
+            id="pre-meal-window"
+            type="number"
+            min="0"
+            max="120"
+            step="5"
+            inputMode="numeric"
+            value={preMealWindowMinutes}
+            onChange={handleInsulinSettingChange(
+              "meal_prebolus_window_minutes",
+              setPreMealWindowMinutes
+            )}
+            className="w-20 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-teal-400"
+          />
+          <span className="text-xs text-white/40">min</span>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="post-meal-window" className="text-sm font-semibold text-white/90">
+          Post-meal insulin
+        </Label>
+        <div className="flex items-center gap-2">
+          <input
+            id="post-meal-window"
+            type="number"
+            min="0"
+            max="180"
+            step="5"
+            inputMode="numeric"
+            value={postMealWindowMinutes}
+            onChange={handleInsulinSettingChange(
+              "meal_postbolus_window_minutes",
+              setPostMealWindowMinutes
+            )}
+            className="w-20 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-teal-400"
+          />
+          <span className="text-xs text-white/40">min</span>
+        </div>
       </div>
     </div>
   </div>
