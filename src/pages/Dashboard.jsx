@@ -237,33 +237,35 @@ function FloatingDoseLogger() {
   return (
     <>
       <DoseForm open={doseFormOpen} onOpenChange={setDoseFormOpen} />
-      <button
-        type="button"
-        onClick={() => setDoseFormOpen(true)}
-        className="fixed bottom-24 right-5 z-40 flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border transition active:scale-95 sm:backdrop-blur-2xl"
-        style={{
-          background: "linear-gradient(145deg, rgba(255,255,255,0.24), rgba(255,255,255,0.08))",
-          borderColor: "rgba(255,255,255,0.28)",
-          boxShadow: "0 18px 48px rgba(0,0,0,0.34), inset 0 1px 1px rgba(255,255,255,0.42), inset 0 -1px 1px rgba(255,255,255,0.1)",
-        }}
-      >
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute -inset-5 opacity-80"
+      {!doseFormOpen && (
+        <button
+          type="button"
+          onClick={() => setDoseFormOpen(true)}
+          className="fixed bottom-24 right-5 z-40 flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border transition active:scale-95 sm:backdrop-blur-2xl"
           style={{
-            background: "radial-gradient(circle at 28% 0%, rgba(255,255,255,0.34), transparent 38%), radial-gradient(circle at 80% 120%, rgba(45,212,191,0.22), transparent 44%)",
+            background: "linear-gradient(145deg, rgba(255,255,255,0.24), rgba(255,255,255,0.08))",
+            borderColor: "rgba(255,255,255,0.28)",
+            boxShadow: "0 18px 48px rgba(0,0,0,0.34), inset 0 1px 1px rgba(255,255,255,0.42), inset 0 -1px 1px rgba(255,255,255,0.1)",
           }}
-        />
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-1 rounded-full"
-          style={{
-            background: "linear-gradient(145deg, rgba(255,255,255,0.12), rgba(255,255,255,0.03))",
-            boxShadow: "inset 0 1px 1px rgba(255,255,255,0.22)",
-          }}
-        />
-        <Plus className="relative z-10 h-7 w-7 text-white/85 drop-shadow-sm" />
-      </button>
+        >
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute -inset-5 opacity-80"
+            style={{
+              background: "radial-gradient(circle at 28% 0%, rgba(255,255,255,0.34), transparent 38%), radial-gradient(circle at 80% 120%, rgba(45,212,191,0.22), transparent 44%)",
+            }}
+          />
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-1 rounded-full"
+            style={{
+              background: "linear-gradient(145deg, rgba(255,255,255,0.12), rgba(255,255,255,0.03))",
+              boxShadow: "inset 0 1px 1px rgba(255,255,255,0.22)",
+            }}
+          />
+          <Plus className="relative z-10 h-7 w-7 text-white/85 drop-shadow-sm" />
+        </button>
+      )}
     </>
   );
 }
