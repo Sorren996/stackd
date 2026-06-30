@@ -1,16 +1,21 @@
-import { useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
-import { Activity, History, BarChart2, Settings } from "lucide-react";
+import { Activity, History as HistoryIcon, BarChart2, Settings } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import SettingsContent from "../pages/Settings";
+import Dashboard from "../pages/Dashboard";
+import HistoryPage from "../pages/History";
 
 const LATEST_GLUCOSE_CACHE_KEY = "latest_glucose_cache";
 
 const navItems = [
   { path: "/", label: "Dashboard", icon: Activity },
-  { path: "/history", label: "History", icon: History },
+  { path: "/history", label: "History", icon: HistoryIcon },
   { path: "/analytics", label: "Analytics", icon: BarChart2 },
 ];
+
+const CachedDashboard = memo(Dashboard);
+const CachedHistoryPage = memo(HistoryPage);
 
 function readCachedLatestGlucose() {
   if (typeof window === "undefined") return null;
@@ -40,6 +45,13 @@ export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
   const isSettingsOpen = location.pathname === "/settings";
+  const isDashboardRoute = location.pathname === "/";
+  const isHistoryRoute = location.pathname === "/history";
+  const isKeepAliveRoute = isDashboardRoute || isHistoryRoute;
+  const [visitedTabs, setVisitedTabs] = useState(() => ({
+    dashboard: true,
+    history: false,
+  }));
   const [latestGlucose, setLatestGlucose] = useState(readCachedLatestGlucose);
   const appBackground = useMemo(() => {
     const primaryColor = getGlucoseBackgroundColor(latestGlucose);
@@ -74,6 +86,14 @@ export default function Layout() {
       };
     });
   }, [appBackground]);
+
+  useEffect(() => {
+    if (isDashboardRoute) {
+      setVisitedTabs((tabs) => (tabs.dashboard ? tabs : { ...tabs, dashboard: true }));
+    } else if (isHistoryRoute) {
+      setVisitedTabs((tabs) => (tabs.history ? tabs : { ...tabs, history: true }));
+    }
+  }, [isDashboardRoute, isHistoryRoute]);
 
   const toggleSettings = () => {
     navigate(isSettingsOpen ? "/" : "/settings");
@@ -150,7 +170,17 @@ export default function Layout() {
 
       <main className="relative z-10 mx-auto w-full max-w-6xl px-4 pb-28 pt-14 overflow-visible">
         <div className="min-w-0 w-full">
-          <Outlet />
+          <div hidden={!isDashboardRoute}>
+            <CachedDashboard />
+          </div>
+          {visitedTabs.history && (
+            <div hidden={!isHistoryRoute}>
+              <CachedHistoryPage />
+            </div>
+          )}
+          {!isKeepAliveRoute && (
+            <Outlet />
+          )}
         </div>
       </main>
 
@@ -177,11 +207,11 @@ export default function Layout() {
 
       <nav className="fixed inset-x-0 bottom-0 z-30 flex justify-center pb-safe">
         <div
-          className="relative mx-4 mb-4 flex items-center gap-1 overflow-hidden rounded-[2rem] border px-2 py-1.5 backdrop-blur-sm"
+          className="relative mx-4 mb-4 flex items-center gap-1 overflow-hidden rounded-[2rem] border px-2 py-1.5 backdrop-blur-2xl"
           style={{
-            background: "linear-gradient(135deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0))",
+            background: "linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.06))",
             borderColor: "rgba(255,255,255,0.24)",
-            boxShadow: "0 18px 50px rgba(0, 0, 0, 0), inset 0 1px 1px rgba(255, 255, 255, 0), inset 0 -1px 1px rgba(255,255,255,0.08)",
+            boxShadow: "0 18px 50px rgba(0,0,0,0.38), inset 0 1px 1px rgba(255,255,255,0.32), inset 0 -1px 1px rgba(255,255,255,0.08)",
           }}
         >
           <div
