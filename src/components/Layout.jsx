@@ -179,9 +179,9 @@ export default function Layout() {
         <div
           className="relative mx-4 mb-4 flex items-center gap-1 overflow-hidden rounded-[2rem] border px-2 py-1.5 backdrop-blur-sm"
           style={{
-            background: "linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.06))",
+            background: "linear-gradient(135deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0))",
             borderColor: "rgba(255,255,255,0.24)",
-            boxShadow: "0 18px 50px rgba(0,0,0,0.38), inset 0 1px 1px rgba(255,255,255,0.32), inset 0 -1px 1px rgba(255,255,255,0.08)",
+            boxShadow: "0 18px 50px rgba(0, 0, 0, 0), inset 0 1px 1px rgba(255, 255, 255, 0), inset 0 -1px 1px rgba(255,255,255,0.08)",
           }}
         >
           <div
