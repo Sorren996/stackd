@@ -475,7 +475,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
 
         {latestGlucose && (
           <div
-            className="dashboard-surface relative mb-6 flex items-center gap-3 overflow-hidden rounded-2xl border px-4 py-3 backdrop-blur-2xl"
+            className="dashboard-surface relative mb-6 flex items-center gap-3 overflow-hidden rounded-2xl border px-4 py-3 backdrop-blur-sm"
             style={{
               background: "linear-gradient(145deg, rgba(255,255,255,0.16), rgba(255,255,255,0.055))",
               borderColor: "rgba(255,255,255,0.16)",
