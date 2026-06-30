@@ -50,11 +50,11 @@ function FloatingDoseLogger() {
       <button
         type="button"
         onClick={() => setDoseFormOpen(true)}
-        className="fixed bottom-24 right-5 z-40 flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border backdrop-blur-2xl transition active:scale-95"
+        className="fixed bottom-24 right-5 z-40 flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border backdrop-blur-sm transition active:scale-95"
         style={{
-          background: "linear-gradient(145deg, rgba(255,255,255,0.24), rgba(255,255,255,0.08))",
+          background: "linear-gradient(145deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0))",
           borderColor: "rgba(255,255,255,0.28)",
-          boxShadow: "0 18px 48px rgba(0,0,0,0.34), inset 0 1px 1px rgba(255,255,255,0.42), inset 0 -1px 1px rgba(255,255,255,0.1)",
+          boxShadow: "0 18px 48px rgba(0, 0, 0, 0), inset 0 1px 1px rgba(255, 255, 255, 0), inset 0 -1px 1px rgba(255,255,255,0.1)",
         }}
       >
         <span
