@@ -4,7 +4,7 @@ import { Clock, TrendingUp, TrendingDown, CheckCircle2, Zap } from "lucide-react
 const phaseConfig = {
   waiting: {
     icon: Clock,
-    className: "border border-amber-600 bg-amber-500/20 text-amber-600",
+    className: "border border-amber-600 bg-amber-700/20 text-amber-600",
     label: "Waiting",
   },
   rising: {
