@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
@@ -92,6 +92,7 @@ function prependUnique(entries, current = []) {
 }
 
 export default function DoseForm({ open, onOpenChange }) {
+  const [renderSheet, setRenderSheet] = useState(open);
   const [tab, setTab] = useState("insulin");
   const [tabDirection, setTabDirection] = useState(1);
   const [insulinRows, setInsulinRows] = useState(() => [createInsulinRow()]);
@@ -103,7 +104,13 @@ export default function DoseForm({ open, onOpenChange }) {
 
   const queryClient = useQueryClient();
   const nowTimeString = new Date().toTimeString().slice(0, 5);
+
+  useEffect(() => {
+    setRenderSheet(open);
+  }, [open]);
+
   const requestClose = () => {
+    setRenderSheet(false);
     onOpenChange?.(false);
   };
 
@@ -118,6 +125,7 @@ export default function DoseForm({ open, onOpenChange }) {
   };
   const handleDialogOpenChange = (nextOpen) => {
     if (nextOpen) {
+      setRenderSheet(true);
       onOpenChange?.(true);
       return;
     }
@@ -353,8 +361,10 @@ export default function DoseForm({ open, onOpenChange }) {
     closeAfterLoggingPaint(() => {});
   };
 
+  if (!renderSheet) return null;
+
   return (
-    <Dialog open={open} onOpenChange={handleDialogOpenChange}>
+    <Dialog open={renderSheet} onOpenChange={handleDialogOpenChange}>
       <DialogPortal>
         <style>{`
           .dose-form-content[data-state="open"] {
