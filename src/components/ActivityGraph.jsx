@@ -646,13 +646,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                 </linearGradient>
               )}
               {doseKeys.map((k) =>
-              <filter key={`insulin_glow_${k.key}`} id={`insulin_glow_${k.key}`} x="-20%" y="-30%" width="140%" height="160%">
-                  <feGaussianBlur stdDeviation="4" result="coloredBlur" />
-                  <feMerge>
-                    <feMergeNode in="coloredBlur" />
-                    <feMergeNode in="SourceGraphic" />
-                  </feMerge>
-                </filter>
+
               )}
               {carbKeys.map((k) =>
               <linearGradient key={k.key} id={`grad_${k.key}`} x1="0" y1="0" x2="0" y2="1">
