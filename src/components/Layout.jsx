@@ -45,6 +45,11 @@ export default function Layout() {
     const primaryColor = getGlucoseBackgroundColor(latestGlucose);
     return `linear-gradient(to bottom, ${primaryColor} 0%, #18181b 52%, #000000 100%)`;
   }, [latestGlucose]);
+  const [backgroundLayers, setBackgroundLayers] = useState(() => ({
+    current: appBackground,
+    previous: null,
+    key: 0,
+  }));
 
   useEffect(() => {
     const updateLatestGlucose = () => setLatestGlucose(readCachedLatestGlucose());
@@ -58,20 +63,52 @@ export default function Layout() {
     };
   }, []);
 
+  useEffect(() => {
+    setBackgroundLayers((layers) => {
+      if (layers.current === appBackground) return layers;
+
+      return {
+        current: appBackground,
+        previous: layers.current,
+        key: layers.key + 1,
+      };
+    });
+  }, [appBackground]);
+
   const toggleSettings = () => {
     navigate(isSettingsOpen ? "/" : "/settings");
   };
 
   return (
     <div className="relative min-h-screen overflow-x-hidden text-white">
-      <motion.div
+      <div
         aria-hidden="true"
-        className="pointer-events-none fixed inset-0 -z-50"
-        initial={false}
-        animate={{ opacity: 1, background: appBackground }}
-        transition={{ duration: 1.2, ease: "easeInOut" }}
-        style={{ background: appBackground }}
-      />
+        className="pointer-events-none fixed inset-0 -z-50 overflow-hidden"
+      >
+        {backgroundLayers.previous && (
+          <motion.div
+            key={`previous-${backgroundLayers.key}`}
+            className="absolute inset-0"
+            initial={{ opacity: 1 }}
+            animate={{ opacity: 0 }}
+            transition={{ duration: 1.8, ease: "easeInOut" }}
+            style={{ background: backgroundLayers.previous }}
+            onAnimationComplete={() => {
+              setBackgroundLayers((layers) =>
+                layers.key === backgroundLayers.key ? { ...layers, previous: null } : layers
+              );
+            }}
+          />
+        )}
+        <motion.div
+          key={`current-${backgroundLayers.key}`}
+          className="absolute inset-0"
+          initial={{ opacity: backgroundLayers.previous ? 0 : 1 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1.8, ease: "easeInOut" }}
+          style={{ background: backgroundLayers.current }}
+        />
+      </div>
 
       <header className="fixed inset-x-0 top-0 z-50 bg-transparent">
         <div
