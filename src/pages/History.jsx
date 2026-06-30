@@ -1,13 +1,15 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import DoseCard from "../components/DoseCard";
 import GlucoseCard from "../components/GlucoseCard";
 import CarbCard from "../components/CarbCard";
 import { toast } from "sonner";
-import { CalendarDays, ChevronRight } from "lucide-react";
+import { CalendarDays, ChevronRight, X } from "lucide-react";
 import { format, isToday, isYesterday, parseISO } from "date-fns";
 import { motion } from "framer-motion";
+import { Textarea } from "@/components/ui/textarea";
+import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
 
 function CollapsibleDateGroup({ label, count, isOpen, onToggle, children }) {
   return (
@@ -92,10 +94,192 @@ function normalizeCarbEntry(entry) {
   };
 }
 
+function toTimeValue(timestamp) {
+  const date = timestamp ? new Date(timestamp) : new Date();
+  return Number.isNaN(date.getTime()) ? new Date().toTimeString().slice(0, 5) : date.toTimeString().slice(0, 5);
+}
+
+function mergeTime(originalTimestamp, timeValue) {
+  const date = originalTimestamp ? new Date(originalTimestamp) : new Date();
+  if (Number.isNaN(date.getTime())) return new Date().toISOString();
+  const [hours, minutes] = timeValue.split(":").map(Number);
+  date.setHours(hours, minutes, 0, 0);
+  return date.toISOString();
+}
+
+function replaceCachedItem(queryClient, queryKey, updatedItem) {
+  queryClient.setQueryData(queryKey, (current = []) =>
+    Array.isArray(current) ? current.map((item) => (item.id === updatedItem.id ? { ...item, ...updatedItem } : item)) : current
+  );
+}
+
+function getEditInitialForm(log) {
+  if (!log) return {};
+  if (log.type === "insulin") {
+    return {
+      insulin_type: log.item.insulin_type || "",
+      units: String(log.item.units ?? ""),
+      meal_units: String(log.item.meal_units ?? ""),
+      correction_units: String(log.item.correction_units ?? ""),
+      time: toTimeValue(log.item.administered_at),
+      notes: log.item.notes || "",
+    };
+  }
+  if (log.type === "glucose") {
+    return {
+      value: String(log.item.value ?? ""),
+      time: toTimeValue(log.item.recorded_at),
+      notes: log.item.notes || "",
+    };
+  }
+  return {
+    food_name: log.item.food_name || log.item.name || "",
+    carbs: String(log.item.carbs ?? ""),
+    absorption_profile: log.item.absorption_profile || log.item.profile || "medium",
+    time: toTimeValue(log.item.consumed_at),
+    notes: log.item.notes || "",
+  };
+}
+
+function EditLogSheet({ log, onClose, onSave, isSaving }) {
+  const [form, setForm] = useState(() => getEditInitialForm(log));
+
+  useEffect(() => {
+    setForm(getEditInitialForm(log));
+  }, [log]);
+
+  if (!log) return null;
+
+  const updateField = (key, value) => setForm((current) => ({ ...current, [key]: value }));
+  const title = log.type === "insulin" ? "Edit Insulin" : log.type === "glucose" ? "Edit Glucose" : "Edit Carbs";
+
+  const submit = () => {
+    if (log.type === "insulin") {
+      const units = Number(form.units);
+      if (!form.insulin_type || !Number.isFinite(units) || units <= 0) return;
+      const mealUnits = form.meal_units === "" ? undefined : Number(form.meal_units);
+      const correctionUnits = form.correction_units === "" ? undefined : Number(form.correction_units);
+      onSave({
+        type: "insulin",
+        id: log.item.id,
+        patch: {
+          insulin_type: form.insulin_type,
+          units,
+          meal_units: Number.isFinite(mealUnits) ? mealUnits : undefined,
+          correction_units: Number.isFinite(correctionUnits) ? correctionUnits : undefined,
+          administered_at: mergeTime(log.item.administered_at, form.time),
+          notes: form.notes || undefined,
+        },
+      });
+      return;
+    }
+
+    if (log.type === "glucose") {
+      const value = Number(form.value);
+      if (!Number.isFinite(value) || value <= 0) return;
+      onSave({
+        type: "glucose",
+        id: log.item.id,
+        patch: {
+          value,
+          recorded_at: mergeTime(log.item.recorded_at, form.time),
+          notes: form.notes || undefined,
+        },
+      });
+      return;
+    }
+
+    const carbs = Number(form.carbs);
+    if (!Number.isFinite(carbs) || carbs <= 0) return;
+    onSave({
+      type: "carbs",
+      id: log.item.id,
+      patch: {
+        name: form.food_name || "Food",
+        food_name: form.food_name || "Food",
+        carbs,
+        absorption_profile: form.absorption_profile || "medium",
+        profile: form.absorption_profile || "medium",
+        consumed_at: mergeTime(log.item.consumed_at, form.time),
+        notes: form.notes || undefined,
+      },
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/75 backdrop-blur-sm sm:items-center">
+      <div className="w-full max-w-md rounded-t-3xl border border-white/10 p-5 shadow-2xl sm:rounded-3xl" style={{ background: "hsl(162,10%,8%)" }}>
+        <div className="mb-5 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-white">{title}</h2>
+          <button type="button" onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/60">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          {log.type === "insulin" && (
+            <>
+              <select value={form.insulin_type} onChange={(event) => updateField("insulin_type", event.target.value)} className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-teal-400">
+                <option value="" className="bg-[#18211f]">Insulin type</option>
+                {Object.keys(INSULIN_PROFILES).map((name) => <option key={name} value={name} className="bg-[#18211f]">{name}</option>)}
+              </select>
+              <div className="grid grid-cols-3 gap-2">
+                <input value={form.units} onChange={(event) => updateField("units", event.target.value)} placeholder="Total" inputMode="decimal" className="rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-teal-400" />
+                <input value={form.meal_units} onChange={(event) => updateField("meal_units", event.target.value)} placeholder="Meal" inputMode="decimal" className="rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-teal-400" />
+                <input value={form.correction_units} onChange={(event) => updateField("correction_units", event.target.value)} placeholder="Correction" inputMode="decimal" className="rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-teal-400" />
+              </div>
+            </>
+          )}
+
+          {log.type === "glucose" && (
+            <input value={form.value} onChange={(event) => updateField("value", event.target.value.replace(/\D/g, "").slice(0, 3))} placeholder="Glucose" inputMode="numeric" className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-teal-400" />
+          )}
+
+          {log.type === "carbs" && (
+            <>
+              <input value={form.food_name} onChange={(event) => updateField("food_name", event.target.value)} placeholder="Food" className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-teal-400" />
+              <div className="grid grid-cols-2 gap-2">
+                <input value={form.carbs} onChange={(event) => updateField("carbs", event.target.value)} placeholder="Carbs" inputMode="decimal" className="rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-teal-400" />
+                <select value={form.absorption_profile} onChange={(event) => updateField("absorption_profile", event.target.value)} className="rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-teal-400">
+                  <option value="fast" className="bg-[#18211f]">Fast</option>
+                  <option value="medium" className="bg-[#18211f]">Medium</option>
+                  <option value="slow" className="bg-[#18211f]">Slow</option>
+                </select>
+              </div>
+            </>
+          )}
+
+          <input type="time" value={form.time} onChange={(event) => updateField("time", event.target.value)} className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-teal-400" style={{ colorScheme: "dark" }} />
+          <Textarea value={form.notes} onChange={(event) => updateField("notes", event.target.value)} rows={2} placeholder="Notes" className="resize-none rounded-xl border-white/10 bg-white/5 text-white placeholder:text-white/30" />
+          <button type="button" onClick={submit} disabled={isSaving} className="w-full rounded-2xl bg-teal-500 py-4 text-base font-semibold text-white transition hover:bg-teal-400 disabled:opacity-40">
+            {isSaving ? "Saving..." : "Save changes"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EditableLog({ children, onEdit }) {
+  return (
+    <div className="relative">
+      {children}
+      <button
+        type="button"
+        onClick={onEdit}
+        className="absolute right-12 top-3 flex h-7 items-center rounded-full border border-white/10 bg-white/[0.04] px-2 text-[10px] font-semibold uppercase tracking-wide text-white/35 transition hover:bg-white/10 hover:text-white/80"
+      >
+        Edit
+      </button>
+    </div>
+  );
+}
+
 export default function History() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("doses");
   const [openGroup, setOpenGroup] = useState(null);
+  const [editingLog, setEditingLog] = useState(null);
 
   const { data: doses = [], isLoading: loadingDoses } = useQuery({
     queryKey: ["insulin-doses"],
@@ -134,6 +318,40 @@ export default function History() {
       queryClient.invalidateQueries({ queryKey: ["carb-entries"] });
       toast.success("Carb entry removed");
     }
+  });
+
+  const updateLog = useMutation({
+    mutationFn: ({ type, id, patch }) => {
+      if (type === "insulin") return base44.entities.InsulinDose.update(id, patch);
+      if (type === "glucose") return base44.entities.GlucoseReading.update(id, patch);
+      return base44.entities.CarbEntry.update(id, patch);
+    },
+    onSuccess: (updated, variables) => {
+      const updatedItem = { ...editingLog?.item, ...variables.patch, ...updated, id: variables.id };
+
+      if (variables.type === "insulin") {
+        replaceCachedItem(queryClient, ["insulin-doses"], updatedItem);
+        replaceCachedItem(queryClient, ["insulin-doses", "graph"], updatedItem);
+        queryClient.invalidateQueries({ queryKey: ["insulin-doses"] });
+        queryClient.invalidateQueries({ queryKey: ["insulin-doses", "graph"] });
+      } else if (variables.type === "glucose") {
+        replaceCachedItem(queryClient, ["latest-glucose"], updatedItem);
+        replaceCachedItem(queryClient, ["glucose-readings"], updatedItem);
+        replaceCachedItem(queryClient, ["glucose-readings", "graph"], updatedItem);
+        queryClient.invalidateQueries({ queryKey: ["latest-glucose"] });
+        queryClient.invalidateQueries({ queryKey: ["glucose-readings"] });
+        queryClient.invalidateQueries({ queryKey: ["glucose-readings", "graph"] });
+      } else {
+        replaceCachedItem(queryClient, ["carb-entries"], updatedItem);
+        replaceCachedItem(queryClient, ["carb-entries", "graph"], updatedItem);
+        queryClient.invalidateQueries({ queryKey: ["carb-entries"] });
+        queryClient.invalidateQueries({ queryKey: ["carb-entries", "graph"] });
+      }
+
+      toast.success("Log updated");
+      setEditingLog(null);
+    },
+    onError: () => toast.error("Unable to update log. Please try again."),
   });
 
   const normalizedCarbEntries = useMemo(
@@ -197,6 +415,13 @@ export default function History() {
 
   return (
     <div className="space-y-6">
+      <EditLogSheet
+        log={editingLog}
+        onClose={() => setEditingLog(null)}
+        onSave={(payload) => updateLog.mutate(payload)}
+        isSaving={updateLog.isPending}
+      />
+
       <div className="flex justify-center">
         <div
           className="flex items-center gap-1 p-1 rounded-3xl border border-white/20 bg-white/5 backdrop-blur-sm shadow-lg"
@@ -267,7 +492,9 @@ export default function History() {
                 onToggle={() => setOpenGroup(openGroup === group.date ? null : group.date)}
               >
                 {group.items.map((dose) => (
-                  <DoseCard key={dose.id} dose={dose} onDelete={(id) => deleteDose.mutate(id)} />
+                  <EditableLog key={dose.id} onEdit={() => setEditingLog({ type: "insulin", item: dose })}>
+                    <DoseCard dose={dose} onDelete={(id) => deleteDose.mutate(id)} />
+                  </EditableLog>
                 ))}
               </CollapsibleDateGroup>
             ))
@@ -314,7 +541,9 @@ export default function History() {
                 onToggle={() => setOpenGroup(openGroup === group.date ? null : group.date)}
               >
                 {group.items.map((reading) => (
-                  <GlucoseCard key={reading.id} reading={reading} onDelete={(id) => deleteGlucose.mutate(id)} />
+                  <EditableLog key={reading.id} onEdit={() => setEditingLog({ type: "glucose", item: reading })}>
+                    <GlucoseCard reading={reading} onDelete={(id) => deleteGlucose.mutate(id)} />
+                  </EditableLog>
                 ))}
               </CollapsibleDateGroup>
             ))
@@ -359,7 +588,9 @@ export default function History() {
                 onToggle={() => setOpenGroup(openGroup === group.date ? null : group.date)}
               >
                 {group.items.map((entry) => (
-                  <CarbCard key={entry.id} entry={entry} onDelete={(id) => deleteCarb.mutate(id)} />
+                  <EditableLog key={entry.id} onEdit={() => setEditingLog({ type: "carbs", item: entry })}>
+                    <CarbCard entry={entry} onDelete={(id) => deleteCarb.mutate(id)} />
+                  </EditableLog>
                 ))}
               </CollapsibleDateGroup>
             ))
