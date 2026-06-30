@@ -23,6 +23,7 @@ const DEFAULT_INSULIN_DURATION_HOURS = 3;
 const DEFAULT_PRE_MEAL_WINDOW_MINUTES = 45;
 const DEFAULT_POST_MEAL_WINDOW_MINUTES = 90;
 const DEFAULT_OUTCOME_WINDOW_MINUTES = 240;
+const MEAL_GROUP_WINDOW_MS = 30 * MINUTE_MS;
 
 function readInsulinSettings() {
   const insulinSensitivityMgDlPerUnit = Number(
@@ -134,6 +135,65 @@ function sumDoseUnits(doses, selectUnits) {
   }, 0);
 }
 
+function buildMealEventGroups(carbEntries, doses) {
+  const carbEvents = (Array.isArray(carbEntries) ? carbEntries : [])
+    .map((entry) => ({
+      type: "carb",
+      time: getEntryTime(entry),
+      carbs: Number(entry.carbs),
+      entry,
+    }))
+    .filter((event) => Number.isFinite(event.time) && Number.isFinite(event.carbs) && event.carbs > 0);
+
+  const doseEvents = (Array.isArray(doses) ? doses : [])
+    .map((dose) => ({
+      type: "dose",
+      time: getDoseTime(dose),
+      units: Number(dose.units),
+      dose,
+    }))
+    .filter((event) => Number.isFinite(event.time) && Number.isFinite(event.units) && event.units > 0);
+
+  const events = [...carbEvents, ...doseEvents].sort((a, b) => a.time - b.time);
+  const groups = [];
+
+  events.forEach((event) => {
+    const lastGroup = groups[groups.length - 1];
+    if (!lastGroup || event.time - lastGroup.end > MEAL_GROUP_WINDOW_MS) {
+      groups.push({
+        start: event.time,
+        end: event.time,
+        carbEvents: event.type === "carb" ? [event] : [],
+        doseEvents: event.type === "dose" ? [event] : [],
+      });
+      return;
+    }
+
+    lastGroup.end = event.time;
+    if (event.type === "carb") {
+      lastGroup.carbEvents.push(event);
+    } else {
+      lastGroup.doseEvents.push(event);
+    }
+  });
+
+  return groups
+    .filter((group) => group.carbEvents.length > 0)
+    .map((group) => {
+      const carbs = group.carbEvents.reduce((sum, event) => sum + event.carbs, 0);
+      const carbTimeTotal = group.carbEvents.reduce((sum, event) => sum + event.time * event.carbs, 0);
+      const mealTime = carbs > 0 ? carbTimeTotal / carbs : group.start;
+
+      return {
+        ...group,
+        carbs,
+        mealTime,
+        carbEntries: group.carbEvents.map((event) => event.entry),
+        doses: group.doseEvents.map((event) => event.dose),
+      };
+    });
+}
+
 function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latestGlucose, insulinSettings) {
   if (!insulinSettings.isComplete) {
     return {
@@ -145,12 +205,9 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
     };
   }
 
-  const carbs = (Array.isArray(carbEntries) ? carbEntries : [])
-    .map((entry) => ({ ...entry, time: getEntryTime(entry), carbs: Number(entry.carbs) }))
-    .filter((entry) => Number.isFinite(entry.time) && Number.isFinite(entry.carbs) && entry.carbs > 0)
-    .sort((a, b) => b.time - a.time);
+  const groups = buildMealEventGroups(carbEntries, doses).sort((a, b) => b.mealTime - a.mealTime);
 
-  if (!carbs.length) {
+  if (!groups.length) {
     return {
       value: "No meal data",
       status: "Log carbs to assess coverage",
@@ -162,14 +219,11 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
 
   const now = Date.now();
   const outcomeWindowMs = insulinSettings.outcomeWindowMinutes * MINUTE_MS;
-  const meal = carbs.find((entry) => now - entry.time <= outcomeWindowMs) ?? carbs[0];
-  const mealTime = meal.time;
-  const windowStart = mealTime - insulinSettings.preMealWindowMinutes * MINUTE_MS;
-  const windowEnd = mealTime + insulinSettings.postMealWindowMinutes * MINUTE_MS;
-  const pairedDoses = (Array.isArray(doses) ? doses : []).filter((dose) => {
-    const time = getDoseTime(dose);
-    return Number.isFinite(time) && time >= windowStart && time <= windowEnd;
-  });
+  const mealGroup = groups.find((group) => now - group.mealTime <= outcomeWindowMs) ?? groups[0];
+  const mealTime = mealGroup.mealTime;
+  const windowStart = mealGroup.start;
+  const windowEnd = mealGroup.end;
+  const pairedDoses = mealGroup.doses;
   const priorDoses = (Array.isArray(doses) ? doses : []).filter((dose) => {
     const time = getDoseTime(dose);
     return Number.isFinite(time) && time < windowStart;
@@ -187,7 +241,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
   const peakOutcome = outcomeReadings.reduce((peak, reading) => (!peak || reading.value > peak.value ? reading : peak), null);
   const lowOutcome = outcomeReadings.reduce((low, reading) => (!low || reading.value < low.value ? reading : low), null);
   const gramsPerUnit = 5 / insulinSettings.mealInsulinUnitsPer5g;
-  const expectedMealUnits = meal.carbs / gramsPerUnit;
+  const expectedMealUnits = mealGroup.carbs / gramsPerUnit;
   const correctionUnitsNeeded =
     Number.isFinite(glucoseValue) && glucoseValue > insulinSettings.targetHigh
       ? (glucoseValue - insulinSettings.targetGlucose) / insulinSettings.insulinSensitivityMgDlPerUnit
@@ -199,9 +253,14 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
   const loggedTotalUnits = loggedMealUnits + loggedCorrectionUnits;
   const ratio = expectedTotalUnits > 0 ? loggedTotalUnits / expectedTotalUnits : null;
   const mealRatio = expectedMealUnits > 0 ? loggedMealUnits / expectedMealUnits : null;
+  const coverageGapUnits = loggedTotalUnits - expectedTotalUnits;
+  const coverageGapAbs = Math.abs(coverageGapUnits);
+  const coveragePercent = ratio === null ? null : Math.round(ratio * 100);
+  const mealCount = mealGroup.carbEntries.length;
+  const doseCount = pairedDoses.length;
 
   let value = "Aligned";
-  let status = "Meal insulin and carbs line up";
+  let status = "Logged close to expected";
   let color = "#35a879";
 
   if (ratio === null) {
@@ -210,11 +269,11 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
     color = "#f59e0b";
   } else if (ratio < 0.75) {
     value = "Under-covered";
-    status = "Logged insulin is below estimated need";
+    status = `${coverageGapAbs.toFixed(1)}u below estimate`;
     color = "#ef4444";
   } else if (ratio > 1.25) {
     value = "Over-covered";
-    status = "Logged insulin is above estimated need";
+    status = `${coverageGapAbs.toFixed(1)}u above estimate`;
     color = "#3b82f6";
   } else if (mealRatio !== null && mealRatio < 0.75 && loggedCorrectionUnits > 0.1) {
     value = "Correction-heavy";
@@ -234,9 +293,14 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
     value,
     status,
     color,
-    sub: `${Math.round(meal.carbs)}g meal - ${loggedTotalUnits.toFixed(1)}u logged`,
+    sub: `${Math.round(mealGroup.carbs)}g carbs - ${loggedTotalUnits.toFixed(1)}u logged`,
     details: {
-      meal,
+      meal: {
+        ...mealGroup.carbEntries[0],
+        carbs: mealGroup.carbs,
+        time: mealTime,
+      },
+      mealGroup,
       gramsPerUnit,
       expectedMealUnits,
       correctionUnitsNeeded: Math.max(0, correctionUnitsNeeded),
@@ -246,6 +310,10 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
       loggedCorrectionUnits,
       loggedTotalUnits,
       ratio,
+      coverageGapUnits,
+      coveragePercent,
+      mealCount,
+      doseCount,
       glucoseValue: Number.isFinite(glucoseValue) ? glucoseValue : null,
       peakOutcome: peakOutcome?.value ?? null,
       lowOutcome: lowOutcome?.value ?? null,
@@ -598,56 +666,90 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
         {openTooltip === "net-carbs" && (
           <TooltipPopover
             title="Meal Coverage Alignment"
-            description="This pairs the most recent meal with nearby meal and correction insulin, then compares it with your insulin-to-carb ratio, sensitivity factor, target range, and active insulin estimate. It is an insight, not a dosing recommendation."
+            description="This groups carb and insulin logs that happen within about 30 minutes, then compares logged insulin with the estimate from your settings. It is an insight, not a dosing recommendation."
             onClose={() => setOpenTooltip(null)}
           >
             {mealInsight.details && (
-              <div className="mt-3 space-y-2 rounded-xl border border-white/10 bg-white/[0.03] p-3 text-[11px] text-white/45">
-                <div className="flex justify-between gap-3">
-                  <span>Meal carbs</span>
-                  <span className="font-semibold text-white/70">{Math.round(mealInsight.details.meal.carbs)}g</span>
+              <div className="mt-3 space-y-3">
+                <div
+                  className="rounded-xl border p-3"
+                  style={{
+                    borderColor: `${mealInsight.color}44`,
+                    background: `${mealInsight.color}12`,
+                  }}
+                >
+                  <p className="text-sm font-semibold" style={{ color: mealInsight.color }}>
+                    {mealInsight.status}
+                  </p>
+                  <p className="mt-1 text-[11px] leading-relaxed text-white/50">
+                    Expected {mealInsight.details.expectedTotalUnits.toFixed(1)}u for this grouped meal. Logged{" "}
+                    {mealInsight.details.loggedTotalUnits.toFixed(1)}u.
+                    {mealInsight.details.coveragePercent !== null && (
+                      <> That is {mealInsight.details.coveragePercent}% of the estimate.</>
+                    )}
+                  </p>
                 </div>
-                <div className="flex justify-between gap-3">
-                  <span>Meal insulin expected</span>
-                  <span className="font-semibold text-white/70">{mealInsight.details.expectedMealUnits.toFixed(1)}u</span>
-                </div>
-                <div className="flex justify-between gap-3">
-                  <span>Correction need</span>
-                  <span className="font-semibold text-white/70">{mealInsight.details.correctionUnitsNeeded.toFixed(1)}u</span>
-                </div>
-                <div className="flex justify-between gap-3">
-                  <span>Prior active insulin</span>
-                  <span className="font-semibold text-white/70">-{mealInsight.details.priorActiveUnits.toFixed(1)}u</span>
-                </div>
-                <div className="flex justify-between gap-3 border-t border-white/10 pt-2">
-                  <span>Logged near meal</span>
-                  <span className="font-semibold text-white/70">{mealInsight.details.loggedTotalUnits.toFixed(1)}u</span>
-                </div>
-                {(mealInsight.details.peakOutcome || mealInsight.details.lowOutcome) && (
+
+                <div className="space-y-2 rounded-xl border border-white/10 bg-white/[0.03] p-3 text-[11px] text-white/45">
                   <div className="flex justify-between gap-3">
-                    <span>Post-meal range</span>
+                    <span>Grouped carbs</span>
+                    <span className="font-semibold text-white/70">
+                      {Math.round(mealInsight.details.meal.carbs)}g
+                      {mealInsight.details.mealCount > 1 ? ` across ${mealInsight.details.mealCount} logs` : ""}
+                    </span>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <span>Carb coverage estimate</span>
+                    <span className="font-semibold text-white/70">{mealInsight.details.expectedMealUnits.toFixed(1)}u</span>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <span>Correction estimate</span>
+                    <span className="font-semibold text-white/70">{mealInsight.details.correctionUnitsNeeded.toFixed(1)}u</span>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <span>Prior active insulin</span>
+                    <span className="font-semibold text-white/70">-{mealInsight.details.priorActiveUnits.toFixed(1)}u</span>
+                  </div>
+                  <div className="flex justify-between gap-3 border-t border-white/10 pt-2">
+                    <span>Total expected</span>
+                    <span className="font-semibold text-white/80">{mealInsight.details.expectedTotalUnits.toFixed(1)}u</span>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <span>Logged insulin</span>
+                    <span className="font-semibold text-white/80">
+                      {mealInsight.details.loggedTotalUnits.toFixed(1)}u
+                      {mealInsight.details.doseCount > 1 ? ` across ${mealInsight.details.doseCount} logs` : ""}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex justify-between text-[10px] font-semibold uppercase tracking-wide text-white/30">
+                    <span>Expected</span>
+                    <span>Logged</span>
+                  </div>
+                  <div className="relative h-2 overflow-hidden rounded-full bg-white/10">
+                    <div
+                      className="absolute inset-y-0 left-0 rounded-full bg-white/25"
+                      style={{ width: `${Math.min(100, Math.max(4, mealInsight.details.expectedTotalUnits * 12))}%` }}
+                    />
+                    <div
+                      className="absolute inset-y-0 left-0 rounded-full"
+                      style={{
+                        width: `${Math.min(100, Math.max(4, mealInsight.details.loggedTotalUnits * 12))}%`,
+                        backgroundColor: mealInsight.color,
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {(mealInsight.details.peakOutcome || mealInsight.details.lowOutcome) && (
+                  <div className="flex justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-3 text-[11px] text-white/45">
+                    <span>Post-meal glucose</span>
                     <span className="font-semibold text-white/70">
                       {mealInsight.details.lowOutcome ?? "--"}-{mealInsight.details.peakOutcome ?? "--"} mg/dL
                     </span>
                   </div>
-                )}
-              </div>
-            )}
-            {trajectory.points.length > 1 && (
-              <div className="mt-3">
-                <RiskSparkline points={trajectory.points} color={netColor} />
-                <div className="mt-1 flex justify-between text-[10px] text-white/30">
-                  <span>Now</span>
-                  <span>{formatClockTime(trajectory.points[trajectory.points.length - 1].time)}</span>
-                </div>
-                {netPeakTime && (
-                  <p className="mt-2 text-[11px] text-white/40">
-                    {netActiveCarbs > 5 ? "Largest carb lead" : netActiveCarbs < -5 ? "Largest insulin lead" : "Most notable balance point"}
-                    {isPeakInFuture ? " expected " : " was "}
-                    <span className="font-semibold" style={{ color: netColor }}>
-                      {formatClockTime(netPeakTime)}
-                    </span>
-                  </p>
                 )}
               </div>
             )}
