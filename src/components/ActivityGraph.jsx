@@ -638,6 +638,22 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             data={chartData}
             margin={{ top: CHART_MARGIN_TOP, right: 0, left: -20, bottom: CHART_MARGIN_BOTTOM }}>
             <defs>
+              {doseKeys.map((k) =>
+              <linearGradient key={`insulin_fill_${k.key}`} id={`insulin_fill_${k.key}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={k.color} stopOpacity={1} />
+                  <stop offset="52%" stopColor={k.color} stopOpacity={0.96} />
+                  <stop offset="100%" stopColor={k.color} stopOpacity={0.88} />
+                </linearGradient>
+              )}
+              {doseKeys.map((k) =>
+              <filter key={`insulin_glow_${k.key}`} id={`insulin_glow_${k.key}`} x="-20%" y="-30%" width="140%" height="160%">
+                  <feGaussianBlur stdDeviation="4" result="coloredBlur" />
+                  <feMerge>
+                    <feMergeNode in="coloredBlur" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
+              )}
               {carbKeys.map((k) =>
               <linearGradient key={k.key} id={`grad_${k.key}`} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor={k.color} stopOpacity={0.28} />
@@ -697,6 +713,23 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             }
 
             {doseKeys.map((k) =>
+            <Line
+              key={`insulin_glow_${k.key}`}
+              yAxisId="insulin"
+              type="basis"
+              dataKey={k.key}
+              stroke={k.color}
+              strokeWidth={12}
+              strokeOpacity={0.16}
+              filter={`url(#insulin_glow_${k.key})`}
+              dot={false}
+              activeDot={false}
+              connectNulls={true}
+              isAnimationActive={false} />
+
+            )}
+
+            {doseKeys.map((k) =>
             <Area
               key={k.key}
               yAxisId="insulin"
@@ -704,10 +737,26 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               dataKey={k.key}
               name={k.label}
               stroke="none"
-              fill={k.color}
-              fillOpacity={.7}
+              fill={`url(#insulin_fill_${k.key})`}
+              fillOpacity={1}
               dot={false}
               activeDot={false}
+              isAnimationActive={false} />
+
+            )}
+
+            {doseKeys.map((k) =>
+            <Line
+              key={`insulin_highlight_${k.key}`}
+              yAxisId="insulin"
+              type="basis"
+              dataKey={k.key}
+              stroke={k.color}
+              strokeWidth={1.25}
+              strokeOpacity={0.72}
+              dot={false}
+              activeDot={false}
+              connectNulls={true}
               isAnimationActive={false} />
 
             )}
@@ -759,20 +808,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           </ComposedChart>
         </div>
       </div>
-      <div
-        className="pointer-events-none absolute inset-y-0 left-0 z-20 w-16"
-        style={{
-          background: "linear-gradient(to right, hsl(162,10%,10%) 0%, rgba(20,28,25,0.78) 42%, rgba(20,28,25,0) 100%)",
-          WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%)",
-          maskImage: "linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%)"
-        }} />
-      <div
-        className="pointer-events-none absolute inset-y-0 right-0 z-20 w-16"
-        style={{
-          background: "linear-gradient(to left, hsl(162,10%,10%) 0%, rgba(20,28,25,0.78) 42%, rgba(20,28,25,0) 100%)",
-          WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%)",
-          maskImage: "linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%)"
-        }} />
       </div>
       </div>
     </div>);
