@@ -14,7 +14,7 @@ function CollapsibleDateGroup({ label, count, isOpen, onToggle, children }) {
     <motion.div
       animate={{
         borderColor: isOpen ? "rgba(20, 184, 166, 0.4)" : "rgba(255, 255, 255, 0.05)",
-        bosmhadow: isOpen
+        boxShadow: isOpen
           ? "0 0 15px rgba(20, 184, 166, 0.15), inset 0 0 0 1px rgba(20, 184, 166, 0.1)"
           : "0 0 0px rgba(0,0,0,0)"
       }}
@@ -56,7 +56,13 @@ function CollapsibleDateGroup({ label, count, isOpen, onToggle, children }) {
 function groupByDate(items, dateField) {
   const groups = {};
   items.forEach((item) => {
-    const date = format(parseISO(item[dateField]), "yyyy-MM-dd");
+    const timestamp = item[dateField];
+    if (!timestamp) return;
+
+    const parsed = parseISO(timestamp);
+    if (Number.isNaN(parsed.getTime())) return;
+
+    const date = format(parsed, "yyyy-MM-dd");
     if (!groups[date]) groups[date] = [];
     groups[date].push(item);
   });
@@ -69,6 +75,21 @@ function groupByDate(items, dateField) {
       else if (isYesterday(d)) label = "Yesterday";
       return { date, label, items };
     });
+}
+
+function normalizeCarbEntry(entry) {
+  const consumedAt = entry.consumed_at || entry.recorded_at || entry.created_date || entry.created_at;
+  const carbs = Number(entry.carbs ?? entry.carbs_grams ?? entry.total_carbs ?? entry.totalCarbs ?? 0);
+  const name = entry.food_name || entry.name || "Estimated meal";
+
+  return {
+    ...entry,
+    id: entry.id || entry._id || `${consumedAt}-${name}-${carbs}`,
+    name,
+    food_name: name,
+    carbs: Number.isFinite(carbs) ? carbs : 0,
+    consumed_at: consumedAt,
+  };
 }
 
 export default function History() {
@@ -115,12 +136,17 @@ export default function History() {
     }
   });
 
+  const normalizedCarbEntries = useMemo(
+    () => carbEntries.map(normalizeCarbEntry).filter((entry) => entry.consumed_at && entry.carbs > 0),
+    [carbEntries]
+  );
+
   const doseGroups = groupByDate(doses, "administered_at");
-  const carbGroups = groupByDate(carbEntries, "consumed_at");
+  const carbGroups = groupByDate(normalizedCarbEntries, "consumed_at");
 
   const getCarbAverage = (days) => {
     const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
-    const filtered = carbEntries.filter((e) => new Date(e.consumed_at).getTime() >= cutoff);
+    const filtered = normalizedCarbEntries.filter((e) => new Date(e.consumed_at).getTime() >= cutoff);
     if (!filtered.length) return "—";
     const totalDays = Math.max(1, Math.ceil((Date.now() - Math.min(...filtered.map(e => new Date(e.consumed_at).getTime()))) / (24*60*60*1000)) || days);
     const sum = filtered.reduce((acc, e) => acc + e.carbs, 0);
@@ -129,8 +155,8 @@ export default function History() {
 
   const totalCarbsLast30 = useMemo(() => {
     const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
-    return carbEntries.filter(e => new Date(e.consumed_at).getTime() >= cutoff).reduce((acc, e) => acc + e.carbs, 0);
-  }, [carbEntries]);
+    return normalizedCarbEntries.filter(e => new Date(e.consumed_at).getTime() >= cutoff).reduce((acc, e) => acc + e.carbs, 0);
+  }, [normalizedCarbEntries]);
 
   const glucose30Days = glucoseReadings.filter((r) => {
     return Date.now() - new Date(r.recorded_at).getTime() <= 30 * 24 * 60 * 60 * 1000;
@@ -176,7 +202,7 @@ export default function History() {
           className="flex items-center gap-1 p-1 rounded-3xl border border-white/20 bg-white/5 backdrop-blur-sm shadow-lg"
           style={{
             background: "rgba(255, 255, 255, 0.03)",
-            bosmhadow: "inset 0 1px 0 rgba(255, 255, 255, 0.05)"
+            boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.05)"
           }}>
           <button
             onClick={() => handleTabChange("doses")}
@@ -265,7 +291,7 @@ export default function History() {
                 <p className="text-[10px] text-white/30 mt-0.5">mg/dL</p>
               </div>
             ))}
-            <div className="bg-white/5 border border-teal-500/20 rounded-2xl p-3 text-center" style={{ bosmhadow: "0 0 15px rgba(20, 184, 166, 0.05)" }}>
+            <div className="bg-white/5 border border-teal-500/20 rounded-2xl p-3 text-center" style={{ boxShadow: "0 0 15px rgba(20, 184, 166, 0.05)" }}>
               <p className="text-[10px] font-bold text-teal-400 uppercase tracking-wider">In Range</p>
               <p className="text-xl text-teal-400 mt-1 font-extrabold text-center">{inRangePercentage}</p>
               <p className="text-[10px] text-teal-400/50 mt-0.5">{targetLow}–{targetHigh} mg/dL</p>
