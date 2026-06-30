@@ -18,6 +18,11 @@ import {
 import { AnimatePresence, motion } from "framer-motion";
 
 const SAMPLE_STEP_MS = 5 * 60 * 1000;
+const MINUTE_MS = 60 * 1000;
+const DEFAULT_INSULIN_DURATION_HOURS = 3;
+const DEFAULT_PRE_MEAL_WINDOW_MINUTES = 45;
+const DEFAULT_POST_MEAL_WINDOW_MINUTES = 90;
+const DEFAULT_OUTCOME_WINDOW_MINUTES = 240;
 
 function readInsulinSettings() {
   const insulinSensitivityMgDlPerUnit = Number(
@@ -26,10 +31,31 @@ function readInsulinSettings() {
   const mealInsulinUnitsPer5g = Number(
     localStorage.getItem("meal_insulin_units_per_5g")
   );
+  const durationHours = Number(
+    localStorage.getItem("insulin_duration_hours")
+  );
+  const preMealWindowMinutes = Number(
+    localStorage.getItem("meal_prebolus_window_minutes")
+  );
+  const postMealWindowMinutes = Number(
+    localStorage.getItem("meal_postbolus_window_minutes")
+  );
+  const outcomeWindowMinutes = Number(
+    localStorage.getItem("meal_outcome_window_minutes")
+  );
+  const targetLow = Number(localStorage.getItem("target_range_low") || 70);
+  const targetHigh = Number(localStorage.getItem("target_range_high") || 180);
 
   return {
     insulinSensitivityMgDlPerUnit,
     mealInsulinUnitsPer5g,
+    durationHours: durationHours > 0 ? durationHours : DEFAULT_INSULIN_DURATION_HOURS,
+    preMealWindowMinutes: preMealWindowMinutes > 0 ? preMealWindowMinutes : DEFAULT_PRE_MEAL_WINDOW_MINUTES,
+    postMealWindowMinutes: postMealWindowMinutes > 0 ? postMealWindowMinutes : DEFAULT_POST_MEAL_WINDOW_MINUTES,
+    outcomeWindowMinutes: outcomeWindowMinutes > 0 ? outcomeWindowMinutes : DEFAULT_OUTCOME_WINDOW_MINUTES,
+    targetLow,
+    targetHigh,
+    targetGlucose: Math.round((targetLow + targetHigh) / 2),
     isComplete:
       insulinSensitivityMgDlPerUnit > 0 &&
       mealInsulinUnitsPer5g > 0,
@@ -56,23 +82,23 @@ function getCurveActivityAt(curve, time) {
   return last.activity;
 }
 
-function getTotalActiveUnits(doses, targetTime = Date.now(), selectUnits = (dose) => dose.units) {
+function getTotalActiveUnits(doses, targetTime = Date.now(), selectUnits = (dose) => dose.units, durationHours = DEFAULT_INSULIN_DURATION_HOURS) {
   return (Array.isArray(doses) ? doses : []).reduce((sum, dose) => {
     const units = Number(selectUnits(dose));
     if (!Number.isFinite(units) || units <= 0) return sum;
 
-    const curve = generateActivityCurve(dose, 3);
+    const curve = generateActivityCurve(dose, durationHours);
     return sum + getCurveActivityAt(curve, targetTime) * units;
   }, 0);
 }
 
-function getTotalActiveMealUnits(doses, targetTime = Date.now()) {
+function getTotalActiveMealUnits(doses, targetTime = Date.now(), durationHours = DEFAULT_INSULIN_DURATION_HOURS) {
   // Older records predate the meal/correction split, so retain their prior behavior.
-  return getTotalActiveUnits(doses, targetTime, (dose) => dose.meal_units ?? dose.units);
+  return getTotalActiveUnits(doses, targetTime, (dose) => dose.meal_units ?? dose.units, durationHours);
 }
 
-function getTotalActiveCorrectionUnits(doses, targetTime = Date.now()) {
-  return getTotalActiveUnits(doses, targetTime, (dose) => dose.correction_units ?? 0);
+function getTotalActiveCorrectionUnits(doses, targetTime = Date.now(), durationHours = DEFAULT_INSULIN_DURATION_HOURS) {
+  return getTotalActiveUnits(doses, targetTime, (dose) => dose.correction_units ?? 0, durationHours);
 }
 
 function getActiveCarbsAt(entries, targetTime) {
@@ -82,6 +108,153 @@ function getActiveCarbsAt(entries, targetTime) {
   );
 }
 
+function getEntryTime(entry) {
+  return new Date(entry.consumed_at || entry.recorded_at || entry.administered_at).getTime();
+}
+
+function getDoseTime(dose) {
+  return new Date(dose.administered_at).getTime();
+}
+
+function getClosestGlucose(readings, targetTime, maxDistanceMinutes = 30) {
+  const maxDistance = maxDistanceMinutes * MINUTE_MS;
+  return (Array.isArray(readings) ? readings : []).reduce((closest, reading) => {
+    const time = new Date(reading.recorded_at).getTime();
+    const distance = Math.abs(time - targetTime);
+    if (!Number.isFinite(time) || distance > maxDistance) return closest;
+    if (!closest || distance < closest.distance) return { reading, distance };
+    return closest;
+  }, null)?.reading ?? null;
+}
+
+function sumDoseUnits(doses, selectUnits) {
+  return doses.reduce((sum, dose) => {
+    const units = Number(selectUnits(dose));
+    return Number.isFinite(units) && units > 0 ? sum + units : sum;
+  }, 0);
+}
+
+function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latestGlucose, insulinSettings) {
+  if (!insulinSettings.isComplete) {
+    return {
+      value: "Setup needed",
+      status: "Add insulin plan in Settings",
+      color: "#f59e0b",
+      sub: "Enter I:C ratio and sensitivity",
+      details: null,
+    };
+  }
+
+  const carbs = (Array.isArray(carbEntries) ? carbEntries : [])
+    .map((entry) => ({ ...entry, time: getEntryTime(entry), carbs: Number(entry.carbs) }))
+    .filter((entry) => Number.isFinite(entry.time) && Number.isFinite(entry.carbs) && entry.carbs > 0)
+    .sort((a, b) => b.time - a.time);
+
+  if (!carbs.length) {
+    return {
+      value: "No meal data",
+      status: "Log carbs to assess coverage",
+      color: "#f59e0b",
+      sub: "Waiting for carb log",
+      details: null,
+    };
+  }
+
+  const now = Date.now();
+  const outcomeWindowMs = insulinSettings.outcomeWindowMinutes * MINUTE_MS;
+  const meal = carbs.find((entry) => now - entry.time <= outcomeWindowMs) ?? carbs[0];
+  const mealTime = meal.time;
+  const windowStart = mealTime - insulinSettings.preMealWindowMinutes * MINUTE_MS;
+  const windowEnd = mealTime + insulinSettings.postMealWindowMinutes * MINUTE_MS;
+  const pairedDoses = (Array.isArray(doses) ? doses : []).filter((dose) => {
+    const time = getDoseTime(dose);
+    return Number.isFinite(time) && time >= windowStart && time <= windowEnd;
+  });
+  const priorDoses = (Array.isArray(doses) ? doses : []).filter((dose) => {
+    const time = getDoseTime(dose);
+    return Number.isFinite(time) && time < windowStart;
+  });
+  const glucoseAtMeal = getClosestGlucose(glucoseReadings, mealTime) ?? latestGlucose ?? null;
+  const glucoseValue = Number(glucoseAtMeal?.value);
+  const outcomeReadings = (Array.isArray(glucoseReadings) ? glucoseReadings : [])
+    .map((reading) => ({ ...reading, time: new Date(reading.recorded_at).getTime(), value: Number(reading.value) }))
+    .filter((reading) =>
+      Number.isFinite(reading.time) &&
+      Number.isFinite(reading.value) &&
+      reading.time >= mealTime + 60 * MINUTE_MS &&
+      reading.time <= mealTime + insulinSettings.outcomeWindowMinutes * MINUTE_MS
+    );
+  const peakOutcome = outcomeReadings.reduce((peak, reading) => (!peak || reading.value > peak.value ? reading : peak), null);
+  const lowOutcome = outcomeReadings.reduce((low, reading) => (!low || reading.value < low.value ? reading : low), null);
+  const gramsPerUnit = 5 / insulinSettings.mealInsulinUnitsPer5g;
+  const expectedMealUnits = meal.carbs / gramsPerUnit;
+  const correctionUnitsNeeded =
+    Number.isFinite(glucoseValue) && glucoseValue > insulinSettings.targetHigh
+      ? (glucoseValue - insulinSettings.targetGlucose) / insulinSettings.insulinSensitivityMgDlPerUnit
+      : 0;
+  const priorActiveUnits = getTotalActiveUnits(priorDoses, mealTime, (dose) => dose.units, insulinSettings.durationHours);
+  const expectedTotalUnits = Math.max(0, expectedMealUnits + correctionUnitsNeeded - priorActiveUnits);
+  const loggedMealUnits = sumDoseUnits(pairedDoses, (dose) => dose.meal_units ?? dose.units);
+  const loggedCorrectionUnits = sumDoseUnits(pairedDoses, (dose) => dose.correction_units ?? 0);
+  const loggedTotalUnits = loggedMealUnits + loggedCorrectionUnits;
+  const ratio = expectedTotalUnits > 0 ? loggedTotalUnits / expectedTotalUnits : null;
+  const mealRatio = expectedMealUnits > 0 ? loggedMealUnits / expectedMealUnits : null;
+
+  let value = "Aligned";
+  let status = "Meal insulin and carbs line up";
+  let color = "#35a879";
+
+  if (ratio === null) {
+    value = "Review";
+    status = "Expected coverage is near zero";
+    color = "#f59e0b";
+  } else if (ratio < 0.75) {
+    value = "Under-covered";
+    status = "Logged insulin is below estimated need";
+    color = "#ef4444";
+  } else if (ratio > 1.25) {
+    value = "Over-covered";
+    status = "Logged insulin is above estimated need";
+    color = "#3b82f6";
+  } else if (mealRatio !== null && mealRatio < 0.75 && loggedCorrectionUnits > 0.1) {
+    value = "Correction-heavy";
+    status = "Correction insulin is carrying the coverage";
+    color = "#f59e0b";
+  } else if (peakOutcome && peakOutcome.value > insulinSettings.targetHigh + 20) {
+    value = "Rise detected";
+    status = "Coverage aligned, but glucose rose after meal";
+    color = "#f59e0b";
+  } else if (lowOutcome && lowOutcome.value < insulinSettings.targetLow) {
+    value = "Drop detected";
+    status = "Coverage aligned, but glucose dropped after meal";
+    color = "#3b82f6";
+  }
+
+  return {
+    value,
+    status,
+    color,
+    sub: `${Math.round(meal.carbs)}g meal - ${loggedTotalUnits.toFixed(1)}u logged`,
+    details: {
+      meal,
+      gramsPerUnit,
+      expectedMealUnits,
+      correctionUnitsNeeded: Math.max(0, correctionUnitsNeeded),
+      priorActiveUnits,
+      expectedTotalUnits,
+      loggedMealUnits,
+      loggedCorrectionUnits,
+      loggedTotalUnits,
+      ratio,
+      glucoseValue: Number.isFinite(glucoseValue) ? glucoseValue : null,
+      peakOutcome: peakOutcome?.value ?? null,
+      lowOutcome: lowOutcome?.value ?? null,
+      windowStart,
+      windowEnd,
+    },
+  };
+}
+
 function computeNetCarbTrajectory(doses, carbEntries, latestGlucose, insulinSettings) {
   const now = Date.now();
   let horizon = now;
@@ -89,7 +262,7 @@ function computeNetCarbTrajectory(doses, carbEntries, latestGlucose, insulinSett
   const safeCarbEntries = Array.isArray(carbEntries) ? carbEntries : [];
 
   safeDoses.forEach((dose) => {
-    const curve = generateActivityCurve(dose, 3);
+    const curve = generateActivityCurve(dose, insulinSettings.durationHours);
     if (curve.length) horizon = Math.max(horizon, curve[curve.length - 1].time);
   });
 
@@ -110,8 +283,8 @@ function computeNetCarbTrajectory(doses, carbEntries, latestGlucose, insulinSett
   const points = [];
 
   for (let time = now; time <= horizon; time += SAMPLE_STEP_MS) {
-    const activeUnits = getTotalActiveUnits(safeDoses, time);
-    const activeMealUnits = getTotalActiveMealUnits(safeDoses, time);
+    const activeUnits = getTotalActiveUnits(safeDoses, time, (dose) => dose.units, insulinSettings.durationHours);
+    const activeMealUnits = getTotalActiveMealUnits(safeDoses, time, insulinSettings.durationHours);
     const activeCarbs = getActiveCarbsAt(safeCarbEntries, time);
 
     points.push({
@@ -312,9 +485,9 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
     };
   }, []);
 
-  const activeUnits = useMemo(() => getTotalActiveUnits(safeDoses), [safeDoses]);
-  const activeMealUnits = useMemo(() => getTotalActiveMealUnits(safeDoses), [safeDoses]);
-  const activeCorrectionUnits = useMemo(() => getTotalActiveCorrectionUnits(safeDoses), [safeDoses]);
+  const activeUnits = useMemo(() => getTotalActiveUnits(safeDoses, Date.now(), (dose) => dose.units, insulinSettings.durationHours), [safeDoses, insulinSettings.durationHours]);
+  const activeMealUnits = useMemo(() => getTotalActiveMealUnits(safeDoses, Date.now(), insulinSettings.durationHours), [safeDoses, insulinSettings.durationHours]);
+  const activeCorrectionUnits = useMemo(() => getTotalActiveCorrectionUnits(safeDoses, Date.now(), insulinSettings.durationHours), [safeDoses, insulinSettings.durationHours]);
   const activeCarbs = useMemo(() => getActiveCarbsNow(safeCarbEntries), [safeCarbEntries]);
   const totalCarbsToday = useMemo(() => getTotalCarbsToday(safeCarbEntries), [safeCarbEntries]);
 
@@ -329,6 +502,11 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
       ? trajectory.peak
       : trajectory.trough;
   }, [trajectory]);
+
+  const mealInsight = useMemo(
+    () => computeMealAlignmentInsight(safeDoses, safeCarbEntries, safeGlucoseReadings, latestGlucose, insulinSettings),
+    [safeDoses, safeCarbEntries, safeGlucoseReadings, latestGlucose, insulinSettings]
+  );
 
   const netActiveCarbs = worstPoint?.net ?? 0;
   const netPeakTime = worstPoint?.time ?? null;
@@ -419,10 +597,42 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
 
         {openTooltip === "net-carbs" && (
           <TooltipPopover
-            title="Insulin and Carb Balance"
-            description="This estimate compares carbs still digesting with insulin logged as meal insulin. Correction insulin remains part of insulin on board but is not treated as meal coverage. It is an estimate, not a glucose prediction or dosing recommendation."
+            title="Meal Coverage Alignment"
+            description="This pairs the most recent meal with nearby meal and correction insulin, then compares it with your insulin-to-carb ratio, sensitivity factor, target range, and active insulin estimate. It is an insight, not a dosing recommendation."
             onClose={() => setOpenTooltip(null)}
           >
+            {mealInsight.details && (
+              <div className="mt-3 space-y-2 rounded-xl border border-white/10 bg-white/[0.03] p-3 text-[11px] text-white/45">
+                <div className="flex justify-between gap-3">
+                  <span>Meal carbs</span>
+                  <span className="font-semibold text-white/70">{Math.round(mealInsight.details.meal.carbs)}g</span>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <span>Meal insulin expected</span>
+                  <span className="font-semibold text-white/70">{mealInsight.details.expectedMealUnits.toFixed(1)}u</span>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <span>Correction need</span>
+                  <span className="font-semibold text-white/70">{mealInsight.details.correctionUnitsNeeded.toFixed(1)}u</span>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <span>Prior active insulin</span>
+                  <span className="font-semibold text-white/70">-{mealInsight.details.priorActiveUnits.toFixed(1)}u</span>
+                </div>
+                <div className="flex justify-between gap-3 border-t border-white/10 pt-2">
+                  <span>Logged near meal</span>
+                  <span className="font-semibold text-white/70">{mealInsight.details.loggedTotalUnits.toFixed(1)}u</span>
+                </div>
+                {(mealInsight.details.peakOutcome || mealInsight.details.lowOutcome) && (
+                  <div className="flex justify-between gap-3">
+                    <span>Post-meal range</span>
+                    <span className="font-semibold text-white/70">
+                      {mealInsight.details.lowOutcome ?? "--"}-{mealInsight.details.peakOutcome ?? "--"} mg/dL
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
             {trajectory.points.length > 1 && (
               <div className="mt-3">
                 <RiskSparkline points={trajectory.points} color={netColor} />
@@ -526,10 +736,10 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
           />
           <MetricCard
             label="Insulin:Carb Ratio"
-            value={netValue}
-            sub={needsInsulinPlan ? "Enter your plan to calculate balance" : isPeakInFuture ? `peak ~${formatClockTime(netPeakTime)}` : "Meal insulin only"}
-            status={netLabel}
-            color={netColor}
+            value={mealInsight.value}
+            sub={mealInsight.sub}
+            status={mealInsight.status}
+            color={mealInsight.color}
             tooltipId="net-carbs"
             openTooltip={openTooltip}
             setOpenTooltip={setOpenTooltip}
