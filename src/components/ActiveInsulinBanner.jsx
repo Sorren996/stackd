@@ -244,9 +244,9 @@ function MetricCard({ label, value, sub, status, color, tooltipId, openTooltip, 
   return (
     <motion.div
       whileTap={{ scale: 0.97 }}
-      className="metric-card relative flex min-h-[112px] flex-col justify-between overflow-hidden rounded-2xl border p-4 backdrop-blur-2xl"
+      className="metric-card relative flex min-h-[112px] flex-col justify-between overflow-hidden rounded-2xl border p-4 backdrop-blur-sm"
       style={{
-        background: "linear-gradient(145deg, rgba(255,255,255,0.16), rgba(255,255,255,0.055))",
+        background: "linear-gradient(145deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0))",
         borderColor: "rgba(255,255,255,0.16)",
         boxShadow: "0 14px 36px rgba(0,0,0,0.18), inset 0 1px 1px rgba(255,255,255,0.24), inset 0 -1px 1px rgba(255,255,255,0.06)",
       }}
