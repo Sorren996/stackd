@@ -1,7 +1,10 @@
+import { useEffect, useMemo, useState } from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { Activity, History, BarChart2, Settings } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import SettingsContent from "../pages/Settings";
+
+const LATEST_GLUCOSE_CACHE_KEY = "latest_glucose_cache";
 
 const navItems = [
   { path: "/", label: "Dashboard", icon: Activity },
@@ -9,10 +12,51 @@ const navItems = [
   { path: "/analytics", label: "Analytics", icon: BarChart2 },
 ];
 
+function readCachedLatestGlucose() {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const cached = window.localStorage.getItem(LATEST_GLUCOSE_CACHE_KEY);
+    return cached ? JSON.parse(cached) : null;
+  } catch {
+    return null;
+  }
+}
+
+function getGlucoseValue(reading) {
+  const value = Number(reading?.value ?? reading?.glucose ?? reading?.glucose_value ?? reading?.mg_dl ?? reading?.mgdl ?? reading?.mg_dL);
+  return Number.isFinite(value) ? value : null;
+}
+
+function getGlucoseBackgroundColor(reading) {
+  const value = getGlucoseValue(reading);
+  if (value === null) return "#042f2e";
+  if (value < 70) return "#102a5c";
+  if (value > 180) return "#5a2a10";
+  return "#063f36";
+}
+
 export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
   const isSettingsOpen = location.pathname === "/settings";
+  const [latestGlucose, setLatestGlucose] = useState(readCachedLatestGlucose);
+  const appBackground = useMemo(() => {
+    const primaryColor = getGlucoseBackgroundColor(latestGlucose);
+    return `linear-gradient(to bottom, ${primaryColor} 0%, #18181b 52%, #000000 100%)`;
+  }, [latestGlucose]);
+
+  useEffect(() => {
+    const updateLatestGlucose = () => setLatestGlucose(readCachedLatestGlucose());
+
+    window.addEventListener("latest-glucose-updated", updateLatestGlucose);
+    window.addEventListener("storage", updateLatestGlucose);
+
+    return () => {
+      window.removeEventListener("latest-glucose-updated", updateLatestGlucose);
+      window.removeEventListener("storage", updateLatestGlucose);
+    };
+  }, []);
 
   const toggleSettings = () => {
     navigate(isSettingsOpen ? "/" : "/settings");
@@ -24,9 +68,9 @@ export default function Layout() {
         aria-hidden="true"
         className="pointer-events-none fixed inset-0 -z-50"
         initial={false}
-        animate={{ opacity: 1 }}
+        animate={{ opacity: 1, background: appBackground }}
         transition={{ duration: 1.2, ease: "easeInOut" }}
-        style={{ background: "linear-gradient(to bottom, #042f2e, #18181b, #000000)" }}
+        style={{ background: appBackground }}
       />
 
       <header className="fixed inset-x-0 top-0 z-50 bg-transparent">
@@ -96,11 +140,11 @@ export default function Layout() {
 
       <nav className="fixed inset-x-0 bottom-0 z-30 flex justify-center pb-safe">
         <div
-          className="relative mx-4 mb-4 flex items-center gap-1 overflow-hidden rounded-[2rem] border px-2 py-1.5 backdrop-blur-sm"
+          className="relative mx-4 mb-4 flex items-center gap-1 overflow-hidden rounded-[2rem] border px-2 py-1.5 backdrop-blur-2xl"
           style={{
-            background: "linear-gradient(135deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0))",
+            background: "linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.06))",
             borderColor: "rgba(255,255,255,0.24)",
-            boxShadow: "0 18px 50px rgba(0, 0, 0, 0.17), inset 0 1px 1px rgba(255, 255, 255, 0), inset 0 -1px 1px rgba(255, 255, 255, 0.97)",
+            boxShadow: "0 18px 50px rgba(0,0,0,0.38), inset 0 1px 1px rgba(255,255,255,0.32), inset 0 -1px 1px rgba(255,255,255,0.08)",
           }}
         >
           <div
