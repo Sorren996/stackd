@@ -704,24 +704,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             }
 
             {doseKeys.map((k) =>
-            <Line
-              key={`insulin_glow_${k.key}`}
-              yAxisId="insulin"
-              type="basis"
-              dataKey={k.key}
-              stroke={k.color}
-              strokeWidth={7}
-              strokeOpacity={0.18}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              dot={false}
-              activeDot={false}
-              connectNulls={true}
-              isAnimationActive={false} />
-
-            )}
-
-            {doseKeys.map((k) =>
             <Area
               key={k.key}
               yAxisId="insulin"
@@ -730,27 +712,9 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               name={k.label}
               stroke="none"
               fill={`url(#insulin_fill_${k.key})`}
-              fillOpacity={1}
+              fillOpacity={0.6}
               dot={false}
               activeDot={false}
-              isAnimationActive={false} />
-
-            )}
-
-            {doseKeys.map((k) =>
-            <Line
-              key={`insulin_highlight_${k.key}`}
-              yAxisId="insulin"
-              type="basis"
-              dataKey={k.key}
-              stroke={k.color}
-              strokeWidth={1.25}
-              strokeOpacity={0.72}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              dot={false}
-              activeDot={false}
-              connectNulls={true}
               isAnimationActive={false} />
 
             )}
