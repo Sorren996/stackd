@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { FOOD_DATABASE } from "@/lib/carbAbsorption";
 import { base44 } from "@/api/base44Client";
-import { InvokeLLM } from "@/api/integrations";
+import { InvokeLLM, UploadFile } from "@/api/integrations";
 import { Textarea } from "@/components/ui/textarea";
 import { Camera, Check, Clock, Loader2, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
@@ -52,6 +52,7 @@ export default function CarbsTab({ onSubmit, isPending }) {
   const [mode, setMode] = useState("estimate");
   const [mealText, setMealText] = useState("");
   const [mealPhoto, setMealPhoto] = useState(null);
+  const [mealPhotoFile, setMealPhotoFile] = useState(null);
   const [mealPhotoName, setMealPhotoName] = useState("");
   const [estimatedMeal, setEstimatedMeal] = useState(null);
   const [isEstimatingMeal, setIsEstimatingMeal] = useState(false);
@@ -106,6 +107,7 @@ export default function CarbsTab({ onSubmit, isPending }) {
     try {
       const dataUrl = await readImageAsDataUrl(file);
       setMealPhoto(dataUrl);
+      setMealPhotoFile(file);
       setMealPhotoName(file.name);
       setEstimatedMeal(null);
     } catch {
@@ -115,13 +117,14 @@ export default function CarbsTab({ onSubmit, isPending }) {
 
   const clearMealPhoto = () => {
     setMealPhoto(null);
+    setMealPhotoFile(null);
     setMealPhotoName("");
   };
 
   const handleEstimateMeal = async () => {
     const description = mealText.trim();
 
-    if (!description && !mealPhoto) {
+    if (!description && !mealPhotoFile) {
       toast.error("Describe the meal or add a photo first.");
       return;
     }
@@ -129,6 +132,18 @@ export default function CarbsTab({ onSubmit, isPending }) {
     setIsEstimatingMeal(true);
 
     try {
+      let uploadedPhotoUrl = null;
+
+      if (mealPhotoFile) {
+        toast.message("Uploading meal photo...");
+        const uploadResult = await UploadFile({ file: mealPhotoFile });
+        uploadedPhotoUrl = uploadResult?.file_url || uploadResult?.url;
+
+        if (!uploadedPhotoUrl) {
+          throw new Error("Meal photo upload failed.");
+        }
+      }
+
       const data = await InvokeLLM({
         prompt: `
 Estimate nutrition for this meal:
@@ -151,7 +166,7 @@ Estimate:
 
 Do not give insulin dosing advice.
         `,
-        file_urls: mealPhoto ? [mealPhoto] : undefined,
+        file_urls: uploadedPhotoUrl ? [uploadedPhotoUrl] : undefined,
         response_json_schema: {
           type: "object",
           properties: {
@@ -187,9 +202,9 @@ Do not give insulin dosing advice.
         },
       });
 
-      setEstimatedMeal(normalizeEstimatedMeal(data, description));
-    } catch {
-      toast.error("Unable to estimate that meal yet.");
+      setEstimatedMeal(normalizeEstimatedMeal(data, description || "Photo meal"));
+    } catch (error) {
+      toast.error(error?.message || "Unable to estimate that meal yet.");
     } finally {
       setIsEstimatingMeal(false);
     }
@@ -386,7 +401,7 @@ Do not give insulin dosing advice.
                 <button
                   type="button"
                   onClick={handleEstimateMeal}
-                  disabled={(!mealText.trim() && !mealPhoto) || isEstimatingMeal}
+                  disabled={(!mealText.trim() && !mealPhotoFile) || isEstimatingMeal}
                   className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-teal-500 py-3 text-sm font-semibold text-white transition hover:bg-teal-400 disabled:opacity-40"
                 >
                   {isEstimatingMeal ? (
