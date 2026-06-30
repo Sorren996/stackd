@@ -644,8 +644,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                   <stop offset="52%" stopColor={k.color} stopOpacity={0.96} />
                   <stop offset="100%" stopColor={k.color} stopOpacity={0.88} />
                 </linearGradient>
-              
-
               )}
               {carbKeys.map((k) =>
               <linearGradient key={k.key} id={`grad_${k.key}`} x1="0" y1="0" x2="0" y2="1">
@@ -712,9 +710,10 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               type="basis"
               dataKey={k.key}
               stroke={k.color}
-              strokeWidth={12}
-              strokeOpacity={0.16}
-              filter={`url(#insulin_glow_${k.key})`}
+              strokeWidth={7}
+              strokeOpacity={0.18}
+              strokeLinecap="round"
+              strokeLinejoin="round"
               dot={false}
               activeDot={false}
               connectNulls={true}
@@ -731,7 +730,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               name={k.label}
               stroke="none"
               fill={`url(#insulin_fill_${k.key})`}
-              fillOpacity={.6}
+              fillOpacity={1}
               dot={false}
               activeDot={false}
               isAnimationActive={false} />
@@ -747,6 +746,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               stroke={k.color}
               strokeWidth={1.25}
               strokeOpacity={0.72}
+              strokeLinecap="round"
+              strokeLinejoin="round"
               dot={false}
               activeDot={false}
               connectNulls={true}
