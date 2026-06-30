@@ -56,6 +56,7 @@ function writeCachedLatestGlucose(reading) {
 
   try {
     window.localStorage.setItem(LATEST_GLUCOSE_CACHE_KEY, JSON.stringify(reading));
+    window.dispatchEvent(new Event("latest-glucose-updated"));
   } catch {
     // Cache is optional; React Query still refreshes from the backend.
   }
