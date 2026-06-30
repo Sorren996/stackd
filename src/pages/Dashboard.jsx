@@ -35,6 +35,7 @@ function writeCachedLatestGlucose(reading) {
 
   try {
     window.localStorage.setItem(LATEST_GLUCOSE_CACHE_KEY, JSON.stringify(reading));
+    window.dispatchEvent(new Event("latest-glucose-updated"));
   } catch {
     // Ignore storage failures; the live query still owns the source of truth.
   }
@@ -293,18 +294,18 @@ export default function Dashboard() {
       <button
         type="button"
         onClick={() => setDoseFormOpen(true)}
-        className="fixed bottom-24 right-5 z-40 flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border backdrop-blur-sm transition active:scale-95"
+        className="fixed bottom-24 right-5 z-40 flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border backdrop-blur-2xl transition active:scale-95"
         style={{
-          background: "linear-gradient(145deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0))",
+          background: "linear-gradient(145deg, rgba(255,255,255,0.24), rgba(255,255,255,0.08))",
           borderColor: "rgba(255,255,255,0.28)",
-          boxShadow: "0 18px 48px rgba(0, 0, 0, 0), inset 0 1px 1px rgba(255, 255, 255, 0), inset 0 -1px 1px rgba(255, 255, 255, 0)",
+          boxShadow: "0 18px 48px rgba(0,0,0,0.34), inset 0 1px 1px rgba(255,255,255,0.42), inset 0 -1px 1px rgba(255,255,255,0.1)",
         }}
       >
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute -inset-5 opacity-20"
+          className="pointer-events-none absolute -inset-5 opacity-80"
           style={{
-            background: "radial-gradient(circle at 28% 0%, rgba(255, 255, 255, 0), transparent 38%), radial-gradient(circle at 80% 120%, rgba(45,212,191,0.22), transparent 44%)",
+            background: "radial-gradient(circle at 28% 0%, rgba(255,255,255,0.34), transparent 38%), radial-gradient(circle at 80% 120%, rgba(45,212,191,0.22), transparent 44%)",
           }}
         />
         <span
