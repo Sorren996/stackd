@@ -9,7 +9,7 @@ import DoseCard from "../components/DoseCard";
 import GlucoseCard from "../components/GlucoseCard";
 import CarbCard from "../components/CarbCard";
 import { getDoseStatus, INSULIN_PROFILES } from "@/lib/insulinPharmacology";
-import { Activity, Plus, AlertTriangle, X } from "lucide-react";
+import { Activity, Plus, AlertTriangle, X, Pencil } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
@@ -215,9 +215,10 @@ function EditableLog({ children, onEdit }) {
       <button
         type="button"
         onClick={onEdit}
-        className="absolute right-12 top-3 flex h-7 items-center rounded-full border border-white/10 bg-white/[0.04] px-2 text-[10px] font-semibold uppercase tracking-wide text-white/35 transition hover:bg-white/10 hover:text-white/80"
+        aria-label="Edit log"
+        className="absolute right-12 top-3 flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-white/35 transition hover:bg-white/10 hover:text-white/80"
       >
-        Edit
+        <Pencil className="h-3.5 w-3.5" />
       </button>
     </div>
   );
