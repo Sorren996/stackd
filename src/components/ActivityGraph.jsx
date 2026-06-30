@@ -644,8 +644,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                   <stop offset="52%" stopColor={k.color} stopOpacity={0.96} />
                   <stop offset="100%" stopColor={k.color} stopOpacity={0.88} />
                 </linearGradient>
-              )}
-              {doseKeys.map((k) =>
+              
 
               )}
               {carbKeys.map((k) =>
