@@ -3,7 +3,7 @@ import { FOOD_DATABASE } from "@/lib/carbAbsorption";
 import { base44 } from "@/api/base44Client";
 import { InvokeLLM } from "@/api/integrations";
 import { Textarea } from "@/components/ui/textarea";
-import { Check, Clock, Loader2, Sparkles, X } from "lucide-react";
+import { Camera, Check, Clock, Loader2, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 
 const CARB_COLOR = "#d97706";
@@ -39,9 +39,20 @@ function buildConsumedAt(timeValue) {
   return consumedAt.toISOString();
 }
 
+function readImageAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function CarbsTab({ onSubmit, isPending }) {
   const [mode, setMode] = useState("estimate");
   const [mealText, setMealText] = useState("");
+  const [mealPhoto, setMealPhoto] = useState(null);
+  const [mealPhotoName, setMealPhotoName] = useState("");
   const [estimatedMeal, setEstimatedMeal] = useState(null);
   const [isEstimatingMeal, setIsEstimatingMeal] = useState(false);
   const [carbSearch, setCarbSearch] = useState("");
@@ -83,11 +94,35 @@ export default function CarbsTab({ onSubmit, isPending }) {
     setEstimatedMeal((meal) => (meal ? { ...meal, ...patch } : meal));
   };
 
+  const handlePhotoChange = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Choose an image of your meal.");
+      return;
+    }
+
+    try {
+      const dataUrl = await readImageAsDataUrl(file);
+      setMealPhoto(dataUrl);
+      setMealPhotoName(file.name);
+      setEstimatedMeal(null);
+    } catch {
+      toast.error("Unable to read that image.");
+    }
+  };
+
+  const clearMealPhoto = () => {
+    setMealPhoto(null);
+    setMealPhotoName("");
+  };
+
   const handleEstimateMeal = async () => {
     const description = mealText.trim();
 
-    if (!description) {
-      toast.error("Describe the meal first.");
+    if (!description && !mealPhoto) {
+      toast.error("Describe the meal or add a photo first.");
       return;
     }
 
@@ -98,9 +133,9 @@ export default function CarbsTab({ onSubmit, isPending }) {
         prompt: `
 Estimate nutrition for this meal:
 
-"${description}"
+${description ? `"${description}"` : "Use the attached food photo as the primary meal description."}
 
-Return a cautious estimate using typical US serving sizes when exact serving sizes are missing.
+Return a cautious estimate using the visible food, plate/container size, and typical US serving sizes when exact serving sizes are missing.
 
 Estimate:
 - meal name
@@ -116,6 +151,7 @@ Estimate:
 
 Do not give insulin dosing advice.
         `,
+        file_urls: mealPhoto ? [mealPhoto] : undefined,
         response_json_schema: {
           type: "object",
           properties: {
@@ -302,17 +338,55 @@ Do not give insulin dosing advice.
                     <Textarea
                       value={mealText}
                       onChange={(event) => setMealText(event.target.value)}
-                      placeholder="e.g. 2 slices pepperoni pizza and a 12 oz coke"
+                      placeholder="e.g. 2 slices pepperoni pizza and a 12 oz coke, or add a photo"
                       rows={4}
                       className="resize-none rounded-2xl border-transparent bg-white/5 text-white placeholder:text-white/30 focus-visible:ring-0 focus-visible:ring-offset-0"
                     />
                   </div>
                 </div>
 
+                <div className="mt-3">
+                  {mealPhoto ? (
+                    <div className="overflow-hidden rounded-2xl border border-teal-500/30 bg-teal-500/[0.04]">
+                      <div className="relative aspect-[4/3] w-full bg-black/20">
+                        <img
+                          src={mealPhoto}
+                          alt="Selected meal"
+                          className="h-full w-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={clearMealPhoto}
+                          className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-black/45 text-white/70 backdrop-blur-sm transition hover:text-white"
+                          aria-label="Remove meal photo"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-2 px-3 py-2 text-xs text-teal-100/70">
+                        <Camera className="h-3.5 w-3.5" />
+                        <span className="truncate">{mealPhotoName || "Meal photo attached"}</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-teal-500/35 bg-teal-500/[0.03] px-4 py-3 text-sm font-semibold text-teal-100/75 transition hover:border-teal-400/60 hover:bg-teal-500/[0.06] hover:text-teal-50">
+                      <Camera className="h-4 w-4" />
+                      Add food photo
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        onChange={handlePhotoChange}
+                        className="hidden"
+                      />
+                    </label>
+                  )}
+                </div>
+
                 <button
                   type="button"
                   onClick={handleEstimateMeal}
-                  disabled={!mealText.trim() || isEstimatingMeal}
+                  disabled={(!mealText.trim() && !mealPhoto) || isEstimatingMeal}
                   className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-teal-500 py-3 text-sm font-semibold text-white transition hover:bg-teal-400 disabled:opacity-40"
                 >
                   {isEstimatingMeal ? (
