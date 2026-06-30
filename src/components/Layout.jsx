@@ -238,7 +238,7 @@ export default function Layout() {
                     layoutId="active-nav-tab"
                     className="absolute inset-0 rounded-[1.55rem]"
                     style={{
-                      background: "linear-gradient(145deg, rgba(255,255,255,0.28), rgba(255,255,255,0.09))",
+                      background: "linear-gradient(145deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0))",
                       border: "1px solid rgba(255,255,255,0.34)",
                       boxShadow: "0 10px 24px rgba(0,0,0,0.22), inset 0 1px 1px rgba(255,255,255,0.38), inset 0 -1px 1px rgba(255,255,255,0.1)",
                     }}
