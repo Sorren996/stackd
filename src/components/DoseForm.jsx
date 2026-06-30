@@ -86,6 +86,11 @@ function writeCachedLatestGlucose(reading) {
   }
 }
 
+function prependUnique(entries, current = []) {
+  const ids = new Set(entries.map((entry) => entry.id).filter(Boolean));
+  return [...entries, ...current.filter((entry) => !ids.has(entry.id))];
+}
+
 export default function DoseForm({ open, onOpenChange }) {
   const [tab, setTab] = useState("insulin");
   const [tabDirection, setTabDirection] = useState(1);
@@ -98,6 +103,11 @@ export default function DoseForm({ open, onOpenChange }) {
 
   const queryClient = useQueryClient();
   const nowTimeString = new Date().toTimeString().slice(0, 5);
+  const closeWithSpring = (resetForm) => {
+    onOpenChange(false);
+    const scheduleReset = typeof window === "undefined" ? setTimeout : window.setTimeout;
+    scheduleReset(resetForm, 320);
+  };
 
   const handleTabChange = (nextTab) => {
     if (nextTab === tab) return;
@@ -109,74 +119,94 @@ export default function DoseForm({ open, onOpenChange }) {
   };
 
   const createDoses = useMutation({
-    mutationFn: (doses) => base44.entities.InsulinDose.bulkCreate(doses),
-    onSuccess: (createdDoses, submittedDoses) => {
-      const savedDoses = Array.isArray(createdDoses) && createdDoses.length ? createdDoses : submittedDoses;
-      queryClient.setQueryData(["insulin-doses"], (current = []) => [...savedDoses, ...current]);
-      queryClient.setQueryData(["insulin-doses", "graph"], (current = []) => [...savedDoses, ...current]);
+    mutationFn: ({ submittedDoses }) => base44.entities.InsulinDose.bulkCreate(submittedDoses),
+    onMutate: ({ optimisticDoses }) => {
+      const previousDoses = queryClient.getQueryData(["insulin-doses"]);
+      const previousGraphDoses = queryClient.getQueryData(["insulin-doses", "graph"]);
+      queryClient.setQueryData(["insulin-doses"], (current = []) => prependUnique(optimisticDoses, current));
+      queryClient.setQueryData(["insulin-doses", "graph"], (current = []) => prependUnique(optimisticDoses, current));
+      return { optimisticIds: optimisticDoses.map((dose) => dose.id), previousDoses, previousGraphDoses };
+    },
+    onSuccess: (createdDoses, variables, context) => {
+      const optimisticIds = new Set(context?.optimisticIds || []);
+      const savedDoses = Array.isArray(createdDoses) && createdDoses.length ? createdDoses : variables.submittedDoses;
+      queryClient.setQueryData(["insulin-doses"], (current = []) => prependUnique(savedDoses, current.filter((dose) => !optimisticIds.has(dose.id))));
+      queryClient.setQueryData(["insulin-doses", "graph"], (current = []) => prependUnique(savedDoses, current.filter((dose) => !optimisticIds.has(dose.id))));
       queryClient.invalidateQueries({ queryKey: ["insulin-doses"] });
       queryClient.invalidateQueries({ queryKey: ["insulin-doses", "graph"] });
       toast.success("Insulin logged - tracking activity now");
-      onOpenChange(false);
-      setInsulinRows([createInsulinRow()]);
-      setInsulinNotes("");
-      setInsulinTime(new Date().toTimeString().slice(0, 5));
     },
-    onError: () => toast.error("Unable to log insulin. Please try again."),
+    onError: (_error, _variables, context) => {
+      queryClient.setQueryData(["insulin-doses"], context?.previousDoses ?? []);
+      queryClient.setQueryData(["insulin-doses", "graph"], context?.previousGraphDoses ?? []);
+      toast.error("Unable to log insulin. Please try again.");
+    },
   });
 
   const createGlucose = useMutation({
-    mutationFn: (data) => base44.entities.GlucoseReading.create(data),
-    onSuccess: (createdReading, submittedReading) => {
-      const savedReading = createdReading || submittedReading;
+    mutationFn: ({ submittedReading }) => base44.entities.GlucoseReading.create(submittedReading),
+    onMutate: ({ optimisticReading }) => {
+      const previousLatestGlucose = queryClient.getQueryData(["latest-glucose"]);
+      const previousGraphGlucose = queryClient.getQueryData(["glucose-readings", "graph"]);
+      writeCachedLatestGlucose(optimisticReading);
+      queryClient.setQueryData(["latest-glucose"], [optimisticReading]);
+      queryClient.setQueryData(["glucose-readings", "graph"], (current = []) => prependUnique([optimisticReading], current));
+      return { optimisticId: optimisticReading.id, previousLatestGlucose, previousGraphGlucose };
+    },
+    onSuccess: (createdReading, variables, context) => {
+      const savedReading = createdReading || variables.submittedReading;
       writeCachedLatestGlucose(savedReading);
       queryClient.setQueryData(["latest-glucose"], [savedReading]);
-      queryClient.setQueryData(["glucose-readings", "graph"], (current = []) => [savedReading, ...current]);
+      queryClient.setQueryData(["glucose-readings", "graph"], (current = []) =>
+        prependUnique([savedReading], current.filter((reading) => reading.id !== context?.optimisticId))
+      );
       queryClient.invalidateQueries({ queryKey: ["latest-glucose"] });
       queryClient.invalidateQueries({ queryKey: ["glucose-readings", "graph"] });
       toast.success("Glucose logged");
-      onOpenChange(false);
-      setGlucoseValue("");
-      setGlucoseNotes("");
-      setGlucoseTime(new Date().toTimeString().slice(0, 5));
+    },
+    onError: (_error, _variables, context) => {
+      queryClient.setQueryData(["latest-glucose"], context?.previousLatestGlucose ?? []);
+      queryClient.setQueryData(["glucose-readings", "graph"], context?.previousGraphGlucose ?? []);
+      toast.error("Unable to log glucose. Please try again.");
     },
   });
 
   const createCarb = useMutation({
-    mutationFn: async (entries) => {
-      const normalizedEntries = entries.map(normalizeCarbEntryForSave).filter((entry) => entry.carbs > 0);
-
-      if (!normalizedEntries.length) {
-        throw new Error("Enter carbs before logging.");
-      }
-
-      toast.message("Sending carb entry...");
-
-      const savePromise = normalizedEntries.length === 1
-        ? base44.entities.CarbEntry.create(normalizedEntries[0]).then((entry) => [entry])
-        : base44.entities.CarbEntry.bulkCreate(normalizedEntries);
+    mutationFn: async ({ submittedEntries }) => {
+      const savePromise = submittedEntries.length === 1
+        ? base44.entities.CarbEntry.create(submittedEntries[0]).then((entry) => [entry])
+        : base44.entities.CarbEntry.bulkCreate(submittedEntries);
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => reject(new Error("Carb save timed out after 10 seconds")), 10000);
       });
 
       return Promise.race([savePromise, timeoutPromise]);
     },
-    onSuccess: (result, entries) => {
-      const submittedEntries = entries.map(normalizeCarbEntryForSave).filter((entry) => entry.carbs > 0);
+    onMutate: ({ optimisticEntries }) => {
+      const previousCarbs = queryClient.getQueryData(["carb-entries"]);
+      const previousGraphCarbs = queryClient.getQueryData(["carb-entries", "graph"]);
+      queryClient.setQueryData(["carb-entries"], (current = []) => prependUnique(optimisticEntries, current));
+      queryClient.setQueryData(["carb-entries", "graph"], (current = []) => prependUnique(optimisticEntries, current));
+      return { optimisticIds: optimisticEntries.map((entry) => entry.id), previousCarbs, previousGraphCarbs };
+    },
+    onSuccess: (result, variables, context) => {
+      const optimisticIds = new Set(context?.optimisticIds || []);
+      const submittedEntries = variables.submittedEntries;
       const savedEntries = Array.isArray(result) && result.length ? result.map((entry, index) => ({
         ...submittedEntries[index],
         ...entry,
       })) : submittedEntries;
 
-      queryClient.setQueryData(["carb-entries"], (current = []) => [...savedEntries, ...current]);
-      queryClient.setQueryData(["carb-entries", "graph"], (current = []) => [...savedEntries, ...current]);
+      queryClient.setQueryData(["carb-entries"], (current = []) => prependUnique(savedEntries, current.filter((entry) => !optimisticIds.has(entry.id))));
+      queryClient.setQueryData(["carb-entries", "graph"], (current = []) => prependUnique(savedEntries, current.filter((entry) => !optimisticIds.has(entry.id))));
       queryClient.invalidateQueries({ queryKey: ["carb-entries"] });
       queryClient.invalidateQueries({ queryKey: ["carb-entries", "graph"] });
-      toast.success(`Logged ${entries.length} food item${entries.length === 1 ? "" : "s"}`);
-      toast.success(`Logged ${entries[0]?.carbs ?? "?"}g carbs`);
-      onOpenChange(false);
+      toast.success(`Logged ${submittedEntries.length} food item${submittedEntries.length === 1 ? "" : "s"}`);
+      toast.success(`Logged ${submittedEntries[0]?.carbs ?? "?"}g carbs`);
     },
-    onError: (error) => {
+    onError: (error, _variables, context) => {
+      queryClient.setQueryData(["carb-entries"], context?.previousCarbs ?? []);
+      queryClient.setQueryData(["carb-entries", "graph"], context?.previousGraphCarbs ?? []);
       console.error("Unable to log carbs", error);
       toast.error(error?.message || "Unable to log carbs. Please check the carb entry fields.");
     },
@@ -247,7 +277,19 @@ export default function DoseForm({ open, onOpenChange }) {
       return groups;
     }, {});
 
-    createDoses.mutate(Object.values(groupedDoses));
+    const submittedDoses = Object.values(groupedDoses);
+    const optimisticDoses = submittedDoses.map((dose, index) => ({
+      ...dose,
+      id: `optimistic-dose-${Date.now()}-${index}`,
+      created_date: new Date().toISOString(),
+    }));
+
+    createDoses.mutate({ submittedDoses, optimisticDoses });
+    closeWithSpring(() => {
+      setInsulinRows([createInsulinRow()]);
+      setInsulinNotes("");
+      setInsulinTime(new Date().toTimeString().slice(0, 5));
+    });
   };
 
   const handleSubmitGlucose = () => {
@@ -258,11 +300,41 @@ export default function DoseForm({ open, onOpenChange }) {
     const recordedAt = new Date();
     recordedAt.setHours(hours, minutes, 0, 0);
 
-    createGlucose.mutate({
+    const submittedReading = {
       value,
       recorded_at: recordedAt.toISOString(),
       notes: glucoseNotes || undefined,
+    };
+    const optimisticReading = {
+      ...submittedReading,
+      id: `optimistic-glucose-${Date.now()}`,
+      created_date: new Date().toISOString(),
+    };
+
+    createGlucose.mutate({ submittedReading, optimisticReading });
+    closeWithSpring(() => {
+      setGlucoseValue("");
+      setGlucoseNotes("");
+      setGlucoseTime(new Date().toTimeString().slice(0, 5));
     });
+  };
+
+  const handleSubmitCarbs = (entries) => {
+    const submittedEntries = entries.map(normalizeCarbEntryForSave).filter((entry) => entry.carbs > 0);
+
+    if (!submittedEntries.length) {
+      toast.error("Enter carbs before logging.");
+      return;
+    }
+
+    const optimisticEntries = submittedEntries.map((entry, index) => ({
+      ...entry,
+      id: `optimistic-carb-${Date.now()}-${index}`,
+      created_date: new Date().toISOString(),
+    }));
+
+    createCarb.mutate({ submittedEntries, optimisticEntries });
+    closeWithSpring(() => {});
   };
 
   return (
@@ -367,7 +439,7 @@ export default function DoseForm({ open, onOpenChange }) {
               >
                 {tab === "carbs" ? (
                   <div className="min-h-0 flex-1 overflow-y-auto">
-                    <CarbsTab onSubmit={(entries) => createCarb.mutate(entries)} isPending={createCarb.isPending} />
+                    <CarbsTab onSubmit={handleSubmitCarbs} isPending={createCarb.isPending} />
                   </div>
                 ) : tab === "insulin" ? (
                   <>
