@@ -207,7 +207,7 @@ function EditLogSheet({ log, onClose, onSave, isSaving }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-end justify-center overflow-y-auto bg-black/75 px-0 pb-28 pt-6 backdrop-blur-sm sm:items-center sm:px-4 sm:pb-6">
+    <div className="fixed inset-0 z-[80] flex items-end justify-center overflow-y-auto bg-black/75 px-0 pb-28 pt-6 sm:items-center sm:px-4 sm:pb-6 sm:backdrop-blur-sm">
       <div className="max-h-[calc(100dvh-8rem)] w-full max-w-md overflow-y-auto rounded-t-3xl border border-white/10 p-5 shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:rounded-3xl" style={{ background: "hsl(162,10%,8%)" }}>
         <div className="mb-5 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-white">{title}</h2>
@@ -424,7 +424,7 @@ export default function History() {
 
       <div className="flex justify-center">
         <div
-          className="flex items-center gap-1 p-1 rounded-3xl border border-white/20 bg-white/5 backdrop-blur-sm shadow-lg"
+          className="flex items-center gap-1 p-1 rounded-3xl border border-white/20 bg-white/5 shadow-lg sm:backdrop-blur-sm"
           style={{
             background: "rgba(255, 255, 255, 0.03)",
             boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.05)"
