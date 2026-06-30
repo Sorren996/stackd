@@ -51,6 +51,30 @@ function createInsulinRow(defaults = {}) {
   };
 }
 
+function normalizeCarbEntryForSave(entry) {
+  const absorptionProfile = entry.absorption_profile || entry.profile || "medium";
+  const categoryByProfile = {
+    fast: "Fast Absorbing",
+    medium: "Medium Absorbing",
+    slow: "Slow Absorbing",
+  };
+  const name = entry.food_name || entry.name || "Estimated meal";
+  const carbs = Number(entry.carbs);
+
+  return {
+    name,
+    food_name: name,
+    carbs: Number.isFinite(carbs) ? carbs : 0,
+    gi: Number(entry.gi) || 50,
+    category: entry.category || categoryByProfile[absorptionProfile] || "Medium Absorbing",
+    profile: absorptionProfile,
+    absorption_profile: absorptionProfile,
+    serving_amount: entry.serving_amount ?? 1,
+    consumed_at: entry.consumed_at || new Date().toISOString(),
+    is_custom: entry.is_custom === true,
+  };
+}
+
 function writeCachedLatestGlucose(reading) {
   if (typeof window === "undefined" || !reading) return;
 
@@ -120,30 +144,17 @@ export default function DoseForm({ open, onOpenChange }) {
 
   const createCarb = useMutation({
     mutationFn: async (entries) => {
-      const normalizedEntries = entries.map((entry) => {
-        const absorptionProfile = entry.absorption_profile || entry.profile || "medium";
-        const categoryByProfile = {
-          fast: "Fast Absorbing",
-          medium: "Medium Absorbing",
-          slow: "Slow Absorbing",
-        };
+      const normalizedEntries = entries.map(normalizeCarbEntryForSave).filter((entry) => entry.carbs > 0);
 
-        return {
-          name: entry.name || "Estimated meal",
-          carbs: Number(entry.carbs) || 0,
-          gi: Number(entry.gi) || 50,
-          category: entry.category || categoryByProfile[absorptionProfile] || "Medium Absorbing",
-          profile: absorptionProfile,
-          absorption_profile: absorptionProfile,
-          consumed_at: entry.consumed_at || new Date().toISOString(),
-          is_custom: false,
-        };
-      });
+      if (!normalizedEntries.length) {
+        throw new Error("Enter carbs before logging.");
+      }
 
-      console.log("Saving carb entries", normalizedEntries);
       toast.message("Sending carb entry...");
 
-      const savePromise = base44.entities.CarbEntry.bulkCreate(normalizedEntries);
+      const savePromise = normalizedEntries.length === 1
+        ? base44.entities.CarbEntry.create(normalizedEntries[0]).then((entry) => [entry])
+        : base44.entities.CarbEntry.bulkCreate(normalizedEntries);
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => reject(new Error("Carb save timed out after 10 seconds")), 10000);
       });
@@ -151,8 +162,12 @@ export default function DoseForm({ open, onOpenChange }) {
       return Promise.race([savePromise, timeoutPromise]);
     },
     onSuccess: (result, entries) => {
-      console.log("Carb entries saved", result);
-      const savedEntries = Array.isArray(result) && result.length ? result : entries;
+      const submittedEntries = entries.map(normalizeCarbEntryForSave).filter((entry) => entry.carbs > 0);
+      const savedEntries = Array.isArray(result) && result.length ? result.map((entry, index) => ({
+        ...submittedEntries[index],
+        ...entry,
+      })) : submittedEntries;
+
       queryClient.setQueryData(["carb-entries"], (current = []) => [...savedEntries, ...current]);
       queryClient.setQueryData(["carb-entries", "graph"], (current = []) => [...savedEntries, ...current]);
       queryClient.invalidateQueries({ queryKey: ["carb-entries"] });
