@@ -103,14 +103,26 @@ export default function DoseForm({ open, onOpenChange }) {
 
   const queryClient = useQueryClient();
   const nowTimeString = new Date().toTimeString().slice(0, 5);
+  const requestClose = () => {
+    onOpenChange?.(false);
+  };
+
   const closeWithSpring = (resetForm) => {
-    onOpenChange(false);
+    requestClose();
     const scheduleReset = typeof window === "undefined" ? setTimeout : window.setTimeout;
     scheduleReset(resetForm, 320);
   };
   const closeAfterLoggingPaint = (resetForm) => {
     const scheduleClose = typeof window === "undefined" ? setTimeout : window.setTimeout;
     scheduleClose(() => closeWithSpring(resetForm), 140);
+  };
+  const handleDialogOpenChange = (nextOpen) => {
+    if (nextOpen) {
+      onOpenChange?.(true);
+      return;
+    }
+
+    requestClose();
   };
 
   const handleTabChange = (nextTab) => {
@@ -342,7 +354,7 @@ export default function DoseForm({ open, onOpenChange }) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogPortal>
         <style>{`
           .dose-form-content[data-state="open"] {
@@ -408,7 +420,7 @@ export default function DoseForm({ open, onOpenChange }) {
             <span className="text-lg font-semibold text-white">Log Entry</span>
             <button
               type="button"
-              onClick={() => onOpenChange(false)}
+              onClick={requestClose}
               className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/60 transition hover:text-white"
               aria-label="Close log form"
             >
