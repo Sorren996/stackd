@@ -101,7 +101,8 @@ function formatTimeLabel(value) {
 function buildTimeValue(hour12, minute, suffix) {
   let hour = Number(hour12) % 12;
   if (suffix === "PM") hour += 12;
-  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+  const safeMinute = Math.max(0, Math.min(55, Number(minute) || 0));
+  return `${String(hour).padStart(2, "0")}:${String(safeMinute).padStart(2, "0")}`;
 }
 
 function parseTimeValue(value) {
@@ -109,9 +110,16 @@ function parseTimeValue(value) {
   const hours = Number(hoursRaw);
   return {
     hour12: hours % 12 || 12,
-    minute: Math.round(Number(minutesRaw) / 5) * 5,
+    minute: Math.max(0, Math.min(55, Math.floor(Number(minutesRaw) / 5) * 5)),
     suffix: hours >= 12 ? "PM" : "AM",
   };
+}
+
+function buildTodayTimestampNoFuture(timeValue) {
+  const [hours, minutes] = timeValue.split(":").map(Number);
+  const date = new Date();
+  date.setHours(hours, minutes, 0, 0);
+  return date.getTime() > Date.now() ? null : date;
 }
 
 function TimeScrollField({ label, value, onChange, max }) {
@@ -429,9 +437,11 @@ export default function DoseForm({ open, onOpenChange }) {
       return;
     }
 
-    const [hours, minutes] = insulinTime.split(":").map(Number);
-    const administeredAt = new Date();
-    administeredAt.setHours(hours, minutes, 0, 0);
+    const administeredAt = buildTodayTimestampNoFuture(insulinTime);
+    if (!administeredAt) {
+      toast.error("Choose a time that is not in the future.");
+      return;
+    }
 
     const groupedDoses = insulinRows.reduce((groups, row) => {
       const units = Number(row.units);
@@ -474,9 +484,11 @@ export default function DoseForm({ open, onOpenChange }) {
     const value = Number(glucoseValue);
     if (!Number.isFinite(value) || value <= 0) return;
 
-    const [hours, minutes] = glucoseTime.split(":").map(Number);
-    const recordedAt = new Date();
-    recordedAt.setHours(hours, minutes, 0, 0);
+    const recordedAt = buildTodayTimestampNoFuture(glucoseTime);
+    if (!recordedAt) {
+      toast.error("Choose a time that is not in the future.");
+      return;
+    }
 
     const submittedReading = {
       value,
