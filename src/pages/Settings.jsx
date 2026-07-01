@@ -127,13 +127,10 @@ function CustomInputTray({ open, onClose, title, children }) {
     if (!open || typeof document === "undefined") return undefined;
 
     const previousOverflow = document.body.style.overflow;
-    const previousTouchAction = document.body.style.touchAction;
     document.body.style.overflow = "hidden";
-    document.body.style.touchAction = "none";
 
     return () => {
       document.body.style.overflow = previousOverflow;
-      document.body.style.touchAction = previousTouchAction;
     };
   }, [open]);
 
@@ -158,18 +155,16 @@ function CustomInputTray({ open, onClose, title, children }) {
       <div
         className="fixed inset-x-0 bottom-0 z-[999] min-h-[34dvh] rounded-t-3xl border border-white/10 bg-[hsl(162,10%,8%)] px-4 pb-[max(env(safe-area-inset-bottom),0.85rem)] pt-3 shadow-[0_-24px_60px_rgba(0,0,0,0.55)]"
         onPointerDown={(event) => event.stopPropagation()}
-        onPointerUp={(event) => event.stopPropagation()}
         onClick={(event) => event.stopPropagation()}
       >
         <div className="mb-3 flex items-center justify-between">
           <p className="text-sm font-semibold text-white/60">{title}</p>
           <button
             type="button"
-            onPointerDown={(event) => {
+            onClick={(event) => {
               absorb(event);
               onClose();
             }}
-            onClick={absorb}
             className="rounded-full bg-white/10 px-4 py-1.5 text-sm font-semibold text-teal-200"
           >
             Done
@@ -205,14 +200,9 @@ function NumberPadField({ label, value, onChange, placeholder = "--", decimal = 
             <button
               key={key}
               type="button"
-              onPointerDown={(event) => {
-                event.preventDefault();
+              onClick={(event) => {
                 event.stopPropagation();
                 press(key);
-              }}
-              onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
               }}
               className="h-14 rounded-2xl border border-white/10 bg-white/[0.06] text-xl font-bold text-white/85 transition hover:bg-white/10 active:scale-[0.98]"
             >
