@@ -90,6 +90,7 @@ export default function Layout() {
     previous: null,
     key: 0,
   }));
+  const [sceneParallaxY, setSceneParallaxY] = useState(0);
 
   useEffect(() => {
     const updateLatestGlucose = () => setLatestGlucose(readCachedLatestGlucose());
@@ -128,6 +129,28 @@ export default function Layout() {
     }
   }, [isDashboardRoute, isHistoryRoute]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    let frame = 0;
+    const updateSceneOffset = () => {
+      frame = 0;
+      setSceneParallaxY(window.scrollY * 0.5);
+    };
+    const handleScroll = () => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(updateSceneOffset);
+    };
+
+    updateSceneOffset();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => {
+      if (frame) window.cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
+
   const toggleSettings = () => {
     navigate(isSettingsOpen ? "/" : "/settings");
   };
@@ -142,8 +165,9 @@ export default function Layout() {
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-[620px] overflow-hidden bg-black sm:h-[720px]"
+        style={{ transform: `translate3d(0, ${sceneParallaxY}px, 0)` }}
       >
-        <AnimatePresence mode="wait">
+        <AnimatePresence initial={false}>
           <motion.img
             key={sceneStatus}
             src={SCENE_IMAGES[sceneStatus]}
@@ -151,7 +175,7 @@ export default function Layout() {
             initial={{ opacity: 0, scale: 1.02 }}
             animate={{ opacity: 0.34, scale: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 1.4, ease: "easeInOut" }}
+            transition={{ duration: 1.1, ease: "easeInOut" }}
             className="absolute inset-0 h-full w-full object-cover"
             style={{
               filter: "grayscale(0.42) saturate(0.82) contrast(1.08) brightness(0.62)",
