@@ -244,6 +244,8 @@ export default function CarbsTab({ onSubmit, isPending }) {
 
   const totalCarbs = selectedFoods.reduce((sum, item) => sum + (parseFloat(item.carbs) || 0), 0);
   const canSubmitManual = selectedFoods.length > 0 && selectedFoods.every((item) => parseFloat(item.carbs) > 0);
+  const isEstimateMode = !FOOD_SEARCH_ENABLED || mode === "estimate";
+  const canSubmitCarbs = isEstimateMode ? !!estimatedMeal && !isEstimatingMeal : canSubmitManual;
 
   const updateEstimatedMeal = (patch) => {
     setEstimatedMeal((meal) => (meal ? { ...meal, ...patch } : meal));
@@ -565,18 +567,18 @@ Do not give insulin dosing advice.
                   type="button"
                   onClick={handleEstimateMeal}
                   disabled={(!mealText.trim() && !mealPhotoFile) || isEstimatingMeal}
-                  className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-teal-500 py-3 text-sm font-semibold text-white transition hover:bg-teal-400 disabled:opacity-40"
+                  className="mt-3 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-2xl bg-teal-500 py-3 text-sm font-semibold text-white transition hover:bg-teal-400 disabled:opacity-40"
                 >
                   {isEstimatingMeal ? (
-                    <>
+                    <span className="inline-flex items-center gap-2">
                       <Loader2 className="h-4 w-4 animate-spin" />
                       Estimating...
-                    </>
+                    </span>
                   ) : (
-                    <>
+                    <span className="inline-flex items-center gap-2">
                       <Sparkles className="h-4 w-4" />
                       Estimate meal
-                    </>
+                    </span>
                   )}
                 </button>
               </div>
@@ -759,8 +761,8 @@ Do not give insulin dosing advice.
         <div className="shrink-0 px-5 pb-6 pt-2">
           <button
             type="button"
-            onClick={!FOOD_SEARCH_ENABLED || mode === "estimate" ? handleSubmitEstimate : handleSubmitManual}
-            disabled={isPending || (!FOOD_SEARCH_ENABLED || mode === "estimate" ? !estimatedMeal : !canSubmitManual)}
+            onClick={isEstimateMode ? handleSubmitEstimate : handleSubmitManual}
+            disabled={isPending || isEstimatingMeal || !canSubmitCarbs}
             className="flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-base font-semibold text-white transition-all disabled:opacity-40"
             style={{ backgroundColor: CARB_COLOR, filter: "brightness(0.9)" }}
           >
@@ -769,7 +771,12 @@ Do not give insulin dosing advice.
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Logging...
               </>
-            ) : !FOOD_SEARCH_ENABLED || mode === "estimate" ? (
+            ) : isEstimatingMeal ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Estimating meal...
+              </>
+            ) : isEstimateMode ? (
               <>
                 <Check className="h-4 w-4" />
                 Log meal estimate
