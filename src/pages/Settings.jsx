@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
 import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
+import { AnimatePresence, motion } from "framer-motion";
 
 const INSULIN_PLAN_HELP = {
   review: {
@@ -68,33 +69,55 @@ function SettingHelpButton({ id, openHelp, setOpenHelp }) {
 }
 
 function SettingsHelpOverlay({ openHelp, onClose }) {
-  const help = INSULIN_PLAN_HELP[openHelp];
-  if (!help) return null;
+  const [visibleHelp, setVisibleHelp] = useState(openHelp);
+  const help = INSULIN_PLAN_HELP[visibleHelp];
+
+  useEffect(() => {
+    if (openHelp) setVisibleHelp(openHelp);
+  }, [openHelp]);
+
   if (typeof document === "undefined") return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[999] bg-black/45" onClick={onClose}>
-      <div
-        className="fixed bottom-24 left-4 right-4 mx-auto w-auto max-w-sm rounded-2xl border border-white/10 bg-[hsl(162,10%,10%)] p-4 text-left shadow-2xl sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-24 sm:w-full sm:-translate-x-1/2"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="mb-2 flex items-start justify-between gap-3">
-          <p className="text-sm font-semibold text-white">{help.title}</p>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/5 text-white/35"
-            aria-label="Close help"
+    <AnimatePresence mode="wait" onExitComplete={() => setVisibleHelp(null)}>
+      {openHelp && help && (
+        <motion.div
+          key="settings-help-backdrop"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.16 }}
+          className="fixed inset-0 z-[999] bg-black/45"
+          onClick={onClose}
+        >
+          <motion.div
+            key={openHelp}
+            initial={{ opacity: 0, y: 34, scale: 0.94 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 30, scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 460, damping: 32, mass: 0.85 }}
+            className="fixed bottom-24 left-4 right-4 mx-auto w-auto max-w-sm rounded-2xl border border-white/10 bg-[hsl(162,10%,10%)] p-4 text-left shadow-2xl sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-24 sm:w-full sm:-translate-x-1/2"
+            onClick={(event) => event.stopPropagation()}
           >
-            x
-          </button>
-        </div>
-        <p className="text-xs leading-relaxed text-white/55">{help.body}</p>
-        <p className="mt-2 text-[10px] leading-relaxed text-white/30">
-          This is for app estimates only and is not dosing advice.
-        </p>
-      </div>
-    </div>,
+            <div className="mb-2 flex items-start justify-between gap-3">
+              <p className="text-sm font-semibold text-white">{help.title}</p>
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/5 text-white/35"
+                aria-label="Close help"
+              >
+                x
+              </button>
+            </div>
+            <p className="text-xs leading-relaxed text-white/55">{help.body}</p>
+            <p className="mt-2 text-[10px] leading-relaxed text-white/30">
+              This is for app estimates only and is not dosing advice.
+            </p>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>,
     document.body
   );
 }
