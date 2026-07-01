@@ -190,7 +190,7 @@ function NumberPadField({ label, value, onChange, placeholder = "--", decimal = 
   return (
     <div className={`rounded-xl border border-white/10 bg-white/5 px-3 py-2 ${className}`}>
       <button type="button" onClick={() => setOpen((value) => !value)} className="flex min-h-10 w-full flex-col items-start justify-center gap-0.5 text-left">
-
+        <span className="text-[9px] font-semibold uppercase tracking-wider text-white/35">{label}</span>
         <span className="max-w-full truncate text-base font-bold leading-tight text-white">{textValue || placeholder}</span>
       </button>
       <CustomInputTray open={open} onClose={() => setOpen(false)} title={label}>
@@ -274,6 +274,11 @@ const handleInsulinSettingValueChange = (key, setValue) => (value) => {
   window.dispatchEvent(new Event("insulin-settings-updated"));
 };
 
+const dispatchTargetRangeUpdated = () => {
+  window.dispatchEvent(new Event("target-range-updated"));
+  window.dispatchEvent(new Event("insulin-settings-updated"));
+};
+
 const toggleMealInsulinType = (name) => {
   setMealInsulinTypes((current) => {
     const next = current.includes(name)
@@ -325,6 +330,7 @@ const toggleMealInsulinType = (name) => {
     setTargetHigh(180);
     localStorage.setItem("target_range_low", "70");
     localStorage.setItem("target_range_high", "180");
+    dispatchTargetRangeUpdated();
     toast.success("Set to recommended range (70–180 mg/dL)");
   };
 
@@ -333,6 +339,7 @@ const toggleMealInsulinType = (name) => {
     setTargetHigh(high);
     localStorage.setItem("target_range_low", low.toString());
     localStorage.setItem("target_range_high", high.toString());
+    dispatchTargetRangeUpdated();
   };
 
   const handleExportCSV = async () => {
