@@ -255,6 +255,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
   const outcomeWindowMs = insulinSettings.outcomeWindowMinutes * MINUTE_MS;
   const mealGroup = groups.find((group) => now - group.mealTime <= outcomeWindowMs) ?? groups[0];
   const mealTime = mealGroup.mealTime;
+  const mealStillUnderReview = now - mealTime <= outcomeWindowMs;
   const windowStart = mealGroup.start;
   const windowEnd = mealGroup.end;
   const pairedDoses = mealGroup.doses;
@@ -275,6 +276,19 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
     );
   const peakOutcome = outcomeReadings.reduce((peak, reading) => (!peak || reading.value > peak.value ? reading : peak), null);
   const lowOutcome = outcomeReadings.reduce((low, reading) => (!low || reading.value < low.value ? reading : low), null);
+  const latestGlucoseValue = Number(latestGlucose?.value);
+  const latestGlucoseTime = new Date(latestGlucose?.recorded_at).getTime();
+  const latestIsAfterMeal = Number.isFinite(latestGlucoseTime) && latestGlucoseTime >= mealTime;
+  const latestInRange =
+    Number.isFinite(latestGlucoseValue) &&
+    latestGlucoseValue >= insulinSettings.targetLow &&
+    latestGlucoseValue <= insulinSettings.targetHigh;
+  const latestHigh =
+    Number.isFinite(latestGlucoseValue) &&
+    latestGlucoseValue > insulinSettings.targetHigh;
+  const latestLow =
+    Number.isFinite(latestGlucoseValue) &&
+    latestGlucoseValue < insulinSettings.targetLow;
   const gramsPerUnit = 5 / insulinSettings.mealInsulinUnitsPer5g;
   const expectedMealUnits = mealGroup.carbs / gramsPerUnit;
   const correctionUnitsNeeded =
@@ -314,14 +328,26 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
     value = "Correction-heavy";
     status = "Correction insulin is carrying the coverage";
     color = "#f59e0b";
-  } else if (peakOutcome && peakOutcome.value > insulinSettings.targetHigh + 20) {
-    value = "Rise detected";
-    status = "Coverage aligned, but glucose rose after meal";
-    color = "#f59e0b";
-  } else if (lowOutcome && lowOutcome.value < insulinSettings.targetLow) {
-    value = "Drop detected";
-    status = "Coverage aligned, but glucose dropped after meal";
-    color = "#3b82f6";
+  } else if (mealStillUnderReview && peakOutcome && peakOutcome.value > insulinSettings.targetHigh + 20) {
+    if (latestIsAfterMeal && latestInRange) {
+      value = "Back in range";
+      status = "Post-meal rise has settled";
+      color = "#35a879";
+    } else if (latestIsAfterMeal && latestHigh) {
+      value = "Rise detected";
+      status = "Post-meal rise still settling";
+      color = "#f59e0b";
+    }
+  } else if (mealStillUnderReview && lowOutcome && lowOutcome.value < insulinSettings.targetLow) {
+    if (latestIsAfterMeal && latestInRange) {
+      value = "Back in range";
+      status = "Post-meal drop has settled";
+      color = "#35a879";
+    } else if (latestIsAfterMeal && latestLow) {
+      value = "Drop detected";
+      status = "Post-meal drop still settling";
+      color = "#3b82f6";
+    }
   }
 
   return {
@@ -350,8 +376,10 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
       mealCount,
       doseCount,
       glucoseValue: Number.isFinite(glucoseValue) ? glucoseValue : null,
+      latestGlucoseValue: Number.isFinite(latestGlucoseValue) ? latestGlucoseValue : null,
       peakOutcome: peakOutcome?.value ?? null,
       lowOutcome: lowOutcome?.value ?? null,
+      mealStillUnderReview,
       windowStart,
       windowEnd,
     },
