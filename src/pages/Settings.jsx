@@ -141,7 +141,7 @@ function CustomInputTray({ open, onClose, title, children }) {
     event.stopPropagation();
   };
 
-  return createPortal(
+  return (
     <>
       <div
         className="fixed inset-0 z-[998] bg-black/25"
@@ -172,8 +172,7 @@ function CustomInputTray({ open, onClose, title, children }) {
         </div>
         {children}
       </div>
-    </>,
-    document.body
+    </>
   );
 }
 
