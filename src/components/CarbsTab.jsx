@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { FOOD_DATABASE } from "@/lib/carbAbsorption";
 import { base44 } from "@/api/base44Client";
 import { InvokeLLM, UploadFile } from "@/api/integrations";
@@ -74,21 +75,25 @@ function parseTimeValue(value) {
 }
 
 function CustomInputTray({ open, onClose, title, children, tall = false }) {
-  if (!open) return null;
+  if (!open || typeof document === "undefined") return null;
 
-  return (
+  return createPortal(
     <>
-      <div className="fixed inset-0 z-[118] bg-black/25" onClick={onClose} />
+      <div className="fixed inset-0 z-[998] bg-black/25" onPointerDown={onClose} />
       <div
-        className={`fixed inset-x-0 bottom-0 z-[119] rounded-t-3xl border border-white/10 bg-[hsl(162,10%,8%)] px-4 pb-[max(env(safe-area-inset-bottom),0.85rem)] pt-3 shadow-[0_-24px_60px_rgba(0,0,0,0.55)] ${
+        className={`fixed inset-x-0 bottom-0 z-[999] rounded-t-3xl border border-white/10 bg-[hsl(162,10%,8%)] px-4 pb-[max(env(safe-area-inset-bottom),0.85rem)] pt-3 shadow-[0_-24px_60px_rgba(0,0,0,0.55)] ${
           tall ? "min-h-[43dvh]" : "min-h-[34dvh]"
         }`}
+        onPointerDown={(event) => event.stopPropagation()}
       >
         <div className="mb-3 flex items-center justify-between">
           <p className="text-sm font-semibold text-white/60">{title}</p>
           <button
             type="button"
-            onClick={onClose}
+            onPointerDown={(event) => {
+              event.preventDefault();
+              onClose();
+            }}
             className="rounded-full bg-white/10 px-4 py-1.5 text-sm font-semibold text-teal-200"
           >
             Done
@@ -96,7 +101,8 @@ function CustomInputTray({ open, onClose, title, children, tall = false }) {
         </div>
         {children}
       </div>
-    </>
+    </>,
+    document.body
   );
 }
 
@@ -125,7 +131,10 @@ function TimeScrollField({ label, value, onChange, max }) {
                 <button
                   key={item}
                   type="button"
-                  onClick={() => updateTime({ [key]: item })}
+                  onPointerDown={(event) => {
+                    event.preventDefault();
+                    updateTime({ [key]: item });
+                  }}
                   className={`mb-1 flex h-12 w-full items-center justify-center rounded-xl text-lg font-semibold transition last:mb-0 ${
                     parsed[key] === item ? "bg-teal-500 text-white" : "text-white/45 hover:bg-white/10 hover:text-white"
                   }`}
@@ -140,7 +149,10 @@ function TimeScrollField({ label, value, onChange, max }) {
               <button
                 key={suffix}
                 type="button"
-                onClick={() => updateTime({ suffix })}
+                onPointerDown={(event) => {
+                  event.preventDefault();
+                  updateTime({ suffix });
+                }}
                 className={`rounded-2xl text-base font-bold transition ${
                   parsed.suffix === suffix ? "bg-teal-500 text-white" : "border border-white/10 bg-black/20 text-white/45"
                 }`}
@@ -180,7 +192,10 @@ function NumberPadField({ label, value, onChange, unit, placeholder = "--", deci
             <button
               key={key}
               type="button"
-              onClick={() => press(key)}
+              onPointerDown={(event) => {
+                event.preventDefault();
+                press(key);
+              }}
               className="h-14 rounded-2xl border border-white/10 bg-white/[0.06] text-xl font-bold text-white/85 transition hover:bg-white/10 active:scale-[0.98]"
             >
               {key === "back" ? "Back" : key === "clear" ? "Clear" : key}
@@ -212,18 +227,36 @@ function TextPadField({ label, value, onChange, placeholder, multiline = false }
           {rows.map((row) => (
             <div key={row} className="mb-1.5 flex justify-center gap-1.5 last:mb-0">
               {[...row].map((letter) => (
-                <button key={letter} type="button" onClick={() => add(letter.toLowerCase())} className="h-12 min-w-0 flex-1 rounded-xl bg-white/10 text-sm font-bold text-white/85 active:scale-[0.98]">
+                <button key={letter} type="button" onPointerDown={(event) => {
+                    event.preventDefault();
+                    add(letter.toLowerCase());
+                  }} className="h-12 min-w-0 flex-1 rounded-xl bg-white/10 text-sm font-bold text-white/85 active:scale-[0.98]">
                   {letter}
                 </button>
               ))}
             </div>
           ))}
           <div className="mt-2 grid grid-cols-[1fr_1fr_2fr_1fr_1fr] gap-2">
-            <button type="button" onClick={() => onChange("")} className="h-12 rounded-xl bg-white/10 text-xs font-bold text-white/65">Clear</button>
-            <button type="button" onClick={() => add(",")} className="h-12 rounded-xl bg-white/10 text-xs font-bold text-white/65">,</button>
-            <button type="button" onClick={() => add(" ")} className="h-12 rounded-xl bg-white/10 text-xs font-bold text-white/65">Space</button>
-            <button type="button" onClick={() => add(".")} className="h-12 rounded-xl bg-white/10 text-xs font-bold text-white/65">.</button>
-            <button type="button" onClick={() => onChange(String(value || "").slice(0, -1))} className="h-12 rounded-xl bg-white/10 text-xs font-bold text-white/65">Back</button>
+            <button type="button" onPointerDown={(event) => {
+              event.preventDefault();
+              onChange("");
+            }} className="h-12 rounded-xl bg-white/10 text-xs font-bold text-white/65">Clear</button>
+            <button type="button" onPointerDown={(event) => {
+              event.preventDefault();
+              add(",");
+            }} className="h-12 rounded-xl bg-white/10 text-xs font-bold text-white/65">,</button>
+            <button type="button" onPointerDown={(event) => {
+              event.preventDefault();
+              add(" ");
+            }} className="h-12 rounded-xl bg-white/10 text-xs font-bold text-white/65">Space</button>
+            <button type="button" onPointerDown={(event) => {
+              event.preventDefault();
+              add(".");
+            }} className="h-12 rounded-xl bg-white/10 text-xs font-bold text-white/65">.</button>
+            <button type="button" onPointerDown={(event) => {
+              event.preventDefault();
+              onChange(String(value || "").slice(0, -1));
+            }} className="h-12 rounded-xl bg-white/10 text-xs font-bold text-white/65">Back</button>
           </div>
         </div>
       </CustomInputTray>
