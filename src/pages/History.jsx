@@ -8,7 +8,6 @@ import { toast } from "sonner";
 import { CalendarDays, ChevronRight, X, Pencil } from "lucide-react";
 import { format, isToday, isYesterday, parseISO } from "date-fns";
 import { motion } from "framer-motion";
-import { Textarea } from "@/components/ui/textarea";
 import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
 
 function CollapsibleDateGroup({ label, count, isOpen, onToggle, children }) {
@@ -141,6 +140,124 @@ function getEditInitialForm(log) {
   };
 }
 
+function formatTimeLabel(value) {
+  const [hoursRaw, minutes = "00"] = String(value || "00:00").split(":");
+  const hours = Number(hoursRaw);
+  const suffix = hours >= 12 ? "PM" : "AM";
+  return `${hours % 12 || 12}:${minutes.padStart(2, "0")} ${suffix}`;
+}
+
+function buildTimeValue(hour12, minute, suffix) {
+  let hour = Number(hour12) % 12;
+  if (suffix === "PM") hour += 12;
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
+function parseTimeValue(value) {
+  const [hoursRaw = "0", minutesRaw = "0"] = String(value || "00:00").split(":");
+  const hours = Number(hoursRaw);
+  return { hour12: hours % 12 || 12, minute: Math.round(Number(minutesRaw) / 5) * 5, suffix: hours >= 12 ? "PM" : "AM" };
+}
+
+function TimeScrollField({ label, value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const parsed = parseTimeValue(value);
+  const updateTime = (patch) => {
+    const next = { ...parsed, ...patch };
+    onChange(buildTimeValue(next.hour12, next.minute, next.suffix));
+  };
+
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+      <button type="button" onClick={() => setOpen((value) => !value)} className="flex w-full items-center justify-between">
+        <span className="text-sm text-white/40">{label}</span>
+        <span className="text-sm font-semibold text-white">{formatTimeLabel(value)}</span>
+      </button>
+      {open && (
+        <div className="mt-3 grid grid-cols-[1fr_1fr_0.9fr] gap-2">
+          {[["hour12", Array.from({ length: 12 }, (_, i) => i + 1)], ["minute", Array.from({ length: 12 }, (_, i) => i * 5)]].map(([key, values]) => (
+            <div key={key} className="max-h-36 overflow-y-auto rounded-xl border border-white/10 bg-black/20 p-1" style={{ scrollbarWidth: "none" }}>
+              {values.map((item) => (
+                <button key={item} type="button" onClick={() => updateTime({ [key]: item })} className={`mb-1 flex h-9 w-full items-center justify-center rounded-lg text-sm font-semibold last:mb-0 ${parsed[key] === item ? "bg-teal-500 text-white" : "text-white/45"}`}>
+                  {String(item).padStart(key === "minute" ? 2 : 1, "0")}
+                </button>
+              ))}
+            </div>
+          ))}
+          <div className="grid gap-2">
+            {["AM", "PM"].map((suffix) => (
+              <button key={suffix} type="button" onClick={() => updateTime({ suffix })} className={`rounded-xl text-sm font-bold ${parsed.suffix === suffix ? "bg-teal-500 text-white" : "border border-white/10 bg-black/20 text-white/45"}`}>
+                {suffix}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function NumberPadField({ label, value, onChange, decimal = true, maxLength = 6 }) {
+  const [open, setOpen] = useState(false);
+  const textValue = value === undefined || value === null ? "" : String(value);
+  const press = (key) => {
+    if (key === "clear") return onChange("");
+    if (key === "back") return onChange(textValue.slice(0, -1));
+    if (key === "." && (!decimal || textValue.includes("."))) return;
+    if (textValue.length >= maxLength) return;
+    onChange(`${textValue}${key}`);
+  };
+
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+      <button type="button" onClick={() => setOpen((value) => !value)} className="flex w-full items-center justify-between">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-white/35">{label}</span>
+        <span className="text-base font-bold text-white">{textValue || "--"}</span>
+      </button>
+      {open && (
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          {["1", "2", "3", "4", "5", "6", "7", "8", "9", decimal ? "." : "clear", "0", "back"].map((key) => (
+            <button key={key} type="button" onClick={() => press(key)} className="h-10 rounded-xl border border-white/10 bg-black/20 text-sm font-bold text-white/80">
+              {key === "back" ? "⌫" : key === "clear" ? "Clear" : key}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TextPadField({ label, value, onChange, placeholder, multiline = false }) {
+  const [open, setOpen] = useState(false);
+  const rows = ["1234567890", "QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"];
+  const add = (key) => onChange(`${value || ""}${key}`);
+
+  return (
+    <div>
+      {label && <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-white/35">{label}</span>}
+      <button type="button" onClick={() => setOpen((value) => !value)} className={`w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-left text-sm text-white ${multiline ? "min-h-20" : ""}`}>
+        {value ? <span className="whitespace-pre-wrap">{value}</span> : <span className="text-white/30">{placeholder}</span>}
+      </button>
+      {open && (
+        <div className="mt-2 rounded-2xl border border-white/10 bg-black/30 p-2">
+          {rows.map((row) => (
+            <div key={row} className="mb-1 flex gap-1 last:mb-0">
+              {[...row].map((letter) => <button key={letter} type="button" onClick={() => add(letter.toLowerCase())} className="h-8 min-w-0 flex-1 rounded-lg bg-white/10 text-[11px] font-bold text-white/80">{letter}</button>)}
+            </div>
+          ))}
+          <div className="mt-2 grid grid-cols-[1fr_1fr_2fr_1fr_1fr] gap-2">
+            <button type="button" onClick={() => onChange("")} className="h-9 rounded-xl bg-white/10 text-xs font-bold text-white/65">Clear</button>
+            <button type="button" onClick={() => add(",")} className="h-9 rounded-xl bg-white/10 text-xs font-bold text-white/65">,</button>
+            <button type="button" onClick={() => add(" ")} className="h-9 rounded-xl bg-white/10 text-xs font-bold text-white/65">Space</button>
+            <button type="button" onClick={() => add(".")} className="h-9 rounded-xl bg-white/10 text-xs font-bold text-white/65">.</button>
+            <button type="button" onClick={() => onChange(String(value || "").slice(0, -1))} className="h-9 rounded-xl bg-white/10 text-xs font-bold text-white/65">⌫</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function EditLogSheet({ log, onClose, onSave, isSaving }) {
   const [form, setForm] = useState(() => getEditInitialForm(log));
 
@@ -230,23 +347,23 @@ function EditLogSheet({ log, onClose, onSave, isSaving }) {
                 <option value="" className="bg-[#18211f]">Insulin type</option>
                 {Object.keys(INSULIN_PROFILES).map((name) => <option key={name} value={name} className="bg-[#18211f]">{name}</option>)}
               </select>
-              <div className="grid grid-cols-3 gap-2">
-                <input value={form.units} onChange={(event) => updateField("units", event.target.value)} placeholder="Total" inputMode="decimal" className="rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-teal-400" />
-                <input value={form.meal_units} onChange={(event) => updateField("meal_units", event.target.value)} placeholder="Meal" inputMode="decimal" className="rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-teal-400" />
-                <input value={form.correction_units} onChange={(event) => updateField("correction_units", event.target.value)} placeholder="Correction" inputMode="decimal" className="rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-teal-400" />
+              <div className="grid grid-cols-1 gap-2">
+                <NumberPadField label="Total" value={form.units} onChange={(value) => updateField("units", value)} />
+                <NumberPadField label="Meal" value={form.meal_units} onChange={(value) => updateField("meal_units", value)} />
+                <NumberPadField label="Correction" value={form.correction_units} onChange={(value) => updateField("correction_units", value)} />
               </div>
             </>
           )}
 
           {log.type === "glucose" && (
-            <input value={form.value} onChange={(event) => updateField("value", event.target.value.replace(/\D/g, "").slice(0, 3))} placeholder="Glucose" inputMode="numeric" className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-teal-400" />
+            <NumberPadField label="Glucose" value={form.value} onChange={(value) => updateField("value", value.replace(/\D/g, "").slice(0, 3))} decimal={false} maxLength={3} />
           )}
 
           {log.type === "carbs" && (
             <>
-              <input value={form.food_name} onChange={(event) => updateField("food_name", event.target.value)} placeholder="Food" className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-teal-400" />
+              <TextPadField label="Food" value={form.food_name} onChange={(value) => updateField("food_name", value)} placeholder="Food" />
               <div className="grid grid-cols-2 gap-2">
-                <input value={form.carbs} onChange={(event) => updateField("carbs", event.target.value)} placeholder="Carbs" inputMode="decimal" className="rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-teal-400" />
+                <NumberPadField label="Carbs" value={form.carbs} onChange={(value) => updateField("carbs", value)} />
                 <select value={form.absorption_profile} onChange={(event) => updateField("absorption_profile", event.target.value)} className="rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-teal-400">
                   <option value="fast" className="bg-[#18211f]">Fast</option>
                   <option value="medium" className="bg-[#18211f]">Medium</option>
@@ -256,8 +373,8 @@ function EditLogSheet({ log, onClose, onSave, isSaving }) {
             </>
           )}
 
-          <input type="time" value={form.time} onChange={(event) => updateField("time", event.target.value)} className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-teal-400" style={{ colorScheme: "dark" }} />
-          <Textarea value={form.notes} onChange={(event) => updateField("notes", event.target.value)} rows={2} placeholder="Notes" className="resize-none rounded-xl border-white/10 bg-white/5 text-white placeholder:text-white/30" />
+          <TimeScrollField label="Logged at" value={form.time} onChange={(value) => updateField("time", value)} />
+          <TextPadField label="Notes" value={form.notes} onChange={(value) => updateField("notes", value)} placeholder="Notes" multiline />
           <button type="button" onClick={submit} disabled={isSaving} className="sticky bottom-0 w-full rounded-2xl bg-teal-500 py-4 text-base font-semibold text-white shadow-[0_-16px_24px_rgba(10,18,16,0.9)] transition hover:bg-teal-400 disabled:opacity-40">
             {isSaving ? "Saving..." : "Save changes"}
           </button>
