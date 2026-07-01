@@ -156,15 +156,15 @@ export default function Layout() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-black text-white">
+    <div className="isolate relative min-h-screen overflow-x-hidden bg-black text-white">
       <div
         aria-hidden="true"
-        className="pointer-events-none fixed inset-0 z-0 bg-black"
+        className="pointer-events-none fixed inset-0 -z-20 bg-black"
       />
 
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-[620px] overflow-hidden bg-black sm:h-[720px]"
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[620px] overflow-hidden bg-black sm:h-[720px]"
         style={{ transform: `translate3d(0, ${sceneParallaxY}px, 0)` }}
       >
         <AnimatePresence initial={false}>
