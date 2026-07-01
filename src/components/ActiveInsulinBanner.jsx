@@ -802,7 +802,7 @@ function SupportiveGlucoseMessage({ insight, color }) {
   return (
     <p
       aria-live="polite"
-      className="mx-auto mb-5 mt-4 max-w-[85vw] text-center text-[15px] font-bold italic leading-relaxed"
+      className="mx-auto mb-5 max-w-[88vw] text-center text-[17px] font-bold italic leading-relaxed"
       style={{ color: "rgba(255,255,255,0.82)" }}
     >
       "{insight.message}"
@@ -1094,6 +1094,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
 
       <div className="relative -mx-4 px-4 pb-6 pt-2">
         <div className="mb-6 flex flex-col items-center pt-2 text-center">
+          <SupportiveGlucoseMessage insight={supportiveGlucoseInsight} color={glucoseColor} />
           <span className="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-white/30">Current Glucose</span>
           <div className="flex items-end gap-3">
             <span className="text-[72px] font-black leading-none text-white sm:text-[88px]">
@@ -1118,7 +1119,6 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
             <span className="relative z-10 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: glucoseColor }} />
             <span className="relative z-10 text-sm font-semibold" style={{ color: glucoseColor }}>{trend.label}</span>
           </div>
-          <SupportiveGlucoseMessage insight={supportiveGlucoseInsight} color={glucoseColor} />
         </div>
 
         {latestGlucose && (
