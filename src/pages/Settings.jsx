@@ -123,6 +123,20 @@ function SettingsHelpOverlay({ openHelp, onClose }) {
 }
 
 function CustomInputTray({ open, onClose, title, children }) {
+  useEffect(() => {
+    if (!open || typeof document === "undefined") return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    const previousTouchAction = document.body.style.touchAction;
+    document.body.style.overflow = "hidden";
+    document.body.style.touchAction = "none";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.body.style.touchAction = previousTouchAction;
+    };
+  }, [open]);
+
   if (!open || typeof document === "undefined") return null;
 
   const absorb = (event) => {
@@ -180,10 +194,10 @@ function NumberPadField({ label, value, onChange, placeholder = "--", decimal = 
   };
 
   return (
-    <div className={`rounded-xl border border-white/10 bg-white/5 p-3 ${className}`}>
-      <button type="button" onClick={() => setOpen((value) => !value)} className="flex w-full items-center justify-between gap-3">
-        <span className="text-left text-[10px] font-semibold uppercase tracking-wider text-white/35">{label}</span>
-        <span className="text-right text-base font-bold text-white">{textValue || placeholder}</span>
+    <div className={`rounded-xl border border-white/10 bg-white/5 px-3 py-2 ${className}`}>
+      <button type="button" onClick={() => setOpen((value) => !value)} className="flex min-h-10 w-full flex-col items-start justify-center gap-0.5 text-left">
+        <span className="text-[9px] font-semibold uppercase tracking-wider text-white/35">{label}</span>
+        <span className="max-w-full truncate text-base font-bold leading-tight text-white">{textValue || placeholder}</span>
       </button>
       <CustomInputTray open={open} onClose={() => setOpen(false)} title={label}>
         <div className="grid grid-cols-3 gap-2.5">
