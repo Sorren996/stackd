@@ -190,7 +190,7 @@ function NumberPadField({ label, value, onChange, placeholder = "--", decimal = 
   return (
     <div className={`rounded-xl border border-white/10 bg-white/5 px-3 py-2 ${className}`}>
       <button type="button" onClick={() => setOpen((value) => !value)} className="flex min-h-10 w-full flex-col items-start justify-center gap-0.5 text-left">
-
+        <span className="text-[9px] font-semibold uppercase tracking-wider text-white/35">{label}</span>
         <span className="max-w-full truncate text-base font-bold leading-tight text-white">{textValue || placeholder}</span>
       </button>
       <CustomInputTray open={open} onClose={() => setOpen(false)} title={label}>
@@ -237,6 +237,10 @@ export default function Settings() {
 
 const [insulinSensitivity, setInsulinSensitivity] = useState(() => {
   return localStorage.getItem("insulin_sensitivity_mgdl_per_unit") || "";
+});
+
+const [correctionTargetGlucose, setCorrectionTargetGlucose] = useState(() => {
+  return localStorage.getItem("correction_target_glucose") || "110";
 });
 
 const [unitsPer5g, setUnitsPer5g] = useState(() => {
@@ -533,6 +537,29 @@ const toggleMealInsulinType = (name) => {
           className="w-24"
         />
         <span className="text-xs text-white/40">mg/dL per unit</span>
+      </div>
+    </div>
+
+    <div className="space-y-2">
+      <Label htmlFor="correction-target" className="text-sm font-semibold text-white/90">
+        Correction target
+      </Label>
+      <p className="text-xs text-white/40">
+        Glucose baseline used when estimating correction insulin.
+      </p>
+      <div className="flex items-center gap-3">
+        <NumberPadField
+          label="Target"
+          value={correctionTargetGlucose}
+          onChange={handleInsulinSettingValueChange(
+            "correction_target_glucose",
+            setCorrectionTargetGlucose
+          )}
+          decimal={false}
+          maxLength={3}
+          className="w-24"
+        />
+        <span className="text-xs text-white/40">mg/dL</span>
       </div>
     </div>
 
