@@ -69,7 +69,7 @@ export default function Layout() {
   const [latestGlucose, setLatestGlucose] = useState(readCachedLatestGlucose);
   const appBackground = useMemo(() => {
     const primaryColor = getGlucoseBackgroundColor(latestGlucose);
-    return `linear-gradient(to bottom, ${primaryColor} 0%, #18181b 52%, #000000 100%)`;
+    return `linear-gradient(to bottom, ${primaryColor} 0%, rgba(0,0,0,0.72) 58%, #000000 100%)`;
   }, [latestGlucose]);
   const sceneStatus = useMemo(() => getGlucoseScene(latestGlucose), [latestGlucose]);
   const [backgroundLayers, setBackgroundLayers] = useState(() => ({
@@ -118,36 +118,12 @@ export default function Layout() {
     <div className="relative min-h-screen overflow-x-hidden bg-black text-white">
       <div
         aria-hidden="true"
-        className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
-      >
-        {backgroundLayers.previous && (
-          <motion.div
-            key={`previous-${backgroundLayers.key}`}
-            className="absolute inset-0"
-            initial={{ opacity: 1 }}
-            animate={{ opacity: 0 }}
-            transition={{ duration: 1.8, ease: "easeInOut" }}
-            style={{ background: backgroundLayers.previous }}
-            onAnimationComplete={() => {
-              setBackgroundLayers((layers) =>
-                layers.key === backgroundLayers.key ? { ...layers, previous: null } : layers
-              );
-            }}
-          />
-        )}
-        <motion.div
-          key={`current-${backgroundLayers.key}`}
-          className="absolute inset-0"
-          initial={{ opacity: backgroundLayers.previous ? 0 : 1 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 1.8, ease: "easeInOut" }}
-          style={{ background: backgroundLayers.current }}
-        />
-      </div>
+        className="pointer-events-none fixed inset-0 z-0 bg-black"
+      />
 
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-[620px] overflow-hidden sm:h-[720px]"
+        className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-[620px] overflow-hidden bg-black sm:h-[720px]"
       >
         <AnimatePresence mode="wait">
           <motion.img
@@ -167,13 +143,28 @@ export default function Layout() {
             }}
           />
         </AnimatePresence>
-        <div
+        {backgroundLayers.previous && (
+          <motion.div
+            key={`previous-${backgroundLayers.key}`}
+            className="absolute inset-0"
+            initial={{ opacity: 1 }}
+            animate={{ opacity: 0 }}
+            transition={{ duration: 1.8, ease: "easeInOut" }}
+            style={{ background: backgroundLayers.previous, mixBlendMode: "color" }}
+            onAnimationComplete={() => {
+              setBackgroundLayers((layers) =>
+                layers.key === backgroundLayers.key ? { ...layers, previous: null } : layers
+              );
+            }}
+          />
+        )}
+        <motion.div
+          key={`current-${backgroundLayers.key}`}
           className="absolute inset-0"
-          style={{
-            background: appBackground,
-            mixBlendMode: "color",
-            opacity: 0.78,
-          }}
+          initial={{ opacity: backgroundLayers.previous ? 0 : 0.78 }}
+          animate={{ opacity: 0.78 }}
+          transition={{ duration: 1.8, ease: "easeInOut" }}
+          style={{ background: backgroundLayers.current, mixBlendMode: "color" }}
         />
         <div
           className="absolute inset-0"
