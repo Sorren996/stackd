@@ -263,6 +263,7 @@ export default function DoseForm({ open, onOpenChange }) {
   const [glucoseValue, setGlucoseValue] = useState("");
   const [glucoseNotes, setGlucoseNotes] = useState("");
   const [glucoseTime, setGlucoseTime] = useState(() => new Date().toTimeString().slice(0, 5));
+  const [loggingTab, setLoggingTab] = useState(null);
 
   const queryClient = useQueryClient();
   const nowTimeString = new Date().toTimeString().slice(0, 5);
@@ -283,7 +284,34 @@ export default function DoseForm({ open, onOpenChange }) {
   };
   const closeAfterLoggingPaint = (resetForm) => {
     const scheduleClose = typeof window === "undefined" ? setTimeout : window.setTimeout;
-    scheduleClose(() => closeWithSpring(resetForm), 140);
+    const close = () => {
+      scheduleClose(() => {
+        closeWithSpring(() => {
+          resetForm();
+          setLoggingTab(null);
+        });
+      }, 220);
+    };
+
+    if (typeof window !== "undefined" && window.requestAnimationFrame) {
+      window.requestAnimationFrame(() => window.requestAnimationFrame(close));
+      return;
+    }
+
+    scheduleClose(close, 0);
+  };
+  const runSaveAfterLoggingPaint = (save, resetForm) => {
+    const start = () => {
+      save();
+      closeAfterLoggingPaint(resetForm);
+    };
+
+    if (typeof window !== "undefined" && window.requestAnimationFrame) {
+      window.requestAnimationFrame(() => window.setTimeout(start, 0));
+      return;
+    }
+
+    setTimeout(start, 0);
   };
   const handleDialogOpenChange = (nextOpen) => {
     if (nextOpen) {
@@ -427,6 +455,8 @@ export default function DoseForm({ open, onOpenChange }) {
   const totalUnits = Object.values(insulinTotals).reduce((sum, units) => sum + units, 0);
 
   const handleSubmitInsulin = () => {
+    if (loggingTab) return;
+
     const invalidRow = insulinRows.find((row) => {
       const units = Number(row.units);
       return !row.insulinType || !Number.isFinite(units) || units <= 0;
@@ -472,8 +502,8 @@ export default function DoseForm({ open, onOpenChange }) {
       created_date: new Date().toISOString(),
     }));
 
-    createDoses.mutate({ submittedDoses, optimisticDoses });
-    closeAfterLoggingPaint(() => {
+    setLoggingTab("insulin");
+    runSaveAfterLoggingPaint(() => createDoses.mutate({ submittedDoses, optimisticDoses }), () => {
       setInsulinRows([createInsulinRow()]);
       setInsulinNotes("");
       setInsulinTime(new Date().toTimeString().slice(0, 5));
@@ -481,6 +511,8 @@ export default function DoseForm({ open, onOpenChange }) {
   };
 
   const handleSubmitGlucose = () => {
+    if (loggingTab) return;
+
     const value = Number(glucoseValue);
     if (!Number.isFinite(value) || value <= 0) return;
 
@@ -501,8 +533,8 @@ export default function DoseForm({ open, onOpenChange }) {
       created_date: new Date().toISOString(),
     };
 
-    createGlucose.mutate({ submittedReading, optimisticReading });
-    closeAfterLoggingPaint(() => {
+    setLoggingTab("glucose");
+    runSaveAfterLoggingPaint(() => createGlucose.mutate({ submittedReading, optimisticReading }), () => {
       setGlucoseValue("");
       setGlucoseNotes("");
       setGlucoseTime(new Date().toTimeString().slice(0, 5));
@@ -510,6 +542,8 @@ export default function DoseForm({ open, onOpenChange }) {
   };
 
   const handleSubmitCarbs = (entries) => {
+    if (loggingTab) return;
+
     const submittedEntries = entries.map(normalizeCarbEntryForSave).filter((entry) => entry.carbs > 0);
 
     if (!submittedEntries.length) {
@@ -523,8 +557,8 @@ export default function DoseForm({ open, onOpenChange }) {
       created_date: new Date().toISOString(),
     }));
 
-    createCarb.mutate({ submittedEntries, optimisticEntries });
-    closeAfterLoggingPaint(() => {});
+    setLoggingTab("carbs");
+    runSaveAfterLoggingPaint(() => createCarb.mutate({ submittedEntries, optimisticEntries }), () => {});
   };
 
   if (!renderSheet) return null;
@@ -639,7 +673,7 @@ export default function DoseForm({ open, onOpenChange }) {
                 {tab === "carbs" ? (
                   <div className="min-h-0 flex-1 overflow-y-auto">
                     <Suspense fallback={<div className="flex h-full items-center justify-center text-sm text-white/35">Loading carbs...</div>}>
-                      <CarbsTab onSubmit={handleSubmitCarbs} isPending={createCarb.isPending} />
+                      <CarbsTab onSubmit={handleSubmitCarbs} isPending={loggingTab === "carbs" || createCarb.isPending} />
                     </Suspense>
                   </div>
                 ) : tab === "insulin" ? (
@@ -736,10 +770,10 @@ export default function DoseForm({ open, onOpenChange }) {
                       <button
                         type="button"
                         onClick={handleSubmitInsulin}
-                        disabled={!totalUnits || createDoses.isPending}
+                        disabled={!totalUnits || loggingTab === "insulin" || createDoses.isPending}
                         className="w-full rounded-2xl bg-teal-500 py-4 text-base font-semibold text-white transition hover:bg-teal-400 disabled:opacity-40"
                       >
-                        {createDoses.isPending
+                        {loggingTab === "insulin" || createDoses.isPending
                           ? "Logging..."
                           : totalUnits
                             ? `Log ${totalUnits % 1 === 0 ? totalUnits : totalUnits.toFixed(1)} units`
@@ -780,10 +814,10 @@ export default function DoseForm({ open, onOpenChange }) {
                       <button
                         type="button"
                         onClick={handleSubmitGlucose}
-                        disabled={!glucoseValue || createGlucose.isPending}
+                        disabled={!glucoseValue || loggingTab === "glucose" || createGlucose.isPending}
                         className="w-full rounded-2xl bg-orange-600 py-4 text-base font-semibold text-white transition hover:bg-orange-500 disabled:opacity-40"
                       >
-                        {createGlucose.isPending ? "Logging..." : `Log ${glucoseValue || "--"} mg/dL`}
+                        {loggingTab === "glucose" || createGlucose.isPending ? "Logging..." : `Log ${glucoseValue || "--"} mg/dL`}
                       </button>
                     </div>
                   </>
