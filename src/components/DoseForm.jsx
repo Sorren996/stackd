@@ -126,6 +126,15 @@ function parseTimeValue(value) {
   };
 }
 
+function buildTodayTimestampNoFuture(timeValue) {
+  const [hours, minutes] = String(timeValue || "").split(":").map(Number);
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
+
+  const date = new Date();
+  date.setHours(hours, minutes, 0, 0);
+  return date.getTime() > Date.now() ? null : date;
+}
+
 function CustomInputTray({ open, onClose, title, children, tall = false }) {
   useEffect(() => {
     if (!open || typeof document === "undefined") return undefined;
