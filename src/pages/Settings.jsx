@@ -1,11 +1,73 @@
 import { useEffect, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQueryClient } from "@tanstack/react-query";
-import { LogOut, User, Target, Radio, Download, Loader2, Sparkles, Heart, Upload, Trash2, Shield, AlertTriangle } from "lucide-react";
+import { LogOut, User, Target, Radio, Download, Loader2, Sparkles, Heart, Upload, Trash2, Shield, AlertTriangle, Info } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
+import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
+
+const INSULIN_PLAN_HELP = {
+  review: {
+    title: "Meal review",
+    body: "How long after a meal the app should keep reviewing that grouped meal. The insulin:carb card uses this window to decide whether a recent meal is still relevant and to inspect post-meal glucose readings.",
+  },
+  pre: {
+    title: "Pre-meal insulin",
+    body: "How far before the first carb log an insulin dose can still be paired with that meal. If you usually pre-bolus 10-20 minutes before eating, this should be at least that long.",
+  },
+  post: {
+    title: "Post-meal insulin",
+    body: "How far after the last carb log an insulin dose can still be paired with that meal. This helps catch doses logged after eating or split meal boluses.",
+  },
+  types: {
+    title: "Meal insulin types",
+    body: "Select only insulin types used for meals or corrections. Basal insulin such as Lantus, Levemir, or Tresiba should usually stay off so it does not count toward meal coverage.",
+  },
+};
+
+function getDefaultMealInsulinTypes() {
+  return Object.entries(INSULIN_PROFILES)
+    .filter(([, profile]) => ["Rapid-Acting", "Short-Acting"].includes(profile.category))
+    .map(([name]) => name);
+}
+
+function readMealInsulinTypes() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem("meal_insulin_types") || "null");
+    return Array.isArray(parsed) && parsed.length ? parsed : getDefaultMealInsulinTypes();
+  } catch {
+    return getDefaultMealInsulinTypes();
+  }
+}
+
+function SettingHelpButton({ id, openHelp, setOpenHelp }) {
+  const help = INSULIN_PLAN_HELP[id];
+  if (!help) return null;
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpenHelp(openHelp === id ? null : id)}
+        className="flex h-5 w-5 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/35 transition hover:text-teal-300"
+        aria-label={`${help.title} help`}
+      >
+        <Info className="h-3 w-3" />
+      </button>
+      {openHelp === id && (
+        <div className="absolute right-0 top-7 z-30 w-64 rounded-2xl border border-white/10 bg-[hsl(162,10%,10%)] p-3 text-left shadow-2xl">
+          <p className="text-xs font-semibold text-white">{help.title}</p>
+          <p className="mt-1 text-xs leading-relaxed text-white/50">{help.body}</p>
+          <p className="mt-2 text-[10px] leading-relaxed text-white/30">
+            This is for app estimates only and is not dosing advice.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Settings() {
   const [user, setUser] = useState(null);
@@ -17,6 +79,7 @@ export default function Settings() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [openHelp, setOpenHelp] = useState(null);
 
   const [targetLow, setTargetLow] = useState(() => {
     const saved = localStorage.getItem("target_range_low");
@@ -35,9 +98,7 @@ const [unitsPer5g, setUnitsPer5g] = useState(() => {
   return localStorage.getItem("meal_insulin_units_per_5g") || "";
 });
 
-const [insulinDurationHours, setInsulinDurationHours] = useState(() => {
-  return localStorage.getItem("insulin_duration_hours") || "3";
-});
+const [mealInsulinTypes, setMealInsulinTypes] = useState(readMealInsulinTypes);
 
 const [preMealWindowMinutes, setPreMealWindowMinutes] = useState(() => {
   return localStorage.getItem("meal_prebolus_window_minutes") || "45";
@@ -62,6 +123,19 @@ const handleInsulinSettingChange = (key, setValue) => (event) => {
   }
 
   window.dispatchEvent(new Event("insulin-settings-updated"));
+};
+
+const toggleMealInsulinType = (name) => {
+  setMealInsulinTypes((current) => {
+    const next = current.includes(name)
+      ? current.filter((item) => item !== name)
+      : [...current, name];
+    const saved = next.length ? next : getDefaultMealInsulinTypes();
+
+    localStorage.setItem("meal_insulin_types", JSON.stringify(saved));
+    window.dispatchEvent(new Event("insulin-settings-updated"));
+    return saved;
+  });
 };
 
   const isRecommended = targetLow === 70 && targetHigh === 180;
@@ -331,34 +405,52 @@ const handleInsulinSettingChange = (key, setValue) => (event) => {
       </div>
     </div>
 
+    <div className="space-y-3 border-t border-white/10 pt-4">
+      <div className="flex items-center gap-2">
+        <Label className="text-sm font-semibold text-white/90">
+          Meal/correction insulin types
+        </Label>
+        <SettingHelpButton id="types" openHelp={openHelp} setOpenHelp={setOpenHelp} />
+      </div>
+      <p className="text-xs text-white/40">
+        These are the only insulin types used by the insulin:carb alignment card.
+      </p>
+      <div className="grid grid-cols-1 gap-2">
+        {Object.entries(INSULIN_PROFILES).map(([name, profile]) => {
+          const selected = mealInsulinTypes.includes(name);
+          return (
+            <button
+              key={name}
+              type="button"
+              onClick={() => toggleMealInsulinType(name)}
+              className={`flex items-center justify-between rounded-2xl border px-3 py-2 text-left transition ${
+                selected
+                  ? "border-teal-500/40 bg-teal-500/10 text-white"
+                  : "border-white/10 bg-white/[0.03] text-white/45"
+              }`}
+            >
+              <span>
+                <span className="block text-sm font-semibold">{name}</span>
+                <span className="text-[10px] uppercase tracking-wider opacity-50">{profile.category}</span>
+              </span>
+              <span
+                className="h-3 w-3 rounded-full"
+                style={{ backgroundColor: selected ? "#2dd4bf" : "rgba(255,255,255,0.12)" }}
+              />
+            </button>
+          );
+        })}
+      </div>
+    </div>
+
     <div className="grid grid-cols-2 gap-3 border-t border-white/10 pt-4">
       <div className="space-y-2">
-        <Label htmlFor="insulin-duration" className="text-sm font-semibold text-white/90">
-          Insulin duration
-        </Label>
         <div className="flex items-center gap-2">
-          <input
-            id="insulin-duration"
-            type="number"
-            min="1"
-            max="8"
-            step="0.25"
-            inputMode="decimal"
-            value={insulinDurationHours}
-            onChange={handleInsulinSettingChange(
-              "insulin_duration_hours",
-              setInsulinDurationHours
-            )}
-            className="w-20 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-teal-400"
-          />
-          <span className="text-xs text-white/40">hours</span>
+          <Label htmlFor="meal-outcome-window" className="text-sm font-semibold text-white/90">
+            Meal review
+          </Label>
+          <SettingHelpButton id="review" openHelp={openHelp} setOpenHelp={setOpenHelp} />
         </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="meal-outcome-window" className="text-sm font-semibold text-white/90">
-          Meal review
-        </Label>
         <div className="flex items-center gap-2">
           <input
             id="meal-outcome-window"
@@ -379,9 +471,12 @@ const handleInsulinSettingChange = (key, setValue) => (event) => {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="pre-meal-window" className="text-sm font-semibold text-white/90">
-          Pre-meal insulin
-        </Label>
+        <div className="flex items-center gap-2">
+          <Label htmlFor="pre-meal-window" className="text-sm font-semibold text-white/90">
+            Pre-meal insulin
+          </Label>
+          <SettingHelpButton id="pre" openHelp={openHelp} setOpenHelp={setOpenHelp} />
+        </div>
         <div className="flex items-center gap-2">
           <input
             id="pre-meal-window"
@@ -402,9 +497,12 @@ const handleInsulinSettingChange = (key, setValue) => (event) => {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="post-meal-window" className="text-sm font-semibold text-white/90">
-          Post-meal insulin
-        </Label>
+        <div className="flex items-center gap-2">
+          <Label htmlFor="post-meal-window" className="text-sm font-semibold text-white/90">
+            Post-meal insulin
+          </Label>
+          <SettingHelpButton id="post" openHelp={openHelp} setOpenHelp={setOpenHelp} />
+        </div>
         <div className="flex items-center gap-2">
           <input
             id="post-meal-window"
