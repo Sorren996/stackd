@@ -73,6 +73,33 @@ function parseTimeValue(value) {
   };
 }
 
+function CustomInputTray({ open, onClose, title, children, tall = false }) {
+  if (!open) return null;
+
+  return (
+    <>
+      <div className="fixed inset-0 z-[118] bg-black/25" onClick={onClose} />
+      <div
+        className={`fixed inset-x-0 bottom-0 z-[119] rounded-t-3xl border border-white/10 bg-[hsl(162,10%,8%)] px-4 pb-[max(env(safe-area-inset-bottom),0.85rem)] pt-3 shadow-[0_-24px_60px_rgba(0,0,0,0.55)] ${
+          tall ? "min-h-[43dvh]" : "min-h-[34dvh]"
+        }`}
+      >
+        <div className="mb-3 flex items-center justify-between">
+          <p className="text-sm font-semibold text-white/60">{title}</p>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full bg-white/10 px-4 py-1.5 text-sm font-semibold text-teal-200"
+          >
+            Done
+          </button>
+        </div>
+        {children}
+      </div>
+    </>
+  );
+}
+
 function TimeScrollField({ label, value, onChange, max }) {
   const [open, setOpen] = useState(false);
   const parsed = parseTimeValue(value);
@@ -90,16 +117,16 @@ function TimeScrollField({ label, value, onChange, max }) {
         <span className="text-sm text-white/40">{label}</span>
         <span className="text-sm font-semibold text-white">{formatTimeLabel(value)}</span>
       </button>
-      {open && (
-        <div className="mt-3 grid grid-cols-[1fr_1fr_0.9fr] gap-2">
+      <CustomInputTray open={open} onClose={() => setOpen(false)} title={label}>
+        <div className="grid h-[27dvh] grid-cols-[1fr_1fr_0.9fr] gap-3">
           {[["hour12", hours], ["minute", minutes]].map(([key, values]) => (
-            <div key={key} className="max-h-36 overflow-y-auto rounded-xl border border-white/10 bg-black/20 p-1" style={{ scrollbarWidth: "none" }}>
+            <div key={key} className="overflow-y-auto rounded-2xl border border-white/10 bg-black/20 p-1" style={{ scrollbarWidth: "none" }}>
               {values.map((item) => (
                 <button
                   key={item}
                   type="button"
                   onClick={() => updateTime({ [key]: item })}
-                  className={`mb-1 flex h-9 w-full items-center justify-center rounded-lg text-sm font-semibold transition last:mb-0 ${
+                  className={`mb-1 flex h-12 w-full items-center justify-center rounded-xl text-lg font-semibold transition last:mb-0 ${
                     parsed[key] === item ? "bg-teal-500 text-white" : "text-white/45 hover:bg-white/10 hover:text-white"
                   }`}
                 >
@@ -114,7 +141,7 @@ function TimeScrollField({ label, value, onChange, max }) {
                 key={suffix}
                 type="button"
                 onClick={() => updateTime({ suffix })}
-                className={`rounded-xl text-sm font-bold transition ${
+                className={`rounded-2xl text-base font-bold transition ${
                   parsed.suffix === suffix ? "bg-teal-500 text-white" : "border border-white/10 bg-black/20 text-white/45"
                 }`}
               >
@@ -123,12 +150,12 @@ function TimeScrollField({ label, value, onChange, max }) {
             ))}
           </div>
         </div>
-      )}
+      </CustomInputTray>
     </div>
   );
 }
 
-function NumberPadField({ label, value, onChange, unit, placeholder = "--", decimal = true, maxLength = 6 }) {
+function NumberPadField({ label, value, onChange, unit, placeholder = "--", decimal = true, maxLength = 6, large = false }) {
   const [open, setOpen] = useState(false);
   const textValue = value === undefined || value === null ? "" : String(value);
   const press = (key) => {
@@ -140,25 +167,27 @@ function NumberPadField({ label, value, onChange, unit, placeholder = "--", deci
   };
 
   return (
-    <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+    <div className={`rounded-xl border border-white/10 bg-white/5 p-3 ${large ? "px-6 py-6" : ""}`}>
       <button type="button" onClick={() => setOpen((value) => !value)} className="flex w-full items-center justify-between gap-3">
         <span className="text-left text-[10px] font-semibold uppercase tracking-wider text-white/35">{label}</span>
-        <span className="text-right text-base font-bold text-white">{textValue || placeholder}{unit && <span className="ml-1 text-xs text-white/35">{unit}</span>}</span>
+        <span className={`${large ? "text-5xl" : "text-base"} text-right font-bold text-white`}>
+          {textValue || placeholder}{unit && <span className="ml-1 text-xs text-white/35">{unit}</span>}
+        </span>
       </button>
-      {open && (
-        <div className="mt-3 grid grid-cols-3 gap-2">
+      <CustomInputTray open={open} onClose={() => setOpen(false)} title={label}>
+        <div className="grid grid-cols-3 gap-2.5">
           {["1", "2", "3", "4", "5", "6", "7", "8", "9", decimal ? "." : "clear", "0", "back"].map((key) => (
             <button
               key={key}
               type="button"
               onClick={() => press(key)}
-              className="h-11 rounded-xl border border-white/10 bg-black/20 text-sm font-bold text-white/80 transition hover:bg-white/10"
+              className="h-14 rounded-2xl border border-white/10 bg-white/[0.06] text-xl font-bold text-white/85 transition hover:bg-white/10 active:scale-[0.98]"
             >
-              {key === "back" ? "⌫" : key === "clear" ? "Clear" : key}
+              {key === "back" ? "Back" : key === "clear" ? "Clear" : key}
             </button>
           ))}
         </div>
-      )}
+      </CustomInputTray>
     </div>
   );
 }
@@ -174,30 +203,30 @@ function TextPadField({ label, value, onChange, placeholder, multiline = false }
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
-        className={`w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-3 text-left text-sm text-white outline-none transition focus:border-teal-400 ${multiline ? "min-h-24" : ""}`}
+        className={`w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-3 text-left text-sm text-white outline-none transition ${multiline ? "min-h-20" : ""}`}
       >
         {value ? <span className="whitespace-pre-wrap">{value}</span> : <span className="text-white/30">{placeholder}</span>}
       </button>
-      {open && (
-        <div className="mt-2 rounded-2xl border border-white/10 bg-black/30 p-2">
+      <CustomInputTray open={open} onClose={() => setOpen(false)} title={label || "Text"} tall>
+        <div className="rounded-2xl border border-white/10 bg-black/20 p-2">
           {rows.map((row) => (
-            <div key={row} className="mb-1 flex justify-center gap-1 last:mb-0">
+            <div key={row} className="mb-1.5 flex justify-center gap-1.5 last:mb-0">
               {[...row].map((letter) => (
-                <button key={letter} type="button" onClick={() => add(letter.toLowerCase())} className="h-9 min-w-0 flex-1 rounded-lg bg-white/10 text-xs font-bold text-white/80">
+                <button key={letter} type="button" onClick={() => add(letter.toLowerCase())} className="h-12 min-w-0 flex-1 rounded-xl bg-white/10 text-sm font-bold text-white/85 active:scale-[0.98]">
                   {letter}
                 </button>
               ))}
             </div>
           ))}
           <div className="mt-2 grid grid-cols-[1fr_1fr_2fr_1fr_1fr] gap-2">
-            <button type="button" onClick={() => onChange("")} className="h-10 rounded-xl bg-white/10 text-xs font-bold text-white/65">Clear</button>
-            <button type="button" onClick={() => add(",")} className="h-10 rounded-xl bg-white/10 text-xs font-bold text-white/65">,</button>
-            <button type="button" onClick={() => add(" ")} className="h-10 rounded-xl bg-white/10 text-xs font-bold text-white/65">Space</button>
-            <button type="button" onClick={() => add(".")} className="h-10 rounded-xl bg-white/10 text-xs font-bold text-white/65">.</button>
-            <button type="button" onClick={() => onChange(String(value || "").slice(0, -1))} className="h-10 rounded-xl bg-white/10 text-xs font-bold text-white/65">⌫</button>
+            <button type="button" onClick={() => onChange("")} className="h-12 rounded-xl bg-white/10 text-xs font-bold text-white/65">Clear</button>
+            <button type="button" onClick={() => add(",")} className="h-12 rounded-xl bg-white/10 text-xs font-bold text-white/65">,</button>
+            <button type="button" onClick={() => add(" ")} className="h-12 rounded-xl bg-white/10 text-xs font-bold text-white/65">Space</button>
+            <button type="button" onClick={() => add(".")} className="h-12 rounded-xl bg-white/10 text-xs font-bold text-white/65">.</button>
+            <button type="button" onClick={() => onChange(String(value || "").slice(0, -1))} className="h-12 rounded-xl bg-white/10 text-xs font-bold text-white/65">Back</button>
           </div>
         </div>
-      )}
+      </CustomInputTray>
     </div>
   );
 }
