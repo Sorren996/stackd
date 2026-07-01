@@ -14,6 +14,11 @@ const ABSORPTION_CATEGORY = {
   medium: "Medium Absorbing",
   slow: "Slow Absorbing",
 };
+const absorptionProfileOptions = [
+  { value: "fast", label: "Fast", description: "Fast carbs" },
+  { value: "medium", label: "Medium", description: "Balanced carbs" },
+  { value: "slow", label: "Slow", description: "Slow carbs" },
+];
 
 function normalizeEstimatedMeal(data, fallbackName) {
   const absorptionProfile = data.absorptionProfile || data.absorption_profile || "medium";
@@ -319,6 +324,54 @@ function TextPadField({ label, value, onChange, placeholder, multiline = false }
               event.stopPropagation();
             }} className="h-12 rounded-xl bg-white/10 text-xs font-bold text-white/65">Back</button>
           </div>
+        </div>
+      </CustomInputTray>
+    </div>
+  );
+}
+
+function SelectField({ label, value, onChange, options, placeholder = "Select" }) {
+  const [open, setOpen] = useState(false);
+  const selected = options.find((option) => option.value === value);
+
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+      <button type="button" onClick={() => setOpen((current) => !current)} className="flex w-full items-center justify-between gap-3 text-left">
+        <span className="text-left text-[10px] font-semibold uppercase tracking-wider text-white/35">{label}</span>
+        <span className="min-w-0 text-right text-sm font-semibold text-white">
+          {selected ? selected.label : <span className="text-white/30">{placeholder}</span>}
+        </span>
+      </button>
+      <CustomInputTray open={open} onClose={() => setOpen(false)} title={label} tall>
+        <div className="max-h-[34dvh] space-y-2 overflow-y-auto pr-1" style={{ scrollbarWidth: "none" }}>
+          {options.map((option) => {
+            const isSelected = option.value === value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onPointerDown={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  onChange(option.value);
+                  setOpen(false);
+                }}
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                }}
+                className={`flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left transition ${
+                  isSelected ? "border-teal-500/45 bg-teal-500/12 text-white" : "border-white/10 bg-white/[0.04] text-white/55"
+                }`}
+              >
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-semibold">{option.label}</span>
+                  {option.description && <span className="text-[10px] uppercase tracking-wider text-white/30">{option.description}</span>}
+                </span>
+                <span className={`h-3 w-3 rounded-full ${isSelected ? "bg-teal-300" : "bg-white/15"}`} />
+              </button>
+            );
+          })}
         </div>
       </CustomInputTray>
     </div>
@@ -730,18 +783,14 @@ Do not give insulin dosing advice.
                     ))}
                   </div>
 
-                  <label className="mt-3 block">
-                    <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-white/35">Absorption</span>
-                    <select
+                  <div className="mt-3">
+                    <SelectField
+                      label="Absorption"
                       value={estimatedMeal.absorptionProfile}
-                      onChange={(event) => updateEstimatedMeal({ absorptionProfile: event.target.value })}
-                      className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-teal-400"
-                    >
-                      <option value="fast" className="bg-[#18211f]">Fast</option>
-                      <option value="medium" className="bg-[#18211f]">Medium</option>
-                      <option value="slow" className="bg-[#18211f]">Slow</option>
-                    </select>
-                  </label>
+                      onChange={(value) => updateEstimatedMeal({ absorptionProfile: value })}
+                      options={absorptionProfileOptions}
+                    />
+                  </div>
 
                   {estimatedMeal.assumptions?.length > 0 && (
                     <div className="mt-3 rounded-xl bg-white/[0.04] px-3 py-2">
