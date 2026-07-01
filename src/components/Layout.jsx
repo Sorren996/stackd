@@ -53,14 +53,6 @@ function getGlucoseBackgroundColor(reading, targetRange) {
   return "#063f36";
 }
 
-function getGlucoseAmbientColor(reading, targetRange) {
-  const value = getGlucoseValue(reading);
-  if (value === null) return "20,184,166";
-  if (value < targetRange.low) return "59,130,246";
-  if (value > targetRange.high) return "245,158,11";
-  return "53,168,121";
-}
-
 const SCENE_IMAGES = {
   high: "https://res.cloudinary.com/bzqjmwln/image/upload/v1782928032/mountain_gxgmap.png",
   range: "https://res.cloudinary.com/bzqjmwln/image/upload/v1782928032/forest_lqseeo.png",
@@ -92,10 +84,6 @@ export default function Layout() {
     const primaryColor = getGlucoseBackgroundColor(latestGlucose, targetRange);
     return `linear-gradient(to bottom, ${primaryColor} 0%, rgba(0,0,0,0.72) 58%, #000000 100%)`;
   }, [latestGlucose, targetRange]);
-  const ambientColor = useMemo(
-    () => getGlucoseAmbientColor(latestGlucose, targetRange),
-    [latestGlucose, targetRange]
-  );
   const sceneStatus = useMemo(() => getGlucoseScene(latestGlucose, targetRange), [latestGlucose, targetRange]);
   const [backgroundLayers, setBackgroundLayers] = useState(() => ({
     current: appBackground,
@@ -148,15 +136,7 @@ export default function Layout() {
     <div className="relative min-h-screen overflow-x-hidden bg-black text-white">
       <div
         aria-hidden="true"
-        className="pointer-events-none fixed inset-0 z-0"
-        style={{
-          background: `
-            radial-gradient(circle at 50% 18%, rgba(${ambientColor}, 0.18), transparent 42%),
-            radial-gradient(circle at 8% 72%, rgba(${ambientColor}, 0.12), transparent 34%),
-            radial-gradient(circle at 92% 92%, rgba(${ambientColor}, 0.10), transparent 34%),
-            linear-gradient(to bottom, rgba(${ambientColor}, 0.08), #050505 42%, #000000 100%)
-          `,
-        }}
+        className="pointer-events-none fixed inset-0 z-0 bg-black"
       />
 
       <div
