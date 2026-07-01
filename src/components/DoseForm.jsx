@@ -132,13 +132,10 @@ function CustomInputTray({ open, onClose, title, children, tall = false }) {
     if (!open || typeof document === "undefined") return undefined;
 
     const previousOverflow = document.body.style.overflow;
-    const previousTouchAction = document.body.style.touchAction;
     document.body.style.overflow = "hidden";
-    document.body.style.touchAction = "none";
 
     return () => {
       document.body.style.overflow = previousOverflow;
-      document.body.style.touchAction = previousTouchAction;
     };
   }, [open]);
 
@@ -165,18 +162,16 @@ function CustomInputTray({ open, onClose, title, children, tall = false }) {
           tall ? "min-h-[43dvh]" : "min-h-[34dvh]"
         }`}
         onPointerDown={(event) => event.stopPropagation()}
-        onPointerUp={(event) => event.stopPropagation()}
         onClick={(event) => event.stopPropagation()}
       >
         <div className="mb-3 flex items-center justify-between">
           <p className="text-sm font-semibold text-white/60">{title}</p>
           <button
             type="button"
-            onPointerDown={(event) => {
+            onClick={(event) => {
               absorb(event);
               onClose();
             }}
-            onClick={absorb}
             className="rounded-full bg-white/10 px-4 py-1.5 text-sm font-semibold text-teal-200"
           >
             Done
@@ -209,19 +204,14 @@ function TimeScrollField({ label, value, onChange, max }) {
       <CustomInputTray open={open} onClose={() => setOpen(false)} title={label}>
         <div className="grid h-[27dvh] grid-cols-[1fr_1fr_0.9fr] gap-3">
           {[["hour12", hours], ["minute", minutes]].map(([key, values]) => (
-            <div key={key} className="overflow-y-auto rounded-2xl border border-white/10 bg-black/20 p-1" style={{ scrollbarWidth: "none" }}>
+            <div key={key} className="touch-pan-y overflow-y-auto rounded-2xl border border-white/10 bg-black/20 p-1" style={{ scrollbarWidth: "none" }}>
               {values.map((item) => (
                 <button
                   key={item}
                   type="button"
-                  onPointerDown={(event) => {
-                    event.preventDefault();
+                  onClick={(event) => {
                     event.stopPropagation();
                     updateTime({ [key]: item });
-                  }}
-                  onClick={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
                   }}
                   className={`mb-1 flex h-12 w-full items-center justify-center rounded-xl text-lg font-semibold transition last:mb-0 ${
                     parsed[key] === item ? "bg-teal-500 text-white" : "text-white/45 hover:bg-white/10 hover:text-white"
@@ -237,14 +227,9 @@ function TimeScrollField({ label, value, onChange, max }) {
               <button
                 key={suffix}
                 type="button"
-                onPointerDown={(event) => {
-                  event.preventDefault();
+                onClick={(event) => {
                   event.stopPropagation();
                   updateTime({ suffix });
-                }}
-                onClick={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
                 }}
                 className={`rounded-2xl text-base font-bold transition ${
                   parsed.suffix === suffix ? "bg-teal-500 text-white" : "border border-white/10 bg-black/20 text-white/45"
@@ -285,14 +270,9 @@ function NumberPadField({ label, value, onChange, unit, placeholder = "--", deci
             <button
               key={key}
               type="button"
-              onPointerDown={(event) => {
-                event.preventDefault();
+              onClick={(event) => {
                 event.stopPropagation();
                 press(key);
-              }}
-              onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
               }}
               className="h-14 rounded-2xl border border-white/10 bg-white/[0.06] text-xl font-bold text-white/85 transition hover:bg-white/10 active:scale-[0.98]"
             >
@@ -325,14 +305,9 @@ function TextPadField({ label, value, onChange, placeholder, multiline = false }
           {rows.map((row) => (
             <div key={row} className="mb-1.5 flex justify-center gap-1.5 last:mb-0">
               {[...row].map((letter) => (
-                <button key={letter} type="button" onPointerDown={(event) => {
-                    event.preventDefault();
+                <button key={letter} type="button" onClick={(event) => {
                     event.stopPropagation();
                     add(letter.toLowerCase());
-                  }}
-                  onClick={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
                   }} className="h-12 min-w-0 flex-1 rounded-xl bg-white/10 text-sm font-bold text-white/85 active:scale-[0.98]">
                   {letter}
                 </button>
@@ -340,50 +315,25 @@ function TextPadField({ label, value, onChange, placeholder, multiline = false }
             </div>
           ))}
           <div className="mt-2 grid grid-cols-[1fr_1fr_2fr_1fr_1fr] gap-2">
-            <button type="button" onPointerDown={(event) => {
-              event.preventDefault();
+            <button type="button" onClick={(event) => {
               event.stopPropagation();
               onChange("");
-            }}
-            onClick={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
             }} className="h-12 rounded-xl bg-white/10 text-xs font-bold text-white/65">Clear</button>
-            <button type="button" onPointerDown={(event) => {
-              event.preventDefault();
+            <button type="button" onClick={(event) => {
               event.stopPropagation();
               add(",");
-            }}
-            onClick={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
             }} className="h-12 rounded-xl bg-white/10 text-xs font-bold text-white/65">,</button>
-            <button type="button" onPointerDown={(event) => {
-              event.preventDefault();
+            <button type="button" onClick={(event) => {
               event.stopPropagation();
               add(" ");
-            }}
-            onClick={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
             }} className="h-12 rounded-xl bg-white/10 text-xs font-bold text-white/65">Space</button>
-            <button type="button" onPointerDown={(event) => {
-              event.preventDefault();
+            <button type="button" onClick={(event) => {
               event.stopPropagation();
               add(".");
-            }}
-            onClick={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
             }} className="h-12 rounded-xl bg-white/10 text-xs font-bold text-white/65">.</button>
-            <button type="button" onPointerDown={(event) => {
-              event.preventDefault();
+            <button type="button" onClick={(event) => {
               event.stopPropagation();
               onChange(String(value || "").slice(0, -1));
-            }}
-            onClick={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
             }} className="h-12 rounded-xl bg-white/10 text-xs font-bold text-white/65">Back</button>
           </div>
         </div>
@@ -405,18 +355,14 @@ function SelectField({ label, value, onChange, options, placeholder = "Select" }
         </span>
       </button>
       <CustomInputTray open={open} onClose={() => setOpen(false)} title={label} tall>
-        <div className="max-h-[34dvh] space-y-2 overflow-y-auto pr-1" style={{ scrollbarWidth: "none" }}>
+        <div className="max-h-[34dvh] touch-pan-y space-y-2 overflow-y-auto pr-1" style={{ scrollbarWidth: "none" }}>
           {options.map((option) => {
             const isSelected = option.value === value;
             return (
               <button
                 key={option.value}
                 type="button"
-                onPointerDown={(event) => {
-                  event.stopPropagation();
-                }}
                 onClick={(event) => {
-                  event.preventDefault();
                   event.stopPropagation();
                   onChange(option.value);
                   setOpen(false);
