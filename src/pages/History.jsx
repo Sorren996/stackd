@@ -10,6 +10,18 @@ import { format, isToday, isYesterday, parseISO } from "date-fns";
 import { motion } from "framer-motion";
 import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
 
+function readTargetRange() {
+  if (typeof window === "undefined") return { low: 70, high: 180 };
+
+  const low = Number(window.localStorage.getItem("target_range_low") || 70);
+  const high = Number(window.localStorage.getItem("target_range_high") || 180);
+
+  return {
+    low: Number.isFinite(low) ? low : 70,
+    high: Number.isFinite(high) ? high : 180,
+  };
+}
+
 function CollapsibleDateGroup({ label, count, isOpen, onToggle, children }) {
   return (
     <motion.div
@@ -596,6 +608,19 @@ export default function History() {
   const [activeTab, setActiveTab] = useState("doses");
   const [openGroup, setOpenGroup] = useState(null);
   const [editingLog, setEditingLog] = useState(null);
+  const [targetRange, setTargetRange] = useState(readTargetRange);
+
+  useEffect(() => {
+    const updateTargetRange = () => setTargetRange(readTargetRange());
+
+    window.addEventListener("target-range-updated", updateTargetRange);
+    window.addEventListener("storage", updateTargetRange);
+
+    return () => {
+      window.removeEventListener("target-range-updated", updateTargetRange);
+      window.removeEventListener("storage", updateTargetRange);
+    };
+  }, []);
 
   const { data: doses = [], isLoading: loadingDoses } = useQuery({
     queryKey: ["insulin-doses"],
@@ -697,8 +722,8 @@ export default function History() {
   });
   const glucoseGroups = groupByDate(glucose30Days, "recorded_at");
 
-  const targetLow = parseInt(localStorage.getItem("target_range_low") || "70", 10);
-  const targetHigh = parseInt(localStorage.getItem("target_range_high") || "180", 10);
+  const targetLow = targetRange.low;
+  const targetHigh = targetRange.high;
 
   const inRangePercentage = useMemo(() => {
     if (!glucoseReadings.length) return "—";
