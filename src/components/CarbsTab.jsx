@@ -246,6 +246,8 @@ export default function CarbsTab({ onSubmit, isPending }) {
   const canSubmitManual = selectedFoods.length > 0 && selectedFoods.every((item) => parseFloat(item.carbs) > 0);
   const isEstimateMode = !FOOD_SEARCH_ENABLED || mode === "estimate";
   const canSubmitCarbs = isEstimateMode ? !!estimatedMeal && !isEstimatingMeal : canSubmitManual;
+  const EstimateButtonIcon = isEstimatingMeal ? Loader2 : Sparkles;
+  const estimateButtonLabel = isEstimatingMeal ? "Estimating..." : "Estimate meal";
 
   const updateEstimatedMeal = (patch) => {
     setEstimatedMeal((meal) => (meal ? { ...meal, ...patch } : meal));
@@ -569,17 +571,8 @@ Do not give insulin dosing advice.
                   disabled={(!mealText.trim() && !mealPhotoFile) || isEstimatingMeal}
                   className="mt-3 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-2xl bg-teal-500 py-3 text-sm font-semibold text-white transition hover:bg-teal-400 disabled:opacity-40"
                 >
-                  {isEstimatingMeal ? (
-                    <span className="inline-flex items-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Estimating...
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-2">
-                      <Sparkles className="h-4 w-4" />
-                      Estimate meal
-                    </span>
-                  )}
+                  <EstimateButtonIcon className={`h-4 w-4 ${isEstimatingMeal ? "animate-spin" : ""}`} />
+                  <span className="whitespace-nowrap">{estimateButtonLabel}</span>
                 </button>
               </div>
 
@@ -758,7 +751,7 @@ Do not give insulin dosing advice.
           </div>
         </div>
 
-        <div className="shrink-0 px-5 pb-6 pt-2">
+        <div className={`shrink-0 px-5 pb-6 pt-2 ${isEstimateMode && isEstimatingMeal ? "hidden" : ""}`}>
           <button
             type="button"
             onClick={isEstimateMode ? handleSubmitEstimate : handleSubmitManual}
@@ -770,11 +763,6 @@ Do not give insulin dosing advice.
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Logging...
-              </>
-            ) : isEstimatingMeal ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Estimating meal...
               </>
             ) : isEstimateMode ? (
               <>
