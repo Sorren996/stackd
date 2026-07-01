@@ -122,6 +122,95 @@ function SettingsHelpOverlay({ openHelp, onClose }) {
   );
 }
 
+function CustomInputTray({ open, onClose, title, children }) {
+  if (!open || typeof document === "undefined") return null;
+
+  const absorb = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
+  return createPortal(
+    <>
+      <div
+        className="fixed inset-0 z-[998] bg-black/25"
+        onPointerDown={absorb}
+        onPointerUp={absorb}
+        onClick={(event) => {
+          absorb(event);
+          onClose();
+        }}
+      />
+      <div
+        className="fixed inset-x-0 bottom-0 z-[999] min-h-[34dvh] rounded-t-3xl border border-white/10 bg-[hsl(162,10%,8%)] px-4 pb-[max(env(safe-area-inset-bottom),0.85rem)] pt-3 shadow-[0_-24px_60px_rgba(0,0,0,0.55)]"
+        onPointerDown={(event) => event.stopPropagation()}
+        onPointerUp={(event) => event.stopPropagation()}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="mb-3 flex items-center justify-between">
+          <p className="text-sm font-semibold text-white/60">{title}</p>
+          <button
+            type="button"
+            onPointerDown={(event) => {
+              absorb(event);
+              onClose();
+            }}
+            onClick={absorb}
+            className="rounded-full bg-white/10 px-4 py-1.5 text-sm font-semibold text-teal-200"
+          >
+            Done
+          </button>
+        </div>
+        {children}
+      </div>
+    </>,
+    document.body
+  );
+}
+
+function NumberPadField({ label, value, onChange, placeholder = "--", decimal = true, maxLength = 6, className = "" }) {
+  const [open, setOpen] = useState(false);
+  const textValue = value === undefined || value === null ? "" : String(value);
+  const press = (key) => {
+    if (key === "clear") return onChange("");
+    if (key === "back") return onChange(textValue.slice(0, -1));
+    if (key === "." && (!decimal || textValue.includes("."))) return;
+    if (textValue.length >= maxLength) return;
+    onChange(`${textValue}${key}`);
+  };
+
+  return (
+    <div className={`rounded-xl border border-white/10 bg-white/5 p-3 ${className}`}>
+      <button type="button" onClick={() => setOpen((value) => !value)} className="flex w-full items-center justify-between gap-3">
+        <span className="text-left text-[10px] font-semibold uppercase tracking-wider text-white/35">{label}</span>
+        <span className="text-right text-base font-bold text-white">{textValue || placeholder}</span>
+      </button>
+      <CustomInputTray open={open} onClose={() => setOpen(false)} title={label}>
+        <div className="grid grid-cols-3 gap-2.5">
+          {["1", "2", "3", "4", "5", "6", "7", "8", "9", decimal ? "." : "clear", "0", "back"].map((key) => (
+            <button
+              key={key}
+              type="button"
+              onPointerDown={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                press(key);
+              }}
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+              }}
+              className="h-14 rounded-2xl border border-white/10 bg-white/[0.06] text-xl font-bold text-white/85 transition hover:bg-white/10 active:scale-[0.98]"
+            >
+              {key === "back" ? "Back" : key === "clear" ? "Clear" : key}
+            </button>
+          ))}
+        </div>
+      </CustomInputTray>
+    </div>
+  );
+}
+
 export default function Settings() {
   const [user, setUser] = useState(null);
   const [stackingAlerts, setStackingAlerts] = useState(() => {
@@ -167,6 +256,10 @@ const [outcomeWindowMinutes, setOutcomeWindowMinutes] = useState(() => {
 
 const handleInsulinSettingChange = (key, setValue) => (event) => {
   const value = event.target.value;
+  handleInsulinSettingValueChange(key, setValue)(value);
+};
+
+const handleInsulinSettingValueChange = (key, setValue) => (value) => {
   setValue(value);
 
   if (value === "") {
@@ -418,18 +511,16 @@ const toggleMealInsulinType = (name) => {
         How much 1 unit of insulin typically lowers your glucose.
       </p>
       <div className="flex items-center gap-3">
-        <input
-          id="insulin-sensitivity"
-          type="number"
-          min="1"
-          step="1"
-          inputMode="decimal"
+        <NumberPadField
+          label="ISF"
           value={insulinSensitivity}
-          onChange={handleInsulinSettingChange(
+          onChange={handleInsulinSettingValueChange(
             "insulin_sensitivity_mgdl_per_unit",
             setInsulinSensitivity
           )}
-          className="w-24 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-teal-400"
+          decimal={false}
+          maxLength={3}
+          className="w-24"
         />
         <span className="text-xs text-white/40">mg/dL per unit</span>
       </div>
@@ -443,18 +534,15 @@ const toggleMealInsulinType = (name) => {
         Insulin units used to cover 5 grams of carbohydrates.
       </p>
       <div className="flex items-center gap-3">
-        <input
-          id="meal-insulin"
-          type="number"
-          min="0.05"
-          step="0.05"
-          inputMode="decimal"
+        <NumberPadField
+          label="Units"
           value={unitsPer5g}
-          onChange={handleInsulinSettingChange(
+          onChange={handleInsulinSettingValueChange(
             "meal_insulin_units_per_5g",
             setUnitsPer5g
           )}
-          className="w-24 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-teal-400"
+          maxLength={5}
+          className="w-24"
         />
         <span className="text-xs text-white/40">units per 5 g</span>
       </div>
@@ -507,19 +595,16 @@ const toggleMealInsulinType = (name) => {
           <SettingHelpButton id="review" openHelp={openHelp} setOpenHelp={setOpenHelp} />
         </div>
         <div className="flex items-center gap-2">
-          <input
-            id="meal-outcome-window"
-            type="number"
-            min="60"
-            max="360"
-            step="15"
-            inputMode="numeric"
+          <NumberPadField
+            label="Minutes"
             value={outcomeWindowMinutes}
-            onChange={handleInsulinSettingChange(
+            onChange={handleInsulinSettingValueChange(
               "meal_outcome_window_minutes",
               setOutcomeWindowMinutes
             )}
-            className="w-20 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-teal-400"
+            decimal={false}
+            maxLength={3}
+            className="w-20"
           />
           <span className="text-xs text-white/40">min</span>
         </div>
@@ -533,19 +618,16 @@ const toggleMealInsulinType = (name) => {
           <SettingHelpButton id="pre" openHelp={openHelp} setOpenHelp={setOpenHelp} />
         </div>
         <div className="flex items-center gap-2">
-          <input
-            id="pre-meal-window"
-            type="number"
-            min="0"
-            max="120"
-            step="5"
-            inputMode="numeric"
+          <NumberPadField
+            label="Minutes"
             value={preMealWindowMinutes}
-            onChange={handleInsulinSettingChange(
+            onChange={handleInsulinSettingValueChange(
               "meal_prebolus_window_minutes",
               setPreMealWindowMinutes
             )}
-            className="w-20 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-teal-400"
+            decimal={false}
+            maxLength={3}
+            className="w-20"
           />
           <span className="text-xs text-white/40">min</span>
         </div>
@@ -559,19 +641,16 @@ const toggleMealInsulinType = (name) => {
           <SettingHelpButton id="post" openHelp={openHelp} setOpenHelp={setOpenHelp} />
         </div>
         <div className="flex items-center gap-2">
-          <input
-            id="post-meal-window"
-            type="number"
-            min="0"
-            max="180"
-            step="5"
-            inputMode="numeric"
+          <NumberPadField
+            label="Minutes"
             value={postMealWindowMinutes}
-            onChange={handleInsulinSettingChange(
+            onChange={handleInsulinSettingValueChange(
               "meal_postbolus_window_minutes",
               setPostMealWindowMinutes
             )}
-            className="w-20 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-teal-400"
+            decimal={false}
+            maxLength={3}
+            className="w-20"
           />
           <span className="text-xs text-white/40">min</span>
         </div>
