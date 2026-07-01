@@ -123,6 +123,20 @@ const absorptionProfileOptions = [
 ];
 
 function CustomInputTray({ open, onClose, title, children, tall = false }) {
+  useEffect(() => {
+    if (!open || typeof document === "undefined") return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    const previousTouchAction = document.body.style.touchAction;
+    document.body.style.overflow = "hidden";
+    document.body.style.touchAction = "none";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.body.style.touchAction = previousTouchAction;
+    };
+  }, [open]);
+
   if (!open || typeof document === "undefined") return null;
 
   const absorb = (event) => {
@@ -394,14 +408,13 @@ function SelectField({ label, value, onChange, options, placeholder = "Select" }
                 key={option.value}
                 type="button"
                 onPointerDown={(event) => {
-                  event.preventDefault();
                   event.stopPropagation();
-                  onChange(option.value);
-                  setOpen(false);
                 }}
                 onClick={(event) => {
                   event.preventDefault();
                   event.stopPropagation();
+                  onChange(option.value);
+                  setOpen(false);
                 }}
                 className={`flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left transition ${
                   isSelected ? "border-teal-500/45 bg-teal-500/12 text-white" : "border-white/10 bg-white/[0.04] text-white/55"
