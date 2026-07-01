@@ -367,19 +367,43 @@ function EditableLog({ children, onEdit }) {
 
 function FloatingDoseLogger() {
   const [doseFormOpen, setDoseFormOpen] = useState(false);
+  const [doseFormPreloaded, setDoseFormPreloaded] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const preload = () => setDoseFormPreloaded(true);
+    if ("requestIdleCallback" in window) {
+      const id = window.requestIdleCallback(preload, { timeout: 1200 });
+      return () => window.cancelIdleCallback(id);
+    }
+
+    const id = window.setTimeout(preload, 350);
+    return () => window.clearTimeout(id);
+  }, []);
+
+  const openDoseForm = () => {
+    if (doseFormOpen) return;
+    setDoseFormPreloaded(true);
+    setDoseFormOpen(true);
+  };
 
   return (
     <>
-      <DoseForm open={doseFormOpen} onOpenChange={setDoseFormOpen} />
+      {(doseFormPreloaded || doseFormOpen) && <DoseForm open={doseFormOpen} onOpenChange={setDoseFormOpen} />}
       {!doseFormOpen && (
         <button
           type="button"
-          onClick={() => setDoseFormOpen(true)}
-          className="fixed bottom-24 right-5 z-40 flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border transition active:scale-95 backdrop-blur-sm"
+          onPointerDown={(event) => {
+            event.preventDefault();
+            openDoseForm();
+          }}
+          onClick={openDoseForm}
+          className="fixed bottom-24 right-5 z-40 flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border transition active:scale-95 sm:backdrop-blur-2xl"
           style={{
-            background: "linear-gradient(145deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0))",
+            background: "linear-gradient(145deg, rgba(255,255,255,0.24), rgba(255,255,255,0.08))",
             borderColor: "rgba(255,255,255,0.28)",
-            boxShadow: "0 18px 48px rgba(0, 0, 0, 0), inset 0 1px 1px rgba(255, 255, 255, 0), inset 0 -1px 1px rgba(255,255,255,0.1)",
+            boxShadow: "0 18px 48px rgba(0,0,0,0.34), inset 0 1px 1px rgba(255,255,255,0.42), inset 0 -1px 1px rgba(255,255,255,0.1)",
           }}
         >
           <span
