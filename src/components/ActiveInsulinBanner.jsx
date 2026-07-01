@@ -8,7 +8,7 @@ import {
   Info,
   X,
 } from "lucide-react";
-import { generateActivityCurve } from "@/lib/insulinPharmacology";
+import { generateActivityCurve, INSULIN_PROFILES } from "@/lib/insulinPharmacology";
 import {
   generateCarbCurve,
   getActiveCarbsNow,
@@ -19,11 +19,25 @@ import { AnimatePresence, motion } from "framer-motion";
 
 const SAMPLE_STEP_MS = 5 * 60 * 1000;
 const MINUTE_MS = 60 * 1000;
-const DEFAULT_INSULIN_DURATION_HOURS = 3;
 const DEFAULT_PRE_MEAL_WINDOW_MINUTES = 45;
 const DEFAULT_POST_MEAL_WINDOW_MINUTES = 90;
 const DEFAULT_OUTCOME_WINDOW_MINUTES = 240;
 const MEAL_GROUP_WINDOW_MS = 30 * MINUTE_MS;
+
+function getDefaultMealInsulinTypes() {
+  return Object.entries(INSULIN_PROFILES)
+    .filter(([, profile]) => ["Rapid-Acting", "Short-Acting"].includes(profile.category))
+    .map(([name]) => name);
+}
+
+function readMealInsulinTypes() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem("meal_insulin_types") || "null");
+    return Array.isArray(parsed) && parsed.length ? parsed : getDefaultMealInsulinTypes();
+  } catch {
+    return getDefaultMealInsulinTypes();
+  }
+}
 
 function readInsulinSettings() {
   const insulinSensitivityMgDlPerUnit = Number(
@@ -31,9 +45,6 @@ function readInsulinSettings() {
   );
   const mealInsulinUnitsPer5g = Number(
     localStorage.getItem("meal_insulin_units_per_5g")
-  );
-  const durationHours = Number(
-    localStorage.getItem("insulin_duration_hours")
   );
   const preMealWindowMinutes = Number(
     localStorage.getItem("meal_prebolus_window_minutes")
@@ -50,7 +61,7 @@ function readInsulinSettings() {
   return {
     insulinSensitivityMgDlPerUnit,
     mealInsulinUnitsPer5g,
-    durationHours: durationHours > 0 ? durationHours : DEFAULT_INSULIN_DURATION_HOURS,
+    mealInsulinTypes: readMealInsulinTypes(),
     preMealWindowMinutes: preMealWindowMinutes > 0 ? preMealWindowMinutes : DEFAULT_PRE_MEAL_WINDOW_MINUTES,
     postMealWindowMinutes: postMealWindowMinutes > 0 ? postMealWindowMinutes : DEFAULT_POST_MEAL_WINDOW_MINUTES,
     outcomeWindowMinutes: outcomeWindowMinutes > 0 ? outcomeWindowMinutes : DEFAULT_OUTCOME_WINDOW_MINUTES,
@@ -83,23 +94,23 @@ function getCurveActivityAt(curve, time) {
   return last.activity;
 }
 
-function getTotalActiveUnits(doses, targetTime = Date.now(), selectUnits = (dose) => dose.units, durationHours = DEFAULT_INSULIN_DURATION_HOURS) {
+function getTotalActiveUnits(doses, targetTime = Date.now(), selectUnits = (dose) => dose.units) {
   return (Array.isArray(doses) ? doses : []).reduce((sum, dose) => {
     const units = Number(selectUnits(dose));
     if (!Number.isFinite(units) || units <= 0) return sum;
 
-    const curve = generateActivityCurve(dose, durationHours);
+    const curve = generateActivityCurve(dose);
     return sum + getCurveActivityAt(curve, targetTime) * units;
   }, 0);
 }
 
-function getTotalActiveMealUnits(doses, targetTime = Date.now(), durationHours = DEFAULT_INSULIN_DURATION_HOURS) {
+function getTotalActiveMealUnits(doses, targetTime = Date.now()) {
   // Older records predate the meal/correction split, so retain their prior behavior.
-  return getTotalActiveUnits(doses, targetTime, (dose) => dose.meal_units ?? dose.units, durationHours);
+  return getTotalActiveUnits(doses, targetTime, (dose) => dose.meal_units ?? dose.units);
 }
 
-function getTotalActiveCorrectionUnits(doses, targetTime = Date.now(), durationHours = DEFAULT_INSULIN_DURATION_HOURS) {
-  return getTotalActiveUnits(doses, targetTime, (dose) => dose.correction_units ?? 0, durationHours);
+function getTotalActiveCorrectionUnits(doses, targetTime = Date.now()) {
+  return getTotalActiveUnits(doses, targetTime, (dose) => dose.correction_units ?? 0);
 }
 
 function getActiveCarbsAt(entries, targetTime) {
@@ -135,7 +146,14 @@ function sumDoseUnits(doses, selectUnits) {
   }, 0);
 }
 
-function buildMealEventGroups(carbEntries, doses) {
+function isMealCoverageInsulin(dose, insulinSettings = {}) {
+  const selectedTypes = insulinSettings.mealInsulinTypes || getDefaultMealInsulinTypes();
+  return selectedTypes.includes(dose.insulin_type);
+}
+
+function buildMealEventGroups(carbEntries, doses, insulinSettings = {}) {
+  const preMealWindowMs = (insulinSettings.preMealWindowMinutes ?? DEFAULT_PRE_MEAL_WINDOW_MINUTES) * MINUTE_MS;
+  const postMealWindowMs = (insulinSettings.postMealWindowMinutes ?? DEFAULT_POST_MEAL_WINDOW_MINUTES) * MINUTE_MS;
   const carbEvents = (Array.isArray(carbEntries) ? carbEntries : [])
     .map((entry) => ({
       type: "carb",
@@ -146,6 +164,7 @@ function buildMealEventGroups(carbEntries, doses) {
     .filter((event) => Number.isFinite(event.time) && Number.isFinite(event.carbs) && event.carbs > 0);
 
   const doseEvents = (Array.isArray(doses) ? doses : [])
+    .filter((dose) => isMealCoverageInsulin(dose, insulinSettings))
     .map((dose) => ({
       type: "dose",
       time: getDoseTime(dose),
@@ -154,42 +173,46 @@ function buildMealEventGroups(carbEntries, doses) {
     }))
     .filter((event) => Number.isFinite(event.time) && Number.isFinite(event.units) && event.units > 0);
 
-  const events = [...carbEvents, ...doseEvents].sort((a, b) => a.time - b.time);
-  const groups = [];
+  const carbGroups = [];
 
-  events.forEach((event) => {
-    const lastGroup = groups[groups.length - 1];
-    if (!lastGroup || event.time - lastGroup.end > MEAL_GROUP_WINDOW_MS) {
-      groups.push({
-        start: event.time,
-        end: event.time,
-        carbEvents: event.type === "carb" ? [event] : [],
-        doseEvents: event.type === "dose" ? [event] : [],
-      });
-      return;
-    }
+  carbEvents
+    .sort((a, b) => a.time - b.time)
+    .forEach((event) => {
+      const lastGroup = carbGroups[carbGroups.length - 1];
+      if (!lastGroup || event.time - lastGroup.end > MEAL_GROUP_WINDOW_MS) {
+        carbGroups.push({
+          start: event.time,
+          end: event.time,
+          carbEvents: [event],
+        });
+        return;
+      }
 
-    lastGroup.end = event.time;
-    if (event.type === "carb") {
+      lastGroup.end = event.time;
       lastGroup.carbEvents.push(event);
-    } else {
-      lastGroup.doseEvents.push(event);
-    }
-  });
+    });
 
-  return groups
-    .filter((group) => group.carbEvents.length > 0)
+  return carbGroups
     .map((group) => {
       const carbs = group.carbEvents.reduce((sum, event) => sum + event.carbs, 0);
       const carbTimeTotal = group.carbEvents.reduce((sum, event) => sum + event.time * event.carbs, 0);
       const mealTime = carbs > 0 ? carbTimeTotal / carbs : group.start;
+      const pairingStart = group.start - preMealWindowMs;
+      const pairingEnd = group.end + postMealWindowMs;
+      const groupDoses = doseEvents
+        .filter((event) => event.time >= pairingStart && event.time <= pairingEnd)
+        .map((event) => event.dose);
 
       return {
         ...group,
+        start: pairingStart,
+        end: pairingEnd,
+        carbLogStart: group.start,
+        carbLogEnd: group.end,
         carbs,
         mealTime,
         carbEntries: group.carbEvents.map((event) => event.entry),
-        doses: group.doseEvents.map((event) => event.dose),
+        doses: groupDoses,
       };
     });
 }
@@ -205,7 +228,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
     };
   }
 
-  const groups = buildMealEventGroups(carbEntries, doses).sort((a, b) => b.mealTime - a.mealTime);
+  const groups = buildMealEventGroups(carbEntries, doses, insulinSettings).sort((a, b) => b.mealTime - a.mealTime);
 
   if (!groups.length) {
     return {
@@ -224,7 +247,8 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
   const windowStart = mealGroup.start;
   const windowEnd = mealGroup.end;
   const pairedDoses = mealGroup.doses;
-  const priorDoses = (Array.isArray(doses) ? doses : []).filter((dose) => {
+  const mealCoverageDoses = (Array.isArray(doses) ? doses : []).filter((dose) => isMealCoverageInsulin(dose, insulinSettings));
+  const priorDoses = mealCoverageDoses.filter((dose) => {
     const time = getDoseTime(dose);
     return Number.isFinite(time) && time < windowStart;
   });
@@ -246,7 +270,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
     Number.isFinite(glucoseValue) && glucoseValue > insulinSettings.targetHigh
       ? (glucoseValue - insulinSettings.targetGlucose) / insulinSettings.insulinSensitivityMgDlPerUnit
       : 0;
-  const priorActiveUnits = getTotalActiveUnits(priorDoses, mealTime, (dose) => dose.units, insulinSettings.durationHours);
+  const priorActiveUnits = getTotalActiveUnits(priorDoses, mealTime, (dose) => dose.units);
   const expectedTotalUnits = Math.max(0, expectedMealUnits + correctionUnitsNeeded - priorActiveUnits);
   const loggedMealUnits = sumDoseUnits(pairedDoses, (dose) => dose.meal_units ?? dose.units);
   const loggedCorrectionUnits = sumDoseUnits(pairedDoses, (dose) => dose.correction_units ?? 0);
@@ -326,11 +350,11 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
 function computeNetCarbTrajectory(doses, carbEntries, latestGlucose, insulinSettings) {
   const now = Date.now();
   let horizon = now;
-  const safeDoses = Array.isArray(doses) ? doses : [];
+  const safeDoses = (Array.isArray(doses) ? doses : []).filter((dose) => isMealCoverageInsulin(dose, insulinSettings));
   const safeCarbEntries = Array.isArray(carbEntries) ? carbEntries : [];
 
   safeDoses.forEach((dose) => {
-    const curve = generateActivityCurve(dose, insulinSettings.durationHours);
+    const curve = generateActivityCurve(dose);
     if (curve.length) horizon = Math.max(horizon, curve[curve.length - 1].time);
   });
 
@@ -351,8 +375,8 @@ function computeNetCarbTrajectory(doses, carbEntries, latestGlucose, insulinSett
   const points = [];
 
   for (let time = now; time <= horizon; time += SAMPLE_STEP_MS) {
-    const activeUnits = getTotalActiveUnits(safeDoses, time, (dose) => dose.units, insulinSettings.durationHours);
-    const activeMealUnits = getTotalActiveMealUnits(safeDoses, time, insulinSettings.durationHours);
+    const activeUnits = getTotalActiveUnits(safeDoses, time, (dose) => dose.units);
+    const activeMealUnits = getTotalActiveMealUnits(safeDoses, time);
     const activeCarbs = getActiveCarbsAt(safeCarbEntries, time);
 
     points.push({
@@ -579,9 +603,13 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
     };
   }, [openTooltip]);
 
-  const activeUnits = useMemo(() => getTotalActiveUnits(safeDoses, Date.now(), (dose) => dose.units, insulinSettings.durationHours), [safeDoses, insulinSettings.durationHours]);
-  const activeMealUnits = useMemo(() => getTotalActiveMealUnits(safeDoses, Date.now(), insulinSettings.durationHours), [safeDoses, insulinSettings.durationHours]);
-  const activeCorrectionUnits = useMemo(() => getTotalActiveCorrectionUnits(safeDoses, Date.now(), insulinSettings.durationHours), [safeDoses, insulinSettings.durationHours]);
+  const mealCoverageDoses = useMemo(
+    () => safeDoses.filter((dose) => isMealCoverageInsulin(dose, insulinSettings)),
+    [safeDoses, insulinSettings]
+  );
+  const activeUnits = useMemo(() => getTotalActiveUnits(safeDoses, Date.now(), (dose) => dose.units), [safeDoses]);
+  const activeMealUnits = useMemo(() => getTotalActiveMealUnits(mealCoverageDoses, Date.now()), [mealCoverageDoses]);
+  const activeCorrectionUnits = useMemo(() => getTotalActiveCorrectionUnits(mealCoverageDoses, Date.now()), [mealCoverageDoses]);
   const activeCarbs = useMemo(() => getActiveCarbsNow(safeCarbEntries), [safeCarbEntries]);
   const totalCarbsToday = useMemo(() => getTotalCarbsToday(safeCarbEntries), [safeCarbEntries]);
 
