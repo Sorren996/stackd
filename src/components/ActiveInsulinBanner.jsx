@@ -969,6 +969,14 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
   const targetLow = Number(localStorage.getItem("target_range_low") || 70);
   const targetHigh = Number(localStorage.getItem("target_range_high") || 180);
   const inRange = glucoseValue == null ? null : glucoseValue >= targetLow && glucoseValue <= targetHigh;
+  const rangeSparkColor =
+    glucoseValue == null
+      ? "#35a87988"
+      : glucoseValue < targetLow
+        ? "#3b82f688"
+        : glucoseValue > targetHigh
+          ? "#f59e0b88"
+          : "#35a87988";
   const glucoseReadingAgeMinutes = latestGlucose?.recorded_at
     ? Math.floor((Date.now() - new Date(latestGlucose.recorded_at).getTime()) / MINUTE_MS)
     : null;
@@ -1142,7 +1150,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
                 <span
                   key={index}
                   className="w-0.5 rounded-full"
-                  style={{ height: height * 3, backgroundColor: inRange ? "#35a87988" : "#f59e0b88" }}
+                  style={{ height: height * 3, backgroundColor: rangeSparkColor }}
                 />
               ))}
             </div>
