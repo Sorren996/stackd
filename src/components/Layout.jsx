@@ -33,11 +33,23 @@ function getGlucoseValue(reading) {
   return Number.isFinite(value) ? value : null;
 }
 
-function getGlucoseBackgroundColor(reading) {
+function readTargetRange() {
+  if (typeof window === "undefined") return { low: 70, high: 180 };
+
+  const low = Number(window.localStorage.getItem("target_range_low") || 70);
+  const high = Number(window.localStorage.getItem("target_range_high") || 180);
+
+  return {
+    low: Number.isFinite(low) ? low : 70,
+    high: Number.isFinite(high) ? high : 180,
+  };
+}
+
+function getGlucoseBackgroundColor(reading, targetRange) {
   const value = getGlucoseValue(reading);
   if (value === null) return "#042f2e";
-  if (value < 70) return "#102a5c";
-  if (value > 180) return "#5a2a10";
+  if (value < targetRange.low) return "#102a5c";
+  if (value > targetRange.high) return "#5a2a10";
   return "#063f36";
 }
 
@@ -47,11 +59,11 @@ const SCENE_IMAGES = {
   low: "https://res.cloudinary.com/bzqjmwln/image/upload/v1782928032/valley_vqpesd.png",
 };
 
-function getGlucoseScene(reading) {
+function getGlucoseScene(reading, targetRange) {
   const value = getGlucoseValue(reading);
   if (value === null) return "range";
-  if (value < 70) return "low";
-  if (value > 180) return "high";
+  if (value < targetRange.low) return "low";
+  if (value > targetRange.high) return "high";
   return "range";
 }
 
@@ -67,11 +79,12 @@ export default function Layout() {
     history: false,
   }));
   const [latestGlucose, setLatestGlucose] = useState(readCachedLatestGlucose);
+  const [targetRange, setTargetRange] = useState(readTargetRange);
   const appBackground = useMemo(() => {
-    const primaryColor = getGlucoseBackgroundColor(latestGlucose);
+    const primaryColor = getGlucoseBackgroundColor(latestGlucose, targetRange);
     return `linear-gradient(to bottom, ${primaryColor} 0%, rgba(0,0,0,0.72) 58%, #000000 100%)`;
-  }, [latestGlucose]);
-  const sceneStatus = useMemo(() => getGlucoseScene(latestGlucose), [latestGlucose]);
+  }, [latestGlucose, targetRange]);
+  const sceneStatus = useMemo(() => getGlucoseScene(latestGlucose, targetRange), [latestGlucose, targetRange]);
   const [backgroundLayers, setBackgroundLayers] = useState(() => ({
     current: appBackground,
     previous: null,
@@ -80,13 +93,18 @@ export default function Layout() {
 
   useEffect(() => {
     const updateLatestGlucose = () => setLatestGlucose(readCachedLatestGlucose());
+    const updateTargetRange = () => setTargetRange(readTargetRange());
 
     window.addEventListener("latest-glucose-updated", updateLatestGlucose);
+    window.addEventListener("target-range-updated", updateTargetRange);
     window.addEventListener("storage", updateLatestGlucose);
+    window.addEventListener("storage", updateTargetRange);
 
     return () => {
       window.removeEventListener("latest-glucose-updated", updateLatestGlucose);
+      window.removeEventListener("target-range-updated", updateTargetRange);
       window.removeEventListener("storage", updateLatestGlucose);
+      window.removeEventListener("storage", updateTargetRange);
     };
   }, []);
 
