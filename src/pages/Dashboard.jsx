@@ -152,7 +152,7 @@ function CustomInputTray({ open, onClose, title, children, tall = false }) {
         }}
       />
       <div
-        className={`fixed inset-x-0 bottom-0 z-[999] rounded-t-3xl border border-white/10 bg-[hsl(162,10%,8%)] px-4 pb-[max(env(safe-area-inset-bottom),0.85rem)] pt-3 shadow-[0_-24px_60px_rgba(0,0,0,0.55)] ${
+        className={`fixed inset-x-10 bottom-0 z-[999] rounded-t-3xl border border-white/10 bg-[hsl(162,10%,8%)] px-4 pb-[max(env(safe-area-inset-bottom),0.85rem)] pt-3 shadow-[0_-24px_60px_rgba(0,0,0,0.55)] ${
           tall ? "min-h-[43dvh]" : "min-h-[34dvh]"
         }`}
         onPointerDown={(event) => event.stopPropagation()}
