@@ -23,6 +23,18 @@ const DEFAULT_POST_MEAL_WINDOW_MINUTES = 90;
 const DEFAULT_OUTCOME_WINDOW_MINUTES = 240;
 const MEAL_GROUP_WINDOW_MS = 30 * MINUTE_MS;
 
+function readTargetRange() {
+  if (typeof window === "undefined") return { low: 70, high: 180 };
+
+  const low = Number(window.localStorage.getItem("target_range_low") || 70);
+  const high = Number(window.localStorage.getItem("target_range_high") || 180);
+
+  return {
+    low: Number.isFinite(low) ? low : 70,
+    high: Number.isFinite(high) ? high : 180,
+  };
+}
+
 function getDefaultMealInsulinTypes() {
   return Object.entries(INSULIN_PROFILES)
     .filter(([, profile]) => ["Rapid-Acting", "Short-Acting"].includes(profile.category))
@@ -813,17 +825,23 @@ function SupportiveGlucoseMessage({ insight, color }) {
 export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucoseReadings = [], carbEntries = [] }) {
   const [openTooltip, setOpenTooltip] = useState(null);
   const [insulinSettings, setInsulinSettings] = useState(readInsulinSettings);
+  const [targetRange, setTargetRange] = useState(readTargetRange);
   const safeDoses = Array.isArray(doses) ? doses : [];
   const safeGlucoseReadings = Array.isArray(glucoseReadings) ? glucoseReadings : [];
   const safeCarbEntries = Array.isArray(carbEntries) ? carbEntries : [];
 
   useEffect(() => {
-    const refreshSettings = () => setInsulinSettings(readInsulinSettings());
+    const refreshSettings = () => {
+      setInsulinSettings(readInsulinSettings());
+      setTargetRange(readTargetRange());
+    };
     window.addEventListener("insulin-settings-updated", refreshSettings);
+    window.addEventListener("target-range-updated", refreshSettings);
     window.addEventListener("storage", refreshSettings);
 
     return () => {
       window.removeEventListener("insulin-settings-updated", refreshSettings);
+      window.removeEventListener("target-range-updated", refreshSettings);
       window.removeEventListener("storage", refreshSettings);
     };
   }, []);
@@ -958,16 +976,16 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
   }, [safeGlucoseReadings]);
 
   const glucoseValue = latestGlucose?.value;
+  const targetLow = targetRange.low;
+  const targetHigh = targetRange.high;
   const glucoseColor = !glucoseValue
     ? "#35a879"
-    : glucoseValue < 70
+    : glucoseValue < targetLow
       ? "#3b82f6"
-      : glucoseValue > 180
+      : glucoseValue > targetHigh
         ? "#f59e0b"
         : "#35a879";
 
-  const targetLow = Number(localStorage.getItem("target_range_low") || 70);
-  const targetHigh = Number(localStorage.getItem("target_range_high") || 180);
   const inRange = glucoseValue == null ? null : glucoseValue >= targetLow && glucoseValue <= targetHigh;
   const rangeSparkColor =
     glucoseValue == null
@@ -998,8 +1016,8 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
 
   const glucoseStatus = (value) => {
     if (!value) return "No data";
-    if (value < 70) return "Low";
-    if (value > 180) return "High";
+    if (value < targetLow) return "Low";
+    if (value > targetHigh) return "High";
     return "In range";
   };
 
@@ -1179,7 +1197,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
             value={dailyAverage ? `${dailyAverage}` : "--"}
             sub={dailyAverage ? "mg/dL" : "No data today"}
             status={glucoseStatus(dailyAverage)}
-            color={!dailyAverage ? "#35a879" : dailyAverage < 70 ? "#3b82f6" : dailyAverage > 180 ? "#f59e0b" : "#10b981"}
+            color={!dailyAverage ? "#35a879" : dailyAverage < targetLow ? "#3b82f6" : dailyAverage > targetHigh ? "#f59e0b" : "#10b981"}
           />
         </div>
       </div>
