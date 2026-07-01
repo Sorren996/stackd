@@ -35,6 +35,7 @@ function buildConsumedAt(timeValue) {
   const [hours, minutes] = timeValue.split(":").map(Number);
   const consumedAt = new Date();
   consumedAt.setHours(hours, minutes, 0, 0);
+  if (consumedAt.getTime() > Date.now()) return null;
   return consumedAt.toISOString();
 }
 
@@ -58,7 +59,8 @@ function formatTimeLabel(value) {
 function buildTimeValue(hour12, minute, suffix) {
   let hour = Number(hour12) % 12;
   if (suffix === "PM") hour += 12;
-  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+  const safeMinute = Math.max(0, Math.min(55, Number(minute) || 0));
+  return `${String(hour).padStart(2, "0")}:${String(safeMinute).padStart(2, "0")}`;
 }
 
 function parseTimeValue(value) {
@@ -66,7 +68,7 @@ function parseTimeValue(value) {
   const hours = Number(hoursRaw);
   return {
     hour12: hours % 12 || 12,
-    minute: Math.round(Number(minutesRaw) / 5) * 5,
+    minute: Math.max(0, Math.min(55, Math.floor(Number(minutesRaw) / 5) * 5)),
     suffix: hours >= 12 ? "PM" : "AM",
   };
 }
@@ -372,6 +374,11 @@ Do not give insulin dosing advice.
     }
 
     const absorptionProfile = estimatedMeal.absorptionProfile || "medium";
+    const consumedAt = buildConsumedAt(carbTime);
+    if (!consumedAt) {
+      toast.error("Choose a time that is not in the future.");
+      return;
+    }
 
     onSubmit([
       {
@@ -382,7 +389,7 @@ Do not give insulin dosing advice.
         category: ABSORPTION_CATEGORY[absorptionProfile],
         profile: absorptionProfile,
         absorption_profile: absorptionProfile,
-        consumed_at: buildConsumedAt(carbTime),
+        consumed_at: consumedAt,
         is_custom: true,
       },
     ]);
@@ -407,6 +414,11 @@ Do not give insulin dosing advice.
 
   const handleSubmitManual = () => {
     if (!canSubmitManual) return;
+    const consumedAt = buildConsumedAt(carbTime);
+    if (!consumedAt) {
+      toast.error("Choose a time that is not in the future.");
+      return;
+    }
 
     onSubmit(
       selectedFoods.map(({ food, carbs }) => ({
@@ -418,7 +430,7 @@ Do not give insulin dosing advice.
         profile: food.profile,
         absorption_profile: food.profile,
         serving_amount: 1,
-        consumed_at: buildConsumedAt(carbTime),
+        consumed_at: consumedAt,
         is_custom: false,
       }))
     );
