@@ -1015,6 +1015,14 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
         : "#35a879";
 
   const inRange = glucoseValue == null ? null : glucoseValue >= targetLow && glucoseValue <= targetHigh;
+  const rangeCardLabel =
+    glucoseValue == null
+      ? "No data"
+      : glucoseValue < targetLow
+        ? "Below range"
+        : glucoseValue > targetHigh
+          ? "Above range"
+          : "In range";
   const rangeSparkColor =
     glucoseValue == null
       ? "#35a87988"
@@ -1201,7 +1209,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
               ))}
             </div>
             <div className="relative z-10 flex-1">
-              <p className="text-sm font-semibold text-white/80">{inRange ? "In range" : "Out of range"}</p>
+              <p className="text-sm font-semibold text-white/80">{rangeCardLabel}</p>
               <p className="text-xs text-white/35">Target: {targetLow}-{targetHigh} mg/dL</p>
             </div>
           </div>
