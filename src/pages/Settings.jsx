@@ -47,25 +47,40 @@ function SettingHelpButton({ id, openHelp, setOpenHelp }) {
   if (!help) return null;
 
   return (
-    <div className="relative">
+    <>
       <button
         type="button"
         onClick={() => setOpenHelp(openHelp === id ? null : id)}
-        className="flex h-5 w-5 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/35 transition hover:text-teal-300"
+        className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/35 transition hover:text-teal-300"
         aria-label={`${help.title} help`}
       >
         <Info className="h-3 w-3" />
       </button>
       {openHelp === id && (
-        <div className="absolute right-0 top-7 z-30 w-64 rounded-2xl border border-white/10 bg-[hsl(162,10%,10%)] p-3 text-left shadow-2xl">
-          <p className="text-xs font-semibold text-white">{help.title}</p>
-          <p className="mt-1 text-xs leading-relaxed text-white/50">{help.body}</p>
-          <p className="mt-2 text-[10px] leading-relaxed text-white/30">
-            This is for app estimates only and is not dosing advice.
-          </p>
+        <div className="fixed inset-0 z-[220] flex items-end justify-center px-4 pb-24 pt-8 sm:items-start" onClick={() => setOpenHelp(null)}>
+          <div
+            className="mx-auto mt-auto w-full max-w-sm rounded-2xl border border-white/10 bg-[hsl(162,10%,10%)] p-4 text-left shadow-2xl sm:mt-20"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-2 flex items-start justify-between gap-3">
+              <p className="text-sm font-semibold text-white">{help.title}</p>
+              <button
+                type="button"
+                onClick={() => setOpenHelp(null)}
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/5 text-white/35"
+                aria-label="Close help"
+              >
+                x
+              </button>
+            </div>
+            <p className="text-xs leading-relaxed text-white/55">{help.body}</p>
+            <p className="mt-2 text-[10px] leading-relaxed text-white/30">
+              This is for app estimates only and is not dosing advice.
+            </p>
+          </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
 
@@ -406,7 +421,7 @@ const toggleMealInsulinType = (name) => {
     </div>
 
     <div className="space-y-3 border-t border-white/10 pt-4">
-      <div className="flex items-center gap-2">
+      <div className="flex min-h-6 items-center justify-between gap-2">
         <Label className="text-sm font-semibold text-white/90">
           Meal/correction insulin types
         </Label>
@@ -445,7 +460,7 @@ const toggleMealInsulinType = (name) => {
 
     <div className="grid grid-cols-2 gap-3 border-t border-white/10 pt-4">
       <div className="space-y-2">
-        <div className="flex items-center gap-2">
+        <div className="flex min-h-6 items-center justify-between gap-2">
           <Label htmlFor="meal-outcome-window" className="text-sm font-semibold text-white/90">
             Meal review
           </Label>
@@ -471,7 +486,7 @@ const toggleMealInsulinType = (name) => {
       </div>
 
       <div className="space-y-2">
-        <div className="flex items-center gap-2">
+        <div className="flex min-h-6 items-center justify-between gap-2">
           <Label htmlFor="pre-meal-window" className="text-sm font-semibold text-white/90">
             Pre-meal insulin
           </Label>
@@ -497,7 +512,7 @@ const toggleMealInsulinType = (name) => {
       </div>
 
       <div className="space-y-2">
-        <div className="flex items-center gap-2">
+        <div className="flex min-h-6 items-center justify-between gap-2">
           <Label htmlFor="post-meal-window" className="text-sm font-semibold text-white/90">
             Post-meal insulin
           </Label>
