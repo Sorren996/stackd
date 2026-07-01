@@ -1,9 +1,9 @@
 import { useMemo, useRef, useEffect, useState } from "react";
-import { Area, XAxis, YAxis, ReferenceLine, Line, ComposedChart } from "recharts";
+import { Area, XAxis, YAxis, Line, ComposedChart } from "recharts";
 import { generateActivityCurve, INSULIN_PROFILES } from "@/lib/insulinPharmacology";
-import { generateCarbCurve, PROFILE_COLORS } from "@/lib/carbAbsorption";
+import { PROFILE_COLORS } from "@/lib/carbAbsorption";
 import { format } from "date-fns";
-import { CornerUpRight, SlidersHorizontal, Check } from "lucide-react";
+import { CornerUpRight, SlidersHorizontal, Check, Wheat } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const STEP_MS = 3 * 60 * 1000;
@@ -17,20 +17,11 @@ const CHART_MARGIN_BOTTOM = 0;
 const X_AXIS_HEIGHT = 30;
 const GLUCOSE_MIN = 40;
 const GLUCOSE_MAX = 250;
-const CARB_VISUAL_MAX_GRAMS = 120;
-const CARB_VISUAL_MAX_HEIGHT = 44;
 const CARB_PROFILE_COLORS = {
   fast: "#fb923c",
   medium: "#f59e0b",
   slow: "#22c55e",
   delayed: "#a78bfa",
-};
-
-const CARB_PROFILE_LABELS = {
-  fast: "Fast",
-  medium: "Mixed",
-  slow: "Slow",
-  delayed: "Delayed",
 };
 
 function normalizeAbsorptionProfile(value) {
@@ -113,51 +104,6 @@ function normalizeCarbEntry(entry) {
     absorption_profile: absorptionProfile,
     is_custom: entry.is_custom === true,
   };
-}
-
-function buildCarbCurve(entry) {
-  const generated = generateCarbCurve(entry);
-  if (Array.isArray(generated) && generated.length > 0) return generated;
-
-  const start = new Date(entry.consumed_at).getTime();
-  if (!Number.isFinite(start)) return [];
-
-  const profile = normalizeAbsorptionProfile(entry.absorption_profile);
-  const settings = {
-    fast: { delayMin: 0, durationMin: 110, peak: 0.2, skew: 1.45 },
-    medium: { delayMin: 10, durationMin: 210, peak: 0.35, skew: 1 },
-    slow: { delayMin: 20, durationMin: 300, peak: 0.48, skew: 0.72 },
-    delayed: { delayMin: 35, durationMin: 420, peak: 0.58, skew: 0.58 },
-  }[profile];
-
-  const curveStart = start + settings.delayMin * 60 * 1000;
-  const durationMs = settings.durationMin * 60 * 1000;
-  const stepMs = 3 * 60 * 1000;
-  const points = [];
-
-  for (let offset = 0; offset <= durationMs; offset += stepMs) {
-    const progress = offset / durationMs;
-    let activity;
-
-    if (profile === "slow") {
-      activity = progress < 0.25 ? progress / 0.25 : progress < 0.72 ? 1 : (1 - progress) / 0.28;
-    } else if (profile === "delayed") {
-      activity = progress < settings.peak
-        ? Math.pow(progress / settings.peak, 1.8)
-        : Math.pow((1 - progress) / (1 - settings.peak), 0.65);
-    } else {
-      const rise = Math.pow(Math.min(progress / settings.peak, 1), profile === "fast" ? 0.65 : 1.15);
-      const fall = Math.pow(Math.max((1 - progress) / (1 - settings.peak), 0), settings.skew);
-      activity = progress <= settings.peak ? rise : fall;
-    }
-
-    points.push({
-      time: curveStart + offset,
-      activity: Math.max(0, Math.min(1, activity)),
-    });
-  }
-
-  return points;
 }
 
 // Filter dropdown — portal-rendered with smart viewport positioning
@@ -298,22 +244,15 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   [filteredDoses]
   );
 
-  const allCarbCurvesMeta = useMemo(() =>
+  const carbEventMarkers = useMemo(() =>
   filteredCarbEntries.
-  filter((e) => !e.is_custom).
   map((entry) => ({
+    time: new Date(entry.consumed_at).getTime(),
     entry,
-    curve: buildCarbCurve(entry),
     color: CARB_PROFILE_COLORS[entry.absorption_profile] || PROFILE_COLORS[entry.absorption_profile] || "#f59e0b"
-  })),
-  [filteredCarbEntries]
-  );
-
-  const customCarbEvents = useMemo(() =>
-  filteredCarbEntries.
-  filter((e) => e.is_custom).
-  map((e) => ({ time: new Date(e.consumed_at).getTime(), entry: e })),
-  [filteredCarbEntries]
+  })).
+  filter((marker) => Number.isFinite(marker.time) && marker.time >= domainStart && marker.time <= domainEnd),
+  [filteredCarbEntries, domainStart, domainEnd]
   );
 
   const glucoseMap = useMemo(() => {
@@ -360,32 +299,13 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           point[`${key}_total`] = dose.units;
         }
       });
-      allCarbCurvesMeta.forEach(({ entry, curve }) => {
-        const key = `carb_${entry.id}`;
-        if (!curve.length || t < curve[0].time || t > curve[curve.length - 1].time) {
-          point[key] = null;
-        } else {
-          let lo = 0;
-          for (let j = 0; j < curve.length - 1; j++) {
-            if (curve[j].time <= t && curve[j + 1].time >= t) {lo = j;break;}
-          }
-          const hi = Math.min(lo + 1, curve.length - 1);
-          const ratio = hi === lo ? 0 : (t - curve[lo].time) / (curve[hi].time - curve[lo].time);
-          const activity = curve[lo].activity + ratio * (curve[hi].activity - curve[lo].activity);
-          const carbVisualRatio = Math.min(entry.carbs, CARB_VISUAL_MAX_GRAMS) / CARB_VISUAL_MAX_GRAMS;
-          point[key] = activity * carbVisualRatio * CARB_VISUAL_MAX_HEIGHT;
-          point[`${key}_carbs`] = entry.carbs;
-          point[`${key}_food`] = entry.food_name;
-          point[`${key}_pace`] = CARB_PROFILE_LABELS[entry.absorption_profile] || "Mixed";
-        }
-      });
       if (glucoseMap[t] !== undefined) {
         point.glucose = Math.min(glucoseMap[t], GLUCOSE_MAX);
       }
       result.push(point);
     }
     return result;
-  }, [doses, glucoseReadings, carbEntries, filters, domainStart, domainEnd, allCurvesMeta, allCarbCurvesMeta, glucoseMap]);
+  }, [doses, glucoseReadings, carbEntries, filters, domainStart, domainEnd, allCurvesMeta, glucoseMap]);
 
   const doseKeys = useMemo(() =>
   filteredDoses.map((dose) => ({
@@ -395,18 +315,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     color: INSULIN_PROFILES[dose.insulin_type]?.color || "#888"
   })),
   [filteredDoses]
-  );
-
-  const carbKeys = useMemo(() =>
-  filteredCarbEntries.
-  filter((e) => !e.is_custom).
-  map((entry) => ({
-    key: `carb_${entry.id}`,
-    label: entry.food_name,
-    carbs: entry.carbs,
-    color: CARB_PROFILE_COLORS[entry.absorption_profile] || PROFILE_COLORS[entry.absorption_profile] || "#f59e0b"
-  })),
-  [filteredCarbEntries]
   );
 
   const totalMs = domainEnd - domainStart;
@@ -631,7 +539,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           scheduleCenterGlucoseUpdate(el.scrollLeft);
         }}
         style={{ WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
-        <div style={{ width: chartWidth, height: CHART_HEIGHT }}>
+        <div className="relative" style={{ width: chartWidth, height: CHART_HEIGHT }}>
           <ComposedChart
             width={chartWidth}
             height={CHART_HEIGHT}
@@ -643,12 +551,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                   <stop offset="0%" stopColor={k.color} stopOpacity={1} />
                   <stop offset="52%" stopColor={k.color} stopOpacity={0.96} />
                   <stop offset="100%" stopColor={k.color} stopOpacity={0.88} />
-                </linearGradient>
-              )}
-              {carbKeys.map((k) =>
-              <linearGradient key={k.key} id={`grad_${k.key}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={k.color} stopOpacity={0.28} />
-                  <stop offset="100%" stopColor={k.color} stopOpacity={0.0} />
                 </linearGradient>
               )}
               <linearGradient id="glucose_range_grad" x1="0" y1="0" x2="0" y2="1">
@@ -686,7 +588,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             
 
             <YAxis yAxisId="insulin" domain={[0, 75]} hide />
-            <YAxis yAxisId="carbs" domain={[0, CARB_VISUAL_MAX_HEIGHT]} hide />
             <YAxis yAxisId="glucose" domain={[GLUCOSE_MIN, GLUCOSE_MAX]} allowDataOverflow hide />
 
             {filters.glucose && filteredGlucoseReadings.length > 0 &&
@@ -719,35 +620,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
             )}
 
-            {carbKeys.map((k) =>
-            <Area
-              key={k.key}
-              yAxisId="carbs"
-              type="monotoneX"
-              dataKey={k.key}
-              name={k.label}
-              stroke={k.color}
-              strokeWidth={2}
-              strokeDasharray="5 3"
-              fill={`url(#grad_${k.key})`}
-              dot={false}
-              isAnimationActive={false}
-              opacity={0.72} />
-
-            )}
-
-            {customCarbEvents.map(({ time, entry }) =>
-            <ReferenceLine
-              key={`custom_${entry.id}`}
-              yAxisId="carbs"
-              x={time}
-              stroke="#6b7280"
-              strokeDasharray="3 3"
-              strokeWidth={1.5}
-              label={{ value: `${entry.carbs}g`, position: "insideTopRight", fill: "#9ca3af", fontSize: 9 }} />
-
-            )}
-
             {filters.glucose && filteredGlucoseReadings.length > 0 &&
             <Line
               yAxisId="glucose"
@@ -764,6 +636,45 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             }
 
           </ComposedChart>
+
+          {filters.carbs && carbEventMarkers.map(({ time, entry, color }) => {
+            const x = (time - domainStart) / totalMs * chartWidth;
+            const isEdgeLeft = x < 58;
+            const isEdgeRight = x > chartWidth - 58;
+
+            return (
+              <div
+                key={`carb_marker_${entry.id}`}
+                className="pointer-events-none absolute top-0 z-20"
+                style={{
+                  left: x,
+                  height: CHART_HEIGHT - X_AXIS_HEIGHT,
+                  transform: isEdgeLeft ? "translateX(0)" : isEdgeRight ? "translateX(-100%)" : "translateX(-50%)"
+                }}>
+                <div
+                  className="absolute left-1/2 w-px -translate-x-1/2"
+                  style={{
+                    top: CHART_MARGIN_TOP - 6,
+                    height: plotHeight + 8,
+                    background: `linear-gradient(to bottom, ${color}cc, ${color}33 62%, transparent)`,
+                    boxShadow: `0 0 12px ${color}26`
+                  }} />
+                <div
+                  className="relative flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold leading-none shadow-lg backdrop-blur-md"
+                  style={{
+                    top: CHART_MARGIN_TOP - 45,
+                    color,
+                    borderColor: `${color}45`,
+                    background: `linear-gradient(145deg, rgba(14,24,21,0.92), rgba(14,24,21,0.62)), ${color}12`,
+                    boxShadow: "0 10px 24px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.08)"
+                  }}>
+                  <Wheat className="h-3 w-3" />
+                  <span className="text-white/55">Carbs</span>
+                  <span className="text-white/90">{Math.round(entry.carbs)}g</span>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
       </div>
