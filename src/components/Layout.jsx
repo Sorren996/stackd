@@ -149,14 +149,14 @@ export default function Layout() {
       <div
         aria-hidden="true"
         className="pointer-events-none fixed inset-0 z-0"
-        style={{
-          background: `
-            radial-gradient(circle at 50% 18%, rgba(${ambientColor}, 0.10), transparent 36%),
-            radial-gradient(circle at 12% 78%, rgba(${ambientColor}, 0.055), transparent 30%),
-            radial-gradient(circle at 88% 92%, rgba(${ambientColor}, 0.045), transparent 28%),
-            linear-gradient(to bottom, rgba(${ambientColor}, 0.045), #030303 34%, #000000 100%)
-          `,
-        }}
+style={{
+  background: `
+    radial-gradient(circle at 50% 16%, rgba(${ambientColor}, 0.22), transparent 42%),
+    radial-gradient(circle at 8% 72%, rgba(${ambientColor}, 0.14), transparent 34%),
+    radial-gradient(circle at 92% 92%, rgba(${ambientColor}, 0.12), transparent 34%),
+    linear-gradient(to bottom, rgba(${ambientColor}, 0.10), #050505 42%, #000000 100%)
+  `,
+}}
       />
 
       <div
