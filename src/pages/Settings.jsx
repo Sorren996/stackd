@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { base44 } from "@/api/base44Client";
 import { useQueryClient } from "@tanstack/react-query";
 import { LogOut, User, Target, Radio, Download, Loader2, Sparkles, Heart, Upload, Trash2, Shield, AlertTriangle, Info } from "lucide-react";
@@ -69,8 +70,9 @@ function SettingHelpButton({ id, openHelp, setOpenHelp }) {
 function SettingsHelpOverlay({ openHelp, onClose }) {
   const help = INSULIN_PLAN_HELP[openHelp];
   if (!help) return null;
+  if (typeof document === "undefined") return null;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[999] bg-black/45" onClick={onClose}>
       <div
         className="fixed bottom-24 left-4 right-4 mx-auto w-auto max-w-sm rounded-2xl border border-white/10 bg-[hsl(162,10%,10%)] p-4 text-left shadow-2xl sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-24 sm:w-full sm:-translate-x-1/2"
@@ -92,7 +94,8 @@ function SettingsHelpOverlay({ openHelp, onClose }) {
           This is for app estimates only and is not dosing advice.
         </p>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
