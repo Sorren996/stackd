@@ -57,6 +57,9 @@ function readInsulinSettings() {
   const mealInsulinUnitsPer5g = Number(
     localStorage.getItem("meal_insulin_units_per_5g")
   );
+  const correctionTargetGlucose = Number(
+    localStorage.getItem("correction_target_glucose") || 110
+  );
   const preMealWindowMinutes = Number(
     localStorage.getItem("meal_prebolus_window_minutes")
   );
@@ -78,7 +81,8 @@ function readInsulinSettings() {
     outcomeWindowMinutes: outcomeWindowMinutes > 0 ? outcomeWindowMinutes : DEFAULT_OUTCOME_WINDOW_MINUTES,
     targetLow,
     targetHigh,
-    targetGlucose: Math.round((targetLow + targetHigh) / 2),
+    correctionTargetGlucose: correctionTargetGlucose > 0 ? correctionTargetGlucose : 110,
+    targetGlucose: correctionTargetGlucose > 0 ? correctionTargetGlucose : 110,
     isComplete:
       insulinSensitivityMgDlPerUnit > 0 &&
       mealInsulinUnitsPer5g > 0,
@@ -289,11 +293,12 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
   const latestLow =
     Number.isFinite(latestGlucoseValue) &&
     latestGlucoseValue < insulinSettings.targetLow;
+  const correctionGlucoseValue = Number.isFinite(latestGlucoseValue) ? latestGlucoseValue : glucoseValue;
   const gramsPerUnit = 5 / insulinSettings.mealInsulinUnitsPer5g;
   const expectedMealUnits = mealGroup.carbs / gramsPerUnit;
   const correctionUnitsNeeded =
-    Number.isFinite(glucoseValue) && glucoseValue > insulinSettings.targetHigh
-      ? (glucoseValue - insulinSettings.targetGlucose) / insulinSettings.insulinSensitivityMgDlPerUnit
+    Number.isFinite(correctionGlucoseValue) && correctionGlucoseValue > insulinSettings.targetHigh
+      ? Math.max(0, (correctionGlucoseValue - insulinSettings.correctionTargetGlucose) / insulinSettings.insulinSensitivityMgDlPerUnit)
       : 0;
   const priorActiveUnits = getTotalActiveUnits(priorDoses, mealTime, (dose) => dose.units);
   const expectedTotalUnits = Math.max(0, expectedMealUnits + correctionUnitsNeeded - priorActiveUnits);
@@ -364,7 +369,9 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
       mealGroup,
       gramsPerUnit,
       expectedMealUnits,
-      correctionUnitsNeeded: Math.max(0, correctionUnitsNeeded),
+      correctionUnitsNeeded,
+      correctionTargetGlucose: insulinSettings.correctionTargetGlucose,
+      correctionGlucoseValue: Number.isFinite(correctionGlucoseValue) ? correctionGlucoseValue : null,
       priorActiveUnits,
       expectedTotalUnits,
       loggedMealUnits,
@@ -1079,7 +1086,10 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
                     {mealInsight.status}
                   </p>
                   <p className="mt-1 text-[11px] leading-relaxed text-white/50">
-                    Expected {mealInsight.details.expectedTotalUnits.toFixed(1)}u for this grouped meal. Logged{" "}
+                    Expected {mealInsight.details.expectedMealUnits.toFixed(1)}u meal
+                    {mealInsight.details.correctionUnitsNeeded > 0 && (
+                      <> + {mealInsight.details.correctionUnitsNeeded.toFixed(1)}u correction</>
+                    )}. Logged{" "}
                     {mealInsight.details.loggedTotalUnits.toFixed(1)}u.
                     {mealInsight.details.coveragePercent !== null && (
                       <> That is {mealInsight.details.coveragePercent}% of the estimate.</>
@@ -1101,7 +1111,14 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
                   </div>
                   <div className="flex justify-between gap-3">
                     <span>Correction estimate</span>
-                    <span className="font-semibold text-white/70">{mealInsight.details.correctionUnitsNeeded.toFixed(1)}u</span>
+                    <span className="font-semibold text-white/70">
+                      {mealInsight.details.correctionUnitsNeeded.toFixed(1)}u
+                      {mealInsight.details.correctionGlucoseValue !== null && (
+                        <span className="ml-1 text-white/35">
+                          from {Math.round(mealInsight.details.correctionGlucoseValue)} to {Math.round(mealInsight.details.correctionTargetGlucose)}
+                        </span>
+                      )}
+                    </span>
                   </div>
                   <div className="flex justify-between gap-3">
                     <span>Prior active insulin</span>
