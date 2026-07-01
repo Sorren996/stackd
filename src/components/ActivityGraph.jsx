@@ -24,6 +24,18 @@ const CARB_PROFILE_COLORS = {
   delayed: "#a78bfa",
 };
 
+function readTargetRange() {
+  if (typeof window === "undefined") return { low: 70, high: 180 };
+
+  const low = Number(window.localStorage.getItem("target_range_low") || 70);
+  const high = Number(window.localStorage.getItem("target_range_high") || 180);
+
+  return {
+    low: Number.isFinite(low) ? low : 70,
+    high: Number.isFinite(high) ? high : 180,
+  };
+}
+
 function normalizeAbsorptionProfile(value) {
   const profile = String(value || "").toLowerCase();
   if (["fast", "rapid", "juice", "sugar", "high_gi"].includes(profile)) return "fast";
@@ -178,6 +190,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const containerRef = useRef(null);
   const graphViewportRef = useRef(null);
   const [containerWidth, setContainerWidth] = useState(600);
+  const [targetRange, setTargetRange] = useState(readTargetRange);
 
   useEffect(() => {
     const target = graphViewportRef.current || containerRef.current;
@@ -198,10 +211,22 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     };
   }, []);
 
+  useEffect(() => {
+    const updateTargetRange = () => setTargetRange(readTargetRange());
+
+    window.addEventListener("target-range-updated", updateTargetRange);
+    window.addEventListener("storage", updateTargetRange);
+
+    return () => {
+      window.removeEventListener("target-range-updated", updateTargetRange);
+      window.removeEventListener("storage", updateTargetRange);
+    };
+  }, []);
+
   const toggleFilter = (key) => setFilters((f) => ({ ...f, [key]: !f[key] }));
 
-  const targetLow = parseInt(localStorage.getItem("target_range_low") || "70", 10);
-  const targetHigh = parseInt(localStorage.getItem("target_range_high") || "180", 10);
+  const targetLow = targetRange.low;
+  const targetHigh = targetRange.high;
 
   const rangeTotal = GLUCOSE_MAX - GLUCOSE_MIN;
   const highPct = ((GLUCOSE_MAX - targetHigh) / rangeTotal * 100).toFixed(1);
