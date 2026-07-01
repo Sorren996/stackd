@@ -293,7 +293,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
   const latestLow =
     Number.isFinite(latestGlucoseValue) &&
     latestGlucoseValue < insulinSettings.targetLow;
-  const correctionGlucoseValue = Number.isFinite(latestGlucoseValue) ? latestGlucoseValue : glucoseValue;
+  const correctionGlucoseValue = glucoseValue;
   const gramsPerUnit = 5 / insulinSettings.mealInsulinUnitsPer5g;
   const expectedMealUnits = mealGroup.carbs / gramsPerUnit;
   const correctionUnitsNeeded =
