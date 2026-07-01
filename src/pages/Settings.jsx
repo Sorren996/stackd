@@ -71,9 +71,9 @@ function SettingsHelpOverlay({ openHelp, onClose }) {
   if (!help) return null;
 
   return (
-    <div className="fixed inset-0 z-[999] flex items-end justify-center bg-black/45 px-4 pb-24 pt-8 sm:items-start" onClick={onClose}>
+    <div className="fixed inset-0 z-[999] bg-black/45" onClick={onClose}>
       <div
-        className="w-full max-w-sm rounded-2xl border border-white/10 bg-[hsl(162,10%,10%)] p-4 text-left shadow-2xl sm:mt-20"
+        className="fixed bottom-24 left-4 right-4 mx-auto w-auto max-w-sm rounded-2xl border border-white/10 bg-[hsl(162,10%,10%)] p-4 text-left shadow-2xl sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-24 sm:w-full sm:-translate-x-1/2"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="mb-2 flex items-start justify-between gap-3">
