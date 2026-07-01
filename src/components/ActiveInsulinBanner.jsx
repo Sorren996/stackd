@@ -432,7 +432,7 @@ function TooltipPopover({ title, description, onClose, children }) {
           exit={{ opacity: 0, scale: 0.94, y: -8 }}
           transition={{ type: "spring", stiffness: 360, damping: 26 }}
           onClick={(event) => event.stopPropagation()}
-          className="tooltip-popover relative w-full max-w-xs overflow-hidden rounded-2xl border p-4 shadow-2xl backdrop-blur-2xl"
+          className="tooltip-popover relative w-full max-w-xs overflow-hidden rounded-2xl border p-4 shadow-2xl backdrop-blur-sm"
           style={{
             background: "linear-gradient(145deg, rgba(255,255,255,0.2), rgba(255,255,255,0.07))",
             borderColor: "rgba(255,255,255,0.22)",
