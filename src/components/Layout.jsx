@@ -151,10 +151,10 @@ export default function Layout() {
         className="pointer-events-none fixed inset-0 z-0"
         style={{
           background: `
-            linear-gradient(to bottom, #000000 0%, #000000 58%, rgba(${ambientColor}, 0.035) 78%, #000000 100%),
-            radial-gradient(circle at 50% 112%, rgba(${ambientColor}, 0.18), transparent 46%),
-            radial-gradient(circle at -16% 92%, rgba(${ambientColor}, 0.10), transparent 34%),
-            radial-gradient(circle at 116% 94%, rgba(${ambientColor}, 0.09), transparent 34%)
+            radial-gradient(circle at 50% 18%, rgba(${ambientColor}, 0.18), transparent 42%),
+            radial-gradient(circle at 8% 72%, rgba(${ambientColor}, 0.12), transparent 34%),
+            radial-gradient(circle at 92% 92%, rgba(${ambientColor}, 0.10), transparent 34%),
+            linear-gradient(to bottom, rgba(${ambientColor}, 0.08), #050505 42%, #000000 100%)
           `,
         }}
       />
@@ -208,6 +208,12 @@ export default function Layout() {
           className="absolute inset-0"
           style={{
             background: "linear-gradient(to bottom, rgba(0,0,0,0.04) 0%, rgba(0,0,0,0.34) 48%, rgba(0,0,0,0.82) 74%, #000000 100%)",
+          }}
+        />
+        <div
+          className="absolute inset-x-0 bottom-0 h-[260px]"
+          style={{
+            background: "linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.72) 52%, #000000 100%)",
           }}
         />
       </div>
