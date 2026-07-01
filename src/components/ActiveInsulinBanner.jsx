@@ -803,9 +803,9 @@ function SupportiveGlucoseMessage({ insight, color }) {
     <p
       aria-live="polite"
       className="mx-auto mb-5 mt-4 max-w-[85vw] text-center text-[15px] font-medium leading-relaxed"
-      style={{ color: `${color}cc` }}
+      style={{ color: "rgba(255,255,255,0.82)" }}
     >
-      {insight.message}
+      ({insight.message})
     </p>
   );
 }
