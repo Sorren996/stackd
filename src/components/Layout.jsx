@@ -147,7 +147,7 @@ export default function Layout() {
 
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-[430px] overflow-hidden sm:h-[520px]"
+        className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-[620px] overflow-hidden sm:h-[720px]"
       >
         <AnimatePresence mode="wait">
           <motion.img
@@ -162,8 +162,8 @@ export default function Layout() {
             style={{
               filter: "grayscale(1) contrast(1.08) brightness(0.68)",
               objectPosition: sceneStatus === "high" ? "center top" : sceneStatus === "low" ? "center 35%" : "center top",
-              WebkitMaskImage: "linear-gradient(to bottom, black 0%, black 58%, transparent 100%)",
-              maskImage: "linear-gradient(to bottom, black 0%, black 58%, transparent 100%)",
+              WebkitMaskImage: "linear-gradient(to bottom, black 0%, black 38%, rgba(0,0,0,0.65) 58%, transparent 100%)",
+              maskImage: "linear-gradient(to bottom, black 0%, black 38%, rgba(0,0,0,0.65) 58%, transparent 100%)",
             }}
           />
         </AnimatePresence>
@@ -178,7 +178,7 @@ export default function Layout() {
         <div
           className="absolute inset-0"
           style={{
-            background: "linear-gradient(to bottom, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.28) 50%, rgba(0,0,0,0.82) 82%, #000000 100%)",
+            background: "linear-gradient(to bottom, rgba(0,0,0,0.04) 0%, rgba(0,0,0,0.34) 48%, rgba(0,0,0,0.82) 74%, #000000 100%)",
           }}
         />
       </div>
