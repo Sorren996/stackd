@@ -135,7 +135,7 @@ export default function Layout() {
     let frame = 0;
     const updateSceneOffset = () => {
       frame = 0;
-      setSceneParallaxY(window.scrollY * 0.5);
+      setSceneParallaxY(window.scrollY * 0.2);
     };
     const handleScroll = () => {
       if (frame) return;
