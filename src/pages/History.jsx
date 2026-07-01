@@ -1,5 +1,4 @@
 import { useState, useMemo, useEffect } from "react";
-import { createPortal } from "react-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import DoseCard from "../components/DoseCard";
@@ -193,7 +192,7 @@ function CustomInputTray({ open, onClose, title, children, tall = false }) {
     event.stopPropagation();
   };
 
-  return createPortal(
+  return (
     <>
       <div
         className="fixed inset-0 z-[998] bg-black/25"
@@ -226,8 +225,7 @@ function CustomInputTray({ open, onClose, title, children, tall = false }) {
         </div>
         {children}
       </div>
-    </>,
-    document.body
+    </>
   );
 }
 
