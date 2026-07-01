@@ -47,10 +47,10 @@ function readTargetRange() {
 
 function getGlucoseBackgroundColor(reading, targetRange) {
   const value = getGlucoseValue(reading);
-  if (value === null) return "#074241ff";
-  if (value < targetRange.low) return "#14346eff";
-  if (value > targetRange.high) return "#6d3313ff";
-  return "#085348ff";
+  if (value === null) return "#0b5d5bff";
+  if (value < targetRange.low) return "#19408aff";
+  if (value > targetRange.high) return "#8d4219ff";
+  return "#0b6e5fff";
 }
 
 const SCENE_IMAGES = {
