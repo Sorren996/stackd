@@ -47,40 +47,52 @@ function SettingHelpButton({ id, openHelp, setOpenHelp }) {
   if (!help) return null;
 
   return (
-    <>
-      <button
-        type="button"
-        onClick={() => setOpenHelp(openHelp === id ? null : id)}
-        className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/35 transition hover:text-teal-300"
-        aria-label={`${help.title} help`}
+    <button
+      type="button"
+      onClick={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        setOpenHelp(openHelp === id ? null : id);
+      }}
+      className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition ${
+        openHelp === id
+          ? "border-teal-400/40 bg-teal-500/10 text-teal-300"
+          : "border-white/10 bg-white/5 text-white/35 hover:text-teal-300"
+      }`}
+      aria-label={`${help.title} help`}
+    >
+      <Info className="h-3 w-3" />
+    </button>
+  );
+}
+
+function SettingsHelpOverlay({ openHelp, onClose }) {
+  const help = INSULIN_PLAN_HELP[openHelp];
+  if (!help) return null;
+
+  return (
+    <div className="fixed inset-0 z-[999] flex items-end justify-center bg-black/45 px-4 pb-24 pt-8 sm:items-start" onClick={onClose}>
+      <div
+        className="w-full max-w-sm rounded-2xl border border-white/10 bg-[hsl(162,10%,10%)] p-4 text-left shadow-2xl sm:mt-20"
+        onClick={(event) => event.stopPropagation()}
       >
-        <Info className="h-3 w-3" />
-      </button>
-      {openHelp === id && (
-        <div className="fixed inset-0 z-[220] flex items-end justify-center px-4 pb-24 pt-8 sm:items-start" onClick={() => setOpenHelp(null)}>
-          <div
-            className="mx-auto mt-auto w-full max-w-sm rounded-2xl border border-white/10 bg-[hsl(162,10%,10%)] p-4 text-left shadow-2xl sm:mt-20"
-            onClick={(event) => event.stopPropagation()}
+        <div className="mb-2 flex items-start justify-between gap-3">
+          <p className="text-sm font-semibold text-white">{help.title}</p>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/5 text-white/35"
+            aria-label="Close help"
           >
-            <div className="mb-2 flex items-start justify-between gap-3">
-              <p className="text-sm font-semibold text-white">{help.title}</p>
-              <button
-                type="button"
-                onClick={() => setOpenHelp(null)}
-                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/5 text-white/35"
-                aria-label="Close help"
-              >
-                x
-              </button>
-            </div>
-            <p className="text-xs leading-relaxed text-white/55">{help.body}</p>
-            <p className="mt-2 text-[10px] leading-relaxed text-white/30">
-              This is for app estimates only and is not dosing advice.
-            </p>
-          </div>
+            x
+          </button>
         </div>
-      )}
-    </>
+        <p className="text-xs leading-relaxed text-white/55">{help.body}</p>
+        <p className="mt-2 text-[10px] leading-relaxed text-white/30">
+          This is for app estimates only and is not dosing advice.
+        </p>
+      </div>
+    </div>
   );
 }
 
@@ -319,6 +331,8 @@ const toggleMealInsulinType = (name) => {
   };
 
   return (
+<>
+<SettingsHelpOverlay openHelp={openHelp} onClose={() => setOpenHelp(null)} />
 <div className="settings-page mx-auto max-w-md space-y-6 pb-12 pt-4">
       {/* Target Range Preference */}
       <div className="space-y-3">
@@ -702,6 +716,7 @@ const toggleMealInsulinType = (name) => {
           </div>
         </div>
       }
-    </div>);
+    </div>
+</>);
 
 }
