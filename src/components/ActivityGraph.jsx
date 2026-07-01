@@ -324,6 +324,29 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const latestGlucoseX = (latestGlucoseBucket - domainStart) / totalMs * chartWidth;
   const maxScrollLeft = Math.max(0, Math.min(chartWidth - containerWidth, latestGlucoseX - containerWidth / 2));
   const plotHeight = CHART_HEIGHT - CHART_MARGIN_TOP - CHART_MARGIN_BOTTOM - X_AXIS_HEIGHT;
+  const positionedCarbMarkers = useMemo(() => {
+    const laneLastX = [];
+    const laneCount = 3;
+    const minMarkerGap = 86;
+
+    return carbEventMarkers
+      .slice()
+      .sort((a, b) => a.time - b.time)
+      .map((marker) => {
+        const x = (marker.time - domainStart) / totalMs * chartWidth;
+        let lane = laneLastX.findIndex((lastX) => x - lastX >= minMarkerGap);
+
+        if (lane === -1) {
+          lane = laneLastX.length < laneCount ? laneLastX.length : 0;
+          if (laneLastX.length >= laneCount) {
+            lane = laneLastX.indexOf(Math.min(...laneLastX));
+          }
+        }
+
+        laneLastX[lane] = x;
+        return { ...marker, x, lane };
+      });
+  }, [carbEventMarkers, domainStart, totalMs, chartWidth]);
 
   const getGlucoseY = (value) => {
     const clamped = Math.min(Math.max(value, GLUCOSE_MIN), GLUCOSE_MAX);
@@ -637,15 +660,15 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
           </ComposedChart>
 
-          {filters.carbs && carbEventMarkers.map(({ time, entry, color }) => {
-            const x = (time - domainStart) / totalMs * chartWidth;
+          {filters.carbs && positionedCarbMarkers.map(({ entry, color, x, lane }) => {
             const isEdgeLeft = x < 58;
             const isEdgeRight = x > chartWidth - 58;
+            const pillTop = CHART_MARGIN_TOP + 8 + lane * 26;
 
             return (
               <div
                 key={`carb_marker_${entry.id}`}
-                className="pointer-events-none absolute top-0 z-20"
+                className="pointer-events-none absolute top-0 z-[12]"
                 style={{
                   left: x,
                   height: CHART_HEIGHT - X_AXIS_HEIGHT,
@@ -654,15 +677,15 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                 <div
                   className="absolute left-1/2 w-px -translate-x-1/2"
                   style={{
-                    top: CHART_MARGIN_TOP - 6,
-                    height: plotHeight + 8,
+                    top: pillTop + 18,
+                    height: Math.max(24, CHART_MARGIN_TOP + plotHeight - pillTop - 18),
                     background: `linear-gradient(to bottom, ${color}cc, ${color}33 62%, transparent)`,
                     boxShadow: `0 0 12px ${color}26`
                   }} />
                 <div
                   className="relative flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold leading-none shadow-lg backdrop-blur-md"
                   style={{
-                    top: CHART_MARGIN_TOP - 45,
+                    top: pillTop,
                     color,
                     borderColor: `${color}45`,
                     background: `linear-gradient(145deg, rgba(14,24,21,0.92), rgba(14,24,21,0.62)), ${color}12`,
