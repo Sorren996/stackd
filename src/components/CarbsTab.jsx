@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { FOOD_DATABASE } from "@/lib/carbAbsorption";
 import { base44 } from "@/api/base44Client";
 import { InvokeLLM, UploadFile } from "@/api/integrations";
-import { Textarea } from "@/components/ui/textarea";
 import { Camera, Check, Clock, Loader2, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 
@@ -46,6 +45,159 @@ function readImageAsDataUrl(file) {
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+}
+
+function formatTimeLabel(value) {
+  const [hoursRaw, minutes = "00"] = String(value || "00:00").split(":");
+  const hours = Number(hoursRaw);
+  const suffix = hours >= 12 ? "PM" : "AM";
+  const hour12 = hours % 12 || 12;
+  return `${hour12}:${minutes.padStart(2, "0")} ${suffix}`;
+}
+
+function buildTimeValue(hour12, minute, suffix) {
+  let hour = Number(hour12) % 12;
+  if (suffix === "PM") hour += 12;
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
+function parseTimeValue(value) {
+  const [hoursRaw = "0", minutesRaw = "0"] = String(value || "00:00").split(":");
+  const hours = Number(hoursRaw);
+  return {
+    hour12: hours % 12 || 12,
+    minute: Math.round(Number(minutesRaw) / 5) * 5,
+    suffix: hours >= 12 ? "PM" : "AM",
+  };
+}
+
+function TimeScrollField({ label, value, onChange, max }) {
+  const [open, setOpen] = useState(false);
+  const parsed = parseTimeValue(value);
+  const hours = Array.from({ length: 12 }, (_, index) => index + 1);
+  const minutes = Array.from({ length: 12 }, (_, index) => index * 5);
+  const updateTime = (patch) => {
+    const next = { ...parsed, ...patch };
+    const nextValue = buildTimeValue(next.hour12, next.minute, next.suffix);
+    onChange(max && nextValue > max ? max : nextValue);
+  };
+
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+      <button type="button" onClick={() => setOpen((value) => !value)} className="flex w-full items-center justify-between">
+        <span className="text-sm text-white/40">{label}</span>
+        <span className="text-sm font-semibold text-white">{formatTimeLabel(value)}</span>
+      </button>
+      {open && (
+        <div className="mt-3 grid grid-cols-[1fr_1fr_0.9fr] gap-2">
+          {[["hour12", hours], ["minute", minutes]].map(([key, values]) => (
+            <div key={key} className="max-h-36 overflow-y-auto rounded-xl border border-white/10 bg-black/20 p-1" style={{ scrollbarWidth: "none" }}>
+              {values.map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => updateTime({ [key]: item })}
+                  className={`mb-1 flex h-9 w-full items-center justify-center rounded-lg text-sm font-semibold transition last:mb-0 ${
+                    parsed[key] === item ? "bg-teal-500 text-white" : "text-white/45 hover:bg-white/10 hover:text-white"
+                  }`}
+                >
+                  {String(item).padStart(key === "minute" ? 2 : 1, "0")}
+                </button>
+              ))}
+            </div>
+          ))}
+          <div className="grid gap-2">
+            {["AM", "PM"].map((suffix) => (
+              <button
+                key={suffix}
+                type="button"
+                onClick={() => updateTime({ suffix })}
+                className={`rounded-xl text-sm font-bold transition ${
+                  parsed.suffix === suffix ? "bg-teal-500 text-white" : "border border-white/10 bg-black/20 text-white/45"
+                }`}
+              >
+                {suffix}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function NumberPadField({ label, value, onChange, unit, placeholder = "--", decimal = true, maxLength = 6 }) {
+  const [open, setOpen] = useState(false);
+  const textValue = value === undefined || value === null ? "" : String(value);
+  const press = (key) => {
+    if (key === "clear") return onChange("");
+    if (key === "back") return onChange(textValue.slice(0, -1));
+    if (key === "." && (!decimal || textValue.includes("."))) return;
+    if (textValue.length >= maxLength) return;
+    onChange(`${textValue}${key}`);
+  };
+
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+      <button type="button" onClick={() => setOpen((value) => !value)} className="flex w-full items-center justify-between gap-3">
+        <span className="text-left text-[10px] font-semibold uppercase tracking-wider text-white/35">{label}</span>
+        <span className="text-right text-base font-bold text-white">{textValue || placeholder}{unit && <span className="ml-1 text-xs text-white/35">{unit}</span>}</span>
+      </button>
+      {open && (
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          {["1", "2", "3", "4", "5", "6", "7", "8", "9", decimal ? "." : "clear", "0", "back"].map((key) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => press(key)}
+              className="h-11 rounded-xl border border-white/10 bg-black/20 text-sm font-bold text-white/80 transition hover:bg-white/10"
+            >
+              {key === "back" ? "⌫" : key === "clear" ? "Clear" : key}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TextPadField({ label, value, onChange, placeholder, multiline = false }) {
+  const [open, setOpen] = useState(false);
+  const rows = ["1234567890", "QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"];
+  const add = (key) => onChange(`${value || ""}${key}`);
+
+  return (
+    <div>
+      {label && <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-white/35">{label}</span>}
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className={`w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-3 text-left text-sm text-white outline-none transition focus:border-teal-400 ${multiline ? "min-h-24" : ""}`}
+      >
+        {value ? <span className="whitespace-pre-wrap">{value}</span> : <span className="text-white/30">{placeholder}</span>}
+      </button>
+      {open && (
+        <div className="mt-2 rounded-2xl border border-white/10 bg-black/30 p-2">
+          {rows.map((row) => (
+            <div key={row} className="mb-1 flex justify-center gap-1 last:mb-0">
+              {[...row].map((letter) => (
+                <button key={letter} type="button" onClick={() => add(letter.toLowerCase())} className="h-9 min-w-0 flex-1 rounded-lg bg-white/10 text-xs font-bold text-white/80">
+                  {letter}
+                </button>
+              ))}
+            </div>
+          ))}
+          <div className="mt-2 grid grid-cols-[1fr_1fr_2fr_1fr_1fr] gap-2">
+            <button type="button" onClick={() => onChange("")} className="h-10 rounded-xl bg-white/10 text-xs font-bold text-white/65">Clear</button>
+            <button type="button" onClick={() => add(",")} className="h-10 rounded-xl bg-white/10 text-xs font-bold text-white/65">,</button>
+            <button type="button" onClick={() => add(" ")} className="h-10 rounded-xl bg-white/10 text-xs font-bold text-white/65">Space</button>
+            <button type="button" onClick={() => add(".")} className="h-10 rounded-xl bg-white/10 text-xs font-bold text-white/65">.</button>
+            <button type="button" onClick={() => onChange(String(value || "").slice(0, -1))} className="h-10 rounded-xl bg-white/10 text-xs font-bold text-white/65">⌫</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function CarbsTab({ onSubmit, isPending }) {
@@ -349,13 +501,12 @@ Do not give insulin dosing advice.
                 </div>
 
                 <div className={`ai-estimate-field ${isEstimatingMeal ? "ai-estimate-field-active" : ""}`}>
-                  <div className="ai-estimate-field-inner">
-                    <Textarea
+                  <div className="ai-estimate-field-inner p-1">
+                    <TextPadField
                       value={mealText}
-                      onChange={(event) => setMealText(event.target.value)}
+                      onChange={setMealText}
                       placeholder="e.g. 2 slices pepperoni pizza and a 12 oz coke, or add a photo"
-                      rows={4}
-                      className="resize-none rounded-2xl border-transparent bg-white/5 text-white placeholder:text-white/30 focus-visible:ring-0 focus-visible:ring-offset-0"
+                      multiline
                     />
                   </div>
                 </div>
@@ -422,14 +573,12 @@ Do not give insulin dosing advice.
                 <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
                   <p className="mb-3 text-sm font-bold uppercase tracking-widest text-white/40">Review estimate</p>
 
-                  <label>
-                    <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-white/35">Meal name</span>
-                    <input
-                      value={estimatedMeal.mealName}
-                      onChange={(event) => updateEstimatedMeal({ mealName: event.target.value })}
-                      className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm font-semibold text-white outline-none focus:border-teal-400"
-                    />
-                  </label>
+                  <TextPadField
+                    label="Meal name"
+                    value={estimatedMeal.mealName}
+                    onChange={(value) => updateEstimatedMeal({ mealName: value })}
+                    placeholder="Meal name"
+                  />
 
                   <div className="mt-3 grid grid-cols-2 gap-2">
                     {[
@@ -439,20 +588,15 @@ Do not give insulin dosing advice.
                       ["calories", "Calories", ""],
                       ["gi", "GI", ""],
                     ].map(([key, label, unit]) => (
-                      <label key={key} className={key === "gi" ? "col-span-2" : ""}>
-                        <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-white/35">{label}</span>
-                        <div className="flex items-center rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-                          <input
-                            type="number"
-                            min="0"
-                            inputMode="decimal"
-                            value={estimatedMeal[key]}
-                            onChange={(event) => updateEstimatedMeal({ [key]: event.target.value })}
-                            className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none"
-                          />
-                          {unit && <span className="text-xs text-white/35">{unit}</span>}
-                        </div>
-                      </label>
+                      <div key={key} className={key === "gi" ? "col-span-2" : ""}>
+                        <NumberPadField
+                          label={label}
+                          value={estimatedMeal[key]}
+                          onChange={(value) => updateEstimatedMeal({ [key]: value })}
+                          unit={unit}
+                          decimal={key !== "calories" && key !== "gi"}
+                        />
+                      </div>
                     ))}
                   </div>
 
@@ -488,13 +632,7 @@ Do not give insulin dosing advice.
             <div className="space-y-5">
               <div className="relative">
                 <p className="mb-3 text-sm font-bold uppercase tracking-widest text-white/40">Search Foods</p>
-                <input
-                  type="text"
-                  value={carbSearch}
-                  onChange={(event) => setCarbSearch(event.target.value)}
-                  placeholder="Search foods..."
-                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none placeholder:text-white/30 transition-colors focus:border-amber-500/30"
-                />
+                <TextPadField value={carbSearch} onChange={setCarbSearch} placeholder="Search foods..." />
 
                 {filteredFoods.length > 0 && (
                   <div className="mt-2 overflow-hidden rounded-2xl border border-white/10 bg-[hsl(162,10%,12%)] shadow-xl">
@@ -568,15 +706,15 @@ Do not give insulin dosing advice.
                           </p>
                         </div>
                         <div className="flex shrink-0 items-center gap-1.5">
-                          <input
-                            type="number"
-                            min="1"
-                            max="500"
-                            value={carbs}
-                            onChange={(event) => updateCarbs(food.name, event.target.value)}
-                            className="w-16 rounded-xl border border-white/10 bg-black/20 px-2 py-1.5 text-center text-sm font-bold text-white outline-none transition-colors focus:border-amber-500/40"
-                          />
-                          <span className="text-xs text-white/40">g</span>
+                          <div className="w-28">
+                            <NumberPadField
+                              label="Carbs"
+                              value={carbs}
+                              onChange={(value) => updateCarbs(food.name, value)}
+                              unit="g"
+                              maxLength={5}
+                            />
+                          </div>
                         </div>
                         <button
                           type="button"
@@ -602,19 +740,7 @@ Do not give insulin dosing advice.
 
           <div className="mt-5">
             <p className="mb-3 text-sm font-bold uppercase tracking-widest text-white/40">Time Consumed</p>
-            <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-              <span className="text-sm text-white/40">Consumed at</span>
-              <input
-                type="time"
-                value={carbTime}
-                max={nowTimeString}
-                onChange={(event) => {
-                  if (event.target.value <= nowTimeString) setCarbTime(event.target.value);
-                }}
-                className="cursor-pointer bg-transparent text-sm font-medium text-white outline-none"
-                style={{ colorScheme: "dark" }}
-              />
-            </div>
+            <TimeScrollField label="Consumed at" value={carbTime} onChange={setCarbTime} max={nowTimeString} />
           </div>
         </div>
 
