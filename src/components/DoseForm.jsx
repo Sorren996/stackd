@@ -1,5 +1,4 @@
 import { lazy, Suspense, useEffect, useState } from "react";
-import { createPortal } from "react-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
@@ -146,7 +145,7 @@ function CustomInputTray({ open, onClose, title, children, tall = false }) {
     event.stopPropagation();
   };
 
-  return createPortal(
+  return (
     <>
       <div
         className="fixed inset-0 z-[998] bg-black/25"
@@ -179,8 +178,7 @@ function CustomInputTray({ open, onClose, title, children, tall = false }) {
         </div>
         {children}
       </div>
-    </>,
-    document.body
+    </>
   );
 }
 
