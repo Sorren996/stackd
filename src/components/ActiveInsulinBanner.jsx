@@ -13,7 +13,6 @@ import {
   generateCarbCurve,
   getActiveCarbsNow,
   getCarbAbsorptionAt,
-  getTotalCarbsToday,
 } from "@/lib/carbAbsorption";
 import { AnimatePresence, motion } from "framer-motion";
 
@@ -551,6 +550,67 @@ function MetricCard({ label, value, sub, status, color, tooltipId, openTooltip, 
   );
 }
 
+function ActiveInsulinDetailCard({ totalUnits, breakdown }) {
+  const hasActiveInsulin = totalUnits > 0.01;
+
+  return (
+    <motion.div
+      whileTap={{ scale: 0.985 }}
+      className="metric-card relative col-span-2 overflow-hidden rounded-2xl border p-4 backdrop-blur-sm"
+      style={{
+        background: "linear-gradient(145deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0))",
+        borderColor: "rgba(255,255,255,0.16)",
+        boxShadow: "0 14px 36px rgba(0,0,0,0.18), inset 0 1px 1px rgba(255,255,255,0.24), inset 0 -1px 1px rgba(255,255,255,0.06)",
+      }}
+    >
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -inset-6 opacity-60"
+        style={{
+          background: "radial-gradient(circle at 20% 0%, rgba(255,255,255,0.18), transparent 34%), radial-gradient(circle at 92% 118%, rgba(6,182,212,0.1), transparent 42%)",
+        }}
+      />
+      <div className="relative z-10 flex items-start justify-between gap-4">
+        <div>
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-white/35">Active Insulin</span>
+          <div className="mt-2 flex items-end gap-2">
+            <span className="text-4xl font-black leading-none text-white">{totalUnits.toFixed(1)}</span>
+            <span className="mb-1 text-xs font-semibold text-white/35">units</span>
+          </div>
+        </div>
+        <span className="rounded-full border px-3 py-1 text-xs font-semibold" style={{
+          color: hasActiveInsulin ? "#06b6d4" : "rgba(255,255,255,0.42)",
+          borderColor: hasActiveInsulin ? "rgba(6,182,212,0.32)" : "rgba(255,255,255,0.1)",
+          background: hasActiveInsulin ? "rgba(6,182,212,0.1)" : "rgba(255,255,255,0.04)",
+        }}>
+          {hasActiveInsulin ? "Active" : "Cleared"}
+        </span>
+      </div>
+
+      <div className="relative z-10 mt-4 space-y-2">
+        {breakdown.length ? (
+          breakdown.map((item) => (
+            <div key={item.type} className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.035] px-3 py-2">
+              <div className="min-w-0">
+                <p className="truncate text-xs font-semibold text-white/75">{item.shortName}</p>
+                <p className="text-[10px] uppercase tracking-wider text-white/30">{item.category}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
+                <span className="text-sm font-bold text-white">{item.units.toFixed(1)}u</span>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 text-xs text-white/35">
+            No active insulin estimated from current logs.
+          </div>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
 const TREND_ICONS = {
   up: ArrowUp,
   "up-right": ArrowUpRight,
@@ -610,8 +670,29 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
   const activeUnits = useMemo(() => getTotalActiveUnits(safeDoses, Date.now(), (dose) => dose.units), [safeDoses]);
   const activeMealUnits = useMemo(() => getTotalActiveMealUnits(mealCoverageDoses, Date.now()), [mealCoverageDoses]);
   const activeCorrectionUnits = useMemo(() => getTotalActiveCorrectionUnits(mealCoverageDoses, Date.now()), [mealCoverageDoses]);
+  const activeInsulinBreakdown = useMemo(() => {
+    const now = Date.now();
+    const grouped = safeDoses.reduce((items, dose) => {
+      const units = getTotalActiveUnits([dose], now, (item) => item.units);
+      if (units <= 0.01) return items;
+
+      const profile = INSULIN_PROFILES[dose.insulin_type];
+      const current = items[dose.insulin_type] || {
+        type: dose.insulin_type,
+        shortName: dose.insulin_type?.split(" ")[0] || "Insulin",
+        category: profile?.category || "Insulin",
+        color: profile?.color || "#06b6d4",
+        units: 0,
+      };
+
+      current.units += units;
+      items[dose.insulin_type] = current;
+      return items;
+    }, {});
+
+    return Object.values(grouped).sort((a, b) => b.units - a.units);
+  }, [safeDoses]);
   const activeCarbs = useMemo(() => getActiveCarbsNow(safeCarbEntries), [safeCarbEntries]);
-  const totalCarbsToday = useMemo(() => getTotalCarbsToday(safeCarbEntries), [safeCarbEntries]);
 
   const trajectory = useMemo(
     () => computeNetCarbTrajectory(safeDoses, safeCarbEntries, latestGlucose, insulinSettings),
@@ -709,14 +790,6 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
   return (
     <>
       <AnimatePresence>
-        {openTooltip === "active-carbs" && (
-          <TooltipPopover
-            title="Carbs Digesting"
-            description="This is an estimate of carbohydrate from recent meals that is still digesting. It is not the number of grams absorbed at this moment."
-            onClose={() => setOpenTooltip(null)}
-          />
-        )}
-
         {openTooltip === "net-carbs" && (
           <TooltipPopover
             title="Meal Coverage Alignment"
@@ -873,23 +946,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
 
         <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-white/25">At a Glance</p>
         <div className="grid grid-cols-2 gap-3">
-          <MetricCard
-            label="Active Insulin"
-            value={activeUnits > 0 ? activeUnits.toFixed(1) : "0.0"}
-            sub="units"
-            status={activeUnits > 0.01 ? "Active" : "Cleared"}
-            color="#06b6d4"
-          />
-          <MetricCard
-            label="Carbs Digesting"
-            value={activeCarbs > 0 ? `${Math.round(activeCarbs)}g` : "0g"}
-            sub={`${totalCarbsToday}g today`}
-            status={activeCarbs > 0.5 ? "Digesting" : "Cleared"}
-            color="#f59e0b"
-            tooltipId="active-carbs"
-            openTooltip={openTooltip}
-            setOpenTooltip={setOpenTooltip}
-          />
+          <ActiveInsulinDetailCard totalUnits={activeUnits} breakdown={activeInsulinBreakdown} />
           <MetricCard
             label="Insulin:Carb Ratio"
             value={mealInsight.value}
