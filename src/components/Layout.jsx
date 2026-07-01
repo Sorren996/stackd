@@ -47,10 +47,10 @@ function readTargetRange() {
 
 function getGlucoseBackgroundColor(reading, targetRange) {
   const value = getGlucoseValue(reading);
-  if (value === null) return "#177978ff";
-  if (value < targetRange.low) return "#2c59acff";
-  if (value > targetRange.high) return "#b75f30ff";
-  return "#1c8d7cff";
+  if (value === null) return "#042f2e";
+  if (value < targetRange.low) return "#102a5c";
+  if (value > targetRange.high) return "#5a2a10";
+  return "#063f36";
 }
 
 const SCENE_IMAGES = {
@@ -154,7 +154,7 @@ export default function Layout() {
             transition={{ duration: 1.4, ease: "easeInOut" }}
             className="absolute inset-0 h-full w-full object-cover"
             style={{
-              filter: "grayscale(1) contrast(1.08) brightness(0.68)",
+              filter: "grayscale(0.42) saturate(0.82) contrast(1.08) brightness(0.62)",
               objectPosition: sceneStatus === "high" ? "center top" : sceneStatus === "low" ? "center 35%" : "center top",
               WebkitMaskImage: "linear-gradient(to bottom, black 0%, black 38%, rgba(0,0,0,0.65) 58%, transparent 100%)",
               maskImage: "linear-gradient(to bottom, black 0%, black 38%, rgba(0,0,0,0.65) 58%, transparent 100%)",
@@ -179,8 +179,8 @@ export default function Layout() {
         <motion.div
           key={`current-${backgroundLayers.key}`}
           className="absolute inset-0"
-          initial={{ opacity: backgroundLayers.previous ? 0 : 0.78 }}
-          animate={{ opacity: 0.78 }}
+          initial={{ opacity: backgroundLayers.previous ? 0 : 0.68 }}
+          animate={{ opacity: 0.68 }}
           transition={{ duration: 1.8, ease: "easeInOut" }}
           style={{ background: backgroundLayers.current, mixBlendMode: "color" }}
         />
