@@ -51,6 +51,7 @@ function mergeTime(originalTimestamp, timeValue) {
   if (Number.isNaN(date.getTime())) return new Date().toISOString();
   const [hours, minutes] = timeValue.split(":").map(Number);
   date.setHours(hours, minutes, 0, 0);
+  if (date.getTime() > Date.now()) return null;
   return date.toISOString();
 }
 
@@ -98,13 +99,14 @@ function formatTimeLabel(value) {
 function buildTimeValue(hour12, minute, suffix) {
   let hour = Number(hour12) % 12;
   if (suffix === "PM") hour += 12;
-  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+  const safeMinute = Math.max(0, Math.min(55, Number(minute) || 0));
+  return `${String(hour).padStart(2, "0")}:${String(safeMinute).padStart(2, "0")}`;
 }
 
 function parseTimeValue(value) {
   const [hoursRaw = "0", minutesRaw = "0"] = String(value || "00:00").split(":");
   const hours = Number(hoursRaw);
-  return { hour12: hours % 12 || 12, minute: Math.round(Number(minutesRaw) / 5) * 5, suffix: hours >= 12 ? "PM" : "AM" };
+  return { hour12: hours % 12 || 12, minute: Math.max(0, Math.min(55, Math.floor(Number(minutesRaw) / 5) * 5)), suffix: hours >= 12 ? "PM" : "AM" };
 }
 
 function TimeScrollField({ label, value, onChange }) {
@@ -222,6 +224,11 @@ function EditLogSheet({ log, onClose, onSave, isSaving }) {
     if (log.type === "insulin") {
       const units = Number(form.units);
       if (!form.insulin_type || !Number.isFinite(units) || units <= 0) return;
+      const administeredAt = mergeTime(log.item.administered_at, form.time);
+      if (!administeredAt) {
+        toast.error("Choose a time that is not in the future.");
+        return;
+      }
       const mealUnits = form.meal_units === "" ? undefined : Number(form.meal_units);
       const correctionUnits = form.correction_units === "" ? undefined : Number(form.correction_units);
       onSave({
@@ -232,7 +239,7 @@ function EditLogSheet({ log, onClose, onSave, isSaving }) {
           units,
           meal_units: Number.isFinite(mealUnits) ? mealUnits : undefined,
           correction_units: Number.isFinite(correctionUnits) ? correctionUnits : undefined,
-          administered_at: mergeTime(log.item.administered_at, form.time),
+          administered_at: administeredAt,
           notes: form.notes || undefined,
         },
       });
@@ -242,12 +249,17 @@ function EditLogSheet({ log, onClose, onSave, isSaving }) {
     if (log.type === "glucose") {
       const value = Number(form.value);
       if (!Number.isFinite(value) || value <= 0) return;
+      const recordedAt = mergeTime(log.item.recorded_at, form.time);
+      if (!recordedAt) {
+        toast.error("Choose a time that is not in the future.");
+        return;
+      }
       onSave({
         type: "glucose",
         id: log.item.id,
         patch: {
           value,
-          recorded_at: mergeTime(log.item.recorded_at, form.time),
+          recorded_at: recordedAt,
           notes: form.notes || undefined,
         },
       });
@@ -256,6 +268,11 @@ function EditLogSheet({ log, onClose, onSave, isSaving }) {
 
     const carbs = Number(form.carbs);
     if (!Number.isFinite(carbs) || carbs <= 0) return;
+    const consumedAt = mergeTime(log.item.consumed_at, form.time);
+    if (!consumedAt) {
+      toast.error("Choose a time that is not in the future.");
+      return;
+    }
     onSave({
       type: "carbs",
       id: log.item.id,
@@ -265,7 +282,7 @@ function EditLogSheet({ log, onClose, onSave, isSaving }) {
         carbs,
         absorption_profile: form.absorption_profile || "medium",
         profile: form.absorption_profile || "medium",
-        consumed_at: mergeTime(log.item.consumed_at, form.time),
+        consumed_at: consumedAt,
         notes: form.notes || undefined,
       },
     });
