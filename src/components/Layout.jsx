@@ -41,6 +41,20 @@ function getGlucoseBackgroundColor(reading) {
   return "#063f36";
 }
 
+const SCENE_IMAGES = {
+  high: "https://res.cloudinary.com/bzqjmwln/image/upload/v1782928032/mountain_gxgmap.png",
+  range: "https://res.cloudinary.com/bzqjmwln/image/upload/v1782928032/forest_lqseeo.png",
+  low: "https://res.cloudinary.com/bzqjmwln/image/upload/v1782928032/valley_vqpesd.png",
+};
+
+function getGlucoseScene(reading) {
+  const value = getGlucoseValue(reading);
+  if (value === null) return "range";
+  if (value < 70) return "low";
+  if (value > 180) return "high";
+  return "range";
+}
+
 export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -57,6 +71,7 @@ export default function Layout() {
     const primaryColor = getGlucoseBackgroundColor(latestGlucose);
     return `linear-gradient(to bottom, ${primaryColor} 0%, #18181b 52%, #000000 100%)`;
   }, [latestGlucose]);
+  const sceneStatus = useMemo(() => getGlucoseScene(latestGlucose), [latestGlucose]);
   const [backgroundLayers, setBackgroundLayers] = useState(() => ({
     current: appBackground,
     previous: null,
@@ -100,10 +115,10 @@ export default function Layout() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden text-white">
+    <div className="relative min-h-screen overflow-x-hidden bg-black text-white">
       <div
         aria-hidden="true"
-        className="pointer-events-none fixed inset-0 -z-50 overflow-hidden"
+        className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
       >
         {backgroundLayers.previous && (
           <motion.div
@@ -127,6 +142,44 @@ export default function Layout() {
           animate={{ opacity: 1 }}
           transition={{ duration: 1.8, ease: "easeInOut" }}
           style={{ background: backgroundLayers.current }}
+        />
+      </div>
+
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-[430px] overflow-hidden sm:h-[520px]"
+      >
+        <AnimatePresence mode="wait">
+          <motion.img
+            key={sceneStatus}
+            src={SCENE_IMAGES[sceneStatus]}
+            alt=""
+            initial={{ opacity: 0, scale: 1.02 }}
+            animate={{ opacity: 0.34, scale: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 1.4, ease: "easeInOut" }}
+            className="absolute inset-0 h-full w-full object-cover"
+            style={{
+              filter: "grayscale(1) contrast(1.08) brightness(0.68)",
+              objectPosition: sceneStatus === "high" ? "center top" : sceneStatus === "low" ? "center 35%" : "center top",
+              WebkitMaskImage: "linear-gradient(to bottom, black 0%, black 58%, transparent 100%)",
+              maskImage: "linear-gradient(to bottom, black 0%, black 58%, transparent 100%)",
+            }}
+          />
+        </AnimatePresence>
+        <div
+          className="absolute inset-0"
+          style={{
+            background: appBackground,
+            mixBlendMode: "color",
+            opacity: 0.78,
+          }}
+        />
+        <div
+          className="absolute inset-0"
+          style={{
+            background: "linear-gradient(to bottom, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.28) 50%, rgba(0,0,0,0.82) 82%, #000000 100%)",
+          }}
         />
       </div>
 
@@ -207,11 +260,11 @@ export default function Layout() {
 
       <nav className="fixed inset-x-0 bottom-0 z-30 flex justify-center pb-safe">
         <div
-          className="relative mx-4 mb-4 flex items-center gap-1 overflow-hidden rounded-[2rem] border px-2 py-1.5 backdrop-blur-sm"
+          className="relative mx-4 mb-4 flex items-center gap-1 overflow-hidden rounded-[2rem] border px-2 py-1.5 backdrop-blur-2xl"
           style={{
-            background: "linear-gradient(135deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0))",
+            background: "linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.06))",
             borderColor: "rgba(255,255,255,0.24)",
-            boxShadow: "0 18px 50px rgba(0, 0, 0, 0), inset 0 1px 1px rgba(255, 255, 255, 0), inset 0 -1px 1px rgba(255,255,255,0.08)",
+            boxShadow: "0 18px 50px rgba(0,0,0,0.38), inset 0 1px 1px rgba(255,255,255,0.32), inset 0 -1px 1px rgba(255,255,255,0.08)",
           }}
         >
           <div
@@ -238,7 +291,7 @@ export default function Layout() {
                     layoutId="active-nav-tab"
                     className="absolute inset-0 rounded-[1.55rem]"
                     style={{
-                      background: "linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0))",
+                      background: "linear-gradient(145deg, rgba(255,255,255,0.28), rgba(255,255,255,0.09))",
                       border: "1px solid rgba(255,255,255,0.34)",
                       boxShadow: "0 10px 24px rgba(0,0,0,0.22), inset 0 1px 1px rgba(255,255,255,0.38), inset 0 -1px 1px rgba(255,255,255,0.1)",
                     }}
