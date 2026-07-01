@@ -619,6 +619,197 @@ const TREND_ICONS = {
   down: ArrowDown,
 };
 
+const STALE_GLUCOSE_MINUTES = 20;
+const MEANINGFUL_ACTIVE_INSULIN_UNITS = 0.1;
+const MEANINGFUL_ACTIVE_CARBS_GRAMS = 1;
+
+function normalizeSupportTrend(trend) {
+  const label = String(trend?.label || "").toLowerCase();
+  const icon = trend?.icon;
+
+  if (icon === "up" || label.includes("rising")) return "rising";
+  if (icon === "down" || label.includes("falling")) return "falling";
+  if (icon === "up-right") return "rising";
+  if (icon === "down-right") return "falling";
+  if (icon === "right" || label.includes("stable")) return "stable";
+  return "unknown";
+}
+
+function hashSupportSeed(value) {
+  const text = String(value || "");
+  let hash = 0;
+  for (let index = 0; index < text.length; index += 1) {
+    hash = (hash * 31 + text.charCodeAt(index)) >>> 0;
+  }
+  return hash;
+}
+
+const SUPPORTIVE_MESSAGES = {
+  missing: [
+    "Waiting for your next reading. We'll pick up from there.",
+    "No current reading yet. We'll be ready when it arrives.",
+    "Glucose data is taking a moment to update.",
+    "We'll show more as soon as a new reading comes through.",
+  ],
+  stale: [
+    "Let's get a fresh reading so you can see where things stand.",
+    "This reading is a little old. A fresh one will tell us more.",
+    "Your glucose may have changed. Let's check in again.",
+    "We need a newer reading before interpreting the trend.",
+  ],
+  lowActiveCarbs: [
+    "Carbs are working. Stay close and give them time.",
+    "You've already taken a step. Keep monitoring closely.",
+    "Carbs are still absorbing. Stay with the trend.",
+    "Help is already on the way from the carbs you took.",
+  ],
+  lowFalling: [
+    "You've got this. Take care of the low now, one step at a time.",
+    "Focus on the low first. Everything else can wait.",
+    "Take care of yourself right now. Stay close to the trend.",
+    "One step at a time - treat the low and keep monitoring.",
+  ],
+  lowStable: [
+    "You're still below range. Take care of the low and stay with it.",
+    "You've got this. Focus on getting safely back above range.",
+    "Take care of the low first. We'll keep watching with you.",
+    "Be gentle with yourself and follow your low-treatment plan.",
+  ],
+  lowUrgent: [
+    "Focus on the low first. Everything else can wait.",
+    "Take care of yourself right now. Stay close to the trend.",
+    "You've got this. Take care of the low now, one step at a time.",
+  ],
+  highInsulinCarbs: [
+    "Insulin and carbs are both still active. Give your body some time.",
+    "A lot is still in motion. Let's stay patient with the trend.",
+    "Your body is balancing several things right now.",
+    "Insulin and carbs are still working through the moment.",
+  ],
+  highInsulinRising: [
+    "You've already taken action. Give the insulin time to work.",
+    "Insulin is working in the background. Stay with the trend.",
+    "There's still time for the insulin to catch up.",
+    "A lot is still in motion. Let's give it a little time.",
+  ],
+  highInsulinStable: [
+    "You're holding steady. Let the insulin keep doing its job.",
+    "Steady gives the insulin time to work.",
+    "You've done your part. Let's stay patient with the trend.",
+    "Nothing has to be perfect right now. Insulin is still active.",
+  ],
+  highInsulinFalling: [
+    "You're moving toward range. Keep going.",
+    "The trend is responding. Stay with it.",
+    "You're heading in the right direction.",
+    "The insulin is doing its work. Let's keep watching.",
+  ],
+  highRising: [
+    "This is one moment, not the whole day. Take it step by step.",
+    "You can handle this moment. Stay with the trend.",
+    "We caught the rise. Let's take it one step at a time.",
+    "A high is information, never a judgment.",
+  ],
+  highStable: [
+    "Steady gives you a moment to breathe. You've got this.",
+    "This number does not define your effort.",
+    "One reading cannot measure everything you're doing.",
+    "You're still showing up, and that matters.",
+  ],
+  highFalling: [
+    "You're moving toward range. Stay with it.",
+    "The trend is heading in a helpful direction.",
+    "Things are beginning to move. Keep going.",
+    "One step closer. Let's keep watching.",
+  ],
+  rangeStable: [
+    "Steady and in range. Take a breath.",
+    "You're in range and holding steady.",
+    "A steady moment. Enjoy it.",
+    "Right here, right now, things are steady.",
+  ],
+  rangeRising: [
+    "Still in range. We'll keep an eye on where it goes.",
+    "You're in range with some upward movement.",
+    "Still in a comfortable place. Let's watch the trend.",
+    "In range for now. Stay with the moment.",
+  ],
+  rangeFalling: [
+    "Still in range. Let's stay close to the trend.",
+    "You're in range and moving gently lower.",
+    "Still in a comfortable place. Keep watching.",
+    "In range right now. One reading at a time.",
+  ],
+};
+
+function pickSupportiveMessage(category, seed) {
+  const options = SUPPORTIVE_MESSAGES[category] || SUPPORTIVE_MESSAGES.missing;
+  return options[hashSupportSeed(`${category}:${seed}`) % options.length];
+}
+
+function getSupportiveGlucoseMessage({
+  glucose,
+  targetLow,
+  targetHigh,
+  trend,
+  activeInsulin,
+  activeCarbs,
+  readingAgeMinutes,
+  seed,
+}) {
+  const value = Number(glucose?.value);
+  const normalizedTrend = normalizeSupportTrend(trend);
+  const hasActiveInsulin = Number(activeInsulin) >= MEANINGFUL_ACTIVE_INSULIN_UNITS;
+  const hasActiveCarbs = Number(activeCarbs) >= MEANINGFUL_ACTIVE_CARBS_GRAMS;
+  const isStale = Number.isFinite(readingAgeMinutes) && readingAgeMinutes >= STALE_GLUCOSE_MINUTES;
+
+  let category = "missing";
+
+  if (!glucose || !Number.isFinite(value)) {
+    category = "missing";
+  } else if (isStale) {
+    category = "stale";
+  } else if (value <= 54) {
+    category = hasActiveCarbs ? "lowActiveCarbs" : "lowUrgent";
+  } else if (value < targetLow) {
+    if (hasActiveCarbs) category = "lowActiveCarbs";
+    else category = normalizedTrend === "falling" ? "lowFalling" : "lowStable";
+  } else if (value > targetHigh) {
+    if (hasActiveInsulin && hasActiveCarbs) category = "highInsulinCarbs";
+    else if (hasActiveInsulin && normalizedTrend === "falling") category = "highInsulinFalling";
+    else if (hasActiveInsulin && normalizedTrend === "stable") category = "highInsulinStable";
+    else if (hasActiveInsulin) category = "highInsulinRising";
+    else if (normalizedTrend === "falling") category = "highFalling";
+    else if (normalizedTrend === "stable") category = "highStable";
+    else category = "highRising";
+  } else if (normalizedTrend === "falling") {
+    category = "rangeFalling";
+  } else if (normalizedTrend === "rising") {
+    category = "rangeRising";
+  } else {
+    category = "rangeStable";
+  }
+
+  return {
+    category,
+    message: pickSupportiveMessage(category, seed || glucose?.id || glucose?.recorded_at || "current"),
+  };
+}
+
+function SupportiveGlucoseMessage({ insight, color }) {
+  if (!insight?.message) return null;
+
+  return (
+    <p
+      aria-live="polite"
+      className="mx-auto mb-5 mt-4 max-w-[85vw] text-center text-[15px] font-medium leading-relaxed"
+      style={{ color: `${color}cc` }}
+    >
+      {insight.message}
+    </p>
+  );
+}
+
 export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucoseReadings = [], carbEntries = [] }) {
   const [openTooltip, setOpenTooltip] = useState(null);
   const [insulinSettings, setInsulinSettings] = useState(readInsulinSettings);
@@ -778,6 +969,23 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
   const targetLow = Number(localStorage.getItem("target_range_low") || 70);
   const targetHigh = Number(localStorage.getItem("target_range_high") || 180);
   const inRange = glucoseValue == null ? null : glucoseValue >= targetLow && glucoseValue <= targetHigh;
+  const glucoseReadingAgeMinutes = latestGlucose?.recorded_at
+    ? Math.floor((Date.now() - new Date(latestGlucose.recorded_at).getTime()) / MINUTE_MS)
+    : null;
+  const supportiveGlucoseInsight = useMemo(
+    () =>
+      getSupportiveGlucoseMessage({
+        glucose: latestGlucose,
+        targetLow,
+        targetHigh,
+        trend,
+        activeInsulin: activeUnits,
+        activeCarbs,
+        readingAgeMinutes: glucoseReadingAgeMinutes,
+        seed: latestGlucose?.id || latestGlucose?.recorded_at || `${Math.floor(Date.now() / (30 * MINUTE_MS))}`,
+      }),
+    [latestGlucose, targetLow, targetHigh, trend, activeUnits, activeCarbs, glucoseReadingAgeMinutes]
+  );
   const TrendIcon = TREND_ICONS[trend.icon] || ArrowRight;
 
   const glucoseStatus = (value) => {
@@ -910,6 +1118,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
             <span className="relative z-10 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: glucoseColor }} />
             <span className="relative z-10 text-sm font-semibold" style={{ color: glucoseColor }}>{trend.label}</span>
           </div>
+          <SupportiveGlucoseMessage insight={supportiveGlucoseInsight} color={glucoseColor} />
         </div>
 
         {latestGlucose && (
