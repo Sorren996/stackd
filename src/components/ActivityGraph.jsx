@@ -52,6 +52,17 @@ function getReadingValue(reading) {
   return reading.value ?? reading.glucose ?? reading.mgdl ?? reading.mg_dL;
 }
 
+function getDoseUnits(dose) {
+  const direct = Number(dose?.units);
+  if (Number.isFinite(direct) && direct > 0) return direct;
+
+  const meal = Number(dose?.meal_units);
+  const correction = Number(dose?.correction_units);
+  const mealUnits = Number.isFinite(meal) && meal > 0 ? meal : 0;
+  const correctionUnits = Number.isFinite(correction) && correction > 0 ? correction : 0;
+  return mealUnits + correctionUnits;
+}
+
 function formatGlucoseDisplay(value) {
   return Math.round(value);
 }
@@ -365,7 +376,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     plotValue: buildMonotoneSegments(glucoseLinePoints, (point) => Math.min(point.value, GLUCOSE_MAX)),
   }), [glucoseLinePoints]);
 
-  const maxDoseUnits = useMemo(() => Math.max(...filteredDoses.map((d) => d.units), 1), [filteredDoses]);
+  const maxDoseUnits = useMemo(() => Math.max(...filteredDoses.map(getDoseUnits), 1), [filteredDoses]);
   const chartData = useMemo(() => {
     if (!doses.length && !glucoseReadings.length && !carbEntries.length) return [];
     const result = [];
@@ -373,6 +384,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       const point = { time: t, bg: GLUCOSE_MAX };
       allCurvesMeta.forEach(({ dose, curve }) => {
         const key = `dose_${dose.id}`;
+        const doseUnits = getDoseUnits(dose);
         if (!curve.length || t < curve[0].time || t > curve[curve.length - 1].time) {
           point[key] = null;
           point[`${key}_actual`] = null;
@@ -385,10 +397,10 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           const ratio = hi === lo ? 0 : (t - curve[lo].time) / (curve[hi].time - curve[lo].time);
           const activity = curve[lo].activity + ratio * (curve[hi].activity - curve[lo].activity);
           const activeUnits = curve[lo].activeUnits + ratio * (curve[hi].activeUnits - curve[lo].activeUnits);
-          point[key] = activity * (dose.units / maxDoseUnits) * 70;
+          point[key] = activity * (doseUnits / maxDoseUnits) * 70;
           point[`${key}_actual`] = activeUnits;
           point[`${key}_activity`] = activity;
-          point[`${key}_total`] = dose.units;
+          point[`${key}_total`] = doseUnits;
         }
       });
       if (glucoseMap[t] !== undefined) {
@@ -403,7 +415,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   filteredDoses.map((dose) => ({
     key: `dose_${dose.id}`,
     label: dose.insulin_type.split(" ")[0],
-    units: dose.units,
+    units: getDoseUnits(dose),
     color: INSULIN_PROFILES[dose.insulin_type]?.color || "#888"
   })),
   [filteredDoses]
