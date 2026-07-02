@@ -1,38 +1,60 @@
-// Pharmacokinetic profiles for insulin types (times in minutes)
-// Based on manufacturer labeling and clinical guidelines
+// Copy this file to: src/lib/insulinPharmacology.js
+// IOB is modeled from remaining area under the activity curve, not from curve height.
+
+const MINUTE_MS = 60 * 1000;
 
 export const INSULIN_PROFILES = {
-  "Novolog (Aspart)": {
+  "Fiasp": {
+    category: "Rapid-Acting",
+    onsetMin: 5,
+    onsetMax: 15,
+    peakMin: 45,
+    peakMax: 90,
+    durationMin: 180,
+    durationMax: 300,
+    color: "#22d3ee",
+  },
+  "Lyumjev": {
+    category: "Rapid-Acting",
+    onsetMin: 5,
+    onsetMax: 15,
+    peakMin: 45,
+    peakMax: 90,
+    durationMin: 180,
+    durationMax: 300,
+    color: "#06b6d4",
+  },
+  "NovoLog": {
     category: "Rapid-Acting",
     onsetMin: 10,
     onsetMax: 20,
     peakMin: 60,
-    peakMax: 180,
+    peakMax: 120,
     durationMin: 180,
     durationMax: 300,
-    color: "#1f547f",
+    color: "#38bdf8",
   },
-  "Humalog (Lispro)": {
+  "Humalog": {
     category: "Rapid-Acting",
-    onsetMin: 15,
-    onsetMax: 30,
-    peakMin: 30,
-    peakMax: 150,
-    durationMin: 180,
-    durationMax: 390,
-    color: "#402976ff",
-  },
-  "Apidra (Glulisine)": {
-    category: "Rapid-Acting",
-    onsetMin: 15,
-    onsetMax: 30,
+    onsetMin: 10,
+    onsetMax: 20,
     peakMin: 60,
-    peakMax: 90,
+    peakMax: 120,
     durationMin: 180,
     durationMax: 300,
-    color: "#712049ff",
+    color: "#0ea5e9",
   },
-  "Regular (Novolin R / Humulin R)": {
+  "Apidra": {
+    category: "Rapid-Acting",
+    onsetMin: 10,
+    onsetMax: 20,
+    peakMin: 60,
+    peakMax: 120,
+    durationMin: 180,
+    durationMax: 300,
+    color: "#60a5fa",
+  },
+  "Regular": {
     category: "Short-Acting",
     onsetMin: 30,
     onsetMax: 60,
@@ -40,19 +62,19 @@ export const INSULIN_PROFILES = {
     peakMax: 240,
     durationMin: 300,
     durationMax: 480,
-    color: "#b97807ff",
+    color: "#818cf8",
   },
-  "NPH (Novolin N / Humulin N)": {
+  "NPH": {
     category: "Intermediate-Acting",
     onsetMin: 60,
-    onsetMax: 180,
+    onsetMax: 120,
     peakMin: 240,
     peakMax: 720,
     durationMin: 720,
     durationMax: 1080,
-    color: "#157152ff",
+    color: "#a78bfa",
   },
-  "Lantus (Glargine)": {
+  "Lantus": {
     category: "Long-Acting",
     onsetMin: 60,
     onsetMax: 120,
@@ -60,184 +82,331 @@ export const INSULIN_PROFILES = {
     peakMax: null,
     durationMin: 1200,
     durationMax: 1440,
-    color: "#1f207fff",
+    color: "#2dd4bf",
   },
-  "Levemir (Detemir)": {
+  "Basaglar": {
     category: "Long-Acting",
     onsetMin: 60,
     onsetMax: 120,
+    peakMin: null,
+    peakMax: null,
+    durationMin: 1200,
+    durationMax: 1440,
+    color: "#14b8a6",
+  },
+  "Levemir": {
+    category: "Long-Acting",
+    onsetMin: 60,
+    onsetMax: 180,
     peakMin: 360,
     peakMax: 480,
     durationMin: 720,
     durationMax: 1440,
-    color: "#166c62ff",
+    color: "#34d399",
   },
-  "Tresiba (Degludec)": {
+  "Tresiba": {
     category: "Ultra-Long-Acting",
     onsetMin: 60,
-    onsetMax: 60,
+    onsetMax: 120,
     peakMin: null,
     peakMax: null,
     durationMin: 2520,
-    durationMax: 2520,
-    color: "#045a82ff",
+    durationMax: 3000,
+    color: "#10b981",
+  },
+  "Toujeo": {
+    category: "Ultra-Long-Acting",
+    onsetMin: 360,
+    onsetMax: 360,
+    peakMin: null,
+    peakMax: null,
+    durationMin: 2160,
+    durationMax: 2160,
+    color: "#059669",
   },
 };
 
-function getDoseDurationMultiplier(units) {
-  const doseUnits = Number(units) || 0;
+const DURATION_MULTIPLIER_POINTS = [
+  { units: 0, multiplier: 0.75 },
+  { units: 5, multiplier: 0.75 },
+  { units: 15, multiplier: 1.0 },
+  { units: 30, multiplier: 1.2 },
+  { units: 50, multiplier: 1.4 },
+  { units: 75, multiplier: 1.6 },
+];
 
-  if (doseUnits <= 5) return 0.75;
-  if (doseUnits <= 15) return 1;
-  if (doseUnits <= 30) return 1.2;
-  if (doseUnits <= 50) return 1.4;
+const PEAK_MULTIPLIER_POINTS = [
+  { units: 0, multiplier: 0.9 },
+  { units: 5, multiplier: 0.9 },
+  { units: 15, multiplier: 1.0 },
+  { units: 30, multiplier: 1.1 },
+  { units: 50, multiplier: 1.2 },
+  { units: 75, multiplier: 1.3 },
+];
 
-  return 1.6;
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
 }
 
-function getDosePeakMultiplier(units) {
-  const doseUnits = Number(units) || 0;
-
-  if (doseUnits <= 5) return 0.9;
-  if (doseUnits <= 15) return 1;
-  if (doseUnits <= 30) return 1.1;
-  if (doseUnits <= 50) return 1.2;
-
-  return 1.3;
+function midpoint(min, max, fallback = 0) {
+  const a = Number(min);
+  const b = Number(max);
+  if (Number.isFinite(a) && Number.isFinite(b)) return (a + b) / 2;
+  if (Number.isFinite(a)) return a;
+  if (Number.isFinite(b)) return b;
+  return fallback;
 }
 
-function getDoseTiming(dose) {
-  const profile = INSULIN_PROFILES[dose.insulin_type];
-  if (!profile) return null;
+export function interpolateControlPoints(units, points) {
+  const safeUnits = Math.max(0, Number(units) || 0);
+  if (!Array.isArray(points) || !points.length) return 1;
+  if (safeUnits <= points[0].units) return points[0].multiplier;
 
-  const onset = (profile.onsetMin + profile.onsetMax) / 2;
+  for (let index = 1; index < points.length; index += 1) {
+    const previous = points[index - 1];
+    const next = points[index];
+    if (safeUnits > next.units) continue;
 
-  const baseDuration = (profile.durationMin + profile.durationMax) / 2;
-  const duration = baseDuration * getDoseDurationMultiplier(dose.units);
+    const span = next.units - previous.units || 1;
+    const ratio = (safeUnits - previous.units) / span;
+    return previous.multiplier + (next.multiplier - previous.multiplier) * ratio;
+  }
 
-  const hasPeak = profile.peakMin !== null && profile.peakMax !== null;
-  const basePeak = hasPeak ? (profile.peakMin + profile.peakMax) / 2 : null;
-  const peak = hasPeak ? basePeak * getDosePeakMultiplier(dose.units) : duration / 2;
-
-  return {
-    profile,
-    onset,
-    peak: Math.min(peak, duration * 0.85),
-    duration,
-    hasPeak,
-  };
+  return points[points.length - 1].multiplier;
 }
 
-// Generate an activity curve for a dose
-// Returns an array of { time, activity } points
-export function generateActivityCurve(dose, intervalMinutes = 5) {
-  const timing = getDoseTiming(dose);
-  if (!timing) return [];
+export function getDoseDurationMultiplier(units) {
+  return interpolateControlPoints(units, DURATION_MULTIPLIER_POINTS);
+}
 
-  const { onset, peak, duration, hasPeak } = timing;
-  const startTime = new Date(dose.administered_at).getTime();
+export function getDosePeakMultiplier(units) {
+  return interpolateControlPoints(units, PEAK_MULTIPLIER_POINTS);
+}
 
-  const points = [];
-  const totalMinutes = duration + 30;
+function getDoseUnits(dose) {
+  const direct = Number(dose?.units);
+  if (Number.isFinite(direct) && direct > 0) return direct;
 
-  for (let m = 0; m <= totalMinutes; m += intervalMinutes) {
-    const time = new Date(startTime + m * 60000);
-    let activity = 0;
+  const meal = Number(dose?.meal_units);
+  const correction = Number(dose?.correction_units);
+  const total = (Number.isFinite(meal) && meal > 0 ? meal : 0) + (Number.isFinite(correction) && correction > 0 ? correction : 0);
+  return total > 0 ? total : 0;
+}
 
-    if (m < onset) {
-      activity = 0.05 * (m / onset);
-    } else if (m < peak) {
-      const progress = (m - onset) / (peak - onset);
-      activity = 0.05 + 0.95 * Math.sin((progress * Math.PI) / 2);
-    } else if (m < duration) {
-      if (hasPeak) {
-        const progress = (m - peak) / (duration - peak);
-        activity = Math.cos((progress * Math.PI) / 2);
-      } else {
-        const flatEnd = duration * 0.75;
+function getProfileTiming(profile, units) {
+  const onset = Math.max(0, midpoint(profile?.onsetMin, profile?.onsetMax, 0));
+  const durationBase = Math.max(onset + 1, midpoint(profile?.durationMin, profile?.durationMax, 240));
+  const duration = Math.max(onset + 1, durationBase * getDoseDurationMultiplier(units));
+  const hasPeak = Number.isFinite(profile?.peakMin) && Number.isFinite(profile?.peakMax);
+  const peakBase = hasPeak ? midpoint(profile.peakMin, profile.peakMax, (onset + duration) / 2) : null;
+  const peak = hasPeak ? clamp(peakBase * getDosePeakMultiplier(units), onset + 1, duration - 1) : null;
 
-        if (m < flatEnd) {
-          activity = 0.85;
-        } else {
-          const progress = (m - flatEnd) / (duration - flatEnd);
-          activity = 0.85 * Math.cos((progress * Math.PI) / 2);
-        }
-      }
+  return { onset, peak, duration, hasPeak };
+}
+
+export function getRelativeActivityAtMinute(minute, timing) {
+  const t = Math.max(0, Number(minute) || 0);
+  const onset = Math.max(0, Number(timing?.onset) || 0);
+  const duration = Math.max(onset + 1, Number(timing?.duration) || onset + 1);
+  const hasPeak = Boolean(timing?.hasPeak && Number.isFinite(timing?.peak));
+
+  if (t <= 0 || t >= duration) return 0;
+
+  if (!hasPeak) {
+    const rampEnd = Math.min(duration * 0.18, Math.max(onset, 1));
+    const taperStart = duration * 0.78;
+
+    if (t <= rampEnd) {
+      const ratio = clamp(t / Math.max(1, rampEnd), 0, 1);
+      return 0.72 * (1 - Math.cos(Math.PI * ratio)) / 2;
     }
 
+    if (t >= taperStart) {
+      const ratio = clamp((t - taperStart) / Math.max(1, duration - taperStart), 0, 1);
+      return 0.72 * (1 + Math.cos(Math.PI * ratio)) / 2;
+    }
+
+    return 0.72;
+  }
+
+  const peak = clamp(Number(timing.peak), onset + 1, duration - 1);
+
+  if (t < onset) {
+    const ratio = clamp(t / Math.max(1, onset), 0, 1);
+    return 0.08 * (1 - Math.cos(Math.PI * ratio)) / 2;
+  }
+
+  if (t <= peak) {
+    const ratio = clamp((t - onset) / Math.max(1, peak - onset), 0, 1);
+    return 0.08 + 0.92 * (1 - Math.cos(Math.PI * ratio)) / 2;
+  }
+
+  const ratio = clamp((t - peak) / Math.max(1, duration - peak), 0, 1);
+  return (1 + Math.cos(Math.PI * ratio)) / 2;
+}
+
+export function generateActivityCurve(dose, intervalMinutes = 5) {
+  const profile = INSULIN_PROFILES[dose?.insulin_type];
+  const units = getDoseUnits(dose);
+  const start = new Date(dose?.administered_at).getTime();
+  const step = Math.max(1, Number(intervalMinutes) || 5);
+
+  if (!profile || !units || !Number.isFinite(start)) return [];
+
+  const timing = getProfileTiming(profile, units);
+  const points = [];
+
+  for (let minute = 0; minute < timing.duration; minute += step) {
     points.push({
-      time: time.getTime(),
-      activity: Math.round(Math.max(0, activity) * 100) / 100,
+      time: start + minute * MINUTE_MS,
+      minute,
+      activity: getRelativeActivityAtMinute(minute, timing),
     });
   }
 
-  return points;
-}
-
-// Get the current status of a dose
-export function getDoseStatus(dose) {
-  const timing = getDoseTiming(dose);
-  if (!timing) return { phase: "unknown", message: "" };
-
-  const { onset, peak, duration, hasPeak } = timing;
-
-  const now = Date.now();
-  const start = new Date(dose.administered_at).getTime();
-  const elapsed = (now - start) / 60000;
-
-  if (elapsed < 0) {
-    return {
-      phase: "scheduled",
-      message: "Scheduled",
-      minutesUntil: Math.abs(elapsed),
-    };
+  if (!points.length || points[points.length - 1].minute !== timing.duration) {
+    points.push({
+      time: start + timing.duration * MINUTE_MS,
+      minute: timing.duration,
+      activity: 0,
+    });
   }
 
-  if (elapsed < onset) {
-    return {
-      phase: "waiting",
-      message: "Absorbing - not yet active",
-      minutesUntil: onset - elapsed,
-    };
+  let totalActivityArea = 0;
+  for (let index = 1; index < points.length; index += 1) {
+    const previous = points[index - 1];
+    const current = points[index];
+    const minutes = Math.max(0, (current.time - previous.time) / MINUTE_MS);
+    totalActivityArea += ((previous.activity + current.activity) / 2) * minutes;
   }
 
-  if (hasPeak && elapsed < peak) {
-    return {
-      phase: "rising",
-      message: "Active - rising toward peak",
-      minutesUntil: peak - elapsed,
-    };
+  if (!Number.isFinite(totalActivityArea) || totalActivityArea <= 0) {
+    return points.map((point, index) => ({
+      ...point,
+      iobFraction: index === points.length - 1 ? 0 : 1,
+      activeUnits: index === points.length - 1 ? 0 : units,
+      activityUnitsPerMinute: 0,
+    }));
   }
 
-  if (elapsed < duration) {
-    if (hasPeak) {
-      return {
-        phase: "declining",
-        message: "Past peak - activity declining",
-        minutesUntil: duration - elapsed,
-      };
+  let usedArea = 0;
+  return points.map((point, index) => {
+    if (index > 0) {
+      const previous = points[index - 1];
+      const minutes = Math.max(0, (point.time - previous.time) / MINUTE_MS);
+      usedArea += ((previous.activity + point.activity) / 2) * minutes;
     }
 
-    return {
-      phase: "active",
-      message: "Active - steady level",
-      minutesUntil: duration - elapsed,
-    };
-  }
+    const iobFraction = index === points.length - 1 ? 0 : clamp(1 - usedArea / totalActivityArea, 0, 1);
+    const activeUnits = Math.max(0, units * iobFraction);
 
-  return {
-    phase: "expired",
-    message: "No longer active",
-  };
+    return {
+      ...point,
+      iobFraction,
+      activeUnits,
+      activityUnitsPerMinute: (point.activity / totalActivityArea) * units,
+    };
+  });
 }
 
-export function formatMinutes(mins) {
-  const m = Math.round(mins);
+function interpolateCurveValue(curve, atTime, key) {
+  if (!Array.isArray(curve) || !curve.length || !Number.isFinite(atTime)) return 0;
+  if (atTime < curve[0].time || atTime > curve[curve.length - 1].time) return 0;
 
-  if (m < 60) return `${m}m`;
+  for (let index = 0; index < curve.length - 1; index += 1) {
+    const current = curve[index];
+    const next = curve[index + 1];
+    if (current.time > atTime || next.time < atTime) continue;
 
-  const h = Math.floor(m / 60);
-  const remainder = m % 60;
+    const span = next.time - current.time;
+    const ratio = span > 0 ? (atTime - current.time) / span : 0;
+    const value = Number(current[key]) + (Number(next[key]) - Number(current[key])) * ratio;
+    return Number.isFinite(value) ? Math.max(0, value) : 0;
+  }
 
-  return remainder > 0 ? `${h}h ${remainder}m` : `${h}h`;
+  const value = Number(curve[curve.length - 1][key]);
+  return Number.isFinite(value) ? Math.max(0, value) : 0;
+}
+
+export function getDoseIOB(dose, atTime = Date.now()) {
+  const start = new Date(dose?.administered_at).getTime();
+  if (!Number.isFinite(start) || !Number.isFinite(atTime) || atTime < start) return 0;
+  return interpolateCurveValue(generateActivityCurve(dose), atTime, "activeUnits");
+}
+
+export function getDoseRelativeActivity(dose, atTime = Date.now()) {
+  const start = new Date(dose?.administered_at).getTime();
+  if (!Number.isFinite(start) || !Number.isFinite(atTime) || atTime < start) return 0;
+  return clamp(interpolateCurveValue(generateActivityCurve(dose), atTime, "activity"), 0, 1);
+}
+
+export function isBolusInsulinType(insulinType) {
+  const category = INSULIN_PROFILES[insulinType]?.category;
+  return category === "Rapid-Acting" || category === "Short-Acting";
+}
+
+export function isIntermediateInsulinType(insulinType) {
+  return INSULIN_PROFILES[insulinType]?.category === "Intermediate-Acting";
+}
+
+export function isBasalInsulinType(insulinType) {
+  const category = INSULIN_PROFILES[insulinType]?.category;
+  return category === "Long-Acting" || category === "Ultra-Long-Acting";
+}
+
+export function getTotalBolusIOB(doses, atTime = Date.now()) {
+  return (Array.isArray(doses) ? doses : []).reduce((sum, dose) => {
+    if (!isBolusInsulinType(dose?.insulin_type)) return sum;
+    return sum + getDoseIOB(dose, atTime);
+  }, 0);
+}
+
+export function getTotalIntermediateIOB(doses, atTime = Date.now()) {
+  return (Array.isArray(doses) ? doses : []).reduce((sum, dose) => {
+    if (!isIntermediateInsulinType(dose?.insulin_type)) return sum;
+    return sum + getDoseIOB(dose, atTime);
+  }, 0);
+}
+
+export function getTotalBasalActivity(doses, atTime = Date.now()) {
+  return (Array.isArray(doses) ? doses : []).reduce((sum, dose) => {
+    if (!isBasalInsulinType(dose?.insulin_type)) return sum;
+    return sum + getDoseRelativeActivity(dose, atTime);
+  }, 0);
+}
+
+export function getDoseStatus(dose, atTime = Date.now()) {
+  const profile = INSULIN_PROFILES[dose?.insulin_type];
+  const units = getDoseUnits(dose);
+  const start = new Date(dose?.administered_at).getTime();
+
+  if (!profile || !units || !Number.isFinite(start)) {
+    return { phase: "expired", label: "Unavailable", activity: 0, iob: 0 };
+  }
+
+  if (atTime < start) {
+    return { phase: "scheduled", label: "Scheduled", activity: 0, iob: 0 };
+  }
+
+  const elapsed = (atTime - start) / MINUTE_MS;
+  const timing = getProfileTiming(profile, units);
+  const activity = getRelativeActivityAtMinute(elapsed, timing);
+  const iob = getDoseIOB(dose, atTime);
+
+  if (elapsed >= timing.duration || iob <= 0.01) {
+    return { phase: "expired", label: "No longer active", activity: 0, iob: 0 };
+  }
+
+  if (!timing.hasPeak) {
+    if (elapsed < timing.onset) return { phase: "waiting", label: "Absorbing - not yet active", activity, iob };
+    if (elapsed > timing.duration * 0.78) return { phase: "low_activity", label: "Low residual activity", activity, iob };
+    return { phase: "steady", label: "Active - steady coverage", activity, iob };
+  }
+
+  if (elapsed < timing.onset) return { phase: "waiting", label: "Absorbing - not yet active", activity, iob };
+  if (elapsed < timing.peak * 0.85) return { phase: "rising", label: "Rising toward peak", activity, iob };
+  if (elapsed < timing.peak) return { phase: "near_peak", label: "Near peak activity", activity, iob };
+  if (Math.abs(elapsed - timing.peak) <= 15) return { phase: "peak", label: "Peak activity", activity, iob };
+  if (elapsed > timing.duration * 0.85) return { phase: "low_activity", label: "Low residual activity", activity, iob };
+  return { phase: "declining", label: "Activity declining", activity, iob };
 }
