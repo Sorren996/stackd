@@ -8,7 +8,14 @@ import {
   Info,
   X,
 } from "lucide-react";
-import { generateActivityCurve, INSULIN_PROFILES } from "@/lib/insulinPharmacology";
+import {
+  generateActivityCurve,
+  getDoseIOB,
+  getDoseStatus,
+  getTotalBolusIOB,
+  INSULIN_PROFILES,
+  isBolusInsulinType,
+} from "@/lib/insulinPharmacology";
 import {
   generateCarbCurve,
   getActiveCarbsNow,
@@ -89,43 +96,35 @@ function readInsulinSettings() {
   };
 }
 
-function getCurveActivityAt(curve, time) {
-  if (!curve.length) return 0;
-
-  const first = curve[0];
-  const last = curve[curve.length - 1];
-  if (time < first.time || time > last.time) return 0;
-
-  for (let index = 0; index < curve.length - 1; index += 1) {
-    const current = curve[index];
-    const next = curve[index + 1];
-
-    if (current.time <= time && next.time >= time) {
-      const ratio = (time - current.time) / (next.time - current.time);
-      return current.activity + ratio * (next.activity - current.activity);
-    }
+function getDosePartIOB(dose, targetTime = Date.now(), selectUnits = (item) => item.units) {
+  const totalUnits = Number(dose?.units);
+  const selectedUnits = Number(selectUnits(dose));
+  if (
+    !Number.isFinite(totalUnits) ||
+    totalUnits <= 0 ||
+    !Number.isFinite(selectedUnits) ||
+    selectedUnits <= 0
+  ) {
+    return 0;
   }
 
-  return last.activity;
+  return getDoseIOB(dose, targetTime) * Math.min(1, selectedUnits / totalUnits);
 }
 
-function getTotalActiveUnits(doses, targetTime = Date.now(), selectUnits = (dose) => dose.units) {
+function getSelectedDoseIOB(doses, targetTime = Date.now(), selectUnits = (dose) => dose.units) {
   return (Array.isArray(doses) ? doses : []).reduce((sum, dose) => {
-    const units = Number(selectUnits(dose));
-    if (!Number.isFinite(units) || units <= 0) return sum;
-
-    const curve = generateActivityCurve(dose);
-    return sum + getCurveActivityAt(curve, targetTime) * units;
+    if (!isBolusInsulinType(dose?.insulin_type)) return sum;
+    return sum + getDosePartIOB(dose, targetTime, selectUnits);
   }, 0);
 }
 
-function getTotalActiveMealUnits(doses, targetTime = Date.now()) {
+function getTotalMealIOB(doses, targetTime = Date.now()) {
   // Older records predate the meal/correction split, so retain their prior behavior.
-  return getTotalActiveUnits(doses, targetTime, (dose) => dose.meal_units ?? dose.units);
+  return getSelectedDoseIOB(doses, targetTime, (dose) => dose.meal_units ?? dose.units);
 }
 
-function getTotalActiveCorrectionUnits(doses, targetTime = Date.now()) {
-  return getTotalActiveUnits(doses, targetTime, (dose) => dose.correction_units ?? 0);
+function getTotalCorrectionIOB(doses, targetTime = Date.now()) {
+  return getSelectedDoseIOB(doses, targetTime, (dose) => dose.correction_units ?? 0);
 }
 
 function getActiveCarbsAt(entries, targetTime) {
@@ -264,12 +263,12 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
   const windowEnd = mealGroup.end;
   const pairedDoses = mealGroup.doses;
   const mealCoverageDoses = (Array.isArray(doses) ? doses : []).filter((dose) => isMealCoverageInsulin(dose, insulinSettings));
-  const priorDoses = mealCoverageDoses.filter((dose) => {
-    const time = getDoseTime(dose);
-    return Number.isFinite(time) && time < windowStart;
-  });
   const glucoseAtMeal = getClosestGlucose(glucoseReadings, mealTime) ?? latestGlucose ?? null;
   const glucoseValue = Number(glucoseAtMeal?.value);
+  const glucoseTime = new Date(glucoseAtMeal?.recorded_at).getTime();
+  const glucoseMinutesFromMeal = Number.isFinite(glucoseTime)
+    ? Math.round(Math.abs(glucoseTime - mealTime) / MINUTE_MS)
+    : null;
   const outcomeReadings = (Array.isArray(glucoseReadings) ? glucoseReadings : [])
     .map((reading) => ({ ...reading, time: new Date(reading.recorded_at).getTime(), value: Number(reading.value) }))
     .filter((reading) =>
@@ -294,40 +293,73 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
     Number.isFinite(latestGlucoseValue) &&
     latestGlucoseValue < insulinSettings.targetLow;
   const correctionGlucoseValue = glucoseValue;
+  const correctionGlucoseAvailable = Number.isFinite(correctionGlucoseValue);
+  const correctionGlucoseLow =
+    correctionGlucoseAvailable && correctionGlucoseValue < insulinSettings.targetLow;
   const gramsPerUnit = 5 / insulinSettings.mealInsulinUnitsPer5g;
   const expectedMealUnits = mealGroup.carbs / gramsPerUnit;
   const correctionUnitsNeeded =
-    Number.isFinite(correctionGlucoseValue) && correctionGlucoseValue > insulinSettings.targetHigh
+    correctionGlucoseAvailable && correctionGlucoseValue > insulinSettings.targetHigh
       ? Math.max(0, (correctionGlucoseValue - insulinSettings.correctionTargetGlucose) / insulinSettings.insulinSensitivityMgDlPerUnit)
       : 0;
-  const priorActiveUnits = getTotalActiveUnits(priorDoses, mealTime, (dose) => dose.units);
-  const expectedTotalUnits = Math.max(0, expectedMealUnits + correctionUnitsNeeded - priorActiveUnits);
+  const grossDoseEstimate = Math.max(0, expectedMealUnits + correctionUnitsNeeded);
+  const bolusIOB = getTotalBolusIOB(mealCoverageDoses, now);
+  const estimatedAdditionalUnits = Math.max(0, grossDoseEstimate - bolusIOB);
   const loggedMealUnits = sumDoseUnits(pairedDoses, (dose) => dose.meal_units ?? dose.units);
   const loggedCorrectionUnits = sumDoseUnits(pairedDoses, (dose) => dose.correction_units ?? 0);
   const loggedTotalUnits = loggedMealUnits + loggedCorrectionUnits;
-  const ratio = expectedTotalUnits > 0 ? loggedTotalUnits / expectedTotalUnits : null;
+  const ratio = grossDoseEstimate > 0 ? loggedTotalUnits / grossDoseEstimate : null;
   const mealRatio = expectedMealUnits > 0 ? loggedMealUnits / expectedMealUnits : null;
-  const coverageGapUnits = loggedTotalUnits - expectedTotalUnits;
+  const coverageGapUnits = loggedTotalUnits - grossDoseEstimate;
   const coverageGapAbs = Math.abs(coverageGapUnits);
   const coveragePercent = ratio === null ? null : Math.round(ratio * 100);
   const mealCount = mealGroup.carbEntries.length;
   const doseCount = pairedDoses.length;
+  const bolusIOBBreakdown = mealCoverageDoses
+    .map((dose) => {
+      const iob = getDoseIOB(dose, now);
+      if (iob <= 0.01 || !isBolusInsulinType(dose.insulin_type)) return null;
+      const profile = INSULIN_PROFILES[dose.insulin_type];
+      const status = getDoseStatus(dose, now);
+      return {
+        id: dose.id,
+        type: dose.insulin_type,
+        time: getDoseTime(dose),
+        color: profile?.color || "#06b6d4",
+        category: profile?.category || "Bolus insulin",
+        iob,
+        units: Number(dose.units) || 0,
+        status,
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.iob - a.iob);
 
-  let value = "Aligned";
-  let status = "Logged close to expected";
+  let value = `${estimatedAdditionalUnits.toFixed(1)}u`;
+  let status = "Estimated additional insulin";
   let color = "#35a879";
+  let sub = `${Math.round(mealGroup.carbs)}g carbs - ${loggedTotalUnits.toFixed(1)}u logged`;
 
   if (ratio === null) {
     value = "Review";
     status = "Expected coverage is near zero";
     color = "#f59e0b";
+  } else if (!correctionGlucoseAvailable) {
+    value = `${expectedMealUnits.toFixed(1)}u`;
+    status = "Meal estimate only - glucose unavailable";
+    color = "#f59e0b";
+  } else if (correctionGlucoseLow) {
+    value = "Review";
+    status = "Glucose is below range";
+    color = "#3b82f6";
+    sub = `${estimatedAdditionalUnits.toFixed(1)}u calculated, but low glucose needs review`;
   } else if (ratio < 0.75) {
     value = "Under-covered";
-    status = `${coverageGapAbs.toFixed(1)}u below estimate`;
+    status = `${coverageGapAbs.toFixed(1)}u below total estimate`;
     color = "#ef4444";
   } else if (ratio > 1.25) {
     value = "Over-covered";
-    status = `${coverageGapAbs.toFixed(1)}u above estimate`;
+    status = `${coverageGapAbs.toFixed(1)}u above total estimate`;
     color = "#3b82f6";
   } else if (mealRatio !== null && mealRatio < 0.75 && loggedCorrectionUnits > 0.1) {
     value = "Correction-heavy";
@@ -355,11 +387,15 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
     }
   }
 
+  if (value !== "Review" && !["Under-covered", "Over-covered", "Correction-heavy", "Back in range", "Rise detected", "Drop detected"].includes(value)) {
+    value = `${estimatedAdditionalUnits.toFixed(1)}u`;
+  }
+
   return {
     value,
     status,
     color,
-    sub: `${Math.round(mealGroup.carbs)}g carbs - ${loggedTotalUnits.toFixed(1)}u logged`,
+    sub,
     details: {
       meal: {
         ...mealGroup.carbEntries[0],
@@ -370,10 +406,16 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
       gramsPerUnit,
       expectedMealUnits,
       correctionUnitsNeeded,
+      correctionGlucoseAvailable,
+      correctionGlucoseLow,
       correctionTargetGlucose: insulinSettings.correctionTargetGlucose,
       correctionGlucoseValue: Number.isFinite(correctionGlucoseValue) ? correctionGlucoseValue : null,
-      priorActiveUnits,
-      expectedTotalUnits,
+      glucoseMinutesFromMeal,
+      grossDoseEstimate,
+      bolusIOB,
+      bolusIOBBreakdown,
+      estimatedAdditionalUnits,
+      expectedTotalUnits: grossDoseEstimate,
       loggedMealUnits,
       loggedCorrectionUnits,
       loggedTotalUnits,
@@ -421,16 +463,16 @@ function computeNetCarbTrajectory(doses, carbEntries, latestGlucose, insulinSett
   const points = [];
 
   for (let time = now; time <= horizon; time += SAMPLE_STEP_MS) {
-    const activeUnits = getTotalActiveUnits(safeDoses, time, (dose) => dose.units);
-    const activeMealUnits = getTotalActiveMealUnits(safeDoses, time);
+    const bolusIOB = getTotalBolusIOB(safeDoses, time);
+    const mealIOB = getTotalMealIOB(safeDoses, time);
     const activeCarbs = getActiveCarbsAt(safeCarbEntries, time);
 
     points.push({
       time,
-      activeUnits,
-      activeMealUnits,
+      bolusIOB,
+      mealIOB,
       activeCarbs,
-      net: activeCarbs - activeMealUnits * gramsPerUnit,
+      net: activeCarbs - mealIOB * gramsPerUnit,
     });
   }
 
@@ -598,7 +640,7 @@ function MetricCard({ label, value, sub, status, color, tooltipId, openTooltip, 
 }
 
 function ActiveInsulinDetailCard({ totalUnits, breakdown }) {
-  const hasActiveInsulin = totalUnits > 0.01;
+  const hasBolusIOB = totalUnits > 0.01;
 
   return (
     <motion.div
@@ -619,18 +661,18 @@ function ActiveInsulinDetailCard({ totalUnits, breakdown }) {
       />
       <div className="relative z-10 flex items-start justify-between gap-4">
         <div>
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-white/35">Active Insulin</span>
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-white/35">Bolus IOB</span>
           <div className="mt-2 flex items-end gap-2">
             <span className="text-4xl font-black leading-none text-white">{totalUnits.toFixed(1)}</span>
-            <span className="mb-1 text-xs font-semibold text-white/35">units</span>
+            <span className="mb-1 text-xs font-semibold text-white/35">U on board</span>
           </div>
         </div>
         <span className="rounded-full border px-3 py-1 text-xs font-semibold" style={{
-          color: hasActiveInsulin ? "#06b6d4" : "rgba(255,255,255,0.42)",
-          borderColor: hasActiveInsulin ? "rgba(6,182,212,0.32)" : "rgba(255,255,255,0.1)",
-          background: hasActiveInsulin ? "rgba(6,182,212,0.1)" : "rgba(255,255,255,0.04)",
+          color: hasBolusIOB ? "#06b6d4" : "rgba(255,255,255,0.42)",
+          borderColor: hasBolusIOB ? "rgba(6,182,212,0.32)" : "rgba(255,255,255,0.1)",
+          background: hasBolusIOB ? "rgba(6,182,212,0.1)" : "rgba(255,255,255,0.04)",
         }}>
-          {hasActiveInsulin ? "Active" : "Cleared"}
+          {hasBolusIOB ? "On board" : "Cleared"}
         </span>
       </div>
 
@@ -640,17 +682,19 @@ function ActiveInsulinDetailCard({ totalUnits, breakdown }) {
             <div key={item.type} className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.035] px-3 py-2">
               <div className="min-w-0">
                 <p className="truncate text-xs font-semibold text-white/75">{item.shortName}</p>
-                <p className="text-[10px] uppercase tracking-wider text-white/30">{item.category}</p>
+                <p className="text-[10px] uppercase tracking-wider text-white/30">
+                  {item.category} - {item.statusLabel}
+                </p>
               </div>
               <div className="flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
-                <span className="text-sm font-bold text-white">{item.units.toFixed(1)}u</span>
+                <span className="text-sm font-bold text-white">{item.iob.toFixed(1)}u</span>
               </div>
             </div>
           ))
         ) : (
           <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 text-xs text-white/35">
-            No active insulin estimated from current logs.
+            No bolus insulin on board estimated from current logs.
           </div>
         )}
       </div>
@@ -911,30 +955,37 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
     () => safeDoses.filter((dose) => isMealCoverageInsulin(dose, insulinSettings)),
     [safeDoses, insulinSettings]
   );
-  const activeUnits = useMemo(() => getTotalActiveUnits(safeDoses, Date.now(), (dose) => dose.units), [safeDoses]);
-  const activeMealUnits = useMemo(() => getTotalActiveMealUnits(mealCoverageDoses, Date.now()), [mealCoverageDoses]);
-  const activeCorrectionUnits = useMemo(() => getTotalActiveCorrectionUnits(mealCoverageDoses, Date.now()), [mealCoverageDoses]);
+  const activeUnits = useMemo(() => getTotalBolusIOB(safeDoses, Date.now()), [safeDoses]);
+  const activeMealUnits = useMemo(() => getTotalMealIOB(mealCoverageDoses, Date.now()), [mealCoverageDoses]);
+  const activeCorrectionUnits = useMemo(() => getTotalCorrectionIOB(mealCoverageDoses, Date.now()), [mealCoverageDoses]);
   const activeInsulinBreakdown = useMemo(() => {
     const now = Date.now();
     const grouped = safeDoses.reduce((items, dose) => {
-      const units = getTotalActiveUnits([dose], now, (item) => item.units);
-      if (units <= 0.01) return items;
+      if (!isBolusInsulinType(dose?.insulin_type)) return items;
+      const iob = getDoseIOB(dose, now);
+      if (iob <= 0.01) return items;
 
       const profile = INSULIN_PROFILES[dose.insulin_type];
+      const status = getDoseStatus(dose, now);
       const current = items[dose.insulin_type] || {
         type: dose.insulin_type,
         shortName: dose.insulin_type?.split(" ")[0] || "Insulin",
         category: profile?.category || "Insulin",
         color: profile?.color || "#06b6d4",
-        units: 0,
+        iob: 0,
+        statusLabel: status.label,
       };
 
-      current.units += units;
+      current.iob += iob;
+      if (status.iob > (current.strongestIOB || 0)) {
+        current.strongestIOB = status.iob;
+        current.statusLabel = status.label;
+      }
       items[dose.insulin_type] = current;
       return items;
     }, {});
 
-    return Object.values(grouped).sort((a, b) => b.units - a.units);
+    return Object.values(grouped).sort((a, b) => b.iob - a.iob);
   }, [safeDoses]);
   const activeCarbs = useMemo(() => getActiveCarbsNow(safeCarbEntries), [safeCarbEntries]);
 
@@ -1086,13 +1137,16 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
                     {mealInsight.status}
                   </p>
                   <p className="mt-1 text-[11px] leading-relaxed text-white/50">
-                    Expected {mealInsight.details.expectedMealUnits.toFixed(1)}u meal
-                    {mealInsight.details.correctionUnitsNeeded > 0 && (
-                      <> + {mealInsight.details.correctionUnitsNeeded.toFixed(1)}u correction</>
-                    )}. Logged{" "}
-                    {mealInsight.details.loggedTotalUnits.toFixed(1)}u.
+                    Meal estimate {mealInsight.details.expectedMealUnits.toFixed(1)}u
+                    {mealInsight.details.correctionGlucoseAvailable ? (
+                      <> plus {mealInsight.details.correctionUnitsNeeded.toFixed(1)}u correction</>
+                    ) : (
+                      <>. Correction estimate unavailable</>
+                    )}
+                    . Bolus IOB is {mealInsight.details.bolusIOB.toFixed(1)}u, leaving{" "}
+                    {mealInsight.details.estimatedAdditionalUnits.toFixed(1)}u estimated additional.
                     {mealInsight.details.coveragePercent !== null && (
-                      <> That is {mealInsight.details.coveragePercent}% of the estimate.</>
+                      <> Logged insulin is {mealInsight.details.coveragePercent}% of the gross estimate.</>
                     )}
                   </p>
                 </div>
@@ -1112,29 +1166,77 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
                   <div className="flex justify-between gap-3">
                     <span>Correction estimate</span>
                     <span className="font-semibold text-white/70">
-                      {mealInsight.details.correctionUnitsNeeded.toFixed(1)}u
-                      {mealInsight.details.correctionGlucoseValue !== null && (
-                        <span className="ml-1 text-white/35">
-                          from {Math.round(mealInsight.details.correctionGlucoseValue)} to {Math.round(mealInsight.details.correctionTargetGlucose)}
-                        </span>
+                      {mealInsight.details.correctionGlucoseAvailable ? (
+                        <>
+                          {mealInsight.details.correctionUnitsNeeded.toFixed(1)}u
+                          {mealInsight.details.correctionGlucoseValue !== null && (
+                            <span className="ml-1 text-white/35">
+                              from {Math.round(mealInsight.details.correctionGlucoseValue)} to {Math.round(mealInsight.details.correctionTargetGlucose)}
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-white/35">Unavailable</span>
                       )}
                     </span>
                   </div>
                   <div className="flex justify-between gap-3">
-                    <span>Prior active insulin</span>
-                    <span className="font-semibold text-white/70">-{mealInsight.details.priorActiveUnits.toFixed(1)}u</span>
+                    <span>Glucose used</span>
+                    <span className="font-semibold text-white/70">
+                      {mealInsight.details.correctionGlucoseValue !== null ? (
+                        <>
+                          {Math.round(mealInsight.details.correctionGlucoseValue)} mg/dL
+                          {mealInsight.details.glucoseMinutesFromMeal !== null && (
+                            <span className="ml-1 text-white/35">
+                              {mealInsight.details.glucoseMinutesFromMeal}m from meal
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-white/35">No nearby reading</span>
+                      )}
+                    </span>
                   </div>
                   <div className="flex justify-between gap-3 border-t border-white/10 pt-2">
-                    <span>Total expected</span>
-                    <span className="font-semibold text-white/80">{mealInsight.details.expectedTotalUnits.toFixed(1)}u</span>
+                    <span>Gross estimate</span>
+                    <span className="font-semibold text-white/80">{mealInsight.details.grossDoseEstimate.toFixed(1)}u</span>
                   </div>
                   <div className="flex justify-between gap-3">
+                    <span>Bolus IOB</span>
+                    <span className="font-semibold text-white/70">-{mealInsight.details.bolusIOB.toFixed(1)}u</span>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <span>Estimated additional</span>
+                    <span className="font-semibold text-white/80">{mealInsight.details.estimatedAdditionalUnits.toFixed(1)}u</span>
+                  </div>
+                  <div className="flex justify-between gap-3 border-t border-white/10 pt-2">
                     <span>Logged insulin</span>
                     <span className="font-semibold text-white/80">
                       {mealInsight.details.loggedTotalUnits.toFixed(1)}u
                       {mealInsight.details.doseCount > 1 ? ` across ${mealInsight.details.doseCount} logs` : ""}
                     </span>
                   </div>
+                  {mealInsight.details.bolusIOBBreakdown.length > 0 && (
+                    <div className="space-y-1 border-t border-white/10 pt-2">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-white/30">Bolus IOB detail</p>
+                      {mealInsight.details.bolusIOBBreakdown.map((item) => (
+                        <div key={`${item.id || item.type}-${item.time}`} className="flex justify-between gap-3">
+                          <span className="min-w-0 truncate">
+                            {item.type} at {formatClockTime(item.time)}
+                          </span>
+                          <span className="shrink-0 font-semibold text-white/70">
+                            {item.iob.toFixed(1)}u
+                            <span className="ml-1 text-white/35">{item.status.label}</span>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {mealInsight.details.correctionGlucoseLow && (
+                    <div className="rounded-xl border border-blue-400/20 bg-blue-500/10 p-2 text-[11px] leading-relaxed text-blue-100/70">
+                      Glucose near this meal is below range, so this card avoids emphasizing a correction amount.
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-1">
@@ -1145,7 +1247,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
                   <div className="relative h-2 overflow-hidden rounded-full bg-white/10">
                     <div
                       className="absolute inset-y-0 left-0 rounded-full bg-white/25"
-                      style={{ width: `${Math.min(100, Math.max(4, mealInsight.details.expectedTotalUnits * 12))}%` }}
+                      style={{ width: `${Math.min(100, Math.max(4, mealInsight.details.grossDoseEstimate * 12))}%` }}
                     />
                     <div
                       className="absolute inset-y-0 left-0 rounded-full"
@@ -1236,7 +1338,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
         <div className="grid grid-cols-2 gap-3">
           <ActiveInsulinDetailCard totalUnits={activeUnits} breakdown={activeInsulinBreakdown} />
           <MetricCard
-            label="Insulin:Carb Ratio"
+            label="Insulin Estimate"
             value={mealInsight.value}
             sub={mealInsight.sub}
             status={mealInsight.status}
