@@ -384,8 +384,10 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           const hi = Math.min(lo + 1, curve.length - 1);
           const ratio = hi === lo ? 0 : (t - curve[lo].time) / (curve[hi].time - curve[lo].time);
           const activity = curve[lo].activity + ratio * (curve[hi].activity - curve[lo].activity);
+          const activeUnits = curve[lo].activeUnits + ratio * (curve[hi].activeUnits - curve[lo].activeUnits);
           point[key] = activity * (dose.units / maxDoseUnits) * 70;
-          point[`${key}_actual`] = activity * dose.units;
+          point[`${key}_actual`] = activeUnits;
+          point[`${key}_activity`] = activity;
           point[`${key}_total`] = dose.units;
         }
       });
