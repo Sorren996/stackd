@@ -56,6 +56,66 @@ function formatGlucoseDisplay(value) {
   return Math.round(value);
 }
 
+function buildMonotoneSegments(points, getValue) {
+  if (!Array.isArray(points) || points.length < 2) return [];
+
+  const sorted = points
+    .map((point) => ({ x: Number(point.time), y: Number(getValue(point)) }))
+    .filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y))
+    .sort((a, b) => a.x - b.x);
+
+  if (sorted.length < 2) return [];
+
+  const h = [];
+  const delta = [];
+
+  for (let index = 0; index < sorted.length - 1; index += 1) {
+    const width = sorted[index + 1].x - sorted[index].x;
+    h[index] = width;
+    delta[index] = width > 0 ? (sorted[index + 1].y - sorted[index].y) / width : 0;
+  }
+
+  const slopes = Array(sorted.length).fill(0);
+  slopes[0] = delta[0];
+  slopes[sorted.length - 1] = delta[delta.length - 1];
+
+  for (let index = 1; index < sorted.length - 1; index += 1) {
+    if (delta[index - 1] * delta[index] <= 0) {
+      slopes[index] = 0;
+      continue;
+    }
+
+    const w1 = 2 * h[index] + h[index - 1];
+    const w2 = h[index] + 2 * h[index - 1];
+    slopes[index] = (w1 + w2) / (w1 / delta[index - 1] + w2 / delta[index]);
+  }
+
+  return sorted.slice(0, -1).map((point, index) => ({
+    x0: point.x,
+    x1: sorted[index + 1].x,
+    y0: point.y,
+    y1: sorted[index + 1].y,
+    m0: slopes[index],
+    m1: slopes[index + 1],
+  }));
+}
+
+function interpolateMonotoneSegment(segment, x) {
+  if (!segment || segment.x1 === segment.x0) return segment?.y0 ?? null;
+
+  const width = segment.x1 - segment.x0;
+  const t = Math.max(0, Math.min(1, (x - segment.x0) / width));
+  const t2 = t * t;
+  const t3 = t2 * t;
+
+  return (
+    (2 * t3 - 3 * t2 + 1) * segment.y0 +
+    (t3 - 2 * t2 + t) * width * segment.m0 +
+    (-2 * t3 + 3 * t2) * segment.y1 +
+    (t3 - t2) * width * segment.m1
+  );
+}
+
 function TimeAxisTick({ x, y, payload }) {
   const date = new Date(payload.value);
   const minute = date.getMinutes();
@@ -300,6 +360,11 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   [glucoseMap]
   );
 
+  const glucoseCurveSegments = useMemo(() => ({
+    value: buildMonotoneSegments(glucoseLinePoints, (point) => point.value),
+    plotValue: buildMonotoneSegments(glucoseLinePoints, (point) => Math.min(point.value, GLUCOSE_MAX)),
+  }), [glucoseLinePoints]);
+
   const maxDoseUnits = useMemo(() => Math.max(...filteredDoses.map((d) => d.units), 1), [filteredDoses]);
   const chartData = useMemo(() => {
     if (!doses.length && !glucoseReadings.length && !carbEntries.length) return [];
@@ -416,12 +481,9 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       const next = glucoseLinePoints[i];
       if (time > next.time) continue;
 
-      const span = next.time - previous.time;
-      const ratio = span > 0 ? (time - previous.time) / span : 0;
-      const value = previous.value + (next.value - previous.value) * ratio;
-      const previousPlotValue = Math.min(previous.value, GLUCOSE_MAX);
-      const nextPlotValue = Math.min(next.value, GLUCOSE_MAX);
-      const plotValue = previousPlotValue + (nextPlotValue - previousPlotValue) * ratio;
+      const segmentIndex = i - 1;
+      const value = interpolateMonotoneSegment(glucoseCurveSegments.value[segmentIndex], time) ?? previous.value;
+      const plotValue = interpolateMonotoneSegment(glucoseCurveSegments.plotValue[segmentIndex], time) ?? Math.min(previous.value, GLUCOSE_MAX);
       const sourceTime = Math.abs(time - previous.time) <= Math.abs(next.time - time) ? previous.time : next.time;
 
       return { value, plotValue, time, sourceTime };
