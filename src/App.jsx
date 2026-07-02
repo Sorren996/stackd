@@ -19,6 +19,7 @@ import Settings from './pages/Settings';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { Navigate } from 'react-router-dom';
 import SplashScreen from "@/components/SplashScreen";
+import { AnimatePresence } from "framer-motion";
 import { base44 } from "@/api/base44Client";
 
 const AuthenticatedApp = () => {
@@ -68,7 +69,11 @@ const AuthenticatedApp = () => {
   const showSplash = !authError && (isLoadingPublicSettings || isLoadingAuth || (isAuthenticated && !dataReady));
 
   if (showSplash) {
-    return <SplashScreen />;
+    return (
+      <AnimatePresence>
+        <SplashScreen />
+      </AnimatePresence>
+    );
   }
 
   // Handle authentication errors

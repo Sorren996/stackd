@@ -304,10 +304,11 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
       : 0;
   const grossDoseEstimate = Math.max(0, expectedMealUnits + correctionUnitsNeeded);
   const bolusIOB = getTotalBolusIOB(mealCoverageDoses, now);
-  const estimatedAdditionalUnits = Math.max(0, grossDoseEstimate - bolusIOB);
   const loggedMealUnits = sumDoseUnits(pairedDoses, (dose) => dose.meal_units ?? dose.units);
   const loggedCorrectionUnits = sumDoseUnits(pairedDoses, (dose) => dose.correction_units ?? 0);
   const loggedTotalUnits = loggedMealUnits + loggedCorrectionUnits;
+  // Fixed at meal time — based on what was logged, not decaying IOB
+  const estimatedAdditionalUnits = Math.max(0, grossDoseEstimate - loggedTotalUnits);
   const ratio = grossDoseEstimate > 0 ? loggedTotalUnits / grossDoseEstimate : null;
   const mealRatio = expectedMealUnits > 0 ? loggedMealUnits / expectedMealUnits : null;
   const coverageGapUnits = loggedTotalUnits - grossDoseEstimate;
@@ -336,59 +337,64 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
     .sort((a, b) => b.iob - a.iob);
 
   let value = `${estimatedAdditionalUnits.toFixed(1)}u`;
-  let status = "Estimated additional insulin";
+  let status = "Suggested support";
   let color = "#35a879";
-  let sub = `${Math.round(mealGroup.carbs)}g carbs - ${loggedTotalUnits.toFixed(1)}u logged`;
+  let sub = `${Math.round(mealGroup.carbs)}g carbs · ${loggedTotalUnits.toFixed(1)}u logged`;
 
+  // --- Point-in-time assessment (fixed at meal time, does not change as IOB decays) ---
   if (ratio === null) {
     value = "Review";
-    status = "Expected coverage is near zero";
-    color = "#f59e0b";
-  } else if (!correctionGlucoseAvailable) {
-    value = `${expectedMealUnits.toFixed(1)}u`;
-    status = "Meal estimate only - glucose unavailable";
+    status = "Not enough data to estimate";
     color = "#f59e0b";
   } else if (correctionGlucoseLow) {
     value = "Review";
-    status = "Glucose is below range";
+    status = "Glucose is below range — take care first";
     color = "#3b82f6";
-    sub = `${estimatedAdditionalUnits.toFixed(1)}u calculated, but low glucose needs review`;
   } else if (ratio < 0.75) {
-    value = "Under-covered";
-    status = `${coverageGapAbs.toFixed(1)}u below total estimate`;
+    value = `${estimatedAdditionalUnits.toFixed(1)}u`;
+    status = "Light coverage — below estimate";
     color = "#ef4444";
   } else if (ratio > 1.25) {
-    value = "Over-covered";
-    status = `${coverageGapAbs.toFixed(1)}u above total estimate`;
+    value = "Generous dose";
+    status = `${coverageGapAbs.toFixed(1)}u above estimate`;
     color = "#3b82f6";
-  } else if (mealRatio !== null && mealRatio < 0.75 && loggedCorrectionUnits > 0.1) {
-    value = "Correction-heavy";
-    status = "Correction insulin is carrying the coverage";
+  } else if (!correctionGlucoseAvailable) {
+    value = `${expectedMealUnits.toFixed(1)}u`;
+    status = "Meal estimate — glucose unavailable";
     color = "#f59e0b";
-  } else if (mealStillUnderReview && peakOutcome && peakOutcome.value > insulinSettings.targetHigh + 20) {
-    if (latestIsAfterMeal && latestInRange) {
-      value = "Back in range";
-      status = "Post-meal rise has settled";
-      color = "#35a879";
-    } else if (latestIsAfterMeal && latestHigh) {
-      value = "Rise detected";
-      status = "Post-meal rise still settling";
-      color = "#f59e0b";
-    }
-  } else if (mealStillUnderReview && lowOutcome && lowOutcome.value < insulinSettings.targetLow) {
-    if (latestIsAfterMeal && latestInRange) {
-      value = "Back in range";
-      status = "Post-meal drop has settled";
-      color = "#35a879";
-    } else if (latestIsAfterMeal && latestLow) {
-      value = "Drop detected";
-      status = "Post-meal drop still settling";
-      color = "#3b82f6";
-    }
+  } else {
+    value = "Well balanced";
+    status = "Nicely aligned";
+    color = "#35a879";
   }
 
-  if (value !== "Review" && !["Under-covered", "Over-covered", "Correction-heavy", "Back in range", "Rise detected", "Drop detected"].includes(value)) {
-    value = `${estimatedAdditionalUnits.toFixed(1)}u`;
+  // --- Continuous monitoring (evolves as glucose readings come in) ---
+  if (mealStillUnderReview && ratio !== null && !correctionGlucoseLow) {
+    if (lowOutcome && lowOutcome.value < insulinSettings.targetLow) {
+      if (latestIsAfterMeal && latestInRange) {
+        value = "Settled nicely";
+        status = "Back in a comfortable range";
+        color = "#35a879";
+      } else if (latestIsAfterMeal && latestLow) {
+        value = "Take care";
+        status = "Glucose dipping below range";
+        color = "#3b82f6";
+      }
+    } else if (peakOutcome && peakOutcome.value > insulinSettings.targetHigh + 20) {
+      if (latestIsAfterMeal && latestInRange) {
+        value = "Settled nicely";
+        status = "Back in a comfortable range";
+        color = "#35a879";
+      } else if (latestIsAfterMeal && latestHigh) {
+        value = "Still settling";
+        status = "Glucose trending above range";
+        color = "#f59e0b";
+      }
+    } else if (latestIsAfterMeal && latestInRange) {
+      value = "Tracking beautifully";
+      status = "Right where we want to be";
+      color = "#35a879";
+    }
   }
 
   return {
@@ -1148,8 +1154,9 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
                     ) : (
                       <>. Correction estimate unavailable</>
                     )}
-                    . Bolus IOB is {mealInsight.details.bolusIOB.toFixed(1)}u, leaving{" "}
-                    {mealInsight.details.estimatedAdditionalUnits.toFixed(1)}u estimated additional.
+                    . Logged {mealInsight.details.loggedTotalUnits.toFixed(1)}u of{" "}
+                    {mealInsight.details.grossDoseEstimate.toFixed(1)}u estimate, leaving{" "}
+                    {mealInsight.details.estimatedAdditionalUnits.toFixed(1)}u suggested support.
                     {mealInsight.details.coveragePercent !== null && (
                       <> Logged insulin is {mealInsight.details.coveragePercent}% of the gross estimate.</>
                     )}
@@ -1211,7 +1218,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
                     <span className="font-semibold text-white/70">-{mealInsight.details.bolusIOB.toFixed(1)}u</span>
                   </div>
                   <div className="flex justify-between gap-3">
-                    <span>Estimated additional</span>
+                    <span>Suggested support</span>
                     <span className="font-semibold text-white/80">{mealInsight.details.estimatedAdditionalUnits.toFixed(1)}u</span>
                   </div>
                   <div className="flex justify-between gap-3 border-t border-white/10 pt-2">
@@ -1343,7 +1350,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
         <div className="grid grid-cols-2 gap-3">
           <ActiveInsulinDetailCard totalUnits={activeUnits} breakdown={activeInsulinBreakdown} />
           <MetricCard
-            label="Insulin Estimate"
+            label="Meal Balance"
             value={mealInsight.value}
             sub={mealInsight.sub}
             status={mealInsight.status}

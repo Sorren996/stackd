@@ -4,8 +4,12 @@ const LOGO_URL = "https://media.base44.com/images/public/6a1b93f234a8611ee159513
 
 export default function SplashScreen() {
   return (
-    <div
+    <motion.div
       className="fixed inset-0 z-[9999] flex items-center justify-center"
+      initial={{ opacity: 1 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.5, ease: "easeInOut" }}
       style={{
         background:
           "radial-gradient(ellipse 120% 60% at 50% 100%, hsl(162, 28%, 10%) 0%, hsl(160, 14%, 7%) 55%, hsl(158, 10%, 5%) 100%)",
@@ -18,6 +22,6 @@ export default function SplashScreen() {
         transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
         className="h-16 w-auto object-contain"
       />
-    </div>
+    </motion.div>
   );
 }
