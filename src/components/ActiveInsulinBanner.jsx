@@ -1188,6 +1188,22 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
                   </div>
                 )}
 
+                {/* How it works */}
+                <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3 space-y-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-white/30">How This Works</p>
+                  <div className="space-y-1.5 text-[11px] leading-relaxed text-white/40">
+                    <p>
+                      <span className="font-semibold text-white/55">Carb estimate</span> — your carbs are divided by your meal ratio to estimate how much insulin your meal needs.
+                    </p>
+                    <p>
+                      <span className="font-semibold text-white/55">Correction factor</span> — if a glucose reading near your meal is above range, we estimate extra support based on your sensitivity.
+                    </p>
+                    <p>
+                      <span className="font-semibold text-white/55">What you logged</span> — the insulin you already took is compared to that estimate so you can see how things line up.
+                    </p>
+                  </div>
+                </div>
+
                 {/* Encouraging note */}
                 <p className="text-center text-[11px] leading-relaxed text-white/35">
                   {mealInsight.details.mealStillUnderReview
