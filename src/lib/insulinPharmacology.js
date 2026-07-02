@@ -4,36 +4,8 @@
 const MINUTE_MS = 60 * 1000;
 
 export const INSULIN_PROFILES = {
-  "Rapid-Acting": {
-    category: "Rapid-Acting",
-    onsetMin: 10,
-    onsetMax: 20,
-    peakMin: 60,
-    peakMax: 120,
-    durationMin: 180,
-    durationMax: 300,
-    color: "#38bdf8",
-  },
-  "Fiasp": {
-    category: "Rapid-Acting",
-    onsetMin: 5,
-    onsetMax: 15,
-    peakMin: 45,
-    peakMax: 90,
-    durationMin: 180,
-    durationMax: 300,
-    color: "#22d3ee",
-  },
-  "Lyumjev": {
-    category: "Rapid-Acting",
-    onsetMin: 5,
-    onsetMax: 15,
-    peakMin: 45,
-    peakMax: 90,
-    durationMin: 180,
-    durationMax: 300,
-    color: "#06b6d4",
-  },
+
+
   "NovoLog": {
     category: "Rapid-Acting",
     onsetMin: 10,
@@ -64,36 +36,6 @@ export const INSULIN_PROFILES = {
     durationMax: 300,
     color: "#60a5fa",
   },
-  "Regular": {
-    category: "Short-Acting",
-    onsetMin: 30,
-    onsetMax: 60,
-    peakMin: 120,
-    peakMax: 240,
-    durationMin: 300,
-    durationMax: 480,
-    color: "#818cf8",
-  },
-  "Short-Acting": {
-    category: "Short-Acting",
-    onsetMin: 30,
-    onsetMax: 60,
-    peakMin: 120,
-    peakMax: 240,
-    durationMin: 300,
-    durationMax: 480,
-    color: "#818cf8",
-  },
-  "Intermediate-Acting": {
-    category: "Intermediate-Acting",
-    onsetMin: 60,
-    onsetMax: 120,
-    peakMin: 240,
-    peakMax: 720,
-    durationMin: 720,
-    durationMax: 1080,
-    color: "#a78bfa",
-  },
   "NPH": {
     category: "Intermediate-Acting",
     onsetMin: 60,
@@ -104,16 +46,7 @@ export const INSULIN_PROFILES = {
     durationMax: 1080,
     color: "#a78bfa",
   },
-  "Long-Acting": {
-    category: "Long-Acting",
-    onsetMin: 60,
-    onsetMax: 120,
-    peakMin: null,
-    peakMax: null,
-    durationMin: 1200,
-    durationMax: 1440,
-    color: "#2dd4bf",
-  },
+
   "Lantus": {
     category: "Long-Acting",
     onsetMin: 60,
@@ -154,16 +87,7 @@ export const INSULIN_PROFILES = {
     durationMax: 3000,
     color: "#10b981",
   },
-  "Ultra-Long-Acting": {
-    category: "Ultra-Long-Acting",
-    onsetMin: 60,
-    onsetMax: 120,
-    peakMin: null,
-    peakMax: null,
-    durationMin: 2520,
-    durationMax: 3000,
-    color: "#10b981",
-  },
+
   "Toujeo": {
     category: "Ultra-Long-Acting",
     onsetMin: 360,
