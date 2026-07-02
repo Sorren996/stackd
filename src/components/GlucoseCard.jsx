@@ -22,8 +22,10 @@ export default function GlucoseCard({ reading, onDelete }) {
       animate={{ opacity: 1, y: 0 }}
       className="flex items-start gap-3.5 px-4 py-3.5 rounded-2xl transition-all p-4"
       style={{
-        background: "rgba(255, 255, 255, 0)",
-        border: "1px solid rgba(255, 255, 255, 0)",
+        background: `linear-gradient(to right, ${color}12, transparent 55%)`,
+        border: "1px solid rgba(255, 255, 255, 0.06)",
+        borderLeft: `2.5px solid ${color}50`,
+        boxShadow: `0 2px 12px ${color}08`,
       }}
     >
       {/* Timeline dot */}
