@@ -66,6 +66,7 @@ export function CustomInputTray({ open, onClose, title, children, tall = false }
   return createPortal(
     <>
       <div
+        data-input-tray
         className="fixed inset-0 z-[998] bg-black/50 backdrop-blur-sm"
         onPointerDown={absorb}
         onPointerUp={absorb}
@@ -75,6 +76,7 @@ export function CustomInputTray({ open, onClose, title, children, tall = false }
         }}
       />
       <motion.div
+        data-input-tray
         initial={{ y: "100%" }}
         animate={{ y: 0 }}
         exit={{ y: "100%" }}
