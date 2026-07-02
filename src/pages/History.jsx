@@ -629,7 +629,7 @@ export default function History() {
 
   const { data: glucoseReadings = [], isLoading: loadingGlucose } = useQuery({
     queryKey: ["glucose-readings"],
-    queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", 300)
+    queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", 1000)
   });
 
   const { data: carbEntries = [], isLoading: loadingCarbs } = useQuery({
