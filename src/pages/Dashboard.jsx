@@ -775,7 +775,7 @@ export default function Dashboard() {
 
     return activeDoses.filter(
       (item) =>
-        ["rising", "active", "declining"].includes(item.status.phase) &&
+        ["rising", "near_peak", "peak", "declining", "low_activity"].includes(item.status.phase) &&
         ["Rapid-Acting", "Short-Acting"].includes(INSULIN_PROFILES[item.dose.insulin_type]?.category),
     ).length;
   }, [recentDoses]);
