@@ -157,6 +157,16 @@ function midpoint(min, max, fallback = 0) {
   return fallback;
 }
 
+export function formatMinutes(minutes) {
+  const safeMinutes = Math.max(0, Math.round(Number(minutes) || 0));
+  if (safeMinutes < 60) return `${safeMinutes}m`;
+
+  const hours = Math.floor(safeMinutes / 60);
+  const remainingMinutes = safeMinutes % 60;
+  if (!remainingMinutes) return `${hours}h`;
+  return `${hours}h ${remainingMinutes}m`;
+}
+
 export function interpolateControlPoints(units, points) {
   const safeUnits = Math.max(0, Number(units) || 0);
   if (!Array.isArray(points) || !points.length) return 1;
