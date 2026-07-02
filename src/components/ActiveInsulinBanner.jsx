@@ -521,7 +521,7 @@ function TooltipPopover({ title, description, onClose, children }) {
           exit={{ opacity: 0, scale: 0.94, y: -8 }}
           transition={{ type: "spring", stiffness: 360, damping: 26 }}
           onClick={(event) => event.stopPropagation()}
-          className="tooltip-popover relative w-full max-w-xs overflow-hidden rounded-2xl border p-4 shadow-2xl backdrop-blur-2xl"
+          className="tooltip-popover relative flex max-h-[min(82dvh,620px)] w-full max-w-xs flex-col overflow-hidden rounded-2xl border p-4 shadow-2xl backdrop-blur-2xl"
           style={{
             background: "linear-gradient(145deg, rgba(255,255,255,0.2), rgba(255,255,255,0.07))",
             borderColor: "rgba(255,255,255,0.22)",
@@ -535,15 +535,20 @@ function TooltipPopover({ title, description, onClose, children }) {
               background: "radial-gradient(circle at 25% 0%, rgba(255,255,255,0.24), transparent 34%), radial-gradient(circle at 88% 120%, rgba(45,212,191,0.16), transparent 42%)",
             }}
           />
-          <div className="relative z-10">
-            <div className="mb-2 flex items-start justify-between gap-3">
+          <div className="relative z-10 flex min-h-0 flex-col">
+            <div className="mb-2 flex shrink-0 items-start justify-between gap-3">
               <p className="text-sm font-semibold text-white">{title}</p>
               <button onClick={onClose} className="text-white/40 transition-colors hover:text-white/80">
                 <X className="h-3.5 w-3.5" />
               </button>
             </div>
-            <p className="text-xs leading-relaxed text-white/50">{description}</p>
-            {children}
+            <p className="shrink-0 text-xs leading-relaxed text-white/50">{description}</p>
+            <div
+              className="-mx-1 mt-3 min-h-0 overflow-y-auto overscroll-contain px-1 pb-1"
+              style={{ WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}
+            >
+              {children}
+            </div>
           </div>
         </motion.div>
       </motion.div>
