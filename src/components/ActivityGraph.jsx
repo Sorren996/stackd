@@ -1,6 +1,6 @@
 import { useMemo, useRef, useEffect, useState } from "react";
 import { Area, XAxis, YAxis, Line, ComposedChart } from "recharts";
-import { generateActivityCurve, INSULIN_PROFILES } from "@/lib/insulinPharmacology";
+import { generateActivityCurve, getInsulinProfile } from "@/lib/insulinPharmacology";
 import { PROFILE_COLORS } from "@/lib/carbAbsorption";
 import { format } from "date-fns";
 import { CornerUpRight, SlidersHorizontal, Check, Wheat } from "lucide-react";
@@ -61,6 +61,12 @@ function getDoseUnits(dose) {
   const mealUnits = Number.isFinite(meal) && meal > 0 ? meal : 0;
   const correctionUnits = Number.isFinite(correction) && correction > 0 ? correction : 0;
   return mealUnits + correctionUnits;
+}
+
+function getDoseKey(dose, index = 0) {
+  const time = dose?.administered_at || dose?.administeredAt || dose?.created_at || dose?.created_date || index;
+  const rawKey = dose?.id || dose?._id || `${dose?.insulin_type || "insulin"}_${time}`;
+  return `dose_${String(rawKey).replace(/[^a-zA-Z0-9_-]/g, "_")}`;
 }
 
 function formatGlucoseDisplay(value) {
@@ -332,10 +338,10 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   );
 
   const allCurvesMeta = useMemo(() =>
-  filteredDoses.map((dose) => ({
+  filteredDoses.map((dose, index) => ({
     dose,
-    curve: generateActivityCurve(dose, 3),
-    profile: INSULIN_PROFILES[dose.insulin_type]
+    key: getDoseKey(dose, index),
+    curve: generateActivityCurve(dose, 3)
   })),
   [filteredDoses]
   );
@@ -382,8 +388,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     const result = [];
     for (let t = domainStart; t <= domainEnd; t += STEP_MS) {
       const point = { time: t, bg: GLUCOSE_MAX };
-      allCurvesMeta.forEach(({ dose, curve }) => {
-        const key = `dose_${dose.id}`;
+      allCurvesMeta.forEach(({ dose, key, curve }) => {
         const doseUnits = getDoseUnits(dose);
         if (!curve.length || t < curve[0].time || t > curve[curve.length - 1].time) {
           point[key] = null;
@@ -412,11 +417,11 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   }, [doses, glucoseReadings, carbEntries, filters, domainStart, domainEnd, allCurvesMeta, glucoseMap]);
 
   const doseKeys = useMemo(() =>
-  filteredDoses.map((dose) => ({
-    key: `dose_${dose.id}`,
-    label: dose.insulin_type.split(" ")[0],
+  filteredDoses.map((dose, index) => ({
+    key: getDoseKey(dose, index),
+    label: String(dose.insulin_type || "Insulin").split(" ")[0],
     units: getDoseUnits(dose),
-    color: INSULIN_PROFILES[dose.insulin_type]?.color || "#888"
+    color: getInsulinProfile(dose.insulin_type)?.color || "#888"
   })),
   [filteredDoses]
   );
