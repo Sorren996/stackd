@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 
 function formatTimeLabel(value) {
@@ -56,18 +55,17 @@ export function CustomInputTray({ open, onClose, title, children, tall = false }
     };
   }, [open]);
 
-  if (!open || typeof document === "undefined") return null;
+  if (!open) return null;
 
   const absorb = (event) => {
     event.preventDefault();
     event.stopPropagation();
   };
 
-  return createPortal(
+  return (
     <>
       <div
-        data-input-tray
-        className="fixed inset-0 z-[998] bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 z-[998] bg-black/50 backdrop-blur-sm"
         onPointerDown={absorb}
         onPointerUp={absorb}
         onClick={(event) => {
@@ -76,12 +74,11 @@ export function CustomInputTray({ open, onClose, title, children, tall = false }
         }}
       />
       <motion.div
-        data-input-tray
         initial={{ y: "100%" }}
         animate={{ y: 0 }}
         exit={{ y: "100%" }}
         transition={{ type: "spring", stiffness: 380, damping: 36 }}
-        className={`fixed inset-x-0 bottom-0 z-[999] overflow-hidden rounded-t-3xl border px-4 pb-[max(env(safe-area-inset-bottom),0.85rem)] pt-3 ${
+        className={`absolute inset-x-0 bottom-0 z-[999] overflow-hidden rounded-t-3xl border px-4 pb-[max(env(safe-area-inset-bottom),0.85rem)] pt-3 ${
           tall ? "min-h-[43dvh]" : "min-h-[34dvh]"
         }`}
         style={{
@@ -116,8 +113,7 @@ export function CustomInputTray({ open, onClose, title, children, tall = false }
         </div>
         <div className="relative z-10">{children}</div>
       </motion.div>
-    </>,
-    document.body
+    </>
   );
 }
 

@@ -479,11 +479,6 @@ export default function DoseForm({ open, onOpenChange }) {
         />
         <DialogPrimitive.Content
           className="dose-form-content fixed bottom-0 left-0 right-0 z-50 flex h-[92dvh] max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-3xl border shadow-2xl sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:h-auto sm:max-h-[92vh] sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl"
-          onInteractOutside={(event) => {
-            if (event.target?.closest?.("[data-input-tray]")) {
-              event.preventDefault();
-            }
-          }}
           style={{
             background: "linear-gradient(165deg, hsl(162,12%,9%) 0%, hsl(162,10%,6%) 100%)",
             borderColor: "rgba(255,255,255,0.12)",
