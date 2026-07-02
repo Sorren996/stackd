@@ -1131,134 +1131,29 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
       <AnimatePresence>
         {openTooltip === "net-carbs" && (
           <TooltipPopover
-            title="Meal Coverage Alignment"
-            description="This groups carb and insulin logs that happen within about 30 minutes, then compares logged insulin with the estimate from your settings. It is an insight, not a dosing recommendation."
+            title="Meal Balance"
+            description="A quick snapshot of how your recent meal and insulin are working together."
             onClose={() => setOpenTooltip(null)}
           >
             {mealInsight.details && (
-              <div className="mt-3 space-y-3">
-                <div
-                  className="rounded-xl border p-3"
-                  style={{
-                    borderColor: `${mealInsight.color}44`,
-                    background: `${mealInsight.color}12`,
-                  }}
-                >
-                  <p className="text-sm font-semibold" style={{ color: mealInsight.color }}>
-                    {mealInsight.status}
+              <div className="mt-3 space-y-4">
+                {/* Headline status */}
+                <div className="text-center">
+                  <p className="text-2xl font-bold" style={{ color: mealInsight.color }}>
+                    {mealInsight.value}
                   </p>
-                  <p className="mt-1 text-[11px] leading-relaxed text-white/50">
-                    Meal estimate {mealInsight.details.expectedMealUnits.toFixed(1)}u
-                    {mealInsight.details.correctionGlucoseAvailable ? (
-                      <> plus {mealInsight.details.correctionUnitsNeeded.toFixed(1)}u correction</>
-                    ) : (
-                      <>. Correction estimate unavailable</>
-                    )}
-                    . Logged {mealInsight.details.loggedTotalUnits.toFixed(1)}u of{" "}
-                    {mealInsight.details.grossDoseEstimate.toFixed(1)}u estimate, leaving{" "}
-                    {mealInsight.details.estimatedAdditionalUnits.toFixed(1)}u suggested support.
-                    {mealInsight.details.coveragePercent !== null && (
-                      <> Logged insulin is {mealInsight.details.coveragePercent}% of the gross estimate.</>
-                    )}
-                  </p>
+                  <p className="mt-0.5 text-xs text-white/50">{mealInsight.status}</p>
                 </div>
 
-                <div className="space-y-2 rounded-xl border border-white/10 bg-white/[0.03] p-3 text-[11px] text-white/45">
-                  <div className="flex justify-between gap-3">
-                    <span>Grouped carbs</span>
-                    <span className="font-semibold text-white/70">
-                      {Math.round(mealInsight.details.meal.carbs)}g
-                      {mealInsight.details.mealCount > 1 ? ` across ${mealInsight.details.mealCount} logs` : ""}
-                    </span>
+                {/* Balance bar */}
+                <div className="space-y-1.5">
+                  <div className="flex justify-between text-[11px] font-medium text-white/40">
+                    <span>{mealInsight.details.loggedTotalUnits.toFixed(1)}u logged</span>
+                    <span>{mealInsight.details.grossDoseEstimate.toFixed(1)}u estimated</span>
                   </div>
-                  <div className="flex justify-between gap-3">
-                    <span>Carb coverage estimate</span>
-                    <span className="font-semibold text-white/70">{mealInsight.details.expectedMealUnits.toFixed(1)}u</span>
-                  </div>
-                  <div className="flex justify-between gap-3">
-                    <span>Correction estimate</span>
-                    <span className="font-semibold text-white/70">
-                      {mealInsight.details.correctionGlucoseAvailable ? (
-                        <>
-                          {mealInsight.details.correctionUnitsNeeded.toFixed(1)}u
-                          {mealInsight.details.correctionGlucoseValue !== null && (
-                            <span className="ml-1 text-white/35">
-                              from {Math.round(mealInsight.details.correctionGlucoseValue)} to {Math.round(mealInsight.details.correctionTargetGlucose)}
-                            </span>
-                          )}
-                        </>
-                      ) : (
-                        <span className="text-white/35">Unavailable</span>
-                      )}
-                    </span>
-                  </div>
-                  <div className="flex justify-between gap-3">
-                    <span>Glucose used</span>
-                    <span className="font-semibold text-white/70">
-                      {mealInsight.details.correctionGlucoseValue !== null ? (
-                        <>
-                          {Math.round(mealInsight.details.correctionGlucoseValue)} mg/dL
-                          {mealInsight.details.glucoseMinutesFromMeal !== null && (
-                            <span className="ml-1 text-white/35">
-                              {mealInsight.details.glucoseMinutesFromMeal}m from meal
-                            </span>
-                          )}
-                        </>
-                      ) : (
-                        <span className="text-white/35">No nearby reading</span>
-                      )}
-                    </span>
-                  </div>
-                  <div className="flex justify-between gap-3 border-t border-white/10 pt-2">
-                    <span>Gross estimate</span>
-                    <span className="font-semibold text-white/80">{mealInsight.details.grossDoseEstimate.toFixed(1)}u</span>
-                  </div>
-                  <div className="flex justify-between gap-3">
-                    <span>Bolus IOB</span>
-                    <span className="font-semibold text-white/70">-{mealInsight.details.bolusIOB.toFixed(1)}u</span>
-                  </div>
-                  <div className="flex justify-between gap-3">
-                    <span>Suggested support</span>
-                    <span className="font-semibold text-white/80">{mealInsight.details.estimatedAdditionalUnits.toFixed(1)}u</span>
-                  </div>
-                  <div className="flex justify-between gap-3 border-t border-white/10 pt-2">
-                    <span>Logged insulin</span>
-                    <span className="font-semibold text-white/80">
-                      {mealInsight.details.loggedTotalUnits.toFixed(1)}u
-                      {mealInsight.details.doseCount > 1 ? ` across ${mealInsight.details.doseCount} logs` : ""}
-                    </span>
-                  </div>
-                  {mealInsight.details.bolusIOBBreakdown.length > 0 && (
-                    <div className="space-y-1 border-t border-white/10 pt-2">
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-white/30">Bolus IOB detail</p>
-                      {mealInsight.details.bolusIOBBreakdown.map((item) => (
-                        <div key={`${item.id || item.type}-${item.time}`} className="flex justify-between gap-3">
-                          <span className="min-w-0 truncate">
-                            {item.type} at {formatClockTime(item.time)}
-                          </span>
-                          <span className="shrink-0 font-semibold text-white/70">
-                            {item.iob.toFixed(1)}u
-                            <span className="ml-1 text-white/35">{item.status.label}</span>
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {mealInsight.details.correctionGlucoseLow && (
-                    <div className="rounded-xl border border-blue-400/20 bg-blue-500/10 p-2 text-[11px] leading-relaxed text-blue-100/70">
-                      Glucose near this meal is below range, so this card avoids emphasizing a correction amount.
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-1">
-                  <div className="flex justify-between text-[10px] font-semibold uppercase tracking-wide text-white/30">
-                    <span>Expected</span>
-                    <span>Logged</span>
-                  </div>
-                  <div className="relative h-2 overflow-hidden rounded-full bg-white/10">
+                  <div className="relative h-2.5 overflow-hidden rounded-full bg-white/10">
                     <div
-                      className="absolute inset-y-0 left-0 rounded-full bg-white/25"
+                      className="absolute inset-y-0 left-0 rounded-full bg-white/20"
                       style={{ width: `${Math.min(100, Math.max(4, mealInsight.details.grossDoseEstimate * 12))}%` }}
                     />
                     <div
@@ -1271,14 +1166,34 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
                   </div>
                 </div>
 
+                {/* Key numbers */}
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-center">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-white/30">Carbs Eaten</p>
+                    <p className="mt-1 text-lg font-bold text-white">{Math.round(mealInsight.details.meal.carbs)}g</p>
+                  </div>
+                  <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-center">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-white/30">Insulin Logged</p>
+                    <p className="mt-1 text-lg font-bold text-white">{mealInsight.details.loggedTotalUnits.toFixed(1)}u</p>
+                  </div>
+                </div>
+
+                {/* How it's tracking */}
                 {(mealInsight.details.peakOutcome || mealInsight.details.lowOutcome) && (
-                  <div className="flex justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-3 text-[11px] text-white/45">
-                    <span>Post-meal glucose</span>
-                    <span className="font-semibold text-white/70">
-                      {mealInsight.details.lowOutcome ?? "--"}-{mealInsight.details.peakOutcome ?? "--"} mg/dL
-                    </span>
+                  <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-center">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-white/30">Since This Meal</p>
+                    <p className="mt-1 text-sm font-semibold text-white/70">
+                      {mealInsight.details.lowOutcome ?? "--"}–{mealInsight.details.peakOutcome ?? "--"} mg/dL
+                    </p>
                   </div>
                 )}
+
+                {/* Encouraging note */}
+                <p className="text-center text-[11px] leading-relaxed text-white/35">
+                  {mealInsight.details.mealStillUnderReview
+                    ? "Still settling — we're keeping an eye on this one with you."
+                    : "This meal's window has passed. Nice work staying on top of it."}
+                </p>
               </div>
             )}
           </TooltipPopover>
