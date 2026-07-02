@@ -4,6 +4,16 @@
 const MINUTE_MS = 60 * 1000;
 
 export const INSULIN_PROFILES = {
+  "Rapid-Acting": {
+    category: "Rapid-Acting",
+    onsetMin: 10,
+    onsetMax: 20,
+    peakMin: 60,
+    peakMax: 120,
+    durationMin: 180,
+    durationMax: 300,
+    color: "#38bdf8",
+  },
   "Fiasp": {
     category: "Rapid-Acting",
     onsetMin: 5,
@@ -64,6 +74,26 @@ export const INSULIN_PROFILES = {
     durationMax: 480,
     color: "#818cf8",
   },
+  "Short-Acting": {
+    category: "Short-Acting",
+    onsetMin: 30,
+    onsetMax: 60,
+    peakMin: 120,
+    peakMax: 240,
+    durationMin: 300,
+    durationMax: 480,
+    color: "#818cf8",
+  },
+  "Intermediate-Acting": {
+    category: "Intermediate-Acting",
+    onsetMin: 60,
+    onsetMax: 120,
+    peakMin: 240,
+    peakMax: 720,
+    durationMin: 720,
+    durationMax: 1080,
+    color: "#a78bfa",
+  },
   "NPH": {
     category: "Intermediate-Acting",
     onsetMin: 60,
@@ -73,6 +103,16 @@ export const INSULIN_PROFILES = {
     durationMin: 720,
     durationMax: 1080,
     color: "#a78bfa",
+  },
+  "Long-Acting": {
+    category: "Long-Acting",
+    onsetMin: 60,
+    onsetMax: 120,
+    peakMin: null,
+    peakMax: null,
+    durationMin: 1200,
+    durationMax: 1440,
+    color: "#2dd4bf",
   },
   "Lantus": {
     category: "Long-Acting",
@@ -114,6 +154,16 @@ export const INSULIN_PROFILES = {
     durationMax: 3000,
     color: "#10b981",
   },
+  "Ultra-Long-Acting": {
+    category: "Ultra-Long-Acting",
+    onsetMin: 60,
+    onsetMax: 120,
+    peakMin: null,
+    peakMax: null,
+    durationMin: 2520,
+    durationMax: 3000,
+    color: "#10b981",
+  },
   "Toujeo": {
     category: "Ultra-Long-Acting",
     onsetMin: 360,
@@ -124,6 +174,26 @@ export const INSULIN_PROFILES = {
     durationMax: 2160,
     color: "#059669",
   },
+};
+
+const INSULIN_TYPE_ALIASES = {
+  "rapid acting": "Rapid-Acting",
+  "rapid-acting": "Rapid-Acting",
+  "rapid": "Rapid-Acting",
+  "fast acting": "Rapid-Acting",
+  "fast-acting": "Rapid-Acting",
+  "short acting": "Short-Acting",
+  "short-acting": "Short-Acting",
+  "regular insulin": "Regular",
+  "intermediate": "Intermediate-Acting",
+  "intermediate acting": "Intermediate-Acting",
+  "intermediate-acting": "Intermediate-Acting",
+  "long acting": "Long-Acting",
+  "long-acting": "Long-Acting",
+  "basal": "Long-Acting",
+  "ultra long acting": "Ultra-Long-Acting",
+  "ultra-long acting": "Ultra-Long-Acting",
+  "ultra-long-acting": "Ultra-Long-Acting",
 };
 
 const DURATION_MULTIPLIER_POINTS = [
@@ -167,6 +237,30 @@ export function formatMinutes(minutes) {
   return `${hours}h ${remainingMinutes}m`;
 }
 
+export function getInsulinProfile(insulinType) {
+  if (!insulinType) return null;
+  if (INSULIN_PROFILES[insulinType]) return INSULIN_PROFILES[insulinType];
+
+  const normalized = String(insulinType)
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+  const aliasKey = INSULIN_TYPE_ALIASES[normalized];
+  if (aliasKey && INSULIN_PROFILES[aliasKey]) return INSULIN_PROFILES[aliasKey];
+
+  const compact = normalized.replace(/[^a-z0-9]/g, "");
+  const matchedEntry = Object.entries(INSULIN_PROFILES).find(([name]) => {
+    const profileKey = name.toLowerCase().replace(/[^a-z0-9]/g, "");
+    return profileKey === compact || profileKey.includes(compact) || compact.includes(profileKey);
+  });
+
+  return matchedEntry?.[1] ?? null;
+}
+
+export function getInsulinCategory(insulinType) {
+  return getInsulinProfile(insulinType)?.category ?? "Insulin";
+}
+
 export function interpolateControlPoints(units, points) {
   const safeUnits = Math.max(0, Number(units) || 0);
   if (!Array.isArray(points) || !points.length) return 1;
@@ -201,6 +295,15 @@ function getDoseUnits(dose) {
   const correction = Number(dose?.correction_units);
   const total = (Number.isFinite(meal) && meal > 0 ? meal : 0) + (Number.isFinite(correction) && correction > 0 ? correction : 0);
   return total > 0 ? total : 0;
+}
+
+function getDoseTime(dose) {
+  return new Date(
+    dose?.administered_at ||
+    dose?.administeredAt ||
+    dose?.created_at ||
+    dose?.created_date
+  ).getTime();
 }
 
 function getProfileTiming(profile, units) {
@@ -256,9 +359,9 @@ export function getRelativeActivityAtMinute(minute, timing) {
 }
 
 export function generateActivityCurve(dose, intervalMinutes = 5) {
-  const profile = INSULIN_PROFILES[dose?.insulin_type];
+  const profile = getInsulinProfile(dose?.insulin_type);
   const units = getDoseUnits(dose);
-  const start = new Date(dose?.administered_at).getTime();
+  const start = getDoseTime(dose);
   const step = Math.max(1, Number(intervalMinutes) || 5);
 
   if (!profile || !units || !Number.isFinite(start)) return [];
@@ -339,28 +442,28 @@ function interpolateCurveValue(curve, atTime, key) {
 }
 
 export function getDoseIOB(dose, atTime = Date.now()) {
-  const start = new Date(dose?.administered_at).getTime();
+  const start = getDoseTime(dose);
   if (!Number.isFinite(start) || !Number.isFinite(atTime) || atTime < start) return 0;
   return interpolateCurveValue(generateActivityCurve(dose), atTime, "activeUnits");
 }
 
 export function getDoseRelativeActivity(dose, atTime = Date.now()) {
-  const start = new Date(dose?.administered_at).getTime();
+  const start = getDoseTime(dose);
   if (!Number.isFinite(start) || !Number.isFinite(atTime) || atTime < start) return 0;
   return clamp(interpolateCurveValue(generateActivityCurve(dose), atTime, "activity"), 0, 1);
 }
 
 export function isBolusInsulinType(insulinType) {
-  const category = INSULIN_PROFILES[insulinType]?.category;
+  const category = getInsulinCategory(insulinType);
   return category === "Rapid-Acting" || category === "Short-Acting";
 }
 
 export function isIntermediateInsulinType(insulinType) {
-  return INSULIN_PROFILES[insulinType]?.category === "Intermediate-Acting";
+  return getInsulinCategory(insulinType) === "Intermediate-Acting";
 }
 
 export function isBasalInsulinType(insulinType) {
-  const category = INSULIN_PROFILES[insulinType]?.category;
+  const category = getInsulinCategory(insulinType);
   return category === "Long-Acting" || category === "Ultra-Long-Acting";
 }
 
@@ -386,9 +489,9 @@ export function getTotalBasalActivity(doses, atTime = Date.now()) {
 }
 
 export function getDoseStatus(dose, atTime = Date.now()) {
-  const profile = INSULIN_PROFILES[dose?.insulin_type];
+  const profile = getInsulinProfile(dose?.insulin_type);
   const units = getDoseUnits(dose);
-  const start = new Date(dose?.administered_at).getTime();
+  const start = getDoseTime(dose);
 
   if (!profile || !units || !Number.isFinite(start)) {
     return { phase: "expired", label: "Unavailable", activity: 0, iob: 0 };
