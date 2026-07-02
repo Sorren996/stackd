@@ -22,6 +22,7 @@ import {
   getCarbAbsorptionAt,
 } from "@/lib/carbAbsorption";
 import { AnimatePresence, motion } from "framer-motion";
+import MealBalanceTooltip from "./MealBalanceTooltip";
 
 const SAMPLE_STEP_MS = 5 * 60 * 1000;
 const MINUTE_MS = 60 * 1000;
@@ -369,28 +370,57 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
   }
 
   // --- Continuous monitoring (evolves as glucose readings come in) ---
+  let outcomeAssessment = null;
+
   if (mealStillUnderReview && ratio !== null && !correctionGlucoseLow) {
     if (lowOutcome && lowOutcome.value < insulinSettings.targetLow) {
-      if (latestIsAfterMeal && latestInRange) {
+      // Glucose dipped below range after the meal — insulin may have been generous
+      if (latestIsAfterMeal && latestLow) {
+        outcomeAssessment = {
+          label: "Worth a closer look",
+          message: "Glucose dipped below range after this meal. Your insulin may have been a touch generous — keep monitoring and take care of yourself.",
+          color: "#3b82f6",
+        };
+        value = "Take care";
+        status = "Glucose dipped below range";
+        color = "#3b82f6";
+      } else if (latestIsAfterMeal && latestInRange) {
+        outcomeAssessment = {
+          label: "Settled nicely",
+          message: "There was a dip along the way, but you're back in a comfortable range. Well done.",
+          color: "#35a879",
+        };
         value = "Settled nicely";
         status = "Back in a comfortable range";
         color = "#35a879";
-      } else if (latestIsAfterMeal && latestLow) {
-        value = "Take care";
-        status = "Glucose dipping below range";
-        color = "#3b82f6";
       }
     } else if (peakOutcome && peakOutcome.value > insulinSettings.targetHigh + 20) {
-      if (latestIsAfterMeal && latestInRange) {
-        value = "Settled nicely";
-        status = "Back in a comfortable range";
-        color = "#35a879";
-      } else if (latestIsAfterMeal && latestHigh) {
+      // Glucose rose well above range — may have needed more support
+      if (latestIsAfterMeal && latestHigh) {
+        outcomeAssessment = {
+          label: "Still settling",
+          message: "Glucose is still above range. This may mean a little more support was needed for this meal. One step at a time.",
+          color: "#f59e0b",
+        };
         value = "Still settling";
         status = "Glucose trending above range";
         color = "#f59e0b";
+      } else if (latestIsAfterMeal && latestInRange) {
+        outcomeAssessment = {
+          label: "Settled nicely",
+          message: "There was a rise after eating, but you've come back to range. Nice work staying with it.",
+          color: "#35a879",
+        };
+        value = "Settled nicely";
+        status = "Back in a comfortable range";
+        color = "#35a879";
       }
     } else if (latestIsAfterMeal && latestInRange) {
+      outcomeAssessment = {
+        label: "Tracking beautifully",
+        message: "Right where we want to be. Your dosing is aligning well with this meal.",
+        color: "#35a879",
+      };
       value = "Tracking beautifully";
       status = "Right where we want to be";
       color = "#35a879";
@@ -434,6 +464,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
       latestGlucoseValue: Number.isFinite(latestGlucoseValue) ? latestGlucoseValue : null,
       peakOutcome: peakOutcome?.value ?? null,
       lowOutcome: lowOutcome?.value ?? null,
+      outcomeAssessment,
       mealStillUnderReview,
       windowStart,
       windowEnd,
@@ -509,57 +540,6 @@ function formatRelativeAge(time) {
 function formatClockTime(time) {
   if (!time) return null;
   return new Date(time).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-}
-
-function TooltipPopover({ title, description, onClose, children }) {
-  return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[300] flex items-center justify-center p-6"
-        onClick={onClose}
-      >
-        <motion.div
-          initial={{ opacity: 0, scale: 0.92, y: -12 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.94, y: -8 }}
-          transition={{ type: "spring", stiffness: 360, damping: 26 }}
-          onClick={(event) => event.stopPropagation()}
-          className="tooltip-popover relative flex max-h-[min(82dvh,620px)] w-full max-w-xs flex-col overflow-hidden rounded-2xl border p-4 shadow-2xl backdrop-blur-2xl"
-          style={{
-            background: "linear-gradient(145deg, rgba(255,255,255,0.2), rgba(255,255,255,0.07))",
-            borderColor: "rgba(255,255,255,0.22)",
-            boxShadow: "0 18px 50px rgba(0,0,0,0.38), inset 0 1px 1px rgba(255,255,255,0.34), inset 0 -1px 1px rgba(255,255,255,0.08)",
-          }}
-        >
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute -inset-8 opacity-70"
-            style={{
-              background: "radial-gradient(circle at 25% 0%, rgba(255,255,255,0.24), transparent 34%), radial-gradient(circle at 88% 120%, rgba(45,212,191,0.16), transparent 42%)",
-            }}
-          />
-          <div className="relative z-10 flex min-h-0 flex-col">
-            <div className="mb-2 flex shrink-0 items-start justify-between gap-3">
-              <p className="text-sm font-semibold text-white">{title}</p>
-              <button onClick={onClose} className="text-white/40 transition-colors hover:text-white/80">
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </div>
-            <p className="shrink-0 text-xs leading-relaxed text-white/50">{description}</p>
-            <div
-              className="-mx-1 mt-3 min-h-0 overflow-y-auto overscroll-contain px-1 pb-1"
-              style={{ WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}
-            >
-              {children}
-            </div>
-          </div>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
-  );
 }
 
 function AmbientOrb({ color, duration = 6 }) {
@@ -1128,93 +1108,11 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
 
   return (
     <>
-      <AnimatePresence>
-        {openTooltip === "net-carbs" && (
-          <TooltipPopover
-            title="Meal Balance"
-            description="A quick snapshot of how your recent meal and insulin are working together."
-            onClose={() => setOpenTooltip(null)}
-          >
-            {mealInsight.details && (
-              <div className="mt-3 space-y-4">
-                {/* Headline status */}
-                <div className="text-center">
-                  <p className="text-2xl font-bold" style={{ color: mealInsight.color }}>
-                    {mealInsight.value}
-                  </p>
-                  <p className="mt-0.5 text-xs text-white/50">{mealInsight.status}</p>
-                </div>
-
-                {/* Balance bar */}
-                <div className="space-y-1.5">
-                  <div className="flex justify-between text-[11px] font-medium text-white/40">
-                    <span>{mealInsight.details.loggedTotalUnits.toFixed(1)}u logged</span>
-                    <span>{mealInsight.details.grossDoseEstimate.toFixed(1)}u estimated</span>
-                  </div>
-                  <div className="relative h-2.5 overflow-hidden rounded-full bg-white/10">
-                    <div
-                      className="absolute inset-y-0 left-0 rounded-full bg-white/20"
-                      style={{ width: `${Math.min(100, Math.max(4, mealInsight.details.grossDoseEstimate * 12))}%` }}
-                    />
-                    <div
-                      className="absolute inset-y-0 left-0 rounded-full"
-                      style={{
-                        width: `${Math.min(100, Math.max(4, mealInsight.details.loggedTotalUnits * 12))}%`,
-                        backgroundColor: mealInsight.color,
-                      }}
-                    />
-                  </div>
-                </div>
-
-                {/* Key numbers */}
-                <div className="grid grid-cols-2 gap-2.5">
-                  <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-center">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-white/30">Carbs Eaten</p>
-                    <p className="mt-1 text-lg font-bold text-white">{Math.round(mealInsight.details.meal.carbs)}g</p>
-                  </div>
-                  <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-center">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-white/30">Insulin Logged</p>
-                    <p className="mt-1 text-lg font-bold text-white">{mealInsight.details.loggedTotalUnits.toFixed(1)}u</p>
-                  </div>
-                </div>
-
-                {/* How it's tracking */}
-                {(mealInsight.details.peakOutcome || mealInsight.details.lowOutcome) && (
-                  <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-center">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-white/30">Since This Meal</p>
-                    <p className="mt-1 text-sm font-semibold text-white/70">
-                      {mealInsight.details.lowOutcome ?? "--"}–{mealInsight.details.peakOutcome ?? "--"} mg/dL
-                    </p>
-                  </div>
-                )}
-
-                {/* How it works */}
-                <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3 space-y-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-white/30">How This Works</p>
-                  <div className="space-y-1.5 text-[11px] leading-relaxed text-white/40">
-                    <p>
-                      <span className="font-semibold text-white/55">Carb estimate</span> — your carbs are divided by your meal ratio to estimate how much insulin your meal needs.
-                    </p>
-                    <p>
-                      <span className="font-semibold text-white/55">Correction factor</span> — if a glucose reading near your meal is above range, we estimate extra support based on your sensitivity.
-                    </p>
-                    <p>
-                      <span className="font-semibold text-white/55">What you logged</span> — the insulin you already took is compared to that estimate so you can see how things line up.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Encouraging note */}
-                <p className="text-center text-[11px] leading-relaxed text-white/35">
-                  {mealInsight.details.mealStillUnderReview
-                    ? "Still settling — we're keeping an eye on this one with you."
-                    : "This meal's window has passed. Nice work staying on top of it."}
-                </p>
-              </div>
-            )}
-          </TooltipPopover>
-        )}
-      </AnimatePresence>
+      <MealBalanceTooltip
+        mealInsight={mealInsight}
+        open={openTooltip === "net-carbs"}
+        onClose={() => setOpenTooltip(null)}
+      />
 
       <div className="relative -mx-4 px-4 pb-6 pt-2">
         <div className="mb-6 flex flex-col items-center pt-2 text-center">
