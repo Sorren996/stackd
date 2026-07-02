@@ -671,11 +671,13 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             {filters.glucose && filteredGlucoseReadings.length > 0 &&
             <Line
               yAxisId="glucose"
-              type="linear"
+              type="monotoneX"
               dataKey="glucose"
               name="Glucose"
               stroke="url(#glucose_line_grad)"
               strokeWidth={2.2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
               dot={false}
               activeDot={false}
               connectNulls={true}
