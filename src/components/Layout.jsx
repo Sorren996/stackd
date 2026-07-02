@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { Activity, History as HistoryIcon, BarChart2, Settings } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -90,7 +90,7 @@ export default function Layout() {
     previous: null,
     key: 0,
   }));
-  const [sceneParallaxY, setSceneParallaxY] = useState(0);
+  const sceneRef = useRef(null);
 
   useEffect(() => {
     const updateLatestGlucose = () => setLatestGlucose(readCachedLatestGlucose());
@@ -135,7 +135,9 @@ export default function Layout() {
     let frame = 0;
     const updateSceneOffset = () => {
       frame = 0;
-      setSceneParallaxY(window.scrollY * 0.5);
+      if (sceneRef.current) {
+        sceneRef.current.style.transform = `translate3d(0, ${window.scrollY * 0.5}px, 0)`;
+      }
     };
     const handleScroll = () => {
       if (frame) return;
@@ -163,9 +165,10 @@ export default function Layout() {
       />
 
       <div
+        ref={sceneRef}
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[620px] overflow-hidden bg-black sm:h-[720px]"
-        style={{ transform: `translate3d(0, ${sceneParallaxY}px, 0)` }}
+        style={{ transform: "translate3d(0, 0, 0)", willChange: "transform" }}
       >
         <AnimatePresence initial={false}>
           <motion.img
