@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
@@ -17,17 +18,57 @@ import Analytics from './pages/Analytics';
 import Settings from './pages/Settings';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { Navigate } from 'react-router-dom';
+import SplashScreen from "@/components/SplashScreen";
+import { base44 } from "@/api/base44Client";
 
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
+  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, isAuthenticated } = useAuth();
+  const [dataReady, setDataReady] = useState(false);
 
-  // Show loading spinner while checking app public settings or auth
-  if (isLoadingPublicSettings || isLoadingAuth) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
-      </div>
-    );
+  useEffect(() => {
+    if (!isAuthenticated || authError) {
+      setDataReady(false);
+      return;
+    }
+
+    let cancelled = false;
+    const prefetchData = async () => {
+      await Promise.all([
+        queryClientInstance.prefetchQuery({
+          queryKey: ["insulin-doses"],
+          queryFn: () => base44.entities.InsulinDose.list("-administered_at", 100),
+        }),
+        queryClientInstance.prefetchQuery({
+          queryKey: ["latest-glucose"],
+          queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", 1),
+        }),
+        queryClientInstance.prefetchQuery({
+          queryKey: ["glucose-readings", "graph"],
+          queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", 5000),
+        }),
+        queryClientInstance.prefetchQuery({
+          queryKey: ["carb-entries"],
+          queryFn: () => base44.entities.CarbEntry.list("-consumed_at", 100),
+        }),
+        queryClientInstance.prefetchQuery({
+          queryKey: ["carb-entries", "graph"],
+          queryFn: () => base44.entities.CarbEntry.list("-consumed_at", 1000),
+        }),
+        queryClientInstance.prefetchQuery({
+          queryKey: ["insulin-doses", "graph"],
+          queryFn: () => base44.entities.InsulinDose.list("-administered_at", 1000),
+        }),
+      ]);
+      if (!cancelled) setDataReady(true);
+    };
+    prefetchData();
+    return () => { cancelled = true; };
+  }, [isAuthenticated, authError]);
+
+  const showSplash = !authError && (isLoadingPublicSettings || isLoadingAuth || (isAuthenticated && !dataReady));
+
+  if (showSplash) {
+    return <SplashScreen />;
   }
 
   // Handle authentication errors
