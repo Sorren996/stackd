@@ -98,6 +98,7 @@ export function CustomInputTray({ open, onClose, title, children, tall = false, 
         }}
         onPointerDown={(event) => event.stopPropagation()}
         onClick={(event) => event.stopPropagation()}
+        onTouchMove={(event) => event.stopPropagation()}
       >
         <div
           aria-hidden="true"
@@ -300,8 +301,8 @@ export function SelectField({ label, value, onChange, options, placeholder = "Se
       </button>
       <CustomInputTray open={open} onClose={() => setOpen(false)} title={label} tall anchorRef={fieldRef}>
         <div
-          className="h-[36dvh] overflow-y-auto rounded-2xl border border-white/10 bg-black/25 p-1"
-          style={{ scrollbarWidth: "none", touchAction: "pan-y" }}
+          className="h-[36dvh] touch-pan-y overflow-y-auto overscroll-contain rounded-2xl border border-white/10 bg-black/25 p-1"
+          style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}
         >
           {options.map((option) => {
             const isSelected = option.value === value;
