@@ -47,7 +47,7 @@ function readTargetRange() {
 
 const SCENE_IMAGES = {
   high: "https://res.cloudinary.com/bzqjmwln/image/upload/v1782928032/mountain_gxgmap.png",
-  range: "https://media.base44.com/images/public/6a1b93f234a8611ee1595134/256fa0ffc_image.png",
+  range: "https://res.cloudinary.com/bzqjmwln/image/upload/v1782928032/forest_lqseeo.png",
   low: "https://res.cloudinary.com/bzqjmwln/image/upload/v1782928032/valley_vqpesd.png",
 };
 
