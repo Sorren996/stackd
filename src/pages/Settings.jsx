@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { base44 } from "@/api/base44Client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -122,15 +122,24 @@ function SettingsHelpOverlay({ openHelp, onClose }) {
   );
 }
 
-function CustomInputTray({ open, onClose, title, children }) {
+function CustomInputTray({ open, onClose, title, children, anchorRef }) {
+  const prevOverflowRef = useRef("");
+
   useEffect(() => {
     if (!open || typeof document === "undefined") return undefined;
 
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    if (anchorRef?.current) {
+      anchorRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+
+    prevOverflowRef.current = document.body.style.overflow;
+    const lockTimeout = setTimeout(() => {
+      document.body.style.overflow = "hidden";
+    }, 400);
 
     return () => {
-      document.body.style.overflow = previousOverflow;
+      clearTimeout(lockTimeout);
+      document.body.style.overflow = prevOverflowRef.current;
     };
   }, [open]);
 
@@ -179,6 +188,7 @@ function CustomInputTray({ open, onClose, title, children }) {
 
 function NumberPadField({ label, value, onChange, placeholder = "--", decimal = true, maxLength = 6, className = "" }) {
   const [open, setOpen] = useState(false);
+  const fieldRef = useRef(null);
   const textValue = value === undefined || value === null ? "" : String(value);
   const press = (key) => {
     if (key === "clear") return onChange("");
@@ -189,12 +199,12 @@ function NumberPadField({ label, value, onChange, placeholder = "--", decimal = 
   };
 
   return (
-    <div className={`rounded-xl border border-white/10 bg-white/5 px-3 py-2 ${className}`}>
+    <div ref={fieldRef} className={`rounded-xl border border-white/10 bg-white/5 px-3 py-2 ${className}`}>
       <button type="button" onClick={() => setOpen((value) => !value)} className="flex min-h-10 w-full flex-col items-start justify-center gap-0.5 text-left">
         <span className="text-[9px] font-semibold uppercase tracking-wider text-white/35">{label}</span>
         <span className="max-w-full truncate text-base font-bold leading-tight text-white">{textValue || placeholder}</span>
       </button>
-      <CustomInputTray open={open} onClose={() => setOpen(false)} title={label}>
+      <CustomInputTray open={open} onClose={() => setOpen(false)} title={label} anchorRef={fieldRef}>
         <div className="grid grid-cols-3 gap-2.5">
           {["1", "2", "3", "4", "5", "6", "7", "8", "9", decimal ? "." : "clear", "0", "back"].map((key) => (
             <button

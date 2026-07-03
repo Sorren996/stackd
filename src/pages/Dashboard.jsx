@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import ActivityGraph from "../components/ActivityGraph";
@@ -121,15 +121,24 @@ const absorptionProfileOptions = [
   { value: "slow", label: "Slow", description: "Slow carbs" },
 ];
 
-function CustomInputTray({ open, onClose, title, children, tall = false }) {
+function CustomInputTray({ open, onClose, title, children, tall = false, anchorRef }) {
+  const prevOverflowRef = useRef("");
+
   useEffect(() => {
     if (!open || typeof document === "undefined") return undefined;
 
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    if (anchorRef?.current) {
+      anchorRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+
+    prevOverflowRef.current = document.body.style.overflow;
+    const lockTimeout = setTimeout(() => {
+      document.body.style.overflow = "hidden";
+    }, 400);
 
     return () => {
-      document.body.style.overflow = previousOverflow;
+      clearTimeout(lockTimeout);
+      document.body.style.overflow = prevOverflowRef.current;
     };
   }, [open]);
 
@@ -179,6 +188,7 @@ function CustomInputTray({ open, onClose, title, children, tall = false }) {
 
 function TimeScrollField({ label, value, onChange, max }) {
   const [open, setOpen] = useState(false);
+  const fieldRef = useRef(null);
   const parsed = parseTimeValue(value);
   const hours = Array.from({ length: 12 }, (_, index) => index + 1);
   const minutes = Array.from({ length: 12 }, (_, index) => index * 5);
@@ -189,12 +199,12 @@ function TimeScrollField({ label, value, onChange, max }) {
   };
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+    <div ref={fieldRef} className="rounded-2xl border border-white/10 bg-white/5 p-3">
       <button type="button" onClick={() => setOpen((value) => !value)} className="flex w-full items-center justify-between">
         <span className="text-sm text-white/40">{label}</span>
         <span className="text-sm font-semibold text-white">{formatTimeLabel(value)}</span>
       </button>
-      <CustomInputTray open={open} onClose={() => setOpen(false)} title={label}>
+      <CustomInputTray open={open} onClose={() => setOpen(false)} title={label} anchorRef={fieldRef}>
         <div className="grid h-[27dvh] grid-cols-[1fr_1fr_0.9fr] gap-3">
           {[["hour12", hours], ["minute", minutes]].map(([key, values]) => (
             <div key={key} className="touch-pan-y overflow-y-auto rounded-2xl border border-white/10 bg-black/20 p-1" style={{ scrollbarWidth: "none" }}>
@@ -240,6 +250,7 @@ function TimeScrollField({ label, value, onChange, max }) {
 
 function NumberPadField({ label, value, onChange, unit, placeholder = "--", decimal = true, maxLength = 6, large = false }) {
   const [open, setOpen] = useState(false);
+  const fieldRef = useRef(null);
   const textValue = value === undefined || value === null ? "" : String(value);
   const press = (key) => {
     if (key === "clear") return onChange("");
@@ -250,14 +261,14 @@ function NumberPadField({ label, value, onChange, unit, placeholder = "--", deci
   };
 
   return (
-    <div className={`rounded-xl border border-white/10 bg-white/5 p-3 ${large ? "px-6 py-6" : ""}`}>
+    <div ref={fieldRef} className={`rounded-xl border border-white/10 bg-white/5 p-3 ${large ? "px-6 py-6" : ""}`}>
       <button type="button" onClick={() => setOpen((value) => !value)} className="flex w-full items-center justify-between gap-3">
         <span className="text-left text-[10px] font-semibold uppercase tracking-wider text-white/35">{label}</span>
         <span className={`${large ? "text-5xl" : "text-base"} text-right font-bold text-white`}>
           {textValue || placeholder}{unit && <span className="ml-1 text-xs text-white/35">{unit}</span>}
         </span>
       </button>
-      <CustomInputTray open={open} onClose={() => setOpen(false)} title={label}>
+      <CustomInputTray open={open} onClose={() => setOpen(false)} title={label} anchorRef={fieldRef}>
         <div className="grid grid-cols-3 gap-2.5">
           {["1", "2", "3", "4", "5", "6", "7", "8", "9", decimal ? "." : "clear", "0", "back"].map((key) => (
             <button
@@ -280,11 +291,12 @@ function NumberPadField({ label, value, onChange, unit, placeholder = "--", deci
 
 function TextPadField({ label, value, onChange, placeholder, multiline = false }) {
   const [open, setOpen] = useState(false);
+  const fieldRef = useRef(null);
   const rows = ["1234567890", "QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"];
   const add = (key) => onChange(`${value || ""}${key}`);
 
   return (
-    <div>
+    <div ref={fieldRef}>
       {label && <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-white/35">{label}</span>}
       <button
         type="button"
@@ -293,7 +305,7 @@ function TextPadField({ label, value, onChange, placeholder, multiline = false }
       >
         {value ? <span className="whitespace-pre-wrap">{value}</span> : <span className="text-white/30">{placeholder}</span>}
       </button>
-      <CustomInputTray open={open} onClose={() => setOpen(false)} title={label || "Text"} tall>
+      <CustomInputTray open={open} onClose={() => setOpen(false)} title={label || "Text"} tall anchorRef={fieldRef}>
         <div className="rounded-2xl border border-white/10 bg-black/20 p-2">
           {rows.map((row) => (
             <div key={row} className="mb-1.5 flex justify-center gap-1.5 last:mb-0">
@@ -337,17 +349,18 @@ function TextPadField({ label, value, onChange, placeholder, multiline = false }
 
 function SelectField({ label, value, onChange, options, placeholder = "Select" }) {
   const [open, setOpen] = useState(false);
+  const fieldRef = useRef(null);
   const selected = options.find((option) => option.value === value);
 
   return (
-    <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+    <div ref={fieldRef} className="rounded-xl border border-white/10 bg-white/5 p-3">
       <button type="button" onClick={() => setOpen((current) => !current)} className="flex w-full items-center justify-between gap-3 text-left">
         <span className="text-left text-[10px] font-semibold uppercase tracking-wider text-white/35">{label}</span>
         <span className="min-w-0 text-right text-sm font-semibold text-white">
           {selected ? selected.label : <span className="text-white/30">{placeholder}</span>}
         </span>
       </button>
-      <CustomInputTray open={open} onClose={() => setOpen(false)} title={label} tall>
+      <CustomInputTray open={open} onClose={() => setOpen(false)} title={label} tall anchorRef={fieldRef}>
         <div className="max-h-[34dvh] touch-pan-y space-y-2 overflow-y-auto pr-1" style={{ scrollbarWidth: "none" }}>
           {options.map((option) => {
             const isSelected = option.value === value;
