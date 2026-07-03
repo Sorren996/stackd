@@ -138,7 +138,7 @@ export default function Layout() {
       frame = 0;
 
       if (sceneRef.current) {
-        const offset = Math.max(-72, Math.min(0, window.scrollY * -0.05));
+        const offset = Math.max(-160, Math.min(0, window.scrollY * -0.12));
         sceneRef.current.style.transform = `translate3d(0, ${offset}px, 0)`;
       }
     };
@@ -183,7 +183,7 @@ export default function Layout() {
             animate={{ opacity: 0.82, scale: 1.03 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 1.1, ease: "easeInOut" }}
-            className="absolute inset-x-0 top-0 h-[115vh] w-full max-w-none object-cover"
+            className="absolute inset-x-0 top-0 h-[130vh] w-full max-w-none object-cover"
             style={{
               filter: "grayscale(0.1) saturate(1.08) contrast(1.02) brightness(1.08)",
               objectPosition: sceneStatus === "high" ? "center top" : sceneStatus === "low" ? "center 35%" : "center top",
