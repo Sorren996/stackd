@@ -75,7 +75,7 @@ export function CustomInputTray({ open, onClose, title, children, tall = false, 
   return createPortal(
     <>
       <div
-        className="fixed inset-0 z-[998] bg-black/30"
+        className="pointer-events-auto fixed inset-0 z-[998] bg-black/30"
         onPointerDown={absorb}
         onPointerUp={absorb}
         onClick={(event) => {
@@ -88,7 +88,7 @@ export function CustomInputTray({ open, onClose, title, children, tall = false, 
         animate={{ y: 0 }}
         exit={{ y: "100%" }}
         transition={{ type: "spring", stiffness: 380, damping: 36 }}
-        className={`fixed inset-x-0 bottom-0 z-[999] overflow-hidden rounded-t-3xl border px-4 pb-[max(env(safe-area-inset-bottom),0.85rem)] pt-3 ${
+        className={`pointer-events-auto fixed inset-x-0 bottom-0 z-[999] overflow-hidden rounded-t-3xl border px-4 pb-[max(env(safe-area-inset-bottom),0.85rem)] pt-3 ${
           tall ? "min-h-[43dvh]" : "min-h-[34dvh]"
         }`}
         style={{
