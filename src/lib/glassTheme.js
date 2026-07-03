@@ -18,6 +18,7 @@ export const GLASS_SURFACE = {
   borderColor: "rgba(255,255,255,0.14)",
   boxShadow:
     "0 12px 40px rgba(0,0,0,0.10), 0 4px 12px rgba(0,0,0,0.06), inset 0 1px 1px rgba(255,255,255,0.22), inset 0 -1px 1px rgba(255,255,255,0.05)",
+  backdropFilter: "blur(4px)",
 };
 
 // Smaller card shadow — gentle and diffuse

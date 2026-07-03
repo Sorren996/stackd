@@ -9,6 +9,7 @@ import { CalendarDays, ChevronRight, X, Pencil } from "lucide-react";
 import { format, isToday, isYesterday, parseISO } from "date-fns";
 import { motion } from "framer-motion";
 import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
+import { TimeScrollField, NumberPadField, TextPadField, SelectField } from "@/components/FormInputFields";
 
 function readTargetRange() {
   if (typeof window === "undefined") return { low: 70, high: 180 };
@@ -32,15 +33,15 @@ function CollapsibleDateGroup({ label, count, isOpen, onToggle, children }) {
           : "0 0 0px rgba(0,0,0,0)"
       }}
       transition={{ type: "spring", stiffness: 300, damping: 25 }}
-      className="bg-white/[0.02] border rounded-2xl overflow-hidden"
+      className="backdrop-blur-sm border border-white/10 rounded-2xl overflow-hidden"
     >
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/[0.04] transition-colors"
+        className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-white/[0.04] transition-colors"
       >
         <div className="flex items-center gap-3">
-          <span className="text-sm font-semibold text-white/90">{label}</span>
-          <span className="text-sm bg-white/10 px-2 py-0.5 rounded-full text-white/50">
+          <span className="text-sm font-semibold text-white">{label}</span>
+          <span className="text-xs bg-white/10 px-2.5 py-0.5 rounded-full text-white/60">
             {count} {count === 1 ? "log" : "logs"}
           </span>
         </div>
@@ -48,7 +49,7 @@ function CollapsibleDateGroup({ label, count, isOpen, onToggle, children }) {
           animate={{ rotate: isOpen ? 90 : 0 }}
           transition={{ type: "spring", stiffness: 300, damping: 20 }}
         >
-          <ChevronRight className="w-4 h-4 text-white/40" />
+          <ChevronRight className="w-4 h-4 text-white/50" />
         </motion.div>
       </button>
 
@@ -58,7 +59,7 @@ function CollapsibleDateGroup({ label, count, isOpen, onToggle, children }) {
         transition={{ type: "spring", stiffness: 220, damping: 26 }}
         className="overflow-hidden"
       >
-        <div className="border-t border-white/5 divide-white/5 space-y-3">
+        <div className="border-t border-white/10 space-y-2 p-2">
           {children}
         </div>
       </motion.div>
@@ -153,26 +154,6 @@ function getEditInitialForm(log) {
   };
 }
 
-function formatTimeLabel(value) {
-  const [hoursRaw, minutes = "00"] = String(value || "00:00").split(":");
-  const hours = Number(hoursRaw);
-  const suffix = hours >= 12 ? "PM" : "AM";
-  return `${hours % 12 || 12}:${minutes.padStart(2, "0")} ${suffix}`;
-}
-
-function buildTimeValue(hour12, minute, suffix) {
-  let hour = Number(hour12) % 12;
-  if (suffix === "PM") hour += 12;
-  const safeMinute = Math.max(0, Math.min(55, Number(minute) || 0));
-  return `${String(hour).padStart(2, "0")}:${String(safeMinute).padStart(2, "0")}`;
-}
-
-function parseTimeValue(value) {
-  const [hoursRaw = "0", minutesRaw = "0"] = String(value || "00:00").split(":");
-  const hours = Number(hoursRaw);
-  return { hour12: hours % 12 || 12, minute: Math.max(0, Math.min(55, Math.floor(Number(minutesRaw) / 5) * 5)), suffix: hours >= 12 ? "PM" : "AM" };
-}
-
 const insulinTypeOptions = Object.entries(INSULIN_PROFILES).map(([name, profile]) => ({
   value: name,
   label: name,
@@ -184,263 +165,6 @@ const absorptionProfileOptions = [
   { value: "medium", label: "Medium", description: "Balanced carbs" },
   { value: "slow", label: "Slow", description: "Slow carbs" },
 ];
-
-function CustomInputTray({ open, onClose, title, children, tall = false }) {
-  useEffect(() => {
-    if (!open || typeof document === "undefined") return undefined;
-
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [open]);
-
-  if (!open || typeof document === "undefined") return null;
-
-  const absorb = (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-  };
-
-  return (
-    <>
-      <div
-        className="fixed inset-0 z-[998] bg-black/25"
-        onPointerDown={absorb}
-        onPointerUp={absorb}
-        onClick={(event) => {
-          absorb(event);
-          onClose();
-        }}
-      />
-      <div
-        className={`fixed inset-x-0 bottom-0 z-[999] rounded-t-3xl border border-white/10 bg-[hsl(162,10%,8%)] px-4 pb-[max(env(safe-area-inset-bottom),0.85rem)] pt-3 shadow-[0_-24px_60px_rgba(0,0,0,0.55)] ${
-          tall ? "min-h-[43dvh]" : "min-h-[34dvh]"
-        }`}
-        onPointerDown={(event) => event.stopPropagation()}
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="mb-3 flex items-center justify-between">
-          <p className="text-sm font-semibold text-white/60">{title}</p>
-          <button
-            type="button"
-            onClick={(event) => {
-              absorb(event);
-              onClose();
-            }}
-            className="rounded-full bg-white/10 px-4 py-1.5 text-sm font-semibold text-teal-200"
-          >
-            Done
-          </button>
-        </div>
-        {children}
-      </div>
-    </>
-  );
-}
-
-function TimeScrollField({ label, value, onChange, max }) {
-  const [open, setOpen] = useState(false);
-  const parsed = parseTimeValue(value);
-  const hours = Array.from({ length: 12 }, (_, index) => index + 1);
-  const minutes = Array.from({ length: 12 }, (_, index) => index * 5);
-  const updateTime = (patch) => {
-    const next = { ...parsed, ...patch };
-    const nextValue = buildTimeValue(next.hour12, next.minute, next.suffix);
-    onChange(max && nextValue > max ? max : nextValue);
-  };
-
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-      <button type="button" onClick={() => setOpen((value) => !value)} className="flex w-full items-center justify-between">
-        <span className="text-sm text-white/40">{label}</span>
-        <span className="text-sm font-semibold text-white">{formatTimeLabel(value)}</span>
-      </button>
-      <CustomInputTray open={open} onClose={() => setOpen(false)} title={label}>
-        <div className="grid h-[27dvh] grid-cols-[1fr_1fr_0.9fr] gap-3">
-          {[["hour12", hours], ["minute", minutes]].map(([key, values]) => (
-            <div key={key} className="touch-pan-y overflow-y-auto rounded-2xl border border-white/10 bg-black/20 p-1" style={{ scrollbarWidth: "none" }}>
-              {values.map((item) => (
-                <button
-                  key={item}
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    updateTime({ [key]: item });
-                  }}
-                  className={`mb-1 flex h-12 w-full items-center justify-center rounded-xl text-lg font-semibold transition last:mb-0 ${
-                    parsed[key] === item ? "bg-teal-500 text-white" : "text-white/45 hover:bg-white/10 hover:text-white"
-                  }`}
-                >
-                  {String(item).padStart(key === "minute" ? 2 : 1, "0")}
-                </button>
-              ))}
-            </div>
-          ))}
-          <div className="grid gap-2">
-            {["AM", "PM"].map((suffix) => (
-              <button
-                key={suffix}
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  updateTime({ suffix });
-                }}
-                className={`rounded-2xl text-base font-bold transition ${
-                  parsed.suffix === suffix ? "bg-teal-500 text-white" : "border border-white/10 bg-black/20 text-white/45"
-                }`}
-              >
-                {suffix}
-              </button>
-            ))}
-          </div>
-        </div>
-      </CustomInputTray>
-    </div>
-  );
-}
-
-function NumberPadField({ label, value, onChange, unit, placeholder = "--", decimal = true, maxLength = 6, large = false }) {
-  const [open, setOpen] = useState(false);
-  const textValue = value === undefined || value === null ? "" : String(value);
-  const press = (key) => {
-    if (key === "clear") return onChange("");
-    if (key === "back") return onChange(textValue.slice(0, -1));
-    if (key === "." && (!decimal || textValue.includes("."))) return;
-    if (textValue.length >= maxLength) return;
-    onChange(`${textValue}${key}`);
-  };
-
-  return (
-    <div className={`rounded-xl border border-white/10 bg-white/5 p-3 ${large ? "px-6 py-6" : ""}`}>
-      <button type="button" onClick={() => setOpen((value) => !value)} className="flex w-full items-center justify-between gap-3">
-        <span className="text-left text-[10px] font-semibold uppercase tracking-wider text-white/35">{label}</span>
-        <span className={`${large ? "text-5xl" : "text-base"} text-right font-bold text-white`}>
-          {textValue || placeholder}{unit && <span className="ml-1 text-xs text-white/35">{unit}</span>}
-        </span>
-      </button>
-      <CustomInputTray open={open} onClose={() => setOpen(false)} title={label}>
-        <div className="grid grid-cols-3 gap-2.5">
-          {["1", "2", "3", "4", "5", "6", "7", "8", "9", decimal ? "." : "clear", "0", "back"].map((key) => (
-            <button
-              key={key}
-              type="button"
-              onClick={(event) => {
-                event.stopPropagation();
-                press(key);
-              }}
-              className="h-14 rounded-2xl border border-white/10 bg-white/[0.06] text-xl font-bold text-white/85 transition hover:bg-white/10 active:scale-[0.98]"
-            >
-              {key === "back" ? "Back" : key === "clear" ? "Clear" : key}
-            </button>
-          ))}
-        </div>
-      </CustomInputTray>
-    </div>
-  );
-}
-
-function TextPadField({ label, value, onChange, placeholder, multiline = false }) {
-  const [open, setOpen] = useState(false);
-  const rows = ["1234567890", "QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"];
-  const add = (key) => onChange(`${value || ""}${key}`);
-
-  return (
-    <div>
-      {label && <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-white/35">{label}</span>}
-      <button
-        type="button"
-        onClick={() => setOpen((current) => !current)}
-        className={`w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-3 text-left text-sm text-white outline-none transition ${multiline ? "min-h-20" : ""}`}
-      >
-        {value ? <span className="whitespace-pre-wrap">{value}</span> : <span className="text-white/30">{placeholder}</span>}
-      </button>
-      <CustomInputTray open={open} onClose={() => setOpen(false)} title={label || "Text"} tall>
-        <div className="rounded-2xl border border-white/10 bg-black/20 p-2">
-          {rows.map((row) => (
-            <div key={row} className="mb-1.5 flex justify-center gap-1.5 last:mb-0">
-              {[...row].map((letter) => (
-                <button key={letter} type="button" onClick={(event) => {
-                    event.stopPropagation();
-                    add(letter.toLowerCase());
-                  }} className="h-12 min-w-0 flex-1 rounded-xl bg-white/10 text-sm font-bold text-white/85 active:scale-[0.98]">
-                  {letter}
-                </button>
-              ))}
-            </div>
-          ))}
-          <div className="mt-2 grid grid-cols-[1fr_1fr_2fr_1fr_1fr] gap-2">
-            <button type="button" onClick={(event) => {
-              event.stopPropagation();
-              onChange("");
-            }} className="h-12 rounded-xl bg-white/10 text-xs font-bold text-white/65">Clear</button>
-            <button type="button" onClick={(event) => {
-              event.stopPropagation();
-              add(",");
-            }} className="h-12 rounded-xl bg-white/10 text-xs font-bold text-white/65">,</button>
-            <button type="button" onClick={(event) => {
-              event.stopPropagation();
-              add(" ");
-            }} className="h-12 rounded-xl bg-white/10 text-xs font-bold text-white/65">Space</button>
-            <button type="button" onClick={(event) => {
-              event.stopPropagation();
-              add(".");
-            }} className="h-12 rounded-xl bg-white/10 text-xs font-bold text-white/65">.</button>
-            <button type="button" onClick={(event) => {
-              event.stopPropagation();
-              onChange(String(value || "").slice(0, -1));
-            }} className="h-12 rounded-xl bg-white/10 text-xs font-bold text-white/65">Back</button>
-          </div>
-        </div>
-      </CustomInputTray>
-    </div>
-  );
-}
-
-function SelectField({ label, value, onChange, options, placeholder = "Select" }) {
-  const [open, setOpen] = useState(false);
-  const selected = options.find((option) => option.value === value);
-
-  return (
-    <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-      <button type="button" onClick={() => setOpen((current) => !current)} className="flex w-full items-center justify-between gap-3 text-left">
-        <span className="text-left text-[10px] font-semibold uppercase tracking-wider text-white/35">{label}</span>
-        <span className="min-w-0 text-right text-sm font-semibold text-white">
-          {selected ? selected.label : <span className="text-white/30">{placeholder}</span>}
-        </span>
-      </button>
-      <CustomInputTray open={open} onClose={() => setOpen(false)} title={label} tall>
-        <div className="max-h-[34dvh] touch-pan-y space-y-2 overflow-y-auto pr-1" style={{ scrollbarWidth: "none" }}>
-          {options.map((option) => {
-            const isSelected = option.value === value;
-            return (
-              <button
-                key={option.value}
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onChange(option.value);
-                  setOpen(false);
-                }}
-                className={`flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left transition ${
-                  isSelected ? "border-teal-500/45 bg-teal-500/12 text-white" : "border-white/10 bg-white/[0.04] text-white/55"
-                }`}
-              >
-                <span className="min-w-0">
-                  <span className="block truncate text-sm font-semibold">{option.label}</span>
-                  {option.description && <span className="text-[10px] uppercase tracking-wider text-white/30">{option.description}</span>}
-                </span>
-                <span className={`h-3 w-3 rounded-full ${isSelected ? "bg-teal-300" : "bg-white/15"}`} />
-              </button>
-            );
-          })}
-        </div>
-      </CustomInputTray>
-    </div>
-  );
-}
 
 function EditLogSheet({ log, onClose, onSave, isSaving }) {
   const [form, setForm] = useState(() => getEditInitialForm(log));
@@ -524,7 +248,7 @@ function EditLogSheet({ log, onClose, onSave, isSaving }) {
 
   return (
     <div className="fixed inset-0 z-[80] flex items-end justify-center overflow-y-auto bg-black/75 px-3 pb-24 pt-6 sm:items-center sm:px-4 sm:pb-6 sm:backdrop-blur-sm">
-      <div className="edit-log-sheet max-h-[calc(100dvh-8rem)] w-full max-w-md overflow-y-auto rounded-3xl border border-white/10 p-5 shadow-2xl sm:max-h-[calc(100dvh-3rem)]" style={{ background: "hsl(162,10%,8%)" }}>
+      <div className="edit-log-sheet max-h-[calc(100dvh-8rem)] w-full max-w-md overflow-y-auto rounded-3xl border p-5 sm:max-h-[calc(100dvh-3rem)]" style={{ background: "linear-gradient(165deg, rgba(18,28,23,0.94), rgba(10,16,13,0.96))", borderColor: "rgba(255,255,255,0.14)", boxShadow: "0 24px 80px rgba(0,0,0,0.45), inset 0 1px 1px rgba(255,255,255,0.12), inset 0 -1px 1px rgba(255,255,255,0.04)", backdropFilter: "blur(20px)" }}>
         <style>{`
           .edit-log-sheet input,
           .edit-log-sheet select,
@@ -534,7 +258,7 @@ function EditLogSheet({ log, onClose, onSave, isSaving }) {
         `}</style>
         <div className="mb-5 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-white">{title}</h2>
-          <button type="button" onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/60">
+          <button type="button" onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-full border text-white/70 transition hover:text-white" style={{ background: "linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))", borderColor: "rgba(255,255,255,0.14)" }}>
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -578,7 +302,7 @@ function EditLogSheet({ log, onClose, onSave, isSaving }) {
 
           <TimeScrollField label="Logged at" value={form.time} onChange={(value) => updateField("time", value)} />
           <TextPadField label="Notes" value={form.notes} onChange={(value) => updateField("notes", value)} placeholder="Notes" multiline />
-          <button type="button" onClick={submit} disabled={isSaving} className="sticky bottom-0 w-full rounded-2xl bg-teal-500 py-4 text-base font-semibold text-white shadow-[0_-16px_24px_rgba(10,18,16,0.9)] transition hover:bg-teal-400 disabled:opacity-40">
+          <button type="button" onClick={submit} disabled={isSaving} className="sticky bottom-0 w-full rounded-2xl py-4 text-base font-semibold text-white transition disabled:opacity-40" style={{ background: "linear-gradient(145deg, rgba(91,168,138,0.85), rgba(91,163,184,0.72))", boxShadow: "0 8px 28px rgba(91,163,184,0.22), 0 -8px 20px rgba(10,18,16,0.9), inset 0 1px 1px rgba(255,255,255,0.2)" }}>
             {isSaving ? "Saving..." : "Save changes"}
           </button>
         </div>
@@ -595,7 +319,7 @@ function EditableLog({ children, onEdit }) {
         type="button"
         onClick={onEdit}
         aria-label="Edit log"
-        className="absolute right-12 top-4 flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-white/35 transition hover:bg-white/10 hover:text-white/80"
+        className="absolute right-12 top-4 flex h-7 w-7 items-center justify-center rounded-full border text-white/55 transition hover:text-white" style={{ background: "linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))", borderColor: "rgba(255,255,255,0.12)" }}
       >
         <Pencil className="h-3.5 w-3.5" />
       </button>
@@ -765,7 +489,7 @@ export default function History() {
 
       <div className="flex justify-center">
         <div
-          className="flex items-center gap-1 p-1 rounded-3xl border border-white/20 bg-white/5 shadow-lg sm:backdrop-blur-sm"
+          className="flex items-center gap-1 p-1 rounded-3xl border border-white/10 bg-white/5 shadow-lg backdrop-blur-sm"
           style={{
             background: "rgba(255, 255, 255, 0.03)",
             boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.05)"
@@ -820,7 +544,7 @@ export default function History() {
           {doseGroups.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
               <CalendarDays className="w-10 h-10 text-muted-foreground/40 mb-3" />
-              <h3 className="text-lg font-semibold">No doses logged yet</h3>
+              <h3 className="text-lg font-semibold text-white">No doses logged yet</h3>
               <p className="text-sm text-muted-foreground mt-1">Head to the Dashboard to log your first dose.</p>
             </div>
           ) : (
@@ -853,13 +577,13 @@ export default function History() {
               { label: "14 Day", days: 14 },
               { label: "30 Day", days: 30 }
             ].map((window) => (
-              <div key={window.label} className="bg-white/5 border border-white/5 rounded-2xl p-3 text-center">
-                <p className="text-[10px] font-bold text-white/30 uppercase tracking-wider">{window.label} Avg</p>
+              <div key={window.label} className="backdrop-blur-sm border border-white/10 rounded-2xl p-3 text-center">
+                <p className="text-[10px] font-bold text-white/60 uppercase tracking-wider">{window.label} Avg</p>
                 <p className="text-xl text-white mt-1 font-extrabold text-center">{getAverage(window.days)}</p>
                 <p className="text-[10px] text-white/30 mt-0.5">mg/dL</p>
               </div>
             ))}
-            <div className="bg-white/5 border border-teal-500/20 rounded-2xl p-3 text-center" style={{ boxShadow: "0 0 15px rgba(20, 184, 166, 0.05)" }}>
+            <div className="backdrop-blur-sm border border-teal-500/20 rounded-2xl p-3 text-center" style={{ boxShadow: "0 0 15px rgba(20, 184, 166, 0.05)" }}>
               <p className="text-[10px] font-bold text-teal-400 uppercase tracking-wider">In Range</p>
               <p className="text-xl text-teal-400 mt-1 font-extrabold text-center">{inRangePercentage}</p>
               <p className="text-[10px] text-teal-400/50 mt-0.5">{targetLow}–{targetHigh} mg/dL</p>
@@ -869,7 +593,7 @@ export default function History() {
           {glucoseGroups.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
               <CalendarDays className="w-10 h-10 text-muted-foreground/40 mb-3" />
-              <h3 className="text-lg font-semibold">No glucose logs for the last 30 days</h3>
+              <h3 className="text-lg font-semibold text-white">No glucose logs for the last 30 days</h3>
               <p className="text-sm text-muted-foreground mt-1">Glucose logs recorded in the dashboard will appear here.</p>
             </div>
           ) : (
@@ -901,14 +625,14 @@ export default function History() {
               { label: "14 Day Avg", days: 14 },
               { label: "30 Day Avg", days: 30 },
             ].map((window) => (
-              <div key={window.label} className="bg-white/5 border border-white/5 rounded-2xl p-3 text-center">
-                <p className="text-[10px] font-bold text-white/30 uppercase tracking-wider">{window.label}</p>
+              <div key={window.label} className="backdrop-blur-sm border border-white/10 rounded-2xl p-3 text-center">
+                <p className="text-[10px] font-bold text-white/60 uppercase tracking-wider">{window.label}</p>
                 <p className="text-xl text-white mt-1 font-extrabold">{getCarbAverage(window.days)}</p>
                 <p className="text-[10px] text-white/30 mt-0.5">g / day</p>
               </div>
             ))}
           </div>
-          <div className="bg-white/5 border border-amber-500/20 rounded-2xl p-3 text-center" style={{ boxShadow: "0 0 15px rgba(245,158,11,0.05)" }}>
+          <div className="backdrop-blur-sm border border-amber-500/20 rounded-2xl p-3 text-center" style={{ boxShadow: "0 0 15px rgba(245,158,11,0.05)" }}>
             <p className="text-[10px] font-bold text-amber-400 uppercase tracking-wider">Total Carbs (30 Days)</p>
             <p className="text-2xl text-amber-400 mt-1 font-extrabold">{totalCarbsLast30}g</p>
           </div>
@@ -916,7 +640,7 @@ export default function History() {
           {carbGroups.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
               <CalendarDays className="w-10 h-10 text-muted-foreground/40 mb-3" />
-              <h3 className="text-lg font-semibold">No carb entries yet</h3>
+              <h3 className="text-lg font-semibold text-white">No carb entries yet</h3>
               <p className="text-sm text-muted-foreground mt-1">Log food from the Dashboard to see it here.</p>
             </div>
           ) : (

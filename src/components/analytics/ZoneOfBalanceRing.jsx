@@ -72,7 +72,7 @@ export default function ZoneOfBalanceRing({ inRangePercent, abovePercent, belowP
         style={{ background: "radial-gradient(circle at 50% 0%, rgba(53,168,121,0.12), transparent 60%)" }}
       />
       <div className="relative z-10 flex flex-col items-center">
-        <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.25em] text-white/40">Time in Your Comfort Zone</p>
+        <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.25em] text-white">Time in Your Comfort Zone</p>
         <p className="mb-5 text-xs text-white/30">Last 30 days · {totalReadings} readings</p>
 
         <div className="relative">

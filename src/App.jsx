@@ -37,7 +37,7 @@ const AuthenticatedApp = () => {
       await Promise.all([
         queryClientInstance.prefetchQuery({
           queryKey: ["insulin-doses"],
-          queryFn: () => base44.entities.InsulinDose.list("-administered_at", 100),
+          queryFn: () => base44.entities.InsulinDose.list("-administered_at", 200),
         }),
         queryClientInstance.prefetchQuery({
           queryKey: ["latest-glucose"],
@@ -48,8 +48,12 @@ const AuthenticatedApp = () => {
           queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", 5000),
         }),
         queryClientInstance.prefetchQuery({
+          queryKey: ["glucose-readings"],
+          queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", 1000),
+        }),
+        queryClientInstance.prefetchQuery({
           queryKey: ["carb-entries"],
-          queryFn: () => base44.entities.CarbEntry.list("-consumed_at", 100),
+          queryFn: () => base44.entities.CarbEntry.list("-consumed_at", 300),
         }),
         queryClientInstance.prefetchQuery({
           queryKey: ["carb-entries", "graph"],

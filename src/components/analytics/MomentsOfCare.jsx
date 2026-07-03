@@ -50,7 +50,7 @@ export default function MomentsOfCare({ segments }) {
     return (
       <div className="relative overflow-hidden rounded-3xl border p-6" style={GLASS_SURFACE}>
         <div className="text-center">
-          <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-white/40">Moments of Care</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-white">Moments of Care</p>
           <p className="mt-3 text-sm leading-relaxed text-white/45">
             Keep logging readings throughout your day to reveal your body's gentle patterns.
           </p>
@@ -99,7 +99,7 @@ export default function MomentsOfCare({ segments }) {
 
   return (
     <div>
-      <p className="mb-3 px-1 text-[10px] font-bold uppercase tracking-[0.25em] text-white/40">Moments of Care</p>
+      <p className="mb-3 px-1 text-[10px] font-bold uppercase tracking-[0.25em] text-white">Moments of Care</p>
       <div className="space-y-3">
         {insights.map((insight, i) => (
           <motion.div

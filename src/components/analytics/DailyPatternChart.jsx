@@ -35,7 +35,7 @@ export default function DailyPatternChart({ hourlyAverages, targetLow, targetHig
         style={{ background: "radial-gradient(circle at 50% 0%, rgba(45,212,191,0.1), transparent 60%)" }}
       />
       <div className="relative z-10">
-        <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.25em] text-white/40">Your Daily Rhythm</p>
+        <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.25em] text-white">Your Daily Rhythm</p>
         <p className="mb-4 text-xs text-white/30">Average glucose throughout the day</p>
 
         <div className="h-56">
