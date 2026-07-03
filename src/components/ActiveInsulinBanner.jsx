@@ -1206,7 +1206,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
             }}
           >
             <motion.span
-              animate={{ scale: [1, 1.1, 1], opacity: [0.7, 1, 0.7] }}
+              animate={{ scale: [.4, .7, .4], opacity: [0.7, 1, 0.7] }}
               transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
               className="relative z-10 h-2 w-2 rounded-full"
               style={{ backgroundColor: glucoseColor, boxShadow: `0 0 12px ${glucoseColor}` }}
