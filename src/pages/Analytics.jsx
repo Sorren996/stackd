@@ -1,99 +1,113 @@
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { useMemo } from "react";
-import { subDays, format, startOfDay, getDay, parseISO, differenceInDays } from "date-fns";
-import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell, LineChart, Line, Legend,
-} from "recharts";
-import { TrendingUp, Syringe, Calendar, Activity } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { subDays } from "date-fns";
+import { motion } from "framer-motion";
+import { Activity } from "lucide-react";
+import ZoneOfBalanceRing from "@/components/analytics/ZoneOfBalanceRing";
+import DailyPatternChart from "@/components/analytics/DailyPatternChart";
+import MomentsOfCare from "@/components/analytics/MomentsOfCare";
 
-const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const COLORS = ["#3B82F6", "#8B5CF6", "#EC4899", "#F59E0B", "#10B981", "#6366F1", "#14B8A6", "#0EA5E9"];
-
-function StatCard({ icon: Icon, label, value, sub }) {
-  return (
-    <div className="bg-card border border-border rounded-2xl p-5 flex items-start gap-4">
-      <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
-        <Icon className="w-5 h-5" />
-      </div>
-      <div>
-        <p className="text-sm text-muted-foreground">{label}</p>
-        <p className="text-2xl font-bold text-white mt-0.5">{value}</p>
-        {sub && <p className="text-sm text-muted-foreground mt-0.5">{sub}</p>}
-      </div>
-    </div>
-  );
+function readTargetRange() {
+  if (typeof window === "undefined") return { low: 70, high: 180 };
+  const low = Number(window.localStorage.getItem("target_range_low") || 70);
+  const high = Number(window.localStorage.getItem("target_range_high") || 180);
+  return {
+    low: Number.isFinite(low) ? low : 70,
+    high: Number.isFinite(high) ? high : 180,
+  };
 }
 
+const SEGMENTS = [
+  { label: "Early Morning", period: "12am – 6am", start: 0, end: 6 },
+  { label: "Morning", period: "6am – 12pm", start: 6, end: 12 },
+  { label: "Afternoon", period: "12pm – 6pm", start: 12, end: 18 },
+  { label: "Evening", period: "6pm – 12am", start: 18, end: 24 },
+];
+
+const HOUR_LABELS = [
+  "12a", "1a", "2a", "3a", "4a", "5a", "6a", "7a", "8a", "9a", "10a", "11a",
+  "12p", "1p", "2p", "3p", "4p", "5p", "6p", "7p", "8p", "9p", "10p", "11p",
+];
+
 export default function Analytics() {
-  const { data: doses = [], isLoading } = useQuery({
-    queryKey: ["insulin-doses-analytics"],
-    queryFn: () => base44.entities.InsulinDose.list("-administered_at", 500),
+  const { data: readings = [], isLoading } = useQuery({
+    queryKey: ["glucose-readings", "graph"],
+    queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", 5000),
   });
+
+  const [targetRange, setTargetRange] = useState(readTargetRange);
+
+  useEffect(() => {
+    const refresh = () => setTargetRange(readTargetRange());
+    window.addEventListener("target-range-updated", refresh);
+    window.addEventListener("storage", refresh);
+    return () => {
+      window.removeEventListener("target-range-updated", refresh);
+      window.removeEventListener("storage", refresh);
+    };
+  }, []);
 
   const stats = useMemo(() => {
     const cutoff = subDays(new Date(), 30);
-    const recent = doses.filter((d) => new Date(d.administered_at) >= cutoff);
+    const recent = readings.filter((r) => new Date(r.recorded_at) >= cutoff && Number.isFinite(r.value));
 
     if (!recent.length) return null;
 
-    // Days with at least 1 dose (to compute daily average)
-    const daySet = new Set(recent.map((d) => format(parseISO(d.administered_at), "yyyy-MM-dd")));
-    const activeDays = daySet.size;
-    const totalUnits = recent.reduce((s, d) => s + (d.units || 0), 0);
-    const avgUnitsPerDay = activeDays ? (totalUnits / activeDays).toFixed(1) : 0;
-    const avgDosesPerDay = activeDays ? (recent.length / activeDays).toFixed(1) : 0;
+    const { low, high } = targetRange;
 
-    // Weekly pattern: avg units per day-of-week
-    const byDow = Array.from({ length: 7 }, (_, i) => ({ day: DAY_NAMES[i], units: 0, count: 0 }));
-    recent.forEach((d) => {
-      const dow = getDay(parseISO(d.administered_at));
-      byDow[dow].units += d.units || 0;
-      byDow[dow].count += 1;
+    const inRangeCount = recent.filter((r) => r.value >= low && r.value <= high).length;
+    const aboveCount = recent.filter((r) => r.value > high).length;
+    const belowCount = recent.filter((r) => r.value < low).length;
+    const total = recent.length;
+    const averageGlucose = recent.reduce((s, r) => s + r.value, 0) / total;
+
+    const hourlyBuckets = Array.from({ length: 24 }, () => []);
+    recent.forEach((r) => {
+      const hour = new Date(r.recorded_at).getHours();
+      hourlyBuckets[hour].push(r.value);
     });
-    const weeklyPattern = byDow.map((d) => ({
-      day: d.day,
-      avgUnits: d.count ? Math.round((d.units / d.count) * 10) / 10 : 0,
-      doses: d.count,
+    const hourlyAverages = hourlyBuckets.map((values, hour) => ({
+      hour: HOUR_LABELS[hour],
+      avg: values.length ? Math.round(values.reduce((s, v) => s + v, 0) / values.length) : null,
+      count: values.length,
     }));
 
-    // Daily totals over 30 days for trend line
-    const dailyMap = {};
-    recent.forEach((d) => {
-      const key = format(parseISO(d.administered_at), "yyyy-MM-dd");
-      if (!dailyMap[key]) dailyMap[key] = { units: 0, doses: 0 };
-      dailyMap[key].units += d.units || 0;
-      dailyMap[key].doses += 1;
-    });
-    const dailyTrend = Array.from({ length: 30 }, (_, i) => {
-      const date = subDays(new Date(), 29 - i);
-      const key = format(date, "yyyy-MM-dd");
+    const segments = SEGMENTS.map((seg) => {
+      const segReadings = recent.filter((r) => {
+        const hour = new Date(r.recorded_at).getHours();
+        return hour >= seg.start && hour < seg.end;
+      });
+      const segTotal = segReadings.length;
+      const segInRange = segReadings.filter((r) => r.value >= low && r.value <= high).length;
+      const segAbove = segReadings.filter((r) => r.value > high).length;
+      const segBelow = segReadings.filter((r) => r.value < low).length;
+      const segAvg = segTotal ? segReadings.reduce((s, r) => s + r.value, 0) / segTotal : null;
       return {
-        date: format(date, "MMM d"),
-        units: dailyMap[key]?.units || 0,
-        doses: dailyMap[key]?.doses || 0,
+        ...seg,
+        count: segTotal,
+        avg: segAvg ? Math.round(segAvg) : null,
+        inRangePct: segTotal ? (segInRange / segTotal) * 100 : 0,
+        abovePct: segTotal ? (segAbove / segTotal) * 100 : 0,
+        belowPct: segTotal ? (segBelow / segTotal) * 100 : 0,
       };
     });
 
-    // By insulin type
-    const typeMap = {};
-    recent.forEach((d) => {
-      if (!typeMap[d.insulin_type]) typeMap[d.insulin_type] = { units: 0, doses: 0 };
-      typeMap[d.insulin_type].units += d.units || 0;
-      typeMap[d.insulin_type].doses += 1;
-    });
-    const byType = Object.entries(typeMap)
-      .map(([type, v]) => ({ type, ...v, color: INSULIN_PROFILES[type]?.color || "#888" }))
-      .sort((a, b) => b.units - a.units);
-
-    return { recent, activeDays, totalUnits, avgUnitsPerDay, avgDosesPerDay, weeklyPattern, dailyTrend, byType };
-  }, [doses]);
+    return {
+      total,
+      inRangePercent: (inRangeCount / total) * 100,
+      abovePercent: (aboveCount / total) * 100,
+      belowPercent: (belowCount / total) * 100,
+      averageGlucose,
+      hourlyAverages,
+      segments,
+    };
+  }, [readings, targetRange]);
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
-        <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-white/10 border-t-teal-400 rounded-full animate-spin" />
       </div>
     );
   }
@@ -101,97 +115,62 @@ export default function Analytics() {
   if (!stats) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
-        <Activity className="w-10 h-10 text-muted-foreground/40 mb-3" />
-        <h3 className="text-lg font-semibold text-white">No data yet</h3>
-        <p className="text-sm text-muted-foreground mt-1">Log some doses to see your patterns here.</p>
+        <Activity className="w-10 h-10 text-white/20 mb-3" />
+        <h3 className="text-lg font-semibold text-white">Your journey awaits</h3>
+        <p className="mt-1 max-w-[240px] text-sm text-white/35">
+          Log a few glucose readings to begin revealing your body's gentle patterns.
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-white">Weekly Analytics</h1>
-        <p className="text-sm text-muted-foreground mt-1">Patterns and averages over the last 30 days</p>
-      </div>
+    <div className="space-y-5 pb-6">
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="px-1"
+      >
+        <h1 className="text-2xl font-bold text-white">Your Rhythms</h1>
+        <p className="mt-1 text-sm text-white/35">Gentle insights from your glucose journey</p>
+      </motion.div>
 
-      {/* Summary stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <StatCard icon={Syringe} label="Avg units / day" value={`${stats.avgUnitsPerDay}u`} sub={`${stats.activeDays} active days`} />
-        <StatCard icon={Activity} label="Avg doses / day" value={stats.avgDosesPerDay} sub="on days with doses" />
-        <StatCard icon={TrendingUp} label="Total units" value={`${stats.totalUnits}u`} sub="last 30 days" />
-        <StatCard icon={Calendar} label="Total doses" value={stats.recent.length} sub="last 30 days" />
-      </div>
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.05 }}
+      >
+        <ZoneOfBalanceRing
+          inRangePercent={stats.inRangePercent}
+          abovePercent={stats.abovePercent}
+          belowPercent={stats.belowPercent}
+          totalReadings={stats.total}
+          averageGlucose={stats.averageGlucose}
+          targetLow={targetRange.low}
+          targetHigh={targetRange.high}
+        />
+      </motion.div>
 
-      {/* Weekly pattern */}
-      <div className="bg-card border border-border rounded-2xl p-5">
-        <h2 className="text-base font-semibold text-white mb-4">Average Units by Day of Week</h2>
-        <div className="h-56">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={stats.weeklyPattern} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(214,20%,90%)" vertical={false} />
-              <XAxis dataKey="day" tick={{ fontSize: 12, fill: "hsl(215,15%,50%)" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: "hsl(215,15%,50%)" }} axisLine={false} tickLine={false} />
-              <Tooltip
-                formatter={(v) => [`${v}u`, "Avg units"]}
-                contentStyle={{ background: "hsl(211,34%,17%)", border: "1px solid hsl(214,20%,90%)", borderRadius: 12 }}
-                labelStyle={{ color: "#fff", fontSize: 12 }}
-              />
-              <Bar dataKey="avgUnits" radius={[6, 6, 0, 0]}>
-                {stats.weeklyPattern.map((entry, i) => (
-                  <Cell key={i} fill={COLORS[i % COLORS.length]} fillOpacity={entry.avgUnits > 0 ? 1 : 0.2} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.1 }}
+      >
+        <DailyPatternChart
+          hourlyAverages={stats.hourlyAverages}
+          targetLow={targetRange.low}
+          targetHigh={targetRange.high}
+        />
+      </motion.div>
 
-      {/* 30-day trend */}
-      <div className="bg-card border border-border rounded-2xl p-5">
-        <h2 className="text-base font-semibold text-white mb-4">Daily Units — 30-Day Trend</h2>
-        <div className="h-56">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={stats.dailyTrend} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(214,20%,90%)" vertical={false} />
-              <XAxis dataKey="date" tick={{ fontSize: 10, fill: "hsl(215,15%,50%)" }} axisLine={false} tickLine={false} interval={4} />
-              <YAxis tick={{ fontSize: 11, fill: "hsl(215,15%,50%)" }} axisLine={false} tickLine={false} />
-              <Tooltip
-                formatter={(v) => [`${v}u`, "Units"]}
-                contentStyle={{ background: "hsl(211,34%,17%)", border: "1px solid hsl(214,20%,90%)", borderRadius: 12 }}
-                labelStyle={{ color: "#fff", fontSize: 12 }}
-              />
-              <Line type="monotone" dataKey="units" stroke="#3B82F6" strokeWidth={2} dot={false} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* By insulin type */}
-      {stats.byType.length > 0 && (
-        <div className="bg-card border border-border rounded-2xl p-5">
-          <h2 className="text-base font-semibold text-white mb-4">Breakdown by Insulin Type</h2>
-          <div className="space-y-3">
-            {stats.byType.map((t) => (
-              <div key={t.type} className="flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: t.color }} />
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-white truncate">{t.type}</span>
-                    <span className="text-muted-foreground ml-2 shrink-0">{t.units}u · {t.doses} doses</span>
-                  </div>
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className="h-full rounded-full"
-                      style={{ width: `${(t.units / stats.totalUnits) * 100}%`, backgroundColor: t.color }}
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.15 }}
+      >
+        <MomentsOfCare segments={stats.segments} />
+      </motion.div>
     </div>
   );
 }
