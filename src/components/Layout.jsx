@@ -183,7 +183,7 @@ export default function Layout() {
             style={{
               filter: "grayscale(0.42) saturate(0.82) contrast(1.08) brightness(0.62)",
               objectPosition: sceneStatus === "high" ? "center top" : sceneStatus === "low" ? "center 35%" : "center top",
-              WebkitMaskImage: "linear-gradient(to bottom, black 0%, black 38%, rgba(0,0,0,0.65) 58%, transparent 100%)",
+              WebkitMaskImage: "linear-gradient(to bottom, black 0%, black 38%, rgba(0,0,0,0.65) 58%, transparent 0%)",
               maskImage: "linear-gradient(to bottom, black 0%, black 38%, rgba(0,0,0,0.65) 58%, transparent 100%)",
             }}
           />
