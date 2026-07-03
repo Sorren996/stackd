@@ -542,7 +542,7 @@ export default function DoseForm({ open, onOpenChange }) {
                   <>
                     <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-6 pt-4">
                       <div className="space-y-3">
-                        <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/40">Your support</p>
+                        <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/55">Your support</p>
 
                         {insulinRows.map((row, index) => (
                           <div key={row.id} className="space-y-2">
@@ -596,12 +596,12 @@ export default function DoseForm({ open, onOpenChange }) {
                       </div>
 
                       <div className="mt-6 space-y-3">
-                        <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/40">Time</p>
+                        <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/55">Time</p>
                         <TimeScrollField label="Administered at" value={insulinTime} onChange={setInsulinTime} max={nowTimeString} />
                       </div>
 
                       <div className="mt-6 space-y-3">
-                        <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/40">Notes (optional)</p>
+                        <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/55">Notes (optional)</p>
                         <TextPadField value={insulinNotes} onChange={setInsulinNotes} placeholder="e.g. before lunch" multiline />
                       </div>
 
@@ -624,7 +624,7 @@ export default function DoseForm({ open, onOpenChange }) {
                         onClick={handleSubmitInsulin}
                         disabled={!totalUnits || loggingTab === "insulin" || createDoses.isPending}
                         className="w-full rounded-2xl py-4 text-base font-semibold text-white transition disabled:opacity-40"
-                        style={{ background: "linear-gradient(145deg, rgba(20,184,166,0.9), rgba(15,118,110,0.85))", boxShadow: "0 8px 24px rgba(20,184,166,0.3), inset 0 1px 1px rgba(255,255,255,0.2)" }}
+                        style={{ background: "linear-gradient(145deg, rgba(91,168,138,0.85), rgba(91,163,184,0.72))", boxShadow: "0 8px 28px rgba(91,163,184,0.22), inset 0 1px 1px rgba(255,255,255,0.2)" }}
                       >
                         {loggingTab === "insulin" || createDoses.isPending
                           ? "Logging..."
@@ -637,7 +637,7 @@ export default function DoseForm({ open, onOpenChange }) {
                 ) : (
                   <>
                     <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-6 pt-4">
-                      <p className="block text-sm font-bold uppercase tracking-widest text-white/40">
+                      <p className="block text-sm font-bold uppercase tracking-widest text-white/55">
                         Glucose (mg/dL)
                       </p>
                       <div className="mt-3">
@@ -653,12 +653,12 @@ export default function DoseForm({ open, onOpenChange }) {
                       </div>
 
                       <div className="mt-6 space-y-3">
-                        <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/40">Time</p>
+                        <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/55">Time</p>
                         <TimeScrollField label="Reading time" value={glucoseTime} onChange={setGlucoseTime} max={nowTimeString} />
                       </div>
 
                       <div className="mt-6 space-y-3">
-                        <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/40">Notes (optional)</p>
+                        <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/55">Notes (optional)</p>
                         <TextPadField value={glucoseNotes} onChange={setGlucoseNotes} placeholder="e.g. fasting, after meal" multiline />
                       </div>
                     </div>
@@ -669,7 +669,7 @@ export default function DoseForm({ open, onOpenChange }) {
                         onClick={handleSubmitGlucose}
                         disabled={!glucoseValue || loggingTab === "glucose" || createGlucose.isPending}
                         className="w-full rounded-2xl py-4 text-base font-semibold text-white transition disabled:opacity-40"
-                        style={{ background: "linear-gradient(145deg, rgba(234,88,12,0.9), rgba(194,65,12,0.85))", boxShadow: "0 8px 24px rgba(234,88,12,0.25), inset 0 1px 1px rgba(255,255,255,0.2)" }}
+                        style={{ background: "linear-gradient(145deg, rgba(212,160,86,0.85), rgba(201,112,96,0.72))", boxShadow: "0 8px 28px rgba(201,112,96,0.2), inset 0 1px 1px rgba(255,255,255,0.2)" }}
                       >
                         {loggingTab === "glucose" || createGlucose.isPending ? "Logging..." : `Log ${glucoseValue || "--"} mg/dL`}
                       </button>

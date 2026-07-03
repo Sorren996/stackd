@@ -6,8 +6,7 @@ function formatTimeLabel(value) {
   const [hoursRaw, minutes = "00"] = String(value || "00:00").split(":");
   const hours = Number(hoursRaw);
   const suffix = hours >= 12 ? "PM" : "AM";
-  const hour12 = hours % 12 || 12;
-  return `${hour12}:${minutes.padStart(2, "0")} ${suffix}`;
+  return `${hours % 12 || 12}:${minutes.padStart(2, "0")} ${suffix}`;
 }
 
 function buildTimeValue(hour12, minute, suffix) {
@@ -28,20 +27,27 @@ function parseTimeValue(value) {
 }
 
 const GLASS_SURFACE = {
-  background: "linear-gradient(145deg, rgba(255,255,255,0.035), rgba(255,255,255,0.008))",
-  borderColor: "rgba(255,255,255,0.12)",
-  boxShadow: "0 2px 10px rgba(0,0,0,0.12), inset 0 1px 1px rgba(255,255,255,0.07)",
+  background: "linear-gradient(145deg, rgba(255,255,255,0.05), rgba(255,255,255,0.012))",
+  borderColor: "rgba(255,255,255,0.14)",
+  boxShadow: "0 2px 10px rgba(0,0,0,0.12), inset 0 1px 1px rgba(255,255,255,0.1)",
 };
 
 const GLASS_KEY = {
-  background: "linear-gradient(145deg, rgba(255,255,255,0.09), rgba(255,255,255,0.03))",
-  borderColor: "rgba(255,255,255,0.1)",
-  boxShadow: "inset 0 1px 1px rgba(255,255,255,0.1), 0 2px 6px rgba(0,0,0,0.18)",
+  background: "linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.035))",
+  borderColor: "rgba(255,255,255,0.12)",
+  boxShadow: "inset 0 1px 1px rgba(255,255,255,0.12), 0 2px 6px rgba(0,0,0,0.18)",
 };
 
 const GLASS_KEY_PRESSED = {
-  background: "linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))",
-  boxShadow: "inset 0 2px 6px rgba(0,0,0,0.3)",
+  background: "linear-gradient(145deg, rgba(91,163,184,0.22), rgba(91,163,184,0.08))",
+  borderColor: "rgba(91,163,184,0.3)",
+  boxShadow: "inset 0 2px 8px rgba(0,0,0,0.25), 0 0 12px rgba(91,163,184,0.15)",
+};
+
+const ORGANIC_ACTIVE = {
+  background: "linear-gradient(145deg, rgba(91,163,184,0.3), rgba(91,163,184,0.12))",
+  borderColor: "rgba(91,163,184,0.35)",
+  boxShadow: "0 0 16px rgba(91,163,184,0.2), inset 0 1px 1px rgba(255,255,255,0.18)",
 };
 
 export function CustomInputTray({ open, onClose, title, children, tall = false, anchorRef }) {
@@ -93,8 +99,9 @@ export function CustomInputTray({ open, onClose, title, children, tall = false, 
         }`}
         style={{
           background: "linear-gradient(160deg, hsl(162,12%,9%) 0%, hsl(162,10%,6%) 100%)",
-          borderColor: "rgba(255,255,255,0.12)",
+          borderColor: "rgba(255,255,255,0.14)",
           boxShadow: "0 -24px 60px rgba(0,0,0,0.6), inset 0 1px 1px rgba(255,255,255,0.1)",
+          backdropFilter: "blur(20px)",
         }}
         onPointerDown={(event) => event.stopPropagation()}
         onClick={(event) => event.stopPropagation()}
@@ -103,20 +110,21 @@ export function CustomInputTray({ open, onClose, title, children, tall = false, 
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-x-0 top-0 h-24 opacity-50"
-          style={{ background: "radial-gradient(ellipse 80% 100% at 50% 0%, rgba(45,212,191,0.12), transparent 70%)" }}
+          style={{ background: "radial-gradient(ellipse 80% 100% at 50% 0%, rgba(91,163,184,0.1), transparent 70%)" }}
         />
         <div className="relative z-10 mb-3 flex items-center justify-between">
-          <p className="text-sm font-semibold text-white/60">{title}</p>
+          <p className="text-sm font-semibold text-white/75">{title}</p>
           <button
             type="button"
             onClick={(event) => {
               absorb(event);
               onClose();
             }}
-            className="rounded-full border px-4 py-1.5 text-sm font-semibold text-teal-200 transition hover:text-white"
+            className="rounded-full border px-4 py-1.5 text-sm font-semibold transition hover:text-white"
             style={{
               background: "linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))",
-              borderColor: "rgba(255,255,255,0.12)",
+              borderColor: "rgba(255,255,255,0.14)",
+              color: "#7dc8d4",
             }}
           >
             Done
@@ -144,7 +152,7 @@ export function TimeScrollField({ label, value, onChange, max }) {
   return (
     <div ref={fieldRef} className="rounded-2xl border p-3" style={GLASS_SURFACE}>
       <button type="button" onClick={() => setOpen((value) => !value)} className="flex w-full items-center justify-between">
-        <span className="text-sm text-white/40">{label}</span>
+        <span className="text-sm text-white/60">{label}</span>
         <span className="text-sm font-semibold text-white">{formatTimeLabel(value)}</span>
       </button>
       <CustomInputTray open={open} onClose={() => setOpen(false)} title={label} anchorRef={fieldRef}>
@@ -161,10 +169,10 @@ export function TimeScrollField({ label, value, onChange, max }) {
                       event.stopPropagation();
                       updateTime({ [key]: item });
                     }}
-                    className={`mb-1 flex h-12 w-full items-center justify-center rounded-xl text-lg font-semibold transition last:mb-0 ${
-                      isActive ? "text-white" : "text-white/45 hover:bg-white/10 hover:text-white"
+                    className={`mb-1 flex h-12 w-full items-center justify-center rounded-xl border text-lg font-semibold transition last:mb-0 ${
+                      isActive ? "text-white" : "border-transparent text-white/60 hover:bg-white/10 hover:text-white"
                     }`}
-                    style={isActive ? { background: "linear-gradient(145deg, rgba(20,184,166,0.4), rgba(15,118,110,0.3))", boxShadow: "0 0 16px rgba(20,184,166,0.35), inset 0 1px 1px rgba(255,255,255,0.2)" } : undefined}
+                    style={isActive ? ORGANIC_ACTIVE : undefined}
                   >
                     {String(item).padStart(key === "minute" ? 2 : 1, "0")}
                   </button>
@@ -183,8 +191,8 @@ export function TimeScrollField({ label, value, onChange, max }) {
                     event.stopPropagation();
                     updateTime({ suffix });
                   }}
-                  className={`rounded-2xl text-base font-bold transition ${isActive ? "text-white" : "border border-white/10 bg-black/25 text-white/45"}`}
-                  style={isActive ? { background: "linear-gradient(145deg, rgba(20,184,166,0.4), rgba(15,118,110,0.3))", boxShadow: "0 0 16px rgba(20,184,166,0.35), inset 0 1px 1px rgba(255,255,255,0.2)" } : undefined}
+                  className={`rounded-2xl border text-base font-bold transition ${isActive ? "text-white" : "border-white/10 bg-black/25 text-white/60"}`}
+                  style={isActive ? ORGANIC_ACTIVE : undefined}
                 >
                   {suffix}
                 </button>
@@ -212,9 +220,9 @@ export function NumberPadField({ label, value, onChange, unit, placeholder = "--
   return (
     <div ref={fieldRef} className={`rounded-xl border p-3 ${large ? "px-6 py-6" : ""}`} style={GLASS_SURFACE}>
       <button type="button" onClick={() => setOpen((value) => !value)} className="flex w-full items-center justify-between gap-3">
-        <span className="text-left text-[10px] font-semibold uppercase tracking-wider text-white/35">{label}</span>
+        <span className="text-left text-[10px] font-semibold uppercase tracking-wider text-white/55">{label}</span>
         <span className={`${large ? "text-5xl" : "text-base"} text-right font-bold text-white`}>
-          {textValue || placeholder}{unit && <span className="ml-1 text-xs text-white/35">{unit}</span>}
+          {textValue || placeholder}{unit && <span className="ml-1 text-xs text-white/55">{unit}</span>}
         </span>
       </button>
       <CustomInputTray open={open} onClose={() => setOpen(false)} title={label} anchorRef={fieldRef}>
@@ -227,7 +235,7 @@ export function NumberPadField({ label, value, onChange, unit, placeholder = "--
                 event.stopPropagation();
                 press(key);
               }}
-              className="h-14 rounded-2xl border text-xl font-bold text-white/85 transition active:scale-[0.96]"
+              className="h-14 rounded-2xl border text-xl font-bold text-white/90 transition active:scale-[0.96]"
               style={GLASS_KEY}
               onMouseDown={(e) => { e.currentTarget.style.cssText = ""; Object.assign(e.currentTarget.style, GLASS_KEY_PRESSED); }}
               onMouseUp={(e) => { e.currentTarget.style.cssText = ""; Object.assign(e.currentTarget.style, GLASS_KEY); }}
@@ -250,14 +258,14 @@ export function TextPadField({ label, value, onChange, placeholder, multiline = 
 
   return (
     <div ref={fieldRef}>
-      {label && <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-white/35">{label}</span>}
+      {label && <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-white/55">{label}</span>}
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
         className={`w-full rounded-2xl border px-3 py-3 text-left text-sm text-white outline-none transition ${multiline ? "min-h-20" : ""}`}
         style={GLASS_SURFACE}
       >
-        {value ? <span className="whitespace-pre-wrap">{value}</span> : <span className="text-white/30">{placeholder}</span>}
+        {value ? <span className="whitespace-pre-wrap">{value}</span> : <span className="text-white/50">{placeholder}</span>}
       </button>
       <CustomInputTray open={open} onClose={() => setOpen(false)} title={label || "Text"} tall anchorRef={fieldRef}>
         <div className="rounded-2xl border border-white/10 bg-black/25 p-2">
@@ -267,18 +275,18 @@ export function TextPadField({ label, value, onChange, placeholder, multiline = 
                 <button key={letter} type="button" onClick={(event) => {
                     event.stopPropagation();
                     add(letter.toLowerCase());
-                  }} className="h-12 min-w-0 flex-1 rounded-xl border text-sm font-bold text-white/85 active:scale-[0.96]" style={GLASS_KEY}>
+                  }} className="h-12 min-w-0 flex-1 rounded-xl border text-sm font-bold text-white/90 active:scale-[0.96]" style={GLASS_KEY}>
                   {letter}
                 </button>
               ))}
             </div>
           ))}
           <div className="mt-2 grid grid-cols-[1fr_1fr_2fr_1fr_1fr] gap-2">
-            <button type="button" onClick={(event) => { event.stopPropagation(); onChange(""); }} className="h-12 rounded-xl border text-xs font-bold text-white/65" style={GLASS_KEY}>Clear</button>
-            <button type="button" onClick={(event) => { event.stopPropagation(); add(","); }} className="h-12 rounded-xl border text-xs font-bold text-white/65" style={GLASS_KEY}>,</button>
-            <button type="button" onClick={(event) => { event.stopPropagation(); add(" "); }} className="h-12 rounded-xl border text-xs font-bold text-white/65" style={GLASS_KEY}>Space</button>
-            <button type="button" onClick={(event) => { event.stopPropagation(); add("."); }} className="h-12 rounded-xl border text-xs font-bold text-white/65" style={GLASS_KEY}>.</button>
-            <button type="button" onClick={(event) => { event.stopPropagation(); onChange(String(value || "").slice(0, -1)); }} className="h-12 rounded-xl border text-xs font-bold text-white/65" style={GLASS_KEY}>Back</button>
+            <button type="button" onClick={(event) => { event.stopPropagation(); onChange(""); }} className="h-12 rounded-xl border text-xs font-bold text-white/75" style={GLASS_KEY}>Clear</button>
+            <button type="button" onClick={(event) => { event.stopPropagation(); add(","); }} className="h-12 rounded-xl border text-xs font-bold text-white/75" style={GLASS_KEY}>,</button>
+            <button type="button" onClick={(event) => { event.stopPropagation(); add(" "); }} className="h-12 rounded-xl border text-xs font-bold text-white/75" style={GLASS_KEY}>Space</button>
+            <button type="button" onClick={(event) => { event.stopPropagation(); add("."); }} className="h-12 rounded-xl border text-xs font-bold text-white/75" style={GLASS_KEY}>.</button>
+            <button type="button" onClick={(event) => { event.stopPropagation(); onChange(String(value || "").slice(0, -1)); }} className="h-12 rounded-xl border text-xs font-bold text-white/75" style={GLASS_KEY}>Back</button>
           </div>
         </div>
       </CustomInputTray>
@@ -294,9 +302,9 @@ export function SelectField({ label, value, onChange, options, placeholder = "Se
   return (
     <div ref={fieldRef} className="rounded-xl border p-3" style={GLASS_SURFACE}>
       <button type="button" onClick={() => setOpen((current) => !current)} className="flex w-full items-center justify-between gap-3 text-left">
-        <span className="text-left text-[10px] font-semibold uppercase tracking-wider text-white/35">{label}</span>
+        <span className="text-left text-[10px] font-semibold uppercase tracking-wider text-white/55">{label}</span>
         <span className="min-w-0 text-right text-sm font-semibold text-white">
-          {selected ? selected.label : <span className="text-white/30">{placeholder}</span>}
+          {selected ? selected.label : <span className="text-white/50">{placeholder}</span>}
         </span>
       </button>
       <CustomInputTray open={open} onClose={() => setOpen(false)} title={label} tall anchorRef={fieldRef}>
@@ -318,15 +326,15 @@ export function SelectField({ label, value, onChange, options, placeholder = "Se
                 className="mb-1 flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left transition last:mb-0"
                 style={
                   isSelected
-                    ? { borderColor: "rgba(20,184,166,0.5)", background: "linear-gradient(145deg, rgba(20,184,166,0.18), rgba(20,184,166,0.06))", boxShadow: "0 0 18px rgba(20,184,166,0.2), inset 0 1px 1px rgba(255,255,255,0.1)" }
+                    ? ORGANIC_ACTIVE
                     : { borderColor: "rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.03)" }
                 }
               >
                 <span className="min-w-0">
-                  <span className={`block truncate text-sm font-semibold ${isSelected ? "text-white" : "text-white/55"}`}>{option.label}</span>
-                  {option.description && <span className="text-[10px] uppercase tracking-wider text-white/30">{option.description}</span>}
+                  <span className={`block truncate text-sm font-semibold ${isSelected ? "text-white" : "text-white/70"}`}>{option.label}</span>
+                  {option.description && <span className="text-[10px] uppercase tracking-wider text-white/45">{option.description}</span>}
                 </span>
-                <span className={`h-3 w-3 rounded-full ${isSelected ? "bg-teal-300" : "bg-white/15"}`} />
+                <span className="h-3 w-3 rounded-full" style={{ backgroundColor: isSelected ? "#5ba3b8" : "rgba(255,255,255,0.15)" }} />
               </button>
             );
           })}
