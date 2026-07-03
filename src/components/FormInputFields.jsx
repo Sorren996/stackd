@@ -299,35 +299,36 @@ export function SelectField({ label, value, onChange, options, placeholder = "Se
         </span>
       </button>
       <CustomInputTray open={open} onClose={() => setOpen(false)} title={label} tall anchorRef={fieldRef}>
-        <div className="h-[34dvh] overflow-hidden rounded-2xl">
-          <div className="h-full touch-pan-y space-y-2 overflow-y-auto overscroll-contain pr-1" style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}>
-            {options.map((option) => {
-              const isSelected = option.value === value;
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onChange(option.value);
-                    setOpen(false);
-                  }}
-                  className="flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left transition"
-                  style={
-                    isSelected
-                      ? { borderColor: "rgba(20,184,166,0.5)", background: "linear-gradient(145deg, rgba(20,184,166,0.18), rgba(20,184,166,0.06))", boxShadow: "0 0 18px rgba(20,184,166,0.2), inset 0 1px 1px rgba(255,255,255,0.1)" }
-                      : { borderColor: "rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.03)" }
-                  }
-                >
-                  <span className="min-w-0">
-                    <span className={`block truncate text-sm font-semibold ${isSelected ? "text-white" : "text-white/55"}`}>{option.label}</span>
-                    {option.description && <span className="text-[10px] uppercase tracking-wider text-white/30">{option.description}</span>}
-                  </span>
-                  <span className={`h-3 w-3 rounded-full ${isSelected ? "bg-teal-300" : "bg-white/15"}`} />
-                </button>
-              );
-            })}
-          </div>
+        <div
+          className="h-[36dvh] overflow-y-auto rounded-2xl border border-white/10 bg-black/25 p-1"
+          style={{ scrollbarWidth: "none", touchAction: "pan-y" }}
+        >
+          {options.map((option) => {
+            const isSelected = option.value === value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onChange(option.value);
+                  setOpen(false);
+                }}
+                className="mb-1 flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left transition last:mb-0"
+                style={
+                  isSelected
+                    ? { borderColor: "rgba(20,184,166,0.5)", background: "linear-gradient(145deg, rgba(20,184,166,0.18), rgba(20,184,166,0.06))", boxShadow: "0 0 18px rgba(20,184,166,0.2), inset 0 1px 1px rgba(255,255,255,0.1)" }
+                    : { borderColor: "rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.03)" }
+                }
+              >
+                <span className="min-w-0">
+                  <span className={`block truncate text-sm font-semibold ${isSelected ? "text-white" : "text-white/55"}`}>{option.label}</span>
+                  {option.description && <span className="text-[10px] uppercase tracking-wider text-white/30">{option.description}</span>}
+                </span>
+                <span className={`h-3 w-3 rounded-full ${isSelected ? "bg-teal-300" : "bg-white/15"}`} />
+              </button>
+            );
+          })}
         </div>
       </CustomInputTray>
     </div>
