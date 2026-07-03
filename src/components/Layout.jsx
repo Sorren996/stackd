@@ -55,7 +55,7 @@ function getGlucoseBackgroundColor(reading, targetRange) {
 
 const SCENE_IMAGES = {
   high: "https://res.cloudinary.com/bzqjmwln/image/upload/v1782928032/mountain_gxgmap.png",
-  range: "https://media.base44.com/images/public/6a1b93f234a8611ee1595134/256fa0ffc_image.png",
+  range: "https://res.cloudinary.com/bzqjmwln/image/upload/v1782928032/forest_lqseeo.png",
   low: "https://res.cloudinary.com/bzqjmwln/image/upload/v1782928032/valley_vqpesd.png",
 };
 
@@ -82,7 +82,7 @@ export default function Layout() {
   const [targetRange, setTargetRange] = useState(readTargetRange);
   const appBackground = useMemo(() => {
     const primaryColor = getGlucoseBackgroundColor(latestGlucose, targetRange);
-    return `linear-gradient(to bottom, ${primaryColor} 0%, rgba(0,0,0,0.18) 62%, rgba(0,0,0,0.02) 100%)`;
+    return `linear-gradient(to bottom, ${primaryColor} 0%, rgba(0,0,0,0.72) 58%, #000000 100%)`;
   }, [latestGlucose, targetRange]);
   const sceneStatus = useMemo(() => getGlucoseScene(latestGlucose, targetRange), [latestGlucose, targetRange]);
   const [backgroundLayers, setBackgroundLayers] = useState(() => ({
@@ -133,16 +133,12 @@ export default function Layout() {
     if (typeof window === "undefined") return undefined;
 
     let frame = 0;
-
     const updateSceneOffset = () => {
       frame = 0;
-
       if (sceneRef.current) {
-        const offset = Math.max(-160, Math.min(0, window.scrollY * -0.12));
-        sceneRef.current.style.transform = `translate3d(0, ${offset}px, 0)`;
+        sceneRef.current.style.transform = `translate3d(0, ${window.scrollY * 0.5}px, 0)`;
       }
     };
-
     const handleScroll = () => {
       if (frame) return;
       frame = window.requestAnimationFrame(updateSceneOffset);
@@ -171,7 +167,7 @@ export default function Layout() {
       <div
         ref={sceneRef}
         aria-hidden="true"
-        className="pointer-events-none fixed inset-x-0 top-0 -z-10 h-[120vh] overflow-hidden bg-black"
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[620px] overflow-hidden bg-black sm:h-[720px]"
         style={{ transform: "translate3d(0, 0, 0)", willChange: "transform" }}
       >
         <AnimatePresence initial={false}>
@@ -179,17 +175,16 @@ export default function Layout() {
             key={sceneStatus}
             src={SCENE_IMAGES[sceneStatus]}
             alt=""
-            initial={{ opacity: 0, scale: 1.03 }}
-            animate={{ opacity: 0.82, scale: 1.03 }}
+            initial={{ opacity: 0, scale: 1.02 }}
+            animate={{ opacity: 0.34, scale: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 1.1, ease: "easeInOut" }}
-            className="absolute inset-x-0 top-0 h-[130vh] w-full max-w-none object-cover"
+            className="absolute inset-0 h-full w-full object-cover"
             style={{
-              filter: "grayscale(0.1) saturate(1.08) contrast(1.02) brightness(1.08)",
+              filter: "grayscale(0.42) saturate(0.82) contrast(1.08) brightness(0.62)",
               objectPosition: sceneStatus === "high" ? "center top" : sceneStatus === "low" ? "center 35%" : "center top",
-              transformOrigin: "center top",
-              WebkitMaskImage: "linear-gradient(to bottom, black 0%, black 70%, rgba(0,0,0,0.9) 100%)",
-              maskImage: "linear-gradient(to bottom, black 0%, black 70%, rgba(0,0,0,0.9) 100%)",
+              WebkitMaskImage: "linear-gradient(to bottom, black 0%, black 38%, rgba(0,0,0,0.65) 58%, transparent 100%)",
+              maskImage: "linear-gradient(to bottom, black 0%, black 38%, rgba(0,0,0,0.65) 58%, transparent 100%)",
             }}
           />
         </AnimatePresence>
@@ -211,21 +206,21 @@ export default function Layout() {
         <motion.div
           key={`current-${backgroundLayers.key}`}
           className="absolute inset-0"
-          initial={{ opacity: backgroundLayers.previous ? 0 : 0.28 }}
-          animate={{ opacity: 0.28 }}
+          initial={{ opacity: backgroundLayers.previous ? 0 : 0.68 }}
+          animate={{ opacity: 0.68 }}
           transition={{ duration: 1.8, ease: "easeInOut" }}
           style={{ background: backgroundLayers.current, mixBlendMode: "color" }}
         />
         <div
           className="absolute inset-0"
           style={{
-            background: "linear-gradient(to bottom, rgba(0,0,0,0.02) 0%, rgba(0,0,0,0.1) 42%, rgba(0,0,0,0.24) 100%)",
+            background: "linear-gradient(to bottom, rgba(0,0,0,0.04) 0%, rgba(0,0,0,0.34) 48%, rgba(0,0,0,0.82) 74%, #000000 100%)",
           }}
         />
         <div
-          className="absolute inset-x-0 bottom-0 h-[38vh]"
+          className="absolute inset-x-0 bottom-0 h-[260px]"
           style={{
-            background: "linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.28) 42%, rgba(0,0,0,0.72) 78%, #000000 100%)",
+            background: "linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.72) 52%, #000000 100%)",
           }}
         />
       </div>
