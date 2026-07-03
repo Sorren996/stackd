@@ -2,13 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import { FOOD_DATABASE } from "@/lib/carbAbsorption";
 import { base44 } from "@/api/base44Client";
 import { InvokeLLM, UploadFile } from "@/api/integrations";
-import { Camera, Check, Clock, Loader2, Sparkles, X } from "lucide-react";
+import { Camera, Check, Clock, Loader2, PenLine, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 import { CustomInputTray, TimeScrollField, NumberPadField, TextPadField, SelectField } from "@/components/FormInputFields";
 
 const CARB_COLOR = "#d97706";
 const PROFILE_COLORS = { fast: "#ef4444", medium: "#f59e0b", slow: "#a78bfa" };
-const FOOD_SEARCH_ENABLED = false;
+const CUSTOM_MODE_ENABLED = true;
 const ABSORPTION_CATEGORY = {
   fast: "Fast Absorbing",
   medium: "Medium Absorbing",
@@ -62,6 +62,9 @@ export default function CarbsTab({ onSubmit, isPending }) {
   const [mealPhotoName, setMealPhotoName] = useState("");
   const [estimatedMeal, setEstimatedMeal] = useState(null);
   const [isEstimatingMeal, setIsEstimatingMeal] = useState(false);
+  const [customFoodName, setCustomFoodName] = useState("");
+  const [customCarbs, setCustomCarbs] = useState("");
+  const [customAbsorption, setCustomAbsorption] = useState("medium");
   const [carbSearch, setCarbSearch] = useState("");
   const [selectedFoods, setSelectedFoods] = useState([]);
   const [recentFoods, setRecentFoods] = useState([]);
@@ -96,8 +99,10 @@ export default function CarbsTab({ onSubmit, isPending }) {
 
   const totalCarbs = selectedFoods.reduce((sum, item) => sum + (parseFloat(item.carbs) || 0), 0);
   const canSubmitManual = selectedFoods.length > 0 && selectedFoods.every((item) => parseFloat(item.carbs) > 0);
-  const isEstimateMode = !FOOD_SEARCH_ENABLED || mode === "estimate";
-  const canSubmitCarbs = isEstimateMode ? !!estimatedMeal && !isEstimatingMeal : canSubmitManual;
+  const isEstimateMode = mode === "estimate";
+  const isCustomMode = mode === "custom";
+  const canSubmitCustom = customFoodName.trim().length > 0 && Number(customCarbs) > 0;
+  const canSubmitCarbs = isEstimateMode ? !!estimatedMeal && !isEstimatingMeal : isCustomMode ? canSubmitCustom : canSubmitManual;
   const EstimateButtonIcon = isEstimatingMeal ? Loader2 : Sparkles;
   const estimateButtonLabel = isEstimatingMeal ? "Estimating..." : "Estimate meal";
 
@@ -251,6 +256,36 @@ Do not give insulin dosing advice.
     ]);
   };
 
+  const handleSubmitCustom = () => {
+    const carbs = Number(customCarbs);
+    if (!customFoodName.trim() || !Number.isFinite(carbs) || carbs <= 0) return;
+
+    const consumedAt = buildConsumedAt(carbTime);
+    if (!consumedAt) {
+      toast.error("Choose a time that is not in the future.");
+      return;
+    }
+
+    const profile = customAbsorption || "medium";
+    onSubmit([
+      {
+        name: customFoodName.trim(),
+        food_name: customFoodName.trim(),
+        carbs,
+        gi: 50,
+        category: ABSORPTION_CATEGORY[profile],
+        profile,
+        absorption_profile: profile,
+        consumed_at: consumedAt,
+        is_custom: true,
+      },
+    ]);
+
+    setCustomFoodName("");
+    setCustomCarbs("");
+    setCustomAbsorption("medium");
+  };
+
   const addFood = (food) => {
     if (selectedFoods.find((item) => item.food.name === food.name)) return;
     setSelectedFoods((items) => [...items, { food, carbs: food.carbs }]);
@@ -336,20 +371,21 @@ Do not give insulin dosing advice.
       `}</style>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        {FOOD_SEARCH_ENABLED && (
+        {CUSTOM_MODE_ENABLED && (
           <div className="px-5 pb-2 pt-4">
-            <div className="flex rounded-2xl bg-white/[0.06] p-1">
+            <div className="flex rounded-2xl border border-white/10 bg-white/[0.04] p-1" style={{ boxShadow: "inset 0 1px 1px rgba(255,255,255,0.06)" }}>
               {[
                 ["estimate", "AI Estimate", Sparkles],
-                ["manual", "Food Search", Clock],
+                ["custom", "Custom", PenLine],
               ].map(([id, label, Icon]) => (
                 <button
                   key={id}
                   type="button"
                   onClick={() => setMode(id)}
-                  className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2 text-sm font-medium transition-colors ${
-                    mode === id ? "bg-white/10 text-white" : "text-white/40 hover:text-white/60"
+                  className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2 text-sm font-medium transition-all ${
+                    mode === id ? "text-white" : "text-white/40 hover:text-white/60"
                   }`}
+                  style={mode === id ? { background: "linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.04))", boxShadow: "inset 0 1px 1px rgba(255,255,255,0.12), 0 2px 8px rgba(0,0,0,0.15)" } : undefined}
                 >
                   <Icon className="h-3.5 w-3.5" />
                   {label}
@@ -360,7 +396,39 @@ Do not give insulin dosing advice.
         )}
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-6 pt-2">
-          {!FOOD_SEARCH_ENABLED || mode === "estimate" ? (
+          {isCustomMode ? (
+            <div className="space-y-5">
+              <div className="relative overflow-hidden rounded-2xl border border-white/12 p-4" style={{ background: "linear-gradient(145deg, rgba(255,255,255,0.035), rgba(255,255,255,0.008))", boxShadow: "0 8px 24px rgba(0,0,0,0.15), inset 0 1px 1px rgba(255,255,255,0.07)" }}>
+                <div className="relative z-10 mb-3 flex items-center gap-2">
+                  <PenLine className="h-4 w-4 text-amber-400" />
+                  <p className="text-sm font-bold uppercase tracking-widest text-white/40">Custom entry</p>
+                </div>
+
+                <div className="space-y-3">
+                  <TextPadField
+                    label="Food name"
+                    value={customFoodName}
+                    onChange={setCustomFoodName}
+                    placeholder="e.g. Rice and chicken"
+                  />
+                  <NumberPadField
+                    label="Carbs"
+                    value={customCarbs}
+                    onChange={setCustomCarbs}
+                    unit="g"
+                    placeholder="0"
+                    maxLength={5}
+                  />
+                  <SelectField
+                    label="Absorption"
+                    value={customAbsorption}
+                    onChange={setCustomAbsorption}
+                    options={absorptionProfileOptions}
+                  />
+                </div>
+              </div>
+            </div>
+          ) : isEstimateMode ? (
             <div className="space-y-5">
               <div className="relative overflow-hidden rounded-2xl border border-white/12 p-4" style={{ background: "linear-gradient(145deg, rgba(255,255,255,0.035), rgba(255,255,255,0.008))", boxShadow: "0 8px 24px rgba(0,0,0,0.15), inset 0 1px 1px rgba(255,255,255,0.07)" }}>
                 <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-20 opacity-50" style={{ background: "radial-gradient(ellipse 70% 100% at 30% 0%, rgba(45,212,191,0.1), transparent 70%)" }} />
@@ -604,7 +672,7 @@ Do not give insulin dosing advice.
         <div className={`shrink-0 px-5 pb-6 pt-2 ${isEstimateMode && isEstimatingMeal ? "hidden" : ""}`}>
           <button
             type="button"
-            onClick={isEstimateMode ? handleSubmitEstimate : handleSubmitManual}
+            onClick={isCustomMode ? handleSubmitCustom : isEstimateMode ? handleSubmitEstimate : handleSubmitManual}
             disabled={isPending || isEstimatingMeal || !canSubmitCarbs}
             className="flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-base font-semibold text-white transition-all disabled:opacity-40"
             style={{ background: "linear-gradient(145deg, rgba(217,119,6,0.9), rgba(180,83,9,0.85))", boxShadow: "0 8px 24px rgba(217,119,6,0.25), inset 0 1px 1px rgba(255,255,255,0.2)" }}
@@ -613,6 +681,11 @@ Do not give insulin dosing advice.
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Logging...
+              </>
+            ) : isCustomMode ? (
+              <>
+                <Check className="h-4 w-4" />
+                {canSubmitCustom ? `Log ${customCarbs}g carbs` : "Enter food and carbs"}
               </>
             ) : isEstimateMode ? (
               <>
