@@ -26,25 +26,25 @@ export default function DoseCard({ dose, onDelete, onEdit }) {
   });
 
   const statusText = isExpired
-    ? "Activity cleared"
+    ? "Support complete"
     : status.phase === "waiting"
-      ? "Onset pending"
+      ? "Gently beginning"
       : status.phase === "rising"
-        ? "Building activity"
+        ? "Finding its rhythm"
         : status.phase === "active"
-          ? "Peak activity"
-          : "Activity declining";
+          ? "In full support"
+          : "Easing back";
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex items-start gap-3.5 rounded-2xl px-4 py-3.5 transition-all"
+      className="relative flex items-start gap-3.5 overflow-hidden rounded-2xl px-4 py-3.5 transition-all"
       style={{
-        background: `linear-gradient(to right, ${color}12, transparent 55%)`,
-        border: "1px solid rgba(255, 255, 255, 0.06)",
+        background: `linear-gradient(to right, ${color}15, transparent 55%), radial-gradient(circle at 10% 50%, ${color}0a, transparent 50%)`,
+        border: "1px solid rgba(255, 255, 255, 0.08)",
         borderLeft: `2.5px solid ${color}50`,
-        boxShadow: `0 2px 12px ${color}08`,
+        boxShadow: `0 2px 12px ${color}08, inset 0 1px 1px rgba(255,255,255,0.04)`,
       }}
     >
 
@@ -64,7 +64,7 @@ export default function DoseCard({ dose, onDelete, onEdit }) {
 
       <div className="min-w-0 flex-1 pt-0.5">
         <p className="text-sm font-semibold text-white/85">
-          {dose.units}u {shortName} administered
+          {dose.units}u {shortName} support given
         </p>
 
         <p className="mt-0.5 text-xs text-white/35">
@@ -108,7 +108,7 @@ export default function DoseCard({ dose, onDelete, onEdit }) {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle className="text-[hsl(var(--popover))]">
-                Delete this dose?
+                Remove this entry?
               </AlertDialogTitle>
 
               <AlertDialogDescription>

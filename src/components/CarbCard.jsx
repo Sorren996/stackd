@@ -16,12 +16,12 @@ export default function CarbCard({ entry, onDelete }) {
     <motion.div
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex items-start gap-3.5 px-4 py-3.5 rounded-2xl transition-all"
+      className="relative flex items-start gap-3.5 overflow-hidden px-4 py-3.5 rounded-2xl transition-all"
       style={{
-        background: `linear-gradient(to right, ${color}12, transparent 55%)`,
-        border: "1px solid rgba(255, 255, 255, 0.06)",
+        background: `linear-gradient(to right, ${color}15, transparent 55%), radial-gradient(circle at 10% 50%, ${color}0a, transparent 50%)`,
+        border: "1px solid rgba(255, 255, 255, 0.08)",
         borderLeft: `2.5px solid ${color}50`,
-        boxShadow: `0 2px 12px ${color}08`,
+        boxShadow: `0 2px 12px ${color}08, inset 0 1px 1px rgba(255,255,255,0.04)`,
       }}
     >
       {/* Timeline dot */}
@@ -34,7 +34,7 @@ export default function CarbCard({ entry, onDelete }) {
       </div>
 
       <div className="flex-1 min-w-0 pt-0.5">
-        <p className="text-sm font-semibold text-white/85">{entry.food_name} consumed</p>
+        <p className="text-sm font-semibold text-white/85">{entry.food_name} enjoyed</p>
         <p className="text-xs text-white/35 mt-0.5">{timeAgo} · {format(new Date(entry.consumed_at), "h:mm a")}</p>
         <p className="text-xs mt-1.5 font-medium" style={{ color }}>
           {entry.carbs}g {profileLabel}
@@ -50,7 +50,7 @@ export default function CarbCard({ entry, onDelete }) {
         </AlertDialogTrigger>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-[hsl(var(--popover))]">Delete this entry?</AlertDialogTitle>
+            <AlertDialogTitle className="text-[hsl(var(--popover))]">Remove this entry?</AlertDialogTitle>
             <AlertDialogDescription>
               This will remove the {entry.carbs}g {entry.food_name} entry from your log and graph.
             </AlertDialogDescription>

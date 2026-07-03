@@ -11,21 +11,21 @@ import { motion } from "framer-motion";
 export default function GlucoseCard({ reading, onDelete }) {
   const value = reading.value;
   const color = value < 70 ? "#3b82f6" : value > 180 ? "#f59e0b" : "#4ade80";
-  const statusLabel = value < 70 ? "Below range" : value > 180 ? "Above range" : "In range";
+  const statusLabel = value < 70 ? "Gently Descending" : value > 180 ? "Ascending" : "In Flow";
   const timeAgo = formatDistanceToNow(new Date(reading.recorded_at), { addSuffix: true });
 
-  const eventLabel = value < 70 ? "Low glucose detected" : value > 180 ? "Elevated glucose reading" : "Glucose reading logged";
+  const eventLabel = value < 70 ? "A gentle dip noticed" : value > 180 ? "A gentle rise noticed" : "Reading captured";
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex items-start gap-3.5 px-4 py-3.5 rounded-2xl transition-all p-4"
+      className="relative flex items-start gap-3.5 overflow-hidden px-4 py-3.5 rounded-2xl transition-all p-4"
       style={{
-        background: `linear-gradient(to right, ${color}12, transparent 55%)`,
-        border: "1px solid rgba(255, 255, 255, 0.06)",
+        background: `linear-gradient(to right, ${color}15, transparent 55%), radial-gradient(circle at 10% 50%, ${color}0a, transparent 50%)`,
+        border: "1px solid rgba(255, 255, 255, 0.08)",
         borderLeft: `2.5px solid ${color}50`,
-        boxShadow: `0 2px 12px ${color}08`,
+        boxShadow: `0 2px 12px ${color}08, inset 0 1px 1px rgba(255,255,255,0.04)`,
       }}
     >
       {/* Timeline dot */}
@@ -54,7 +54,7 @@ export default function GlucoseCard({ reading, onDelete }) {
         </AlertDialogTrigger>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-[hsl(var(--popover))]">Delete this reading?</AlertDialogTitle>
+            <AlertDialogTitle className="text-[hsl(var(--popover))]">Remove this reading?</AlertDialogTitle>
             <AlertDialogDescription>
               This will remove the {value} mg/dL glucose reading from your history and graphs.
             </AlertDialogDescription>

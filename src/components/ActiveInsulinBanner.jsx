@@ -1090,11 +1090,11 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
   const trend = useMemo(() => {
     if (safeGlucoseReadings.length < 2) return { icon: "right", label: "Stable" };
     const difference = safeGlucoseReadings[0].value - safeGlucoseReadings[1].value;
-    if (difference >= 7) return { icon: "up", label: "Rising" };
-    if (difference >= 4) return { icon: "up-right", label: "Slowly rising" };
-    if (difference >= -3) return { icon: "right", label: "Stable" };
-    if (difference >= -6) return { icon: "down-right", label: "Slowly falling" };
-    return { icon: "down", label: "Falling" };
+    if (difference >= 7) return { icon: "up", label: "Ascending" };
+    if (difference >= 4) return { icon: "up-right", label: "Gently ascending" };
+    if (difference >= -3) return { icon: "right", label: "Steady" };
+    if (difference >= -6) return { icon: "down-right", label: "Gently easing" };
+    return { icon: "down", label: "Descending" };
   }, [safeGlucoseReadings]);
 
   const glucoseValue = latestGlucose?.value;
@@ -1113,10 +1113,10 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
     glucoseValue == null
       ? "No data"
       : glucoseValue < targetLow
-        ? "Below range"
+        ? "Gently Descending"
         : glucoseValue > targetHigh
-          ? "Above range"
-          : "In range";
+          ? "Ascending"
+          : "In Flow";
   const rangeSparkColor =
     glucoseValue == null
       ? "#35a87988"
@@ -1146,9 +1146,9 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
 
   const glucoseStatus = (value) => {
     if (!value) return "No data";
-    if (value < targetLow) return "Low";
-    if (value > targetHigh) return "High";
-    return "In range";
+    if (value < targetLow) return "Gently Descending";
+    if (value > targetHigh) return "Ascending";
+    return "In Flow";
   };
 
   return (
@@ -1159,9 +1159,22 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
         onClose={() => setOpenTooltip(null)}
       />
 
-      <div className="relative -mx-4 px-4 pb-6 pt-2">
-        <div className="mb-6 flex flex-col items-center pt-2 text-center">
-          <SupportiveGlucoseMessage insight={supportiveGlucoseInsight} color={glucoseColor} />
+      <div className="relative -mx-4 overflow-hidden px-4 pb-6 pt-2">
+        <motion.div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0"
+          animate={{ opacity: inRange ? 0.35 : 0.55 }}
+          transition={{ duration: 1.5, ease: "easeInOut" }}
+          style={{ background: `radial-gradient(ellipse 90% 55% at 50% 10%, ${glucoseColor}22, transparent 70%)` }}
+        />
+        <motion.div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0"
+          animate={{ scale: [1, 1.06, 1], opacity: [0.25, 0.45, 0.25] }}
+          transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }}
+          style={{ background: `radial-gradient(ellipse 60% 40% at 50% 25%, ${glucoseColor}12, transparent 65%)` }}
+        />
+        <div className="relative z-10 mb-6 flex flex-col items-center pt-2 text-center">
           <span className="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-white/30">Current Glucose</span>
           <div className="flex items-end gap-3">
             <span className="text-[72px] font-black leading-none text-white sm:text-[88px]">
@@ -1184,8 +1197,9 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
             }}
           >
             <span className="relative z-10 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: glucoseColor }} />
-            <span className="relative z-10 text-sm font-semibold" style={{ color: glucoseColor }}>{trend.label}</span>
+            <span className="relative z-10 text-sm font-semibold" style={{ color: glucoseColor }}>{rangeCardLabel}</span>
           </div>
+          <SupportiveGlucoseMessage insight={supportiveGlucoseInsight} color={glucoseColor} />
         </div>
 
         {latestGlucose && (
@@ -1214,8 +1228,8 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
               ))}
             </div>
             <div className="relative z-10 flex-1">
-              <p className="text-sm font-semibold text-white/80">{rangeCardLabel}</p>
-              <p className="text-xs text-white/35">Target: {targetLow}-{targetHigh} mg/dL</p>
+              <p className="text-sm font-semibold text-white/80">{trend.label}</p>
+              <p className="text-xs text-white/35">Your range: {targetLow}–{targetHigh} mg/dL</p>
             </div>
           </div>
         )}
