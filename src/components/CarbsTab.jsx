@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { InvokeLLM, UploadFile } from "@/api/integrations";
 import { Camera, Check, Clock, Loader2, PenLine, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
-import { CustomInputTray, TimeScrollField, NumberPadField, TextPadField, SelectField } from "@/components/FormInputFields";
+import { CustomInputTray, TimeScrollField, NumberPadField, TextPadField } from "@/components/FormInputFields";
 
 const CARB_COLOR = "#d97706";
 const PROFILE_COLORS = { fast: "#ef4444", medium: "#f59e0b", slow: "#a78bfa" };
@@ -14,11 +14,6 @@ const ABSORPTION_CATEGORY = {
   medium: "Medium Absorbing",
   slow: "Slow Absorbing",
 };
-const absorptionProfileOptions = [
-  { value: "fast", label: "Fast", description: "Fast carbs" },
-  { value: "medium", label: "Medium", description: "Balanced carbs" },
-  { value: "slow", label: "Slow", description: "Slow carbs" },
-];
 
 function normalizeEstimatedMeal(data, fallbackName) {
   const absorptionProfile = data.absorptionProfile || data.absorption_profile || "medium";
@@ -64,7 +59,6 @@ export default function CarbsTab({ onSubmit, isPending }) {
   const [isEstimatingMeal, setIsEstimatingMeal] = useState(false);
   const [customFoodName, setCustomFoodName] = useState("");
   const [customCarbs, setCustomCarbs] = useState("");
-  const [customAbsorption, setCustomAbsorption] = useState("medium");
   const [carbSearch, setCarbSearch] = useState("");
   const [selectedFoods, setSelectedFoods] = useState([]);
   const [recentFoods, setRecentFoods] = useState([]);
@@ -266,7 +260,7 @@ Do not give insulin dosing advice.
       return;
     }
 
-    const profile = customAbsorption || "medium";
+    const profile = "medium";
     onSubmit([
       {
         name: customFoodName.trim(),
@@ -283,7 +277,6 @@ Do not give insulin dosing advice.
 
     setCustomFoodName("");
     setCustomCarbs("");
-    setCustomAbsorption("medium");
   };
 
   const addFood = (food) => {
@@ -419,12 +412,6 @@ Do not give insulin dosing advice.
                     placeholder="0"
                     maxLength={5}
                   />
-                  <SelectField
-                    label="Absorption"
-                    value={customAbsorption}
-                    onChange={setCustomAbsorption}
-                    options={absorptionProfileOptions}
-                  />
                 </div>
               </div>
             </div>
@@ -527,15 +514,6 @@ Do not give insulin dosing advice.
                         />
                       </div>
                     ))}
-                  </div>
-
-                  <div className="mt-3">
-                    <SelectField
-                      label="Absorption"
-                      value={estimatedMeal.absorptionProfile}
-                      onChange={(value) => updateEstimatedMeal({ absorptionProfile: value })}
-                      options={absorptionProfileOptions}
-                    />
                   </div>
 
                   {estimatedMeal.assumptions?.length > 0 && (

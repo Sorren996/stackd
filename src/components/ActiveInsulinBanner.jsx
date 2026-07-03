@@ -280,6 +280,33 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
     );
   const peakOutcome = outcomeReadings.reduce((peak, reading) => (!peak || reading.value > peak.value ? reading : peak), null);
   const lowOutcome = outcomeReadings.reduce((low, reading) => (!low || reading.value < low.value ? reading : low), null);
+
+  const correctiveInsulinDoses = peakOutcome
+    ? (Array.isArray(doses) ? doses : []).filter((dose) => {
+        const doseTime = getDoseTime(dose);
+        return (
+          isMealCoverageInsulin(dose, insulinSettings) &&
+          Number.isFinite(doseTime) &&
+          doseTime > peakOutcome.time &&
+          doseTime <= mealTime + outcomeWindowMs
+        );
+      })
+    : [];
+
+  const correctiveCarbEntries = lowOutcome
+    ? (Array.isArray(carbEntries) ? carbEntries : []).filter((entry) => {
+        const entryTime = getEntryTime(entry);
+        return (
+          Number.isFinite(entryTime) &&
+          entryTime > lowOutcome.time &&
+          entryTime <= mealTime + outcomeWindowMs
+        );
+      })
+    : [];
+
+  const hasCorrectiveInsulin = correctiveInsulinDoses.length > 0;
+  const hasCorrectiveCarbs = correctiveCarbEntries.length > 0;
+
   const latestGlucoseValue = Number(latestGlucose?.value);
   const latestGlucoseTime = new Date(latestGlucose?.recorded_at).getTime();
   const latestIsAfterMeal = Number.isFinite(latestGlucoseTime) && latestGlucoseTime >= mealTime;
@@ -374,11 +401,19 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
 
   if (mealStillUnderReview && ratio !== null && !correctionGlucoseLow) {
     if (lowOutcome && lowOutcome.value < insulinSettings.targetLow) {
-      // Glucose dipped below range after the meal — insulin may have been generous
-      if (latestIsAfterMeal && latestLow) {
+      if (hasCorrectiveCarbs && latestIsAfterMeal && latestLow) {
+        outcomeAssessment = {
+          label: "Rising gently",
+          message: "Carbs added. We're keeping a supportive eye on the trend as you gently rise back to your comfortable range.",
+          color: "#35a879",
+        };
+        value = "Realigning";
+        status = "Carbs added — rising back";
+        color = "#35a879";
+      } else if (latestIsAfterMeal && latestLow) {
         outcomeAssessment = {
           label: "Worth a closer look",
-          message: "Glucose dipped below range after this meal. Your insulin may have been a touch generous — keep monitoring and take care of yourself.",
+          message: "It looks like you've provided a bit more support than this moment needed. Please enjoy a gentle carb source and stay close to the trend while your body settles back.",
           color: "#3b82f6",
         };
         value = "Take care";
@@ -395,11 +430,19 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
         color = "#35a879";
       }
     } else if (peakOutcome && peakOutcome.value > insulinSettings.targetHigh + 20) {
-      // Glucose rose well above range — may have needed more support
-      if (latestIsAfterMeal && latestHigh) {
+      if (hasCorrectiveInsulin && latestIsAfterMeal && latestHigh) {
+        outcomeAssessment = {
+          label: "Finding its balance",
+          message: "You added a little extra support, and your body is working through it now. We're watching closely as things gently return to a comfortable flow.",
+          color: "#35a879",
+        };
+        value = "Realigning";
+        status = "Support added — settling back";
+        color = "#35a879";
+      } else if (latestIsAfterMeal && latestHigh) {
         outcomeAssessment = {
           label: "Still settling",
-          message: "Glucose is still above range. This may mean a little more support was needed for this meal. One step at a time.",
+          message: "Glucose is climbing a little higher than we'd like. Let's give it some gentle time to see how your body finds its balance before adding more support.",
           color: "#f59e0b",
         };
         value = "Still settling";
@@ -465,6 +508,8 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
       peakOutcome: peakOutcome?.value ?? null,
       lowOutcome: lowOutcome?.value ?? null,
       outcomeAssessment,
+      hasCorrectiveInsulin,
+      hasCorrectiveCarbs,
       mealStillUnderReview,
       windowStart,
       windowEnd,
