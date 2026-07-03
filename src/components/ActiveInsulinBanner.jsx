@@ -633,7 +633,7 @@ function MetricCard({ label, value, sub, status, color, tooltipId, openTooltip, 
   return (
     <motion.div
       whileTap={{ scale: 0.97 }}
-      className="metric-card relative flex min-h-[112px] flex-col justify-between overflow-hidden rounded-2xl p-4 backdrop-blur-sm"
+      className="metric-card relative flex min-h-[112px] flex-col justify-between overflow-hidden rounded-2xl border p-4 backdrop-blur-sm"
       style={{
         background: "linear-gradient(145deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0))",
         borderColor: "rgba(255,255,255,0.16)",
@@ -681,7 +681,7 @@ function ActiveInsulinDetailCard({ totalUnits, breakdown }) {
   return (
     <motion.div
       whileTap={{ scale: 0.985 }}
-      className="metric-card relative col-span-2 overflow-hidden rounded-2xl p-4 backdrop-blur-sm"
+      className="metric-card relative col-span-2 overflow-hidden rounded-2xl border p-4 backdrop-blur-sm"
       style={{
         background: "linear-gradient(145deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0))",
         borderColor: "rgba(255,255,255,0.16)",
@@ -1090,11 +1090,11 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
   const trend = useMemo(() => {
     if (safeGlucoseReadings.length < 2) return { icon: "right", label: "Stable" };
     const difference = safeGlucoseReadings[0].value - safeGlucoseReadings[1].value;
-    if (difference >= 7) return { icon: "up", label: "Ascending" };
-    if (difference >= 4) return { icon: "up-right", label: "Gently ascending" };
-    if (difference >= -3) return { icon: "right", label: "Steady" };
-    if (difference >= -6) return { icon: "down-right", label: "Gently easing" };
-    return { icon: "down", label: "Descending" };
+    if (difference >= 7) return { icon: "up", label: "Rising" };
+    if (difference >= 4) return { icon: "up-right", label: "Slowly rising" };
+    if (difference >= -3) return { icon: "right", label: "Stable" };
+    if (difference >= -6) return { icon: "down-right", label: "Slowly falling" };
+    return { icon: "down", label: "Falling" };
   }, [safeGlucoseReadings]);
 
   const glucoseValue = latestGlucose?.value;
@@ -1113,10 +1113,10 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
     glucoseValue == null
       ? "No data"
       : glucoseValue < targetLow
-        ? "Gently Descending"
+        ? "Below range"
         : glucoseValue > targetHigh
-          ? "Ascending"
-          : "In Flow";
+          ? "Above range"
+          : "In range";
   const rangeSparkColor =
     glucoseValue == null
       ? "#35a87988"
@@ -1146,9 +1146,9 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
 
   const glucoseStatus = (value) => {
     if (!value) return "No data";
-    if (value < targetLow) return "Gently Descending";
-    if (value > targetHigh) return "Ascending";
-    return "In Flow";
+    if (value < targetLow) return "Low";
+    if (value > targetHigh) return "High";
+    return "In range";
   };
 
   return (
@@ -1159,29 +1159,9 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
         onClose={() => setOpenTooltip(null)}
       />
 
-      <div className="relative -mx-4 overflow-visible px-4 pb-6 pt-2">
-        <motion.div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0"
-          animate={{ opacity: inRange ? 0.6 : 0.85 }}
-          transition={{ duration: 1.8, ease: "easeInOut" }}
-          style={{ background: `radial-gradient(ellipse 95% 60% at 50% 5%, ${glucoseColor}44, transparent 72%)` }}
-        />
-        <motion.div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0"
-          animate={{ scale: [1, 1.15, 1], opacity: [0.4, 0.7, 0.4] }}
-          transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
-          style={{ background: `radial-gradient(ellipse 65% 45% at 50% 20%, ${glucoseColor}33, transparent 60%)` }}
-        />
-        <motion.div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0"
-          animate={{ x: [0, 30, 0], opacity: [0.2, 0.4, 0.2] }}
-          transition={{ duration: 11, repeat: Infinity, ease: "easeInOut" }}
-          style={{ background: `radial-gradient(ellipse 40% 30% at 30% 30%, ${glucoseColor}22, transparent 55%)` }}
-        />
-        <div className="relative z-10 mb-6 flex flex-col items-center pt-2 text-center">
+      <div className="relative -mx-4 px-4 pb-6 pt-2">
+        <div className="mb-6 flex flex-col items-center pt-2 text-center">
+          <SupportiveGlucoseMessage insight={supportiveGlucoseInsight} color={glucoseColor} />
           <span className="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-white/30">Current Glucose</span>
           <div className="flex items-end gap-3">
             <span className="text-[72px] font-black leading-none text-white sm:text-[88px]">
@@ -1195,33 +1175,26 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
               {formatRelativeAge(new Date(latestGlucose.recorded_at).getTime())}
             </span>
           )}
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-            className="relative flex items-center gap-2 overflow-hidden rounded-full px-5 py-2.5 backdrop-blur-md"
+          <div
+            className="relative flex items-center gap-2 overflow-hidden rounded-full border px-4 py-2 backdrop-blur-sm"
             style={{
-              backgroundColor: `${glucoseColor}20`,
-              boxShadow: `0 8px 32px ${glucoseColor}33, inset 0 1px 1px rgba(255,255,255,0.2), inset 0 -1px 1px rgba(255,255,255,0.06)`,
+              backgroundColor: `${glucoseColor}18`,
+              borderColor: `${glucoseColor}40`,
+              boxShadow: "0 10px 28px rgba(0,0,0,0.16), inset 0 1px 1px rgba(255,255,255,0.22), inset 0 -1px 1px rgba(255,255,255,0.06)",
             }}
           >
-            <motion.span
-              animate={{ scale: [.4, .7, .4], opacity: [0.7, 1, 0.7] }}
-              transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
-              className="relative z-10 h-2 w-2 rounded-full"
-              style={{ backgroundColor: glucoseColor, boxShadow: `0 0 12px ${glucoseColor}` }}
-            />
-            <span className="relative z-10 text-sm font-semibold" style={{ color: glucoseColor }}>{rangeCardLabel}</span>
-          </motion.div>
-          <SupportiveGlucoseMessage insight={supportiveGlucoseInsight} color={glucoseColor} />
+            <span className="relative z-10 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: glucoseColor }} />
+            <span className="relative z-10 text-sm font-semibold" style={{ color: glucoseColor }}>{trend.label}</span>
+          </div>
         </div>
 
         {latestGlucose && (
           <div
-            className="dashboard-surface relative mb-6 flex items-center gap-3 overflow-hidden rounded-2xl px-4 py-3 backdrop-blur-sm"
+            className="dashboard-surface relative mb-6 flex items-center gap-3 overflow-hidden rounded-2xl border px-4 py-3 backdrop-blur-sm"
             style={{
-              background: `linear-gradient(145deg, ${rangeSparkColor}11, transparent 70%)`,
-              boxShadow: `0 14px 36px ${rangeSparkColor}15`,
+              background: "linear-gradient(145deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0))",
+              borderColor: "rgba(255,255,255,0.16)",
+              boxShadow: "0 14px 36px rgba(0,0,0,0.18), inset 0 1px 1px rgba(255,255,255,0.24), inset 0 -1px 1px rgba(255,255,255,0.06)",
             }}
           >
             <div
@@ -1241,8 +1214,8 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
               ))}
             </div>
             <div className="relative z-10 flex-1">
-              <p className="text-sm font-semibold text-white/80">{trend.label}</p>
-              <p className="text-xs text-white/35">Your range: {targetLow}–{targetHigh} mg/dL</p>
+              <p className="text-sm font-semibold text-white/80">{rangeCardLabel}</p>
+              <p className="text-xs text-white/35">Target: {targetLow}-{targetHigh} mg/dL</p>
             </div>
           </div>
         )}

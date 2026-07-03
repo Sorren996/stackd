@@ -48,8 +48,8 @@ const insulinTypeOptions = Object.entries(INSULIN_PROFILES).map(([name, profile]
 }));
 
 const dosePurposeOptions = [
-  { value: "meal", label: "Meal support", description: "Carb coverage" },
-  { value: "correction", label: "Balancing", description: "Glucose balancing" },
+  { value: "meal", label: "Meal", description: "Carb coverage" },
+  { value: "correction", label: "Correction", description: "Glucose correction" },
 ];
 
 function createInsulinRow(defaults = {}) {
@@ -485,8 +485,7 @@ export default function DoseForm({ open, onOpenChange }) {
             boxShadow: "0 -20px 60px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.08)",
           }}
         >
-          <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-20 opacity-40" style={{ background: "radial-gradient(ellipse 70% 100% at 50% 0%, rgba(45,212,191,0.1), transparent 70%)" }} />
-          <div className="relative z-10 flex items-center justify-between px-6 pb-3 pt-5">
+          <div className="flex items-center justify-between px-6 pb-3 pt-5">
             <div className="w-8" />
             <span className="text-lg font-semibold text-white">Log Entry</span>
             <button
@@ -500,7 +499,7 @@ export default function DoseForm({ open, onOpenChange }) {
             </button>
           </div>
 
-          <div className="relative z-10 mx-5 mb-2 flex rounded-2xl border border-white/10 bg-white/[0.04] p-1" style={{ boxShadow: "inset 0 1px 1px rgba(255,255,255,0.06)" }}>
+          <div className="mx-5 mb-2 flex rounded-2xl border border-white/10 bg-white/[0.04] p-1" style={{ boxShadow: "inset 0 1px 1px rgba(255,255,255,0.06)" }}>
             {[
               { id: "insulin", label: "Insulin", Icon: Syringe },
               { id: "glucose", label: "Glucose", Icon: Droplets },
@@ -543,7 +542,7 @@ export default function DoseForm({ open, onOpenChange }) {
                   <>
                     <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-6 pt-4">
                       <div className="space-y-3">
-                        <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/40">Your support</p>
+                        <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/40">Insulin doses</p>
 
                         {insulinRows.map((row, index) => (
                           <div key={row.id} className="space-y-2">
@@ -565,7 +564,7 @@ export default function DoseForm({ open, onOpenChange }) {
                               />
 
                               <SelectField
-                                label="What's this for?"
+                                label="Purpose"
                                 value={row.purpose}
                                 onChange={(value) => updateInsulinRow(row.id, { purpose: value })}
                                 options={dosePurposeOptions}
@@ -597,12 +596,12 @@ export default function DoseForm({ open, onOpenChange }) {
                       </div>
 
                       <div className="mt-6 space-y-3">
-                        <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/40">When did you take it?</p>
+                        <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/40">Time administered</p>
                         <TimeScrollField label="Administered at" value={insulinTime} onChange={setInsulinTime} max={nowTimeString} />
                       </div>
 
                       <div className="mt-6 space-y-3">
-                        <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/40">A note (optional)</p>
+                        <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/40">Notes (optional)</p>
                         <TextPadField value={insulinNotes} onChange={setInsulinNotes} placeholder="e.g. before lunch" multiline />
                       </div>
 
@@ -639,7 +638,7 @@ export default function DoseForm({ open, onOpenChange }) {
                   <>
                     <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-6 pt-4">
                       <p className="block text-sm font-bold uppercase tracking-widest text-white/40">
-                        Your glucose reading
+                        Blood glucose (mg/dL)
                       </p>
                       <div className="mt-3">
                         <NumberPadField
@@ -654,12 +653,12 @@ export default function DoseForm({ open, onOpenChange }) {
                       </div>
 
                       <div className="mt-6 space-y-3">
-                        <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/40">When was this?</p>
+                        <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/40">Time</p>
                         <TimeScrollField label="Reading time" value={glucoseTime} onChange={setGlucoseTime} max={nowTimeString} />
                       </div>
 
                       <div className="mt-6 space-y-3">
-                        <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/40">A note (optional)</p>
+                        <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/40">Notes (optional)</p>
                         <TextPadField value={glucoseNotes} onChange={setGlucoseNotes} placeholder="e.g. fasting, after meal" multiline />
                       </div>
                     </div>

@@ -642,8 +642,8 @@ Do not give insulin dosing advice.
           )}
 
           <div className="mt-5">
-            <p className="mb-3 text-sm font-bold uppercase tracking-widest text-white/40">When did you enjoy this?</p>
-            <TimeScrollField label="Time" value={carbTime} onChange={setCarbTime} max={nowTimeString} />
+            <p className="mb-3 text-sm font-bold uppercase tracking-widest text-white/40">Time Consumed</p>
+            <TimeScrollField label="Consumed at" value={carbTime} onChange={setCarbTime} max={nowTimeString} />
           </div>
         </div>
 
