@@ -1159,29 +1159,36 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
         onClose={() => setOpenTooltip(null)}
       />
 
-      <div className="relative -mx-4 overflow-visible border-none px-4 pb-6 pt-2" style={{ border: "none", outline: "none" }}>
+      <div className="glucose-hero relative -mx-4 overflow-visible px-4 pb-6 pt-2" style={{ border: "none", outline: "none" }}>
         <motion.div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0"
-          animate={{ opacity: inRange ? 0.6 : 0.85 }}
+          animate={{ opacity: inRange ? 0.7 : 0.9 }}
           transition={{ duration: 1.8, ease: "easeInOut" }}
-          style={{ background: `radial-gradient(ellipse 95% 60% at 50% 5%, ${glucoseColor}44, transparent 72%)` }}
+          style={{ background: `radial-gradient(ellipse 95% 60% at 50% 5%, ${glucoseColor}66, transparent 72%)`, filter: "blur(20px)" }}
         />
         <motion.div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0"
-          animate={{ scale: [1, 1.15, 1], opacity: [0.4, 0.7, 0.4] }}
+          animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.8, 0.5] }}
           transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
-          style={{ background: `radial-gradient(ellipse 65% 45% at 50% 20%, ${glucoseColor}33, transparent 60%)` }}
+          style={{ background: `radial-gradient(ellipse 65% 45% at 50% 20%, ${glucoseColor}55, transparent 60%)`, filter: "blur(16px)" }}
         />
         <motion.div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0"
-          animate={{ x: [0, 30, 0], opacity: [0.2, 0.4, 0.2] }}
+          animate={{ x: [0, 30, 0], y: [0, -10, 0], opacity: [0.3, 0.6, 0.3] }}
           transition={{ duration: 11, repeat: Infinity, ease: "easeInOut" }}
-          style={{ background: `radial-gradient(ellipse 40% 30% at 30% 30%, ${glucoseColor}22, transparent 55%)` }}
+          style={{ background: `radial-gradient(ellipse 40% 30% at 30% 30%, ${glucoseColor}44, transparent 55%)`, filter: "blur(14px)" }}
         />
-        <div className="relative z-10 mb-6 flex flex-col items-center border-none pt-2 text-center" style={{ border: "none", outline: "none" }}>
+        <motion.div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0"
+          animate={{ x: [0, -25, 0], y: [0, 12, 0], opacity: [0.25, 0.55, 0.25] }}
+          transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }}
+          style={{ background: `radial-gradient(ellipse 50% 35% at 70% 25%, ${glucoseColor}33, transparent 55%)`, filter: "blur(18px)" }}
+        />
+        <div className="relative z-10 mb-6 flex flex-col items-center pt-2 text-center">
           <span className="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-white/30">Current Glucose</span>
           <div className="flex items-end gap-3">
             <span className="text-[72px] font-black leading-none text-white sm:text-[88px]">
