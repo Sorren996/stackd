@@ -167,7 +167,7 @@ export default function Layout() {
       <div
         ref={sceneRef}
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[620px] overflow-hidden bg-black sm:h-[720px]"
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[620px] overflow-hidden sm:h-[720px]"
         style={{ transform: "translate3d(0, 0, 0)", willChange: "transform" }}
       >
         <AnimatePresence initial={false}>
@@ -225,12 +225,14 @@ export default function Layout() {
         />
       </div>
 
-      <header className="fixed inset-x-0 top-0 z-50 bg-transparent">
+      <header
+        className="fixed inset-x-0 top-0 z-50"
+        style={{
+          background: "linear-gradient(to bottom, rgba(0,0,0,0.8), rgba(0,0,0,0.4), transparent)",
+        }}
+      >
         <div
           className="mx-auto grid h-14 max-w-6xl grid-cols-[1fr_auto_1fr] items-center px-4"
-          style={{
-            background: "linear-gradient(to bottom, rgba(0,0,0,0.8), rgba(0,0,0,0.4), transparent)",
-          }}
         >
           <div />
           <img
