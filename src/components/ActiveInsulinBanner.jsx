@@ -990,7 +990,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
           style={{ background: "radial-gradient(ellipse at center, rgba(0,0,0,0.28) 0%, transparent 70%)" }}
         />
         <div className="relative z-10 mb-6 flex flex-col items-center pt-2 text-center">
-          <span className="text-legible mb-5 text-[10px] font-bold uppercase tracking-[0.25em] text-white/50">
+          <span className="text-legible mb-5 text-[10px] font-bold uppercase tracking-[0.25em] text-white">
             {supportiveGlucoseInsight?.intent || "Your Journey"}
           </span>
           <div className="flex items-end gap-3">
