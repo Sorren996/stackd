@@ -1181,7 +1181,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
           transition={{ duration: 11, repeat: Infinity, ease: "easeInOut" }}
           style={{ background: `radial-gradient(ellipse 40% 30% at 30% 30%, ${glucoseColor}22, transparent 55%)` }}
         />
-        <div className="relative z-10 mb-6 flex flex-col items-center pt-2 text-center">
+        <div className="relative z-10 mb-6 flex flex-col items-center border-none pt-2 text-center" style={{ border: "none", outline: "none" }}>
           <span className="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-white/30">Current Glucose</span>
           <div className="flex items-end gap-3">
             <span className="text-[72px] font-black leading-none text-white sm:text-[88px]">
