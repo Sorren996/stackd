@@ -82,7 +82,7 @@ export default function Layout() {
   const [targetRange, setTargetRange] = useState(readTargetRange);
   const appBackground = useMemo(() => {
     const primaryColor = getGlucoseBackgroundColor(latestGlucose, targetRange);
-    return `linear-gradient(to bottom, ${primaryColor} 0%, rgba(0,0,0,0.72) 58%, #000000 100%)`;
+    return `linear-gradient(to bottom, ${primaryColor} 0%, rgba(0,0,0,0.72) 58%, #00000004 100%)`;
   }, [latestGlucose, targetRange]);
   const sceneStatus = useMemo(() => getGlucoseScene(latestGlucose, targetRange), [latestGlucose, targetRange]);
   const [backgroundLayers, setBackgroundLayers] = useState(() => ({
