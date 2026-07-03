@@ -1159,7 +1159,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
         onClose={() => setOpenTooltip(null)}
       />
 
-      <div className="relative -mx-4 overflow-hidden px-4 pb-6 pt-2">
+      <div className="relative -mx-4 overflow-visible px-4 pb-6 pt-2">
         <motion.div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0"
