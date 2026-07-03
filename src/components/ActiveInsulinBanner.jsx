@@ -1159,34 +1159,27 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
         onClose={() => setOpenTooltip(null)}
       />
 
-      <div className="glucose-hero relative -mx-4 overflow-visible px-4 pb-6 pt-2" style={{ border: "none", outline: "none" }}>
+      <div className="relative -mx-4 overflow-visible px-4 pb-6 pt-2">
         <motion.div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0"
-          animate={{ opacity: inRange ? 0.7 : 0.9 }}
+          animate={{ opacity: inRange ? 0.6 : 0.85 }}
           transition={{ duration: 1.8, ease: "easeInOut" }}
-          style={{ background: `radial-gradient(ellipse 95% 60% at 50% 5%, ${glucoseColor}66, transparent 72%)`, filter: "blur(20px)" }}
+          style={{ background: `radial-gradient(ellipse 95% 60% at 50% 5%, ${glucoseColor}44, transparent 72%)` }}
         />
         <motion.div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0"
-          animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.8, 0.5] }}
+          animate={{ scale: [1, 1.15, 1], opacity: [0.4, 0.7, 0.4] }}
           transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
-          style={{ background: `radial-gradient(ellipse 65% 45% at 50% 20%, ${glucoseColor}55, transparent 60%)`, filter: "blur(16px)" }}
+          style={{ background: `radial-gradient(ellipse 65% 45% at 50% 20%, ${glucoseColor}33, transparent 60%)` }}
         />
         <motion.div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0"
-          animate={{ x: [0, 30, 0], y: [0, -10, 0], opacity: [0.3, 0.6, 0.3] }}
+          animate={{ x: [0, 30, 0], opacity: [0.2, 0.4, 0.2] }}
           transition={{ duration: 11, repeat: Infinity, ease: "easeInOut" }}
-          style={{ background: `radial-gradient(ellipse 40% 30% at 30% 30%, ${glucoseColor}44, transparent 55%)`, filter: "blur(14px)" }}
-        />
-        <motion.div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0"
-          animate={{ x: [0, -25, 0], y: [0, 12, 0], opacity: [0.25, 0.55, 0.25] }}
-          transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }}
-          style={{ background: `radial-gradient(ellipse 50% 35% at 70% 25%, ${glucoseColor}33, transparent 55%)`, filter: "blur(18px)" }}
+          style={{ background: `radial-gradient(ellipse 40% 30% at 30% 30%, ${glucoseColor}22, transparent 55%)` }}
         />
         <div className="relative z-10 mb-6 flex flex-col items-center pt-2 text-center">
           <span className="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-white/30">Current Glucose</span>

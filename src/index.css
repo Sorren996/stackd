@@ -93,8 +93,4 @@
     min-height: 100vh;
   }
 
-  .glucose-hero, .glucose-hero * {
-    border: none !important;
-    outline: none !important;
-  }
 }
