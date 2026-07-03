@@ -1,6 +1,6 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
-import { Activity, History as HistoryIcon, BarChart2, Settings } from "lucide-react";
+import { Wind, Leaf, Waves, Settings } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import SettingsContent from "../pages/Settings";
 import Dashboard from "../pages/Dashboard";
@@ -9,9 +9,9 @@ import HistoryPage from "../pages/History";
 const LATEST_GLUCOSE_CACHE_KEY = "latest_glucose_cache";
 
 const navItems = [
-  { path: "/", label: "Dashboard", icon: Activity },
-  { path: "/history", label: "History", icon: HistoryIcon },
-  { path: "/analytics", label: "Analytics", icon: BarChart2 },
+  { path: "/", label: "My Flow", icon: Wind },
+  { path: "/history", label: "My Journal", icon: Leaf },
+  { path: "/analytics", label: "My Rhythms", icon: Waves },
 ];
 
 const CachedDashboard = memo(Dashboard);
