@@ -574,7 +574,7 @@ export default function Dashboard() {
           )}
 
           <div className="mb-2 w-full max-w-full min-w-0">
-            <p className="mb-2 px-0 text-[10px] font-bold uppercase tracking-[0.18em] text-white/40">
+            <p className="mb-2 px-0 text-[10px] font-bold uppercase tracking-[0.18em] text-white">
               Glucose Journey
             </p>
             {showGraph ? (
@@ -586,7 +586,7 @@ export default function Dashboard() {
 
           <div className="grid w-full max-w-full min-w-0 grid-cols-1 gap-6 overflow-x-hidden border-0 px-0 py-4 lg:grid-cols-3">
             <div className="min-w-0 max-w-full space-y-2 overflow-x-hidden lg:col-span-2">
-              <p className="mx-4 mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-white/40">
+              <p className="mx-4 mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-white">
                 Recent Moments
               </p>
               <div className="w-full max-w-full min-w-0 space-y-2 overflow-x-hidden">

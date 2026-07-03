@@ -753,8 +753,8 @@ function SupportiveGlucoseMessage({ insight }) {
   return (
     <p
       aria-live="polite"
-      className="text-legible mx-auto mt-6 max-w-[85vw] text-center text-[15px] font-medium italic leading-relaxed"
-      style={{ color: "rgba(255,255,255,0.65)" }}
+      className="text-legible-strong mx-auto mt-6 max-w-[85vw] text-center text-[15px] font-medium italic leading-relaxed"
+      style={{ color: "rgba(255,255,255,0.95)" }}
     >
       "{insight.message}"
     </p>
@@ -1051,7 +1051,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
           </div>
         )}
 
-        <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-white/25">Your Rhythm</p>
+        <p className="text-legible mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-white">Your Rhythm</p>
         <div className="grid grid-cols-2 gap-3">
           <ActiveInsulinDetailCard totalUnits={activeUnits} breakdown={activeInsulinBreakdown} />
           <MetricCard
