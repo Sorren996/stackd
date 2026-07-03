@@ -55,7 +55,7 @@ function getGlucoseBackgroundColor(reading, targetRange) {
 
 const SCENE_IMAGES = {
   high: "https://res.cloudinary.com/bzqjmwln/image/upload/v1782928032/mountain_gxgmap.png",
-  range: "https://res.cloudinary.com/bzqjmwln/image/upload/v1782928032/forest_lqseeo.png",
+  range: "https://media.base44.com/images/public/6a1b93f234a8611ee1595134/2d5cd90dd_image.png",
   low: "https://res.cloudinary.com/bzqjmwln/image/upload/v1782928032/valley_vqpesd.png",
 };
 
@@ -167,7 +167,7 @@ export default function Layout() {
       <div
         ref={sceneRef}
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[620px] overflow-hidden bg-black sm:h-[720px]"
+        className="pointer-events-none absolute inset-0 -z-10 overflow-hidden bg-black"
         style={{ transform: "translate3d(0, 0, 0)", willChange: "transform" }}
       >
         <AnimatePresence initial={false}>
@@ -183,8 +183,6 @@ export default function Layout() {
             style={{
               filter: "grayscale(0.42) saturate(0.82) contrast(1.08) brightness(0.62)",
               objectPosition: sceneStatus === "high" ? "center top" : sceneStatus === "low" ? "center 35%" : "center top",
-              WebkitMaskImage: "linear-gradient(to bottom, black 0%, black 38%, rgba(0,0,0,0.65) 58%, transparent 100%)",
-              maskImage: "linear-gradient(to bottom, black 0%, black 38%, rgba(0,0,0,0.65) 58%, transparent 100%)",
             }}
           />
         </AnimatePresence>
@@ -214,7 +212,7 @@ export default function Layout() {
         <div
           className="absolute inset-0"
           style={{
-            background: "linear-gradient(to bottom, rgba(0,0,0,0.04) 0%, rgba(0,0,0,0.34) 48%, rgba(0,0,0,0.82) 74%, #000000 100%)",
+            background: "linear-gradient(to bottom, rgba(0,0,0,0.12) 0%, rgba(0,0,0,0.28) 40%, rgba(0,0,0,0.5) 80%, rgba(0,0,0,0.72) 100%)",
           }}
         />
         <div
