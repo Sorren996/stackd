@@ -5,22 +5,22 @@ const phaseConfig = {
   waiting: {
     icon: Clock,
     className: "border border-amber-600 bg-amber-900/20 text-amber-600",
-    label: "Waiting",
+    label: "Beginning",
   },
   rising: {
     icon: TrendingUp,
     className: "border border-blue-600 bg-blue-900/20 text-blue-600",
-    label: "Rising",
+    label: "Building",
   },
   active: {
     icon: Zap,
     className: "border border-emerald-600 bg-emerald-500/20 text-emerald-600",
-    label: "Active",
+    label: "Supporting",
   },
   declining: {
     icon: TrendingDown,
     className: "border border-violet-600 bg-violet-500/20 text-violet-600",
-    label: "Declining",
+    label: "Easing",
   },
   expired: {
     icon: CheckCircle2,
@@ -44,7 +44,7 @@ export default function ActiveAlerts({ doses = [] }) {
   return (
     <section className="active-alerts w-full space-y-3 overflow-hidden">
       <h2 className="active-alerts-title px-1 text-[10px] font-bold uppercase tracking-[0.18em] text-white/35">
-        Active Alerts
+        Active Support
       </h2>
 
       <div className="space-y-2 bg-transparent">

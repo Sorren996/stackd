@@ -206,7 +206,7 @@ export default function DoseForm({ open, onOpenChange }) {
       queryClient.setQueryData(["insulin-doses", "graph"], (current = []) => prependUnique(savedDoses, current.filter((dose) => !optimisticIds.has(dose.id))));
       queryClient.invalidateQueries({ queryKey: ["insulin-doses"] });
       queryClient.invalidateQueries({ queryKey: ["insulin-doses", "graph"] });
-      toast.success("Insulin logged - tracking activity now");
+      toast.success("Insulin logged — tracking its gentle activity");
     },
     onError: (_error, _variables, context) => {
       queryClient.setQueryData(["insulin-doses"], context?.previousDoses ?? []);
@@ -234,7 +234,7 @@ export default function DoseForm({ open, onOpenChange }) {
       );
       queryClient.invalidateQueries({ queryKey: ["latest-glucose"] });
       queryClient.invalidateQueries({ queryKey: ["glucose-readings", "graph"] });
-      toast.success("Glucose logged");
+      toast.success("Glucose check-in recorded");
     },
     onError: (_error, _variables, context) => {
       queryClient.setQueryData(["latest-glucose"], context?.previousLatestGlucose ?? []);
@@ -273,8 +273,8 @@ export default function DoseForm({ open, onOpenChange }) {
       queryClient.setQueryData(["carb-entries", "graph"], (current = []) => prependUnique(savedEntries, current.filter((entry) => !optimisticIds.has(entry.id))));
       queryClient.invalidateQueries({ queryKey: ["carb-entries"] });
       queryClient.invalidateQueries({ queryKey: ["carb-entries", "graph"] });
-      toast.success(`Logged ${submittedEntries.length} food item${submittedEntries.length === 1 ? "" : "s"}`);
-      toast.success(`Logged ${submittedEntries[0]?.carbs ?? "?"}g carbs`);
+      toast.success(`Nourishment logged`);
+      toast.success(`Added ${submittedEntries[0]?.carbs ?? "?"}g to your day`);
     },
     onError: (error, _variables, context) => {
       queryClient.setQueryData(["carb-entries"], context?.previousCarbs ?? []);
@@ -487,7 +487,7 @@ export default function DoseForm({ open, onOpenChange }) {
         >
           <div className="flex items-center justify-between px-6 pb-3 pt-5">
             <div className="w-8" />
-            <span className="text-lg font-semibold text-white">Log Entry</span>
+            <span className="text-lg font-semibold text-white">Record a Moment</span>
             <button
               type="button"
               onClick={requestClose}
@@ -542,7 +542,7 @@ export default function DoseForm({ open, onOpenChange }) {
                   <>
                     <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-6 pt-4">
                       <div className="space-y-3">
-                        <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/40">Insulin doses</p>
+                        <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/40">Your support</p>
 
                         {insulinRows.map((row, index) => (
                           <div key={row.id} className="space-y-2">
@@ -591,12 +591,12 @@ export default function DoseForm({ open, onOpenChange }) {
                           style={{ boxShadow: "inset 0 1px 1px rgba(255,255,255,0.04)" }}
                         >
                           <Plus className="h-4 w-4" />
-                          Add more insulin
+                          Add another dose
                         </button>
                       </div>
 
                       <div className="mt-6 space-y-3">
-                        <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/40">Time administered</p>
+                        <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/40">Time</p>
                         <TimeScrollField label="Administered at" value={insulinTime} onChange={setInsulinTime} max={nowTimeString} />
                       </div>
 
@@ -638,7 +638,7 @@ export default function DoseForm({ open, onOpenChange }) {
                   <>
                     <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-6 pt-4">
                       <p className="block text-sm font-bold uppercase tracking-widest text-white/40">
-                        Blood glucose (mg/dL)
+                        Glucose (mg/dL)
                       </p>
                       <div className="mt-3">
                         <NumberPadField

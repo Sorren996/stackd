@@ -26,14 +26,14 @@ export default function DoseCard({ dose, onDelete, onEdit }) {
   });
 
   const statusText = isExpired
-    ? "Activity cleared"
+    ? "Support complete"
     : status.phase === "waiting"
-      ? "Onset pending"
+      ? "Gently beginning"
       : status.phase === "rising"
-        ? "Building activity"
+        ? "Gently building"
         : status.phase === "active"
-          ? "Peak activity"
-          : "Activity declining";
+          ? "Providing steady support"
+          : "Gently easing";
 
   return (
     <motion.div
@@ -64,7 +64,7 @@ export default function DoseCard({ dose, onDelete, onEdit }) {
 
       <div className="min-w-0 flex-1 pt-0.5">
         <p className="text-sm font-semibold text-white/85">
-          {dose.units}u {shortName} administered
+          {dose.units}u {shortName} logged
         </p>
 
         <p className="mt-0.5 text-xs text-white/35">
@@ -108,12 +108,11 @@ export default function DoseCard({ dose, onDelete, onEdit }) {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle className="text-[hsl(var(--popover))]">
-                Delete this dose?
+                Remove this support?
               </AlertDialogTitle>
 
               <AlertDialogDescription>
-                This will remove the {dose.units}u {dose.insulin_type} dose from
-                your log and graph.
+                This will gently remove the {dose.units}u {dose.insulin_type} from your log.
               </AlertDialogDescription>
             </AlertDialogHeader>
 
@@ -126,7 +125,7 @@ export default function DoseCard({ dose, onDelete, onEdit }) {
                 onClick={() => onDelete(dose.id)}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
-                Delete
+                Remove
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

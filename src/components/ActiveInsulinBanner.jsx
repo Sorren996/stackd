@@ -697,10 +697,10 @@ function ActiveInsulinDetailCard({ totalUnits, breakdown }) {
       />
       <div className="relative z-10 flex items-start justify-between gap-4">
         <div>
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-white/35">Bolus IOB</span>
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-white/35">Insulin on Board</span>
           <div className="mt-2 flex items-end gap-2">
             <span className="text-4xl font-black leading-none text-white">{totalUnits.toFixed(1)}</span>
-            <span className="mb-1 text-xs font-semibold text-white/35">U on board</span>
+            <span className="mb-1 text-xs font-semibold text-white/35">units active</span>
           </div>
         </div>
         <span className="rounded-full border px-3 py-1 text-xs font-semibold" style={{
@@ -708,7 +708,7 @@ function ActiveInsulinDetailCard({ totalUnits, breakdown }) {
           borderColor: hasBolusIOB ? "rgba(6,182,212,0.32)" : "rgba(255,255,255,0.1)",
           background: hasBolusIOB ? "rgba(6,182,212,0.1)" : "rgba(255,255,255,0.04)",
         }}>
-          {hasBolusIOB ? "On board" : "Cleared"}
+          {hasBolusIOB ? "Supporting you" : "Settled"}
         </span>
       </div>
 
@@ -1113,10 +1113,10 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
     glucoseValue == null
       ? "No data"
       : glucoseValue < targetLow
-        ? "Below range"
+        ? "Below comfort zone"
         : glucoseValue > targetHigh
-          ? "Above range"
-          : "In range";
+          ? "Above comfort zone"
+          : "In comfort zone";
   const rangeSparkColor =
     glucoseValue == null
       ? "#35a87988"
@@ -1162,7 +1162,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
       <div className="relative -mx-4 px-4 pb-6 pt-2">
         <div className="mb-6 flex flex-col items-center pt-2 text-center">
           <SupportiveGlucoseMessage insight={supportiveGlucoseInsight} color={glucoseColor} />
-          <span className="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-white/30">Current Glucose</span>
+          <span className="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-white/30">Your Glucose</span>
           <div className="flex items-end gap-3">
             <span className="text-[72px] font-black leading-none text-white sm:text-[88px]">
               {glucoseValue ?? "--"}
@@ -1220,7 +1220,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
           </div>
         )}
 
-        <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-white/25">At a Glance</p>
+        <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-white/25">Your Rhythm</p>
         <div className="grid grid-cols-2 gap-3">
           <ActiveInsulinDetailCard totalUnits={activeUnits} breakdown={activeInsulinBreakdown} />
           <MetricCard

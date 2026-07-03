@@ -11,10 +11,10 @@ import { motion } from "framer-motion";
 export default function GlucoseCard({ reading, onDelete }) {
   const value = reading.value;
   const color = value < 70 ? "#3b82f6" : value > 180 ? "#f59e0b" : "#4ade80";
-  const statusLabel = value < 70 ? "Below range" : value > 180 ? "Above range" : "In range";
+  const statusLabel = value < 70 ? "Below comfort zone" : value > 180 ? "Above comfort zone" : "In comfort zone";
   const timeAgo = formatDistanceToNow(new Date(reading.recorded_at), { addSuffix: true });
 
-  const eventLabel = value < 70 ? "Low glucose detected" : value > 180 ? "Elevated glucose reading" : "Glucose reading logged";
+  const eventLabel = value < 70 ? "Glucose below comfort zone" : value > 180 ? "Glucose above comfort zone" : "Glucose check-in";
 
   return (
     <motion.div
@@ -54,15 +54,15 @@ export default function GlucoseCard({ reading, onDelete }) {
         </AlertDialogTrigger>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-[hsl(var(--popover))]">Delete this reading?</AlertDialogTitle>
+            <AlertDialogTitle className="text-[hsl(var(--popover))]">Remove this check-in?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will remove the {value} mg/dL glucose reading from your history and graphs.
+              This will gently remove the {value} mg/dL reading from your history.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="text-[hsl(var(--popover))]">Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={() => onDelete(reading.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Delete
+              Remove
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

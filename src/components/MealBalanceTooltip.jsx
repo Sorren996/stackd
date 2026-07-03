@@ -58,7 +58,7 @@ export default function MealBalanceTooltip({ mealInsight, open, onClose }) {
   return (
     <TooltipPopover
       title="Meal Balance"
-      description="A quick snapshot of how your recent meal and insulin are working together."
+      description="A gentle snapshot of how your nourishment and support are working together."
       onClose={onClose}
     >
       <div className="mt-3 space-y-4">
@@ -99,15 +99,15 @@ export default function MealBalanceTooltip({ mealInsight, open, onClose }) {
         {/* Key numbers — color-coded */}
         <div className="grid grid-cols-2 gap-2.5">
           <div className="rounded-xl border p-3 text-center" style={{ borderColor: `${mealInsight.color}30`, background: `${mealInsight.color}08` }}>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-white/30">Carbs Eaten</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-white/30">Nourishment</p>
             <p className="mt-1 text-lg font-bold text-white">{Math.round(mealInsight.details.meal.carbs)}g</p>
             <p className="mt-0.5 text-[10px] text-white/30">~{mealInsight.details.gramsPerUnit.toFixed(1)}g per unit</p>
           </div>
           <div className="rounded-xl border p-3 text-center" style={{ borderColor: `${mealInsight.color}30`, background: `${mealInsight.color}08` }}>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-white/30">Insulin Logged</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-white/30">Support Logged</p>
             <p className="mt-1 text-lg font-bold text-white">{mealInsight.details.loggedTotalUnits.toFixed(1)}u</p>
             <p className="mt-0.5 text-[10px] text-white/30">
-              {mealInsight.details.loggedMealUnits.toFixed(1)} meal + {mealInsight.details.loggedCorrectionUnits.toFixed(1)} correction
+              {mealInsight.details.loggedMealUnits.toFixed(1)} meal + {mealInsight.details.loggedCorrectionUnits.toFixed(1)} restoration
             </p>
           </div>
         </div>

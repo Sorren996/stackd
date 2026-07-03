@@ -401,7 +401,7 @@ function EditLogSheet({ log, onClose, onSave, isSaving }) {
   if (!log) return null;
 
   const updateField = (key, value) => setForm((current) => ({ ...current, [key]: value }));
-  const title = log.type === "insulin" ? "Edit Insulin" : log.type === "glucose" ? "Edit Glucose" : "Edit Carbs";
+  const title = log.type === "insulin" ? "Edit Insulin" : log.type === "glucose" ? "Edit Glucose" : "Edit Nourishment";
 
   const submit = () => {
     if (log.type === "insulin") {
@@ -525,10 +525,10 @@ function EditLogSheet({ log, onClose, onSave, isSaving }) {
             </>
           )}
 
-          <TimeScrollField label="Logged at" value={form.time} onChange={(value) => updateField("time", value)} />
+          <TimeScrollField label="Time" value={form.time} onChange={(value) => updateField("time", value)} />
           <TextPadField label="Notes" value={form.notes} onChange={(value) => updateField("notes", value)} placeholder="Notes" multiline />
           <button type="button" onClick={submit} disabled={isSaving} className="sticky bottom-0 w-full rounded-2xl bg-teal-500 py-4 text-base font-semibold text-white shadow-[0_-16px_24px_rgba(10,18,16,0.9)] transition hover:bg-teal-400 disabled:opacity-40">
-            {isSaving ? "Saving..." : "Save changes"}
+            {isSaving ? "Saving..." : "Save moment"}
           </button>
         </div>
       </div>
@@ -689,7 +689,7 @@ export default function Dashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["latest-glucose"] });
       queryClient.invalidateQueries({ queryKey: ["glucose-readings", "graph"] });
-      toast.success("Glucose reading removed");
+      toast.success("Reading gently removed");
     },
   });
 
@@ -698,7 +698,7 @@ export default function Dashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["carb-entries"] });
       queryClient.invalidateQueries({ queryKey: ["carb-entries", "graph"] });
-      toast.success("Carb entry removed");
+      toast.success("Nourishment removed");
     },
   });
 
@@ -707,7 +707,7 @@ export default function Dashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["insulin-doses"] });
       queryClient.invalidateQueries({ queryKey: ["insulin-doses", "graph"] });
-      toast.success("Dose removed");
+      toast.success("Support removed");
     },
   });
 
@@ -741,7 +741,7 @@ export default function Dashboard() {
         queryClient.invalidateQueries({ queryKey: ["carb-entries", "graph"] });
       }
 
-      toast.success("Log updated");
+      toast.success("Moment updated");
       setEditingLog(null);
     },
     onError: () => toast.error("Unable to update log. Please try again."),
@@ -833,10 +833,9 @@ export default function Dashboard() {
       {shouldShowEmptyState ? (
         <div className="flex flex-col items-center justify-center px-4 py-20 text-center">
           <Activity className="mb-3 h-10 w-10 text-muted-foreground/40" />
-          <h3 className="text-lg font-semibold text-white">No active insulin</h3>
+          <h3 className="text-lg font-semibold text-white">Ready to begin</h3>
           <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-            Log your first dose to see its pharmacokinetic curve - onset, peak, and duration - all visualized on a
-            timeline.
+            Log your first dose to see its gentle activity curve unfold on your timeline.
           </p>
         </div>
       ) : (
@@ -854,9 +853,9 @@ export default function Dashboard() {
             <div className="dashboard-stacking-alert mx-0 flex w-full max-w-full min-w-0 items-start gap-3 overflow-hidden rounded-xl p-4 pb-3">
               <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
               <div className="min-w-0">
-                <p className="text-sm font-semibold">Insulin Stacking Detected</p>
+                <p className="text-sm font-semibold">Multiple Active Doses</p>
                 <p className="mt-0.5 text-sm opacity-80">
-                  {activeRapidCount} rapid/short-acting doses are active simultaneously. Monitor for low blood sugar.
+                  {activeRapidCount} rapid-acting doses are active at once. Keep a gentle eye on how you're feeling.
                 </p>
               </div>
             </div>
@@ -864,7 +863,7 @@ export default function Dashboard() {
 
           <div className="mb-2 w-full max-w-full min-w-0">
             <p className="mb-2 px-0 text-[10px] font-bold uppercase tracking-[0.18em] text-white/25">
-              Glucose Trend
+              Glucose Journey
             </p>
             {showGraph ? (
               <ActivityGraph doses={graphDoses} glucoseReadings={graphGlucose} carbEntries={graphCarbs} />
@@ -876,7 +875,7 @@ export default function Dashboard() {
           <div className="grid w-full max-w-full min-w-0 grid-cols-1 gap-6 overflow-x-hidden border-0 px-0 py-4 lg:grid-cols-3">
             <div className="min-w-0 max-w-full space-y-2 overflow-x-hidden lg:col-span-2">
               <p className="mx-4 mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-white/25">
-                Recent Activity
+                Recent Moments
               </p>
               <div className="w-full max-w-full min-w-0 space-y-2 overflow-x-hidden">
                 {(showAllDoses ? recentActivity.slice(0, 15) : recentActivity.slice(0, 5)).map((item) =>
