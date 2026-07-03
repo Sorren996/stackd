@@ -633,7 +633,7 @@ function MetricCard({ label, value, sub, status, color, tooltipId, openTooltip, 
   return (
     <motion.div
       whileTap={{ scale: 0.97 }}
-      className="metric-card relative flex min-h-[112px] flex-col justify-between overflow-hidden rounded-2xl border p-4 backdrop-blur-sm"
+      className="metric-card relative flex min-h-[112px] flex-col justify-between overflow-hidden rounded-2xl p-4 backdrop-blur-sm"
       style={{
         background: "linear-gradient(145deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0))",
         borderColor: "rgba(255,255,255,0.16)",
@@ -681,7 +681,7 @@ function ActiveInsulinDetailCard({ totalUnits, breakdown }) {
   return (
     <motion.div
       whileTap={{ scale: 0.985 }}
-      className="metric-card relative col-span-2 overflow-hidden rounded-2xl border p-4 backdrop-blur-sm"
+      className="metric-card relative col-span-2 overflow-hidden rounded-2xl p-4 backdrop-blur-sm"
       style={{
         background: "linear-gradient(145deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0))",
         borderColor: "rgba(255,255,255,0.16)",
@@ -1221,7 +1221,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
             className="dashboard-surface relative mb-6 flex items-center gap-3 overflow-hidden rounded-2xl px-4 py-3 backdrop-blur-sm"
             style={{
               background: `linear-gradient(145deg, ${rangeSparkColor}11, transparent 70%)`,
-              boxShadow: `0 14px 36px ${rangeSparkColor}15, inset 0 1px 1px rgba(255,255,255,0.12)`,
+              boxShadow: `0 14px 36px ${rangeSparkColor}15`,
             }}
           >
             <div
