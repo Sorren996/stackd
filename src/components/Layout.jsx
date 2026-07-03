@@ -225,7 +225,7 @@ export default function Layout() {
         <div
           className="absolute inset-x-0 bottom-0 h-[38vh]"
           style={{
-            background: "linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.16) 100%)",
+            background: "linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.28) 42%, rgba(0,0,0,0.72) 78%, #000000 100%)",
           }}
         />
       </div>
