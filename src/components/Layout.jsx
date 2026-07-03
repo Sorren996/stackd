@@ -104,22 +104,40 @@ export default function Layout() {
     if (typeof window === "undefined") return undefined;
 
     let frame = 0;
+    let currentOffset = 0;
+    let targetOffset = 0;
 
     const updateSceneOffset = () => {
       frame = 0;
 
-      if (sceneRef.current) {
-        const offset = Math.max(-160, Math.min(0, window.scrollY * -0.12));
-        sceneRef.current.style.transform = `translate3d(0, ${offset}px, 0)`;
+      if (!sceneRef.current) return;
+
+      // Lerp toward target for buttery-smooth parallax — no stutter
+      currentOffset += (targetOffset - currentOffset) * 0.18;
+
+      if (Math.abs(targetOffset - currentOffset) < 0.15) {
+        currentOffset = targetOffset;
+        sceneRef.current.style.transform = `translate3d(0, ${currentOffset}px, 0)`;
+        return;
       }
+
+      sceneRef.current.style.transform = `translate3d(0, ${currentOffset}px, 0)`;
+      frame = window.requestAnimationFrame(updateSceneOffset);
     };
 
     const handleScroll = () => {
+      targetOffset = Math.max(-160, Math.min(0, window.scrollY * -0.12));
       if (frame) return;
       frame = window.requestAnimationFrame(updateSceneOffset);
     };
 
-    updateSceneOffset();
+    // Set initial position without animation
+    targetOffset = Math.max(-160, Math.min(0, window.scrollY * -0.12));
+    currentOffset = targetOffset;
+    if (sceneRef.current) {
+      sceneRef.current.style.transform = `translate3d(0, ${currentOffset}px, 0)`;
+    }
+
     window.addEventListener("scroll", handleScroll, { passive: true });
 
     return () => {
@@ -164,6 +182,7 @@ export default function Layout() {
             }}
           />
         </AnimatePresence>
+        <div className="absolute inset-0 bg-black/25" />
         <div
           className="absolute inset-x-0 bottom-0 h-[38vh]"
           style={{

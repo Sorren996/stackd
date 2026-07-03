@@ -669,7 +669,7 @@ export default function DoseForm({ open, onOpenChange }) {
                         onClick={handleSubmitGlucose}
                         disabled={!glucoseValue || loggingTab === "glucose" || createGlucose.isPending}
                         className="w-full rounded-2xl py-4 text-base font-semibold text-white transition disabled:opacity-40"
-                        style={{ background: "linear-gradient(145deg, rgba(212,160,86,0.85), rgba(201,112,96,0.72))", boxShadow: "0 8px 28px rgba(201,112,96,0.2), inset 0 1px 1px rgba(255,255,255,0.2)" }}
+                        style={{ background: "linear-gradient(145deg, rgba(91,168,138,0.85), rgba(91,163,184,0.72))", boxShadow: "0 8px 28px rgba(91,163,184,0.22), inset 0 1px 1px rgba(255,255,255,0.2)" }}
                       >
                         {loggingTab === "glucose" || createGlucose.isPending ? "Logging..." : `Log ${glucoseValue || "--"} mg/dL`}
                       </button>

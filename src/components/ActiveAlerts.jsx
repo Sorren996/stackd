@@ -2,31 +2,11 @@ import { getDoseStatus, formatMinutes, INSULIN_PROFILES } from "@/lib/insulinPha
 import { Clock, TrendingUp, TrendingDown, CheckCircle2, Zap } from "lucide-react";
 
 const phaseConfig = {
-  waiting: {
-    icon: Clock,
-    className: "border border-amber-600 bg-amber-900/20 text-amber-600",
-    label: "Beginning",
-  },
-  rising: {
-    icon: TrendingUp,
-    className: "border border-blue-600 bg-blue-900/20 text-blue-600",
-    label: "Building",
-  },
-  active: {
-    icon: Zap,
-    className: "border border-emerald-600 bg-emerald-500/20 text-emerald-600",
-    label: "Supporting",
-  },
-  declining: {
-    icon: TrendingDown,
-    className: "border border-violet-600 bg-violet-500/20 text-violet-600",
-    label: "Easing",
-  },
-  expired: {
-    icon: CheckCircle2,
-    className: "border border-white/10 bg-white-500/20 text-white/40",
-    label: "Complete",
-  },
+  waiting: { icon: Clock, color: "#a8b89a", label: "Beginning" },
+  rising: { icon: TrendingUp, color: "#6b92c4", label: "Building" },
+  active: { icon: Zap, color: "#5ba88a", label: "Supporting" },
+  declining: { icon: TrendingDown, color: "#9a8fc7", label: "Easing" },
+  expired: { icon: CheckCircle2, color: "#8b8b97", label: "Complete" },
 };
 
 export default function ActiveAlerts({ doses = [] }) {
@@ -54,10 +34,9 @@ export default function ActiveAlerts({ doses = [] }) {
           const profile = INSULIN_PROFILES[dose.insulin_type];
 
           return (
-            <div key={dose.id} className="active-alert-row backdrop-blur-sm flex items-center gap-3 rounded-xl p-3">
-              <div className={`flex h-8 w-8 shrink-0 items-center justify-center bg-transparent rounded-lg  ${config.className}`}>
-
-                <Icon className="bg-transparent h-4 w-4" />
+            <div key={dose.id} className="active-alert-row backdrop-blur-sm flex items-center gap-3 rounded-xl border border-white/10 p-3" style={{ background: "linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))" }}>
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ border: `1px solid ${config.color}40`, background: `${config.color}18` }}>
+                <Icon className="h-4 w-4" style={{ color: config.color }} />
               </div>
 
               <div className="min-w-0 flex-1">
@@ -75,7 +54,7 @@ export default function ActiveAlerts({ doses = [] }) {
                 )}
               </div>
 
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-white/35">
+              <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: config.color, opacity: 0.75 }}>
                 {config.label}
               </span>
             </div>

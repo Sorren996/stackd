@@ -5,11 +5,13 @@ import DoseCard from "../components/DoseCard";
 import GlucoseCard from "../components/GlucoseCard";
 import CarbCard from "../components/CarbCard";
 import { toast } from "sonner";
-import { CalendarDays, ChevronRight, X, Pencil } from "lucide-react";
+import { CalendarDays, X, Pencil } from "lucide-react";
 import { format, isToday, isYesterday, parseISO } from "date-fns";
 import { motion } from "framer-motion";
 import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
 import { TimeScrollField, NumberPadField, TextPadField, SelectField } from "@/components/FormInputFields";
+import TimelineDayGroup from "@/components/history/TimelineDayGroup";
+import { GLASS_SURFACE } from "@/lib/glassTheme";
 
 function readTargetRange() {
   if (typeof window === "undefined") return { low: 70, high: 180 };
@@ -23,48 +25,22 @@ function readTargetRange() {
   };
 }
 
-function CollapsibleDateGroup({ label, count, isOpen, onToggle, children }) {
-  return (
-    <motion.div
-      animate={{
-        borderColor: isOpen ? "rgba(20, 184, 166, 0.4)" : "rgba(255, 255, 255, 0.05)",
-        boxShadow: isOpen
-          ? "0 0 15px rgba(20, 184, 166, 0.15), inset 0 0 0 1px rgba(20, 184, 166, 0.1)"
-          : "0 0 0px rgba(0,0,0,0)"
-      }}
-      transition={{ type: "spring", stiffness: 300, damping: 25 }}
-      className="backdrop-blur-sm border border-white/10 rounded-2xl overflow-hidden"
-    >
-      <button
-        onClick={onToggle}
-        className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-white/[0.04] transition-colors"
-      >
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-semibold text-white">{label}</span>
-          <span className="text-xs bg-white/10 px-2.5 py-0.5 rounded-full text-white/60">
-            {count} {count === 1 ? "log" : "logs"}
-          </span>
-        </div>
-        <motion.div
-          animate={{ rotate: isOpen ? 90 : 0 }}
-          transition={{ type: "spring", stiffness: 300, damping: 20 }}
-        >
-          <ChevronRight className="w-4 h-4 text-white/50" />
-        </motion.div>
-      </button>
+function getDoseDaySummary(items) {
+  const total = items.reduce((sum, d) => sum + Number(d.units || 0), 0);
+  return `${total % 1 === 0 ? total : total.toFixed(1)}u of support`;
+}
 
-      <motion.div
-        initial={false}
-        animate={{ height: isOpen ? "auto" : 0, opacity: isOpen ? 1 : 0 }}
-        transition={{ type: "spring", stiffness: 220, damping: 26 }}
-        className="overflow-hidden"
-      >
-        <div className="border-t border-white/10 space-y-2 p-2">
-          {children}
-        </div>
-      </motion.div>
-    </motion.div>
-  );
+function getGlucoseDaySummary(items, targetLow, targetHigh) {
+  if (!items.length) return null;
+  const avg = Math.round(items.reduce((s, r) => s + Number(r.value), 0) / items.length);
+  const inRange = items.filter((r) => r.value >= targetLow && r.value <= targetHigh).length;
+  const pct = Math.round((inRange / items.length) * 100);
+  return `${avg} mg/dL avg · ${pct}% in comfort zone`;
+}
+
+function getCarbDaySummary(items) {
+  const total = items.reduce((sum, e) => sum + Number(e.carbs || 0), 0);
+  return `${Math.round(total)}g of nourishment`;
 }
 
 function groupByDate(items, dateField) {
@@ -303,7 +279,7 @@ function EditLogSheet({ log, onClose, onSave, isSaving }) {
           <TimeScrollField label="Logged at" value={form.time} onChange={(value) => updateField("time", value)} />
           <TextPadField label="Notes" value={form.notes} onChange={(value) => updateField("notes", value)} placeholder="Notes" multiline />
           <button type="button" onClick={submit} disabled={isSaving} className="sticky bottom-0 w-full rounded-2xl py-4 text-base font-semibold text-white transition disabled:opacity-40" style={{ background: "linear-gradient(145deg, rgba(91,168,138,0.85), rgba(91,163,184,0.72))", boxShadow: "0 8px 28px rgba(91,163,184,0.22), 0 -8px 20px rgba(10,18,16,0.9), inset 0 1px 1px rgba(255,255,255,0.2)" }}>
-            {isSaving ? "Saving..." : "Save changes"}
+            {isSaving ? "Saving..." : "Save moment"}
           </button>
         </div>
       </div>
@@ -365,7 +341,7 @@ export default function History() {
     mutationFn: (id) => base44.entities.InsulinDose.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["insulin-doses"] });
-      toast.success("Dose removed");
+      toast.success("Support gently removed");
     }
   });
 
@@ -373,7 +349,7 @@ export default function History() {
     mutationFn: (id) => base44.entities.GlucoseReading.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["glucose-readings"] });
-      toast.success("Glucose reading removed");
+      toast.success("Reading gently removed");
     }
   });
 
@@ -381,7 +357,7 @@ export default function History() {
     mutationFn: (id) => base44.entities.CarbEntry.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["carb-entries"] });
-      toast.success("Carb entry removed");
+      toast.success("Nourishment removed");
     }
   });
 
@@ -413,7 +389,7 @@ export default function History() {
         queryClient.invalidateQueries({ queryKey: ["carb-entries", "graph"] });
       }
 
-      toast.success("Log updated");
+      toast.success("Moment updated");
       setEditingLog(null);
     },
     onError: () => toast.error("Unable to update log. Please try again."),
@@ -489,10 +465,10 @@ export default function History() {
 
       <div className="flex justify-center">
         <div
-          className="flex items-center gap-1 p-1 rounded-3xl border border-white/10 bg-white/5 shadow-lg backdrop-blur-sm"
+          className="flex items-center gap-1 p-1 rounded-3xl border border-white/10 shadow-lg backdrop-blur-sm"
           style={{
-            background: "rgba(255, 255, 255, 0.03)",
-            boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.05)"
+            background: "linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))",
+            boxShadow: "inset 0 1px 1px rgba(255,255,255,0.08), 0 8px 24px rgba(0,0,0,0.12)"
           }}>
           <button
             onClick={() => handleTabChange("doses")}
@@ -503,9 +479,9 @@ export default function History() {
               <motion.div
                 layoutId="active-history-tab"
                 className="absolute inset-0 bg-white/10 rounded-2xl -z-10"
-                transition={{ type: "spring", stiffness: 380, damping: 30 }} />
+                transition={{ type: "spring", stiffness: 400, damping: 25, mass: 0.8 }} />
             )}
-            <span className="relative z-10">Insulin Doses</span>
+            <span className="relative z-10">Support</span>
           </button>
 
           <button
@@ -517,24 +493,23 @@ export default function History() {
               <motion.div
                 layoutId="active-history-tab"
                 className="absolute inset-0 bg-white/10 rounded-2xl -z-10"
-                transition={{ type: "spring", stiffness: 380, damping: 30 }} />
+                transition={{ type: "spring", stiffness: 400, damping: 25, mass: 0.8 }} />
             )}
-            <span className="relative z-10">Glucose Readings</span>
+            <span className="relative z-10">Glucose</span>
           </button>
 
           <button
             onClick={() => handleTabChange("carbs")}
             className={`relative px-4 py-2 rounded-2xl text-sm font-medium transition-colors ${
-              activeTab === "carbs" ? "text-amber-400" : "text-white/40 hover:text-white/70"
+              activeTab === "carbs" ? "text-white" : "text-white/40 hover:text-white/70"
             }`}>
             {activeTab === "carbs" && (
               <motion.div
                 layoutId="active-history-tab"
-                className="absolute inset-0 rounded-2xl -z-10"
-                style={{ backgroundColor: "rgba(245,158,11,0.15)" }}
-                transition={{ type: "spring", stiffness: 380, damping: 30 }} />
+                className="absolute inset-0 bg-white/10 rounded-2xl -z-10"
+                transition={{ type: "spring", stiffness: 400, damping: 25, mass: 0.8 }} />
             )}
-            <span className="relative z-10">Carb Log</span>
+            <span className="relative z-10">Nourishment</span>
           </button>
         </div>
       </div>
@@ -544,15 +519,16 @@ export default function History() {
           {doseGroups.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
               <CalendarDays className="w-10 h-10 text-muted-foreground/40 mb-3" />
-              <h3 className="text-lg font-semibold text-white">No doses logged yet</h3>
-              <p className="text-sm text-muted-foreground mt-1">Head to the Dashboard to log your first dose.</p>
+              <h3 className="text-lg font-semibold text-white">Your journey is just beginning</h3>
+              <p className="text-sm text-muted-foreground mt-1">Tap the + button to record your first moment of support.</p>
             </div>
           ) : (
             doseGroups.map((group) => (
-              <CollapsibleDateGroup
+              <TimelineDayGroup
                 key={group.date}
                 label={group.label}
                 count={group.items.length}
+                summary={getDoseDaySummary(group.items)}
                 isOpen={openGroup === group.date}
                 onToggle={() => setOpenGroup(openGroup === group.date ? null : group.date)}
               >
@@ -561,7 +537,7 @@ export default function History() {
                     <DoseCard dose={dose} onDelete={(id) => deleteDose.mutate(id)} />
                   </EditableLog>
                 ))}
-              </CollapsibleDateGroup>
+              </TimelineDayGroup>
             ))
           )}
         </div>
@@ -577,31 +553,32 @@ export default function History() {
               { label: "14 Day", days: 14 },
               { label: "30 Day", days: 30 }
             ].map((window) => (
-              <div key={window.label} className="backdrop-blur-sm border border-white/10 rounded-2xl p-3 text-center">
+              <div key={window.label} className="backdrop-blur-sm border border-white/10 rounded-2xl p-3 text-center" style={GLASS_SURFACE}>
                 <p className="text-[10px] font-bold text-white/60 uppercase tracking-wider">{window.label} Avg</p>
                 <p className="text-xl text-white mt-1 font-extrabold text-center">{getAverage(window.days)}</p>
                 <p className="text-[10px] text-white/30 mt-0.5">mg/dL</p>
               </div>
             ))}
-            <div className="backdrop-blur-sm border border-teal-500/20 rounded-2xl p-3 text-center" style={{ boxShadow: "0 0 15px rgba(20, 184, 166, 0.05)" }}>
-              <p className="text-[10px] font-bold text-teal-400 uppercase tracking-wider">In Range</p>
-              <p className="text-xl text-teal-400 mt-1 font-extrabold text-center">{inRangePercentage}</p>
-              <p className="text-[10px] text-teal-400/50 mt-0.5">{targetLow}–{targetHigh} mg/dL</p>
+            <div className="backdrop-blur-sm rounded-2xl p-3 text-center" style={{ ...GLASS_SURFACE, borderColor: "rgba(91,168,138,0.3)" }}>
+              <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#5ba88a" }}>In Comfort Zone</p>
+              <p className="text-xl mt-1 font-extrabold text-center" style={{ color: "#5ba88a" }}>{inRangePercentage}</p>
+              <p className="text-[10px] mt-0.5" style={{ color: "rgba(91,168,138,0.6)" }}>{targetLow}–{targetHigh} mg/dL</p>
             </div>
           </div>
 
           {glucoseGroups.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
               <CalendarDays className="w-10 h-10 text-muted-foreground/40 mb-3" />
-              <h3 className="text-lg font-semibold text-white">No glucose logs for the last 30 days</h3>
-              <p className="text-sm text-muted-foreground mt-1">Glucose logs recorded in the dashboard will appear here.</p>
+              <h3 className="text-lg font-semibold text-white">No glucose moments in the last 30 days</h3>
+              <p className="text-sm text-muted-foreground mt-1">Your glucose check-ins will gently appear here as you log them.</p>
             </div>
           ) : (
             glucoseGroups.map((group) => (
-              <CollapsibleDateGroup
+              <TimelineDayGroup
                 key={group.date}
                 label={group.label}
                 count={group.items.length}
+                summary={getGlucoseDaySummary(group.items, targetLow, targetHigh)}
                 isOpen={openGroup === group.date}
                 onToggle={() => setOpenGroup(openGroup === group.date ? null : group.date)}
               >
@@ -610,7 +587,7 @@ export default function History() {
                     <GlucoseCard reading={reading} onDelete={(id) => deleteGlucose.mutate(id)} />
                   </EditableLog>
                 ))}
-              </CollapsibleDateGroup>
+              </TimelineDayGroup>
             ))
           )}
         </div>
@@ -625,30 +602,31 @@ export default function History() {
               { label: "14 Day Avg", days: 14 },
               { label: "30 Day Avg", days: 30 },
             ].map((window) => (
-              <div key={window.label} className="backdrop-blur-sm border border-white/10 rounded-2xl p-3 text-center">
+              <div key={window.label} className="backdrop-blur-sm border border-white/10 rounded-2xl p-3 text-center" style={GLASS_SURFACE}>
                 <p className="text-[10px] font-bold text-white/60 uppercase tracking-wider">{window.label}</p>
                 <p className="text-xl text-white mt-1 font-extrabold">{getCarbAverage(window.days)}</p>
                 <p className="text-[10px] text-white/30 mt-0.5">g / day</p>
               </div>
             ))}
           </div>
-          <div className="backdrop-blur-sm border border-amber-500/20 rounded-2xl p-3 text-center" style={{ boxShadow: "0 0 15px rgba(245,158,11,0.05)" }}>
-            <p className="text-[10px] font-bold text-amber-400 uppercase tracking-wider">Total Carbs (30 Days)</p>
-            <p className="text-2xl text-amber-400 mt-1 font-extrabold">{totalCarbsLast30}g</p>
+          <div className="backdrop-blur-sm rounded-2xl p-3 text-center" style={GLASS_SURFACE}>
+            <p className="text-[10px] font-bold text-white/60 uppercase tracking-wider">Total Nourishment (30 Days)</p>
+            <p className="text-2xl text-white mt-1 font-extrabold">{totalCarbsLast30}g</p>
           </div>
 
           {carbGroups.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
               <CalendarDays className="w-10 h-10 text-muted-foreground/40 mb-3" />
-              <h3 className="text-lg font-semibold text-white">No carb entries yet</h3>
-              <p className="text-sm text-muted-foreground mt-1">Log food from the Dashboard to see it here.</p>
+              <h3 className="text-lg font-semibold text-white">No nourishment logged yet</h3>
+              <p className="text-sm text-muted-foreground mt-1">Your meals will appear here as you log them.</p>
             </div>
           ) : (
             carbGroups.map((group) => (
-              <CollapsibleDateGroup
+              <TimelineDayGroup
                 key={group.date}
                 label={group.label}
                 count={group.items.length}
+                summary={getCarbDaySummary(group.items)}
                 isOpen={openGroup === group.date}
                 onToggle={() => setOpenGroup(openGroup === group.date ? null : group.date)}
               >
@@ -657,7 +635,7 @@ export default function History() {
                     <CarbCard entry={entry} onDelete={(id) => deleteCarb.mutate(id)} />
                   </EditableLog>
                 ))}
-              </CollapsibleDateGroup>
+              </TimelineDayGroup>
             ))
           )}
         </div>

@@ -10,6 +10,7 @@ export const WELLNESS_COLORS = {
   medium: "#d4a056",    // muted gold
   slow: "#9a8fc7",      // muted lavender
   custom: "#8b8b97",    // soft neutral
+  accent: "#5ba88a",    // sage — unified highlight for all interactive elements
 };
 
 // Soft, diffuse shadow that fades gradually — no hard rectangular edge

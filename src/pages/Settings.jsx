@@ -480,8 +480,8 @@ const toggleMealInsulinType = (name) => {
 <div className="settings-page mx-auto max-w-md space-y-6 pb-12 pt-4">
       {/* Target Range Preference */}
       <div className="space-y-3">
-        <h3 className="text-sm font-bold text-white/35 uppercase tracking-wider px-1">Target Range Preference</h3>
-        <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-4 flex gap-4 items-stretch">
+        <h3 className="text-sm font-bold text-white uppercase tracking-wider px-1">Target Range Preference</h3>
+        <div className="backdrop-blur-sm bg-white/[0.02] border border-white/10 rounded-3xl p-4 flex gap-4 items-stretch">
           <button
             onClick={handleSetRecommended}
             className={`shrink-0 w-28 py-3 px-2 rounded-2xl border text-center transition-all flex flex-col items-center justify-center ${
@@ -519,11 +519,11 @@ const toggleMealInsulinType = (name) => {
 
 {/* Insulin Plan */}
 <div className="space-y-3">
-  <h3 className="text-sm font-bold text-white/35 uppercase tracking-wider px-1">
+  <h3 className="text-sm font-bold text-white uppercase tracking-wider px-1">
     Insulin Plan
   </h3>
 
-  <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-4 space-y-5">
+  <div className="backdrop-blur-sm bg-white/[0.02] border border-white/10 rounded-3xl p-4 space-y-5">
     <p className="text-xs text-white/40">
       Enter the values from your established insulin plan.
     </p>
@@ -710,8 +710,8 @@ const toggleMealInsulinType = (name) => {
 
       {/* Alerts & Preferences */}
       <div className="space-y-3">
-        <h3 className="text-sm font-bold text-white/35 uppercase tracking-wider px-1">Alerts & Preferences</h3>
-        <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-4 space-y-5">
+        <h3 className="text-sm font-bold text-white uppercase tracking-wider px-1">Alerts & Preferences</h3>
+        <div className="backdrop-blur-sm bg-white/[0.02] border border-white/10 rounded-3xl p-4 space-y-5">
           <div className="flex items-center justify-between gap-4">
             <div className="space-y-0.5">
               <Label className="text-sm font-semibold text-white/90 flex items-center gap-2">
@@ -727,8 +727,8 @@ const toggleMealInsulinType = (name) => {
 
       {/* Hardware Integrations */}
       <div className="space-y-3">
-        <h3 className="text-sm font-bold text-white/35 uppercase tracking-wider px-1">Hardware Integrations</h3>
-        <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-4">
+        <h3 className="text-sm font-bold text-white uppercase tracking-wider px-1">Hardware Integrations</h3>
+        <div className="backdrop-blur-sm bg-white/[0.02] border border-white/10 rounded-3xl p-4">
           <div className="flex items-center justify-between gap-4">
             <div className="space-y-0.5">
               <Label className="text-sm font-semibold text-white/90 flex items-center gap-2">
@@ -748,8 +748,8 @@ const toggleMealInsulinType = (name) => {
 
       {/* Apple Health Sync */}
       <div className="space-y-3">
-        <h3 className="text-sm font-bold text-white/35 uppercase tracking-wider px-1">Apple Health Sync</h3>
-        <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-5 space-y-4">
+        <h3 className="text-sm font-bold text-white uppercase tracking-wider px-1">Apple Health Sync</h3>
+        <div className="backdrop-blur-sm bg-white/[0.02] border border-white/10 rounded-3xl p-5 space-y-4">
           <div className="space-y-1">
             <div className="text-sm font-semibold text-white flex items-center gap-2">
               <Heart className="w-4 h-4 text-red-500" />
@@ -784,8 +784,8 @@ const toggleMealInsulinType = (name) => {
 
       {/* Backup & Export */}
       <div className="space-y-3">
-        <h3 className="text-sm font-bold text-white/35 uppercase tracking-wider px-1">Backup & Logs</h3>
-        <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-4">
+        <h3 className="text-sm font-bold text-white uppercase tracking-wider px-1">Backup & Logs</h3>
+        <div className="backdrop-blur-sm bg-white/[0.02] border border-white/10 rounded-3xl p-4">
           <button
             onClick={handleExportCSV}
             disabled={isExporting}
@@ -808,8 +808,8 @@ const toggleMealInsulinType = (name) => {
 
       {/* Privacy Notice */}
       <div className="space-y-3">
-        <h3 className="text-sm font-bold text-white/35 uppercase tracking-wider px-1">Privacy</h3>
-        <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-4 space-y-3">
+        <h3 className="text-sm font-bold text-white uppercase tracking-wider px-1">Privacy</h3>
+        <div className="backdrop-blur-sm bg-white/[0.02] border border-white/10 rounded-3xl p-4 space-y-3">
           <div className="flex items-start gap-3">
             <Shield className="w-4 h-4 text-teal-400 mt-0.5 shrink-0" />
             <div className="space-y-1.5">
