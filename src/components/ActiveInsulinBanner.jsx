@@ -1163,16 +1163,23 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
         <motion.div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0"
-          animate={{ opacity: inRange ? 0.35 : 0.55 }}
-          transition={{ duration: 1.5, ease: "easeInOut" }}
-          style={{ background: `radial-gradient(ellipse 90% 55% at 50% 10%, ${glucoseColor}22, transparent 70%)` }}
+          animate={{ opacity: inRange ? 0.6 : 0.85 }}
+          transition={{ duration: 1.8, ease: "easeInOut" }}
+          style={{ background: `radial-gradient(ellipse 95% 60% at 50% 5%, ${glucoseColor}44, transparent 72%)` }}
         />
         <motion.div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0"
-          animate={{ scale: [1, 1.06, 1], opacity: [0.25, 0.45, 0.25] }}
-          transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }}
-          style={{ background: `radial-gradient(ellipse 60% 40% at 50% 25%, ${glucoseColor}12, transparent 65%)` }}
+          animate={{ scale: [1, 1.15, 1], opacity: [0.4, 0.7, 0.4] }}
+          transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
+          style={{ background: `radial-gradient(ellipse 65% 45% at 50% 20%, ${glucoseColor}33, transparent 60%)` }}
+        />
+        <motion.div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0"
+          animate={{ x: [0, 30, 0], opacity: [0.2, 0.4, 0.2] }}
+          transition={{ duration: 11, repeat: Infinity, ease: "easeInOut" }}
+          style={{ background: `radial-gradient(ellipse 40% 30% at 30% 30%, ${glucoseColor}22, transparent 55%)` }}
         />
         <div className="relative z-10 mb-6 flex flex-col items-center pt-2 text-center">
           <span className="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-white/30">Current Glucose</span>
@@ -1188,27 +1195,33 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
               {formatRelativeAge(new Date(latestGlucose.recorded_at).getTime())}
             </span>
           )}
-          <div
-            className="relative flex items-center gap-2 overflow-hidden rounded-full border px-4 py-2 backdrop-blur-sm"
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            className="relative flex items-center gap-2 overflow-hidden rounded-full px-5 py-2.5 backdrop-blur-md"
             style={{
-              backgroundColor: `${glucoseColor}18`,
-              borderColor: `${glucoseColor}40`,
-              boxShadow: "0 10px 28px rgba(0,0,0,0.16), inset 0 1px 1px rgba(255,255,255,0.22), inset 0 -1px 1px rgba(255,255,255,0.06)",
+              backgroundColor: `${glucoseColor}20`,
+              boxShadow: `0 8px 32px ${glucoseColor}33, inset 0 1px 1px rgba(255,255,255,0.2), inset 0 -1px 1px rgba(255,255,255,0.06)`,
             }}
           >
-            <span className="relative z-10 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: glucoseColor }} />
+            <motion.span
+              animate={{ scale: [1, 1.4, 1], opacity: [0.7, 1, 0.7] }}
+              transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+              className="relative z-10 h-2 w-2 rounded-full"
+              style={{ backgroundColor: glucoseColor, boxShadow: `0 0 12px ${glucoseColor}` }}
+            />
             <span className="relative z-10 text-sm font-semibold" style={{ color: glucoseColor }}>{rangeCardLabel}</span>
-          </div>
+          </motion.div>
           <SupportiveGlucoseMessage insight={supportiveGlucoseInsight} color={glucoseColor} />
         </div>
 
         {latestGlucose && (
           <div
-            className="dashboard-surface relative mb-6 flex items-center gap-3 overflow-hidden rounded-2xl border px-4 py-3 backdrop-blur-sm"
+            className="dashboard-surface relative mb-6 flex items-center gap-3 overflow-hidden rounded-2xl px-4 py-3 backdrop-blur-sm"
             style={{
-              background: "linear-gradient(145deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0))",
-              borderColor: "rgba(255,255,255,0.16)",
-              boxShadow: "0 14px 36px rgba(0,0,0,0.18), inset 0 1px 1px rgba(255,255,255,0.24), inset 0 -1px 1px rgba(255,255,255,0.06)",
+              background: `linear-gradient(145deg, ${rangeSparkColor}11, transparent 70%)`,
+              boxShadow: `0 14px 36px ${rangeSparkColor}15, inset 0 1px 1px rgba(255,255,255,0.12)`,
             }}
           >
             <div

@@ -41,24 +41,26 @@ export default function DoseCard({ dose, onDelete, onEdit }) {
       animate={{ opacity: 1, y: 0 }}
       className="relative flex items-start gap-3.5 overflow-hidden rounded-2xl px-4 py-3.5 transition-all"
       style={{
-        background: `linear-gradient(to right, ${color}15, transparent 55%), radial-gradient(circle at 10% 50%, ${color}0a, transparent 50%)`,
-        border: "1px solid rgba(255, 255, 255, 0.08)",
-        borderLeft: `2.5px solid ${color}50`,
-        boxShadow: `0 2px 12px ${color}08, inset 0 1px 1px rgba(255,255,255,0.04)`,
+        background: `linear-gradient(to right, ${color}22, transparent 60%), radial-gradient(circle at 8% 50%, ${color}18, transparent 45%)`,
+        border: "none",
+        borderLeft: `3px solid ${color}80`,
+        boxShadow: `0 4px 20px ${color}15, inset 0 1px 1px rgba(255,255,255,0.08)`,
       }}
     >
 
 
 
 <div className="flex flex-col items-center pt-1 shrink-0">
-  <div
-    className="w-7 h-7 rounded-full flex items-center justify-center bg-blue-500/20"
-   style={{  border: `1px solid ${color}` }}>
-  
-    <Syringe className="w-3.5 h-3.5" style={{ color }} />
-  </div>
+  <motion.div
+    animate={{ boxShadow: [`0 0 0px ${color}00`, `0 0 16px ${color}66`, `0 0 0px ${color}00`] }}
+    transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+    className="w-8 h-8 rounded-full flex items-center justify-center"
+   style={{  background: `${color}25`, border: `1px solid ${color}60` }}>
 
-        <div className="w-px flex-1 mt-2" style={{ background: `${color}`, minHeight: 12 }} />
+     <Syringe className="w-3.5 h-3.5" style={{ color }} />
+   </motion.div>
+
+        <div className="w-px flex-1 mt-2" style={{ background: `${color}40`, minHeight: 12 }} />
 
 </div>
 
