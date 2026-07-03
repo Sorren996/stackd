@@ -180,12 +180,12 @@ export default function Layout() {
             src={SCENE_IMAGES[sceneStatus]}
             alt=""
             initial={{ opacity: 0, scale: 1.08 }}
-            animate={{ opacity: 0.68, scale: 1.08 }}
+            animate={{ opacity: 0.82, scale: 1.08 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 1.1, ease: "easeInOut" }}
-            className="absolute left-1/2 top-[-10vh] h-[130vh] w-full max-w-none -translate-x-1/2 object-cover"
+            className="absolute inset-x-0 top-[-10vh] h-[130vh] w-full max-w-none object-cover"
             style={{
-              filter: "grayscale(0.18) saturate(1.02) contrast(1.04) brightness(0.86)",
+              filter: "grayscale(0.1) saturate(1.08) contrast(1.02) brightness(1.08)",
               objectPosition: sceneStatus === "high" ? "center top" : sceneStatus === "low" ? "center 35%" : "center top",
               WebkitMaskImage: "linear-gradient(to bottom, black 0%, black 70%, rgba(0,0,0,0.9) 100%)",
               maskImage: "linear-gradient(to bottom, black 0%, black 70%, rgba(0,0,0,0.9) 100%)",
