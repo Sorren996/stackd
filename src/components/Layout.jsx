@@ -214,13 +214,13 @@ export default function Layout() {
         <div
           className="absolute inset-0"
           style={{
-            background: "linear-gradient(to bottom, rgba(0,0,0,0.04) 0%, rgba(0,0,0,0.34) 48%, rgba(0,0,0,0.82) 74%, #000000 100%)",
+            background: "linear-gradient(to bottom, rgba(0,0,0,0.04) 0%, rgba(0,0,0,0.34) 48%, rgba(0,0,0,0.82) 0%, #000000 0%)",
           }}
         />
         <div
           className="absolute inset-x-0 bottom-0 h-[260px]"
           style={{
-            background: "linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.72) 52%, #000000 100%)",
+            background: "linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.72) 0%, #000000 0%)",
           }}
         />
       </div>
