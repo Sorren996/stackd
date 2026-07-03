@@ -529,7 +529,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
     const centerTime = getCenterTimeForScroll(scrollLeft);
     const glucose = getGlucoseAt(centerTime);
-    if (!glucose) {
+    if (!glucose || !Number.isFinite(glucose.time)) {
       if (marker) marker.style.opacity = "0";
       return;
     }
