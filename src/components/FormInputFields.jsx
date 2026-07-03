@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 
 function formatTimeLabel(value) {
@@ -64,17 +65,17 @@ export function CustomInputTray({ open, onClose, title, children, tall = false, 
     };
   }, [open]);
 
-  if (!open) return null;
+  if (!open || typeof document === "undefined") return null;
 
   const absorb = (event) => {
     event.preventDefault();
     event.stopPropagation();
   };
 
-  return (
+  return createPortal(
     <>
       <div
-        className="fixed inset-0 z-[998] bg-black/20"
+        className="fixed inset-0 z-[998] bg-black/30"
         onPointerDown={absorb}
         onPointerUp={absorb}
         onClick={(event) => {
@@ -122,7 +123,8 @@ export function CustomInputTray({ open, onClose, title, children, tall = false, 
         </div>
         <div className="relative z-10">{children}</div>
       </motion.div>
-    </>
+    </>,
+    document.body
   );
 }
 
