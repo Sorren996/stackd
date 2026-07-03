@@ -10,7 +10,7 @@ import { motion } from "framer-motion";
 
 export default function GlucoseCard({ reading, onDelete }) {
   const value = reading.value;
-  const color = value < 70 ? "#3b82f6" : value > 180 ? "#f59e0b" : "#4ade80";
+  const color = value < 70 ? "#6b92c4" : value > 180 ? "#d4a056" : "#5ba88a";
   const statusLabel = value < 70 ? "Below comfort zone" : value > 180 ? "Above comfort zone" : "In comfort zone";
   const timeAgo = formatDistanceToNow(new Date(reading.recorded_at), { addSuffix: true });
 
@@ -25,7 +25,7 @@ export default function GlucoseCard({ reading, onDelete }) {
         background: `linear-gradient(to right, ${color}12, transparent 55%)`,
         border: "1px solid rgba(255, 255, 255, 0.06)",
         borderLeft: `2.5px solid ${color}50`,
-        boxShadow: `0 2px 12px ${color}08`,
+        boxShadow: "0 6px 24px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)",
       }}
     >
       {/* Timeline dot */}

@@ -1,10 +1,5 @@
 import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis, Tooltip, ReferenceArea } from "recharts";
-
-const GLASS_SURFACE = {
-  background: "linear-gradient(145deg, rgba(255,255,255,0.03), rgba(255,255,255,0.008))",
-  borderColor: "rgba(255,255,255,0.12)",
-  boxShadow: "0 14px 36px rgba(0,0,0,0.18), inset 0 1px 1px rgba(255,255,255,0.24), inset 0 -1px 1px rgba(255,255,255,0.06)",
-};
+import { GLASS_SURFACE } from "@/lib/glassTheme";
 
 function ChartTooltip({ active, payload }) {
   if (!active || !payload?.length) return null;
@@ -48,11 +43,11 @@ export default function DailyPatternChart({ hourlyAverages, targetLow, targetHig
             <AreaChart data={hourlyAverages} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="glucoseGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#2dd4bf" stopOpacity={0.35} />
-                  <stop offset="100%" stopColor="#2dd4bf" stopOpacity={0} />
+                  <stop offset="0%" stopColor="#5ba3b8" stopOpacity={0.30} />
+                  <stop offset="100%" stopColor="#5ba3b8" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <ReferenceArea y1={targetLow} y2={targetHigh} fill="rgba(53,168,121,0.1)" />
+              <ReferenceArea y1={targetLow} y2={targetHigh} fill="rgba(91,168,138,0.1)" />
               <XAxis
                 dataKey="hour"
                 tick={{ fontSize: 9, fill: "rgba(255,255,255,0.35)" }}
@@ -70,12 +65,12 @@ export default function DailyPatternChart({ hourlyAverages, targetLow, targetHig
               <Area
                 type="monotone"
                 dataKey="avg"
-                stroke="#2dd4bf"
+                stroke="#5ba3b8"
                 strokeWidth={2.5}
                 fill="url(#glucoseGradient)"
                 connectNulls
-                dot={{ r: 2, fill: "#2dd4bf", opacity: 0.6 }}
-                activeDot={{ r: 4, fill: "#2dd4bf" }}
+                dot={{ r: 2, fill: "#5ba3b8", opacity: 0.6 }}
+                activeDot={{ r: 4, fill: "#5ba3b8" }}
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -83,11 +78,11 @@ export default function DailyPatternChart({ hourlyAverages, targetLow, targetHig
 
         <div className="mt-3 flex items-center justify-center gap-4">
           <div className="flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: "rgba(53,168,121,0.5)" }} />
+            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: "rgba(91,168,138,0.5)" }} />
             <span className="text-[10px] uppercase tracking-wider text-white/35">Comfort Zone</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: "#2dd4bf" }} />
+            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: "#5ba3b8" }} />
             <span className="text-[10px] uppercase tracking-wider text-white/35">Your Average</span>
           </div>
         </div>

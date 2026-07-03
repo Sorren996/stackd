@@ -1,15 +1,10 @@
 import { motion } from "framer-motion";
-
-const GLASS_SURFACE = {
-  background: "linear-gradient(145deg, rgba(255,255,255,0.03), rgba(255,255,255,0.008))",
-  borderColor: "rgba(255,255,255,0.12)",
-  boxShadow: "0 14px 36px rgba(0,0,0,0.18), inset 0 1px 1px rgba(255,255,255,0.24), inset 0 -1px 1px rgba(255,255,255,0.06)",
-};
+import { GLASS_SURFACE, WELLNESS_COLORS } from "@/lib/glassTheme";
 
 const COLORS = {
-  inRange: "#35a879",
-  above: "#f59e0b",
-  below: "#3b82f6",
+  inRange: WELLNESS_COLORS.inRange,
+  above: WELLNESS_COLORS.above,
+  below: WELLNESS_COLORS.below,
 };
 
 function getTIRMessages(inRangePercent) {

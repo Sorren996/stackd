@@ -1,11 +1,6 @@
 import { motion } from "framer-motion";
 import { Heart, Sun, Moon } from "lucide-react";
-
-const GLASS_SURFACE = {
-  background: "linear-gradient(145deg, rgba(255,255,255,0.03), rgba(255,255,255,0.008))",
-  borderColor: "rgba(255,255,255,0.12)",
-  boxShadow: "0 14px 36px rgba(0,0,0,0.18), inset 0 1px 1px rgba(255,255,255,0.24), inset 0 -1px 1px rgba(255,255,255,0.06)",
-};
+import { GLASS_SURFACE, WELLNESS_COLORS } from "@/lib/glassTheme";
 
 const MIN_READINGS = 3;
 const ELEVATED_THRESHOLD = 20;
@@ -81,21 +76,21 @@ export default function MomentsOfCare({ segments }) {
   const insights = [
     {
       icon: Heart,
-      color: "#35a879",
+      color: WELLNESS_COLORS.inRange,
       title: "Your Most Peaceful Time",
       segment: mostPeaceful,
       message: `Your ${mostPeaceful.label.toLowerCase()} hours have been a beautiful rhythm of balance. Your routine is nurturing you well here.`,
     },
     mostElevated && {
       icon: Sun,
-      color: "#f59e0b",
+      color: WELLNESS_COLORS.above,
       title: "Where You Tend to Rise",
       segment: mostElevated,
       message: `Your ${mostElevated.label.toLowerCase()} often gently rises above your comfort zone. A mindful pause or a gentle walk here might help your body find its way back to steady ground.`,
     },
     mostLikelyToDip && {
       icon: Moon,
-      color: "#3b82f6",
+      color: WELLNESS_COLORS.below,
       title: "Where You Tend to Drift Low",
       segment: mostLikelyToDip,
       message: `Your ${mostLikelyToDip.label.toLowerCase()} sometimes drifts a little low. A small, kind snack before this time might keep you gently supported.`,

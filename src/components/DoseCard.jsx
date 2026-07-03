@@ -44,7 +44,7 @@ export default function DoseCard({ dose, onDelete, onEdit }) {
         background: `linear-gradient(to right, ${color}12, transparent 55%)`,
         border: "1px solid rgba(255, 255, 255, 0.06)",
         borderLeft: `2.5px solid ${color}50`,
-        boxShadow: `0 2px 12px ${color}08`,
+        boxShadow: "0 6px 24px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)",
       }}
     >
 

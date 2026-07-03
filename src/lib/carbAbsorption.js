@@ -29,9 +29,9 @@ export const ABSORPTION_PROFILES = {
 
 
 export const PROFILE_COLORS = {
-  fast:   "#ef4444",
-  medium: "#f59e0b",
-  slow:   "#a78bfa",
+  fast:   "#c97060",
+  medium: "#d4a056",
+  slow:   "#9a8fc7",
 };
 
 export const FOOD_DATABASE = [

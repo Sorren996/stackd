@@ -238,7 +238,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
     return {
       value: "Setup needed",
       status: "Add insulin plan in Settings",
-      color: "#f59e0b",
+      color: "#d4a056",
       sub: "Enter I:C ratio and sensitivity",
       details: null,
     };
@@ -250,7 +250,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
     return {
       value: "No meal data",
       status: "Log carbs to assess coverage",
-      color: "#f59e0b",
+      color: "#d4a056",
       sub: "Waiting for carb log",
       details: null,
     };
@@ -355,7 +355,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
         id: dose.id,
         type: dose.insulin_type,
         time: getDoseTime(dose),
-        color: profile?.color || "#06b6d4",
+        color: profile?.color || "#5ba3b8",
         category: profile?.category || "Bolus insulin",
         iob,
         units: Number(dose.units) || 0,
@@ -367,34 +367,34 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
 
   let value = `${estimatedAdditionalUnits.toFixed(1)}u`;
   let status = "Suggested support";
-  let color = "#35a879";
+  let color = "#5ba88a";
   let sub = `${Math.round(mealGroup.carbs)}g carbs · ${loggedTotalUnits.toFixed(1)}u logged`;
 
   // --- Point-in-time assessment (fixed at meal time, does not change as IOB decays) ---
   if (ratio === null) {
     value = "Review";
     status = "Not enough data to estimate";
-    color = "#f59e0b";
+    color = "#d4a056";
   } else if (correctionGlucoseLow) {
     value = "Review";
     status = "Glucose is below range — take care first";
-    color = "#3b82f6";
+    color = "#6b92c4";
   } else if (ratio < 0.75) {
     value = `${estimatedAdditionalUnits.toFixed(1)}u`;
     status = "Light coverage — below estimate";
-    color = "#ef4444";
+    color = "#c97060";
   } else if (ratio > 1.25) {
     value = "Generous dose";
     status = `${coverageGapAbs.toFixed(1)}u above estimate`;
-    color = "#3b82f6";
+    color = "#6b92c4";
   } else if (!correctionGlucoseAvailable) {
     value = `${expectedMealUnits.toFixed(1)}u`;
     status = "Meal estimate — glucose unavailable";
-    color = "#f59e0b";
+    color = "#d4a056";
   } else {
     value = "Well balanced";
     status = "Nicely aligned";
-    color = "#35a879";
+    color = "#5ba88a";
   }
 
   // --- Continuous monitoring (evolves as glucose readings come in) ---
@@ -406,68 +406,68 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
         outcomeAssessment = {
           label: "Rising gently",
           message: "Carbs added. We're keeping a supportive eye on the trend as you gently rise back to your comfortable range.",
-          color: "#35a879",
+          color: "#5ba88a",
         };
         value = "Realigning";
         status = "Carbs added — rising back";
-        color = "#35a879";
+        color = "#5ba88a";
       } else if (latestIsAfterMeal && latestLow) {
         outcomeAssessment = {
           label: "Worth a closer look",
           message: "It looks like you've provided a bit more support than this moment needed. Please enjoy a gentle carb source and stay close to the trend while your body settles back.",
-          color: "#3b82f6",
+          color: "#6b92c4",
         };
         value = "Take care";
         status = "Glucose dipped below range";
-        color = "#3b82f6";
+        color = "#6b92c4";
       } else if (latestIsAfterMeal && latestInRange) {
         outcomeAssessment = {
           label: "Settled nicely",
           message: "There was a dip along the way, but you're back in a comfortable range. Well done.",
-          color: "#35a879",
+          color: "#5ba88a",
         };
         value = "Settled nicely";
         status = "Back in a comfortable range";
-        color = "#35a879";
+        color = "#5ba88a";
       }
     } else if (peakOutcome && peakOutcome.value > insulinSettings.targetHigh + 20) {
       if (hasCorrectiveInsulin && latestIsAfterMeal && latestHigh) {
         outcomeAssessment = {
           label: "Finding its balance",
           message: "You added a little extra support, and your body is working through it now. We're watching closely as things gently return to a comfortable flow.",
-          color: "#35a879",
+          color: "#5ba88a",
         };
         value = "Realigning";
         status = "Support added — settling back";
-        color = "#35a879";
+        color = "#5ba88a";
       } else if (latestIsAfterMeal && latestHigh) {
         outcomeAssessment = {
           label: "Still settling",
           message: "Glucose is climbing a little higher than we'd like. Let's give it some gentle time to see how your body finds its balance before adding more support.",
-          color: "#f59e0b",
+          color: "#d4a056",
         };
         value = "Still settling";
         status = "Glucose trending above range";
-        color = "#f59e0b";
+        color = "#d4a056";
       } else if (latestIsAfterMeal && latestInRange) {
         outcomeAssessment = {
           label: "Settled nicely",
           message: "There was a rise after eating, but you've come back to range. Nice work staying with it.",
-          color: "#35a879",
+          color: "#5ba88a",
         };
         value = "Settled nicely";
         status = "Back in a comfortable range";
-        color = "#35a879";
+        color = "#5ba88a";
       }
     } else if (latestIsAfterMeal && latestInRange) {
       outcomeAssessment = {
         label: "Tracking beautifully",
         message: "Right where we want to be. Your dosing is aligning well with this meal.",
-        color: "#35a879",
+        color: "#5ba88a",
       };
       value = "Tracking beautifully";
       status = "Right where we want to be";
-      color = "#35a879";
+      color = "#5ba88a";
     }
   }
 
@@ -638,7 +638,7 @@ function MetricCard({ label, value, sub, status, color, tooltipId, openTooltip, 
       style={{
         background: "linear-gradient(145deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0))",
         borderColor: "rgba(255,255,255,0.16)",
-        boxShadow: "0 14px 36px rgba(0,0,0,0.18), inset 0 1px 1px rgba(255,255,255,0.24), inset 0 -1px 1px rgba(255,255,255,0.06)",
+        boxShadow: "0 12px 40px rgba(0,0,0,0.10), 0 4px 12px rgba(0,0,0,0.06), inset 0 1px 1px rgba(255,255,255,0.22), inset 0 -1px 1px rgba(255,255,255,0.05)",
       }}
     >
       <div
@@ -686,7 +686,7 @@ function ActiveInsulinDetailCard({ totalUnits, breakdown }) {
       style={{
         background: "linear-gradient(145deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0))",
         borderColor: "rgba(255,255,255,0.16)",
-        boxShadow: "0 14px 36px rgba(0,0,0,0.18), inset 0 1px 1px rgba(255,255,255,0.24), inset 0 -1px 1px rgba(255,255,255,0.06)",
+        boxShadow: "0 12px 40px rgba(0,0,0,0.10), 0 4px 12px rgba(0,0,0,0.06), inset 0 1px 1px rgba(255,255,255,0.22), inset 0 -1px 1px rgba(255,255,255,0.05)",
       }}
     >
       <div
@@ -705,7 +705,7 @@ function ActiveInsulinDetailCard({ totalUnits, breakdown }) {
           </div>
         </div>
         <span className="rounded-full border px-3 py-1 text-xs font-semibold" style={{
-          color: hasBolusIOB ? "#06b6d4" : "rgba(255,255,255,0.42)",
+          color: hasBolusIOB ? "#5ba3b8" : "rgba(255,255,255,0.42)",
           borderColor: hasBolusIOB ? "rgba(6,182,212,0.32)" : "rgba(255,255,255,0.1)",
           background: hasBolusIOB ? "rgba(6,182,212,0.1)" : "rgba(255,255,255,0.04)",
         }}>
@@ -753,8 +753,8 @@ function SupportiveGlucoseMessage({ insight }) {
   return (
     <p
       aria-live="polite"
-      className="mx-auto mt-6 max-w-[85vw] text-center text-[15px] font-medium italic leading-relaxed"
-      style={{ color: "rgba(255,255,255,0.6)" }}
+      className="text-legible mx-auto mt-6 max-w-[85vw] text-center text-[15px] font-medium italic leading-relaxed"
+      style={{ color: "rgba(255,255,255,0.65)" }}
     >
       "{insight.message}"
     </p>
@@ -831,7 +831,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
         type: dose.insulin_type,
         shortName: dose.insulin_type?.split(" ")[0] || "Insulin",
         category: profile?.category || "Insulin",
-        color: profile?.color || "#06b6d4",
+        color: profile?.color || "#5ba3b8",
         iob: 0,
         statusLabel: status.label,
       };
@@ -896,12 +896,12 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
           : "Carbs and insulin are aligned";
 
   const netColor = needsInsulinPlan || correctionOnlyActive
-    ? "#f59e0b"
+    ? "#d4a056"
     : netActiveCarbs > 5
-      ? "#ef4444"
+      ? "#c97060"
       : netActiveCarbs < -5
-        ? "#3b82f6"
-        : "#35a879";
+        ? "#6b92c4"
+        : "#5ba88a";
 
   const dailyAverage = useMemo(() => {
     const today = new Date();
@@ -925,12 +925,12 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
   const targetLow = targetRange.low;
   const targetHigh = targetRange.high;
   const glucoseColor = !glucoseValue
-    ? "#35a879"
+    ? "#5ba88a"
     : glucoseValue < targetLow
-      ? "#3b82f6"
+      ? "#6b92c4"
       : glucoseValue > targetHigh
-        ? "#f59e0b"
-        : "#35a879";
+        ? "#d4a056"
+        : "#5ba88a";
 
   const inRange = glucoseValue == null ? null : glucoseValue >= targetLow && glucoseValue <= targetHigh;
   const rangeCardLabel =
@@ -943,12 +943,12 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
           : "In comfort zone";
   const rangeSparkColor =
     glucoseValue == null
-      ? "#35a87988"
+      ? "#5ba88a88"
       : glucoseValue < targetLow
-        ? "#3b82f688"
+        ? "#6b92c488"
         : glucoseValue > targetHigh
-          ? "#f59e0b88"
-          : "#35a87988";
+          ? "#d4a05688"
+          : "#5ba88a88";
   const glucoseReadingAgeMinutes = latestGlucose?.recorded_at
     ? Math.floor((Date.now() - new Date(latestGlucose.recorded_at).getTime()) / MINUTE_MS)
     : null;
@@ -984,19 +984,24 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
       />
 
       <div className="relative -mx-4 px-4 pb-6 pt-2">
-        <div className="mb-6 flex flex-col items-center pt-2 text-center">
-          <span className="mb-5 text-[10px] font-bold uppercase tracking-[0.25em] text-white/40">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 -top-2 mx-auto h-[260px] max-w-[420px] rounded-full"
+          style={{ background: "radial-gradient(ellipse at center, rgba(0,0,0,0.28) 0%, transparent 70%)" }}
+        />
+        <div className="relative z-10 mb-6 flex flex-col items-center pt-2 text-center">
+          <span className="text-legible mb-5 text-[10px] font-bold uppercase tracking-[0.25em] text-white/50">
             {supportiveGlucoseInsight?.intent || "Your Journey"}
           </span>
           <div className="flex items-end gap-3">
-            <span className="text-[72px] font-black leading-none text-white sm:text-[88px]">
+            <span className="text-legible-strong text-[72px] font-black leading-none text-white sm:text-[88px]">
               {glucoseValue ?? "--"}
             </span>
-            {latestGlucose && <TrendIcon className="mb-3 h-8 w-8" style={{ color: glucoseColor }} />}
+            {latestGlucose && <TrendIcon className="text-legible mb-3 h-8 w-8" style={{ color: glucoseColor }} />}
           </div>
-          <span className="mb-1 text-sm font-medium text-white/35">mg/dL</span>
+          <span className="text-legible mb-1 text-sm font-medium text-white/45">mg/dL</span>
           {latestGlucose?.recorded_at && (
-            <span className="mb-4 text-xs text-white/35">
+            <span className="text-legible mb-4 text-xs text-white/45">
               {formatRelativeAge(new Date(latestGlucose.recorded_at).getTime())}
             </span>
           )}
@@ -1020,7 +1025,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
             style={{
               background: "linear-gradient(145deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0))",
               borderColor: "rgba(255,255,255,0.16)",
-              boxShadow: "0 14px 36px rgba(0,0,0,0.18), inset 0 1px 1px rgba(255,255,255,0.24), inset 0 -1px 1px rgba(255,255,255,0.06)",
+              boxShadow: "0 12px 40px rgba(0,0,0,0.10), 0 4px 12px rgba(0,0,0,0.06), inset 0 1px 1px rgba(255,255,255,0.22), inset 0 -1px 1px rgba(255,255,255,0.05)",
             }}
           >
             <div
@@ -1064,7 +1069,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
             value={dailyAverage ? `${dailyAverage}` : "--"}
             sub={dailyAverage ? "mg/dL" : "No data today"}
             status={glucoseStatus(dailyAverage)}
-            color={!dailyAverage ? "#35a879" : dailyAverage < targetLow ? "#3b82f6" : dailyAverage > targetHigh ? "#f59e0b" : "#10b981"}
+            color={!dailyAverage ? "#5ba88a" : dailyAverage < targetLow ? "#6b92c4" : dailyAverage > targetHigh ? "#d4a056" : "#5ba88a"}
           />
         </div>
       </div>
