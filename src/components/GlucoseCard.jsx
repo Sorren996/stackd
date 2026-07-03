@@ -39,7 +39,7 @@ export default function GlucoseCard({ reading, onDelete }) {
 
       <div className="flex-1 min-w-0 pt-0.5">
         <p className="text-sm font-semibold text-white/85">{eventLabel}</p>
-        <p className="text-xs text-white/35 mt-0.5">{timeAgo} · {format(new Date(reading.recorded_at), "h:mm a")}</p>
+        <p className="text-xs text-white/70 mt-0.5">{timeAgo} · {format(new Date(reading.recorded_at), "h:mm a")}</p>
         <p className="text-xs mt-1.5 font-semibold" style={{ color }}>
           {value} mg/dL · {statusLabel}
         </p>
@@ -48,7 +48,7 @@ export default function GlucoseCard({ reading, onDelete }) {
 
       <AlertDialog>
         <AlertDialogTrigger asChild>
-          <Button variant="ghost" size="icon" className="shrink-0 w-7 h-7 text-white/20 hover:text-destructive hover:bg-destructive/10 mt-0.5">
+          <Button variant="ghost" size="icon" className="shrink-0 w-7 h-7 text-white/50 hover:text-destructive hover:bg-destructive/10 mt-0.5">
             <Trash2 className="w-3.5 h-3.5" />
           </Button>
         </AlertDialogTrigger>
