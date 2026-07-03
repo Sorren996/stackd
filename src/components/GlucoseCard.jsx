@@ -20,7 +20,7 @@ export default function GlucoseCard({ reading, onDelete }) {
     <motion.div
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex items-start gap-3.5 px-4 py-3.5 background-blur-sm rounded-2xl transition-all p-4"
+      className="flex items-start gap-3.5 px-4 py-3.5 backdrop-blur-sm rounded-2xl transition-all p-4"
       style={{
         background: `linear-gradient(to right, ${color}12, transparent 55%)`,
         border: "1px solid rgba(255, 255, 255, 0.06)",
