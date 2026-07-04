@@ -725,62 +725,7 @@ const toggleMealInsulinType = (name) => {
         </div>
       </div>
 
-      {/* Hardware Integrations */}
-      <div className="space-y-3">
-        <h3 className="text-sm font-bold text-white uppercase tracking-wider px-1">Hardware Integrations</h3>
-        <div className="backdrop-blur-sm bg-white/[0.02] border border-white/10 rounded-3xl p-4">
-          <div className="flex items-center justify-between gap-4">
-            <div className="space-y-0.5">
-              <Label className="text-sm font-semibold text-white/90 flex items-center gap-2">
-                <Radio className="w-4 h-4 text-white/40" />
-                Dexcom Stelo Biosensor
-              </Label>
-              <p className="text-sm text-white/40">Automatic CGM sync requires backend support</p>
-            </div>
-            <button
-              onClick={handleSteloConnect}
-              className="text-sm font-bold px-4 py-2 rounded-xl border border-white/5 bg-white/5 text-white/80 hover:bg-white/10 transition-all">
-              Connect
-            </button>
-          </div>
-        </div>
-      </div>
 
-      {/* Apple Health Sync */}
-      <div className="space-y-3">
-        <h3 className="text-sm font-bold text-white uppercase tracking-wider px-1">Apple Health Sync</h3>
-        <div className="backdrop-blur-sm bg-white/[0.02] border border-white/10 rounded-3xl p-5 space-y-4">
-          <div className="space-y-1">
-            <div className="text-sm font-semibold text-white flex items-center gap-2">
-              <Heart className="w-4 h-4 text-red-500" />
-              Sync Apple Health Data
-            </div>
-            <p className="text-xs text-white/40 leading-relaxed">
-              Export from iPhone: Health App → Profile → Export All Health Data. Upload the file to replace manual logs with continuous records.
-            </p>
-          </div>
-
-          <label className={`flex flex-col items-center justify-center border-2 border-dashed rounded-2xl p-6 cursor-pointer transition-all group ${
-          isSyncing ? "border-teal-500/40 bg-teal-500/[0.02]" : "border-white/10 hover:border-teal-500/40 bg-white/[0.01] hover:bg-teal-500/[0.02]"}`
-          }>
-            {isSyncing ?
-            <Loader2 className="w-6 h-6 text-teal-400 animate-spin mb-2" /> :
-            <Upload className="w-6 h-6 text-white/30 group-hover:text-teal-400 mb-2 transition-colors" />
-            }
-            <span className="text-sm font-medium text-white/70 group-hover:text-white transition-colors">
-              {isSyncing ? "Parsing export data..." : "Select export.xml or health.zip"}
-            </span>
-            <span className="text-xs text-white/30 mt-1">Accepts XML or Zip exports</span>
-            <input
-              type="file"
-              accept=".xml,.zip"
-              onChange={handleAppleHealthImport}
-              disabled={isSyncing}
-              className="hidden" />
-            
-          </label>
-        </div>
-      </div>
 
       {/* Backup & Export */}
       <div className="space-y-3">
