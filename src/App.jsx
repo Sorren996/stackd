@@ -23,6 +23,7 @@ import { AnimatePresence } from "framer-motion";
 import { base44 } from "@/api/base44Client";
 import RequiredAcknowledgments from "@/pages/RequiredAcknowledgments";
 import { ACKNOWLEDGMENT_VERSIONS, CHECKBOX_KEYS } from "@/lib/acknowledgmentConfig";
+import { loadUserSettings, migrateLocalSettingsIfNeeded, cacheSettingsLocally } from "@/lib/userSettings";
 
 const AuthenticatedApp = () => {
   const { user, isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, isAuthenticated, handleSessionExpired } = useAuth();
@@ -54,6 +55,17 @@ const AuthenticatedApp = () => {
     const prefetchData = async () => {
       await Promise.all([
         queryClientInstance.prefetchQuery({
+          queryKey: ["user-settings"],
+          queryFn: async () => {
+            try {
+              await migrateLocalSettingsIfNeeded();
+            } catch {
+              // Migration failure is non-fatal
+            }
+            return loadUserSettings();
+          },
+        }),
+        queryClientInstance.prefetchQuery({
           queryKey: ["insulin-doses"],
           queryFn: () => base44.entities.InsulinDose.list("-administered_at", 200),
         }),
@@ -82,6 +94,18 @@ const AuthenticatedApp = () => {
           queryFn: () => base44.entities.InsulinDose.list("-administered_at", 1000),
         }),
       ]);
+
+      // Cache user settings into localStorage so all pages (Dashboard,
+      // ActiveInsulinBanner, etc.) can read them immediately on login.
+      const settings = queryClientInstance.getQueryData(["user-settings"]);
+      if (settings && user?.id) {
+        cacheSettingsLocally(user.id, settings);
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("target-range-updated"));
+          window.dispatchEvent(new Event("insulin-settings-updated"));
+        }
+      }
+
       if (!cancelled) setDataReady(true);
     };
     prefetchData();
