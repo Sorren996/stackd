@@ -457,6 +457,37 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       });
   }, [carbEventMarkers, domainStart, totalMs, chartWidth]);
 
+  const positionedDoseMarkers = useMemo(() => {
+    const laneLastX = [];
+    const laneCount = 3;
+    const minMarkerGap = 42;
+
+    return filteredDoses
+      .slice()
+      .sort((a, b) => {
+        const aTime = new Date(a.administered_at || a.created_at || a.created_date).getTime();
+        const bTime = new Date(b.administered_at || b.created_at || b.created_date).getTime();
+        return aTime - bTime;
+      })
+      .map((dose, index) => {
+        const time = new Date(dose.administered_at || dose.created_at || dose.created_date).getTime();
+        if (!Number.isFinite(time) || time < domainStart || time > domainEnd) return null;
+        const units = getDoseUnits(dose);
+        if (!Number.isFinite(units) || units <= 0) return null;
+        const x = (time - domainStart) / totalMs * chartWidth;
+        let lane = laneLastX.findIndex((lastX) => x - lastX >= minMarkerGap);
+        if (lane === -1) {
+          lane = laneLastX.length < laneCount ? laneLastX.length : 0;
+          if (laneLastX.length >= laneCount) {
+            lane = laneLastX.indexOf(Math.min(...laneLastX));
+          }
+        }
+        laneLastX[lane] = x;
+        return { dose, x, lane, units, key: getDoseKey(dose, index) };
+      })
+      .filter(Boolean);
+  }, [filteredDoses, domainStart, domainEnd, totalMs, chartWidth]);
+
   const getGlucoseY = (value) => {
     const clamped = Math.min(Math.max(value, GLUCOSE_MIN), GLUCOSE_MAX);
     return CHART_MARGIN_TOP + (GLUCOSE_MAX - clamped) / (GLUCOSE_MAX - GLUCOSE_MIN) * plotHeight;
@@ -767,6 +798,35 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             }
 
           </ComposedChart>
+
+          {filters.insulin && positionedDoseMarkers.map(({ dose, x, lane, units, key }) => {
+            const isEdgeLeft = x < 24;
+            const isEdgeRight = x > chartWidth - 24;
+            const labelTop = 6 + lane * 20;
+            const formattedUnits = units % 1 === 0 ? String(units) : units.toFixed(1);
+
+            return (
+              <div
+                key={`dose_label_${key}`}
+                className="pointer-events-none absolute top-0 z-[5]"
+                style={{
+                  left: x,
+                  transform: isEdgeLeft ? "translateX(0)" : isEdgeRight ? "translateX(-100%)" : "translateX(-50%)"
+                }}>
+                <div
+                  className="relative flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-semibold leading-none"
+                  style={{
+                    top: labelTop,
+                    color: "rgba(91,168,138,0.9)",
+                    background: "linear-gradient(145deg, rgba(14,24,21,0.72), rgba(14,24,21,0.42))",
+                    border: "1px solid rgba(91,168,138,0.16)",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.22)"
+                  }}>
+                  <span>{formattedUnits}u</span>
+                </div>
+              </div>
+            );
+          })}
 
           {filters.carbs && positionedCarbMarkers.map(({ entry, color, x, lane }) => {
             const isEdgeLeft = x < 58;
