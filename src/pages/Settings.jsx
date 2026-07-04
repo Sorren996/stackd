@@ -727,29 +727,7 @@ const toggleMealInsulinType = (name) => {
 
 
 
-      {/* Backup & Export */}
-      <div className="space-y-3">
-        <h3 className="text-sm font-bold text-white uppercase tracking-wider px-1">Backup & Logs</h3>
-        <div className="backdrop-blur-sm bg-white/[0.02] border border-white/10 rounded-3xl p-4">
-          <button
-            onClick={handleExportCSV}
-            disabled={isExporting}
-            className="w-full flex items-center justify-between py-1 bg-transparent hover:opacity-80 transition-all text-left">
-            
-            <div className="space-y-0.5">
-              <div className="text-sm font-semibold text-white flex items-center gap-2">
-                <Download className="w-4 h-4 text-teal-400" />
-                Export logs as CSV
-              </div>
-              <p className="text-sm text-white/40">Download insulin & glucose data for past 30 days</p>
-            </div>
-            {isExporting ?
-            <Loader2 className="w-4 h-4 animate-spin text-teal-400" /> :
-            <Sparkles className="w-4 h-4 text-teal-400/60" />
-            }
-          </button>
-        </div>
-      </div>
+
 
       {/* Privacy Notice */}
       <div className="space-y-3">
