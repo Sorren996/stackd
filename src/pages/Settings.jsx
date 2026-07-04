@@ -236,6 +236,7 @@ export default function Settings() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [openHelp, setOpenHelp] = useState(null);
 
   const [targetLow, setTargetLow] = useState(() => {
@@ -316,8 +317,22 @@ const toggleMealInsulinType = (name) => {
     base44.auth.me().then(setUser).catch(() => {});
   }, []);
 
-  const handleLogout = () => {
-    base44.auth.logout("/login");
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      queryClient.clear();
+      [
+        'stacking_alerts_enabled', 'target_range_low', 'target_range_high',
+        'insulin_sensitivity_mgdl_per_unit', 'correction_target_glucose',
+        'meal_insulin_units_per_5g', 'meal_insulin_types',
+        'meal_prebolus_window_minutes', 'meal_postbolus_window_minutes',
+        'meal_outcome_window_minutes', 'latest_glucose_cache'
+      ].forEach(key => localStorage.removeItem(key));
+      base44.auth.logout('/');
+    } catch {
+      toast.error("Something didn't go as expected. Please try again.");
+      setIsLoggingOut(false);
+    }
   };
 
   const handleDeleteAccount = async () => {
@@ -333,7 +348,8 @@ const toggleMealInsulinType = (name) => {
     ...readings.map((r) => base44.entities.GlucoseReading.delete(r.id)),
     ...carbs.map((c) => base44.entities.CarbEntry.delete(c.id))]
     );
-    base44.auth.logout("/login");
+    queryClient.clear();
+    base44.auth.logout('/');
   };
 
   const handleStackingToggle = (checked) => {
@@ -758,10 +774,10 @@ const toggleMealInsulinType = (name) => {
       {/* Log Out */}
       <button
         onClick={handleLogout}
-        className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl border border-white/5 text-white/50 hover:bg-white/5 hover:text-white/80 transition-all text-sm font-medium">
-        
-        <LogOut className="w-4 h-4" />
-        Log Out
+        disabled={isLoggingOut}
+        className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl border border-white/5 text-white/50 hover:bg-white/5 hover:text-white/80 transition-all text-sm font-medium disabled:opacity-40">
+        {isLoggingOut ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogOut className="w-4 h-4" />}
+        {isLoggingOut ? "Logging out..." : "Log Out"}
       </button>
 
       {/* Delete Account */}

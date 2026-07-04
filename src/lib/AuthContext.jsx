@@ -104,8 +104,9 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(false);
       setAuthChecked(true);
       
-      // If user auth fails, it might be an expired token
+      // If user auth fails, it might be an expired token — clear stale local state
       if (error.status === 401 || error.status === 403) {
+        try { localStorage.removeItem('latest_glucose_cache'); } catch {}
         setAuthError({
           type: 'auth_required',
           message: 'Authentication required'

@@ -78,8 +78,6 @@ const AuthenticatedApp = () => {
     return () => { cancelled = true; };
   }, [isAuthenticated, authError]);
 
-  const showSplash = !authError && (isLoadingPublicSettings || isLoadingAuth || (isAuthenticated && !dataReady) || (isAuthenticated && dataReady && ackLoading));
-
   const needsAcknowledgment = useMemo(() => {
     if (!isAuthenticated || !dataReady || ackLoading) return null;
 
@@ -101,7 +99,8 @@ const AuthenticatedApp = () => {
     return false;
   }, [user, latestAck, isAuthenticated, dataReady, ackLoading]);
 
-  if (showSplash) {
+  // Still checking auth
+  if (isLoadingPublicSettings || isLoadingAuth) {
     return (
       <AnimatePresence>
         <SplashScreen />
@@ -109,18 +108,26 @@ const AuthenticatedApp = () => {
     );
   }
 
-  // Handle authentication errors
-  if (authError) {
-    if (authError.type === 'user_not_registered') {
-      return <UserNotRegisteredError />;
-    } else if (authError.type === 'auth_required') {
-      // Redirect to login automatically
-      navigateToLogin();
-      return null;
-    }
+  // User not registered for this app
+  if (authError?.type === 'user_not_registered') {
+    return <UserNotRegisteredError />;
   }
 
-  if (needsAcknowledgment === null) {
+  // Not authenticated — show auth pages or splash with login/register actions
+  if (!isAuthenticated) {
+    return (
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="*" element={<SplashScreen showAuth />} />
+      </Routes>
+    );
+  }
+
+  // Authenticated — wait for data prefetch and acknowledgment check
+  if (!dataReady || ackLoading) {
     return (
       <AnimatePresence>
         <SplashScreen />
@@ -128,6 +135,7 @@ const AuthenticatedApp = () => {
     );
   }
 
+  // Acknowledgment flow required
   if (needsAcknowledgment) {
     return <RequiredAcknowledgments />;
   }
@@ -135,19 +143,13 @@ const AuthenticatedApp = () => {
   // Render the main app
   return (
     <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/reset-password" element={<ResetPassword />} />
-      <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
-        <Route element={<Layout />}>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/history" element={<History />} />
-          <Route path="/analytics" element={<Analytics />} />
-          <Route path="/settings" element={<Settings />} />
-        </Route>
+      <Route element={<Layout />}>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/history" element={<History />} />
+        <Route path="/analytics" element={<Analytics />} />
+        <Route path="/settings" element={<Settings />} />
       </Route>
-      <Route path="*" element={<PageNotFound />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 };
