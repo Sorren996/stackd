@@ -266,65 +266,88 @@ export default function Layout() {
         )}
       </AnimatePresence>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 flex justify-center pb-safe">
-        <div
-          className="relative mx-4 mb-4 flex items-center gap-1 overflow-hidden rounded-[2rem] border px-2 py-1.5 backdrop-blur-sm"
-          style={{
-            background: "linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.06))",
-            borderColor: "rgba(255,255,255,0.24)",
-            boxShadow: "0 18px 50px rgba(0,0,0,0.38), inset 0 1px 1px rgba(255,255,255,0.32), inset 0 -1px 1px rgba(255,255,255,0.08)",
-          }}
-        >
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute -inset-8 opacity-70"
-            style={{
-              background: "radial-gradient(circle at 25% 0%, rgba(255,255,255,0.26), transparent 34%), radial-gradient(circle at 85% 130%, rgba(45,212,191,0.16), transparent 42%)",
-            }}
-          />
-          {navItems.map((item) => {
-            const isActive = location.pathname === item.path && !isSettingsOpen;
-            const Icon = item.icon;
+     <nav className="fixed inset-x-0 bottom-0 z-30 flex justify-center pb-safe">
+  <div
+    className="relative mx-4 mb-4 grid w-[min(calc(100vw-2rem),22rem)] grid-cols-3 gap-1 overflow-hidden rounded-[2rem] border px-2 py-1.5 backdrop-blur-sm"
+    style={{
+      background:
+        "linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.06))",
+      borderColor: "rgba(255,255,255,0.24)",
+      boxShadow:
+        "0 18px 50px rgba(0,0,0,0.38), inset 0 1px 1px rgba(255,255,255,0.32), inset 0 -1px 1px rgba(255,255,255,0.08)",
+    }}
+  >
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute -inset-8 opacity-70"
+      style={{
+        background:
+          "radial-gradient(circle at 25% 0%, rgba(255,255,255,0.26), transparent 34%), radial-gradient(circle at 85% 130%, rgba(45,212,191,0.16), transparent 42%)",
+      }}
+    />
 
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`relative flex min-w-[72px] flex-col items-center gap-1 rounded-[1.55rem] px-3 py-2 transition-colors ${
-                  isActive ? "text-white" : "text-white/45 hover:text-white/75"
-                }`}
-              >
-                {isActive && (
-                  <motion.div
-                    layoutId="active-nav-tab"
-                    className="absolute inset-0 rounded-[1.55rem]"
-                    style={{
-                      background: "linear-gradient(145deg, rgba(255,255,255,0.28), rgba(255,255,255,0.09))",
-                      border: "1px solid rgba(255,255,255,0.34)",
-                      boxShadow: "0 10px 24px rgba(0,0,0,0.22), inset 0 1px 1px rgba(255,255,255,0.38), inset 0 -1px 1px rgba(255,255,255,0.1)",
-                    }}
-                    transition={{ type: "spring", stiffness: 460, damping: 34, mass: 0.8 }}
-                  />
-                )}
-                <motion.span
-                  className="relative z-10 flex"
-                  animate={{ y: isActive ? -1 : 0, scale: isActive ? 1.07 : 1 }}
-                  transition={{ type: "spring", stiffness: 420, damping: 28 }}
-                >
-                  <Icon className="h-5 w-5" />
-                </motion.span>
-                <motion.span
-                  className="relative z-10 text-[10px] font-semibold"
-                  animate={{ opacity: isActive ? 1 : 0.64, y: isActive ? 0 : 1 }}
-                  transition={{ duration: 0.16 }}
-                >
-                  {item.label}
-                </motion.span>
-              </Link>
-            );
-          })}
-        </div>
-      </nav>
+    {navItems.map((item) => {
+      const isActive = location.pathname === item.path && !isSettingsOpen;
+      const Icon = item.icon;
+
+      return (
+        <Link
+          key={item.path}
+          to={item.path}
+          className={`relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-[1.55rem] px-2 py-2 text-center transition-colors ${
+            isActive ? "text-white" : "text-white/45 hover:text-white/75"
+          }`}
+        >
+          {isActive && (
+            <motion.div
+              layoutId="active-nav-tab"
+              className="absolute inset-0 rounded-[1.55rem]"
+              style={{
+                background:
+                  "linear-gradient(145deg, rgba(255,255,255,0.28), rgba(255,255,255,0.09))",
+                border: "1px solid rgba(255,255,255,0.34)",
+                boxShadow:
+                  "0 10px 24px rgba(0,0,0,0.22), inset 0 1px 1px rgba(255,255,255,0.38), inset 0 -1px 1px rgba(255,255,255,0.1)",
+              }}
+              transition={{
+                type: "spring",
+                stiffness: 460,
+                damping: 34,
+                mass: 0.8,
+              }}
+            />
+          )}
+
+          <motion.span
+            className="relative z-10 flex items-center justify-center"
+            animate={{
+              y: isActive ? -1 : 0,
+              scale: isActive ? 1.07 : 1,
+            }}
+            transition={{
+              type: "spring",
+              stiffness: 420,
+              damping: 28,
+            }}
+          >
+            <Icon className="h-5 w-5" />
+          </motion.span>
+
+          <motion.span
+            className="relative z-10 whitespace-nowrap text-[10px] font-semibold leading-none"
+            animate={{
+              opacity: isActive ? 1 : 0.64,
+              y: isActive ? 0 : 1,
+            }}
+            transition={{ duration: 0.16 }}
+          >
+            {item.label}
+          </motion.span>
+        </Link>
+      );
+    })}
+  </div>
+</nav>
     </div>
   );
 }
