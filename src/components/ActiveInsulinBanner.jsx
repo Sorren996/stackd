@@ -368,7 +368,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
   let value = `${estimatedAdditionalUnits.toFixed(1)}u`;
   let status = "Suggested support";
   let color = "#5ba88a";
-  let sub = `${Math.round(mealGroup.carbs)}g carbs Â· ${loggedTotalUnits.toFixed(1)}u logged`;
+  let sub = `${Math.round(mealGroup.carbs)}g carbs · ${loggedTotalUnits.toFixed(1)}u logged`;
 
   // --- Point-in-time assessment (fixed at meal time, does not change as IOB decays) ---
   if (ratio === null) {
