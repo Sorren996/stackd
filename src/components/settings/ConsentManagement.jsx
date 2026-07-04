@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
@@ -15,6 +15,22 @@ export default function ConsentManagement() {
   const [activeDoc, setActiveDoc] = useState(null);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
+
+  useEffect(() => {
+    if (!showWithdrawModal) return;
+    const scrollY = window.scrollY;
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = "100%";
+    document.documentElement.style.overflow = "hidden";
+    return () => {
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.width = "";
+      document.documentElement.style.overflow = "";
+      window.scrollTo(0, scrollY);
+    };
+  }, [showWithdrawModal]);
 
   const { data: ackRecords = [], isLoading } = useQuery({
     queryKey: ["acknowledgment-history"],
@@ -168,7 +184,7 @@ export default function ConsentManagement() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[250] flex items-end justify-center bg-black/70 px-4 pb-8 sm:items-center sm:pb-8"
+            className="fixed inset-0 z-[250] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto"
             onClick={() => !isWithdrawing && setShowWithdrawModal(false)}
           >
             <motion.div
