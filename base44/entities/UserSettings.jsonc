@@ -2,6 +2,10 @@
   "name": "UserSettings",
   "type": "object",
   "properties": {
+    "username": {
+      "type": "string",
+      "description": "Display name of the user these settings belong to, for identification in the backend."
+    },
     "insulin_sensitivity_mgdl_per_unit": {
       "type": "number",
       "description": "How much 1 unit of insulin typically lowers glucose (mg/dL per unit). Must come from the user's established insulin plan."
@@ -74,5 +78,6 @@
     "delete": {
       "created_by_id": "{{user.id}}"
     }
-  }
+  },
+  "required": []
 }

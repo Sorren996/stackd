@@ -12,7 +12,8 @@ import {
 import NoticeSection from "@/components/acknowledgments/NoticeSection";
 import DocumentModal from "@/components/acknowledgments/DocumentModal";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, LogOut, Leaf, Check, AlertCircle, Loader2 } from "lucide-react";
+import { ChevronLeft, LogOut, Leaf, Check, AlertCircle, Loader2, RefreshCw } from "lucide-react";
+import { SUPPORTIVE_ERRORS } from "@/lib/supportiveErrors";
 
 export default function RequiredAcknowledgments() {
   const { user, checkUserAuth, logout } = useAuth();
@@ -113,9 +114,14 @@ export default function RequiredAcknowledgments() {
       await checkUserAuth();
       queryClient.invalidateQueries({ queryKey: ["latest-acknowledgment"] });
     } catch {
-      setSubmitError("Unable to save your acknowledgment. Please check your connection and try again.");
+      setSubmitError(SUPPORTIVE_ERRORS.submit);
       setIsSubmitting(false);
     }
+  };
+
+  const handleRetry = () => {
+    setSubmitError(null);
+    handleAccept();
   };
 
   const allSections = ACKNOWLEDGMENT_STEPS.filter((s) => s.sections).flatMap((s) => s.sections);
@@ -246,10 +252,21 @@ export default function RequiredAcknowledgments() {
                     </p>
                   )}
                   {submitError && (
-                    <p className="flex items-center gap-2 text-xs text-red-400">
-                      <AlertCircle className="h-3.5 w-3.5" />
-                      {submitError}
-                    </p>
+                    <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3">
+                      <p className="flex items-center gap-2 text-xs text-red-400">
+                        <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                        {submitError}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleRetry}
+                        disabled={isSubmitting}
+                        className="mt-2 flex items-center gap-1.5 rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-1.5 text-xs font-semibold text-red-300 transition hover:bg-red-500/10 disabled:opacity-40"
+                      >
+                        <RefreshCw className="h-3 w-3" />
+                        Try Again
+                      </button>
+                    </div>
                   )}
                 </div>
               )}

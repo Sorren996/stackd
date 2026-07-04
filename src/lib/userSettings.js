@@ -1,5 +1,6 @@
 import { base44 } from "@/api/base44Client";
 import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
+import { SUPPORTIVE_ERRORS } from "@/lib/supportiveErrors";
 
 // Local storage keys that mirror server-side UserSettings fields.
 // Used only as a temporary cache scoped to the authenticated user.
@@ -98,6 +99,11 @@ function validateSettings(raw) {
     sanitized.glucose_units = raw.glucose_units;
   }
 
+  // Pass through username for backend identification (not validated numerically)
+  if (typeof raw.username === "string" && raw.username.trim()) {
+    sanitized.username = raw.username.trim();
+  }
+
   return { valid: Object.keys(sanitized).length > 0, sanitized };
 }
 
@@ -140,7 +146,7 @@ export async function loadUserSettings() {
     return records && records.length > 0 ? records[0] : null;
   } catch (error) {
     console.error("Failed to load user settings:", error);
-    throw new Error("We couldn't load your saved settings. Please try again.");
+    throw new Error(SUPPORTIVE_ERRORS.load);
   }
 }
 
@@ -187,6 +193,16 @@ export async function migrateLocalSettingsIfNeeded() {
   if (!valid) return null;
 
   try {
+    // Attach username during migration for backend identification
+    try {
+      const user = await base44.auth.me();
+      if (user?.full_name || user?.email) {
+        sanitized.username = user.full_name || user.email;
+      }
+    } catch {
+      // Non-fatal — username is optional
+    }
+
     const saved = await base44.entities.UserSettings.create({
       ...sanitized,
       settings_migrated_from_local: true,

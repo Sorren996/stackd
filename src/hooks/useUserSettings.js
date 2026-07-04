@@ -10,6 +10,7 @@ import {
 } from "@/lib/userSettings";
 import { useAuth } from "@/lib/AuthContext";
 import { toast } from "sonner";
+import { getSupportiveErrorMessage, SUPPORTIVE_SUCCESS } from "@/lib/supportiveErrors";
 
 const SETTINGS_QUERY_KEY = ["user-settings"];
 
@@ -48,7 +49,11 @@ export function useUserSettings() {
   }, [serverSettings, user?.id]);
 
   const saveMutation = useMutation({
-    mutationFn: (settingsData) => saveUserSettings(settingsData),
+    mutationFn: (settingsData) =>
+      saveUserSettings({
+        ...settingsData,
+        username: user?.full_name || user?.email || "unknown",
+      }),
     onMutate: () => {
       setIsSaving(true);
       setSaveError(null);
@@ -58,13 +63,11 @@ export function useUserSettings() {
       queryClient.setQueryData(SETTINGS_QUERY_KEY, saved);
       if (user?.id) cacheSettingsLocally(user.id, saved);
       setSaveSuccess(true);
-      toast.success("Your settings have been saved.");
+      toast.success(SUPPORTIVE_SUCCESS.save);
       setTimeout(() => setSaveSuccess(false), 2500);
     },
     onError: (error) => {
-      const message = error?.message?.includes("values need adjustment")
-        ? error.message
-        : "We couldn't save your settings right now. Please try again in a moment.";
+      const message = getSupportiveErrorMessage(error, "save");
       setSaveError(message);
       toast.error(message);
     },
