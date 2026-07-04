@@ -486,13 +486,17 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
         const key = getDoseKey(dose, index);
         let peakVal = 0;
+        let peakX = x;
         for (const point of chartData) {
           const v = point[key];
-          if (Number.isFinite(v) && v > peakVal) peakVal = v;
+          if (Number.isFinite(v) && v > peakVal) {
+            peakVal = v;
+            peakX = (point.time - domainStart) / totalMs * chartWidth;
+          }
         }
         const peakY = CHART_MARGIN_TOP + plotHeight * (1 - Math.min(peakVal, 75) / 75);
 
-        return { dose, x, lane, units, key, peakY };
+        return { dose, x: peakX, lane, units, key, peakY };
       })
       .filter(Boolean);
   }, [filteredDoses, domainStart, domainEnd, totalMs, chartWidth, chartData, plotHeight]);
