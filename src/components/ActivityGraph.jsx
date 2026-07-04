@@ -483,10 +483,19 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           }
         }
         laneLastX[lane] = x;
-        return { dose, x, lane, units, key: getDoseKey(dose, index) };
+
+        const key = getDoseKey(dose, index);
+        let peakVal = 0;
+        for (const point of chartData) {
+          const v = point[key];
+          if (Number.isFinite(v) && v > peakVal) peakVal = v;
+        }
+        const peakY = CHART_MARGIN_TOP + plotHeight * (1 - Math.min(peakVal, 75) / 75);
+
+        return { dose, x, lane, units, key, peakY };
       })
       .filter(Boolean);
-  }, [filteredDoses, domainStart, domainEnd, totalMs, chartWidth]);
+  }, [filteredDoses, domainStart, domainEnd, totalMs, chartWidth, chartData, plotHeight]);
 
   const getGlucoseY = (value) => {
     const clamped = Math.min(Math.max(value, GLUCOSE_MIN), GLUCOSE_MAX);
@@ -799,10 +808,10 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
           </ComposedChart>
 
-          {filters.insulin && positionedDoseMarkers.map(({ dose, x, lane, units, key }) => {
+          {filters.insulin && positionedDoseMarkers.map(({ dose, x, lane, units, key, peakY }) => {
             const isEdgeLeft = x < 24;
             const isEdgeRight = x > chartWidth - 24;
-            const labelTop = 6 + lane * 20;
+            const labelTop = Math.max(2, peakY - 16 - lane * 18);
             const formattedUnits = units % 1 === 0 ? String(units) : units.toFixed(1);
 
             return (
