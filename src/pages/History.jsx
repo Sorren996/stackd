@@ -22,7 +22,7 @@ import {
   getCarbAbsorptionAt,
 } from "@/lib/carbAbsorption";
 import { AnimatePresence, motion } from "framer-motion";
-import MealBalanceTooltip from "./MealBalanceTooltip";
+import MealBalanceTooltip from "@/components/MealBalanceTooltip";
 import { getSupportiveGlucoseMessage } from "@/lib/supportiveMessages";
 
 const SAMPLE_STEP_MS = 5 * 60 * 1000;
