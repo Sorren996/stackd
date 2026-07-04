@@ -575,7 +575,7 @@ export default function Dashboard() {
           )}
 
           <div className="mb-2 w-full max-w-full min-w-0">
-            <p className="mt-4 mb-2 px-0 text-[10px] font-bold uppercase tracking-[0.18em] text-white">
+            <p className="mt-6 mb-2 px-0 text-[10px] font-bold uppercase tracking-[0.18em] text-white">
               Glucose Journey
             </p>
             {showGraph ? (
