@@ -180,6 +180,7 @@ export default function ConsentManagement() {
       {/* Withdrawal modal */}
       <AnimatePresence>
 {showWithdrawModal && (
+  createPortal(
   <motion.div
     initial={{ opacity: 0 }}
     animate={{ opacity: 1 }}
@@ -245,7 +246,7 @@ export default function ConsentManagement() {
               </div>
             </motion.div>
           </motion.div>
-        )}
+        ))}
       </AnimatePresence>
     </>
   );
