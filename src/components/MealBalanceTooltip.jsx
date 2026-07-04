@@ -163,6 +163,44 @@ export default function MealBalanceTooltip({ mealInsight, open, onClose }) {
           </div>
         )}
 
+        {/* Numbers breakdown */}
+        {mealInsight.details && mealInsight.details.grossDoseEstimate > 0 && mealInsight.details.meal?.carbs > 0 && (
+          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 space-y-1.5">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-white/30">How the Numbers Align</p>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-baseline gap-1.5 min-w-0">
+                <span className="text-[11px] font-medium text-white/50">Nourishment</span>
+                <span className="text-[9px] text-white/25 truncate">
+                  {Math.round(mealInsight.details.meal.carbs)}g ÷ {mealInsight.details.gramsPerUnit.toFixed(1)}g/u
+                </span>
+              </div>
+              <span className="text-[12px] font-semibold text-white/65 shrink-0">
+                {mealInsight.details.expectedMealUnits.toFixed(1)}u
+              </span>
+            </div>
+            {mealInsight.details.correctionUnitsNeeded > 0.01 && (
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[11px] font-medium text-white/50">Gentle Adjustment</span>
+                <span className="text-[12px] font-semibold text-white/65">
+                  +{mealInsight.details.correctionUnitsNeeded.toFixed(1)}u
+                </span>
+              </div>
+            )}
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] font-medium text-white/50">Already Logged</span>
+              <span className="text-[12px] font-semibold text-white/65">
+                −{mealInsight.details.loggedTotalUnits.toFixed(1)}u
+              </span>
+            </div>
+            <div className="flex items-center justify-between gap-2 border-t border-white/10 pt-1.5">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-white/55">Suggested Support</span>
+              <span className="text-[15px] font-bold" style={{ color: mealInsight.color }}>
+                {mealInsight.details.estimatedAdditionalUnits.toFixed(1)}u
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* How it works */}
         <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3 space-y-2">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-white/30">How This Works</p>
