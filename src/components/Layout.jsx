@@ -113,6 +113,11 @@ export default function Layout() {
     const MAX_DARKNESS = 0.6;
     const SCROLL_RANGE = 500;
 
+    const computeTargetOverlay = () =>
+      isDashboardRoute
+        ? Math.min(MAX_DARKNESS, (window.scrollY / SCROLL_RANGE) * MAX_DARKNESS)
+        : MAX_DARKNESS;
+
     const updateSceneOffset = () => {
       frame = 0;
 
@@ -137,14 +142,14 @@ export default function Layout() {
 
     const handleScroll = () => {
       targetOffset = Math.max(-160, Math.min(0, window.scrollY * -0.12));
-      targetOverlay = Math.min(MAX_DARKNESS, (window.scrollY / SCROLL_RANGE) * MAX_DARKNESS);
+      targetOverlay = computeTargetOverlay();
       if (frame) return;
       frame = window.requestAnimationFrame(updateSceneOffset);
     };
 
     // Set initial position without animation
     targetOffset = Math.max(-160, Math.min(0, window.scrollY * -0.12));
-    targetOverlay = Math.min(MAX_DARKNESS, (window.scrollY / SCROLL_RANGE) * MAX_DARKNESS);
+    targetOverlay = computeTargetOverlay();
     currentOffset = targetOffset;
     currentOverlay = targetOverlay;
     if (sceneRef.current) {
@@ -160,7 +165,7 @@ export default function Layout() {
       if (frame) window.cancelAnimationFrame(frame);
       window.removeEventListener("scroll", handleScroll);
     };
-  }, []);
+  }, [isDashboardRoute]);
 
   const toggleSettings = () => {
     navigate(isSettingsOpen ? "/" : "/settings");
