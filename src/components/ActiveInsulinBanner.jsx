@@ -336,7 +336,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
   const loggedMealUnits = sumDoseUnits(pairedDoses, (dose) => dose.meal_units ?? dose.units);
   const loggedCorrectionUnits = sumDoseUnits(pairedDoses, (dose) => dose.correction_units ?? 0);
   const loggedTotalUnits = loggedMealUnits + loggedCorrectionUnits;
-  // Fixed at meal time — based on what was logged, not decaying IOB
+  // Fixed at meal time â€” based on what was logged, not decaying IOB
   const estimatedAdditionalUnits = Math.max(0, grossDoseEstimate - loggedTotalUnits);
   const ratio = grossDoseEstimate > 0 ? loggedTotalUnits / grossDoseEstimate : null;
   const mealRatio = expectedMealUnits > 0 ? loggedMealUnits / expectedMealUnits : null;
@@ -368,7 +368,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
   let value = `${estimatedAdditionalUnits.toFixed(1)}u`;
   let status = "Suggested support";
   let color = "#5ba88a";
-  let sub = `${Math.round(mealGroup.carbs)}g carbs · ${loggedTotalUnits.toFixed(1)}u logged`;
+  let sub = `${Math.round(mealGroup.carbs)}g carbs Â· ${loggedTotalUnits.toFixed(1)}u logged`;
 
   // --- Point-in-time assessment (fixed at meal time, does not change as IOB decays) ---
   if (ratio === null) {
@@ -377,11 +377,11 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
     color = "#d4a056";
   } else if (correctionGlucoseLow) {
     value = "Review";
-    status = "Glucose is below range — take care first";
+    status = "Glucose is below range â€” take care first";
     color = "#6b92c4";
   } else if (ratio < 0.75) {
     value = `${estimatedAdditionalUnits.toFixed(1)}u`;
-    status = "Light coverage — below estimate";
+    status = "Light coverage â€” below estimate";
     color = "#c97060";
   } else if (ratio > 1.25) {
     value = "Generous dose";
@@ -389,7 +389,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
     color = "#6b92c4";
   } else if (!correctionGlucoseAvailable) {
     value = `${expectedMealUnits.toFixed(1)}u`;
-    status = "Meal estimate — glucose unavailable";
+    status = "Meal estimate â€” glucose unavailable";
     color = "#d4a056";
   } else {
     value = "Well balanced";
@@ -409,7 +409,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
           color: "#5ba88a",
         };
         value = "Realigning";
-        status = "Carbs added — rising back";
+        status = "Carbs added â€” rising back";
         color = "#5ba88a";
       } else if (latestIsAfterMeal && latestLow) {
         outcomeAssessment = {
@@ -438,7 +438,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
           color: "#5ba88a",
         };
         value = "Realigning";
-        status = "Support added — settling back";
+        status = "Support added â€” settling back";
         color = "#5ba88a";
       } else if (latestIsAfterMeal && latestHigh) {
         outcomeAssessment = {
@@ -469,6 +469,19 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
       status = "Right where we want to be";
       color = "#5ba88a";
     }
+  }
+
+  if (!mealStillUnderReview) {
+    value = "Window passed";
+    status = "Nice job staying on top of it";
+    color = "#5ba88a";
+    sub = `${Math.round(mealGroup.carbs)}g meal reviewed`;
+
+    outcomeAssessment = {
+      label: "Meal window passed",
+      message: "Meal window has passed. Nice job staying on top of it.",
+      color: "#5ba88a",
+    };
   }
 
   return {
@@ -765,6 +778,9 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
   const [openTooltip, setOpenTooltip] = useState(null);
   const [insulinSettings, setInsulinSettings] = useState(readInsulinSettings);
   const [targetRange, setTargetRange] = useState(readTargetRange);
+  const [nowMinute, setNowMinute] = useState(() =>
+    Math.floor(Date.now() / MINUTE_MS)
+  );
   const safeDoses = Array.isArray(doses) ? doses : [];
   const safeGlucoseReadings = Array.isArray(glucoseReadings) ? glucoseReadings : [];
   const safeCarbEntries = Array.isArray(carbEntries) ? carbEntries : [];
@@ -783,6 +799,14 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
       window.removeEventListener("target-range-updated", refreshSettings);
       window.removeEventListener("storage", refreshSettings);
     };
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setNowMinute(Math.floor(Date.now() / MINUTE_MS));
+    }, 30 * 1000);
+
+    return () => window.clearInterval(timer);
   }, []);
 
   useEffect(() => {
@@ -862,8 +886,22 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
   }, [trajectory]);
 
   const mealInsight = useMemo(
-    () => computeMealAlignmentInsight(safeDoses, safeCarbEntries, safeGlucoseReadings, latestGlucose, insulinSettings),
-    [safeDoses, safeCarbEntries, safeGlucoseReadings, latestGlucose, insulinSettings]
+    () =>
+      computeMealAlignmentInsight(
+        safeDoses,
+        safeCarbEntries,
+        safeGlucoseReadings,
+        latestGlucose,
+        insulinSettings
+      ),
+    [
+      safeDoses,
+      safeCarbEntries,
+      safeGlucoseReadings,
+      latestGlucose,
+      insulinSettings,
+      nowMinute,
+    ]
   );
 
   const netActiveCarbs = worstPoint?.net ?? 0;
