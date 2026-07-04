@@ -604,7 +604,7 @@ const toggleMealInsulinType = (name) => {
         <SettingHelpButton id="types" openHelp={openHelp} setOpenHelp={setOpenHelp} />
       </div>
       <p className="text-xs text-white/40">
-        These are the only insulin types used by the insulin:carb alignment card.
+        These are the only insulin types used by the meal balance card.
       </p>
       <div className="grid grid-cols-1 gap-2">
         {Object.entries(INSULIN_PROFILES).map(([name, profile]) => {
