@@ -1,4 +1,6 @@
 {
+  "name": "User",
+  "type": "object",
   "properties": {
     "role": {
       "type": "string",
@@ -7,11 +9,33 @@
         "admin",
         "user"
       ]
+    },
+    "required_acknowledgments_complete": {
+      "type": "boolean",
+      "default": false,
+      "description": "Fast status check \u2014 whether all required acknowledgments are complete"
+    },
+    "current_acknowledgment_bundle_version": {
+      "type": "string",
+      "description": "Version of the last acknowledged bundle"
+    },
+    "last_acknowledged_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the user last completed the acknowledgment flow"
+    },
+    "required_reconsent": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the user must re-consent before accessing health features"
+    },
+    "health_data_consent_active": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether health data consent is currently active"
     }
   },
   "required": [
     "role"
-  ],
-  "name": "User",
-  "type": "object"
+  ]
 }

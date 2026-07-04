@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Toaster } from "@/components/ui/toaster"
-import { QueryClientProvider } from '@tanstack/react-query'
+import { QueryClientProvider, useQuery } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
@@ -21,10 +21,18 @@ import { Navigate } from 'react-router-dom';
 import SplashScreen from "@/components/SplashScreen";
 import { AnimatePresence } from "framer-motion";
 import { base44 } from "@/api/base44Client";
+import RequiredAcknowledgments from "@/pages/RequiredAcknowledgments";
+import { ACKNOWLEDGMENT_VERSIONS, CHECKBOX_KEYS } from "@/lib/acknowledgmentConfig";
 
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, isAuthenticated } = useAuth();
+  const { user, isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, isAuthenticated } = useAuth();
   const [dataReady, setDataReady] = useState(false);
+
+  const { data: latestAck, isLoading: ackLoading } = useQuery({
+    queryKey: ["latest-acknowledgment"],
+    queryFn: () => base44.entities.UserAcknowledgment.list("-accepted_at", 1),
+    enabled: isAuthenticated,
+  });
 
   useEffect(() => {
     if (!isAuthenticated || authError) {
@@ -70,7 +78,28 @@ const AuthenticatedApp = () => {
     return () => { cancelled = true; };
   }, [isAuthenticated, authError]);
 
-  const showSplash = !authError && (isLoadingPublicSettings || isLoadingAuth || (isAuthenticated && !dataReady));
+  const showSplash = !authError && (isLoadingPublicSettings || isLoadingAuth || (isAuthenticated && !dataReady) || (isAuthenticated && dataReady && ackLoading));
+
+  const needsAcknowledgment = useMemo(() => {
+    if (!isAuthenticated || !dataReady || ackLoading) return null;
+
+    if (user?.required_reconsent) return true;
+    if (!user?.health_data_consent_active) return true;
+    if (user?.current_acknowledgment_bundle_version !== ACKNOWLEDGMENT_VERSIONS.acknowledgment_bundle_version) return true;
+    if (!user?.required_acknowledgments_complete) return true;
+
+    if (!latestAck?.length) return true;
+    const record = latestAck[0];
+    if (record.withdrawn_at) return true;
+
+    for (const [key, value] of Object.entries(ACKNOWLEDGMENT_VERSIONS)) {
+      if (record[key] !== value) return true;
+    }
+
+    if (CHECKBOX_KEYS.some((flag) => !record[flag])) return true;
+
+    return false;
+  }, [user, latestAck, isAuthenticated, dataReady, ackLoading]);
 
   if (showSplash) {
     return (
@@ -89,6 +118,18 @@ const AuthenticatedApp = () => {
       navigateToLogin();
       return null;
     }
+  }
+
+  if (needsAcknowledgment === null) {
+    return (
+      <AnimatePresence>
+        <SplashScreen />
+      </AnimatePresence>
+    );
+  }
+
+  if (needsAcknowledgment) {
+    return <RequiredAcknowledgments />;
   }
 
   // Render the main app

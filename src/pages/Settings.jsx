@@ -9,6 +9,7 @@ import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
 import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
 import { AnimatePresence, motion } from "framer-motion";
+import ConsentManagement from "@/components/settings/ConsentManagement";
 
 const INSULIN_PLAN_HELP = {
   review: {
@@ -731,6 +732,9 @@ const toggleMealInsulinType = (name) => {
 
 
 
+
+      {/* Legal & Consent */}
+      <ConsentManagement />
 
       {/* Privacy Notice */}
       <div className="space-y-3">

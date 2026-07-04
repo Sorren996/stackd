@@ -1,0 +1,155 @@
+{
+  "name": "UserAcknowledgment",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "The ID of the user who completed this acknowledgment"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Email of the user at time of acceptance"
+    },
+    "user_display_name": {
+      "type": "string",
+      "description": "Display name of the user at time of acceptance"
+    },
+    "acknowledgment_bundle_version": {
+      "type": "string",
+      "description": "Version of the acknowledgment bundle accepted"
+    },
+    "terms_version": {
+      "type": "string",
+      "description": "Version of the Terms of Use accepted"
+    },
+    "privacy_notice_version": {
+      "type": "string",
+      "description": "Version of the Privacy Notice acknowledged"
+    },
+    "medical_disclaimer_version": {
+      "type": "string",
+      "description": "Version of the medical disclaimer accepted"
+    },
+    "emergency_notice_version": {
+      "type": "string",
+      "description": "Version of the emergency notice accepted"
+    },
+    "insulin_estimate_notice_version": {
+      "type": "string",
+      "description": "Version of the insulin estimate disclosure accepted"
+    },
+    "insulin_settings_notice_version": {
+      "type": "string",
+      "description": "Version of the insulin settings acknowledgment accepted"
+    },
+    "notification_notice_version": {
+      "type": "string",
+      "description": "Version of the notification limitations notice accepted"
+    },
+    "health_data_consent_version": {
+      "type": "string",
+      "description": "Version of the health data consent accepted"
+    },
+    "terms_accepted": {
+      "type": "boolean",
+      "default": false
+    },
+    "privacy_notice_acknowledged": {
+      "type": "boolean",
+      "default": false
+    },
+    "medical_disclaimer_accepted": {
+      "type": "boolean",
+      "default": false
+    },
+    "emergency_notice_accepted": {
+      "type": "boolean",
+      "default": false
+    },
+    "insulin_estimate_notice_accepted": {
+      "type": "boolean",
+      "default": false
+    },
+    "insulin_settings_notice_accepted": {
+      "type": "boolean",
+      "default": false
+    },
+    "notification_notice_accepted": {
+      "type": "boolean",
+      "default": false
+    },
+    "health_data_consent_accepted": {
+      "type": "boolean",
+      "default": false
+    },
+    "accepted_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the user accepted the acknowledgment bundle"
+    },
+    "account_created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the user's account was originally created"
+    },
+    "app_version": {
+      "type": "string",
+      "description": "App version at time of acceptance"
+    },
+    "platform": {
+      "type": "string",
+      "description": "Platform (web, ios, android)"
+    },
+    "device_type": {
+      "type": "string",
+      "description": "Device user agent or type"
+    },
+    "locale": {
+      "type": "string",
+      "description": "User locale at time of acceptance"
+    },
+    "timezone": {
+      "type": "string",
+      "description": "User timezone at time of acceptance"
+    },
+    "consent_source": {
+      "type": "string",
+      "enum": [
+        "initial_onboarding",
+        "updated_terms",
+        "updated_privacy_notice",
+        "new_required_consent",
+        "reconsent"
+      ],
+      "description": "What triggered this acknowledgment flow"
+    },
+    "withdrawn_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When health data consent was withdrawn, if applicable"
+    },
+    "withdrawal_reason": {
+      "type": "string",
+      "description": "User-provided reason for withdrawal, if applicable"
+    }
+  },
+  "required": [
+    "user_email",
+    "acknowledgment_bundle_version",
+    "consent_source"
+  ],
+  "rls": {
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}
