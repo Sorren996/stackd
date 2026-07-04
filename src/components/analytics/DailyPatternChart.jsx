@@ -67,7 +67,7 @@ export default function DailyPatternChart({ hourlyAverages, targetLow, targetHig
                 dataKey="avg"
                 stroke="#5ba3b8"
                 strokeWidth={2.5}
-                fill="rgba(91, 168, 139, 0.74)"
+                fill="url(#glucoseGradient)"
                 connectNulls
                 dot={{ r: 2, fill: "#5ba3b8", opacity: 0.6 }}
                 activeDot={{ r: 4, fill: "#5ba3b8" }}
