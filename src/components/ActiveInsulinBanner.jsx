@@ -1008,9 +1008,9 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
 
   const glucoseStatus = (value) => {
     if (!value) return "No data";
-    if (value < targetLow) return "Low";
-    if (value > targetHigh) return "High";
-    return "In range";
+    if (value < targetLow) return "Below comfort zone";
+    if (value > targetHigh) return "Above comfort zone";
+    return "In comfort zone";
   };
 
   return (
