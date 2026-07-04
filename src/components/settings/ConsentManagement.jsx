@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
@@ -178,25 +179,26 @@ export default function ConsentManagement() {
       </div>
 
       {/* Withdrawal modal */}
-      <AnimatePresence>
-        {showWithdrawModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[250] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
-            onClick={() => !isWithdrawing && setShowWithdrawModal(false)}
-          >
+      {typeof document !== "undefined" && showWithdrawModal &&
+        createPortal(
+          <AnimatePresence>
             <motion.div
-              initial={{ scale: 0.96, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.96, opacity: 0 }}
-              transition={{ type: "spring", stiffness: 400, damping: 32 }}
-              className="w-full max-w-md rounded-3xl border border-white/10 p-5"
-              style={{ background: "linear-gradient(165deg, rgba(18,28,23,0.97), rgba(10,16,13,0.98))", backdropFilter: "blur(20px)" }}
-              onClick={(e) => e.stopPropagation()}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[250] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+              onClick={() => !isWithdrawing && setShowWithdrawModal(false)}
             >
-              <div className="mb-4 flex items-start gap-3">
+              <motion.div
+                initial={{ scale: 0.96, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.96, opacity: 0 }}
+                transition={{ type: "spring", stiffness: 400, damping: 32 }}
+                className="w-full max-w-md rounded-3xl border border-white/10 p-5"
+                style={{ background: "linear-gradient(165deg, rgba(18,28,23,0.97), rgba(10,16,13,0.98))", backdropFilter: "blur(20px)" }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="mb-4 flex items-start gap-3">
                 <AlertTriangle className="w-5 h-5 shrink-0 text-amber-400 mt-0.5" />
                 <div>
                   <h3 className="text-base font-bold text-white">Withdraw Health Data Consent?</h3>
@@ -247,8 +249,9 @@ export default function ConsentManagement() {
               </div>
             </motion.div>
             </motion.div>
+            </AnimatePresence>,
+            document.body
             )}
-            </AnimatePresence>
-    </>
-  );
-}
+            </>
+            );
+            }
