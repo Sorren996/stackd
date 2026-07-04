@@ -37,7 +37,7 @@ export default function DoseCard({ dose, onDelete, onEdit }) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 6 }}
+      initial={{ opacity: 1, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       className="flex items-start gap-3.5 backdrop-blur-sm rounded-2xl px-4 py-3.5 transition-all"
       style={{
