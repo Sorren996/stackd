@@ -16,6 +16,9 @@ import Dashboard from './pages/Dashboard';
 import History from './pages/History';
 import Analytics from './pages/Analytics';
 import Settings from './pages/Settings';
+import InsulinSettingsPage from './pages/InsulinSettingsPage';
+import ProfileSettingsPage from './pages/ProfileSettingsPage';
+import PrivacyConsentPage from './pages/PrivacyConsentPage';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { Navigate } from 'react-router-dom';
 import SplashScreen from "@/components/SplashScreen";
@@ -182,6 +185,9 @@ const AuthenticatedApp = () => {
         <Route path="/history" element={<History />} />
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/settings/insulin" element={<InsulinSettingsPage />} />
+        <Route path="/settings/profile" element={<ProfileSettingsPage />} />
+        <Route path="/settings/privacy-consent" element={<PrivacyConsentPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

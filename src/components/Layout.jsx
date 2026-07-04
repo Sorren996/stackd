@@ -2,7 +2,6 @@ import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { Wind, Leaf, Waves, Settings } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import SettingsContent from "../pages/Settings";
 import Dashboard from "../pages/Dashboard";
 import HistoryPage from "../pages/History";
 
@@ -62,7 +61,7 @@ function getGlucoseScene(reading, targetRange) {
 export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const isSettingsOpen = location.pathname === "/settings";
+  const isSettingsOpen = location.pathname.startsWith("/settings");
   const isDashboardRoute = location.pathname === "/";
   const isHistoryRoute = location.pathname === "/history";
   const isKeepAliveRoute = isDashboardRoute || isHistoryRoute;
@@ -167,6 +166,13 @@ export default function Layout() {
     };
   }, [isDashboardRoute]);
 
+  useEffect(() => {
+    if (isSettingsOpen) {
+      const overlay = document.getElementById("settings-overlay");
+      if (overlay) overlay.scrollTo({ top: 0, behavior: "auto" });
+    }
+  }, [location.pathname]);
+
   const toggleSettings = () => {
     navigate(isSettingsOpen ? "/" : "/settings");
   };
@@ -260,7 +266,7 @@ export default function Layout() {
               <CachedHistoryPage />
             </div>
           )}
-          {!isKeepAliveRoute && (
+          {!isKeepAliveRoute && !isSettingsOpen && (
             <Outlet />
           )}
         </div>
@@ -269,7 +275,7 @@ export default function Layout() {
       <AnimatePresence>
         {isSettingsOpen && (
           <motion.div
-            key="settings-overlay"
+            key="settings-overlay" id="settings-overlay"
             initial={{ y: "-100%", opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: "-100%", opacity: 0 }}
@@ -281,7 +287,7 @@ export default function Layout() {
             }}
           >
             <div className="px-4">
-              <SettingsContent />
+              <Outlet />
             </div>
           </motion.div>
         )}
