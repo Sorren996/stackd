@@ -47,7 +47,7 @@ export default function DailyPatternChart({ hourlyAverages, targetLow, targetHig
                   <stop offset="100%" stopColor="#5ba3b8" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <ReferenceArea y1={targetLow} y2={targetHigh} fill="rgba(91,168,138,0.1)" />
+              <ReferenceArea y1={targetLow} y2={targetHigh} fill="rgba(91, 168, 139, 0.75)" />
               <XAxis
                 dataKey="hour"
                 tick={{ fontSize: 9, fill: "rgba(255,255,255,0.35)" }}
