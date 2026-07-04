@@ -517,6 +517,24 @@ const toggleMealInsulinType = (name) => {
       </div>
 
 
+      {/* Alerts & Preferences */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-bold text-white uppercase tracking-wider px-1">Alerts & Preferences</h3>
+        <div className="backdrop-blur-sm bg-white/[0.02] border border-white/10 rounded-3xl p-4 space-y-5">
+          <div className="flex items-center justify-between gap-4">
+            <div className="space-y-0.5">
+              <Label className="text-sm font-semibold text-white/90 flex items-center gap-2">
+                <Target className="w-4 h-4 text-teal-400" />
+                Insulin Stacking Warnings
+              </Label>
+              <p className="text-sm text-white/40">Alert when multiple rapid doses overlap</p>
+            </div>
+            <Switch checked={stackingAlerts} onCheckedChange={handleStackingToggle} />
+          </div>
+        </div>
+      </div>
+
+
 {/* Insulin Plan */}
 <div className="space-y-3">
   <h3 className="text-sm font-bold text-white uppercase tracking-wider px-1">
@@ -708,22 +726,6 @@ const toggleMealInsulinType = (name) => {
 </div>
 
 
-      {/* Alerts & Preferences */}
-      <div className="space-y-3">
-        <h3 className="text-sm font-bold text-white uppercase tracking-wider px-1">Alerts & Preferences</h3>
-        <div className="backdrop-blur-sm bg-white/[0.02] border border-white/10 rounded-3xl p-4 space-y-5">
-          <div className="flex items-center justify-between gap-4">
-            <div className="space-y-0.5">
-              <Label className="text-sm font-semibold text-white/90 flex items-center gap-2">
-                <Target className="w-4 h-4 text-teal-400" />
-                Insulin Stacking Warnings
-              </Label>
-              <p className="text-sm text-white/40">Alert when multiple rapid doses overlap</p>
-            </div>
-            <Switch checked={stackingAlerts} onCheckedChange={handleStackingToggle} />
-          </div>
-        </div>
-      </div>
 
 
 
