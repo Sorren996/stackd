@@ -179,23 +179,23 @@ export default function ConsentManagement() {
 
       {/* Withdrawal modal */}
       <AnimatePresence>
-{showWithdrawModal && (
-  typeof document !== "undefined" &&
-  createPortal(
-  <motion.div
-    initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
-    exit={{ opacity: 0 }}
-    className="fixed inset-0 z-[250] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
-    onClick={() => !isWithdrawing && setShowWithdrawModal(false)}
-  >
-    <motion.div
-      initial={{ scale: 0.96, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      exit={{ scale: 0.96, opacity: 0 }}
-      className="w-full max-w-sm rounded-xl bg-neutral-900 p-5 shadow-xl"
-      onClick={(e) => e.stopPropagation()}
-    >
+        {showWithdrawModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[250] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+            onClick={() => !isWithdrawing && setShowWithdrawModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.96, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.96, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 400, damping: 32 }}
+              className="w-full max-w-md rounded-3xl border border-white/10 p-5"
+              style={{ background: "linear-gradient(165deg, rgba(18,28,23,0.97), rgba(10,16,13,0.98))", backdropFilter: "blur(20px)" }}
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="mb-4 flex items-start gap-3">
                 <AlertTriangle className="w-5 h-5 shrink-0 text-amber-400 mt-0.5" />
                 <div>
@@ -246,9 +246,9 @@ export default function ConsentManagement() {
                 </button>
               </div>
             </motion.div>
-          </motion.div>
-        ))}
-      </AnimatePresence>
+            </motion.div>
+            )}
+            </AnimatePresence>
     </>
   );
 }
