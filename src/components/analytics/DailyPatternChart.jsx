@@ -78,7 +78,7 @@ export default function DailyPatternChart({ hourlyAverages, targetLow, targetHig
 
         <div className="mt-3 flex items-center justify-center gap-4">
           <div className="flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: "rgba(91,168,138,0.5)" }} />
+            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: "rgba(91, 168, 139, 0.74)" }} />
             <span className="text-[10px] uppercase tracking-wider text-white/35">Comfort Zone</span>
           </div>
           <div className="flex items-center gap-1.5">
