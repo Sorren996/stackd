@@ -377,11 +377,11 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
     color = "#d4a056";
   } else if (correctionGlucoseLow) {
     value = "Review";
-    status = "Glucose is below range â€” take care first";
+    status = "Glucose is below range - take care first";
     color = "#6b92c4";
   } else if (ratio < 0.75) {
     value = `${estimatedAdditionalUnits.toFixed(1)}u`;
-    status = "Light coverage â€” below estimate";
+    status = "Light coverage - below estimate";
     color = "#c97060";
   } else if (ratio > 1.25) {
     value = "Generous dose";
@@ -389,7 +389,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
     color = "#6b92c4";
   } else if (!correctionGlucoseAvailable) {
     value = `${expectedMealUnits.toFixed(1)}u`;
-    status = "Meal estimate â€” glucose unavailable";
+    status = "Meal estimate - glucose unavailable";
     color = "#d4a056";
   } else {
     value = "Well balanced";
@@ -409,7 +409,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
           color: "#5ba88a",
         };
         value = "Realigning";
-        status = "Carbs added â€” rising back";
+        status = "Carbs added, rising back";
         color = "#5ba88a";
       } else if (latestIsAfterMeal && latestLow) {
         outcomeAssessment = {
@@ -438,7 +438,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
           color: "#5ba88a",
         };
         value = "Realigning";
-        status = "Support added â€” settling back";
+        status = "Support added, settling back";
         color = "#5ba88a";
       } else if (latestIsAfterMeal && latestHigh) {
         outcomeAssessment = {
