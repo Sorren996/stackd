@@ -621,7 +621,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       <button
         type="button"
         onClick={scrollToLatestGlucose}
-        className="absolute right-0 top-0 z-30 flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-white/55 shadow-lg transition-colors hover:bg-white/[0.1] hover:text-white/85"
+        className="absolute right-0 top-0 z-30 flex backdrop-blur-sm h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-white/55 shadow-lg transition-colors hover:bg-white/[0.1] hover:text-white/85"
         aria-label="Scroll to latest glucose">
           <CornerUpRight className="h-4 w-4" />
         </button>
