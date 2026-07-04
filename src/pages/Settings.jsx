@@ -543,7 +543,8 @@ const toggleMealInsulinType = (name) => {
 
   <div className="backdrop-blur-sm bg-white/[0.02] border border-white/10 rounded-3xl p-4 space-y-5">
     <p className="text-xs text-white/40">
-      Enter the values from your established insulin plan.
+      Enter only insulin settings prescribed or confirmed by your licensed healthcare professional. This app does not provide medical advice, verify dosing accuracy, or replace clinical judgment. Incorrect values may result in serious hypoglycemia or hyperglycemia. Do not start, stop, or adjust insulin based solely on information provided by this app.
+
     </p>
 
     <div className="space-y-2">
