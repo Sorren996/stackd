@@ -458,9 +458,10 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   }, [carbEventMarkers, domainStart, totalMs, chartWidth]);
 
   const positionedDoseMarkers = useMemo(() => {
-    const laneLastX = [];
-    const laneCount = 3;
-    const minMarkerGap = 42;
+    const placed = [];
+    const minHorizontalGap = 30;
+    const labelHeight = 12;
+    const minVerticalGap = 2;
 
     return filteredDoses
       .slice()
@@ -475,14 +476,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         const units = getDoseUnits(dose);
         if (!Number.isFinite(units) || units <= 0) return null;
         const x = (time - domainStart) / totalMs * chartWidth;
-        let lane = laneLastX.findIndex((lastX) => x - lastX >= minMarkerGap);
-        if (lane === -1) {
-          lane = laneLastX.length < laneCount ? laneLastX.length : 0;
-          if (laneLastX.length >= laneCount) {
-            lane = laneLastX.indexOf(Math.min(...laneLastX));
-          }
-        }
-        laneLastX[lane] = x;
 
         const key = getDoseKey(dose, index);
         let peakVal = 0;
@@ -496,7 +489,20 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         }
         const peakY = CHART_MARGIN_TOP + plotHeight * (1 - Math.min(peakVal, 75) / 75);
 
-        return { dose, x: peakX, lane, units, key, peakY };
+        let labelTop = Math.max(2, peakY - 16);
+
+        for (const p of placed) {
+          const horizontalOverlap = Math.abs(peakX - p.x) < minHorizontalGap;
+          const verticalOverlap =
+            labelTop < p.labelTop + p.labelHeight + minVerticalGap &&
+            labelTop + labelHeight + minVerticalGap > p.labelTop;
+          if (horizontalOverlap && verticalOverlap) {
+            labelTop = Math.max(2, p.labelTop - labelHeight - minVerticalGap);
+          }
+        }
+
+        placed.push({ x: peakX, labelTop, labelHeight });
+        return { dose, x: peakX, units, key, peakY, labelTop };
       })
       .filter(Boolean);
   }, [filteredDoses, domainStart, domainEnd, totalMs, chartWidth, chartData, plotHeight]);
@@ -812,10 +818,9 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
           </ComposedChart>
 
-          {filters.insulin && positionedDoseMarkers.map(({ dose, x, lane, units, key, peakY }) => {
+          {filters.insulin && positionedDoseMarkers.map(({ dose, x, units, key, labelTop }) => {
             const isEdgeLeft = x < 24;
             const isEdgeRight = x > chartWidth - 24;
-            const labelTop = Math.max(2, peakY - 16 - lane * 18);
             const formattedUnits = units % 1 === 0 ? String(units) : units.toFixed(1);
 
             return (
