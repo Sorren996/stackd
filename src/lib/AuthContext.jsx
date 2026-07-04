@@ -1,9 +1,13 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { appParams } from '@/lib/app-params';
 import { createAxiosClient } from '@base44/sdk/dist/utils/axios-client';
+import { clearLocalSettingsCache } from '@/lib/userSettings';
 
 const AuthContext = createContext();
+
+const LOGOUT_CHANNEL_NAME = 'stackd-logout-sync';
+const SESSION_EXPIRED_EVENT = 'stackd-session-expired';
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -12,25 +16,85 @@ export const AuthProvider = ({ children }) => {
   const [isLoadingPublicSettings, setIsLoadingPublicSettings] = useState(true);
   const [authError, setAuthError] = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
-  const [appPublicSettings, setAppPublicSettings] = useState(null); // Contains only { id, public_settings }
+  const [appPublicSettings, setAppPublicSettings] = useState(null);
+  const [sessionExpired, setSessionExpired] = useState(false);
+  const logoutChannelRef = useRef(null);
+  const isLoggingOutRef = useRef(false);
+
+  // Cross-tab logout synchronization via BroadcastChannel
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    let channel = null;
+    try {
+      channel = new BroadcastChannel(LOGOUT_CHANNEL_NAME);
+      channel.onmessage = (event) => {
+        if (event.data?.type === 'logout') {
+          // Another tab initiated logout — clear local state and redirect
+          performLocalLogout(false);
+          window.location.href = '/';
+        }
+      };
+      logoutChannelRef.current = channel;
+    } catch {
+      // BroadcastChannel not supported — storage event fallback below
+    }
+
+    // Storage event fallback for browsers without BroadcastChannel
+    const handleStorageChange = (event) => {
+      if (event.key === 'stackd-logout-signal' && event.newValue) {
+        performLocalLogout(false);
+        window.location.href = '/';
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      if (channel) channel.close();
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
 
   useEffect(() => {
     checkAppState();
   }, []);
+
+  const performLocalLogout = (broadcast = true) => {
+    // Clear all user-specific local state
+    setUser(null);
+    setIsAuthenticated(false);
+    setAuthChecked(true);
+    setSessionExpired(false);
+
+    // Clear cached clinical settings and glucose cache
+    clearLocalSettingsCache();
+
+    // Broadcast to other tabs if requested
+    if (broadcast) {
+      try {
+        logoutChannelRef.current?.postMessage({ type: 'logout' });
+      } catch {}
+      // Storage event fallback
+      try {
+        const signal = Date.now().toString();
+        localStorage.setItem('stackd-logout-signal', signal);
+        // Clean up after a moment so it can fire again later
+        setTimeout(() => localStorage.removeItem('stackd-logout-signal'), 1000);
+      } catch {}
+    }
+  };
 
   const checkAppState = async () => {
     try {
       setIsLoadingPublicSettings(true);
       setAuthError(null);
       
-      // First, check app public settings (with token if available)
-      // This will tell us if auth is required, user not registered, etc.
       const appClient = createAxiosClient({
         baseURL: `/api/apps/public`,
         headers: {
           'X-App-Id': appParams.appId
         },
-        token: appParams.token, // Include token if available
+        token: appParams.token,
         interceptResponses: true
       });
       
@@ -38,7 +102,6 @@ export const AuthProvider = ({ children }) => {
         const publicSettings = await appClient.get(`/prod/public-settings/by-id/${appParams.appId}`);
         setAppPublicSettings(publicSettings);
         
-        // If we got the app public settings successfully, check if user is authenticated
         if (appParams.token) {
           await checkUserAuth();
         } else {
@@ -48,42 +111,23 @@ export const AuthProvider = ({ children }) => {
         }
         setIsLoadingPublicSettings(false);
       } catch (appError) {
-        console.error('App state check failed:', appError);
-        
-        // Handle app-level errors
         if (appError.status === 403 && appError.data?.extra_data?.reason) {
           const reason = appError.data.extra_data.reason;
           if (reason === 'auth_required') {
-            setAuthError({
-              type: 'auth_required',
-              message: 'Authentication required'
-            });
+            setAuthError({ type: 'auth_required', message: 'Authentication required' });
           } else if (reason === 'user_not_registered') {
-            setAuthError({
-              type: 'user_not_registered',
-              message: 'User not registered for this app'
-            });
+            setAuthError({ type: 'user_not_registered', message: 'User not registered for this app' });
           } else {
-            setAuthError({
-              type: reason,
-              message: appError.message
-            });
+            setAuthError({ type: reason, message: appError.message });
           }
         } else {
-          setAuthError({
-            type: 'unknown',
-            message: appError.message || 'Failed to load app'
-          });
+          setAuthError({ type: 'unknown', message: appError.message || 'Failed to load app' });
         }
         setIsLoadingPublicSettings(false);
         setIsLoadingAuth(false);
       }
     } catch (error) {
-      console.error('Unexpected error:', error);
-      setAuthError({
-        type: 'unknown',
-        message: error.message || 'An unexpected error occurred'
-      });
+      setAuthError({ type: 'unknown', message: error.message || 'An unexpected error occurred' });
       setIsLoadingPublicSettings(false);
       setIsLoadingAuth(false);
     }
@@ -91,7 +135,6 @@ export const AuthProvider = ({ children }) => {
 
   const checkUserAuth = async () => {
     try {
-      // Now check if the user is authenticated
       setIsLoadingAuth(true);
       const currentUser = await base44.auth.me();
       setUser(currentUser);
@@ -99,37 +142,59 @@ export const AuthProvider = ({ children }) => {
       setIsLoadingAuth(false);
       setAuthChecked(true);
     } catch (error) {
-      console.error('User auth check failed:', error);
       setIsLoadingAuth(false);
       setIsAuthenticated(false);
+      setUser(null);
       setAuthChecked(true);
       
-      // If user auth fails, it might be an expired token — clear stale local state
+      // Session expired or invalid — clear stale local state
       if (error.status === 401 || error.status === 403) {
-        try { localStorage.removeItem('latest_glucose_cache'); } catch {}
-        setAuthError({
-          type: 'auth_required',
-          message: 'Authentication required'
-        });
+        clearLocalSettingsCache();
+        setAuthError({ type: 'auth_required', message: 'Authentication required' });
       }
     }
   };
 
-  const logout = (shouldRedirect = true) => {
-    setUser(null);
-    setIsAuthenticated(false);
-    
-    if (shouldRedirect) {
-      // Use the SDK's logout method which handles token cleanup and redirect
-      base44.auth.logout(window.location.href);
-    } else {
-      // Just remove the token without redirect
-      base44.auth.logout();
+  /**
+   * Centralized session expiration handler.
+   * Called when a protected request fails due to an expired session.
+   * Clears all authenticated state, hides protected data, and redirects.
+   */
+  const handleSessionExpired = () => {
+    setSessionExpired(true);
+    performLocalLogout(true);
+    // Use href for full browser navigation to clear all in-memory state
+    window.location.href = '/';
+  };
+
+  const logout = async (shouldRedirect = true) => {
+    // Prevent duplicate logout requests
+    if (isLoggingOutRef.current) return;
+    isLoggingOutRef.current = true;
+
+    try {
+      // Always clear local state immediately so protected data is hidden
+      // even if the server request fails (offline, poor connectivity)
+      performLocalLogout(shouldRedirect);
+
+      // Attempt the official server-side logout
+      if (shouldRedirect) {
+        await base44.auth.logout('/');
+      } else {
+        await base44.auth.logout();
+      }
+    } catch {
+      // Server logout failed — local state is already cleared.
+      // Redirect to splash so user sees they're logged out.
+      if (shouldRedirect) {
+        window.location.href = '/';
+      }
+    } finally {
+      isLoggingOutRef.current = false;
     }
   };
 
   const navigateToLogin = () => {
-    // Use the SDK's redirectToLogin method
     base44.auth.redirectToLogin(window.location.href);
   };
 
@@ -142,10 +207,12 @@ export const AuthProvider = ({ children }) => {
       authError,
       appPublicSettings,
       authChecked,
+      sessionExpired,
       logout,
       navigateToLogin,
       checkUserAuth,
-      checkAppState
+      checkAppState,
+      handleSessionExpired
     }}>
       {children}
     </AuthContext.Provider>

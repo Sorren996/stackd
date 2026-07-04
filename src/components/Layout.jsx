@@ -169,7 +169,7 @@ export default function Layout() {
             src={SCENE_IMAGES[sceneStatus]}
             alt=""
             initial={{ opacity: 0, scale: 1.03 }}
-            animate={{ opacity: 0.82, scale: 1.03 }}
+            animate={{ opacity: 0.7, scale: 1.03 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 1.1, ease: "easeInOut" }}
             className="absolute inset-x-0 top-0 h-[130vh] w-full max-w-none object-cover"
@@ -182,7 +182,7 @@ export default function Layout() {
             }}
           />
         </AnimatePresence>
-        <div className="absolute inset-0 bg-black/25" />
+        <div className="absolute inset-0 bg-black/50" />
         <div
           className="absolute inset-x-0 bottom-0 h-[38vh]"
           style={{

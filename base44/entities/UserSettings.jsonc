@@ -1,0 +1,78 @@
+{
+  "name": "UserSettings",
+  "type": "object",
+  "properties": {
+    "insulin_sensitivity_mgdl_per_unit": {
+      "type": "number",
+      "description": "How much 1 unit of insulin typically lowers glucose (mg/dL per unit). Must come from the user's established insulin plan."
+    },
+    "correction_target_glucose": {
+      "type": "number",
+      "description": "Glucose baseline used when estimating correction insulin (mg/dL)."
+    },
+    "meal_insulin_units_per_5g": {
+      "type": "number",
+      "description": "Insulin units used to cover 5 grams of carbohydrates."
+    },
+    "meal_insulin_types": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Insulin types used for meals or corrections."
+    },
+    "meal_prebolus_window_minutes": {
+      "type": "number",
+      "description": "How far before the first carb log an insulin dose can still be paired with that meal."
+    },
+    "meal_postbolus_window_minutes": {
+      "type": "number",
+      "description": "How far after the last carb log an insulin dose can still be paired with that meal."
+    },
+    "meal_outcome_window_minutes": {
+      "type": "number",
+      "description": "How long after a meal the app should keep reviewing that grouped meal."
+    },
+    "target_range_low": {
+      "type": "number",
+      "description": "Lower bound of the user's target glucose range (mg/dL)."
+    },
+    "target_range_high": {
+      "type": "number",
+      "description": "Upper bound of the user's target glucose range (mg/dL)."
+    },
+    "stacking_alerts_enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether insulin stacking warnings are shown."
+    },
+    "glucose_units": {
+      "type": "string",
+      "enum": [
+        "mg/dL",
+        "mmol/L"
+      ],
+      "default": "mg/dL",
+      "description": "Display units for glucose values."
+    },
+    "settings_migrated_from_local": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether local storage settings were migrated to the server."
+    }
+  },
+  "rls": {
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider, useQuery } from '@tanstack/react-query'
-import { queryClientInstance } from '@/lib/query-client'
+import { queryClientInstance, setOnAuthFailure } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
@@ -25,8 +25,18 @@ import RequiredAcknowledgments from "@/pages/RequiredAcknowledgments";
 import { ACKNOWLEDGMENT_VERSIONS, CHECKBOX_KEYS } from "@/lib/acknowledgmentConfig";
 
 const AuthenticatedApp = () => {
-  const { user, isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, isAuthenticated } = useAuth();
+  const { user, isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, isAuthenticated, handleSessionExpired } = useAuth();
   const [dataReady, setDataReady] = useState(false);
+
+  // Wire global auth-failure handler so any 401/403 during a query or mutation
+  // triggers the centralized session-expiration flow.
+  useEffect(() => {
+    setOnAuthFailure(() => {
+      queryClientInstance.clear();
+      handleSessionExpired();
+    });
+    return () => setOnAuthFailure(null);
+  }, [handleSessionExpired]);
 
   const { data: latestAck, isLoading: ackLoading } = useQuery({
     queryKey: ["latest-acknowledgment"],

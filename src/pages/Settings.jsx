@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { base44 } from "@/api/base44Client";
 import { useQueryClient } from "@tanstack/react-query";
-import { LogOut, User, Target, Radio, Download, Loader2, Sparkles, Heart, Upload, Trash2, Shield, AlertTriangle, Info } from "lucide-react";
+import { LogOut, User, Target, Radio, Download, Loader2, Sparkles, Heart, Upload, Trash2, Shield, AlertTriangle, Info, Check } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
@@ -10,6 +10,8 @@ import { toast } from "sonner";
 import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
 import { AnimatePresence, motion } from "framer-motion";
 import ConsentManagement from "@/components/settings/ConsentManagement";
+import { useUserSettings } from "@/hooks/useUserSettings";
+import { useAuth } from "@/lib/AuthContext";
 
 const INSULIN_PLAN_HELP = {
   review: {
@@ -227,6 +229,8 @@ function NumberPadField({ label, value, onChange, placeholder = "--", decimal = 
 }
 
 export default function Settings() {
+  const { user: authUser, logout: authLogout } = useAuth();
+  const { settings: serverSettings, isLoading: isLoadingSettings, isSaving, saveError, saveSuccess, save: saveSettings } = useUserSettings();
   const [user, setUser] = useState(null);
   const [stackingAlerts, setStackingAlerts] = useState(() => {
     const saved = localStorage.getItem("stacking_alerts_enabled");
@@ -273,6 +277,70 @@ const [postMealWindowMinutes, setPostMealWindowMinutes] = useState(() => {
 const [outcomeWindowMinutes, setOutcomeWindowMinutes] = useState(() => {
   return localStorage.getItem("meal_outcome_window_minutes") || "240";
 });
+
+// Load settings from server when available — server is authoritative, not local storage
+useEffect(() => {
+  if (!serverSettings) return;
+
+  if (serverSettings.target_range_low != null) {
+    setTargetLow(serverSettings.target_range_low);
+    localStorage.setItem("target_range_low", String(serverSettings.target_range_low));
+  }
+  if (serverSettings.target_range_high != null) {
+    setTargetHigh(serverSettings.target_range_high);
+    localStorage.setItem("target_range_high", String(serverSettings.target_range_high));
+  }
+  if (serverSettings.insulin_sensitivity_mgdl_per_unit != null) {
+    setInsulinSensitivity(String(serverSettings.insulin_sensitivity_mgdl_per_unit));
+    localStorage.setItem("insulin_sensitivity_mgdl_per_unit", String(serverSettings.insulin_sensitivity_mgdl_per_unit));
+  }
+  if (serverSettings.correction_target_glucose != null) {
+    setCorrectionTargetGlucose(String(serverSettings.correction_target_glucose));
+    localStorage.setItem("correction_target_glucose", String(serverSettings.correction_target_glucose));
+  }
+  if (serverSettings.meal_insulin_units_per_5g != null) {
+    setUnitsPer5g(String(serverSettings.meal_insulin_units_per_5g));
+    localStorage.setItem("meal_insulin_units_per_5g", String(serverSettings.meal_insulin_units_per_5g));
+  }
+  if (Array.isArray(serverSettings.meal_insulin_types) && serverSettings.meal_insulin_types.length) {
+    setMealInsulinTypes(serverSettings.meal_insulin_types);
+    localStorage.setItem("meal_insulin_types", JSON.stringify(serverSettings.meal_insulin_types));
+  }
+  if (serverSettings.meal_prebolus_window_minutes != null) {
+    setPreMealWindowMinutes(String(serverSettings.meal_prebolus_window_minutes));
+    localStorage.setItem("meal_prebolus_window_minutes", String(serverSettings.meal_prebolus_window_minutes));
+  }
+  if (serverSettings.meal_postbolus_window_minutes != null) {
+    setPostMealWindowMinutes(String(serverSettings.meal_postbolus_window_minutes));
+    localStorage.setItem("meal_postbolus_window_minutes", String(serverSettings.meal_postbolus_window_minutes));
+  }
+  if (serverSettings.meal_outcome_window_minutes != null) {
+    setOutcomeWindowMinutes(String(serverSettings.meal_outcome_window_minutes));
+    localStorage.setItem("meal_outcome_window_minutes", String(serverSettings.meal_outcome_window_minutes));
+  }
+  if (typeof serverSettings.stacking_alerts_enabled === "boolean") {
+    setStackingAlerts(serverSettings.stacking_alerts_enabled);
+    localStorage.setItem("stacking_alerts_enabled", serverSettings.stacking_alerts_enabled ? "true" : "false");
+  }
+
+  window.dispatchEvent(new Event("target-range-updated"));
+  window.dispatchEvent(new Event("insulin-settings-updated"));
+}, [serverSettings]);
+
+const handleSaveSettings = () => {
+  saveSettings({
+    insulin_sensitivity_mgdl_per_unit: insulinSensitivity === "" ? undefined : Number(insulinSensitivity),
+    correction_target_glucose: correctionTargetGlucose === "" ? undefined : Number(correctionTargetGlucose),
+    meal_insulin_units_per_5g: unitsPer5g === "" ? undefined : Number(unitsPer5g),
+    meal_insulin_types: mealInsulinTypes,
+    meal_prebolus_window_minutes: preMealWindowMinutes === "" ? undefined : Number(preMealWindowMinutes),
+    meal_postbolus_window_minutes: postMealWindowMinutes === "" ? undefined : Number(postMealWindowMinutes),
+    meal_outcome_window_minutes: outcomeWindowMinutes === "" ? undefined : Number(outcomeWindowMinutes),
+    target_range_low: targetLow,
+    target_range_high: targetHigh,
+    stacking_alerts_enabled: stackingAlerts,
+  });
+};
 
 const handleInsulinSettingChange = (key, setValue) => (event) => {
   const value = event.target.value;
@@ -321,14 +389,7 @@ const toggleMealInsulinType = (name) => {
     setIsLoggingOut(true);
     try {
       queryClient.clear();
-      [
-        'stacking_alerts_enabled', 'target_range_low', 'target_range_high',
-        'insulin_sensitivity_mgdl_per_unit', 'correction_target_glucose',
-        'meal_insulin_units_per_5g', 'meal_insulin_types',
-        'meal_prebolus_window_minutes', 'meal_postbolus_window_minutes',
-        'meal_outcome_window_minutes', 'latest_glucose_cache'
-      ].forEach(key => localStorage.removeItem(key));
-      base44.auth.logout('/');
+      await authLogout(true);
     } catch {
       toast.error("Something didn't go as expected. Please try again.");
       setIsLoggingOut(false);
@@ -349,7 +410,7 @@ const toggleMealInsulinType = (name) => {
     ...carbs.map((c) => base44.entities.CarbEntry.delete(c.id))]
     );
     queryClient.clear();
-    base44.auth.logout('/');
+    await authLogout(true);
   };
 
   const handleStackingToggle = (checked) => {
@@ -743,8 +804,27 @@ const toggleMealInsulinType = (name) => {
   </div>
 </div>
 
-
-
+      {/* Save Settings to Account */}
+      <div className="space-y-2">
+        <button
+          onClick={handleSaveSettings}
+          disabled={isSaving}
+          className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl font-semibold text-white transition-all disabled:opacity-50"
+          style={{
+            background: "linear-gradient(145deg, rgba(91,168,138,0.85), rgba(91,163,184,0.72))",
+            boxShadow: "0 8px 28px rgba(91,163,184,0.22), inset 0 1px 1px rgba(255,255,255,0.2)",
+          }}
+        >
+          {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : saveSuccess ? <Check className="w-4 h-4" /> : null}
+          {isSaving ? "Saving..." : saveSuccess ? "Saved!" : "Save to My Account"}
+        </button>
+        {saveError && (
+          <p className="text-xs text-center text-red-400/80 px-4">{saveError}</p>
+        )}
+        <p className="text-[10px] text-center text-white/30 px-4">
+          Your settings are saved securely to your account and follow you across devices.
+        </p>
+      </div>
 
 
 

@@ -11,6 +11,7 @@ import CarbCard from "../components/CarbCard";
 import { getDoseStatus, INSULIN_PROFILES } from "@/lib/insulinPharmacology";
 import { Activity, Plus, AlertTriangle, X, Pencil } from "lucide-react";
 import { toast } from "sonner";
+import { getVersionString } from "@/lib/appVersion";
 import { TimeScrollField, NumberPadField, TextPadField, SelectField } from "@/components/FormInputFields";
 
 const FRESH_DATA_MS = 60 * 1000;
@@ -624,6 +625,12 @@ export default function Dashboard() {
       )}
 
       <FloatingDoseLogger />
+
+      <div className="flex w-full justify-center pt-8 pb-4">
+        <span className="text-[10px] font-medium tracking-wide text-white/20">
+          {getVersionString()}
+        </span>
+      </div>
     </div>
   );
 }
