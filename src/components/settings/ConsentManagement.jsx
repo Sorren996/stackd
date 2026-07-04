@@ -180,6 +180,7 @@ export default function ConsentManagement() {
       {/* Withdrawal modal */}
       <AnimatePresence>
 {showWithdrawModal && (
+  typeof document !== "undefined" &&
   createPortal(
   <motion.div
     initial={{ opacity: 0 }}
