@@ -22,29 +22,31 @@ export default function TimelineDayGroup({
         }}
       />
 
-      {/* Day waypoint + label */}
-      <div className="relative z-10 mb-3 pl-7">
-        {/* Waypoint dot */}
-        <div
-          className="absolute left-0 top-1/2 z-10 flex h-4 w-4 -translate-y-1/2 items-center justify-center rounded-full border-2"
-          style={{
-            borderColor: "rgba(91,168,138,0.4)",
-            background: "hsl(162,12%,9%)",
-          }}
-        >
-          <motion.div
-            animate={{ scale: isOpen ? 1 : 0.5 }}
-            transition={SPRING}
-            className="h-1.5 w-1.5 rounded-full"
-            style={{ backgroundColor: "#5ba88a" }}
-          />
+      {/* Day waypoint */}
+      <div className="relative z-10 mb-3 flex items-center gap-3">
+        {/* Fixed-width timeline column */}
+        <div className="flex w-4 shrink-0 items-center justify-center">
+          <div
+            className="relative z-10 flex h-4 w-4 items-center justify-center rounded-full border-2"
+            style={{
+              borderColor: "rgba(91,168,138,0.4)",
+              background: "hsl(162,12%,9%)",
+            }}
+          >
+            <motion.div
+              animate={{ scale: isOpen ? 1 : 0.5 }}
+              transition={SPRING}
+              className="h-1.5 w-1.5 rounded-full"
+              style={{ backgroundColor: "#5ba88a" }}
+            />
+          </div>
         </div>
 
         {/* Day label + summary in glass card */}
         <button
           type="button"
           onClick={onToggle}
-          className="flex w-full items-center justify-between gap-3 rounded-2xl border px-4 py-2.5 backdrop-blur-sm transition-colors hover:bg-white/[0.04]"
+          className="flex w-full min-w-0 items-center justify-between gap-3 rounded-2xl border px-4 py-2.5 backdrop-blur-sm transition-colors hover:bg-white/[0.04]"
           style={GLASS_SURFACE}
         >
           <div className="min-w-0 text-left">
