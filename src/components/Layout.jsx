@@ -210,7 +210,7 @@ export default function Layout() {
               type="button"
               onClick={toggleSettings}
               aria-label="Open settings"
-              className="flex h-9 w-9 items-center justify-center rounded-full border transition-all"
+              className="flex h-9 w-9 items-center justify-center rounded-full backdrop-blur-sm border transition-all"
               style={{
                 background: isSettingsOpen ? "rgba(20,184,166,0.1)" : "rgba(255,255,255,0.05)",
                 borderColor: isSettingsOpen ? "rgba(20,184,166,0.35)" : "rgba(255,255,255,0.05)",
