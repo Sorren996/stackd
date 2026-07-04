@@ -74,6 +74,7 @@ export default function Layout() {
   const [targetRange, setTargetRange] = useState(readTargetRange);
   const sceneStatus = useMemo(() => getGlucoseScene(latestGlucose, targetRange), [latestGlucose, targetRange]);
   const sceneRef = useRef(null);
+  const overlayRef = useRef(null);
 
   useEffect(() => {
     const updateLatestGlucose = () => setLatestGlucose(readCachedLatestGlucose());
@@ -106,6 +107,11 @@ export default function Layout() {
     let frame = 0;
     let currentOffset = 0;
     let targetOffset = 0;
+    let currentOverlay = 0;
+    let targetOverlay = 0;
+
+    const MAX_DARKNESS = 0.6;
+    const SCROLL_RANGE = 500;
 
     const updateSceneOffset = () => {
       frame = 0;
@@ -114,28 +120,38 @@ export default function Layout() {
 
       // Lerp toward target for buttery-smooth parallax — no stutter
       currentOffset += (targetOffset - currentOffset) * 0.18;
+      currentOverlay += (targetOverlay - currentOverlay) * 0.18;
 
-      if (Math.abs(targetOffset - currentOffset) < 0.15) {
+      if (Math.abs(targetOffset - currentOffset) < 0.15 && Math.abs(targetOverlay - currentOverlay) < 0.005) {
         currentOffset = targetOffset;
+        currentOverlay = targetOverlay;
         sceneRef.current.style.transform = `translate3d(0, ${currentOffset}px, 0)`;
+        if (overlayRef.current) overlayRef.current.style.opacity = String(currentOverlay);
         return;
       }
 
       sceneRef.current.style.transform = `translate3d(0, ${currentOffset}px, 0)`;
+      if (overlayRef.current) overlayRef.current.style.opacity = String(currentOverlay);
       frame = window.requestAnimationFrame(updateSceneOffset);
     };
 
     const handleScroll = () => {
       targetOffset = Math.max(-160, Math.min(0, window.scrollY * -0.12));
+      targetOverlay = Math.min(MAX_DARKNESS, (window.scrollY / SCROLL_RANGE) * MAX_DARKNESS);
       if (frame) return;
       frame = window.requestAnimationFrame(updateSceneOffset);
     };
 
     // Set initial position without animation
     targetOffset = Math.max(-160, Math.min(0, window.scrollY * -0.12));
+    targetOverlay = Math.min(MAX_DARKNESS, (window.scrollY / SCROLL_RANGE) * MAX_DARKNESS);
     currentOffset = targetOffset;
+    currentOverlay = targetOverlay;
     if (sceneRef.current) {
       sceneRef.current.style.transform = `translate3d(0, ${currentOffset}px, 0)`;
+    }
+    if (overlayRef.current) {
+      overlayRef.current.style.opacity = String(currentOverlay);
     }
 
     window.addEventListener("scroll", handleScroll, { passive: true });
@@ -182,7 +198,7 @@ export default function Layout() {
             }}
           />
         </AnimatePresence>
-        <div className="absolute inset-0 bg-black/50" />
+        <div ref={overlayRef} className="absolute inset-0 bg-black" style={{ opacity: 0, willChange: "opacity" }} />
         <div
           className="absolute inset-x-0 bottom-0 h-[38vh]"
           style={{
