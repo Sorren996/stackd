@@ -179,23 +179,21 @@ export default function ConsentManagement() {
 
       {/* Withdrawal modal */}
       <AnimatePresence>
-        {showWithdrawModal && (
+{showWithdrawModal && (
+  <motion.div
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    exit={{ opacity: 0 }}
+    className="fixed inset-0 z-[250] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+    onClick={() => !isWithdrawing && setShowWithdrawModal(false)}
+  >
     <motion.div
-      initial={{ opacity: 0, y: -6 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -6 }}
-      className="absolute bottom-full left-1/2 z-[250] mb-2 w-80 -translate-x-1/2 rounded-xl bg-neutral-900 p-4 shadow-xl"
-            onClick={() => !isWithdrawing && setShowWithdrawModal(false)}
-          >
-            <motion.div
-              initial={{ y: 40, scale: 0.96 }}
-              animate={{ y: 0, scale: 1 }}
-              exit={{ y: 40, scale: 0.96 }}
-              transition={{ type: "spring", stiffness: 400, damping: 32 }}
-              className="w-full max-w-md rounded-3xl border border-white/10 p-5"
-              style={{ background: "linear-gradient(165deg, rgba(18,28,23,0.97), rgba(10,16,13,0.98))", backdropFilter: "blur(20px)" }}
-              onClick={(e) => e.stopPropagation()}
-            >
+      initial={{ scale: 0.96, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      exit={{ scale: 0.96, opacity: 0 }}
+      className="w-full max-w-sm rounded-xl bg-neutral-900 p-5 shadow-xl"
+      onClick={(e) => e.stopPropagation()}
+    >
               <div className="mb-4 flex items-start gap-3">
                 <AlertTriangle className="w-5 h-5 shrink-0 text-amber-400 mt-0.5" />
                 <div>
