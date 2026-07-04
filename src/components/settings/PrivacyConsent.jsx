@@ -81,24 +81,8 @@ export default function PrivacyConsent() {
             </div>
           </div>
 
-          {/* Data Export */}
-          <div className="border-t border-white/8 pt-3">
-            <button
-              type="button"
-              onClick={handleExportCSV}
-              disabled={isExporting}
-              className="flex w-full items-center justify-between gap-3 rounded-2xl px-3 py-2.5 transition hover:bg-white/5 disabled:opacity-40"
-            >
-              <div className="flex items-center gap-3">
-                <Download className="w-4 h-4 text-white/40" />
-                <div className="text-left">
-                  <p className="text-sm font-medium text-white/80">Export 30-Day Data</p>
-                  <p className="text-[10px] text-white/30">Download glucose and insulin logs as CSV</p>
-                </div>
-              </div>
-              {isExporting && <Loader2 className="w-3.5 h-3.5 animate-spin text-white/40" />}
-            </button>
-          </div>
+       
+         
         </div>
       </div>
 
