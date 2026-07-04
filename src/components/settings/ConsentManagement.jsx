@@ -180,11 +180,11 @@ export default function ConsentManagement() {
       {/* Withdrawal modal */}
       <AnimatePresence>
         {showWithdrawModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[250] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto"
+    <motion.div
+      initial={{ opacity: 0, y: -6 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -6 }}
+      className="absolute bottom-full left-1/2 z-[250] mb-2 w-80 -translate-x-1/2 rounded-xl bg-neutral-900 p-4 shadow-xl"
             onClick={() => !isWithdrawing && setShowWithdrawModal(false)}
           >
             <motion.div
