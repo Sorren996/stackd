@@ -12,7 +12,9 @@ import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
 import { TimeScrollField, NumberPadField, TextPadField, SelectField } from "@/components/FormInputFields";
 import HighProteinFatCheckbox from "@/components/HighProteinFatCheckbox";
 import TimelineDayGroup from "@/components/history/TimelineDayGroup";
+import TimelineWeekGroup from "@/components/history/TimelineWeekGroup";
 import { GLASS_SURFACE } from "@/lib/glassTheme";
+import { startOfWeek, format as fnsFormat } from "date-fns";
 
 function readTargetRange() {
   if (typeof window === "undefined") return { low: 70, high: 180 };
@@ -66,6 +68,42 @@ function groupByDate(items, dateField) {
       else if (isYesterday(d)) label = "Yesterday";
       return { date, label, items };
     });
+}
+
+function groupByWeek(dayGroups) {
+  const weeks = {};
+  dayGroups.forEach((day) => {
+    const parsed = parseISO(day.date);
+    if (Number.isNaN(parsed.getTime())) return;
+
+    const weekStart = startOfWeek(parsed, { weekStartsOn: 1 });
+    const weekKey = fnsFormat(weekStart, "yyyy-MM-dd");
+    if (!weeks[weekKey]) weeks[weekKey] = { weekStart, days: [] };
+    weeks[weekKey].days.push(day);
+  });
+
+  const now = new Date();
+  const thisWeekStart = startOfWeek(now, { weekStartsOn: 1 });
+  const lastWeekStart = new Date(thisWeekStart.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+  return Object.entries(weeks)
+    .sort(([a], [b]) => b.localeCompare(a))
+    .map(([weekKey, { weekStart, days }]) => {
+      let label;
+      if (fnsFormat(weekStart, "yyyy-MM-dd") === fnsFormat(thisWeekStart, "yyyy-MM-dd")) {
+        label = "This Week";
+      } else if (fnsFormat(weekStart, "yyyy-MM-dd") === fnsFormat(lastWeekStart, "yyyy-MM-dd")) {
+        label = "Last Week";
+      } else {
+        label = `Week of ${format(weekStart, "MMM d")}`;
+      }
+      return { weekKey, label, days };
+    });
+}
+
+function getWeekSummary(days, summaryFn) {
+  const allItems = days.flatMap((d) => d.items);
+  return summaryFn(allItems);
 }
 
 function normalizeCarbEntry(entry) {
@@ -531,21 +569,31 @@ export default function History() {
               <p className="text-sm text-muted-foreground mt-1">Tap the + button to record your first moment of support.</p>
             </div>
           ) : (
-            doseGroups.map((group) => (
-              <TimelineDayGroup
-                key={group.date}
-                label={group.label}
-                count={group.items.length}
-                summary={getDoseDaySummary(group.items)}
-                isOpen={openGroup === group.date}
-                onToggle={() => setOpenGroup(openGroup === group.date ? null : group.date)}
+            groupByWeek(doseGroups).map((week) => (
+              <TimelineWeekGroup
+                key={week.weekKey}
+                label={week.label}
+                dayCount={week.days.length}
+                momentCount={week.days.reduce((s, d) => s + d.items.length, 0)}
+                summary={getWeekSummary(week.days, getDoseDaySummary)}
               >
-                {group.items.map((dose) => (
-                  <EditableLog key={dose.id} onEdit={() => setEditingLog({ type: "insulin", item: dose })}>
-                    <DoseCard dose={dose} onDelete={(id) => deleteDose.mutate(id)} />
-                  </EditableLog>
+                {week.days.map((group) => (
+                  <TimelineDayGroup
+                    key={group.date}
+                    label={group.label}
+                    count={group.items.length}
+                    summary={getDoseDaySummary(group.items)}
+                    isOpen={openGroup === group.date}
+                    onToggle={() => setOpenGroup(openGroup === group.date ? null : group.date)}
+                  >
+                    {group.items.map((dose) => (
+                      <EditableLog key={dose.id} onEdit={() => setEditingLog({ type: "insulin", item: dose })}>
+                        <DoseCard dose={dose} onDelete={(id) => deleteDose.mutate(id)} />
+                      </EditableLog>
+                    ))}
+                  </TimelineDayGroup>
                 ))}
-              </TimelineDayGroup>
+              </TimelineWeekGroup>
             ))
           )}
         </div>
@@ -581,21 +629,31 @@ export default function History() {
               <p className="text-sm text-muted-foreground mt-1">Your glucose check-ins will gently appear here as you log them.</p>
             </div>
           ) : (
-            glucoseGroups.map((group) => (
-              <TimelineDayGroup
-                key={group.date}
-                label={group.label}
-                count={group.items.length}
-                summary={getGlucoseDaySummary(group.items, targetLow, targetHigh)}
-                isOpen={openGroup === group.date}
-                onToggle={() => setOpenGroup(openGroup === group.date ? null : group.date)}
+            groupByWeek(glucoseGroups).map((week) => (
+              <TimelineWeekGroup
+                key={week.weekKey}
+                label={week.label}
+                dayCount={week.days.length}
+                momentCount={week.days.reduce((s, d) => s + d.items.length, 0)}
+                summary={getWeekSummary(week.days, (items) => getGlucoseDaySummary(items, targetLow, targetHigh))}
               >
-                {group.items.map((reading) => (
-                  <EditableLog key={reading.id} onEdit={() => setEditingLog({ type: "glucose", item: reading })}>
-                    <GlucoseCard reading={reading} onDelete={(id) => deleteGlucose.mutate(id)} />
-                  </EditableLog>
+                {week.days.map((group) => (
+                  <TimelineDayGroup
+                    key={group.date}
+                    label={group.label}
+                    count={group.items.length}
+                    summary={getGlucoseDaySummary(group.items, targetLow, targetHigh)}
+                    isOpen={openGroup === group.date}
+                    onToggle={() => setOpenGroup(openGroup === group.date ? null : group.date)}
+                  >
+                    {group.items.map((reading) => (
+                      <EditableLog key={reading.id} onEdit={() => setEditingLog({ type: "glucose", item: reading })}>
+                        <GlucoseCard reading={reading} onDelete={(id) => deleteGlucose.mutate(id)} />
+                      </EditableLog>
+                    ))}
+                  </TimelineDayGroup>
                 ))}
-              </TimelineDayGroup>
+              </TimelineWeekGroup>
             ))
           )}
         </div>
@@ -629,21 +687,31 @@ export default function History() {
               <p className="text-sm text-muted-foreground mt-1">Your meals will appear here as you log them.</p>
             </div>
           ) : (
-            carbGroups.map((group) => (
-              <TimelineDayGroup
-                key={group.date}
-                label={group.label}
-                count={group.items.length}
-                summary={getCarbDaySummary(group.items)}
-                isOpen={openGroup === group.date}
-                onToggle={() => setOpenGroup(openGroup === group.date ? null : group.date)}
+            groupByWeek(carbGroups).map((week) => (
+              <TimelineWeekGroup
+                key={week.weekKey}
+                label={week.label}
+                dayCount={week.days.length}
+                momentCount={week.days.reduce((s, d) => s + d.items.length, 0)}
+                summary={getWeekSummary(week.days, getCarbDaySummary)}
               >
-                {group.items.map((entry) => (
-                  <EditableLog key={entry.id} onEdit={() => setEditingLog({ type: "carbs", item: entry })}>
-                    <CarbCard entry={entry} onDelete={(id) => deleteCarb.mutate(id)} />
-                  </EditableLog>
+                {week.days.map((group) => (
+                  <TimelineDayGroup
+                    key={group.date}
+                    label={group.label}
+                    count={group.items.length}
+                    summary={getCarbDaySummary(group.items)}
+                    isOpen={openGroup === group.date}
+                    onToggle={() => setOpenGroup(openGroup === group.date ? null : group.date)}
+                  >
+                    {group.items.map((entry) => (
+                      <EditableLog key={entry.id} onEdit={() => setEditingLog({ type: "carbs", item: entry })}>
+                        <CarbCard entry={entry} onDelete={(id) => deleteCarb.mutate(id)} />
+                      </EditableLog>
+                    ))}
+                  </TimelineDayGroup>
                 ))}
-              </TimelineDayGroup>
+              </TimelineWeekGroup>
             ))
           )}
         </div>

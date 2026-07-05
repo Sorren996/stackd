@@ -401,20 +401,50 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
   }
 
   // --- Continuous monitoring (evolves as glucose readings come in) ---
+  // Priority is given to the CURRENT glucose state over historical dip/peak data,
+  // so the card always reflects where you are now, not just where you've been.
   let outcomeAssessment = null;
 
   if (mealStillUnderReview && ratio !== null && !correctionGlucoseLow) {
-    if (lowOutcome && lowOutcome.value < insulinSettings.targetLow) {
-      if (hasCorrectiveCarbs && latestIsAfterMeal && latestLow) {
+    const hadDip = lowOutcome && lowOutcome.value < insulinSettings.targetLow;
+    const hadSpike = peakOutcome && peakOutcome.value > insulinSettings.targetHigh + 20;
+
+    if (latestIsAfterMeal && latestInRange) {
+      // Currently in range — always show a positive recovery message
+      if (hadDip) {
+        outcomeAssessment = {
+          label: "Settled nicely",
+          message: "There was a gentle dip along the way, but you've found your footing again. Well done.",
+          color: "#5ba88a",
+        };
+      } else if (hadSpike) {
+        outcomeAssessment = {
+          label: "Settled nicely",
+          message: "There was a rise after eating, but you've come back to range. Nice work staying with it.",
+          color: "#5ba88a",
+        };
+      } else {
+        outcomeAssessment = {
+          label: "Tracking beautifully",
+          message: "Right where we want to be. Your dosing is aligning well with this meal.",
+          color: "#5ba88a",
+        };
+      }
+      value = outcomeAssessment.label;
+      status = "Back in a comfortable range";
+      color = "#5ba88a";
+    } else if (latestIsAfterMeal && latestLow) {
+      // Currently below range
+      if (hadDip && hasCorrectiveCarbs) {
         outcomeAssessment = {
           label: "Rising gently",
-          message: "Carbs added. We're keeping a supportive eye on the trend as you gently rise back to your comfortable range.",
+          message: "Nourishment added. We're keeping a supportive eye on the trend as you gently rise back to your comfortable range.",
           color: "#5ba88a",
         };
         value = "Realigning";
-        status = "Carbs added, rising back";
+        status = "Nourishment added, rising back";
         color = "#5ba88a";
-      } else if (latestIsAfterMeal && latestLow) {
+      } else if (hadDip) {
         outcomeAssessment = {
           label: "Worth a closer look",
           message: "It looks like you've provided a bit more support than this moment needed. Please enjoy a gentle carb source and stay close to the trend while your body settles back.",
@@ -423,27 +453,19 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
         value = "Take care";
         status = "Glucose dipped below range";
         color = "#6b92c4";
-      } else if (latestIsAfterMeal && latestInRange) {
+      } else {
         outcomeAssessment = {
-          label: "Settled nicely",
-          message: "There was a dip along the way, but you're back in a comfortable range. Well done.",
-          color: "#5ba88a",
+          label: "Below range",
+          message: "Glucose has dipped below your comfortable range. Consider a gentle carb source and follow your established plan.",
+          color: "#6b92c4",
         };
-        value = "Settled nicely";
-        status = "Back in a comfortable range";
-        color = "#5ba88a";
-      } else if (latestIsAfterMeal && !latestLow) {
-        outcomeAssessment = {
-          label: "Settled nicely",
-          message: "There was a dip along the way, but you've found your footing again. Well done.",
-          color: "#5ba88a",
-        };
-        value = "Settled nicely";
-        status = "Back in a comfortable range";
-        color = "#5ba88a";
+        value = "Take care";
+        status = "Below comfort zone";
+        color = "#6b92c4";
       }
-    } else if (peakOutcome && peakOutcome.value > insulinSettings.targetHigh + 20) {
-      if (hasCorrectiveInsulin && latestIsAfterMeal && latestHigh) {
+    } else if (latestIsAfterMeal && latestHigh) {
+      // Currently above range
+      if (hadSpike && hasCorrectiveInsulin) {
         outcomeAssessment = {
           label: "Finding its balance",
           message: "You added a little extra support, and your body is working through it now. We're watching closely as things gently return to a comfortable flow.",
@@ -452,7 +474,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
         value = "Realigning";
         status = "Support added, settling back";
         color = "#5ba88a";
-      } else if (latestIsAfterMeal && latestHigh) {
+      } else if (hadSpike) {
         outcomeAssessment = {
           label: "Still settling",
           message: "Glucose is climbing a little higher than we'd like. Let's give it some gentle time to see how your body finds its balance before adding more support.",
@@ -461,34 +483,16 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
         value = "Still settling";
         status = "Glucose trending above range";
         color = "#d4a056";
-      } else if (latestIsAfterMeal && latestInRange) {
+      } else {
         outcomeAssessment = {
-          label: "Settled nicely",
-          message: "There was a rise after eating, but you've come back to range. Nice work staying with it.",
-          color: "#5ba88a",
+          label: "Above range",
+          message: "Glucose is a little above your comfortable range. Give it some gentle time to settle before adding more support.",
+          color: "#d4a056",
         };
-        value = "Settled nicely";
-        status = "Back in a comfortable range";
-        color = "#5ba88a";
-      } else if (latestIsAfterMeal && !latestHigh) {
-        outcomeAssessment = {
-          label: "Settled nicely",
-          message: "There was a rise after eating, but things have settled back. Nice work staying with it.",
-          color: "#5ba88a",
-        };
-        value = "Settled nicely";
-        status = "Back in a comfortable range";
-        color = "#5ba88a";
+        value = "Still settling";
+        status = "Above comfort zone";
+        color = "#d4a056";
       }
-    } else if (latestIsAfterMeal && latestInRange) {
-      outcomeAssessment = {
-        label: "Tracking beautifully",
-        message: "Right where we want to be. Your dosing is aligning well with this meal.",
-        color: "#5ba88a",
-      };
-      value = "Tracking beautifully";
-      status = "Right where we want to be";
-      color = "#5ba88a";
     }
   }
 
