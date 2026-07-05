@@ -46,8 +46,8 @@ function readTargetRange() {
 
 const SCENE_IMAGES = {
   high: "https://res.cloudinary.com/bzqjmwln/image/upload/v1783289511/serene_mountain_cloud_loop_more_visible_iua2rx.gif",
-  range: "https://res.cloudinary.com/bzqjmwln/image/upload/v1783094100/01e40410-8011-4b5c-a610-c19ed5209481_jdz8wn.png",
-  low: "https://res.cloudinary.com/bzqjmwln/image/upload/v1782928032/valley_vqpesd.png",
+  range: "https://res.cloudinary.com/bzqjmwln/image/upload/v1783290766/forest_river_cloud_loop_much_less_transparent_isw9wy.gif",
+  low: "https://res.cloudinary.com/bzqjmwln/image/upload/v1783290769/visible_valley_cloud_loop_hfyhph.gif",
 };
 
 function getGlucoseScene(reading, targetRange) {
