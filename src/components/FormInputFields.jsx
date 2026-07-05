@@ -12,7 +12,7 @@ function formatTimeLabel(value) {
 function buildTimeValue(hour12, minute, suffix) {
   let hour = Number(hour12) % 12;
   if (suffix === "PM") hour += 12;
-  const safeMinute = Math.max(0, Math.min(55, Number(minute) || 0));
+  const safeMinute = Math.max(0, Math.min(59, Number(minute) || 0));
   return `${String(hour).padStart(2, "0")}:${String(safeMinute).padStart(2, "0")}`;
 }
 
@@ -21,7 +21,7 @@ function parseTimeValue(value) {
   const hours = Number(hoursRaw);
   return {
     hour12: hours % 12 || 12,
-    minute: Math.max(0, Math.min(55, Math.floor(Number(minutesRaw) / 5) * 5)),
+    minute: Math.max(0, Math.min(59, Number(minutesRaw) || 0)),
     suffix: hours >= 12 ? "PM" : "AM",
   };
 }
@@ -142,7 +142,7 @@ export function TimeScrollField({ label, value, onChange, max }) {
   const fieldRef = useRef(null);
   const parsed = parseTimeValue(value);
   const hours = Array.from({ length: 12 }, (_, index) => index + 1);
-  const minutes = Array.from({ length: 12 }, (_, index) => index * 5);
+  const minutes = Array.from({ length: 60 }, (_, index) => index);
   const updateTime = (patch) => {
     const next = { ...parsed, ...patch };
     const nextValue = buildTimeValue(next.hour12, next.minute, next.suffix);
