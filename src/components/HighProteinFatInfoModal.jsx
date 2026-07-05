@@ -19,20 +19,26 @@ export default function HighProteinFatInfoModal({ open, onClose }) {
     };
     document.addEventListener("keydown", handleKeyDown);
 
-    scrollRef.current = window.scrollY;
-    document.body.style.overflow = "hidden";
-    document.body.style.position = "fixed";
-    document.body.style.top = `-${scrollRef.current}px`;
-    document.body.style.width = "100%";
+    // Only lock body scroll if it isn't already locked (e.g. by the DoseForm dialog)
+    const alreadyLocked = document.body.style.position === "fixed";
+    if (!alreadyLocked) {
+      scrollRef.current = window.scrollY;
+      document.body.style.overflow = "hidden";
+      document.body.style.position = "fixed";
+      document.body.style.top = `-${scrollRef.current}px`;
+      document.body.style.width = "100%";
+    }
 
     return () => {
       clearTimeout(timer);
       document.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "";
-      document.body.style.position = "";
-      document.body.style.top = "";
-      document.body.style.width = "";
-      window.scrollTo(0, scrollRef.current);
+      if (!alreadyLocked) {
+        document.body.style.overflow = "";
+        document.body.style.position = "";
+        document.body.style.top = "";
+        document.body.style.width = "";
+        window.scrollTo(0, scrollRef.current);
+      }
       previousFocusRef.current?.focus();
     };
   }, [open, onClose]);
@@ -55,7 +61,11 @@ export default function HighProteinFatInfoModal({ open, onClose }) {
         aria-modal="true"
         aria-label="High protein and high fat meals"
       >
-        <div className="fixed inset-0 bg-black/80" aria-hidden="true" />
+        <div
+          className="fixed inset-0 bg-black/80"
+          aria-hidden="true"
+          onTouchMove={(e) => e.preventDefault()}
+        />
         <motion.div
           initial={{ opacity: 0, scale: 0.94, y: 12 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -91,7 +101,8 @@ export default function HighProteinFatInfoModal({ open, onClose }) {
 
           <div
             className="min-h-0 flex-1 overflow-y-auto px-5 pb-5"
-            style={{ WebkitOverflowScrolling: "touch" }}
+            style={{ WebkitOverflowScrolling: "touch", overscrollBehavior: "contain" }}
+            onTouchMove={(e) => e.stopPropagation()}
           >
             <div className="space-y-4 text-[13px] leading-relaxed text-white/60">
               <p>
