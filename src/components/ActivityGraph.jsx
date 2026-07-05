@@ -640,10 +640,20 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       const halfSpan = containerWidth / 2 + iv.width / 2;
       const proximity = Math.max(0, 1 - distance / halfSpan);
       const isActive = centerTime >= iv.start && centerTime < iv.end;
-      const intensity = isActive ? 1 : 0.35 + proximity * 0.55;
-      const glow = isActive ? 1 : proximity;
+
+      // Interpolate from soft dormant purple to vibrant organic purple
+      const t = isActive ? 1 : proximity * 0.7;
+      const r = Math.round(148 + (178 - 148) * t);
+      const g = Math.round(130 + (108 - 130) * t);
+      const b = Math.round(196 + (230 - 196) * t);
+      const alpha = (0.10 + t * 0.18).toFixed(3);
+      const glowAlpha = (0.05 + t * 0.22).toFixed(3);
+      const glowSize = Math.round(10 + t * 26);
+      const intensity = isActive ? 1 : 0.4 + proximity * 0.5;
+
       el.style.opacity = String(intensity);
-      el.style.boxShadow = `0 0 ${18 + glow * 36}px rgba(148,130,196,${0.12 + glow * 0.28}), inset 0 -${8 + glow * 14}px ${20 + glow * 30}px rgba(148,130,196,${0.05 + glow * 0.12})`;
+      el.style.background = `linear-gradient(to bottom, rgba(${r},${g},${b},${alpha}) 0%, rgba(${r},${g},${b},${alpha}) 55%, rgba(${r},${g},${b},0) 100%)`;
+      el.style.boxShadow = `inset 0 0 ${glowSize}px rgba(${r},${g},${b},${glowAlpha})`;
     });
 
     const lEl = monitoringLabelRef.current;
@@ -797,11 +807,10 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                 top: CHART_MARGIN_TOP,
                 width: iv.width,
                 height: monitoringGradientHeight,
-                background: "linear-gradient(to top, rgba(148,130,196,0.22) 0%, rgba(148,130,196,0.10) 55%, rgba(148,130,196,0.02) 100%)",
                 opacity: 0,
-                transition: "opacity 350ms ease-in-out, box-shadow 350ms ease-in-out",
+                transition: "opacity 300ms ease-in-out",
                 borderRadius: 4,
-                willChange: "opacity, box-shadow",
+                willChange: "opacity, background, box-shadow",
               }}
               aria-hidden="true"
             />
@@ -973,15 +982,15 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           })}
         </div>
       </div>
+      </div>
       <div
         ref={monitoringLabelRef}
-        className="pointer-events-none absolute bottom-1 left-1/2 z-20 flex -translate-x-1/2 items-center justify-center gap-1.5"
-        style={{ opacity: 0, transform: "translate(-50%, 4px)", transition: "opacity 350ms ease-in-out, transform 350ms ease-in-out" }}
+        className="pointer-events-none mt-1 flex items-center justify-center gap-1.5"
+        style={{ opacity: 0, transform: "translateY(4px)", transition: "opacity 350ms ease-in-out, transform 350ms ease-in-out", minHeight: 16 }}
         aria-hidden="true"
       >
-        <span className="text-[9px] font-medium" style={{ color: "rgba(190,170,240,0.85)" }}>Extended meal response window</span>
-        <AlertTriangle className="h-2.5 w-2.5" style={{ color: "rgba(190,170,240,0.7)" }} />
-      </div>
+        <AlertTriangle className="h-3 w-3" style={{ color: "rgba(217,169,56,0.7)" }} />
+        <span className="text-[9px] font-medium" style={{ color: "rgba(217,169,56,0.8)" }}>Extended meal response window</span>
       </div>
       </div>
     </div>);
