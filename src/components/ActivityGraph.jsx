@@ -3,7 +3,8 @@ import { Area, XAxis, YAxis, Line, ComposedChart } from "recharts";
 import { generateActivityCurve, getInsulinProfile } from "@/lib/insulinPharmacology";
 import { PROFILE_COLORS } from "@/lib/carbAbsorption";
 import { format } from "date-fns";
-import { CornerUpRight, SlidersHorizontal, Check, Wheat } from "lucide-react";
+import { AlertTriangle, CornerUpRight, SlidersHorizontal, Check, Wheat } from "lucide-react";
+import { HIGH_PROTEIN_FAT_MONITORING_HOURS, mergeMonitoringIntervals } from "@/lib/mealMonitoring";
 import { motion, AnimatePresence } from "framer-motion";
 
 const STEP_MS = 3 * 60 * 1000;
@@ -266,6 +267,10 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const pendingScrollLeftRef = useRef(0);
   const containerRef = useRef(null);
   const graphViewportRef = useRef(null);
+  const monitoringGradientRef = useRef(null);
+  const monitoringLabelRef = useRef(null);
+  const monitoringA11yRef = useRef(null);
+  const prevMonitoringActiveRef = useRef(false);
   const [containerWidth, setContainerWidth] = useState(600);
   const [targetRange, setTargetRange] = useState(readTargetRange);
 
@@ -433,6 +438,18 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const latestGlucoseX = (latestGlucoseBucket - domainStart) / totalMs * chartWidth;
   const maxScrollLeft = Math.max(0, Math.min(chartWidth - containerWidth, latestGlucoseX - containerWidth / 2));
   const plotHeight = CHART_HEIGHT - CHART_MARGIN_TOP - CHART_MARGIN_BOTTOM - X_AXIS_HEIGHT;
+
+  const mergedMonitoringIntervals = useMemo(() => {
+    const MS = HIGH_PROTEIN_FAT_MONITORING_HOURS * 60 * 60 * 1000;
+    const intervals = (Array.isArray(carbEntries) ? carbEntries : [])
+      .filter((e) => e.is_high_protein_fat_meal === true && e.consumed_at)
+      .map((e) => { const s = new Date(e.consumed_at).getTime(); return Number.isFinite(s) ? { start: s, end: s + MS } : null; })
+      .filter(Boolean);
+    return mergeMonitoringIntervals(intervals);
+  }, [carbEntries]);
+
+  const monitoringGradientHeight = Math.max(0, CHART_MARGIN_TOP + (GLUCOSE_MAX - targetLow) / (GLUCOSE_MAX - GLUCOSE_MIN) * plotHeight - CHART_MARGIN_TOP);
+
   const positionedCarbMarkers = useMemo(() => {
     const laneLastX = [];
     const laneCount = 3;
@@ -594,6 +611,20 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     if (dateEl) dateEl.textContent = format(new Date(glucose.time), "EEEE, MMM d");
   };
 
+  const updateMonitoringOverlay = (scrollLeft) => {
+    const centerTime = getCenterTimeForScroll(scrollLeft);
+    const isActive = mergedMonitoringIntervals.some((i) => centerTime >= i.start && centerTime < i.end);
+    const gEl = monitoringGradientRef.current;
+    const lEl = monitoringLabelRef.current;
+    if (gEl) gEl.style.opacity = isActive ? "1" : "0";
+    if (lEl) { lEl.style.opacity = isActive ? "1" : "0"; lEl.style.transform = isActive ? "translateY(0)" : "translateY(-2px)"; }
+    if (isActive !== prevMonitoringActiveRef.current) {
+      prevMonitoringActiveRef.current = isActive;
+      const a = monitoringA11yRef.current;
+      if (a) a.textContent = isActive ? "Extended meal response window active." : "Extended meal response window ended for the selected graph time.";
+    }
+  };
+
   const scheduleCenterGlucoseUpdate = (scrollLeft) => {
     pendingScrollLeftRef.current = scrollLeft;
     if (scrollFrameRef.current) return;
@@ -601,6 +632,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     scrollFrameRef.current = requestAnimationFrame(() => {
       scrollFrameRef.current = null;
       drawCenterGlucose(pendingScrollLeftRef.current);
+      updateMonitoringOverlay(pendingScrollLeftRef.current);
     });
   };
 
@@ -615,6 +647,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     if (!scrollRef.current) return;
     scrollRef.current.scrollLeft = maxScrollLeft;
     drawCenterGlucose(maxScrollLeft);
+    updateMonitoringOverlay(maxScrollLeft);
 
     return () => {
       if (scrollFrameRef.current) cancelAnimationFrame(scrollFrameRef.current);
@@ -634,6 +667,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
   return (
     <div ref={containerRef} className="relative overflow-visible">
+      <div ref={monitoringA11yRef} className="sr-only" aria-live="polite" role="status" />
       {/* Controls row */}
       <div className="flex py-3 items-center mb-4 justify-start pl-4 gap-2">
 
@@ -693,6 +727,15 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           </div>
           <div ref={tooltipTimeRef} className="mt-1 text-xs font-medium text-white/35">{format(new Date(glucoseLinePoints[glucoseLinePoints.length - 1].time), "h:mm a")}</div>
           <div ref={tooltipDateRef} className="mt-0.5 text-[10px] font-medium text-white/30">{format(new Date(glucoseLinePoints[glucoseLinePoints.length - 1].time), "EEEE, MMM d")}</div>
+          <div
+            ref={monitoringLabelRef}
+            className="pointer-events-none mt-0.5 flex items-center justify-center gap-1.5"
+            style={{ opacity: 0, transform: "translateY(-2px)", transition: "opacity 350ms ease-in-out, transform 350ms ease-in-out", minHeight: 14 }}
+            aria-hidden="true"
+          >
+            <span className="text-[9px] font-medium" style={{ color: "rgba(217,169,56,0.7)" }}>Extended meal response window</span>
+            <AlertTriangle className="h-2.5 w-2.5" style={{ color: "rgba(217,169,56,0.55)" }} />
+          </div>
         </div>
       }
       {filters.glucose && glucoseLinePoints.length > 0 &&
@@ -705,6 +748,18 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           willChange: "transform, opacity"
         }} />
       }
+      <div
+        ref={monitoringGradientRef}
+        className="pointer-events-none absolute inset-x-0 z-[2]"
+        style={{
+          top: CHART_MARGIN_TOP,
+          height: monitoringGradientHeight,
+          background: "linear-gradient(to bottom, rgba(148,130,196,0.14) 0%, rgba(148,130,196,0.06) 55%, rgba(148,130,196,0.02) 100%)",
+          opacity: 0,
+          transition: "opacity 350ms ease-in-out",
+        }}
+        aria-hidden="true"
+      />
       <div
         ref={scrollRef}
         className="overflow-x-auto"

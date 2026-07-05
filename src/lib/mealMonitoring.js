@@ -21,6 +21,21 @@ export function getHighProteinFatMonitoringStatus(carbEntries) {
   };
 }
 
+export function mergeMonitoringIntervals(intervals) {
+  if (!intervals.length) return [];
+  const sorted = intervals.slice().sort((a, b) => a.start - b.start);
+  const merged = [{ start: sorted[0].start, end: sorted[0].end }];
+  for (let i = 1; i < sorted.length; i++) {
+    const last = merged[merged.length - 1];
+    if (sorted[i].start <= last.end) {
+      last.end = Math.max(last.end, sorted[i].end);
+    } else {
+      merged.push({ start: sorted[i].start, end: sorted[i].end });
+    }
+  }
+  return merged;
+}
+
 export function formatMonitoringEndTime(endTime) {
   if (!endTime) return "";
   const date = new Date(endTime);
