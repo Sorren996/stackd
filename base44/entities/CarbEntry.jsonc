@@ -38,6 +38,11 @@
       "format": "date-time",
       "description": "When the food was consumed"
     },
+    "is_high_protein_fat_meal": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this meal was flagged as high protein or high fat for monitoring purposes"
+    },
     "notes": {
       "type": "string",
       "description": "Optional notes"

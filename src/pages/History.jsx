@@ -10,6 +10,7 @@ import { format, isToday, isYesterday, parseISO } from "date-fns";
 import { motion } from "framer-motion";
 import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
 import { TimeScrollField, NumberPadField, TextPadField, SelectField } from "@/components/FormInputFields";
+import HighProteinFatCheckbox from "@/components/HighProteinFatCheckbox";
 import TimelineDayGroup from "@/components/history/TimelineDayGroup";
 import { GLASS_SURFACE } from "@/lib/glassTheme";
 
@@ -125,6 +126,7 @@ function getEditInitialForm(log) {
     food_name: log.item.food_name || log.item.name || "",
     carbs: String(log.item.carbs ?? ""),
     absorption_profile: log.item.absorption_profile || log.item.profile || "medium",
+    is_high_protein_fat_meal: log.item.is_high_protein_fat_meal || false,
     time: toTimeValue(log.item.consumed_at),
     notes: log.item.notes || "",
   };
@@ -218,6 +220,7 @@ function EditLogSheet({ log, onClose, onSave, isSaving }) {
         profile: form.absorption_profile || "medium",
         consumed_at: consumedAt,
         notes: form.notes || undefined,
+        is_high_protein_fat_meal: form.is_high_protein_fat_meal || false,
       },
     });
   };
@@ -273,6 +276,10 @@ function EditLogSheet({ log, onClose, onSave, isSaving }) {
                   options={absorptionProfileOptions}
                 />
               </div>
+              <HighProteinFatCheckbox
+                checked={form.is_high_protein_fat_meal}
+                onChange={(checked) => updateField("is_high_protein_fat_meal", checked)}
+              />
             </>
           )}
 

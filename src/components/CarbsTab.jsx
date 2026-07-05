@@ -3,6 +3,7 @@ import { FOOD_DATABASE } from "@/lib/carbAbsorption";
 import { base44 } from "@/api/base44Client";
 import { InvokeLLM, UploadFile } from "@/api/integrations";
 import { Camera, Check, Clock, Loader2, PenLine, Sparkles, X } from "lucide-react";
+import HighProteinFatCheckbox from "@/components/HighProteinFatCheckbox";
 import { toast } from "sonner";
 import { CustomInputTray, TimeScrollField, NumberPadField, TextPadField } from "@/components/FormInputFields";
 
@@ -63,6 +64,7 @@ export default function CarbsTab({ onSubmit, isPending }) {
   const [selectedFoods, setSelectedFoods] = useState([]);
   const [recentFoods, setRecentFoods] = useState([]);
   const [carbTime, setCarbTime] = useState(() => new Date().toTimeString().slice(0, 5));
+  const [isHighProteinFat, setIsHighProteinFat] = useState(false);
 
   const nowTimeString = new Date().toTimeString().slice(0, 5);
 
@@ -246,8 +248,10 @@ Do not give insulin dosing advice.
         absorption_profile: absorptionProfile,
         consumed_at: consumedAt,
         is_custom: true,
+        is_high_protein_fat_meal: isHighProteinFat,
       },
     ]);
+    setIsHighProteinFat(false);
   };
 
   const handleSubmitCustom = () => {
@@ -272,9 +276,11 @@ Do not give insulin dosing advice.
         absorption_profile: profile,
         consumed_at: consumedAt,
         is_custom: true,
+        is_high_protein_fat_meal: isHighProteinFat,
       },
     ]);
 
+    setIsHighProteinFat(false);
     setCustomFoodName("");
     setCustomCarbs("");
   };
@@ -316,8 +322,10 @@ Do not give insulin dosing advice.
         serving_amount: 1,
         consumed_at: consumedAt,
         is_custom: false,
+        is_high_protein_fat_meal: isHighProteinFat,
       }))
     );
+    setIsHighProteinFat(false);
   };
 
   return (
@@ -530,6 +538,13 @@ Do not give insulin dosing advice.
                   </p>
                 </div>
               )}
+              {estimatedMeal && (Number(estimatedMeal.protein) >= 30 || Number(estimatedMeal.fat) >= 20) && !isHighProteinFat && (
+                <div className="rounded-xl border border-amber-500/20 bg-amber-500/[0.06] px-3.5 py-2.5">
+                  <p className="text-[11px] leading-relaxed text-amber-200/70">
+                    This meal may contain substantial protein or fat. Review the monitoring option below.
+                  </p>
+                </div>
+              )}
             </div>
           ) : (
             <div className="space-y-5">
@@ -644,6 +659,10 @@ Do not give insulin dosing advice.
           <div className="mt-5">
             <p className="mb-3 text-sm font-bold uppercase tracking-widest text-white/40">Time Consumed</p>
             <TimeScrollField label="Consumed at" value={carbTime} onChange={setCarbTime} max={nowTimeString} />
+          </div>
+
+          <div className="mt-4">
+            <HighProteinFatCheckbox checked={isHighProteinFat} onChange={setIsHighProteinFat} />
           </div>
         </div>
 

@@ -83,6 +83,7 @@ function normalizeCarbEntryForSave(entry) {
     serving_amount: entry.serving_amount ?? 1,
     consumed_at: entry.consumed_at || new Date().toISOString(),
     is_custom: entry.is_custom === true,
+    is_high_protein_fat_meal: entry.is_high_protein_fat_meal === true,
   };
 }
 

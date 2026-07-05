@@ -39,6 +39,9 @@ export default function CarbCard({ entry, onDelete }) {
         <p className="text-xs mt-1.5 font-medium" style={{ color }}>
           {entry.carbs}g {profileLabel}
         </p>
+        {entry.is_high_protein_fat_meal && (
+          <p className="mt-1 text-[10px] font-medium text-amber-400/60">High protein/fat monitoring selected</p>
+        )}
         {entry.notes && <p className="text-xs text-white/30 mt-1 italic">{entry.notes}</p>}
       </div>
 

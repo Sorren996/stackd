@@ -10,6 +10,7 @@ import GlucoseCard from "../components/GlucoseCard";
 import CarbCard from "../components/CarbCard";
 import { getDoseStatus, INSULIN_PROFILES } from "@/lib/insulinPharmacology";
 import { Activity, Plus, AlertTriangle, X, Pencil } from "lucide-react";
+import HighProteinFatCheckbox from "@/components/HighProteinFatCheckbox";
 import { toast } from "sonner";
 import { getVersionString } from "@/lib/appVersion";
 import { TimeScrollField, NumberPadField, TextPadField, SelectField } from "@/components/FormInputFields";
@@ -86,6 +87,7 @@ function getEditInitialForm(log) {
     food_name: log.item.food_name || log.item.name || "",
     carbs: String(log.item.carbs ?? ""),
     absorption_profile: log.item.absorption_profile || log.item.profile || "medium",
+    is_high_protein_fat_meal: log.item.is_high_protein_fat_meal || false,
     time: toTimeValue(log.item.consumed_at),
     notes: log.item.notes || "",
   };
@@ -179,6 +181,7 @@ function EditLogSheet({ log, onClose, onSave, isSaving }) {
         profile: form.absorption_profile || "medium",
         consumed_at: consumedAt,
         notes: form.notes || undefined,
+        is_high_protein_fat_meal: form.is_high_protein_fat_meal || false,
       },
     });
   };
@@ -234,6 +237,10 @@ function EditLogSheet({ log, onClose, onSave, isSaving }) {
                   options={absorptionProfileOptions}
                 />
               </div>
+              <HighProteinFatCheckbox
+                checked={form.is_high_protein_fat_meal}
+                onChange={(checked) => updateField("is_high_protein_fat_meal", checked)}
+              />
             </>
           )}
 

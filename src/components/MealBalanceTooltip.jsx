@@ -52,7 +52,7 @@ function TooltipPopover({ title, description, onClose, children }) {
   );
 }
 
-export default function MealBalanceTooltip({ mealInsight, open, onClose }) {
+export default function MealBalanceTooltip({ mealInsight, open, onClose, monitoringStatus, glucoseTrend }) {
   if (!open || !mealInsight?.details) return null;
 
   return (
@@ -159,6 +159,30 @@ export default function MealBalanceTooltip({ mealInsight, open, onClose }) {
             </p>
             <p className="mt-1 text-[11px] leading-relaxed text-white/45">
               {mealInsight.details.outcomeAssessment.message}
+            </p>
+          </div>
+        )}
+
+        {monitoringStatus?.isActive && (
+          <div className="rounded-xl border p-3" style={{ borderColor: "rgba(217,169,56,0.25)", background: "rgba(217,169,56,0.06)" }}>
+            <p className="text-xs font-semibold text-amber-400/90">High protein/fat meal monitoring</p>
+            <p className="mt-1.5 text-[11px] leading-relaxed text-white/50">
+              A recently logged meal may have delayed or prolonged glucose effects. Continue monitoring through the time shown below. Responses can vary and may include a gradual rise, a prolonged trend, no noticeable change, or a pattern different from your usual response.
+            </p>
+            <p className="mt-2 text-[11px] leading-relaxed text-white/40">
+              This status does not add carbohydrates, alter insulin estimates, or recommend additional insulin. Follow your established treatment plan and account for insulin already active before making treatment decisions.
+            </p>
+            <p className="mt-2 text-[11px] font-medium text-amber-400/70">
+              Monitoring period ends: {new Date(monitoringStatus.endTime).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+            </p>
+            <p className="mt-2 text-[11px] leading-relaxed text-white/40 italic">
+              {mealInsight.details.latestGlucoseValue === null
+                ? "Current glucose data is unavailable. Check your connected glucose source or monitor using your usual method."
+                : glucoseTrend?.label === "Rising" || glucoseTrend?.label === "Slowly rising"
+                  ? "Glucose is currently rising. Continue watching the trend and follow your established plan."
+                  : glucoseTrend?.label === "Falling" || glucoseTrend?.label === "Slowly falling"
+                    ? "Glucose is currently falling. Consider insulin already active and continue monitoring closely."
+                    : "Glucose is currently stable. Delayed changes may still occur during this monitoring period."}
             </p>
           </div>
         )}
