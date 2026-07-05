@@ -15,7 +15,7 @@ export default function TimelineWeekGroup({ label, dayCount, momentCount, summar
       >
         <div className="min-w-0 text-left">
           <span className="text-sm font-bold text-white">{label}</span>
-          {summary && <p className="mt-0.5 text-[11px] text-white/45">{summary}</p>}
+
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs text-white/40">
