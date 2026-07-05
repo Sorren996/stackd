@@ -53,7 +53,7 @@ export default function ComfortZoneCard({ percentage }) {
 
       <div className="relative z-10 mt-1">
         <span className="text-2xl font-bold leading-none text-white">{displayValue}</span>
-        <p className="mt-1 text-[11px] text-white/35">Time spent feeling balanced</p>
+        <p className="mt-1 text-[11px] text-white/35">Time in Comfort Zone</p>
       </div>
 
       <span className="relative z-10 mt-2 text-xs font-semibold" style={{ color: status.color }}>
