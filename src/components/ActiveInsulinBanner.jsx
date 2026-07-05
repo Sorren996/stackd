@@ -846,9 +846,9 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
     () => safeDoses.filter((dose) => isMealCoverageInsulin(dose, insulinSettings)),
     [safeDoses, insulinSettings]
   );
-  const activeUnits = useMemo(() => getTotalBolusIOB(safeDoses, Date.now()), [safeDoses]);
-  const activeMealUnits = useMemo(() => getTotalMealIOB(mealCoverageDoses, Date.now()), [mealCoverageDoses]);
-  const activeCorrectionUnits = useMemo(() => getTotalCorrectionIOB(mealCoverageDoses, Date.now()), [mealCoverageDoses]);
+  const activeUnits = useMemo(() => getTotalBolusIOB(safeDoses, Date.now()), [safeDoses, nowMinute]);
+  const activeMealUnits = useMemo(() => getTotalMealIOB(mealCoverageDoses, Date.now()), [mealCoverageDoses, nowMinute]);
+  const activeCorrectionUnits = useMemo(() => getTotalCorrectionIOB(mealCoverageDoses, Date.now()), [mealCoverageDoses, nowMinute]);
   const activeInsulinBreakdown = useMemo(() => {
     const now = Date.now();
     const grouped = safeDoses.reduce((items, dose) => {
@@ -878,11 +878,11 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
 
     return Object.values(grouped).sort((a, b) => b.iob - a.iob);
   }, [safeDoses]);
-  const activeCarbs = useMemo(() => getActiveCarbsNow(safeCarbEntries), [safeCarbEntries]);
+  const activeCarbs = useMemo(() => getActiveCarbsNow(safeCarbEntries), [safeCarbEntries, nowMinute]);
 
   const trajectory = useMemo(
     () => computeNetCarbTrajectory(safeDoses, safeCarbEntries, latestGlucose, insulinSettings),
-    [safeDoses, safeCarbEntries, latestGlucose, insulinSettings]
+    [safeDoses, safeCarbEntries, latestGlucose, insulinSettings, nowMinute]
   );
 
   const worstPoint = useMemo(() => {

@@ -62,6 +62,8 @@ export function useUserSettings() {
     onSuccess: (saved) => {
       queryClient.setQueryData(SETTINGS_QUERY_KEY, saved);
       if (user?.id) cacheSettingsLocally(user.id, saved);
+      window.dispatchEvent(new Event("insulin-settings-updated"));
+      window.dispatchEvent(new Event("target-range-updated"));
       setSaveSuccess(true);
       toast.success(SUPPORTIVE_SUCCESS.save);
       setTimeout(() => setSaveSuccess(false), 2500);
