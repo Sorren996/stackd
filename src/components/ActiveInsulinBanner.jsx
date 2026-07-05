@@ -432,6 +432,15 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
         value = "Settled nicely";
         status = "Back in a comfortable range";
         color = "#5ba88a";
+      } else if (latestIsAfterMeal && !latestLow) {
+        outcomeAssessment = {
+          label: "Settled nicely",
+          message: "There was a dip along the way, but you've found your footing again. Well done.",
+          color: "#5ba88a",
+        };
+        value = "Settled nicely";
+        status = "Back in a comfortable range";
+        color = "#5ba88a";
       }
     } else if (peakOutcome && peakOutcome.value > insulinSettings.targetHigh + 20) {
       if (hasCorrectiveInsulin && latestIsAfterMeal && latestHigh) {
@@ -456,6 +465,15 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
         outcomeAssessment = {
           label: "Settled nicely",
           message: "There was a rise after eating, but you've come back to range. Nice work staying with it.",
+          color: "#5ba88a",
+        };
+        value = "Settled nicely";
+        status = "Back in a comfortable range";
+        color = "#5ba88a";
+      } else if (latestIsAfterMeal && !latestHigh) {
+        outcomeAssessment = {
+          label: "Settled nicely",
+          message: "There was a rise after eating, but things have settled back. Nice work staying with it.",
           color: "#5ba88a",
         };
         value = "Settled nicely";
