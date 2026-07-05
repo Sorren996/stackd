@@ -653,8 +653,15 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       const intensity = isActive ? 1 : 0.4 + proximity * 0.5;
 
       el.style.opacity = String(intensity);
-      el.style.background = `linear-gradient(to top, rgba(${r},${g},${b},${alpha}) 0%, rgba(${r},${g},${b},${alpha}) 25%, rgba(${r},${g},${b},0) 100%)`;
+      el.style.background = `rgba(${r},${g},${b},${alpha})`;
       el.style.boxShadow = `inset 0 0 ${glowSize}px rgba(${r},${g},${b},${glowAlpha})`;
+      // Fade the top and both side edges to 0% so the band has no hard edges
+      const topFade = "linear-gradient(to top, black 0%, black 15%, transparent 100%)";
+      const sideFade = "linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)";
+      el.style.maskImage = `${topFade}, ${sideFade}`;
+      el.style.WebkitMaskImage = `${topFade}, ${sideFade}`;
+      el.style.maskComposite = "intersect";
+      el.style.WebkitMaskComposite = "source-in";
     });
 
     const lEl = monitoringLabelRef.current;
