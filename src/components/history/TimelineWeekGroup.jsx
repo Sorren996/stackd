@@ -2,17 +2,14 @@ import { motion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 import { GLASS_SURFACE } from "@/lib/glassTheme";
 import { SPRING, SPRING_GENTLE } from "@/lib/motion";
-import { useState } from "react";
 
-export default function TimelineWeekGroup({ label, dayCount, momentCount, summary, children }) {
-  const [isOpen, setIsOpen] = useState(true);
-
+export default function TimelineWeekGroup({ label, dayCount, momentCount, summary, isOpen, onToggle, children }) {
   return (
     <div className="relative">
       {/* Week header */}
       <button
         type="button"
-        onClick={() => setIsOpen((v) => !v)}
+        onClick={onToggle}
         className="flex w-full items-center justify-between gap-3 rounded-2xl border px-4 py-3 backdrop-blur-sm transition-colors hover:bg-white/[0.04]"
         style={GLASS_SURFACE}
       >

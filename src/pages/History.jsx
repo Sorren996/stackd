@@ -353,6 +353,7 @@ export default function History() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("doses");
   const [openGroup, setOpenGroup] = useState(null);
+  const [openWeek, setOpenWeek] = useState(null);
   const [editingLog, setEditingLog] = useState(null);
   const [targetRange, setTargetRange] = useState(readTargetRange);
 
@@ -490,6 +491,7 @@ export default function History() {
   const handleTabChange = (tab) => {
     setActiveTab(tab);
     setOpenGroup(null);
+    setOpenWeek(null);
   };
 
   if (loadingDoses || loadingGlucose || loadingCarbs) {
@@ -576,6 +578,8 @@ export default function History() {
                 dayCount={week.days.length}
                 momentCount={week.days.reduce((s, d) => s + d.items.length, 0)}
                 summary={getWeekSummary(week.days, getDoseDaySummary)}
+                isOpen={openWeek === week.weekKey}
+                onToggle={() => setOpenWeek(openWeek === week.weekKey ? null : week.weekKey)}
               >
                 {week.days.map((group) => (
                   <TimelineDayGroup
@@ -636,6 +640,8 @@ export default function History() {
                 dayCount={week.days.length}
                 momentCount={week.days.reduce((s, d) => s + d.items.length, 0)}
                 summary={getWeekSummary(week.days, (items) => getGlucoseDaySummary(items, targetLow, targetHigh))}
+                isOpen={openWeek === week.weekKey}
+                onToggle={() => setOpenWeek(openWeek === week.weekKey ? null : week.weekKey)}
               >
                 {week.days.map((group) => (
                   <TimelineDayGroup
@@ -694,6 +700,8 @@ export default function History() {
                 dayCount={week.days.length}
                 momentCount={week.days.reduce((s, d) => s + d.items.length, 0)}
                 summary={getWeekSummary(week.days, getCarbDaySummary)}
+                isOpen={openWeek === week.weekKey}
+                onToggle={() => setOpenWeek(openWeek === week.weekKey ? null : week.weekKey)}
               >
                 {week.days.map((group) => (
                   <TimelineDayGroup
