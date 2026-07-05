@@ -476,7 +476,7 @@ export default function DoseForm({ open, onOpenChange }) {
         `}</style>
         <DialogOverlay
           className="fixed inset-0 z-50 sm:backdrop-blur-sm data-[state=closed]:pointer-events-none data-[state=closed]:opacity-0"
-          style={{ background: "rgba(0, 0, 0, 0.75)" }}
+          style={{ background: "rgba(0, 0, 0, 0.25)" }}
         />
         <DialogPrimitive.Content
           className="dose-form-content fixed bottom-0 left-0 right-0 z-50 flex h-[92dvh] max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-3xl border shadow-2xl sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:h-auto sm:max-h-[92vh] sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl"
