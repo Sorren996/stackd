@@ -44,7 +44,7 @@ export default function ComfortZoneCard({ percentage }) {
         }}
       />
       <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2">
-        <AmbientOrb color="rgba(255,255,255,1)" />
+        <AmbientOrb color="#ffffff" />
       </div>
 
       <div className="relative z-10 mb-1 flex items-start justify-between gap-2">

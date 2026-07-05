@@ -449,8 +449,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     return mergeMonitoringIntervals(intervals);
   }, [carbEntries]);
 
-  const monitoringBandTop = CHART_MARGIN_TOP + plotHeight * 0.4;
-  const monitoringBandHeight = Math.max(0, plotHeight * 0.6);
+  const monitoringBandTop = CHART_MARGIN_TOP;
+  const monitoringBandHeight = plotHeight;
 
   const positionedMonitoringIntervals = useMemo(() => {
     return mergedMonitoringIntervals
@@ -809,9 +809,9 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                 width: iv.width,
                 height: monitoringBandHeight,
                 opacity: 0,
-                transition: "opacity 600ms ease-in-out, background 600ms ease-in-out, box-shadow 600ms ease-in-out",
+                transition: "opacity 400ms ease-in-out",
                 borderRadius: 4,
-                willChange: "opacity, background, box-shadow",
+                willChange: "opacity",
               }}
               aria-hidden="true"
             />
