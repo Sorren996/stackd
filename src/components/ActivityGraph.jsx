@@ -271,6 +271,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const monitoringLabelRef = useRef(null);
   const monitoringA11yRef = useRef(null);
   const prevMonitoringActiveRef = useRef(false);
+  const monitoringBandRefs = useRef([]);
   const [containerWidth, setContainerWidth] = useState(600);
   const [targetRange, setTargetRange] = useState(readTargetRange);
 
@@ -450,6 +451,16 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
   const monitoringGradientHeight = Math.max(0, CHART_MARGIN_TOP + (GLUCOSE_MAX - targetLow) / (GLUCOSE_MAX - GLUCOSE_MIN) * plotHeight - CHART_MARGIN_TOP);
 
+  const positionedMonitoringIntervals = useMemo(() => {
+    return mergedMonitoringIntervals
+      .map((iv) => {
+        const startX = ((iv.start - domainStart) / totalMs) * chartWidth;
+        const endX = ((iv.end - domainStart) / totalMs) * chartWidth;
+        return { start: iv.start, end: iv.end, x: startX, width: Math.max(2, endX - startX) };
+      })
+      .filter((iv) => iv.width > 0 && iv.x + iv.width > 0 && iv.x < chartWidth);
+  }, [mergedMonitoringIntervals, domainStart, totalMs, chartWidth]);
+
   const positionedCarbMarkers = useMemo(() => {
     const laneLastX = [];
     const laneCount = 3;
@@ -613,15 +624,37 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
   const updateMonitoringOverlay = (scrollLeft) => {
     const centerTime = getCenterTimeForScroll(scrollLeft);
-    const isActive = mergedMonitoringIntervals.some((i) => centerTime >= i.start && centerTime < i.end);
-    const gEl = monitoringGradientRef.current;
+    const viewportCenterX = scrollLeft + containerWidth / 2;
+    const viewportLeft = scrollLeft;
+    const viewportRight = scrollLeft + containerWidth;
+    const anyActive = mergedMonitoringIntervals.some((i) => centerTime >= i.start && centerTime < i.end);
+
+    monitoringBandRefs.current.forEach((el, idx) => {
+      if (!el) return;
+      const iv = positionedMonitoringIntervals[idx];
+      if (!iv) { el.style.opacity = "0"; return; }
+      const bandCenterX = iv.x + iv.width / 2;
+      const inView = iv.x + iv.width > viewportLeft && iv.x < viewportRight;
+      if (!inView) { el.style.opacity = "0"; return; }
+      const distance = Math.abs(bandCenterX - viewportCenterX);
+      const halfSpan = containerWidth / 2 + iv.width / 2;
+      const proximity = Math.max(0, 1 - distance / halfSpan);
+      const isActive = centerTime >= iv.start && centerTime < iv.end;
+      const intensity = isActive ? 1 : 0.35 + proximity * 0.55;
+      const glow = isActive ? 1 : proximity;
+      el.style.opacity = String(intensity);
+      el.style.boxShadow = `0 0 ${18 + glow * 36}px rgba(148,130,196,${0.12 + glow * 0.28}), inset 0 -${8 + glow * 14}px ${20 + glow * 30}px rgba(148,130,196,${0.05 + glow * 0.12})`;
+    });
+
     const lEl = monitoringLabelRef.current;
-    if (gEl) gEl.style.opacity = isActive ? "1" : "0";
-    if (lEl) { lEl.style.opacity = isActive ? "1" : "0"; lEl.style.transform = isActive ? "translateY(0)" : "translateY(-2px)"; }
-    if (isActive !== prevMonitoringActiveRef.current) {
-      prevMonitoringActiveRef.current = isActive;
+    if (lEl) {
+      lEl.style.opacity = anyActive ? "1" : "0";
+      lEl.style.transform = anyActive ? "translate(-50%, 0)" : "translate(-50%, 4px)";
+    }
+    if (anyActive !== prevMonitoringActiveRef.current) {
+      prevMonitoringActiveRef.current = anyActive;
       const a = monitoringA11yRef.current;
-      if (a) a.textContent = isActive ? "Extended meal response window active." : "Extended meal response window ended for the selected graph time.";
+      if (a) a.textContent = anyActive ? "Extended meal response window active." : "Extended meal response window ended for the selected graph time.";
     }
   };
 
@@ -652,7 +685,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     return () => {
       if (scrollFrameRef.current) cancelAnimationFrame(scrollFrameRef.current);
     };
-  }, [maxScrollLeft, latestGlucoseBucket, filters.glucose, glucoseLinePoints.length]);
+  }, [maxScrollLeft, latestGlucoseBucket, filters.glucose, glucoseLinePoints.length, positionedMonitoringIntervals]);
 
   if (!doses.length && !glucoseReadings.length && !carbEntries.length) return null;
 
@@ -727,15 +760,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           </div>
           <div ref={tooltipTimeRef} className="mt-1 text-xs font-medium text-white/35">{format(new Date(glucoseLinePoints[glucoseLinePoints.length - 1].time), "h:mm a")}</div>
           <div ref={tooltipDateRef} className="mt-0.5 text-[10px] font-medium text-white/30">{format(new Date(glucoseLinePoints[glucoseLinePoints.length - 1].time), "EEEE, MMM d")}</div>
-          <div
-            ref={monitoringLabelRef}
-            className="pointer-events-none mt-0.5 flex items-center justify-center gap-1.5"
-            style={{ opacity: 0, transform: "translateY(-2px)", transition: "opacity 350ms ease-in-out, transform 350ms ease-in-out", minHeight: 14 }}
-            aria-hidden="true"
-          >
-            <span className="text-[9px] font-medium" style={{ color: "rgba(217,169,56,0.7)" }}>Extended meal response window</span>
-            <AlertTriangle className="h-2.5 w-2.5" style={{ color: "rgba(217,169,56,0.55)" }} />
-          </div>
         </div>
       }
       {filters.glucose && glucoseLinePoints.length > 0 &&
@@ -748,18 +772,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           willChange: "transform, opacity"
         }} />
       }
-      <div
-        ref={monitoringGradientRef}
-        className="pointer-events-none absolute inset-x-0 z-[2]"
-        style={{
-          top: CHART_MARGIN_TOP,
-          height: monitoringGradientHeight,
-          background: "linear-gradient(to bottom, rgba(148,130,196,0.14) 0%, rgba(148,130,196,0.06) 55%, rgba(148,130,196,0.02) 100%)",
-          opacity: 0,
-          transition: "opacity 350ms ease-in-out",
-        }}
-        aria-hidden="true"
-      />
+      {/* monitoring gradient bands live inside the scrollable chart below */}
       <div
         ref={scrollRef}
         className="overflow-x-auto"
@@ -774,6 +787,25 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         }}
         style={{ WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
         <div className="relative" style={{ width: chartWidth, height: CHART_HEIGHT }}>
+          {positionedMonitoringIntervals.map((iv, idx) => (
+            <div
+              key={`monitoring_band_${idx}`}
+              ref={(el) => (monitoringBandRefs.current[idx] = el)}
+              className="pointer-events-none absolute z-[2]"
+              style={{
+                left: iv.x,
+                top: CHART_MARGIN_TOP,
+                width: iv.width,
+                height: monitoringGradientHeight,
+                background: "linear-gradient(to top, rgba(148,130,196,0.22) 0%, rgba(148,130,196,0.10) 55%, rgba(148,130,196,0.02) 100%)",
+                opacity: 0,
+                transition: "opacity 350ms ease-in-out, box-shadow 350ms ease-in-out",
+                borderRadius: 4,
+                willChange: "opacity, box-shadow",
+              }}
+              aria-hidden="true"
+            />
+          ))}
           <ComposedChart
             width={chartWidth}
             height={CHART_HEIGHT}
@@ -940,6 +972,15 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             );
           })}
         </div>
+      </div>
+      <div
+        ref={monitoringLabelRef}
+        className="pointer-events-none absolute bottom-1 left-1/2 z-20 flex -translate-x-1/2 items-center justify-center gap-1.5"
+        style={{ opacity: 0, transform: "translate(-50%, 4px)", transition: "opacity 350ms ease-in-out, transform 350ms ease-in-out" }}
+        aria-hidden="true"
+      >
+        <span className="text-[9px] font-medium" style={{ color: "rgba(190,170,240,0.85)" }}>Extended meal response window</span>
+        <AlertTriangle className="h-2.5 w-2.5" style={{ color: "rgba(190,170,240,0.7)" }} />
       </div>
       </div>
       </div>
