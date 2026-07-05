@@ -844,8 +844,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                 y1={CHART_MARGIN_TOP}
                 x2="0"
                 y2={CHART_HEIGHT - CHART_MARGIN_BOTTOM - X_AXIS_HEIGHT}>
-                <stop offset="0%" stopColor="rgba(255,255,255,0.72)" stopOpacity={0} />
-                <stop offset="10%" stopColor="rgba(255,255,255,0.72)" stopOpacity={0.18} />
+                <stop offset="0%" stopColor="rgba(255,255,255,0.0)" stopOpacity={0} />
+                <stop offset="10%" stopColor="rgba(255,255,255,0.18)" stopOpacity={0.18} />
                 <stop offset="24%" stopColor="rgba(255,255,255,0.72)" stopOpacity={0.72} />
                 <stop offset="100%" stopColor="rgba(255,255,255,0.72)" stopOpacity={0.72} />
               </linearGradient>
