@@ -25,6 +25,7 @@ import {
 } from "@/lib/carbAbsorption";
 import { AnimatePresence, motion } from "framer-motion";
 import MealBalanceTooltip from "./MealBalanceTooltip";
+import ComfortZoneCard from "./ComfortZoneCard";
 import { getSupportiveGlucoseMessage } from "@/lib/supportiveMessages";
 
 const SAMPLE_STEP_MS = 5 * 60 * 1000;
@@ -961,6 +962,17 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
     return Math.round(readingsToday.reduce((sum, reading) => sum + reading.value, 0) / readingsToday.length);
   }, [safeGlucoseReadings]);
 
+  const comfortZonePercentage = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const readingsToday = safeGlucoseReadings.filter((reading) => new Date(reading.recorded_at) >= today);
+    if (!readingsToday.length) return null;
+    const inRange = readingsToday.filter(
+      (reading) => reading.value >= insulinSettings.targetLow && reading.value <= insulinSettings.targetHigh
+    );
+    return (inRange.length / readingsToday.length) * 100;
+  }, [safeGlucoseReadings, insulinSettings.targetLow, insulinSettings.targetHigh]);
+
   const trend = useMemo(() => {
     if (safeGlucoseReadings.length < 2) return { icon: "right", label: "Stable" };
     const difference = safeGlucoseReadings[0].value - safeGlucoseReadings[1].value;
@@ -1106,30 +1118,32 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
         <p className="text-legible mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-white">Your Rhythm</p>
         <div className="grid grid-cols-2 gap-3">
           <ActiveInsulinDetailCard totalUnits={activeUnits} breakdown={activeInsulinBreakdown} />
-          <MetricCard
-            label="Meal Balance"
-            value={mealInsight.value}
-            sub={mealInsight.sub}
-            status={mealInsight.status}
-            color={mealInsight.color}
-            tooltipId="net-carbs"
-            openTooltip={openTooltip}
-            setOpenTooltip={setOpenTooltip}
-            footer={highProteinFatStatus.isActive ? (
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <AlertTriangle className="h-3 w-3 shrink-0 text-amber-400/80" />
-                  <span className="text-[11px] font-semibold text-amber-400/90">Delayed meal response possible</span>
+          <div className="col-span-2">
+            <MetricCard
+              label="Meal Balance"
+              value={mealInsight.value}
+              sub={mealInsight.sub}
+              status={mealInsight.status}
+              color={mealInsight.color}
+              tooltipId="net-carbs"
+              openTooltip={openTooltip}
+              setOpenTooltip={setOpenTooltip}
+              footer={highProteinFatStatus.isActive ? (
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <AlertTriangle className="h-3 w-3 shrink-0 text-amber-400/80" />
+                    <span className="text-[11px] font-semibold text-amber-400/90">Delayed meal response possible</span>
+                  </div>
+                  <p className="mt-1 pl-[18px] text-[10px] leading-relaxed text-white/40">
+                    High protein or fat was logged. Glucose effects may be delayed or less predictable.
+                  </p>
+                  <p className="mt-1 pl-[18px] text-[10px] font-medium text-amber-400/60">
+                    Monitor through {formatMonitoringEndTime(highProteinFatStatus.endTime)}
+                  </p>
                 </div>
-                <p className="mt-1 pl-[18px] text-[10px] leading-relaxed text-white/40">
-                  High protein or fat was logged. Glucose effects may be delayed or less predictable.
-                </p>
-                <p className="mt-1 pl-[18px] text-[10px] font-medium text-amber-400/60">
-                  Monitor through {formatMonitoringEndTime(highProteinFatStatus.endTime)}
-                </p>
-              </div>
-            ) : undefined}
-          />
+              ) : undefined}
+            />
+          </div>
           <MetricCard
             label="Daily Average"
             value={dailyAverage ? `${dailyAverage}` : "--"}
@@ -1137,6 +1151,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
             status={glucoseStatus(dailyAverage)}
             color={!dailyAverage ? "#5ba88a" : dailyAverage < targetLow ? "#6b92c4" : dailyAverage > targetHigh ? "#d4a056" : "#5ba88a"}
           />
+          <ComfortZoneCard percentage={comfortZonePercentage} />
         </div>
       </div>
     </>

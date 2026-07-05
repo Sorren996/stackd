@@ -653,7 +653,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       const intensity = isActive ? 1 : 0.4 + proximity * 0.5;
 
       el.style.opacity = String(intensity);
-      el.style.background = `linear-gradient(to bottom, rgba(${r},${g},${b},0) 0%, rgba(${r},${g},${b},${alpha}) 45%, rgba(${r},${g},${b},${alpha}) 100%)`;
+      el.style.background = `linear-gradient(to top, rgba(${r},${g},${b},${alpha}) 0%, rgba(${r},${g},${b},${alpha}) 25%, rgba(${r},${g},${b},0) 100%)`;
       el.style.boxShadow = `inset 0 0 ${glowSize}px rgba(${r},${g},${b},${glowAlpha})`;
     });
 
@@ -809,7 +809,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                 width: iv.width,
                 height: monitoringBandHeight,
                 opacity: 0,
-                transition: "opacity 300ms ease-in-out",
+                transition: "opacity 600ms ease-in-out, background 600ms ease-in-out, box-shadow 600ms ease-in-out",
                 borderRadius: 4,
                 willChange: "opacity, background, box-shadow",
               }}
