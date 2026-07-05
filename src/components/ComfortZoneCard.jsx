@@ -48,7 +48,7 @@ export default function ComfortZoneCard({ percentage }) {
       </div>
 
       <div className="relative z-10 mb-1 flex items-start justify-between gap-2">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-white/35">Comfort Zone Today</span>
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-white/35">Daily Balance</span>
       </div>
 
       <div className="relative z-10 mt-1">
