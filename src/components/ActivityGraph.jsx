@@ -809,7 +809,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                 width: iv.width,
                 height: monitoringBandHeight,
                 opacity: 0,
-                transition: "opacity 400ms ease-in-out",
+                transition: "opacity 1000ms ease-in-out",
                 borderRadius: 4,
                 willChange: "opacity",
               }}
