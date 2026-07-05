@@ -449,7 +449,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     return mergeMonitoringIntervals(intervals);
   }, [carbEntries]);
 
-  const monitoringGradientHeight = Math.max(0, CHART_MARGIN_TOP + (GLUCOSE_MAX - targetLow) / (GLUCOSE_MAX - GLUCOSE_MIN) * plotHeight - CHART_MARGIN_TOP);
+  const monitoringBandTop = CHART_MARGIN_TOP + plotHeight * 0.4;
+  const monitoringBandHeight = Math.max(0, plotHeight * 0.6);
 
   const positionedMonitoringIntervals = useMemo(() => {
     return mergedMonitoringIntervals
@@ -652,14 +653,14 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       const intensity = isActive ? 1 : 0.4 + proximity * 0.5;
 
       el.style.opacity = String(intensity);
-      el.style.background = `linear-gradient(to bottom, rgba(${r},${g},${b},${alpha}) 0%, rgba(${r},${g},${b},${alpha}) 55%, rgba(${r},${g},${b},0) 100%)`;
+      el.style.background = `linear-gradient(to bottom, rgba(${r},${g},${b},0) 0%, rgba(${r},${g},${b},${alpha}) 45%, rgba(${r},${g},${b},${alpha}) 100%)`;
       el.style.boxShadow = `inset 0 0 ${glowSize}px rgba(${r},${g},${b},${glowAlpha})`;
     });
 
     const lEl = monitoringLabelRef.current;
     if (lEl) {
       lEl.style.opacity = anyActive ? "1" : "0";
-      lEl.style.transform = anyActive ? "translate(-50%, 0)" : "translate(-50%, 4px)";
+      lEl.style.transform = anyActive ? "translateY(0)" : "translateY(4px)";
     }
     if (anyActive !== prevMonitoringActiveRef.current) {
       prevMonitoringActiveRef.current = anyActive;
@@ -804,9 +805,9 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               className="pointer-events-none absolute z-[2]"
               style={{
                 left: iv.x,
-                top: CHART_MARGIN_TOP,
+                top: monitoringBandTop,
                 width: iv.width,
-                height: monitoringGradientHeight,
+                height: monitoringBandHeight,
                 opacity: 0,
                 transition: "opacity 300ms ease-in-out",
                 borderRadius: 4,
