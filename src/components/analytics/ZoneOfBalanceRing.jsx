@@ -121,13 +121,13 @@ export default function ZoneOfBalanceRing({ inRangePercent, abovePercent, belowP
             >
               {Math.round(inRangePercent)}%
             </motion.span>
-            <span className="text-[10px] uppercase tracking-wider text-white/40">in balance</span>
+            <span className="text-[10px] uppercase tracking-wider text-white/40">balanced</span>
           </div>
         </div>
 
         <div className="mt-5 flex gap-4">
           <LegendItem color={COLORS.below} label="Below" value={`${Math.round(belowPercent)}%`} />
-          <LegendItem color={COLORS.inRange} label="In Balance" value={`${Math.round(inRangePercent)}%`} />
+          <LegendItem color={COLORS.inRange} label="Balanced" value={`${Math.round(inRangePercent)}%`} />
           <LegendItem color={COLORS.above} label="Above" value={`${Math.round(abovePercent)}%`} />
         </div>
 
