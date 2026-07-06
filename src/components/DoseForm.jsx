@@ -1,13 +1,13 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
-import { Dialog, DialogPortal, DialogOverlay } from "@/components/ui/dialog";
 import { X, Syringe, Droplets, Wheat, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { AnimatePresence, motion } from "framer-motion";
-import { CustomInputTray, TimeScrollField, NumberPadField, TextPadField, SelectField } from "@/components/FormInputFields";
+import { TimeScrollField, NumberPadField, TextPadField, SelectField } from "@/components/FormInputFields";
+import Sheet from "@/components/Sheet";
 
 const CarbsTab = lazy(() => import("@/components/CarbsTab"));
 const LATEST_GLUCOSE_CACHE_KEY = "latest_glucose_cache";
@@ -51,6 +51,18 @@ const dosePurposeOptions = [
   { value: "meal", label: "Meal", description: "Carb coverage" },
   { value: "correction", label: "Correction", description: "Glucose correction" },
 ];
+
+const ACCENT_COLORS = {
+  insulin: "rgba(91,163,184,0.12)",
+  glucose: "rgba(91,168,138,0.12)",
+  carbs: "rgba(212,160,86,0.12)",
+};
+
+const TAB_TITLES = {
+  insulin: "Log Support",
+  glucose: "Log Glucose",
+  carbs: "Log Nourishment",
+};
 
 function createInsulinRow(defaults = {}) {
   return {
@@ -123,6 +135,8 @@ export default function DoseForm({ open, onOpenChange }) {
   const [glucoseNotes, setGlucoseNotes] = useState("");
   const [glucoseTime, setGlucoseTime] = useState(() => new Date().toTimeString().slice(0, 5));
   const [loggingTab, setLoggingTab] = useState(null);
+  const [showDiscardPrompt, setShowDiscardPrompt] = useState(false);
+  const [carbsDirty, setCarbsDirty] = useState(false);
 
   const queryClient = useQueryClient();
   const nowTimeString = new Date().toTimeString().slice(0, 5);
@@ -171,15 +185,6 @@ export default function DoseForm({ open, onOpenChange }) {
     }
 
     setTimeout(start, 0);
-  };
-  const handleDialogOpenChange = (nextOpen) => {
-    if (nextOpen) {
-      setRenderSheet(true);
-      onOpenChange?.(true);
-      return;
-    }
-
-    requestClose();
   };
 
   const handleTabChange = (nextTab) => {
@@ -274,7 +279,7 @@ export default function DoseForm({ open, onOpenChange }) {
       queryClient.setQueryData(["carb-entries", "graph"], (current = []) => prependUnique(savedEntries, current.filter((entry) => !optimisticIds.has(entry.id))));
       queryClient.invalidateQueries({ queryKey: ["carb-entries"] });
       queryClient.invalidateQueries({ queryKey: ["carb-entries", "graph"] });
-      toast.success(`Nourishment logged`);
+      toast.success("Nourishment logged");
       toast.success(`Added ${submittedEntries[0]?.carbs ?? "?"}g to your day`);
     },
     onError: (error, _variables, context) => {
@@ -284,6 +289,7 @@ export default function DoseForm({ open, onOpenChange }) {
       toast.error(error?.message || "Unable to log carbs. Please check the carb entry fields.");
     },
   });
+
   const updateInsulinRow = (id, patch) => {
     setInsulinRows((rows) => rows.map((row) => (row.id === id ? { ...row, ...patch } : row)));
   };
@@ -312,6 +318,51 @@ export default function DoseForm({ open, onOpenChange }) {
   }, {});
 
   const totalUnits = Object.values(insulinTotals).reduce((sum, units) => sum + units, 0);
+
+  const hasUnsavedChanges = useMemo(() => {
+    if (loggingTab) return false;
+    if (tab === "insulin") {
+      return insulinRows.some((row) => row.insulinType || row.units) || insulinNotes.length > 0;
+    }
+    if (tab === "glucose") {
+      return glucoseValue !== "" || glucoseNotes.length > 0;
+    }
+    if (tab === "carbs") {
+      return carbsDirty;
+    }
+    return false;
+  }, [tab, loggingTab, insulinRows, insulinNotes, glucoseValue, glucoseNotes, carbsDirty]);
+
+  useEffect(() => {
+    if (!hasUnsavedChanges || !renderSheet) return;
+    const handler = (e) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [hasUnsavedChanges, renderSheet]);
+
+  const attemptClose = () => {
+    if (loggingTab) return;
+    if (hasUnsavedChanges) {
+      setShowDiscardPrompt(true);
+    } else {
+      requestClose();
+    }
+  };
+
+  const discardAndClose = () => {
+    setShowDiscardPrompt(false);
+    setInsulinRows([createInsulinRow()]);
+    setInsulinNotes("");
+    setInsulinTime(new Date().toTimeString().slice(0, 5));
+    setGlucoseValue("");
+    setGlucoseNotes("");
+    setGlucoseTime(new Date().toTimeString().slice(0, 5));
+    setCarbsDirty(false);
+    requestClose();
+  };
 
   const handleSubmitInsulin = () => {
     if (loggingTab) return;
@@ -417,94 +468,37 @@ export default function DoseForm({ open, onOpenChange }) {
     }));
 
     setLoggingTab("carbs");
-    runSaveAfterLoggingPaint(() => createCarb.mutate({ submittedEntries, optimisticEntries }), () => {});
+    runSaveAfterLoggingPaint(() => createCarb.mutate({ submittedEntries, optimisticEntries }), () => {
+      setCarbsDirty(false);
+    });
   };
 
-  if (!renderSheet) return null;
-
   return (
-    <Dialog open={renderSheet} onOpenChange={handleDialogOpenChange}>
-      <DialogPortal>
-        <style>{`
-          .dose-form-content[data-state="open"] {
-            animation: dose-form-sheet-in 420ms cubic-bezier(0.22, 1, 0.36, 1);
-          }
+    <>
+      <Sheet open={renderSheet} onClose={attemptClose} accentColor={ACCENT_COLORS[tab]}>
+        <div className="dose-form-sheet flex min-h-0 flex-1 flex-col">
+          <style>{`.dose-form-sheet input,.dose-form-sheet select,.dose-form-sheet textarea{font-size:16px}`}</style>
 
-          .dose-form-content[data-state="closed"] {
-            animation: dose-form-sheet-out 260ms cubic-bezier(0.32, 0, 0.67, 0);
-            opacity: 0;
-            pointer-events: none;
-            transform: translateY(100%);
-          }
-
-          @keyframes dose-form-sheet-in {
-            from { transform: translateY(100%); }
-            to { transform: translateY(0); }
-          }
-
-          @keyframes dose-form-sheet-out {
-            from { transform: translateY(0); }
-            to { transform: translateY(100%); }
-          }
-
-          .dose-form-content input,
-          .dose-form-content select,
-          .dose-form-content textarea {
-            font-size: 16px;
-          }
-
-          @media (min-width: 640px) {
-            .dose-form-content[data-state="open"] {
-              animation-name: dose-form-dialog-in;
-            }
-
-            .dose-form-content[data-state="closed"] {
-              animation-name: dose-form-dialog-out;
-              transform: translate(-50%, calc(-50% + 16px)) scale(0.98);
-            }
-
-            @keyframes dose-form-dialog-in {
-              from { opacity: 0; transform: translate(-50%, calc(-50% + 24px)) scale(0.96); }
-              to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-            }
-
-            @keyframes dose-form-dialog-out {
-              from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-              to { opacity: 0; transform: translate(-50%, calc(-50% + 16px)) scale(0.98); }
-            }
-          }
-        `}</style>
-        <DialogOverlay
-          className="fixed inset-0 z-50 sm:backdrop-blur-sm data-[state=closed]:pointer-events-none data-[state=closed]:opacity-0"
-          style={{ background: "rgba(0, 0, 0, 0.25)" }}
-        />
-        <DialogPrimitive.Content
-          className="dose-form-content fixed bottom-0 left-0 right-0 z-50 flex h-[92dvh] max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-3xl border shadow-2xl sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:h-auto sm:max-h-[92vh] sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl"
-          style={{
-            background: "linear-gradient(165deg, hsl(162,12%,9%) 0%, hsl(162,10%,6%) 100%)",
-            borderColor: "rgba(255,255,255,0.12)",
-            boxShadow: "0 -20px 60px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.08)",
-          }}
-        >
-          <div className="flex items-center justify-between px-6 pb-3 pt-5">
-            <div className="w-8" />
-            <span className="text-lg font-semibold text-white">Record a Moment</span>
+          {/* Title bar */}
+          <div className="flex shrink-0 items-center justify-between px-5 pb-2">
+            <h2 className="text-base font-semibold text-white/90">{TAB_TITLES[tab]}</h2>
             <button
               type="button"
-              onClick={requestClose}
+              onClick={attemptClose}
               className="flex h-8 w-8 items-center justify-center rounded-full border text-white/60 transition hover:text-white"
               style={{ background: "linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))", borderColor: "rgba(255,255,255,0.12)" }}
-              aria-label="Close log form"
+              aria-label="Close"
             >
               <X className="h-4 w-4" />
             </button>
           </div>
 
-          <div className="mx-5 mb-2 flex rounded-2xl border border-white/10 bg-white/[0.04] p-1" style={{ boxShadow: "inset 0 1px 1px rgba(255,255,255,0.06)" }}>
+          {/* Tab selector */}
+          <div className="mx-5 mb-2 flex shrink-0 rounded-2xl border border-white/10 bg-white/[0.04] p-1" style={{ boxShadow: "inset 0 1px 1px rgba(255,255,255,0.06)" }}>
             {[
-              { id: "insulin", label: "Insulin", Icon: Syringe },
+              { id: "insulin", label: "Support", Icon: Syringe },
               { id: "glucose", label: "Glucose", Icon: Droplets },
-              { id: "carbs", label: "Carbs", Icon: Wheat },
+              { id: "carbs", label: "Nourishment", Icon: Wheat },
             ].map(({ id, label, Icon }) => (
               <button
                 key={id}
@@ -521,6 +515,7 @@ export default function DoseForm({ open, onOpenChange }) {
             ))}
           </div>
 
+          {/* Form content */}
           <div className="relative min-h-0 flex-1 overflow-hidden">
             <AnimatePresence initial={false} custom={tabDirection} mode="popLayout">
               <motion.div
@@ -535,17 +530,15 @@ export default function DoseForm({ open, onOpenChange }) {
               >
                 {tab === "carbs" ? (
                   <div className="min-h-0 flex-1 overflow-y-auto">
-                    <Suspense fallback={<div className="flex h-full items-center justify-center text-sm text-white/35">Loading carbs...</div>}>
-                      <CarbsTab onSubmit={handleSubmitCarbs} isPending={loggingTab === "carbs" || createCarb.isPending} />
+                    <Suspense fallback={<div className="flex h-full items-center justify-center text-sm text-white/35">Loading...</div>}>
+                      <CarbsTab onSubmit={handleSubmitCarbs} isPending={loggingTab === "carbs" || createCarb.isPending} onDirtyChange={setCarbsDirty} />
                     </Suspense>
                   </div>
                 ) : tab === "insulin" ? (
                   <>
-                    <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-6 pt-4">
+                    <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-4 pt-3">
                       <div className="space-y-3">
-                        <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/55">Your support</p>
-
-                        {insulinRows.map((row, index) => (
+                        {insulinRows.map((row) => (
                           <div key={row.id} className="space-y-2">
                             <div className="grid grid-cols-1 gap-2">
                               <SelectField
@@ -555,15 +548,14 @@ export default function DoseForm({ open, onOpenChange }) {
                                 options={insulinTypeOptions}
                                 placeholder="Insulin type"
                               />
-
                               <NumberPadField
                                 label="Units"
                                 value={row.units}
                                 onChange={(value) => updateInsulinRow(row.id, { units: value })}
                                 placeholder="0"
                                 maxLength={4}
+                                large
                               />
-
                               <SelectField
                                 label="Purpose"
                                 value={row.purpose}
@@ -571,7 +563,6 @@ export default function DoseForm({ open, onOpenChange }) {
                                 options={dosePurposeOptions}
                               />
                             </div>
-
                             {insulinRows.length > 1 && (
                               <button
                                 type="button"
@@ -584,7 +575,6 @@ export default function DoseForm({ open, onOpenChange }) {
                             )}
                           </div>
                         ))}
-
                         <button
                           type="button"
                           onClick={addInsulinRow}
@@ -595,31 +585,21 @@ export default function DoseForm({ open, onOpenChange }) {
                           Add another dose
                         </button>
                       </div>
-
-                      <div className="mt-6 space-y-3">
-                        <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/55">Time</p>
+                      <div className="mt-4 space-y-3">
                         <TimeScrollField label="Administered at" value={insulinTime} onChange={setInsulinTime} max={nowTimeString} />
-                      </div>
-
-                      <div className="mt-6 space-y-3">
-                        <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/55">Notes (optional)</p>
-                        <TextPadField value={insulinNotes} onChange={setInsulinNotes} placeholder="e.g. before lunch" multiline />
-                      </div>
-
-                      <div className="mt-6 space-y-2 border-t border-white/10 pt-4">
-                        {Object.entries(insulinTotals).length ? (
-                          Object.entries(insulinTotals).map(([type, units]) => (
-                            <p key={type} className="text-sm font-semibold text-white/85">
-                              {type.split(" ")[0]} {units % 1 === 0 ? units : units.toFixed(1)} units total
-                            </p>
-                          ))
-                        ) : (
-                          <p className="text-sm text-white/35">Add an insulin dose to see the total.</p>
-                        )}
+                        <TextPadField label="Notes" value={insulinNotes} onChange={setInsulinNotes} placeholder="e.g. before lunch" multiline />
                       </div>
                     </div>
-
-                    <div className="shrink-0 px-5 pb-6 pt-3">
+                    <div className="shrink-0 px-5 pb-[max(env(safe-area-inset-bottom),1.5rem)] pt-2">
+                      {Object.entries(insulinTotals).length > 0 && (
+                        <div className="mb-2 px-1">
+                          {Object.entries(insulinTotals).map(([type, units]) => (
+                            <p key={type} className="text-xs text-white/35">
+                              {type.split(" ")[0]} · {units % 1 === 0 ? units : units.toFixed(1)}u
+                            </p>
+                          ))}
+                        </div>
+                      )}
                       <button
                         type="button"
                         onClick={handleSubmitInsulin}
@@ -637,34 +617,22 @@ export default function DoseForm({ open, onOpenChange }) {
                   </>
                 ) : (
                   <>
-                    <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-6 pt-4">
-                      <p className="block text-sm font-bold uppercase tracking-widest text-white/55">
-                        Glucose (mg/dL)
-                      </p>
-                      <div className="mt-3">
-                        <NumberPadField
-                          label="Glucose"
-                          value={glucoseValue}
-                          onChange={(value) => setGlucoseValue(value.replace(/\D/g, "").slice(0, 3))}
-                          unit="mg/dL"
-                          decimal={false}
-                          maxLength={3}
-                          large
-                        />
-                      </div>
-
-                      <div className="mt-6 space-y-3">
-                        <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/55">Time</p>
+                    <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-4 pt-3">
+                      <NumberPadField
+                        label="Glucose"
+                        value={glucoseValue}
+                        onChange={(value) => setGlucoseValue(value.replace(/\D/g, "").slice(0, 3))}
+                        unit="mg/dL"
+                        decimal={false}
+                        maxLength={3}
+                        large
+                      />
+                      <div className="mt-4 space-y-3">
                         <TimeScrollField label="Reading time" value={glucoseTime} onChange={setGlucoseTime} max={nowTimeString} />
-                      </div>
-
-                      <div className="mt-6 space-y-3">
-                        <p className="px-1 text-sm font-bold uppercase tracking-widest text-white/55">Notes (optional)</p>
-                        <TextPadField value={glucoseNotes} onChange={setGlucoseNotes} placeholder="e.g. fasting, after meal" multiline />
+                        <TextPadField label="Notes" value={glucoseNotes} onChange={setGlucoseNotes} placeholder="e.g. fasting, after meal" multiline />
                       </div>
                     </div>
-
-                    <div className="shrink-0 px-5 pb-6 pt-3">
+                    <div className="shrink-0 px-5 pb-[max(env(safe-area-inset-bottom),1.5rem)] pt-2">
                       <button
                         type="button"
                         onClick={handleSubmitGlucose}
@@ -680,8 +648,58 @@ export default function DoseForm({ open, onOpenChange }) {
               </motion.div>
             </AnimatePresence>
           </div>
-        </DialogPrimitive.Content>
-      </DialogPortal>
-    </Dialog>
+        </div>
+      </Sheet>
+
+      {/* Unsaved changes confirmation */}
+      {typeof document !== "undefined" && createPortal(
+        <AnimatePresence>
+          {showDiscardPrompt && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18 }}
+              className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 px-6 backdrop-blur-sm"
+              onClick={() => setShowDiscardPrompt(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.92, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.92, opacity: 0 }}
+                transition={{ type: "spring", stiffness: 380, damping: 28 }}
+                onClick={(e) => e.stopPropagation()}
+                className="w-full max-w-sm rounded-3xl border p-6 text-center"
+                style={{ background: "linear-gradient(165deg, hsl(162,12%,11%), hsl(162,10%,7%))", borderColor: "rgba(255,255,255,0.14)", boxShadow: "0 24px 60px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.08)" }}
+              >
+                <h3 className="text-lg font-semibold text-white">Discard this entry?</h3>
+                <p className="mt-2 text-sm leading-relaxed text-white/55">
+                  Your moment hasn't been saved yet. You'll lose what you've entered.
+                </p>
+                <div className="mt-6 flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowDiscardPrompt(false)}
+                    className="flex-1 rounded-2xl border py-3 text-sm font-semibold text-white/80 transition hover:text-white"
+                    style={{ borderColor: "rgba(255,255,255,0.14)", background: "rgba(255,255,255,0.04)" }}
+                  >
+                    Keep editing
+                  </button>
+                  <button
+                    type="button"
+                    onClick={discardAndClose}
+                    className="flex-1 rounded-2xl py-3 text-sm font-semibold text-white transition"
+                    style={{ background: "linear-gradient(145deg, rgba(201,112,96,0.8), rgba(180,90,75,0.7))", boxShadow: "0 6px 20px rgba(201,112,96,0.2)" }}
+                  >
+                    Discard
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
+    </>
   );
 }

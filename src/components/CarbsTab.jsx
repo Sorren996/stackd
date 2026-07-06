@@ -50,7 +50,7 @@ function readImageAsDataUrl(file) {
   });
 }
 
-export default function CarbsTab({ onSubmit, isPending }) {
+export default function CarbsTab({ onSubmit, isPending, onDirtyChange }) {
   const [mode, setMode] = useState("estimate");
   const [mealText, setMealText] = useState("");
   const [mealPhoto, setMealPhoto] = useState(null);
@@ -67,6 +67,12 @@ export default function CarbsTab({ onSubmit, isPending }) {
   const [isHighProteinFat, setIsHighProteinFat] = useState(false);
 
   const nowTimeString = new Date().toTimeString().slice(0, 5);
+
+  useEffect(() => {
+    onDirtyChange?.(
+      Boolean(mealText || mealPhotoFile || estimatedMeal || customFoodName || customCarbs || selectedFoods.length > 0)
+    );
+  }, [mealText, mealPhotoFile, estimatedMeal, customFoodName, customCarbs, selectedFoods, onDirtyChange]);
 
   useEffect(() => {
     base44.entities.CarbEntry.list("-consumed_at", 20).then((entries) => {
