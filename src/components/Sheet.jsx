@@ -97,14 +97,15 @@ export default function Sheet({ open, onClose, children, accentColor }) {
             dragElastic={{ top: 0, bottom: 0.5 }}
             onDragEnd={handleDragEnd}
             className="relative flex h-[90dvh] max-h-[92dvh] flex-col overflow-hidden rounded-t-[28px] border-t"
-            style={{
-              background: "rgba(12, 18, 15, 0.55)",
-              backdropFilter: "blur(24px) saturate(1.5)",
-              WebkitBackdropFilter: "blur(24px) saturate(1.5)",
-              borderColor: "rgba(255,255,255,0.1)",
-              boxShadow: "0 -24px 60px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.08)",
-              willChange: "transform",
-            }}
+            // Change from solid gradient to semi-transparent surface with blur
+style={{
+  background: "rgba(20, 25, 23, 0.75)", // Semi-transparent deep charcoal
+  backdropFilter: "blur(24px)",        // The frosted effect
+  WebkitBackdropFilter: "blur(24px)", // Required for Safari/iOS
+  borderColor: "rgba(255,255,255,0.1)",
+  boxShadow: "0 -24px 60px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.08)",
+  willChange: "transform",
+}}
           >
             {/* Drag indicator — large invisible touch target, minimal visible bar */}
             <div
