@@ -96,7 +96,7 @@ export default function Sheet({ open, onClose, children, accentColor }) {
             dragConstraints={{ top: 0, bottom: 0 }}
             dragElastic={{ top: 0, bottom: 0.5 }}
             onDragEnd={handleDragEnd}
-            className="relative flex max-h-[92dvh] flex-col overflow-hidden rounded-t-[28px] border-t"
+            className="relative flex h-[90dvh] max-h-[92dvh] flex-col overflow-hidden rounded-t-[28px] border-t"
             style={{
               background: "linear-gradient(180deg, hsl(162,12%,9%) 0%, hsl(160,10%,5%) 100%)",
               borderColor: "rgba(255,255,255,0.1)",
