@@ -99,7 +99,7 @@ export default function Sheet({ open, onClose, children, accentColor }) {
             className="relative flex h-[90dvh] max-h-[92dvh] flex-col overflow-hidden rounded-t-[28px] border-t"
             // Change from solid gradient to semi-transparent surface with blur
 style={{
-  background: "rgba(20, 25, 23, 0.75)", // Semi-transparent deep charcoal
+  background: "rgba(20, 25, 23, 0.11)", // Semi-transparent deep charcoal
   backdropFilter: "blur(24px)",        // The frosted effect
   WebkitBackdropFilter: "blur(24px)", // Required for Safari/iOS
   borderColor: "rgba(255,255,255,0.1)",
