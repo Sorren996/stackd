@@ -411,22 +411,27 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
 
     if (latestIsAfterMeal && latestInRange) {
       // Currently in range — always show a positive recovery message
+      const startPart = correctionGlucoseAvailable
+        ? `You began at ${Math.round(glucoseValue)} mg/dL`
+        : "You began this meal";
+      const nowPart = `and you're now at ${Math.round(latestGlucoseValue)} mg/dL in your comfortable range`;
+
       if (hadDip) {
         outcomeAssessment = {
           label: "Settled nicely",
-          message: "There was a gentle dip along the way, but you've found your footing again. Well done.",
+          message: `${startPart}, dipped to ${Math.round(lowOutcome.value)} mg/dL along the way, ${nowPart}. Well done finding your footing again.`,
           color: "#5ba88a",
         };
       } else if (hadSpike) {
         outcomeAssessment = {
           label: "Settled nicely",
-          message: "There was a rise after eating, but you've come back to range. Nice work staying with it.",
+          message: `${startPart}, rose to ${Math.round(peakOutcome.value)} mg/dL after eating, ${nowPart}. Nice work staying with it.`,
           color: "#5ba88a",
         };
       } else {
         outcomeAssessment = {
           label: "Tracking beautifully",
-          message: "Right where we want to be. Your dosing is aligning well with this meal.",
+          message: `${startPart} ${nowPart}. Your support is aligning beautifully with this meal.`,
           color: "#5ba88a",
         };
       }

@@ -226,8 +226,26 @@ export function NumberPadField({ label, value, onChange, unit, placeholder = "--
           {textValue || placeholder}{unit && <span className="ml-1 text-xs text-white/55">{unit}</span>}
         </span>
       </button>
-      <CustomInputTray open={open} onClose={() => setOpen(false)} title={label} anchorRef={fieldRef}>
-        <div className="grid grid-cols-3 gap-2.5">
+      <CustomInputTray open={open} onClose={() => setOpen(false)} title={label} anchorRef={fieldRef} tall>
+        {/* Input preview */}
+        <div className="mb-3 flex min-h-[48px] items-center rounded-2xl border border-white/10 bg-black/30 px-4 py-2.5">
+          <span className="w-full text-center text-2xl font-bold text-white">
+            {textValue || <span className="text-white/40">{placeholder}</span>}
+          </span>
+          {unit && textValue && <span className="ml-1 text-xs text-white/55">{unit}</span>}
+          {textValue && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onChange(""); }}
+              className="ml-2 shrink-0 text-xs font-semibold text-white/40 transition hover:text-white/70"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+
+        {/* Number pad with iOS-style keys */}
+        <div className="grid grid-cols-3 gap-[5px]">
           {["1", "2", "3", "4", "5", "6", "7", "8", "9", decimal ? "." : "clear", "0", "back"].map((key) => (
             <button
               key={key}
@@ -236,13 +254,13 @@ export function NumberPadField({ label, value, onChange, unit, placeholder = "--
                 event.stopPropagation();
                 press(key);
               }}
-              className="h-14 rounded-2xl border text-xl font-bold text-white/90 transition active:scale-[0.96]"
-              style={GLASS_KEY}
-              onMouseDown={(e) => { e.currentTarget.style.cssText = ""; Object.assign(e.currentTarget.style, GLASS_KEY_PRESSED); }}
-              onMouseUp={(e) => { e.currentTarget.style.cssText = ""; Object.assign(e.currentTarget.style, GLASS_KEY); }}
-              onMouseLeave={(e) => { e.currentTarget.style.cssText = ""; Object.assign(e.currentTarget.style, GLASS_KEY); }}
+              className="h-[52px] rounded-[9px] border text-base font-bold text-white/95 transition-all duration-100 active:scale-[0.94]"
+              style={IOS_KEY}
+              onPointerDown={(e) => { e.currentTarget.style.cssText = ""; Object.assign(e.currentTarget.style, IOS_KEY_PRESSED); }}
+              onPointerUp={(e) => { e.currentTarget.style.cssText = ""; Object.assign(e.currentTarget.style, IOS_KEY); }}
+              onPointerLeave={(e) => { e.currentTarget.style.cssText = ""; Object.assign(e.currentTarget.style, IOS_KEY); }}
             >
-              {key === "back" ? "Back" : key === "clear" ? "Clear" : key}
+              {key === "back" ? <Delete className="h-5 w-5 mx-auto" /> : key === "clear" ? "Clear" : key}
             </button>
           ))}
         </div>
