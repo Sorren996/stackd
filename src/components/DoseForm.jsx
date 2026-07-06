@@ -367,6 +367,8 @@ export default function DoseForm({ open, onOpenChange }) {
   const handleSubmitInsulin = () => {
     if (loggingTab) return;
 
+    navigator.vibrate?.(20);
+
     const invalidRow = insulinRows.find((row) => {
       const units = Number(row.units);
       return !row.insulinType || !Number.isFinite(units) || units <= 0;
@@ -423,6 +425,8 @@ export default function DoseForm({ open, onOpenChange }) {
   const handleSubmitGlucose = () => {
     if (loggingTab) return;
 
+    navigator.vibrate?.(20);
+
     const value = Number(glucoseValue);
     if (!Number.isFinite(value) || value <= 0) return;
 
@@ -453,6 +457,8 @@ export default function DoseForm({ open, onOpenChange }) {
 
   const handleSubmitCarbs = (entries) => {
     if (loggingTab) return;
+
+    navigator.vibrate?.(20);
 
     const submittedEntries = entries.map(normalizeCarbEntryForSave).filter((entry) => entry.carbs > 0);
 

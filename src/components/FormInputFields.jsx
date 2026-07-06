@@ -40,9 +40,9 @@ const GLASS_KEY = {
 };
 
 const GLASS_KEY_PRESSED = {
-  background: "linear-gradient(145deg, rgba(91,163,184,0.22), rgba(91,163,184,0.08))",
-  borderColor: "rgba(91,163,184,0.3)",
-  boxShadow: "inset 0 2px 8px rgba(0,0,0,0.25), 0 0 12px rgba(91,163,184,0.15)",
+  background: "linear-gradient(145deg, rgba(91,168,138,0.35), rgba(91,168,138,0.12))",
+  borderColor: "rgba(91,168,138,0.3)",
+  boxShadow: "inset 0 2px 8px rgba(0,0,0,0.25), 0 0 12px rgba(91,168,138,0.15)",
 };
 
 const ORGANIC_ACTIVE = {
@@ -263,6 +263,12 @@ const IOS_KEY_DARK = {
   boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)",
 };
 
+const IOS_KEY_PRESSED = {
+  background: "linear-gradient(180deg, rgba(91,168,138,0.3) 0%, rgba(91,168,138,0.1) 100%)",
+  borderColor: "rgba(91,168,138,0.28)",
+  boxShadow: "inset 0 2px 8px rgba(0,0,0,0.2), 0 0 10px rgba(91,168,138,0.12)",
+};
+
 export function TextPadField({ label, value, onChange, placeholder, multiline = false }) {
   const [open, setOpen] = useState(false);
   const fieldRef = useRef(null);
@@ -273,8 +279,11 @@ export function TextPadField({ label, value, onChange, placeholder, multiline = 
     <button
       type="button"
       onClick={(e) => { e.stopPropagation(); onClick?.(); }}
-      className={`h-[52px] min-w-0 rounded-[9px] border text-base font-normal text-white/95 transition-transform active:scale-[0.94] active:brightness-110 ${wide ? "flex-1" : "shrink-0"} ${className}`}
+      className={`h-[52px] min-w-0 rounded-[9px] border text-base font-normal text-white/95 transition-all duration-100 active:scale-[0.94] ${wide ? "flex-1" : "shrink-0"} ${className}`}
       style={style}
+      onPointerDown={(e) => { e.currentTarget.style.cssText = ""; Object.assign(e.currentTarget.style, IOS_KEY_PRESSED); }}
+      onPointerUp={(e) => { e.currentTarget.style.cssText = ""; Object.assign(e.currentTarget.style, style); }}
+      onPointerLeave={(e) => { e.currentTarget.style.cssText = ""; Object.assign(e.currentTarget.style, style); }}
     >
       {children}
     </button>
