@@ -98,9 +98,11 @@ export default function Sheet({ open, onClose, children, accentColor }) {
             onDragEnd={handleDragEnd}
             className="relative flex h-[90dvh] max-h-[92dvh] flex-col overflow-hidden rounded-t-[28px] border-t"
             style={{
-              background: "linear-gradient(180deg, hsl(162,12%,9%) 0%, hsl(160,10%,5%) 100%)",
+              background: "rgba(12, 18, 15, 0.55)",
+              backdropFilter: "blur(24px) saturate(1.5)",
+              WebkitBackdropFilter: "blur(24px) saturate(1.5)",
               borderColor: "rgba(255,255,255,0.1)",
-              boxShadow: "0 -24px 60px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.08)",
+              boxShadow: "0 -24px 60px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.08)",
               willChange: "transform",
             }}
           >

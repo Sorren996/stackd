@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
+import { Delete, ArrowLeft } from "lucide-react";
 
 function formatTimeLabel(value) {
   const [hoursRaw, minutes = "00"] = String(value || "00:00").split(":");
@@ -250,11 +251,34 @@ export function NumberPadField({ label, value, onChange, unit, placeholder = "--
   );
 }
 
+const IOS_KEY = {
+  background: "linear-gradient(180deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.06) 100%)",
+  borderColor: "rgba(255,255,255,0.08)",
+  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.12), 0 1px 3px rgba(0,0,0,0.2)",
+};
+
+const IOS_KEY_DARK = {
+  background: "linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%)",
+  borderColor: "rgba(255,255,255,0.06)",
+  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)",
+};
+
 export function TextPadField({ label, value, onChange, placeholder, multiline = false }) {
   const [open, setOpen] = useState(false);
   const fieldRef = useRef(null);
-  const rows = ["1234567890", "QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"];
+  const rows = ["qwertyuiop", "asdfghjkl", "zxcvbnm"];
   const add = (key) => onChange(`${value || ""}${key}`);
+
+  const KeyButton = ({ children, onClick, wide = false, style = IOS_KEY, className = "" }) => (
+    <button
+      type="button"
+      onClick={(e) => { e.stopPropagation(); onClick?.(); }}
+      className={`h-[52px] min-w-0 rounded-[9px] border text-base font-normal text-white/95 transition-transform active:scale-[0.94] active:brightness-110 ${wide ? "flex-1" : "shrink-0"} ${className}`}
+      style={style}
+    >
+      {children}
+    </button>
+  );
 
   return (
     <div ref={fieldRef}>
@@ -262,31 +286,65 @@ export function TextPadField({ label, value, onChange, placeholder, multiline = 
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
-        className={`w-full rounded-2xl border px-3 py-3 text-left text-sm text-white outline-none transition ${multiline ? "min-h-20" : ""}`}
+        className={`w-full rounded-2xl border px-4 py-3.5 text-left text-sm text-white outline-none transition ${multiline ? "min-h-20" : ""}`}
         style={GLASS_SURFACE}
       >
         {value ? <span className="whitespace-pre-wrap">{value}</span> : <span className="text-white/50">{placeholder}</span>}
       </button>
       <CustomInputTray open={open} onClose={() => setOpen(false)} title={label || "Text"} tall anchorRef={fieldRef}>
-        <div className="rounded-2xl border border-white/10 bg-black/25 p-2">
-          {rows.map((row) => (
-            <div key={row} className="mb-1.5 flex justify-center gap-1.5 last:mb-0">
-              {[...row].map((letter) => (
-                <button key={letter} type="button" onClick={(event) => {
-                    event.stopPropagation();
-                    add(letter.toLowerCase());
-                  }} className="h-12 min-w-0 flex-1 rounded-xl border text-sm font-bold text-white/90 active:scale-[0.96]" style={GLASS_KEY}>
-                  {letter}
-                </button>
-              ))}
-            </div>
-          ))}
-          <div className="mt-2 grid grid-cols-[1fr_1fr_2fr_1fr_1fr] gap-2">
-            <button type="button" onClick={(event) => { event.stopPropagation(); onChange(""); }} className="h-12 rounded-xl border text-xs font-bold text-white/75" style={GLASS_KEY}>Clear</button>
-            <button type="button" onClick={(event) => { event.stopPropagation(); add(","); }} className="h-12 rounded-xl border text-xs font-bold text-white/75" style={GLASS_KEY}>,</button>
-            <button type="button" onClick={(event) => { event.stopPropagation(); add(" "); }} className="h-12 rounded-xl border text-xs font-bold text-white/75" style={GLASS_KEY}>Space</button>
-            <button type="button" onClick={(event) => { event.stopPropagation(); add("."); }} className="h-12 rounded-xl border text-xs font-bold text-white/75" style={GLASS_KEY}>.</button>
-            <button type="button" onClick={(event) => { event.stopPropagation(); onChange(String(value || "").slice(0, -1)); }} className="h-12 rounded-xl border text-xs font-bold text-white/75" style={GLASS_KEY}>Back</button>
+        {/* Text preview */}
+        <div className="mb-3 flex min-h-[48px] items-center rounded-2xl border border-white/10 bg-black/30 px-4 py-2.5">
+          <span className="w-full break-words text-base text-white">
+            {value || <span className="text-white/40">{placeholder}</span>}
+          </span>
+          {value && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onChange(""); }}
+              className="ml-2 shrink-0 text-xs font-semibold text-white/40 transition hover:text-white/70"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+
+        {/* iOS-style keyboard */}
+        <div className="space-y-[7px]">
+          {/* Row 1: q-p */}
+          <div className="flex gap-[5px]">
+            {[...rows[0]].map((letter) => (
+              <KeyButton key={letter} onClick={() => add(letter)} wide>
+                {letter}
+              </KeyButton>
+            ))}
+          </div>
+          {/* Row 2: a-l (offset like iOS) */}
+          <div className="flex gap-[5px] px-[18px]">
+            {[...rows[1]].map((letter) => (
+              <KeyButton key={letter} onClick={() => add(letter)} wide>
+                {letter}
+              </KeyButton>
+            ))}
+          </div>
+          {/* Row 3: comma + z-m + delete */}
+          <div className="flex gap-[5px]">
+            <KeyButton onClick={() => add(",")} style={IOS_KEY_DARK} className="w-[34px] text-sm text-white/60">,</KeyButton>
+            {[...rows[2]].map((letter) => (
+              <KeyButton key={letter} onClick={() => add(letter)} wide>
+                {letter}
+              </KeyButton>
+            ))}
+            <KeyButton onClick={() => onChange(String(value || "").slice(0, -1))} style={IOS_KEY_DARK} className="w-[44px] flex items-center justify-center text-white/60">
+              <Delete className="h-5 w-5" />
+            </KeyButton>
+          </div>
+          {/* Row 4: period + space + return */}
+          <div className="flex gap-[5px]">
+            <KeyButton onClick={() => add(".")} style={IOS_KEY_DARK} className="w-[34px] text-sm text-white/60">.</KeyButton>
+            <KeyButton onClick={() => add(" ")} style={IOS_KEY_DARK} className="flex-[5] text-sm text-white/50">space</KeyButton>
+            <KeyButton onClick={() => setOpen(false)} style={IOS_KEY_DARK} className="w-[72px] flex items-center justify-center text-sm text-white/60">
+              <ArrowLeft className="h-4 w-4" />
+            </KeyButton>
           </div>
         </div>
       </CustomInputTray>
