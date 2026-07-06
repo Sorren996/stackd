@@ -998,7 +998,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         aria-hidden="true"
       >
         <AlertTriangle className="h-3 w-3" style={{ color: "rgba(217,169,56,0.7)" }} />
-        <span className="text-[9px] font-medium" style={{ color: "rgba(217,169,56,0.8)" }}>Extended meal response window</span>
+        <span className="text-[9px] font-medium" style={{ color: "rgba(217,169,56,0.8)" }}>Hight protein/fat meal window</span>
       </div>
       </div>
     </div>);
