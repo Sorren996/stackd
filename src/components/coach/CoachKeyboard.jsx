@@ -41,15 +41,26 @@ export default function CoachKeyboard({ value, onChange, onSend, onDismiss, send
     onChange(String(value || "").slice(0, -1));
   };
 
-  const KeyButton = ({ children, onClick, wide = false, style = IOS_KEY, className = "" }) => (
+  const pressKey = (e, action) => {
+    e.preventDefault();
+    e.stopPropagation();
+    action();
+  };
+
+  const KeyButton = ({ children, onPress, wide = false, style = IOS_KEY, className = "" }) => (
     <button
       type="button"
-      onClick={(e) => { e.stopPropagation(); onClick?.(); }}
-      className={`h-[42px] min-w-0 rounded-[9px] border text-base font-normal text-white/95 transition-all duration-100 active:scale-[0.94] ${wide ? "flex-1" : "shrink-0"} ${className}`}
-      style={style}
-      onPointerDown={(e) => { e.currentTarget.style.cssText = ""; Object.assign(e.currentTarget.style, IOS_KEY_PRESSED); }}
+      onPointerDown={(e) => {
+        e.preventDefault();
+        e.currentTarget.style.cssText = "";
+        Object.assign(e.currentTarget.style, IOS_KEY_PRESSED);
+        pressKey(e, onPress);
+      }}
       onPointerUp={(e) => { e.currentTarget.style.cssText = ""; Object.assign(e.currentTarget.style, style); }}
       onPointerLeave={(e) => { e.currentTarget.style.cssText = ""; Object.assign(e.currentTarget.style, style); }}
+      onPointerCancel={(e) => { e.currentTarget.style.cssText = ""; Object.assign(e.currentTarget.style, style); }}
+      className={`h-[52px] min-w-0 touch-none select-none rounded-[10px] border text-lg font-normal text-white/95 ${wide ? "flex-1" : "shrink-0"} ${className}`}
+      style={style}
     >
       {children}
     </button>
@@ -71,53 +82,53 @@ export default function CoachKeyboard({ value, onChange, onSend, onDismiss, send
       <div className="mb-1 flex justify-center">
         <button
           type="button"
-          onClick={(e) => { e.stopPropagation(); haptic(); onDismiss(); }}
+          onPointerDown={(e) => { e.preventDefault(); haptic(); onDismiss(); }}
           className="flex items-center justify-center"
         >
           <ChevronDown className="h-4 w-4 text-white/30" />
         </button>
       </div>
 
-      <div className="space-y-[6px]">
-        <div className="flex gap-[5px]">
+      <div className="space-y-[7px]">
+        <div className="flex gap-[6px]">
           {[...rows[0]].map((letter) => (
-            <KeyButton key={letter} onClick={() => add(letter)} wide>
+            <KeyButton key={letter} onPress={() => add(letter)} wide>
               {shifted ? letter.toUpperCase() : letter}
             </KeyButton>
           ))}
         </div>
-        <div className="flex gap-[5px] px-[18px]">
+        <div className="flex gap-[6px] px-[18px]">
           {[...rows[1]].map((letter) => (
-            <KeyButton key={letter} onClick={() => add(letter)} wide>
+            <KeyButton key={letter} onPress={() => add(letter)} wide>
               {shifted ? letter.toUpperCase() : letter}
             </KeyButton>
           ))}
         </div>
-        <div className="flex gap-[5px]">
-          <KeyButton onClick={() => { haptic(); setShifted((s) => !s); }} style={shifted ? IOS_KEY_PRESSED : IOS_KEY_DARK} className="w-[34px] flex items-center justify-center text-white/60">
+        <div className="flex gap-[6px]">
+          <KeyButton onPress={() => { haptic(); setShifted((s) => !s); }} style={shifted ? IOS_KEY_PRESSED : IOS_KEY_DARK} className="w-[38px] flex items-center justify-center text-white/60">
             <ArrowUp className="h-4 w-4" />
           </KeyButton>
           {[...rows[2]].map((letter) => (
-            <KeyButton key={letter} onClick={() => add(letter)} wide>
+            <KeyButton key={letter} onPress={() => add(letter)} wide>
               {shifted ? letter.toUpperCase() : letter}
             </KeyButton>
           ))}
-          <KeyButton onClick={backspace} style={IOS_KEY_DARK} className="w-[42px] flex items-center justify-center text-white/60">
+          <KeyButton onPress={backspace} style={IOS_KEY_DARK} className="w-[46px] flex items-center justify-center text-white/60">
             <Delete className="h-5 w-5" />
           </KeyButton>
         </div>
-        <div className="flex gap-[5px]">
-          <KeyButton onClick={() => add(",")} style={IOS_KEY_DARK} className="w-[30px] text-sm text-white/60">,</KeyButton>
-          <KeyButton onClick={() => add(".")} style={IOS_KEY_DARK} className="w-[30px] text-sm text-white/60">.</KeyButton>
-          <KeyButton onClick={() => add("?")} style={IOS_KEY_DARK} className="w-[30px] flex items-center justify-center text-white/60">
+        <div className="flex gap-[6px]">
+          <KeyButton onPress={() => add(",")} style={IOS_KEY_DARK} className="w-[34px] text-sm text-white/60">,</KeyButton>
+          <KeyButton onPress={() => add(".")} style={IOS_KEY_DARK} className="w-[34px] text-sm text-white/60">.</KeyButton>
+          <KeyButton onPress={() => add("?")} style={IOS_KEY_DARK} className="w-[34px] flex items-center justify-center text-white/60">
             <Question className="h-4 w-4" />
           </KeyButton>
-          <KeyButton onClick={() => add(" ")} style={IOS_KEY_DARK} className="flex-[4] text-sm text-white/50">space</KeyButton>
+          <KeyButton onPress={() => add(" ")} style={IOS_KEY_DARK} className="flex-[4] text-sm text-white/50">space</KeyButton>
           <button
             type="button"
-            onClick={(e) => { e.stopPropagation(); haptic(); onSend(); }}
+            onPointerDown={(e) => { e.preventDefault(); if (!sendDisabled) { haptic(); onSend(); } }}
             disabled={sendDisabled}
-            className="flex h-[42px] w-[56px] shrink-0 items-center justify-center gap-1 rounded-[9px] border text-xs font-semibold text-white transition-all duration-100 active:scale-[0.94] disabled:opacity-30"
+            className="flex h-[52px] w-[60px] shrink-0 touch-none select-none items-center justify-center gap-1 rounded-[10px] border text-xs font-semibold text-white disabled:opacity-30"
             style={{
               background: "linear-gradient(145deg, rgba(91,168,138,0.7), rgba(91,163,184,0.5))",
               borderColor: "rgba(91,168,138,0.3)",
