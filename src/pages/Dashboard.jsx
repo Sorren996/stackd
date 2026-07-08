@@ -561,16 +561,15 @@ export default function Dashboard() {
         </div>
       ) : (
         <>
-          <div className="w-full max-w-full min-w-0 overflow-x-hidden">
+          <div className="relative w-full max-w-full min-w-0 overflow-x-hidden">
             <ActiveInsulinBanner
               doses={recentDoses}
               latestGlucose={latestGlucose}
               glucoseReadings={heroGlucoseReadings}
               carbEntries={recentCarbs}
             />
+            <CoachGateway />
           </div>
-
-          <CoachGateway />
 
           {stackingAlertsEnabled && activeRapidCount > 1 && (
             <div className="dashboard-stacking-alert backdrop-blur-sm mx-0 flex w-full max-w-full min-w-0 items-start gap-3 overflow-hidden rounded-xl border border-white/10 p-4 pb-3">

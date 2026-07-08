@@ -27,49 +27,44 @@ export default function CoachGateway() {
   }, []);
 
   return (
-    <div className="flex justify-center pt-4 pb-2">
+    <div className="pointer-events-none absolute right-3 top-2 z-30">
       <motion.button
         type="button"
         onClick={() => navigate("/coach")}
-        whileTap={{ scale: 0.95 }}
-        className="relative flex items-center gap-2.5 rounded-full border px-5 py-2.5 backdrop-blur-sm transition"
+        whileTap={{ scale: 0.9 }}
+        aria-label="Open Wellness Coach"
+        className="pointer-events-auto relative flex h-10 w-10 items-center justify-center rounded-full border backdrop-blur-sm transition"
         style={{
           background: glowing
-            ? "linear-gradient(145deg, rgba(251,191,36,0.12), rgba(251,191,36,0.04))"
-            : "linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))",
-          borderColor: glowing ? "rgba(251,191,36,0.3)" : "rgba(255,255,255,0.14)",
+            ? "linear-gradient(145deg, rgba(251,191,36,0.15), rgba(251,191,36,0.04))"
+            : "linear-gradient(145deg, rgba(255,255,255,0.12), rgba(255,255,255,0.04))",
+          borderColor: glowing ? "rgba(251,191,36,0.35)" : "rgba(255,255,255,0.18)",
           boxShadow: glowing
-            ? "0 8px 28px rgba(251,191,36,0.15), inset 0 1px 1px rgba(255,255,255,0.18)"
-            : "0 6px 20px rgba(0,0,0,0.12), inset 0 1px 1px rgba(255,255,255,0.12)",
+            ? "0 4px 20px rgba(251,191,36,0.2), inset 0 1px 1px rgba(255,255,255,0.2)"
+            : "0 4px 14px rgba(0,0,0,0.12), inset 0 1px 1px rgba(255,255,255,0.14)",
         }}
       >
         {glowing && (
           <motion.span
             aria-hidden="true"
-            className="pointer-events-none absolute -inset-3 rounded-full"
-            animate={{ opacity: [0.3, 0.6, 0.3] }}
+            className="pointer-events-none absolute -inset-2 rounded-full"
+            animate={{ opacity: [0.3, 0.65, 0.3] }}
             transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
             style={{
-              background: "radial-gradient(circle, rgba(251,191,36,0.18) 0%, transparent 70%)",
+              background: "radial-gradient(circle, rgba(251,191,36,0.22) 0%, transparent 70%)",
             }}
           />
         )}
         <motion.span
-          animate={glowing ? { scale: [1, 1.1, 1] } : { scale: 1 }}
+          animate={glowing ? { scale: [1, 1.12, 1] } : { scale: 1 }}
           transition={glowing ? { duration: 2.5, repeat: Infinity, ease: "easeInOut" } : {}}
           className="relative z-10"
         >
           <Leaf
-            className="h-4 w-4"
-            style={{ color: glowing ? "rgba(251,191,36,0.9)" : "rgba(255,255,255,0.5)" }}
+            className="h-5 w-5"
+            style={{ color: glowing ? "rgba(251,191,36,0.95)" : "rgba(255,255,255,0.6)" }}
           />
         </motion.span>
-        <span
-          className="relative z-10 text-sm font-semibold"
-          style={{ color: glowing ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.7)" }}
-        >
-          {glowing ? "New reflections await" : "Your Wellness Coach"}
-        </span>
       </motion.button>
     </div>
   );

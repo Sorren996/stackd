@@ -105,7 +105,7 @@ export default function Layout() {
     } else if (isCoachRoute) {
       setVisitedTabs((tabs) => (tabs.coach ? tabs : { ...tabs, coach: true }));
     }
-  }, [isDashboardRoute, isHistoryRoute]);
+  }, [isDashboardRoute, isHistoryRoute, isCoachRoute]);
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
