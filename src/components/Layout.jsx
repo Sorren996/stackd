@@ -75,6 +75,7 @@ export default function Layout() {
     coach: false,
   }));
   const [latestGlucose, setLatestGlucose] = useState(readCachedLatestGlucose);
+  const [coachKeyboardOpen, setCoachKeyboardOpen] = useState(false);
   const [targetRange, setTargetRange] = useState(readTargetRange);
   const sceneStatus = useMemo(() => getGlucoseScene(latestGlucose, targetRange), [latestGlucose, targetRange]);
   const sceneRef = useRef(null);
@@ -95,6 +96,12 @@ export default function Layout() {
       window.removeEventListener("storage", updateLatestGlucose);
       window.removeEventListener("storage", updateTargetRange);
     };
+  }, []);
+
+  useEffect(() => {
+    const handler = (e) => setCoachKeyboardOpen(e.detail?.open ?? false);
+    window.addEventListener("coach-keyboard-toggle", handler);
+    return () => window.removeEventListener("coach-keyboard-toggle", handler);
   }, []);
 
   useEffect(() => {
@@ -263,7 +270,7 @@ export default function Layout() {
         </div>
       </header>
 
-      <main className="relative mx-auto w-full max-w-6xl px-4 pb-28 pt-14 overflow-visible">
+      <main className={`relative mx-auto w-full max-w-6xl px-4 pt-14 overflow-visible ${isCoachRoute ? "pb-0" : "pb-28"}`}>
         <div className="min-w-0 w-full">
           <div hidden={!isDashboardRoute}>
             <CachedDashboard />
@@ -305,7 +312,15 @@ export default function Layout() {
         )}
       </AnimatePresence>
 
-     <nav className="fixed inset-x-0 bottom-0 z-30 flex justify-center pb-safe">
+     <AnimatePresence>
+      {!coachKeyboardOpen && (
+        <motion.nav
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 30 }}
+          transition={{ duration: 0.2 }}
+          className="fixed inset-x-0 bottom-0 z-30 flex justify-center pb-safe"
+        >
   <div
     className="relative mx-4 mb-4 grid w-[min(calc(100vw-2rem),28rem)] grid-cols-4 gap-1 overflow-hidden rounded-[2rem] border px-2 py-1.5 backdrop-blur-sm"
     style={{
@@ -386,7 +401,9 @@ export default function Layout() {
       );
     })}
   </div>
-</nav>
+        </motion.nav>
+      )}
+    </AnimatePresence>
     </div>
   );
 }

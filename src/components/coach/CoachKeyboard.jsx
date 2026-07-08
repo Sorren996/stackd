@@ -1,0 +1,133 @@
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { Delete, Send, ChevronDown, ArrowUp, HelpCircle as Question } from "lucide-react";
+
+const IOS_KEY = {
+  background: "linear-gradient(180deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.06) 100%)",
+  borderColor: "rgba(255,255,255,0.08)",
+  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.12), 0 1px 3px rgba(0,0,0,0.2)",
+};
+
+const IOS_KEY_DARK = {
+  background: "linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%)",
+  borderColor: "rgba(255,255,255,0.06)",
+  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)",
+};
+
+const IOS_KEY_PRESSED = {
+  background: "linear-gradient(180deg, rgba(91,168,138,0.3) 0%, rgba(91,168,138,0.1) 100%)",
+  borderColor: "rgba(91,168,138,0.28)",
+  boxShadow: "inset 0 2px 8px rgba(0,0,0,0.2), 0 0 10px rgba(91,168,138,0.12)",
+};
+
+function haptic() {
+  if (typeof window !== "undefined" && window.navigator?.vibrate) {
+    window.navigator.vibrate(8);
+  }
+}
+
+export default function CoachKeyboard({ value, onChange, onSend, onDismiss, sendDisabled }) {
+  const [shifted, setShifted] = useState(false);
+  const rows = ["qwertyuiop", "asdfghjkl", "zxcvbnm"];
+
+  const add = (key) => {
+    haptic();
+    onChange(`${value || ""}${shifted ? key.toUpperCase() : key}`);
+    if (shifted) setShifted(false);
+  };
+
+  const backspace = () => {
+    haptic();
+    onChange(String(value || "").slice(0, -1));
+  };
+
+  const KeyButton = ({ children, onClick, wide = false, style = IOS_KEY, className = "" }) => (
+    <button
+      type="button"
+      onClick={(e) => { e.stopPropagation(); onClick?.(); }}
+      className={`h-[42px] min-w-0 rounded-[9px] border text-base font-normal text-white/95 transition-all duration-100 active:scale-[0.94] ${wide ? "flex-1" : "shrink-0"} ${className}`}
+      style={style}
+      onPointerDown={(e) => { e.currentTarget.style.cssText = ""; Object.assign(e.currentTarget.style, IOS_KEY_PRESSED); }}
+      onPointerUp={(e) => { e.currentTarget.style.cssText = ""; Object.assign(e.currentTarget.style, style); }}
+      onPointerLeave={(e) => { e.currentTarget.style.cssText = ""; Object.assign(e.currentTarget.style, style); }}
+    >
+      {children}
+    </button>
+  );
+
+  return (
+    <motion.div
+      initial={{ y: "100%" }}
+      animate={{ y: 0 }}
+      exit={{ y: "100%" }}
+      transition={{ type: "spring", stiffness: 380, damping: 36 }}
+      className="shrink-0 overflow-hidden border-t px-2 pb-[max(env(safe-area-inset-bottom),0.4rem)] pt-1"
+      style={{
+        background: "linear-gradient(160deg, hsl(162,12%,9%) 0%, hsl(162,10%,6%) 100%)",
+        borderColor: "rgba(255,255,255,0.1)",
+        backdropFilter: "blur(20px)",
+      }}
+    >
+      <div className="mb-1 flex justify-center">
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); haptic(); onDismiss(); }}
+          className="flex items-center justify-center"
+        >
+          <ChevronDown className="h-4 w-4 text-white/30" />
+        </button>
+      </div>
+
+      <div className="space-y-[6px]">
+        <div className="flex gap-[5px]">
+          {[...rows[0]].map((letter) => (
+            <KeyButton key={letter} onClick={() => add(letter)} wide>
+              {shifted ? letter.toUpperCase() : letter}
+            </KeyButton>
+          ))}
+        </div>
+        <div className="flex gap-[5px] px-[18px]">
+          {[...rows[1]].map((letter) => (
+            <KeyButton key={letter} onClick={() => add(letter)} wide>
+              {shifted ? letter.toUpperCase() : letter}
+            </KeyButton>
+          ))}
+        </div>
+        <div className="flex gap-[5px]">
+          <KeyButton onClick={() => { haptic(); setShifted((s) => !s); }} style={shifted ? IOS_KEY_PRESSED : IOS_KEY_DARK} className="w-[34px] flex items-center justify-center text-white/60">
+            <ArrowUp className="h-4 w-4" />
+          </KeyButton>
+          {[...rows[2]].map((letter) => (
+            <KeyButton key={letter} onClick={() => add(letter)} wide>
+              {shifted ? letter.toUpperCase() : letter}
+            </KeyButton>
+          ))}
+          <KeyButton onClick={backspace} style={IOS_KEY_DARK} className="w-[42px] flex items-center justify-center text-white/60">
+            <Delete className="h-5 w-5" />
+          </KeyButton>
+        </div>
+        <div className="flex gap-[5px]">
+          <KeyButton onClick={() => add(",")} style={IOS_KEY_DARK} className="w-[30px] text-sm text-white/60">,</KeyButton>
+          <KeyButton onClick={() => add(".")} style={IOS_KEY_DARK} className="w-[30px] text-sm text-white/60">.</KeyButton>
+          <KeyButton onClick={() => add("?")} style={IOS_KEY_DARK} className="w-[30px] flex items-center justify-center text-white/60">
+            <Question className="h-4 w-4" />
+          </KeyButton>
+          <KeyButton onClick={() => add(" ")} style={IOS_KEY_DARK} className="flex-[4] text-sm text-white/50">space</KeyButton>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); haptic(); onSend(); }}
+            disabled={sendDisabled}
+            className="flex h-[42px] w-[56px] shrink-0 items-center justify-center gap-1 rounded-[9px] border text-xs font-semibold text-white transition-all duration-100 active:scale-[0.94] disabled:opacity-30"
+            style={{
+              background: "linear-gradient(145deg, rgba(91,168,138,0.7), rgba(91,163,184,0.5))",
+              borderColor: "rgba(91,168,138,0.3)",
+              boxShadow: "0 2px 10px rgba(91,163,184,0.15), inset 0 1px 1px rgba(255,255,255,0.2)",
+            }}
+          >
+            <Send className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  );
+}

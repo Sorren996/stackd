@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Send, Leaf, BookOpen, X } from "lucide-react";
 import AIHandshake, { hasAcceptedAIHandshake, acceptAIHandshake } from "@/components/coach/AIHandshake";
 import MessageBubble from "@/components/coach/MessageBubble";
+import CoachKeyboard from "@/components/coach/CoachKeyboard";
 
 const AGENT_NAME = "coach";
 const LAST_VISIT_KEY = "ai_coach_last_visit";
@@ -17,6 +18,7 @@ export default function Coach() {
   const [isSending, setIsSending] = useState(false);
   const [loadingConversations, setLoadingConversations] = useState(true);
   const [showJournalModal, setShowJournalModal] = useState(false);
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
   const messagesEndRef = useRef(null);
   const scrollContainerRef = useRef(null);
 
@@ -42,6 +44,13 @@ export default function Coach() {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
     }
   }, [messages]);
+
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("coach-keyboard-toggle", { detail: { open: keyboardOpen } }));
+    if (keyboardOpen && messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
+    }
+  }, [keyboardOpen]);
 
   const loadConversations = async () => {
     try {
@@ -141,7 +150,7 @@ export default function Coach() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-3.5rem)] flex-col">
+    <div className={`flex h-[calc(100dvh-3.5rem)] flex-col overflow-hidden ${keyboardOpen ? "pb-0" : "pb-28"}`}>
       {/* Header */}
       <div className="flex shrink-0 items-center justify-between px-5 py-3">
         <div className="flex items-center gap-2.5">
@@ -208,33 +217,27 @@ export default function Coach() {
         </div>
       </div>
 
-      {/* Input */}
-      <div className="shrink-0 px-4 pb-[max(env(safe-area-inset-bottom),1rem)] pt-2">
+      {/* Input bar — tappable to open keyboard, shows live text above keys */}
+      <div className="shrink-0 px-4 pt-2">
         <div
-          className="flex items-end gap-2 rounded-2xl border p-2"
+          onClick={() => !keyboardOpen && setKeyboardOpen(true)}
+          className="flex w-full items-center gap-2 rounded-2xl border p-3"
           style={{
             background: "linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))",
             borderColor: "rgba(255,255,255,0.12)",
           }}
         >
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-              }
-            }}
-            placeholder="Share what's on your mind..."
-            rows={1}
-            className="max-h-32 min-h-[24px] flex-1 resize-none bg-transparent px-2 py-1 text-sm text-white placeholder:text-white/35 focus:outline-none"
-            style={{ scrollbarWidth: "none" }}
-          />
+          <span className="min-h-[20px] flex-1 overflow-hidden text-sm text-white">
+            {input ? (
+              <span className="whitespace-pre-wrap break-words">{input}</span>
+            ) : (
+              <span className="text-white/35">Share what's on your mind...</span>
+            )}
+          </span>
           <motion.button
             whileTap={{ scale: 0.9 }}
             type="button"
-            onClick={handleSend}
+            onClick={(e) => { e.stopPropagation(); handleSend(); }}
             disabled={!input.trim() || isSending}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition disabled:opacity-30"
             style={{
@@ -246,6 +249,19 @@ export default function Coach() {
           </motion.button>
         </div>
       </div>
+
+      {/* Custom keyboard — slides up, no preview window */}
+      <AnimatePresence>
+        {keyboardOpen && (
+          <CoachKeyboard
+            value={input}
+            onChange={setInput}
+            onSend={handleSend}
+            onDismiss={() => setKeyboardOpen(false)}
+            sendDisabled={!input.trim() || isSending}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Journal modal */}
       <AnimatePresence>
