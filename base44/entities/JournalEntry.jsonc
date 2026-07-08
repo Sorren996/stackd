@@ -1,0 +1,45 @@
+{
+  "name": "JournalEntry",
+  "type": "object",
+  "properties": {
+    "content": {
+      "type": "string",
+      "description": "The journal reflection text"
+    },
+    "mood": {
+      "type": "string",
+      "enum": [
+        "calm",
+        "steady",
+        "tired",
+        "stressed",
+        "motivated",
+        "reflective"
+      ],
+      "description": "The user's emotional state for this entry"
+    },
+    "entry_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the journal entry was recorded"
+    }
+  },
+  "required": [
+    "content",
+    "entry_date"
+  ],
+  "rls": {
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

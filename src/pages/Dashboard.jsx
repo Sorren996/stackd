@@ -10,6 +10,7 @@ import GlucoseCard from "../components/GlucoseCard";
 import CarbCard from "../components/CarbCard";
 import { getDoseStatus, INSULIN_PROFILES } from "@/lib/insulinPharmacology";
 import { Activity, Plus, AlertTriangle, X, Pencil } from "lucide-react";
+import CoachGateway from "@/components/coach/CoachGateway";
 import HighProteinFatCheckbox from "@/components/HighProteinFatCheckbox";
 import { toast } from "sonner";
 import { getVersionString } from "@/lib/appVersion";
@@ -568,6 +569,8 @@ export default function Dashboard() {
               carbEntries={recentCarbs}
             />
           </div>
+
+          <CoachGateway />
 
           {stackingAlertsEnabled && activeRapidCount > 1 && (
             <div className="dashboard-stacking-alert backdrop-blur-sm mx-0 flex w-full max-w-full min-w-0 items-start gap-3 overflow-hidden rounded-xl border border-white/10 p-4 pb-3">

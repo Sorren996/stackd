@@ -1,9 +1,10 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
-import { Wind, Leaf, Waves, Settings } from "lucide-react";
+import { Wind, Leaf, Waves, Settings, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Dashboard from "../pages/Dashboard";
 import HistoryPage from "../pages/History";
+import CoachPage from "../pages/Coach";
 
 const LATEST_GLUCOSE_CACHE_KEY = "latest_glucose_cache";
 
@@ -11,10 +12,12 @@ const navItems = [
   { path: "/", label: "My Flow", icon: Wind },
   { path: "/history", label: "My Journal", icon: Leaf },
   { path: "/analytics", label: "My Rhythms", icon: Waves },
+  { path: "/coach", label: "Coach", icon: Sparkles },
 ];
 
 const CachedDashboard = memo(Dashboard);
 const CachedHistoryPage = memo(HistoryPage);
+const CachedCoachPage = memo(CoachPage);
 
 function readCachedLatestGlucose() {
   if (typeof window === "undefined") return null;
@@ -64,10 +67,12 @@ export default function Layout() {
   const isSettingsOpen = location.pathname.startsWith("/settings");
   const isDashboardRoute = location.pathname === "/";
   const isHistoryRoute = location.pathname === "/history";
-  const isKeepAliveRoute = isDashboardRoute || isHistoryRoute;
+  const isCoachRoute = location.pathname === "/coach";
+  const isKeepAliveRoute = isDashboardRoute || isHistoryRoute || isCoachRoute;
   const [visitedTabs, setVisitedTabs] = useState(() => ({
     dashboard: true,
     history: false,
+    coach: false,
   }));
   const [latestGlucose, setLatestGlucose] = useState(readCachedLatestGlucose);
   const [targetRange, setTargetRange] = useState(readTargetRange);
@@ -97,6 +102,8 @@ export default function Layout() {
       setVisitedTabs((tabs) => (tabs.dashboard ? tabs : { ...tabs, dashboard: true }));
     } else if (isHistoryRoute) {
       setVisitedTabs((tabs) => (tabs.history ? tabs : { ...tabs, history: true }));
+    } else if (isCoachRoute) {
+      setVisitedTabs((tabs) => (tabs.coach ? tabs : { ...tabs, coach: true }));
     }
   }, [isDashboardRoute, isHistoryRoute]);
 
@@ -266,6 +273,11 @@ export default function Layout() {
               <CachedHistoryPage />
             </div>
           )}
+          {visitedTabs.coach && (
+            <div hidden={!isCoachRoute}>
+              <CachedCoachPage />
+            </div>
+          )}
           {!isKeepAliveRoute && !isSettingsOpen && (
             <Outlet />
           )}
@@ -295,7 +307,7 @@ export default function Layout() {
 
      <nav className="fixed inset-x-0 bottom-0 z-30 flex justify-center pb-safe">
   <div
-    className="relative mx-4 mb-4 grid w-[min(calc(100vw-2rem),22rem)] grid-cols-3 gap-1 overflow-hidden rounded-[2rem] border px-2 py-1.5 backdrop-blur-sm"
+    className="relative mx-4 mb-4 grid w-[min(calc(100vw-2rem),28rem)] grid-cols-4 gap-1 overflow-hidden rounded-[2rem] border px-2 py-1.5 backdrop-blur-sm"
     style={{
       background:
         "linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.06))",
