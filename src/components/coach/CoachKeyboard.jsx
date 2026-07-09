@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
 import { Delete, Send, ChevronDown, ArrowUp, HelpCircle as Question } from "lucide-react";
 
 const IOS_KEY = {
@@ -67,12 +66,8 @@ export default function CoachKeyboard({ value, onChange, onSend, onDismiss, send
   );
 
   return (
-    <motion.div
-      initial={{ y: "100%" }}
-      animate={{ y: 0 }}
-      exit={{ y: "100%" }}
-      transition={{ type: "spring", stiffness: 380, damping: 36 }}
-      className="shrink-0 overflow-hidden border-t pb-[max(env(safe-area-inset-bottom),0.4rem)] pt-1"
+    <div
+      className="overflow-hidden border-t px-[6px] pb-[max(env(safe-area-inset-bottom),0.4rem)] pt-1"
       style={{
         background: "linear-gradient(160deg, hsl(162,12%,9%) 0%, hsl(162,10%,6%) 100%)",
         borderColor: "rgba(255,255,255,0.1)",
@@ -139,6 +134,6 @@ export default function CoachKeyboard({ value, onChange, onSend, onDismiss, send
           </button>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }

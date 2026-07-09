@@ -145,6 +145,38 @@ export default function Coach() {
     }
   };
 
+  const inputBarInner = (
+    <div
+      onClick={() => !keyboardOpen && setKeyboardOpen(true)}
+      className="flex w-full items-center gap-2 rounded-2xl border p-3"
+      style={{
+        background: "linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))",
+        borderColor: "rgba(255,255,255,0.12)",
+      }}
+    >
+      <span className="min-h-[20px] flex-1 overflow-hidden text-sm text-white">
+        {input ? (
+          <span className="whitespace-pre-wrap break-words">{input}</span>
+        ) : (
+          <span className="text-white/35">Share what's on your mind...</span>
+        )}
+      </span>
+      <motion.button
+        whileTap={{ scale: 0.9 }}
+        type="button"
+        onClick={(e) => { e.stopPropagation(); handleSend(); }}
+        disabled={!input.trim() || isSending}
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition disabled:opacity-30"
+        style={{
+          background: "linear-gradient(145deg, rgba(91,168,138,0.85), rgba(91,163,184,0.72))",
+          boxShadow: "0 4px 14px rgba(91,163,184,0.2), inset 0 1px 1px rgba(255,255,255,0.2)",
+        }}
+      >
+        <Send className="h-4 w-4 text-white" />
+      </motion.button>
+    </div>
+  );
+
   if (!handshakeAccepted) {
     return <AIHandshake onAccept={handleAcceptHandshake} />;
   }
@@ -192,7 +224,7 @@ export default function Coach() {
         className="min-h-0 flex-1 overflow-y-auto px-5"
         style={{ scrollbarWidth: "none" }}
       >
-        <div className="space-y-4 py-4">
+        <div className={`space-y-4 py-4 ${keyboardOpen ? "pb-[360px]" : ""}`}>
           {messages.length === 0 && !loadingConversations && (
             <motion.div
               initial={{ opacity: 0 }}
@@ -217,51 +249,39 @@ export default function Coach() {
         </div>
       </div>
 
-      {/* Input bar — tappable to open keyboard, shows live text above keys */}
-      <div className="shrink-0 px-4 pt-2">
-        <div
-          onClick={() => !keyboardOpen && setKeyboardOpen(true)}
-          className="flex w-full items-center gap-2 rounded-2xl border p-3"
-          style={{
-            background: "linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))",
-            borderColor: "rgba(255,255,255,0.12)",
-          }}
-        >
-          <span className="min-h-[20px] flex-1 overflow-hidden text-sm text-white">
-            {input ? (
-              <span className="whitespace-pre-wrap break-words">{input}</span>
-            ) : (
-              <span className="text-white/35">Share what's on your mind...</span>
-            )}
-          </span>
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            type="button"
-            onClick={(e) => { e.stopPropagation(); handleSend(); }}
-            disabled={!input.trim() || isSending}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition disabled:opacity-30"
-            style={{
-              background: "linear-gradient(145deg, rgba(91,168,138,0.85), rgba(91,163,184,0.72))",
-              boxShadow: "0 4px 14px rgba(91,163,184,0.2), inset 0 1px 1px rgba(255,255,255,0.2)",
-            }}
-          >
-            <Send className="h-4 w-4 text-white" />
-          </motion.button>
-        </div>
-      </div>
-
-      {/* Custom keyboard — slides up, no preview window */}
+      {/* Input + keyboard dock — fixed at bottom when keyboard open, in-flow when closed */}
       <AnimatePresence>
         {keyboardOpen && (
-          <CoachKeyboard
-            value={input}
-            onChange={setInput}
-            onSend={handleSend}
-            onDismiss={() => setKeyboardOpen(false)}
-            sendDisabled={!input.trim() || isSending}
-          />
+          <motion.div
+            key="keyboard-dock"
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ type: "spring", stiffness: 380, damping: 36 }}
+            className="fixed inset-x-0 bottom-0 z-50"
+          >
+            <div
+              className="px-4 pt-2"
+              style={{ background: "linear-gradient(160deg, hsl(162,12%,9%) 0%, hsl(162,10%,6%) 100%)" }}
+            >
+              {inputBarInner}
+            </div>
+            <CoachKeyboard
+              value={input}
+              onChange={setInput}
+              onSend={handleSend}
+              onDismiss={() => setKeyboardOpen(false)}
+              sendDisabled={!input.trim() || isSending}
+            />
+          </motion.div>
         )}
       </AnimatePresence>
+
+      {!keyboardOpen && (
+        <div className="shrink-0 px-4 pt-2">
+          {inputBarInner}
+        </div>
+      )}
 
       {/* Journal modal */}
       <AnimatePresence>
