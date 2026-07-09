@@ -59,7 +59,7 @@ export default function CoachKeyboard({ value, onChange, onSend, onDismiss, send
       onPointerUp={(e) => { e.currentTarget.style.cssText = ""; Object.assign(e.currentTarget.style, style); }}
       onPointerLeave={(e) => { e.currentTarget.style.cssText = ""; Object.assign(e.currentTarget.style, style); }}
       onPointerCancel={(e) => { e.currentTarget.style.cssText = ""; Object.assign(e.currentTarget.style, style); }}
-      className={`h-[52px] min-w-0 touch-none select-none rounded-[10px] border text-lg font-normal text-white/95 ${wide ? "flex-1" : "shrink-0"} ${className}`}
+      className={`h-[56px] min-w-0 touch-none select-none rounded-[10px] border text-xl font-normal text-white/95 ${wide ? "flex-1" : "shrink-0"} ${className}`}
       style={style}
     >
       {children}
@@ -72,7 +72,7 @@ export default function CoachKeyboard({ value, onChange, onSend, onDismiss, send
       animate={{ y: 0 }}
       exit={{ y: "100%" }}
       transition={{ type: "spring", stiffness: 380, damping: 36 }}
-      className="shrink-0 overflow-hidden border-t px-2 pb-[max(env(safe-area-inset-bottom),0.4rem)] pt-1"
+      className="shrink-0 overflow-hidden border-t pb-[max(env(safe-area-inset-bottom),0.4rem)] pt-1"
       style={{
         background: "linear-gradient(160deg, hsl(162,12%,9%) 0%, hsl(162,10%,6%) 100%)",
         borderColor: "rgba(255,255,255,0.1)",
@@ -128,7 +128,7 @@ export default function CoachKeyboard({ value, onChange, onSend, onDismiss, send
             type="button"
             onPointerDown={(e) => { e.preventDefault(); if (!sendDisabled) { haptic(); onSend(); } }}
             disabled={sendDisabled}
-            className="flex h-[52px] w-[60px] shrink-0 touch-none select-none items-center justify-center gap-1 rounded-[10px] border text-xs font-semibold text-white disabled:opacity-30"
+            className="flex h-[56px] w-[72px] shrink-0 touch-none select-none items-center justify-center gap-1 rounded-[10px] border text-xs font-semibold text-white disabled:opacity-30"
             style={{
               background: "linear-gradient(145deg, rgba(91,168,138,0.7), rgba(91,163,184,0.5))",
               borderColor: "rgba(91,168,138,0.3)",
