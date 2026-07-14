@@ -29,7 +29,7 @@ export default function SplitPlanCard({ plan }) {
       type="button"
       whileTap={{ scale: 0.98 }}
       onClick={() => navigate(`/split-plan/${plan.id}`)}
-      className="relative flex w-full items-center gap-3 overflow-hidden rounded-2xl border p-4 text-left backdrop-blur-sm"
+      className="relative flex w-full items-center gap-3 overflow-hidden mt-4 rounded-2xl border p-4 text-left backdrop-blur-sm"
       style={{
         background: "linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))",
         borderColor: `${color}40`,
