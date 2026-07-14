@@ -6,7 +6,7 @@ import ActiveInsulinBanner from "../components/ActiveInsulinBanner";
 import ActiveAlerts from "../components/ActiveAlerts";
 import FloatingActionMenu from "@/components/FloatingActionMenu";
 import SplitPlanCard from "@/components/splitdose/SplitPlanCard";
-import { isActivePlan } from "@/lib/splitDoseUtils";
+import { isActivePlan, cancelSplitPlansForMeal, cleanupSplitPlansForDose } from "@/lib/splitDoseUtils";
 import DoseCard from "../components/DoseCard";
 import GlucoseCard from "../components/GlucoseCard";
 import CarbCard from "../components/CarbCard";
@@ -367,19 +367,29 @@ export default function Dashboard() {
 
   const deleteCarb = useMutation({
     mutationFn: (id) => base44.entities.CarbEntry.delete(id),
-    onSuccess: () => {
+    onSuccess: (_data, deletedId) => {
       queryClient.invalidateQueries({ queryKey: ["carb-entries"] });
       queryClient.invalidateQueries({ queryKey: ["carb-entries", "graph"] });
       toast.success("Nourishment removed");
+      (async () => {
+        if (await cancelSplitPlansForMeal(base44, deletedId)) {
+          queryClient.invalidateQueries({ queryKey: ["split-plans"] });
+        }
+      })();
     },
   });
 
   const deleteDose = useMutation({
     mutationFn: (id) => base44.entities.InsulinDose.delete(id),
-    onSuccess: () => {
+    onSuccess: (_data, deletedId) => {
       queryClient.invalidateQueries({ queryKey: ["insulin-doses"] });
       queryClient.invalidateQueries({ queryKey: ["insulin-doses", "graph"] });
       toast.success("Support removed");
+      (async () => {
+        if (await cleanupSplitPlansForDose(base44, deletedId)) {
+          queryClient.invalidateQueries({ queryKey: ["split-plans"] });
+        }
+      })();
     },
   });
 

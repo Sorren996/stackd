@@ -14,6 +14,7 @@ import HighProteinFatCheckbox from "@/components/HighProteinFatCheckbox";
 import TimelineDayGroup from "@/components/history/TimelineDayGroup";
 import TimelineWeekGroup from "@/components/history/TimelineWeekGroup";
 import { GLASS_SURFACE } from "@/lib/glassTheme";
+import { cancelSplitPlansForMeal, cleanupSplitPlansForDose } from "@/lib/splitDoseUtils";
 import { startOfWeek, format as fnsFormat } from "date-fns";
 
 function readTargetRange() {
@@ -386,9 +387,14 @@ export default function History() {
 
   const deleteDose = useMutation({
     mutationFn: (id) => base44.entities.InsulinDose.delete(id),
-    onSuccess: () => {
+    onSuccess: (_data, deletedId) => {
       queryClient.invalidateQueries({ queryKey: ["insulin-doses"] });
       toast.success("Support gently removed");
+      (async () => {
+        if (await cleanupSplitPlansForDose(base44, deletedId)) {
+          queryClient.invalidateQueries({ queryKey: ["split-plans"] });
+        }
+      })();
     }
   });
 
@@ -402,9 +408,14 @@ export default function History() {
 
   const deleteCarb = useMutation({
     mutationFn: (id) => base44.entities.CarbEntry.delete(id),
-    onSuccess: () => {
+    onSuccess: (_data, deletedId) => {
       queryClient.invalidateQueries({ queryKey: ["carb-entries"] });
       toast.success("Nourishment removed");
+      (async () => {
+        if (await cancelSplitPlansForMeal(base44, deletedId)) {
+          queryClient.invalidateQueries({ queryKey: ["split-plans"] });
+        }
+      })();
     }
   });
 

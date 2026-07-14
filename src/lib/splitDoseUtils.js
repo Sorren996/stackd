@@ -128,6 +128,45 @@ export function formatClockTime(time) {
   return new Date(time).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 }
 
+export async function cancelSplitPlansForMeal(base44, mealId) {
+  if (!mealId) return false;
+  try {
+    const plans = await base44.entities.SplitDosePlan.filter({ meal_log_id: mealId });
+    const active = plans.filter((p) => !TERMINAL_STATUSES.includes(p.status));
+    for (const plan of active) {
+      await base44.entities.SplitDosePlan.update(plan.id, { status: "cancelled" });
+    }
+    return active.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+export async function cleanupSplitPlansForDose(base44, doseId) {
+  if (!doseId) return false;
+  try {
+    const plans = await base44.entities.SplitDosePlan.list("-created_date", 50);
+    let updated = false;
+    for (const plan of plans) {
+      if (plan.first_dose_log_id === doseId) {
+        if (!TERMINAL_STATUSES.includes(plan.status)) {
+          await base44.entities.SplitDosePlan.update(plan.id, { status: "cancelled" });
+          updated = true;
+        }
+      } else if (plan.follow_up_dose_log_id === doseId) {
+        await base44.entities.SplitDosePlan.update(plan.id, {
+          follow_up_dose_log_id: null,
+          follow_up_actual_units: null,
+        });
+        updated = true;
+      }
+    }
+    return updated;
+  } catch {
+    return false;
+  }
+}
+
 export const STATUS_LABELS = {
   draft: "Plan saved",
   planned: "Split plan active",
