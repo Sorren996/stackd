@@ -872,21 +872,21 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
       .filter((dose) => isBolusInsulinType(dose?.insulin_type))
       .map((dose) => {
         const iob = getDoseIOB(dose, now);
-        if (iob <= 0.01) return null;
+        if (iob < 0.9) return null;
 
-        const profile = INSULIN_PROFILES[dose.insulin_type];
-        const status = getDoseStatus(dose, now);
-        return {
-          id: dose.id,
-          type: dose.insulin_type,
-          shortName: dose.insulin_type?.split(" ")[0] || "Insulin",
-          category: profile?.category || "Insulin",
-          color: profile?.color || "#5ba3b8",
-          iob,
-          units: Number(dose.units) || 0,
-          statusLabel: status.label,
-          timingInfo: getDoseTimingInfo(dose, now),
-        };
+          const profile = INSULIN_PROFILES[dose.insulin_type];
+          const status = getDoseStatus(dose, now);
+          return {
+            id: dose.id,
+            type: dose.insulin_type,
+            shortName: dose.insulin_type?.split(" ")[0] || "Insulin",
+            category: profile?.category || "Insulin",
+            color: profile?.color || "#5ba3b8",
+            iob,
+            units: Number(dose.units) || 0,
+            statusLabel: status.label,
+            timingInfo: getDoseTimingInfo(dose, now),
+          };
       })
       .filter(Boolean)
       .sort((a, b) => b.iob - a.iob);

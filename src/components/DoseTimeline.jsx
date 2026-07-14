@@ -14,7 +14,7 @@ function DoseTimelineBar({ dose }) {
           <p className="truncate text-xs font-semibold text-white/75">{shortName}</p>
           <span className="text-[10px] text-white/30">{units}u</span>
         </div>
-        <span className="shrink-0 text-sm font-bold text-white">{iob.toFixed(1)}u</span>
+        <span className="shrink-0 text-sm font-bold text-white">{Math.round(iob)}u</span>
       </div>
 
       <div className="relative h-2.5 overflow-hidden rounded-full" style={{ background: "rgba(255,255,255,0.05)" }}>
