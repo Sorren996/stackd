@@ -63,6 +63,26 @@
       "type": "boolean",
       "default": false,
       "description": "Whether local storage settings were migrated to the server."
+    },
+    "coach_reviews_enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether periodic AI Wellness Coach background reviews are active."
+    },
+    "coach_insight_notifications_enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether the dashboard leaf glows amber for new Coach insights."
+    },
+    "coach_exclude_journal": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether journal entries are excluded from AI Coach review."
+    },
+    "coach_last_review_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp of the last successful Coach background review, used for cooldown."
     }
   },
   "rls": {

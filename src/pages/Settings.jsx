@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
-import { Activity, User, Shield, LogOut, Loader2, ChevronRight } from "lucide-react";
+import { Activity, User, Shield, LogOut, Loader2, ChevronRight, Leaf } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Settings() {
@@ -39,6 +39,12 @@ export default function Settings() {
       icon: Shield,
       title: "Privacy and Consent",
       description: "Review notices, manage acknowledgments, withdraw consent, or delete your account.",
+    },
+    {
+      to: "/settings/coach",
+      icon: Leaf,
+      title: "Wellness Coach",
+      description: "Manage AI Coach reviews, insight notifications, journal access, and insight data.",
     },
   ];
 

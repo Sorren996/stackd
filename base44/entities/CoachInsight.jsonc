@@ -1,0 +1,146 @@
+{
+  "name": "CoachInsight",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "Explicit user ID for service-role created insights"
+    },
+    "insight_type": {
+      "type": "string",
+      "enum": [
+        "meal_pattern",
+        "time_of_day_pattern",
+        "glucose_rhythm",
+        "journal_reflection",
+        "logging_pattern",
+        "positive_consistency",
+        "weekly_reflection"
+      ],
+      "description": "Category of the wellness observation"
+    },
+    "title": {
+      "type": "string",
+      "description": "Short headline for the insight"
+    },
+    "summary": {
+      "type": "string",
+      "description": "Conversational observation text grounded in real data"
+    },
+    "observation_start_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Start of the data window reviewed"
+    },
+    "observation_end_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "End of the data window reviewed"
+    },
+    "supporting_glucose_log_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "GlucoseReading record IDs that support this observation"
+    },
+    "supporting_carb_log_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "CarbEntry record IDs that support this observation"
+    },
+    "supporting_insulin_log_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "InsulinDose record IDs that support this observation"
+    },
+    "supporting_journal_entry_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "JournalEntry record IDs that support this observation"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "unread",
+        "read",
+        "dismissed",
+        "expired"
+      ],
+      "default": "unread",
+      "description": "Whether the user has seen or dismissed this insight"
+    },
+    "deduplication_key": {
+      "type": "string",
+      "description": "Deterministic key to prevent duplicate insights for the same pattern"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the insight was generated"
+    },
+    "read_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the user opened the insight"
+    },
+    "dismissed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the user dismissed the insight"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the insight is no longer timely or relevant"
+    },
+    "model_version": {
+      "type": "string",
+      "description": "AI model used to generate this insight"
+    },
+    "analysis_version": {
+      "type": "string",
+      "description": "Version of the analysis logic"
+    },
+    "review_type": {
+      "type": "string",
+      "enum": [
+        "daily",
+        "weekly"
+      ],
+      "description": "Whether this insight came from a daily or weekly review"
+    }
+  },
+  "required": [
+    "insight_type",
+    "title",
+    "summary",
+    "deduplication_key",
+    "generated_at",
+    "status"
+  ],
+  "rls": {
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

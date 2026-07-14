@@ -2,8 +2,11 @@ import { useState, useEffect, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { motion, AnimatePresence } from "framer-motion";
 import { Send, Leaf, BookOpen, X } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import AIHandshake, { hasAcceptedAIHandshake, acceptAIHandshake } from "@/components/coach/AIHandshake";
 import MessageBubble from "@/components/coach/MessageBubble";
+import CoachInsightCard from "@/components/coach/CoachInsightCard";
 
 const AGENT_NAME = "coach";
 const LAST_VISIT_KEY = "ai_coach_last_visit";
@@ -19,6 +22,65 @@ export default function Coach() {
   const [showJournalModal, setShowJournalModal] = useState(false);
   const messagesEndRef = useRef(null);
   const scrollContainerRef = useRef(null);
+  const queryClient = useQueryClient();
+
+  const { data: unreadInsights = [] } = useQuery({
+    queryKey: ["unread-coach-insights"],
+    queryFn: () => base44.entities.CoachInsight.filter({ status: "unread" }, "-generated_at", 10),
+    staleTime: 30 * 1000,
+    refetchInterval: 60 * 1000,
+    refetchOnWindowFocus: true,
+  });
+
+  const validUnreadInsights = (unreadInsights || []).filter(
+    (i) => !i.expires_at || new Date(i.expires_at).getTime() > Date.now()
+  );
+  const newestInsight = validUnreadInsights[0] || null;
+
+  useEffect(() => {
+    if (!newestInsight?.id) return;
+    const insightId = newestInsight.id;
+    const timer = setTimeout(() => {
+      base44.entities.CoachInsight.update(insightId, {
+        status: "read",
+        read_at: new Date().toISOString(),
+      })
+        .then(() => queryClient.invalidateQueries({ queryKey: ["unread-coach-insights"] }))
+        .catch(() => {});
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [newestInsight?.id]);
+
+  const handleDismissInsight = async (insight) => {
+    try {
+      await base44.entities.CoachInsight.update(insight.id, {
+        status: "dismissed",
+        dismissed_at: new Date().toISOString(),
+      });
+      queryClient.invalidateQueries({ queryKey: ["unread-coach-insights"] });
+      toast.success("Insight dismissed");
+    } catch {
+      toast.error("Could not dismiss insight");
+    }
+  };
+
+  const handleTalkAboutInsight = (insight) => {
+    const message = `I'd like to talk about this insight (insight ID: ${insight.id}): ${insight.title}. ${insight.summary}`;
+    handleSend(message);
+  };
+
+  const handleSaveInsightToJournal = async (insight) => {
+    try {
+      await base44.entities.JournalEntry.create({
+        content: `Coach insight: ${insight.title}\n\n${insight.summary}`,
+        mood: "reflective",
+        entry_date: new Date().toISOString(),
+      });
+      toast.success("Saved to journal");
+    } catch {
+      toast.error("Could not save to journal");
+    }
+  };
 
   useEffect(() => {
     if (!handshakeAccepted) return;
@@ -77,8 +139,8 @@ export default function Coach() {
     }
   };
 
-  const handleSend = async () => {
-    const trimmed = input.trim();
+  const handleSend = async (overrideMessage) => {
+    const trimmed = (overrideMessage || input).trim();
     if (!trimmed || isSending) return;
 
     setInput("");
@@ -176,6 +238,18 @@ export default function Coach() {
           For emergencies, please call 911. This is not a medical service.
         </p>
       </div>
+
+      {/* Unread insight */}
+      {newestInsight && (
+        <div className="shrink-0 px-5 pt-2">
+          <CoachInsightCard
+            insight={newestInsight}
+            onTalkAbout={handleTalkAboutInsight}
+            onDismiss={handleDismissInsight}
+            onSaveToJournal={handleSaveInsightToJournal}
+          />
+        </div>
+      )}
 
       {/* Messages */}
       <div

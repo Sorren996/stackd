@@ -20,6 +20,7 @@ import Settings from './pages/Settings';
 import InsulinSettingsPage from './pages/InsulinSettingsPage';
 import ProfileSettingsPage from './pages/ProfileSettingsPage';
 import PrivacyConsentPage from './pages/PrivacyConsentPage';
+import CoachPreferencesPage from './pages/CoachPreferencesPage';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { Navigate } from 'react-router-dom';
 import SplashScreen from "@/components/SplashScreen";
@@ -101,6 +102,10 @@ const AuthenticatedApp = () => {
         queryClientInstance.prefetchQuery({
           queryKey: ["split-plans"],
           queryFn: () => base44.entities.SplitDosePlan.list("-created_date", 20),
+        }),
+        queryClientInstance.prefetchQuery({
+          queryKey: ["unread-coach-insights"],
+          queryFn: () => base44.entities.CoachInsight.filter({ status: "unread" }, "-generated_at", 10),
         }),
       ]);
 
@@ -195,6 +200,7 @@ const AuthenticatedApp = () => {
         <Route path="/settings/insulin" element={<InsulinSettingsPage />} />
         <Route path="/settings/profile" element={<ProfileSettingsPage />} />
         <Route path="/settings/privacy-consent" element={<PrivacyConsentPage />} />
+        <Route path="/settings/coach" element={<CoachPreferencesPage />} />
         <Route path="/split-plan/:planId" element={<SplitPlanReview />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

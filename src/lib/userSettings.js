@@ -15,6 +15,9 @@ const LOCAL_KEYS = [
   "target_range_low",
   "target_range_high",
   "stacking_alerts_enabled",
+  "coach_reviews_enabled",
+  "coach_insight_notifications_enabled",
+  "coach_exclude_journal",
 ];
 
 function getDefaultMealInsulinTypes() {
@@ -38,7 +41,7 @@ function readLocalSettings() {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed) && parsed.length) result[key] = parsed;
       } catch {}
-    } else if (key === "stacking_alerts_enabled") {
+    } else if (["stacking_alerts_enabled", "coach_reviews_enabled", "coach_insight_notifications_enabled", "coach_exclude_journal"].includes(key)) {
       result[key] = raw === "true";
     } else {
       const num = Number(raw);
@@ -93,6 +96,18 @@ function validateSettings(raw) {
 
   if (typeof raw.stacking_alerts_enabled === "boolean") {
     sanitized.stacking_alerts_enabled = raw.stacking_alerts_enabled;
+  }
+
+  if (typeof raw.coach_reviews_enabled === "boolean") {
+    sanitized.coach_reviews_enabled = raw.coach_reviews_enabled;
+  }
+
+  if (typeof raw.coach_insight_notifications_enabled === "boolean") {
+    sanitized.coach_insight_notifications_enabled = raw.coach_insight_notifications_enabled;
+  }
+
+  if (typeof raw.coach_exclude_journal === "boolean") {
+    sanitized.coach_exclude_journal = raw.coach_exclude_journal;
   }
 
   if (raw.glucose_units === "mg/dL" || raw.glucose_units === "mmol/L") {
