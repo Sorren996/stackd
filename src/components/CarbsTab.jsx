@@ -5,7 +5,7 @@ import { InvokeLLM, UploadFile } from "@/api/integrations";
 import { Camera, Check, Clock, Loader2, PenLine, Sparkles, X } from "lucide-react";
 import HighProteinFatCheckbox from "@/components/HighProteinFatCheckbox";
 import { toast } from "sonner";
-import { CustomInputTray, TimeScrollField, NumberPadField, TextPadField } from "@/components/FormInputFields";
+import { TimeScrollField, NumberPadField, TextPadField } from "@/components/FormInputFields";
 
 const CARB_COLOR = "#d97706";
 const PROFILE_COLORS = { fast: "#ef4444", medium: "#f59e0b", slow: "#a78bfa" };
