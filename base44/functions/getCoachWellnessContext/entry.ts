@@ -13,6 +13,18 @@ Deno.serve(async (req) => {
       }, { status: 401 });
     }
 
+    // Respect health data consent — if withdrawn, refuse to return any data.
+    // Even though the app gate (RequiredAcknowledgments) locks users out after
+    // withdrawal, this is a defense-in-depth check so the function itself
+    // never serves data without active consent.
+    if (user.health_data_consent_active === false) {
+      return Response.json({
+        retrievalStatus: 'failed',
+        error: 'Health data consent withdrawn. Please re-complete the acknowledgment flow to use the Coach.',
+        metadata: { authenticated: true, consentActive: false, retrievalDurationMs: Date.now() - startedAt }
+      }, { status: 403 });
+    }
+
     let body: any = {};
     try { body = await req.json(); } catch { /* empty body is fine */ }
 

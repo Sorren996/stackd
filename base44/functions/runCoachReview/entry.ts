@@ -33,6 +33,22 @@ Deno.serve(async (req) => {
       // Respect user preference — default to enabled if field is missing
       if (settings.coach_reviews_enabled === false) { skipped++; continue; }
 
+      // Respect health data consent — if withdrawn, skip this user entirely.
+      // This is the critical check: withdrawing consent must actually stop
+      // background reviews from reading the user's data.
+      try {
+        const userRecords = await sr.entities.User.filter({ id: userId }, '-created_date', 1);
+        const userRecord = userRecords[0];
+        if (!userRecord || userRecord.health_data_consent_active === false) {
+          skipped++;
+          continue;
+        }
+      } catch (consentError) {
+        console.log(`[CoachReview] Could not verify consent for user ${userId}:`, consentError.message);
+        skipped++;
+        continue;
+      }
+
       // Check cooldown — idempotency guard
       const lastReview = settings.coach_last_review_at;
       if (lastReview && now.getTime() - new Date(lastReview).getTime() < cooldownMs) {
