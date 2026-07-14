@@ -750,7 +750,7 @@ function ActiveInsulinDetailCard({ totalUnits, breakdown }) {
         <div>
           <span className="text-[10px] font-semibold uppercase tracking-wider text-white/35">Insulin on Board</span>
           <div className="mt-2 flex items-end gap-2">
-            <span className="text-4xl font-black leading-none text-white">{totalUnits.toFixed(1)}</span>
+            <span className="text-4xl font-black leading-none text-white">{Math.round(totalUnits)}</span>
             <span className="mb-1 text-xs font-semibold text-white/35">units active</span>
           </div>
         </div>
