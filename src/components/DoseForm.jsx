@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
-import { X, Syringe, Droplets, Wheat, Plus, Trash2 } from "lucide-react";
+import { X, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AnimatePresence, motion } from "framer-motion";
 import { TimeScrollField, NumberPadField, TextPadField, SelectField } from "@/components/FormInputFields";
@@ -11,21 +11,6 @@ import Sheet from "@/components/Sheet";
 
 const CarbsTab = lazy(() => import("@/components/CarbsTab"));
 const LATEST_GLUCOSE_CACHE_KEY = "latest_glucose_cache";
-const TAB_ORDER = ["insulin", "glucose", "carbs"];
-const tabPanelVariants = {
-  enter: (direction) => ({
-    x: direction > 0 ? "100%" : "-100%",
-    opacity: 0,
-  }),
-  center: {
-    x: 0,
-    opacity: 1,
-  },
-  exit: (direction) => ({
-    x: direction > 0 ? "-100%" : "100%",
-    opacity: 0,
-  }),
-};
 
 const CATEGORY_ORDER = [
   "Rapid-Acting",
@@ -124,10 +109,8 @@ function buildTodayTimestampNoFuture(timeValue) {
   return date.getTime() > Date.now() ? null : date;
 }
 
-export default function DoseForm({ open, onOpenChange }) {
+export default function DoseForm({ open, onOpenChange, mode = "insulin" }) {
   const [renderSheet, setRenderSheet] = useState(open);
-  const [tab, setTab] = useState("insulin");
-  const [tabDirection, setTabDirection] = useState(1);
   const [insulinRows, setInsulinRows] = useState(() => [createInsulinRow()]);
   const [insulinNotes, setInsulinNotes] = useState("");
   const [insulinTime, setInsulinTime] = useState(() => new Date().toTimeString().slice(0, 5));
@@ -185,15 +168,6 @@ export default function DoseForm({ open, onOpenChange }) {
     }
 
     setTimeout(start, 0);
-  };
-
-  const handleTabChange = (nextTab) => {
-    if (nextTab === tab) return;
-
-    const currentIndex = TAB_ORDER.indexOf(tab);
-    const nextIndex = TAB_ORDER.indexOf(nextTab);
-    setTabDirection(nextIndex > currentIndex ? 1 : -1);
-    setTab(nextTab);
   };
 
   const createDoses = useMutation({
@@ -321,17 +295,17 @@ export default function DoseForm({ open, onOpenChange }) {
 
   const hasUnsavedChanges = useMemo(() => {
     if (loggingTab) return false;
-    if (tab === "insulin") {
+    if (mode === "insulin") {
       return insulinRows.some((row) => row.insulinType || row.units) || insulinNotes.length > 0;
     }
-    if (tab === "glucose") {
+    if (mode === "glucose") {
       return glucoseValue !== "" || glucoseNotes.length > 0;
     }
-    if (tab === "carbs") {
+    if (mode === "carbs") {
       return carbsDirty;
     }
     return false;
-  }, [tab, loggingTab, insulinRows, insulinNotes, glucoseValue, glucoseNotes, carbsDirty]);
+  }, [mode, loggingTab, insulinRows, insulinNotes, glucoseValue, glucoseNotes, carbsDirty]);
 
   useEffect(() => {
     if (!hasUnsavedChanges || !renderSheet) return;
@@ -481,13 +455,13 @@ export default function DoseForm({ open, onOpenChange }) {
 
   return (
     <>
-      <Sheet open={renderSheet} onClose={attemptClose} accentColor={ACCENT_COLORS[tab]}>
+      <Sheet open={renderSheet} onClose={attemptClose} accentColor={ACCENT_COLORS[mode]}>
         <div className="dose-form-sheet flex min-h-0 flex-1 flex-col">
           <style>{`.dose-form-sheet input,.dose-form-sheet select,.dose-form-sheet textarea{font-size:16px}`}</style>
 
           {/* Title bar */}
           <div className="flex shrink-0 items-center justify-between px-5 pb-2">
-            <h2 className="text-base font-semibold text-white/90">{TAB_TITLES[tab]}</h2>
+            <h2 className="text-base font-semibold text-white/90">{TAB_TITLES[mode]}</h2>
             <button
               type="button"
               onClick={attemptClose}
@@ -499,48 +473,15 @@ export default function DoseForm({ open, onOpenChange }) {
             </button>
           </div>
 
-          {/* Tab selector */}
-          <div className="mx-5 mb-2 flex shrink-0 rounded-2xl border border-white/10 bg-white/[0.04] p-1" style={{ boxShadow: "inset 0 1px 1px rgba(255,255,255,0.06)" }}>
-            {[
-              { id: "insulin", label: "Support", Icon: Syringe },
-              { id: "glucose", label: "Glucose", Icon: Droplets },
-              { id: "carbs", label: "Nourishment", Icon: Wheat },
-            ].map(({ id, label, Icon }) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => handleTabChange(id)}
-                className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2 text-sm font-medium transition-all ${
-                  tab === id ? "text-white" : "text-white/40 hover:text-white/60"
-                }`}
-                style={tab === id ? { background: "linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.04))", boxShadow: "inset 0 1px 1px rgba(255,255,255,0.12), 0 2px 8px rgba(0,0,0,0.15)" } : undefined}
-              >
-                <Icon className="h-3.5 w-3.5" />
-                {label}
-              </button>
-            ))}
-          </div>
-
           {/* Form content */}
-          <div className="relative min-h-0 flex-1 overflow-hidden">
-            <AnimatePresence initial={false} custom={tabDirection} mode="popLayout">
-              <motion.div
-                key={tab}
-                custom={tabDirection}
-                variants={tabPanelVariants}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                transition={{ type: "spring", stiffness: 420, damping: 36, mass: 0.85 }}
-                className="absolute inset-0 flex min-h-0 flex-col"
-              >
-                {tab === "carbs" ? (
+          <div className="relative min-h-0 flex-1 overflow-hidden flex min-h-0 flex-col">
+                {mode === "carbs" ? (
                   <div className="min-h-0 flex-1 overflow-y-auto">
                     <Suspense fallback={<div className="flex h-full items-center justify-center text-sm text-white/35">Loading...</div>}>
                       <CarbsTab onSubmit={handleSubmitCarbs} isPending={loggingTab === "carbs" || createCarb.isPending} onDirtyChange={setCarbsDirty} />
                     </Suspense>
                   </div>
-                ) : tab === "insulin" ? (
+                ) : mode === "insulin" ? (
                   <>
                     <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-4 pt-3">
                       <div className="space-y-3">
@@ -651,8 +592,6 @@ export default function DoseForm({ open, onOpenChange }) {
                     </div>
                   </>
                 )}
-              </motion.div>
-            </AnimatePresence>
           </div>
         </div>
       </Sheet>

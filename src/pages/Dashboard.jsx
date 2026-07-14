@@ -4,12 +4,12 @@ import { base44 } from "@/api/base44Client";
 import ActivityGraph from "../components/ActivityGraph";
 import ActiveInsulinBanner from "../components/ActiveInsulinBanner";
 import ActiveAlerts from "../components/ActiveAlerts";
-import DoseForm from "../components/DoseForm";
+import FloatingActionMenu from "@/components/FloatingActionMenu";
 import DoseCard from "../components/DoseCard";
 import GlucoseCard from "../components/GlucoseCard";
 import CarbCard from "../components/CarbCard";
 import { getDoseStatus, INSULIN_PROFILES } from "@/lib/insulinPharmacology";
-import { Activity, Plus, AlertTriangle, X, Pencil } from "lucide-react";
+import { Activity, AlertTriangle, X, Pencil } from "lucide-react";
 import CoachGateway from "@/components/coach/CoachGateway";
 import HighProteinFatCheckbox from "@/components/HighProteinFatCheckbox";
 import { toast } from "sonner";
@@ -270,69 +270,6 @@ function EditableLog({ children, onEdit }) {
         <Pencil className="h-3.5 w-3.5" />
       </button>
     </div>
-  );
-}
-
-function FloatingDoseLogger() {
-  const [doseFormOpen, setDoseFormOpen] = useState(false);
-  const [doseFormPreloaded, setDoseFormPreloaded] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return undefined;
-
-    const preload = () => setDoseFormPreloaded(true);
-    if ("requestIdleCallback" in window) {
-      const id = window.requestIdleCallback(preload, { timeout: 1200 });
-      return () => window.cancelIdleCallback(id);
-    }
-
-    const id = window.setTimeout(preload, 350);
-    return () => window.clearTimeout(id);
-  }, []);
-
-  const openDoseForm = () => {
-    if (doseFormOpen) return;
-    setDoseFormPreloaded(true);
-    setDoseFormOpen(true);
-  };
-
-  return (
-    <>
-      {(doseFormPreloaded || doseFormOpen) && <DoseForm open={doseFormOpen} onOpenChange={setDoseFormOpen} />}
-      {!doseFormOpen && (
-        <button
-          type="button"
-          onPointerDown={(event) => {
-            event.preventDefault();
-            openDoseForm();
-          }}
-          onClick={openDoseForm}
-          className="fixed bottom-24 right-5 z-40 flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border transition active:scale-95 backdrop-blur-sm"
-          style={{
-            background: "linear-gradient(145deg, rgba(255,255,255,0.24), rgba(255,255,255,0.08))",
-            borderColor: "rgba(255,255,255,0.28)",
-            boxShadow: "0 18px 48px rgba(0,0,0,0.34), inset 0 1px 1px rgba(255,255,255,0.42), inset 0 -1px 1px rgba(255,255,255,0.1)",
-          }}
-        >
-          <span
-            aria-hidden="true"
-            className="pointer-events-none absolute -inset-5 opacity-80"
-            style={{
-              background: "radial-gradient(circle at 28% 0%, rgba(255,255,255,0.34), transparent 38%), radial-gradient(circle at 80% 120%, rgba(45,212,191,0.22), transparent 44%)",
-            }}
-          />
-          <span
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-1 rounded-full"
-            style={{
-              background: "linear-gradient(145deg, rgba(255,255,255,0.12), rgba(255,255,255,0.03))",
-              boxShadow: "inset 0 1px 1px rgba(255,255,255,0.22)",
-            }}
-          />
-          <Plus className="relative z-10 h-7 w-7 text-white/85 drop-shadow-sm" />
-        </button>
-      )}
-    </>
   );
 }
 
@@ -633,7 +570,7 @@ export default function Dashboard() {
         </>
       )}
 
-      <FloatingDoseLogger />
+      <FloatingActionMenu />
 
       <div className="flex w-full justify-center pt-8 pb-4">
         <span className="text-[10px] font-medium tracking-wide text-white/20">
