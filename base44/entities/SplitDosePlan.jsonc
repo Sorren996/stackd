@@ -1,0 +1,119 @@
+{
+  "name": "SplitDosePlan",
+  "type": "object",
+  "properties": {
+    "meal_log_id": {
+      "type": "string",
+      "description": "ID of the associated CarbEntry meal log"
+    },
+    "meal_name": {
+      "type": "string",
+      "description": "Meal name for display without requiring a join"
+    },
+    "total_planned_units": {
+      "type": "number",
+      "description": "Total insulin the user planned for this meal"
+    },
+    "first_planned_units": {
+      "type": "number",
+      "description": "Planned first portion units"
+    },
+    "follow_up_planned_units": {
+      "type": "number",
+      "description": "Planned remaining portion units \u2014 never contributes to IOB until logged as administered"
+    },
+    "first_dose_log_id": {
+      "type": "string",
+      "description": "ID of the InsulinDose record for the first administered portion, if logged"
+    },
+    "follow_up_dose_log_id": {
+      "type": "string",
+      "description": "ID of the InsulinDose record for the follow-up portion, if logged"
+    },
+    "insulin_type": {
+      "type": "string",
+      "description": "Insulin type selected for this plan"
+    },
+    "review_after_minutes": {
+      "type": "number",
+      "description": "How many minutes after the meal the user wants to reassess"
+    },
+    "original_review_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Original review time, preserved for history"
+    },
+    "current_review_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Current review time, updated when postponed"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "planned",
+        "review_approaching",
+        "review_due",
+        "postponed",
+        "completed",
+        "modified",
+        "skipped",
+        "expired",
+        "cancelled"
+      ],
+      "default": "planned",
+      "description": "Current lifecycle state of the plan"
+    },
+    "follow_up_actual_units": {
+      "type": "number",
+      "description": "Actual administered follow-up units, stored separately from planned"
+    },
+    "follow_up_decision_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the follow-up decision was made"
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "manual",
+        "personal_preset"
+      ],
+      "default": "manual",
+      "description": "Whether this plan was created manually or from a preset"
+    },
+    "preset_id": {
+      "type": "string",
+      "description": "ID of the SplitDosePreset used, if any"
+    },
+    "user_notes": {
+      "type": "string",
+      "description": "Optional private notes"
+    }
+  },
+  "required": [
+    "meal_log_id",
+    "total_planned_units",
+    "first_planned_units",
+    "follow_up_planned_units",
+    "review_after_minutes",
+    "original_review_at",
+    "current_review_at",
+    "status"
+  ],
+  "rls": {
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

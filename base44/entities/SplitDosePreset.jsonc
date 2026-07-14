@@ -1,0 +1,54 @@
+{
+  "name": "SplitDosePreset",
+  "type": "object",
+  "properties": {
+    "preset_name": {
+      "type": "string",
+      "description": "User-chosen name for this preset, e.g. Pizza, Brisket"
+    },
+    "meal_description": {
+      "type": "string",
+      "description": "Typical meal description for this preset"
+    },
+    "first_portion_percentage": {
+      "type": "number",
+      "description": "User-selected first-portion percentage"
+    },
+    "review_interval_minutes": {
+      "type": "number",
+      "description": "User-selected review interval in minutes"
+    },
+    "insulin_type": {
+      "type": "string",
+      "description": "Insulin type typically used with this preset"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Optional private notes"
+    },
+    "is_enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether this preset is active and selectable"
+    }
+  },
+  "required": [
+    "preset_name",
+    "first_portion_percentage",
+    "review_interval_minutes"
+  ],
+  "rls": {
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

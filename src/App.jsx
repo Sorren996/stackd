@@ -26,6 +26,7 @@ import SplashScreen from "@/components/SplashScreen";
 import { AnimatePresence } from "framer-motion";
 import { base44 } from "@/api/base44Client";
 import RequiredAcknowledgments from "@/pages/RequiredAcknowledgments";
+import SplitPlanReview from "@/pages/SplitPlanReview";
 import { ACKNOWLEDGMENT_VERSIONS, CHECKBOX_KEYS } from "@/lib/acknowledgmentConfig";
 import { loadUserSettings, migrateLocalSettingsIfNeeded, cacheSettingsLocally } from "@/lib/userSettings";
 
@@ -96,6 +97,10 @@ const AuthenticatedApp = () => {
         queryClientInstance.prefetchQuery({
           queryKey: ["insulin-doses", "graph"],
           queryFn: () => base44.entities.InsulinDose.list("-administered_at", 1000),
+        }),
+        queryClientInstance.prefetchQuery({
+          queryKey: ["split-plans"],
+          queryFn: () => base44.entities.SplitDosePlan.list("-created_date", 20),
         }),
       ]);
 
@@ -190,6 +195,7 @@ const AuthenticatedApp = () => {
         <Route path="/settings/insulin" element={<InsulinSettingsPage />} />
         <Route path="/settings/profile" element={<ProfileSettingsPage />} />
         <Route path="/settings/privacy-consent" element={<PrivacyConsentPage />} />
+        <Route path="/split-plan/:planId" element={<SplitPlanReview />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

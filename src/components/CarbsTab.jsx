@@ -6,6 +6,7 @@ import { Camera, Check, Clock, Loader2, PenLine, Sparkles, X } from "lucide-reac
 import HighProteinFatCheckbox from "@/components/HighProteinFatCheckbox";
 import { toast } from "sonner";
 import { TimeScrollField, NumberPadField, TextPadField } from "@/components/FormInputFields";
+import SplitDosePlanner from "@/components/splitdose/SplitDosePlanner";
 
 const CARB_COLOR = "#d97706";
 const PROFILE_COLORS = { fast: "#ef4444", medium: "#f59e0b", slow: "#a78bfa" };
@@ -107,6 +108,35 @@ export default function CarbsTab({ onSubmit, isPending, onDirtyChange }) {
   const canSubmitCarbs = isEstimateMode ? !!estimatedMeal && !isEstimatingMeal : isCustomMode ? canSubmitCustom : canSubmitManual;
   const EstimateButtonIcon = isEstimatingMeal ? Loader2 : Sparkles;
   const estimateButtonLabel = isEstimatingMeal ? "Estimating..." : "Estimate meal";
+
+  const currentMealName = isEstimateMode
+    ? estimatedMeal?.mealName
+    : isCustomMode
+      ? customFoodName
+      : selectedFoods.length === 1
+        ? selectedFoods[0].food.name
+        : selectedFoods.length > 1
+          ? "Multiple foods"
+          : "";
+
+  const expectedDose = useMemo(() => {
+    const carbs = isEstimateMode ? Number(estimatedMeal?.carbs) : isCustomMode ? Number(customCarbs) : totalCarbs;
+    if (!carbs) return null;
+    const per5g = Number(localStorage.getItem("meal_insulin_units_per_5g"));
+    if (!per5g || per5g <= 0) return null;
+    const gramsPerUnit = 5 / per5g;
+    return (carbs / gramsPerUnit).toFixed(1);
+  }, [estimatedMeal, customCarbs, totalCarbs]);
+
+  const handleSplitConfirm = (planData) => {
+    if (!canSubmitCarbs) {
+      toast.error("Complete your meal entry before confirming the split plan.");
+      return;
+    }
+    if (isEstimateMode) handleSubmitEstimate(planData);
+    else if (isCustomMode) handleSubmitCustom(planData);
+    else handleSubmitManual(planData);
+  };
 
   const updateEstimatedMeal = (patch) => {
     setEstimatedMeal((meal) => (meal ? { ...meal, ...patch } : meal));
@@ -227,7 +257,7 @@ Do not give insulin dosing advice.
     }
   };
 
-  const handleSubmitEstimate = () => {
+  const handleSubmitEstimate = (splitPlan = null) => {
     if (!estimatedMeal) return;
 
     const carbs = Number(estimatedMeal.carbs);
@@ -256,11 +286,11 @@ Do not give insulin dosing advice.
         is_custom: true,
         is_high_protein_fat_meal: isHighProteinFat,
       },
-    ]);
+    ], splitPlan);
     setIsHighProteinFat(false);
   };
 
-  const handleSubmitCustom = () => {
+  const handleSubmitCustom = (splitPlan = null) => {
     const carbs = Number(customCarbs);
     if (!customFoodName.trim() || !Number.isFinite(carbs) || carbs <= 0) return;
 
@@ -284,7 +314,7 @@ Do not give insulin dosing advice.
         is_custom: true,
         is_high_protein_fat_meal: isHighProteinFat,
       },
-    ]);
+    ], splitPlan);
 
     setIsHighProteinFat(false);
     setCustomFoodName("");
@@ -308,7 +338,7 @@ Do not give insulin dosing advice.
     );
   };
 
-  const handleSubmitManual = () => {
+  const handleSubmitManual = (splitPlan = null) => {
     if (!canSubmitManual) return;
     const consumedAt = buildConsumedAt(carbTime);
     if (!consumedAt) {
@@ -329,7 +359,8 @@ Do not give insulin dosing advice.
         consumed_at: consumedAt,
         is_custom: false,
         is_high_protein_fat_meal: isHighProteinFat,
-      }))
+      })),
+      splitPlan
     );
     setIsHighProteinFat(false);
   };
@@ -670,6 +701,14 @@ Do not give insulin dosing advice.
           <div className="mt-4">
             <HighProteinFatCheckbox checked={isHighProteinFat} onChange={setIsHighProteinFat} />
           </div>
+
+          {isHighProteinFat && (
+            <SplitDosePlanner
+              mealName={currentMealName}
+              expectedDose={expectedDose}
+              onConfirm={handleSplitConfirm}
+            />
+          )}
         </div>
 
         <div className={`shrink-0 px-5 pb-6 pt-2 ${isEstimateMode && isEstimatingMeal ? "hidden" : ""}`}>

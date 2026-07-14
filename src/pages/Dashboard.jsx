@@ -5,6 +5,8 @@ import ActivityGraph from "../components/ActivityGraph";
 import ActiveInsulinBanner from "../components/ActiveInsulinBanner";
 import ActiveAlerts from "../components/ActiveAlerts";
 import FloatingActionMenu from "@/components/FloatingActionMenu";
+import SplitPlanCard from "@/components/splitdose/SplitPlanCard";
+import { isActivePlan } from "@/lib/splitDoseUtils";
 import DoseCard from "../components/DoseCard";
 import GlucoseCard from "../components/GlucoseCard";
 import CarbCard from "../components/CarbCard";
@@ -342,6 +344,18 @@ export default function Dashboard() {
     placeholderData: () => queryClient.getQueryData(["insulin-doses", "graph"]) ?? doses,
   });
 
+  const { data: splitPlans = [] } = useQuery({
+    queryKey: ["split-plans"],
+    queryFn: () => base44.entities.SplitDosePlan.list("-created_date", 20),
+    staleTime: FRESH_DATA_MS,
+    gcTime: GRAPH_DATA_MS,
+  });
+
+  const activeSplitPlans = useMemo(
+    () => splitPlans.filter((p) => isActivePlan(p)),
+    [splitPlans]
+  );
+
   const deleteGlucose = useMutation({
     mutationFn: (id) => base44.entities.GlucoseReading.delete(id),
     onSuccess: () => {
@@ -507,6 +521,14 @@ export default function Dashboard() {
             />
             <CoachGateway />
           </div>
+
+          {activeSplitPlans.length > 0 && (
+            <div className="mt-4 space-y-2">
+              {activeSplitPlans.slice(0, 3).map((plan) => (
+                <SplitPlanCard key={plan.id} plan={plan} />
+              ))}
+            </div>
+          )}
 
           {stackingAlertsEnabled && activeRapidCount > 1 && (
             <div className="dashboard-stacking-alert backdrop-blur-sm mx-0 flex w-full max-w-full min-w-0 items-start gap-3 overflow-hidden rounded-xl border border-white/10 p-4 pb-3">
