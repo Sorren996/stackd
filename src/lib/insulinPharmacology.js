@@ -447,3 +447,26 @@ export function getDoseStatus(dose, atTime = Date.now()) {
   if (elapsed > timing.duration * 0.85) return { phase: "low_activity", label: "Low residual activity", activity, iob };
   return { phase: "declining", label: "Activity declining", activity, iob };
 }
+
+export function getDoseTimingInfo(dose, atTime = Date.now()) {
+  const profile = getInsulinProfile(dose?.insulin_type);
+  const units = getDoseUnits(dose);
+  const start = getDoseTime(dose);
+
+  if (!profile || !units || !Number.isFinite(start) || !Number.isFinite(atTime)) {
+    return { totalDurationMin: 0, elapsedMin: 0, remainingMin: 0, progress: 0, isExpired: true };
+  }
+
+  const timing = getProfileTiming(profile, units);
+  const elapsedMin = atTime >= start ? (atTime - start) / MINUTE_MS : 0;
+  const remainingMin = Math.max(0, timing.duration - elapsedMin);
+  const progress = timing.duration > 0 ? Math.min(1, elapsedMin / timing.duration) : 0;
+
+  return {
+    totalDurationMin: timing.duration,
+    elapsedMin,
+    remainingMin,
+    progress,
+    isExpired: elapsedMin >= timing.duration,
+  };
+}

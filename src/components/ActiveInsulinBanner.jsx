@@ -14,6 +14,7 @@ import {
   generateActivityCurve,
   getDoseIOB,
   getDoseStatus,
+  getDoseTimingInfo,
   getTotalBolusIOB,
   INSULIN_PROFILES,
   isBolusInsulinType,
@@ -25,6 +26,7 @@ import {
 } from "@/lib/carbAbsorption";
 import { AnimatePresence, motion } from "framer-motion";
 import MealBalanceTooltip from "./MealBalanceTooltip";
+import DoseTimeline from "./DoseTimeline";
 import ComfortZoneCard from "./ComfortZoneCard";
 import { getSupportiveGlucoseMessage } from "@/lib/supportiveMessages";
 
@@ -761,22 +763,9 @@ function ActiveInsulinDetailCard({ totalUnits, breakdown }) {
         </span>
       </div>
 
-      <div className="relative z-10 mt-4 space-y-2">
+      <div className="relative z-10 mt-4">
         {breakdown.length ? (
-          breakdown.map((item) => (
-            <div key={item.type} className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.035] px-3 py-2">
-              <div className="min-w-0">
-                <p className="truncate text-xs font-semibold text-white/75">{item.shortName}</p>
-                <p className="text-[10px] uppercase tracking-wider text-white/30">
-                  {item.category} - {item.statusLabel}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
-                <span className="text-sm font-bold text-white">{item.iob.toFixed(1)}u</span>
-              </div>
-            </div>
-          ))
+          <DoseTimeline doses={breakdown} />
         ) : (
           <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 text-xs text-white/35">
             No bolus insulin on board estimated from current logs.
@@ -879,33 +868,29 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
   const activeCorrectionUnits = useMemo(() => getTotalCorrectionIOB(mealCoverageDoses, Date.now()), [mealCoverageDoses, nowMinute]);
   const activeInsulinBreakdown = useMemo(() => {
     const now = Date.now();
-    const grouped = safeDoses.reduce((items, dose) => {
-      if (!isBolusInsulinType(dose?.insulin_type)) return items;
-      const iob = getDoseIOB(dose, now);
-      if (iob <= 0.01) return items;
+    return safeDoses
+      .filter((dose) => isBolusInsulinType(dose?.insulin_type))
+      .map((dose) => {
+        const iob = getDoseIOB(dose, now);
+        if (iob <= 0.01) return null;
 
-      const profile = INSULIN_PROFILES[dose.insulin_type];
-      const status = getDoseStatus(dose, now);
-      const current = items[dose.insulin_type] || {
-        type: dose.insulin_type,
-        shortName: dose.insulin_type?.split(" ")[0] || "Insulin",
-        category: profile?.category || "Insulin",
-        color: profile?.color || "#5ba3b8",
-        iob: 0,
-        statusLabel: status.label,
-      };
-
-      current.iob += iob;
-      if (status.iob > (current.strongestIOB || 0)) {
-        current.strongestIOB = status.iob;
-        current.statusLabel = status.label;
-      }
-      items[dose.insulin_type] = current;
-      return items;
-    }, {});
-
-    return Object.values(grouped).sort((a, b) => b.iob - a.iob);
-  }, [safeDoses]);
+        const profile = INSULIN_PROFILES[dose.insulin_type];
+        const status = getDoseStatus(dose, now);
+        return {
+          id: dose.id,
+          type: dose.insulin_type,
+          shortName: dose.insulin_type?.split(" ")[0] || "Insulin",
+          category: profile?.category || "Insulin",
+          color: profile?.color || "#5ba3b8",
+          iob,
+          units: Number(dose.units) || 0,
+          statusLabel: status.label,
+          timingInfo: getDoseTimingInfo(dose, now),
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => b.iob - a.iob);
+  }, [safeDoses, nowMinute]);
   const activeCarbs = useMemo(() => getActiveCarbsNow(safeCarbEntries), [safeCarbEntries, nowMinute]);
 
   const trajectory = useMemo(
