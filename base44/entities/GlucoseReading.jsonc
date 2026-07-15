@@ -14,6 +14,11 @@
     "notes": {
       "type": "string",
       "description": "Optional notes"
+    },
+    "is_locked": {
+      "type": "boolean",
+      "default": false,
+      "description": "Server-side archive flag. Automatically set to true once the log is older than 14 days. Locked logs are read-only and cannot be edited or deleted."
     }
   },
   "required": [
@@ -28,10 +33,28 @@
       "created_by_id": "{{user.id}}"
     },
     "update": {
-      "created_by_id": "{{user.id}}"
+      "$and": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.is_locked": {
+            "$ne": true
+          }
+        }
+      ]
     },
     "delete": {
-      "created_by_id": "{{user.id}}"
+      "$and": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.is_locked": {
+            "$ne": true
+          }
+        }
+      ]
     }
   }
 }
