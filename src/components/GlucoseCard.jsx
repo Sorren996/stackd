@@ -1,5 +1,5 @@
 import { formatDistanceToNow, format } from "date-fns";
-import { Trash2, Droplets } from "lucide-react";
+import { Trash2, Droplets, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { motion } from "framer-motion";
 
-export default function GlucoseCard({ reading, onDelete }) {
+export default function GlucoseCard({ reading, onDelete, locked = false }) {
   const value = reading.value;
   const color = value < 70 ? "#6b92c4" : value > 180 ? "#d4a056" : "#5ba88a";
   const statusLabel = value < 70 ? "Below comfort zone" : value > 180 ? "Above comfort zone" : "In comfort zone";
@@ -44,8 +44,14 @@ export default function GlucoseCard({ reading, onDelete }) {
           {value} mg/dL · {statusLabel}
         </p>
         {reading.notes && <p className="text-xs text-white/30 mt-1 italic">{reading.notes}</p>}
+        {locked && (
+          <p className="mt-1 flex items-center gap-1 text-[10px] font-medium text-white/30">
+            <Lock className="w-3 h-3" /> Archived
+          </p>
+        )}
       </div>
 
+      {!locked && (
       <AlertDialog>
         <AlertDialogTrigger asChild>
           <Button variant="ghost" size="icon" className="shrink-0 w-7 h-7 text-white/50 hover:text-destructive hover:bg-destructive/10 mt-0.5">
@@ -67,6 +73,7 @@ export default function GlucoseCard({ reading, onDelete }) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      )}
     </motion.div>
   );
 }

@@ -1,6 +1,6 @@
 import { INSULIN_PROFILES, getDoseStatus } from "@/lib/insulinPharmacology";
 import { formatDistanceToNow, format } from "date-fns";
-import { Trash2, Syringe, Pencil } from "lucide-react";
+import { Trash2, Syringe, Pencil, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { motion } from "framer-motion";
 
-export default function DoseCard({ dose, onDelete, onEdit }) {
+export default function DoseCard({ dose, onDelete, onEdit, locked = false }) {
   const profile = INSULIN_PROFILES[dose.insulin_type];
   const status = getDoseStatus(dose);
   const color = profile?.color || "#b3b3b3ff";
@@ -81,8 +81,14 @@ export default function DoseCard({ dose, onDelete, onEdit }) {
         {dose.notes && (
           <p className="mt-1 text-xs italic text-white/30">{dose.notes}</p>
         )}
+        {locked && (
+          <p className="mt-1 flex items-center gap-1 text-[10px] font-medium text-white/30">
+            <Lock className="w-3 h-3" /> Archived
+          </p>
+        )}
       </div>
 
+      {!locked && (
       <div className="mt-0.5 flex shrink-0 items-center gap-1">
         <Button
           type="button"
@@ -131,6 +137,7 @@ export default function DoseCard({ dose, onDelete, onEdit }) {
           </AlertDialogContent>
         </AlertDialog>
       </div>
+      )}
     </motion.div>
   );
 }

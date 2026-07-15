@@ -1,21 +1,18 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import DoseCard from "@/components/DoseCard";
-import GlucoseCard from "@/components/GlucoseCard";
-import CarbCard from "@/components/CarbCard";
 import { toast } from "sonner";
-import { CalendarDays, X, Pencil } from "lucide-react";
-import { format, isToday, isYesterday, parseISO } from "date-fns";
-import { motion } from "framer-motion";
+import { ChevronLeft, X } from "lucide-react";
+import { format, parseISO } from "date-fns";
 import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
 import { DateScrollField, TimeScrollField, NumberPadField, TextPadField, SelectField } from "@/components/FormInputFields";
 import HighProteinFatCheckbox from "@/components/HighProteinFatCheckbox";
-import TimelineDayGroup from "@/components/history/TimelineDayGroup";
-import TimelineWeekGroup from "@/components/history/TimelineWeekGroup";
-import { GLASS_SURFACE } from "@/lib/glassTheme";
 import { cancelSplitPlansForMeal, cleanupSplitPlansForDose } from "@/lib/splitDoseUtils";
-import { startOfWeek, format as fnsFormat } from "date-fns";
+import { groupDaysByMonth, groupDaysByWeek, monthStats, weekStats, trendSummary } from "@/lib/historyAggregations";
+import HistoryMonthView from "@/components/history/HistoryMonthView";
+import HistoryWeekView from "@/components/history/HistoryWeekView";
+import HistoryDayView from "@/components/history/HistoryDayView";
+import HistoryTimelineView from "@/components/history/HistoryTimelineView";
 
 function readTargetRange() {
   if (typeof window === "undefined") return { low: 70, high: 180 };
@@ -27,84 +24,6 @@ function readTargetRange() {
     low: Number.isFinite(low) ? low : 70,
     high: Number.isFinite(high) ? high : 180,
   };
-}
-
-function getDoseDaySummary(items) {
-  const total = items.reduce((sum, d) => sum + Number(d.units || 0), 0);
-  return `${total % 1 === 0 ? total : total.toFixed(1)}u of support`;
-}
-
-function getGlucoseDaySummary(items, targetLow, targetHigh) {
-  if (!items.length) return null;
-  const avg = Math.round(items.reduce((s, r) => s + Number(r.value), 0) / items.length);
-  const inRange = items.filter((r) => r.value >= targetLow && r.value <= targetHigh).length;
-  const pct = Math.round((inRange / items.length) * 100);
-  return `${avg} mg/dL avg · ${pct}% in comfort zone`;
-}
-
-function getCarbDaySummary(items) {
-  const total = items.reduce((sum, e) => sum + Number(e.carbs || 0), 0);
-  return `${Math.round(total)}g of nourishment`;
-}
-
-function groupByDate(items, dateField) {
-  const groups = {};
-  items.forEach((item) => {
-    const timestamp = item[dateField];
-    if (!timestamp) return;
-
-    const parsed = parseISO(timestamp);
-    if (Number.isNaN(parsed.getTime())) return;
-
-    const date = format(parsed, "yyyy-MM-dd");
-    if (!groups[date]) groups[date] = [];
-    groups[date].push(item);
-  });
-  return Object.entries(groups)
-    .sort(([a], [b]) => b.localeCompare(a))
-    .map(([date, items]) => {
-      const d = parseISO(date);
-      let label = format(d, "EEEE, MMMM d");
-      if (isToday(d)) label = "Today";
-      else if (isYesterday(d)) label = "Yesterday";
-      return { date, label, items };
-    });
-}
-
-function groupByWeek(dayGroups) {
-  const weeks = {};
-  dayGroups.forEach((day) => {
-    const parsed = parseISO(day.date);
-    if (Number.isNaN(parsed.getTime())) return;
-
-    const weekStart = startOfWeek(parsed, { weekStartsOn: 1 });
-    const weekKey = fnsFormat(weekStart, "yyyy-MM-dd");
-    if (!weeks[weekKey]) weeks[weekKey] = { weekStart, days: [] };
-    weeks[weekKey].days.push(day);
-  });
-
-  const now = new Date();
-  const thisWeekStart = startOfWeek(now, { weekStartsOn: 1 });
-  const lastWeekStart = new Date(thisWeekStart.getTime() - 7 * 24 * 60 * 60 * 1000);
-
-  return Object.entries(weeks)
-    .sort(([a], [b]) => b.localeCompare(a))
-    .map(([weekKey, { weekStart, days }]) => {
-      let label;
-      if (fnsFormat(weekStart, "yyyy-MM-dd") === fnsFormat(thisWeekStart, "yyyy-MM-dd")) {
-        label = "This Week";
-      } else if (fnsFormat(weekStart, "yyyy-MM-dd") === fnsFormat(lastWeekStart, "yyyy-MM-dd")) {
-        label = "Last Week";
-      } else {
-        label = `Week of ${format(weekStart, "MMM d")}`;
-      }
-      return { weekKey, label, days };
-    });
-}
-
-function getWeekSummary(days, summaryFn) {
-  const allItems = days.flatMap((d) => d.items);
-  return summaryFn(allItems);
 }
 
 function normalizeCarbEntry(entry) {
@@ -351,28 +270,12 @@ function EditLogSheet({ log, onClose, onSave, isSaving }) {
   );
 }
 
-function EditableLog({ children, onEdit }) {
-  return (
-    <div className="relative">
-      {children}
-      <button
-        type="button"
-        onClick={onEdit}
-        aria-label="Edit log"
-        className="absolute right-12 top-4 flex h-7 w-7 items-center justify-center rounded-full border text-white/55 transition hover:text-white"
-        style={{ background: "linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))", borderColor: "rgba(255,255,255,0.12)" }}
-      >
-        <Pencil className="h-3.5 w-3.5" />
-      </button>
-    </div>
-  );
-}
-
 export default function History() {
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState("doses");
-  const [openGroup, setOpenGroup] = useState(null);
-  const [openWeek, setOpenWeek] = useState(null);
+  const [level, setLevel] = useState("month"); // month | week | day | timeline
+  const [selectedMonth, setSelectedMonth] = useState(null);
+  const [selectedWeek, setSelectedWeek] = useState(null);
+  const [selectedDay, setSelectedDay] = useState(null);
   const [editingLog, setEditingLog] = useState(null);
   const [targetRange, setTargetRange] = useState(readTargetRange);
 
@@ -388,53 +291,95 @@ export default function History() {
     };
   }, []);
 
-  const { data: doses = [], isLoading: loadingDoses } = useQuery({
-    queryKey: ["insulin-doses"],
-    queryFn: () => base44.entities.InsulinDose.list("-administered_at", 200)
+  const { data: summary, isLoading: loadingSummary } = useQuery({
+    queryKey: ["history-summary"],
+    queryFn: async () => {
+      const res = await base44.functions.invoke("getHistorySummary", {});
+      return res.data;
+    },
+    staleTime: 5 * 60 * 1000,
   });
 
-  const { data: glucoseReadings = [], isLoading: loadingGlucose } = useQuery({
-    queryKey: ["glucose-readings"],
-    queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", 1000)
+  const allDays = summary?.days || [];
+  const targetLow = summary?.targetLow ?? targetRange.low;
+  const targetHigh = summary?.targetHigh ?? targetRange.high;
+
+  const months = useMemo(() => groupDaysByMonth(allDays), [allDays]);
+  const currentMonth = useMemo(() => months.find((m) => m.key === selectedMonth) || null, [months, selectedMonth]);
+  const weeks = useMemo(() => (currentMonth ? groupDaysByWeek(currentMonth.days) : []), [currentMonth]);
+  const currentWeek = useMemo(() => weeks.find((w) => w.key === selectedWeek) || null, [weeks, selectedWeek]);
+  const weekDays = useMemo(
+    () => (currentWeek ? [...currentWeek.days].sort((a, b) => b.date.localeCompare(a.date)) : []),
+    [currentWeek]
+  );
+
+  const { data: dayLogs = [], isLoading: loadingDayLogs } = useQuery({
+    queryKey: ["history-day-logs", selectedDay],
+    queryFn: async () => {
+      const start = `${selectedDay}T00:00:00`;
+      const end = `${selectedDay}T23:59:59`;
+      const [glucose, carbs, insulin] = await Promise.all([
+        base44.entities.GlucoseReading.filter({ recorded_at: { $gte: start, $lte: end } }, "-recorded_at", 500),
+        base44.entities.CarbEntry.filter({ consumed_at: { $gte: start, $lte: end } }, "-consumed_at", 500),
+        base44.entities.InsulinDose.filter({ administered_at: { $gte: start, $lte: end } }, "-administered_at", 500),
+      ]);
+      const merged = [
+        ...glucose.map((i) => ({ ...i, feedType: "glucose", timestamp: new Date(i.recorded_at).getTime() })),
+        ...carbs.map((i) => ({ ...normalizeCarbEntry(i), feedType: "carbs", timestamp: new Date(i.consumed_at).getTime() })),
+        ...insulin.map((i) => ({ ...i, feedType: "insulin", timestamp: new Date(i.administered_at).getTime() })),
+      ].sort((a, b) => b.timestamp - a.timestamp);
+      return merged;
+    },
+    enabled: level === "timeline" && !!selectedDay,
   });
 
-  const { data: carbEntries = [], isLoading: loadingCarbs } = useQuery({
-    queryKey: ["carb-entries"],
-    queryFn: () => base44.entities.CarbEntry.list("-consumed_at", 300)
-  });
+  const invalidateHistory = () => {
+    queryClient.invalidateQueries({ queryKey: ["history-summary"] });
+    queryClient.invalidateQueries({ queryKey: ["history-day-logs"] });
+  };
 
   const deleteDose = useMutation({
     mutationFn: (id) => base44.entities.InsulinDose.delete(id),
     onSuccess: (_data, deletedId) => {
       queryClient.invalidateQueries({ queryKey: ["insulin-doses"] });
+      queryClient.invalidateQueries({ queryKey: ["insulin-doses", "graph"] });
+      invalidateHistory();
       toast.success("Support gently removed");
       (async () => {
         if (await cleanupSplitPlansForDose(base44, deletedId)) {
           queryClient.invalidateQueries({ queryKey: ["split-plans"] });
         }
       })();
-    }
+    },
+    onError: () => toast.error("This moment has been preserved and can't be removed."),
   });
 
   const deleteGlucose = useMutation({
     mutationFn: (id) => base44.entities.GlucoseReading.delete(id),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["latest-glucose"] });
       queryClient.invalidateQueries({ queryKey: ["glucose-readings"] });
+      queryClient.invalidateQueries({ queryKey: ["glucose-readings", "graph"] });
+      invalidateHistory();
       toast.success("Reading gently removed");
-    }
+    },
+    onError: () => toast.error("This moment has been preserved and can't be removed."),
   });
 
   const deleteCarb = useMutation({
     mutationFn: (id) => base44.entities.CarbEntry.delete(id),
     onSuccess: (_data, deletedId) => {
       queryClient.invalidateQueries({ queryKey: ["carb-entries"] });
+      queryClient.invalidateQueries({ queryKey: ["carb-entries", "graph"] });
+      invalidateHistory();
       toast.success("Nourishment removed");
       (async () => {
         if (await cancelSplitPlansForMeal(base44, deletedId)) {
           queryClient.invalidateQueries({ queryKey: ["split-plans"] });
         }
       })();
-    }
+    },
+    onError: () => toast.error("This moment has been preserved and can't be removed."),
   });
 
   const updateLog = useMutation({
@@ -465,65 +410,56 @@ export default function History() {
         queryClient.invalidateQueries({ queryKey: ["carb-entries", "graph"] });
       }
 
+      invalidateHistory();
       toast.success("Moment updated");
       setEditingLog(null);
     },
-    onError: () => toast.error("Unable to update log. Please try again."),
+    onError: () => toast.error("Unable to update log. It may have been preserved."),
   });
 
-  const normalizedCarbEntries = useMemo(
-    () => carbEntries.map(normalizeCarbEntry).filter((entry) => entry.consumed_at && entry.carbs > 0),
-    [carbEntries]
-  );
-
-  const doseGroups = groupByDate(doses, "administered_at");
-  const carbGroups = groupByDate(normalizedCarbEntries, "consumed_at");
-
-  const getCarbAverage = (days) => {
-    const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
-    const filtered = normalizedCarbEntries.filter((e) => new Date(e.consumed_at).getTime() >= cutoff);
-    if (!filtered.length) return "—";
-    const totalDays = Math.max(1, Math.ceil((Date.now() - Math.min(...filtered.map(e => new Date(e.consumed_at).getTime()))) / (24*60*60*1000)) || days);
-    const sum = filtered.reduce((acc, e) => acc + e.carbs, 0);
-    return `${Math.round(sum / Math.min(days, totalDays))}`;
+  const handleSelectMonth = (key) => {
+    setSelectedMonth(key);
+    setLevel("week");
   };
 
-  const totalCarbsLast30 = useMemo(() => {
-    const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
-    return normalizedCarbEntries.filter(e => new Date(e.consumed_at).getTime() >= cutoff).reduce((acc, e) => acc + e.carbs, 0);
-  }, [normalizedCarbEntries]);
-
-  const glucose30Days = glucoseReadings.filter((r) => {
-    return Date.now() - new Date(r.recorded_at).getTime() <= 30 * 24 * 60 * 60 * 1000;
-  });
-  const glucoseGroups = groupByDate(glucose30Days, "recorded_at");
-
-  const targetLow = targetRange.low;
-  const targetHigh = targetRange.high;
-
-  const inRangePercentage = useMemo(() => {
-    if (!glucoseReadings.length) return "—";
-    const inRangeCount = glucoseReadings.filter(
-      (r) => r.value >= targetLow && r.value <= targetHigh
-    ).length;
-    return `${Math.round((inRangeCount / glucoseReadings.length) * 100)}%`;
-  }, [glucoseReadings, targetLow, targetHigh]);
-
-  const getAverage = (days) => {
-    const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
-    const filtered = glucoseReadings.filter((r) => new Date(r.recorded_at).getTime() >= cutoff);
-    if (!filtered.length) return "—";
-    const sum = filtered.reduce((acc, curr) => acc + curr.value, 0);
-    return `${Math.round(sum / filtered.length)}`;
+  const handleSelectWeek = (key) => {
+    setSelectedWeek(key);
+    setLevel("day");
   };
 
-  const handleTabChange = (tab) => {
-    setActiveTab(tab);
-    setOpenGroup(null);
-    setOpenWeek(null);
+  const handleSelectDay = (date) => {
+    setSelectedDay(date);
+    setLevel("timeline");
   };
 
-  if (loadingDoses || loadingGlucose || loadingCarbs) {
+  const goBack = () => {
+    if (level === "timeline") {
+      setLevel("day");
+      setSelectedDay(null);
+    } else if (level === "day") {
+      setLevel("week");
+      setSelectedWeek(null);
+    } else if (level === "week") {
+      setLevel("month");
+      setSelectedMonth(null);
+    }
+  };
+
+  let headerTitle = "Your 90-Day Journey";
+  let headerSub = "Reflecting on the last three months";
+  if (level === "week" && currentMonth) {
+    headerTitle = `${currentMonth.label} ${currentMonth.year}`;
+    headerSub = trendSummary(currentMonth);
+  } else if (level === "day" && currentWeek) {
+    headerTitle = `Week of ${format(currentWeek.weekStart, "MMM d")}`;
+    const ws = weekStats(currentWeek);
+    headerSub = ws.glucoseAvg ? `${ws.glucoseAvg} mg/dL weekly average` : "No glucose moments this week";
+  } else if (level === "timeline" && selectedDay) {
+    headerTitle = format(parseISO(selectedDay), "EEEE, MMMM d");
+    headerSub = `${dayLogs.length} ${dayLogs.length === 1 ? "moment" : "moments"}`;
+  }
+
+  if (loadingSummary) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
         <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
@@ -540,218 +476,45 @@ export default function History() {
         isSaving={updateLog.isPending}
       />
 
-      <div className="flex justify-center">
-        <div
-          className="flex items-center gap-1 p-1 rounded-3xl border border-white/10 shadow-lg backdrop-blur-sm"
-          style={{
-            background: "linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))",
-            boxShadow: "inset 0 1px 1px rgba(255,255,255,0.08), 0 8px 24px rgba(0,0,0,0.12)"
-          }}>
+      <div className="flex items-center gap-3">
+        {level !== "month" && (
           <button
-            onClick={() => handleTabChange("doses")}
-            className={`relative px-4 py-2 rounded-2xl text-sm font-medium transition-colors ${
-              activeTab === "doses" ? "text-white" : "text-white/40 hover:text-white/70"
-            }`}>
-            {activeTab === "doses" && (
-              <motion.div
-                layoutId="active-history-tab"
-                className="absolute inset-0 bg-white/10 rounded-2xl -z-10"
-                transition={{ type: "spring", stiffness: 400, damping: 25, mass: 0.8 }} />
-            )}
-            <span className="relative z-10">Support</span>
+            type="button"
+            onClick={goBack}
+            aria-label="Back"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-white/70 transition hover:text-white"
+            style={{ background: "linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))", borderColor: "rgba(255,255,255,0.14)" }}
+          >
+            <ChevronLeft className="h-4 w-4" />
           </button>
-
-          <button
-            onClick={() => handleTabChange("glucose")}
-            className={`relative px-4 py-2 rounded-2xl text-sm font-medium transition-colors ${
-              activeTab === "glucose" ? "text-white" : "text-white/40 hover:text-white/70"
-            }`}>
-            {activeTab === "glucose" && (
-              <motion.div
-                layoutId="active-history-tab"
-                className="absolute inset-0 bg-white/10 rounded-2xl -z-10"
-                transition={{ type: "spring", stiffness: 400, damping: 25, mass: 0.8 }} />
-            )}
-            <span className="relative z-10">Glucose</span>
-          </button>
-
-          <button
-            onClick={() => handleTabChange("carbs")}
-            className={`relative px-4 py-2 rounded-2xl text-sm font-medium transition-colors ${
-              activeTab === "carbs" ? "text-white" : "text-white/40 hover:text-white/70"
-            }`}>
-            {activeTab === "carbs" && (
-              <motion.div
-                layoutId="active-history-tab"
-                className="absolute inset-0 bg-white/10 rounded-2xl -z-10"
-                transition={{ type: "spring", stiffness: 400, damping: 25, mass: 0.8 }} />
-            )}
-            <span className="relative z-10">Nourishment</span>
-          </button>
+        )}
+        <div className="min-w-0">
+          <h2 className="text-lg font-semibold text-white">{headerTitle}</h2>
+          <p className="text-xs text-white/40">{headerSub}</p>
         </div>
       </div>
 
-      {activeTab === "doses" && (
-        <div className="space-y-6">
-          {doseGroups.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <CalendarDays className="w-10 h-10 text-muted-foreground/40 mb-3" />
-              <h3 className="text-lg font-semibold text-white">Your journey is just beginning</h3>
-              <p className="text-sm text-muted-foreground mt-1">Tap the + button to record your first moment of support.</p>
-            </div>
-          ) : (
-            groupByWeek(doseGroups).map((week) => (
-              <TimelineWeekGroup
-                key={week.weekKey}
-                label={week.label}
-                dayCount={week.days.length}
-                momentCount={week.days.reduce((s, d) => s + d.items.length, 0)}
-                summary={getWeekSummary(week.days, getDoseDaySummary)}
-                isOpen={openWeek === week.weekKey}
-                onToggle={() => setOpenWeek(openWeek === week.weekKey ? null : week.weekKey)}
-              >
-                {week.days.map((group) => (
-                  <TimelineDayGroup
-                    key={group.date}
-                    label={group.label}
-                    count={group.items.length}
-                    summary={getDoseDaySummary(group.items)}
-                    isOpen={openGroup === group.date}
-                    onToggle={() => setOpenGroup(openGroup === group.date ? null : group.date)}
-                  >
-                    {group.items.map((dose) => (
-                      <EditableLog key={dose.id} onEdit={() => setEditingLog({ type: "insulin", item: dose })}>
-                        <DoseCard dose={dose} onDelete={(id) => deleteDose.mutate(id)} />
-                      </EditableLog>
-                    ))}
-                  </TimelineDayGroup>
-                ))}
-              </TimelineWeekGroup>
-            ))
-          )}
-        </div>
+      {level === "month" && (
+        <HistoryMonthView months={months} onSelectMonth={handleSelectMonth} />
       )}
 
-      {activeTab === "glucose" && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
-            {[
-              { label: "1 Day", days: 1 },
-              { label: "3 Day", days: 3 },
-              { label: "7 Day", days: 7 },
-              { label: "14 Day", days: 14 },
-              { label: "30 Day", days: 30 }
-            ].map((window) => (
-              <div key={window.label} className="backdrop-blur-sm border border-white/10 rounded-2xl p-3 text-center" style={GLASS_SURFACE}>
-                <p className="text-[10px] font-bold text-white/60 uppercase tracking-wider">{window.label} Avg</p>
-                <p className="text-xl text-white mt-1 font-extrabold text-center">{getAverage(window.days)}</p>
-                <p className="text-[10px] text-white/30 mt-0.5">mg/dL</p>
-              </div>
-            ))}
-            <div className="backdrop-blur-sm rounded-2xl p-3 text-center" style={{ ...GLASS_SURFACE, borderColor: "rgba(91,168,138,0.3)" }}>
-              <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#5ba88a" }}>In Comfort Zone</p>
-              <p className="text-xl mt-1 font-extrabold text-center" style={{ color: "#5ba88a" }}>{inRangePercentage}</p>
-              <p className="text-[10px] mt-0.5" style={{ color: "rgba(91,168,138,0.6)" }}>{targetLow}–{targetHigh} mg/dL</p>
-            </div>
-          </div>
-
-          {glucoseGroups.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <CalendarDays className="w-10 h-10 text-muted-foreground/40 mb-3" />
-              <h3 className="text-lg font-semibold text-white">No glucose moments in the last 30 days</h3>
-              <p className="text-sm text-muted-foreground mt-1">Your glucose check-ins will gently appear here as you log them.</p>
-            </div>
-          ) : (
-            groupByWeek(glucoseGroups).map((week) => (
-              <TimelineWeekGroup
-                key={week.weekKey}
-                label={week.label}
-                dayCount={week.days.length}
-                momentCount={week.days.reduce((s, d) => s + d.items.length, 0)}
-                summary={getWeekSummary(week.days, (items) => getGlucoseDaySummary(items, targetLow, targetHigh))}
-                isOpen={openWeek === week.weekKey}
-                onToggle={() => setOpenWeek(openWeek === week.weekKey ? null : week.weekKey)}
-              >
-                {week.days.map((group) => (
-                  <TimelineDayGroup
-                    key={group.date}
-                    label={group.label}
-                    count={group.items.length}
-                    summary={getGlucoseDaySummary(group.items, targetLow, targetHigh)}
-                    isOpen={openGroup === group.date}
-                    onToggle={() => setOpenGroup(openGroup === group.date ? null : group.date)}
-                  >
-                    {group.items.map((reading) => (
-                      <EditableLog key={reading.id} onEdit={() => setEditingLog({ type: "glucose", item: reading })}>
-                        <GlucoseCard reading={reading} onDelete={(id) => deleteGlucose.mutate(id)} />
-                      </EditableLog>
-                    ))}
-                  </TimelineDayGroup>
-                ))}
-              </TimelineWeekGroup>
-            ))
-          )}
-        </div>
+      {level === "week" && currentMonth && (
+        <HistoryWeekView weeks={weeks} onSelectWeek={handleSelectWeek} />
       )}
 
-      {activeTab === "carbs" && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {[
-              { label: "1 Day Avg", days: 1 },
-              { label: "7 Day Avg", days: 7 },
-              { label: "14 Day Avg", days: 14 },
-              { label: "30 Day Avg", days: 30 },
-            ].map((window) => (
-              <div key={window.label} className="backdrop-blur-sm border border-white/10 rounded-2xl p-3 text-center" style={GLASS_SURFACE}>
-                <p className="text-[10px] font-bold text-white/60 uppercase tracking-wider">{window.label}</p>
-                <p className="text-xl text-white mt-1 font-extrabold">{getCarbAverage(window.days)}</p>
-                <p className="text-[10px] text-white/30 mt-0.5">g / day</p>
-              </div>
-            ))}
-          </div>
-          <div className="backdrop-blur-sm rounded-2xl p-3 text-center" style={GLASS_SURFACE}>
-            <p className="text-[10px] font-bold text-white/60 uppercase tracking-wider">Total Nourishment (30 Days)</p>
-            <p className="text-2xl text-white mt-1 font-extrabold">{totalCarbsLast30}g</p>
-          </div>
+      {level === "day" && currentWeek && (
+        <HistoryDayView days={weekDays} onSelectDay={handleSelectDay} />
+      )}
 
-          {carbGroups.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <CalendarDays className="w-10 h-10 text-muted-foreground/40 mb-3" />
-              <h3 className="text-lg font-semibold text-white">No nourishment logged yet</h3>
-              <p className="text-sm text-muted-foreground mt-1">Your meals will appear here as you log them.</p>
-            </div>
-          ) : (
-            groupByWeek(carbGroups).map((week) => (
-              <TimelineWeekGroup
-                key={week.weekKey}
-                label={week.label}
-                dayCount={week.days.length}
-                momentCount={week.days.reduce((s, d) => s + d.items.length, 0)}
-                summary={getWeekSummary(week.days, getCarbDaySummary)}
-                isOpen={openWeek === week.weekKey}
-                onToggle={() => setOpenWeek(openWeek === week.weekKey ? null : week.weekKey)}
-              >
-                {week.days.map((group) => (
-                  <TimelineDayGroup
-                    key={group.date}
-                    label={group.label}
-                    count={group.items.length}
-                    summary={getCarbDaySummary(group.items)}
-                    isOpen={openGroup === group.date}
-                    onToggle={() => setOpenGroup(openGroup === group.date ? null : group.date)}
-                  >
-                    {group.items.map((entry) => (
-                      <EditableLog key={entry.id} onEdit={() => setEditingLog({ type: "carbs", item: entry })}>
-                        <CarbCard entry={entry} onDelete={(id) => deleteCarb.mutate(id)} />
-                      </EditableLog>
-                    ))}
-                  </TimelineDayGroup>
-                ))}
-              </TimelineWeekGroup>
-            ))
-          )}
-        </div>
+      {level === "timeline" && selectedDay && (
+        <HistoryTimelineView
+          logs={dayLogs}
+          loading={loadingDayLogs}
+          onEdit={(payload) => setEditingLog(payload)}
+          onDeleteDose={(id) => deleteDose.mutate(id)}
+          onDeleteGlucose={(id) => deleteGlucose.mutate(id)}
+          onDeleteCarb={(id) => deleteCarb.mutate(id)}
+        />
       )}
     </div>
   );

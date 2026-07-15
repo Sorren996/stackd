@@ -1,5 +1,5 @@
 import { formatDistanceToNow, format } from "date-fns";
-import { Trash2, Wheat } from "lucide-react";
+import { Trash2, Wheat, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { PROFILE_COLORS } from "@/lib/carbAbsorption";
@@ -7,7 +7,7 @@ import { motion } from "framer-motion";
 
 const PROFILE_LABELS = { fast: "fast carbs", medium: "medium carbs", slow: "slow carbs" };
 
-export default function CarbCard({ entry, onDelete }) {
+export default function CarbCard({ entry, onDelete, locked = false }) {
   const color = entry.is_custom ? "#8b8b97" : (PROFILE_COLORS[entry.absorption_profile] || "#d4a056");
   const profileLabel = entry.is_custom ? "custom" : (PROFILE_LABELS[entry.absorption_profile] || "");
   const timeAgo = formatDistanceToNow(new Date(entry.consumed_at), { addSuffix: true });
@@ -43,8 +43,14 @@ export default function CarbCard({ entry, onDelete }) {
           <p className="mt-1 text-[10px] font-medium text-amber-400/60">High protein/fat monitoring selected</p>
         )}
         {entry.notes && <p className="text-xs text-white/30 mt-1 italic">{entry.notes}</p>}
+        {locked && (
+          <p className="mt-1 flex items-center gap-1 text-[10px] font-medium text-white/30">
+            <Lock className="w-3 h-3" /> Archived
+          </p>
+        )}
       </div>
 
+      {!locked && (
       <AlertDialog>
         <AlertDialogTrigger asChild>
           <Button variant="ghost" size="icon" className="shrink-0 w-7 h-7 text-white/20 hover:text-destructive hover:bg-destructive/10 mt-0.5">
@@ -66,6 +72,7 @@ export default function CarbCard({ entry, onDelete }) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      )}
     </motion.div>
   );
 }
