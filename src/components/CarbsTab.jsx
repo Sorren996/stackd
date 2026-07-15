@@ -5,7 +5,7 @@ import { InvokeLLM, UploadFile } from "@/api/integrations";
 import { Camera, Check, Clock, Loader2, PenLine, Sparkles, X } from "lucide-react";
 import HighProteinFatCheckbox from "@/components/HighProteinFatCheckbox";
 import { toast } from "sonner";
-import { TimeScrollField, NumberPadField, TextPadField } from "@/components/FormInputFields";
+import { DateScrollField, TimeScrollField, NumberPadField, TextPadField } from "@/components/FormInputFields";
 import SplitDosePlanner from "@/components/splitdose/SplitDosePlanner";
 
 const CARB_COLOR = "#d97706";
@@ -34,9 +34,15 @@ function normalizeEstimatedMeal(data, fallbackName) {
   };
 }
 
-function buildConsumedAt(timeValue) {
-  const [hours, minutes] = timeValue.split(":").map(Number);
-  const consumedAt = new Date();
+function getTodayDateValue() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
+
+function buildConsumedAt(dateValue, timeValue) {
+  const [hours, minutes] = String(timeValue || "").split(":").map(Number);
+  const consumedAt = dateValue ? new Date(dateValue + "T00:00:00") : new Date();
+  if (Number.isNaN(consumedAt.getTime())) return null;
   consumedAt.setHours(hours, minutes, 0, 0);
   if (consumedAt.getTime() > Date.now()) return null;
   return consumedAt.toISOString();
@@ -65,9 +71,11 @@ export default function CarbsTab({ onSubmit, isPending, onDirtyChange }) {
   const [selectedFoods, setSelectedFoods] = useState([]);
   const [recentFoods, setRecentFoods] = useState([]);
   const [carbTime, setCarbTime] = useState(() => new Date().toTimeString().slice(0, 5));
+  const [carbDate, setCarbDate] = useState(getTodayDateValue);
   const [isHighProteinFat, setIsHighProteinFat] = useState(false);
 
   const nowTimeString = new Date().toTimeString().slice(0, 5);
+  const todayDateValue = getTodayDateValue();
 
   useEffect(() => {
     onDirtyChange?.(
@@ -267,7 +275,7 @@ Do not give insulin dosing advice.
     }
 
     const absorptionProfile = estimatedMeal.absorptionProfile || "medium";
-    const consumedAt = buildConsumedAt(carbTime);
+    const consumedAt = buildConsumedAt(carbDate, carbTime);
     if (!consumedAt) {
       toast.error("Choose a time that is not in the future.");
       return;
@@ -294,7 +302,7 @@ Do not give insulin dosing advice.
     const carbs = Number(customCarbs);
     if (!customFoodName.trim() || !Number.isFinite(carbs) || carbs <= 0) return;
 
-    const consumedAt = buildConsumedAt(carbTime);
+    const consumedAt = buildConsumedAt(carbDate, carbTime);
     if (!consumedAt) {
       toast.error("Choose a time that is not in the future.");
       return;
@@ -340,7 +348,7 @@ Do not give insulin dosing advice.
 
   const handleSubmitManual = (splitPlan = null) => {
     if (!canSubmitManual) return;
-    const consumedAt = buildConsumedAt(carbTime);
+    const consumedAt = buildConsumedAt(carbDate, carbTime);
     if (!consumedAt) {
       toast.error("Choose a time that is not in the future.");
       return;
@@ -695,7 +703,8 @@ Do not give insulin dosing advice.
 
           <div className="mt-5">
             <p className="mb-3 text-sm font-bold uppercase tracking-widest text-white/40">Time Consumed</p>
-            <TimeScrollField label="Consumed at" value={carbTime} onChange={setCarbTime} max={nowTimeString} />
+            <DateScrollField label="Date" value={carbDate} onChange={setCarbDate} max={todayDateValue} />
+            <TimeScrollField label="Consumed at" value={carbTime} onChange={setCarbTime} max={carbDate === todayDateValue ? nowTimeString : undefined} />
           </div>
 
           <div className="mt-4">

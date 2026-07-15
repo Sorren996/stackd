@@ -61,6 +61,23 @@ export function TextPadField({ label, value, onChange, placeholder, multiline = 
   );
 }
 
+export function DateScrollField({ label, value, onChange, max }) {
+  return (
+    <div className="rounded-2xl border p-3" style={GLASS_SURFACE}>
+      <div className="flex items-center justify-between">
+        <span className="text-sm text-white/60">{label}</span>
+        <input
+          type="date"
+          value={value || ""}
+          max={max}
+          onChange={(e) => onChange(e.target.value)}
+          className="bg-transparent text-sm font-semibold text-white focus:outline-none [color-scheme:dark]"
+        />
+      </div>
+    </div>
+  );
+}
+
 export function TimeScrollField({ label, value, onChange, max }) {
   return (
     <div className="rounded-2xl border p-3" style={GLASS_SURFACE}>

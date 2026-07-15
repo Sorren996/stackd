@@ -9,7 +9,7 @@ import { CalendarDays, X, Pencil } from "lucide-react";
 import { format, isToday, isYesterday, parseISO } from "date-fns";
 import { motion } from "framer-motion";
 import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
-import { TimeScrollField, NumberPadField, TextPadField, SelectField } from "@/components/FormInputFields";
+import { DateScrollField, TimeScrollField, NumberPadField, TextPadField, SelectField } from "@/components/FormInputFields";
 import HighProteinFatCheckbox from "@/components/HighProteinFatCheckbox";
 import TimelineDayGroup from "@/components/history/TimelineDayGroup";
 import TimelineWeekGroup from "@/components/history/TimelineWeekGroup";
@@ -127,10 +127,22 @@ function toTimeValue(timestamp) {
   return Number.isNaN(date.getTime()) ? new Date().toTimeString().slice(0, 5) : date.toTimeString().slice(0, 5);
 }
 
-function mergeTime(originalTimestamp, timeValue) {
-  const date = originalTimestamp ? new Date(originalTimestamp) : new Date();
-  if (Number.isNaN(date.getTime())) return new Date().toISOString();
-  const [hours, minutes] = timeValue.split(":").map(Number);
+function getTodayDateValue() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
+
+function toDateValue(timestamp) {
+  const date = timestamp ? new Date(timestamp) : new Date();
+  if (Number.isNaN(date.getTime())) return getTodayDateValue();
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function mergeDateTime(dateValue, timeValue) {
+  const [hours, minutes] = String(timeValue || "").split(":").map(Number);
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
+  const date = dateValue ? new Date(dateValue + "T00:00:00") : new Date();
+  if (Number.isNaN(date.getTime())) return null;
   date.setHours(hours, minutes, 0, 0);
   if (date.getTime() > Date.now()) return null;
   return date.toISOString();
@@ -150,6 +162,7 @@ function getEditInitialForm(log) {
       units: String(log.item.units ?? ""),
       meal_units: String(log.item.meal_units ?? ""),
       correction_units: String(log.item.correction_units ?? ""),
+      date: toDateValue(log.item.administered_at),
       time: toTimeValue(log.item.administered_at),
       notes: log.item.notes || "",
     };
@@ -157,6 +170,7 @@ function getEditInitialForm(log) {
   if (log.type === "glucose") {
     return {
       value: String(log.item.value ?? ""),
+      date: toDateValue(log.item.recorded_at),
       time: toTimeValue(log.item.recorded_at),
       notes: log.item.notes || "",
     };
@@ -166,6 +180,7 @@ function getEditInitialForm(log) {
     carbs: String(log.item.carbs ?? ""),
     absorption_profile: log.item.absorption_profile || log.item.profile || "medium",
     is_high_protein_fat_meal: log.item.is_high_protein_fat_meal || false,
+    date: toDateValue(log.item.consumed_at),
     time: toTimeValue(log.item.consumed_at),
     notes: log.item.notes || "",
   };
@@ -185,6 +200,8 @@ const absorptionProfileOptions = [
 
 function EditLogSheet({ log, onClose, onSave, isSaving }) {
   const [form, setForm] = useState(() => getEditInitialForm(log));
+  const todayDateValue = getTodayDateValue();
+  const nowTimeString = new Date().toTimeString().slice(0, 5);
 
   useEffect(() => {
     setForm(getEditInitialForm(log));
@@ -199,7 +216,7 @@ function EditLogSheet({ log, onClose, onSave, isSaving }) {
     if (log.type === "insulin") {
       const units = Number(form.units);
       if (!form.insulin_type || !Number.isFinite(units) || units <= 0) return;
-      const administeredAt = mergeTime(log.item.administered_at, form.time);
+      const administeredAt = mergeDateTime(form.date, form.time);
       if (!administeredAt) {
         toast.error("Choose a time that is not in the future.");
         return;
@@ -224,7 +241,7 @@ function EditLogSheet({ log, onClose, onSave, isSaving }) {
     if (log.type === "glucose") {
       const value = Number(form.value);
       if (!Number.isFinite(value) || value <= 0) return;
-      const recordedAt = mergeTime(log.item.recorded_at, form.time);
+      const recordedAt = mergeDateTime(form.date, form.time);
       if (!recordedAt) {
         toast.error("Choose a time that is not in the future.");
         return;
@@ -243,7 +260,7 @@ function EditLogSheet({ log, onClose, onSave, isSaving }) {
 
     const carbs = Number(form.carbs);
     if (!Number.isFinite(carbs) || carbs <= 0) return;
-    const consumedAt = mergeTime(log.item.consumed_at, form.time);
+    const consumedAt = mergeDateTime(form.date, form.time);
     if (!consumedAt) {
       toast.error("Choose a time that is not in the future.");
       return;
@@ -322,7 +339,8 @@ function EditLogSheet({ log, onClose, onSave, isSaving }) {
             </>
           )}
 
-          <TimeScrollField label="Logged at" value={form.time} onChange={(value) => updateField("time", value)} />
+          <DateScrollField label="Date" value={form.date} onChange={(value) => updateField("date", value)} max={todayDateValue} />
+          <TimeScrollField label="Logged at" value={form.time} onChange={(value) => updateField("time", value)} max={form.date === todayDateValue ? nowTimeString : undefined} />
           <TextPadField label="Notes" value={form.notes} onChange={(value) => updateField("notes", value)} placeholder="Notes" multiline />
           <button type="button" onClick={submit} disabled={isSaving} className="sticky bottom-0 w-full rounded-2xl py-4 text-base font-semibold text-white transition disabled:opacity-40" style={{ background: "linear-gradient(145deg, rgba(91,168,138,0.85), rgba(91,163,184,0.72))", boxShadow: "0 8px 28px rgba(91,163,184,0.22), 0 -8px 20px rgba(10,18,16,0.9), inset 0 1px 1px rgba(255,255,255,0.2)" }}>
             {isSaving ? "Saving..." : "Save moment"}

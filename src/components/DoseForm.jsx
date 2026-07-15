@@ -6,7 +6,7 @@ import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
 import { X, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AnimatePresence, motion } from "framer-motion";
-import { TimeScrollField, NumberPadField, TextPadField, SelectField } from "@/components/FormInputFields";
+import { DateScrollField, TimeScrollField, NumberPadField, TextPadField, SelectField } from "@/components/FormInputFields";
 import Sheet from "@/components/Sheet";
 
 const CarbsTab = lazy(() => import("@/components/CarbsTab"));
@@ -100,11 +100,17 @@ function prependUnique(entries, current = []) {
   return [...entries, ...current.filter((entry) => !ids.has(entry.id))];
 }
 
-function buildTodayTimestampNoFuture(timeValue) {
+function getTodayDateValue() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
+
+function buildTimestampNoFuture(dateValue, timeValue) {
   const [hours, minutes] = String(timeValue || "").split(":").map(Number);
   if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
 
-  const date = new Date();
+  const date = dateValue ? new Date(dateValue + "T00:00:00") : new Date();
+  if (Number.isNaN(date.getTime())) return null;
   date.setHours(hours, minutes, 0, 0);
   return date.getTime() > Date.now() ? null : date;
 }
@@ -114,15 +120,18 @@ export default function DoseForm({ open, onOpenChange, mode = "insulin" }) {
   const [insulinRows, setInsulinRows] = useState(() => [createInsulinRow()]);
   const [insulinNotes, setInsulinNotes] = useState("");
   const [insulinTime, setInsulinTime] = useState(() => new Date().toTimeString().slice(0, 5));
+  const [insulinDate, setInsulinDate] = useState(getTodayDateValue);
   const [glucoseValue, setGlucoseValue] = useState("");
   const [glucoseNotes, setGlucoseNotes] = useState("");
   const [glucoseTime, setGlucoseTime] = useState(() => new Date().toTimeString().slice(0, 5));
+  const [glucoseDate, setGlucoseDate] = useState(getTodayDateValue);
   const [loggingTab, setLoggingTab] = useState(null);
   const [showDiscardPrompt, setShowDiscardPrompt] = useState(false);
   const [carbsDirty, setCarbsDirty] = useState(false);
 
   const queryClient = useQueryClient();
   const nowTimeString = new Date().toTimeString().slice(0, 5);
+  const todayDateValue = getTodayDateValue();
 
   useEffect(() => {
     setRenderSheet(open);
@@ -379,9 +388,11 @@ export default function DoseForm({ open, onOpenChange, mode = "insulin" }) {
     setInsulinRows([createInsulinRow()]);
     setInsulinNotes("");
     setInsulinTime(new Date().toTimeString().slice(0, 5));
+    setInsulinDate(getTodayDateValue());
     setGlucoseValue("");
     setGlucoseNotes("");
     setGlucoseTime(new Date().toTimeString().slice(0, 5));
+    setGlucoseDate(getTodayDateValue());
     setCarbsDirty(false);
     requestClose();
   };
@@ -401,7 +412,7 @@ export default function DoseForm({ open, onOpenChange, mode = "insulin" }) {
       return;
     }
 
-    const administeredAt = buildTodayTimestampNoFuture(insulinTime);
+    const administeredAt = buildTimestampNoFuture(insulinDate, insulinTime);
     if (!administeredAt) {
       toast.error("Choose a time that is not in the future.");
       return;
@@ -441,6 +452,7 @@ export default function DoseForm({ open, onOpenChange, mode = "insulin" }) {
       setInsulinRows([createInsulinRow()]);
       setInsulinNotes("");
       setInsulinTime(new Date().toTimeString().slice(0, 5));
+      setInsulinDate(getTodayDateValue());
     });
   };
 
@@ -452,7 +464,7 @@ export default function DoseForm({ open, onOpenChange, mode = "insulin" }) {
     const value = Number(glucoseValue);
     if (!Number.isFinite(value) || value <= 0) return;
 
-    const recordedAt = buildTodayTimestampNoFuture(glucoseTime);
+    const recordedAt = buildTimestampNoFuture(glucoseDate, glucoseTime);
     if (!recordedAt) {
       toast.error("Choose a time that is not in the future.");
       return;
@@ -474,6 +486,7 @@ export default function DoseForm({ open, onOpenChange, mode = "insulin" }) {
       setGlucoseValue("");
       setGlucoseNotes("");
       setGlucoseTime(new Date().toTimeString().slice(0, 5));
+      setGlucoseDate(getTodayDateValue());
     });
   };
 
@@ -581,7 +594,8 @@ export default function DoseForm({ open, onOpenChange, mode = "insulin" }) {
                         </button>
                       </div>
                       <div className="mt-4 space-y-3">
-                        <TimeScrollField label="Administered at" value={insulinTime} onChange={setInsulinTime} max={nowTimeString} />
+                        <DateScrollField label="Date" value={insulinDate} onChange={setInsulinDate} max={todayDateValue} />
+                        <TimeScrollField label="Administered at" value={insulinTime} onChange={setInsulinTime} max={insulinDate === todayDateValue ? nowTimeString : undefined} />
                         <TextPadField label="Notes" value={insulinNotes} onChange={setInsulinNotes} placeholder="e.g. before lunch" multiline />
                       </div>
                     </div>
@@ -623,7 +637,8 @@ export default function DoseForm({ open, onOpenChange, mode = "insulin" }) {
                         large
                       />
                       <div className="mt-4 space-y-3">
-                        <TimeScrollField label="Reading time" value={glucoseTime} onChange={setGlucoseTime} max={nowTimeString} />
+                        <DateScrollField label="Date" value={glucoseDate} onChange={setGlucoseDate} max={todayDateValue} />
+                        <TimeScrollField label="Reading time" value={glucoseTime} onChange={setGlucoseTime} max={glucoseDate === todayDateValue ? nowTimeString : undefined} />
                         <TextPadField label="Notes" value={glucoseNotes} onChange={setGlucoseNotes} placeholder="e.g. fasting, after meal" multiline />
                       </div>
                     </div>
