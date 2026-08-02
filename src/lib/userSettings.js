@@ -9,6 +9,7 @@ const LOCAL_KEYS = [
   "correction_target_glucose",
   "meal_insulin_units_per_5g",
   "meal_insulin_types",
+  "insulin_library",
   "meal_prebolus_window_minutes",
   "meal_postbolus_window_minutes",
   "meal_outcome_window_minutes",
@@ -26,6 +27,10 @@ function getDefaultMealInsulinTypes() {
     .map(([name]) => name);
 }
 
+function getDefaultInsulinLibrary() {
+  return Object.keys(INSULIN_PROFILES);
+}
+
 /**
  * Read current local-storage settings into a plain object.
  * Returns only keys that actually exist in localStorage.
@@ -36,7 +41,7 @@ function readLocalSettings() {
     const raw = localStorage.getItem(key);
     if (raw === null) continue;
 
-    if (key === "meal_insulin_types") {
+    if (key === "meal_insulin_types" || key === "insulin_library") {
       try {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed) && parsed.length) result[key] = parsed;
@@ -92,6 +97,10 @@ function validateSettings(raw) {
 
   if (Array.isArray(raw.meal_insulin_types) && raw.meal_insulin_types.length) {
     sanitized.meal_insulin_types = raw.meal_insulin_types;
+  }
+
+  if (Array.isArray(raw.insulin_library) && raw.insulin_library.length) {
+    sanitized.insulin_library = raw.insulin_library;
   }
 
   if (typeof raw.stacking_alerts_enabled === "boolean") {
@@ -229,4 +238,4 @@ export async function migrateLocalSettingsIfNeeded() {
   }
 }
 
-export { getDefaultMealInsulinTypes, LOCAL_KEYS };
+export { getDefaultMealInsulinTypes, getDefaultInsulinLibrary, LOCAL_KEYS };

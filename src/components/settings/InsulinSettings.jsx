@@ -7,6 +7,8 @@ import { Target, Info, Loader2, Check } from "lucide-react";
 import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
 import { AnimatePresence, motion } from "framer-motion";
 import { useUserSettings } from "@/hooks/useUserSettings";
+import { getDefaultInsulinLibrary } from "@/lib/userSettings";
+import InsulinTypeSelector from "@/components/settings/InsulinTypeSelector";
 import { toast } from "sonner";
 
 const INSULIN_PLAN_HELP = {
@@ -26,6 +28,10 @@ const INSULIN_PLAN_HELP = {
     title: "Meal insulin types",
     body: "Select only insulin types used for meals or corrections. Basal insulin such as Lantus, Levemir, or Tresiba should usually stay off so it does not count toward meal coverage.",
   },
+  library: {
+    title: "My insulin library",
+    body: "Choose every insulin type you personally use. Only these appear when logging a dose, so add your basal insulins here even if they aren't used for meal coverage.",
+  },
 };
 
 function getDefaultMealInsulinTypes() {
@@ -40,6 +46,15 @@ function readMealInsulinTypes() {
     return Array.isArray(parsed) && parsed.length ? parsed : getDefaultMealInsulinTypes();
   } catch {
     return getDefaultMealInsulinTypes();
+  }
+}
+
+function readInsulinLibrary() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem("insulin_library") || "null");
+    return Array.isArray(parsed) && parsed.length ? parsed : getDefaultInsulinLibrary();
+  } catch {
+    return getDefaultInsulinLibrary();
   }
 }
 
@@ -254,6 +269,7 @@ export default function InsulinSettings() {
   });
 
   const [mealInsulinTypes, setMealInsulinTypes] = useState(readMealInsulinTypes);
+  const [insulinLibrary, setInsulinLibrary] = useState(readInsulinLibrary);
 
   const [preMealWindowMinutes, setPreMealWindowMinutes] = useState(() => {
     return localStorage.getItem("meal_prebolus_window_minutes") || "45";
@@ -295,6 +311,10 @@ export default function InsulinSettings() {
       setMealInsulinTypes(serverSettings.meal_insulin_types);
       localStorage.setItem("meal_insulin_types", JSON.stringify(serverSettings.meal_insulin_types));
     }
+    if (Array.isArray(serverSettings.insulin_library) && serverSettings.insulin_library.length) {
+      setInsulinLibrary(serverSettings.insulin_library);
+      localStorage.setItem("insulin_library", JSON.stringify(serverSettings.insulin_library));
+    }
     if (serverSettings.meal_prebolus_window_minutes != null) {
       setPreMealWindowMinutes(String(serverSettings.meal_prebolus_window_minutes));
       localStorage.setItem("meal_prebolus_window_minutes", String(serverSettings.meal_prebolus_window_minutes));
@@ -322,6 +342,7 @@ export default function InsulinSettings() {
       correction_target_glucose: correctionTargetGlucose === "" ? undefined : Number(correctionTargetGlucose),
       meal_insulin_units_per_5g: unitsPer5g === "" ? undefined : Number(unitsPer5g),
       meal_insulin_types: mealInsulinTypes,
+      insulin_library: insulinLibrary,
       meal_prebolus_window_minutes: preMealWindowMinutes === "" ? undefined : Number(preMealWindowMinutes),
       meal_postbolus_window_minutes: postMealWindowMinutes === "" ? undefined : Number(postMealWindowMinutes),
       meal_outcome_window_minutes: outcomeWindowMinutes === "" ? undefined : Number(outcomeWindowMinutes),
@@ -356,6 +377,19 @@ export default function InsulinSettings() {
       const saved = next.length ? next : getDefaultMealInsulinTypes();
 
       localStorage.setItem("meal_insulin_types", JSON.stringify(saved));
+      window.dispatchEvent(new Event("insulin-settings-updated"));
+      return saved;
+    });
+  };
+
+  const toggleInsulinLibrary = (name) => {
+    setInsulinLibrary((current) => {
+      const next = current.includes(name)
+        ? current.filter((item) => item !== name)
+        : [...current, name];
+      const saved = next.length ? next : getDefaultInsulinLibrary();
+
+      localStorage.setItem("insulin_library", JSON.stringify(saved));
       window.dispatchEvent(new Event("insulin-settings-updated"));
       return saved;
     });
@@ -527,39 +561,27 @@ export default function InsulinSettings() {
             <div className="space-y-3 border-t border-white/10 pt-4">
               <div className="flex min-h-6 items-center justify-between gap-2">
                 <Label className="text-sm font-semibold text-white/90">
+                  My insulin library
+                </Label>
+                <SettingHelpButton id="library" openHelp={openHelp} setOpenHelp={setOpenHelp} />
+              </div>
+              <p className="text-xs text-white/40">
+                Every insulin type you use. Only these appear when logging a dose.
+              </p>
+              <InsulinTypeSelector selectedTypes={insulinLibrary} onToggle={toggleInsulinLibrary} />
+            </div>
+
+            <div className="space-y-3 border-t border-white/10 pt-4">
+              <div className="flex min-h-6 items-center justify-between gap-2">
+                <Label className="text-sm font-semibold text-white/90">
                   Meal/correction insulin types
                 </Label>
                 <SettingHelpButton id="types" openHelp={openHelp} setOpenHelp={setOpenHelp} />
               </div>
               <p className="text-xs text-white/40">
-                These are the only insulin types used by the meal balance card.
+                The subset of your library used for meal coverage and corrections.
               </p>
-              <div className="grid grid-cols-1 gap-2">
-                {Object.entries(INSULIN_PROFILES).map(([name, profile]) => {
-                  const selected = mealInsulinTypes.includes(name);
-                  return (
-                    <button
-                      key={name}
-                      type="button"
-                      onClick={() => toggleMealInsulinType(name)}
-                      className={`flex items-center justify-between rounded-2xl border px-3 py-2 text-left transition ${
-                        selected
-                          ? "border-teal-500/40 bg-teal-500/10 text-white"
-                          : "border-white/10 bg-white/[0.03] text-white/45"
-                      }`}
-                    >
-                      <span>
-                        <span className="block text-sm font-semibold">{name}</span>
-                        <span className="text-[10px] uppercase tracking-wider opacity-50">{profile.category}</span>
-                      </span>
-                      <span
-                        className="h-3 w-3 rounded-full"
-                        style={{ backgroundColor: selected ? "#2dd4bf" : "rgba(255,255,255,0.12)" }}
-                      />
-                    </button>
-                  );
-                })}
-              </div>
+              <InsulinTypeSelector selectedTypes={mealInsulinTypes} onToggle={toggleMealInsulinType} />
             </div>
 
             <div className="grid grid-cols-2 gap-3 border-t border-white/10 pt-4">

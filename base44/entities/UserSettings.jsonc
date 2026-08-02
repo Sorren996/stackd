@@ -18,12 +18,19 @@
       "type": "number",
       "description": "Insulin units used to cover 5 grams of carbohydrates."
     },
+    "insulin_library": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Every insulin type the user personally uses. Only these appear in the logging dropdown."
+    },
     "meal_insulin_types": {
       "type": "array",
       "items": {
         "type": "string"
       },
-      "description": "Insulin types used for meals or corrections."
+      "description": "Insulin types used for meals or corrections \u2014 the subset of the library used by the meal balance card."
     },
     "meal_prebolus_window_minutes": {
       "type": "number",

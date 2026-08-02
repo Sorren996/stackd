@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
-import { getDefaultMealInsulinTypes } from "@/lib/userSettings";
+import { getDefaultInsulinLibrary } from "@/lib/userSettings";
 import { X, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AnimatePresence, motion } from "framer-motion";
@@ -27,16 +27,16 @@ const groupedInsulins = CATEGORY_ORDER.reduce((groups, category) => {
   return groups;
 }, []);
 
-// The insulin types the user has chosen in Settings (their personal "library").
-// Falls back to the rapid/short-acting defaults until they curate their own list.
-function readEnabledInsulinTypes() {
+// The insulin types the user has added to their personal library in Settings.
+// Falls back to the full list so logging is never blocked before they curate.
+function readInsulinLibrary() {
   try {
-    const parsed = JSON.parse(localStorage.getItem("meal_insulin_types") || "null");
+    const parsed = JSON.parse(localStorage.getItem("insulin_library") || "null");
     if (Array.isArray(parsed) && parsed.length) return parsed;
   } catch {
     // fall through to defaults
   }
-  return getDefaultMealInsulinTypes();
+  return getDefaultInsulinLibrary();
 }
 
 const dosePurposeOptions = [
@@ -136,10 +136,10 @@ export default function DoseForm({ open, onOpenChange, mode = "insulin" }) {
   const [showDiscardPrompt, setShowDiscardPrompt] = useState(false);
   const [carbsDirty, setCarbsDirty] = useState(false);
 
-  const [enabledInsulinTypes, setEnabledInsulinTypes] = useState(readEnabledInsulinTypes);
+  const [insulinLibrary, setInsulinLibrary] = useState(readInsulinLibrary);
 
   useEffect(() => {
-    const refresh = () => setEnabledInsulinTypes(readEnabledInsulinTypes());
+    const refresh = () => setInsulinLibrary(readInsulinLibrary());
     window.addEventListener("insulin-settings-updated", refresh);
     window.addEventListener("storage", refresh);
     return () => {
@@ -151,9 +151,9 @@ export default function DoseForm({ open, onOpenChange, mode = "insulin" }) {
   const insulinTypeOptions = useMemo(
     () =>
       Object.entries(INSULIN_PROFILES)
-        .filter(([name]) => enabledInsulinTypes.includes(name))
+        .filter(([name]) => insulinLibrary.includes(name))
         .map(([name, profile]) => ({ value: name, label: name, description: profile.category })),
-    [enabledInsulinTypes]
+    [insulinLibrary]
   );
 
   const queryClient = useQueryClient();
