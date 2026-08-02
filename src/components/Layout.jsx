@@ -80,13 +80,7 @@ export default function Layout() {
   };
 
   return (
-    <div className="isolate relative min-h-screen overflow-x-hidden bg-black text-white">
-      {/* Solid static background — deep near-black forest charcoal */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none fixed inset-0 -z-10"
-        style={{ background: "hsl(160, 14%, 7%)" }}
-      />
+    <div className="isolate relative min-h-screen overflow-x-hidden text-white">
 
       <header className="fixed inset-x-0 top-0 z-50 bg-transparent">
         <div
