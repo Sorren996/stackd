@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
+import { getDefaultMealInsulinTypes } from "@/lib/userSettings";
 import { X, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AnimatePresence, motion } from "framer-motion";
@@ -26,11 +27,17 @@ const groupedInsulins = CATEGORY_ORDER.reduce((groups, category) => {
   return groups;
 }, []);
 
-const insulinTypeOptions = Object.entries(INSULIN_PROFILES).map(([name, profile]) => ({
-  value: name,
-  label: name,
-  description: profile.category,
-}));
+// The insulin types the user has chosen in Settings (their personal "library").
+// Falls back to the rapid/short-acting defaults until they curate their own list.
+function readEnabledInsulinTypes() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem("meal_insulin_types") || "null");
+    if (Array.isArray(parsed) && parsed.length) return parsed;
+  } catch {
+    // fall through to defaults
+  }
+  return getDefaultMealInsulinTypes();
+}
 
 const dosePurposeOptions = [
   { value: "meal", label: "Meal", description: "Carb coverage" },
@@ -128,6 +135,26 @@ export default function DoseForm({ open, onOpenChange, mode = "insulin" }) {
   const [loggingTab, setLoggingTab] = useState(null);
   const [showDiscardPrompt, setShowDiscardPrompt] = useState(false);
   const [carbsDirty, setCarbsDirty] = useState(false);
+
+  const [enabledInsulinTypes, setEnabledInsulinTypes] = useState(readEnabledInsulinTypes);
+
+  useEffect(() => {
+    const refresh = () => setEnabledInsulinTypes(readEnabledInsulinTypes());
+    window.addEventListener("insulin-settings-updated", refresh);
+    window.addEventListener("storage", refresh);
+    return () => {
+      window.removeEventListener("insulin-settings-updated", refresh);
+      window.removeEventListener("storage", refresh);
+    };
+  }, []);
+
+  const insulinTypeOptions = useMemo(
+    () =>
+      Object.entries(INSULIN_PROFILES)
+        .filter(([name]) => enabledInsulinTypes.includes(name))
+        .map(([name, profile]) => ({ value: name, label: name, description: profile.category })),
+    [enabledInsulinTypes]
+  );
 
   const queryClient = useQueryClient();
   const nowTimeString = new Date().toTimeString().slice(0, 5);
