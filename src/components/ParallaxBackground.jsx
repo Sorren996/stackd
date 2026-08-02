@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 
-// Bright amber->green gradient with a subtle dark scrim so the vibrant colors
-// stay visible (and parallax) while keeping light UI text legible everywhere.
+// Full-brightness amber->green gradient with parallax. Legibility is handled
+// by dark frosted-glass content cards + dark direct text, not by darkening the background.
 export default function ParallaxBackground() {
   const ref = useRef(null);
 
@@ -32,27 +32,17 @@ export default function ParallaxBackground() {
   }, []);
 
   return (
-    <>
-      <div
-        ref={ref}
-        aria-hidden="true"
-        className="pointer-events-none fixed inset-0"
-        style={{
-          zIndex: -2,
-          background: "linear-gradient(to bottom, #FFAD39 0%, #68FF90 100%)",
-          backgroundSize: "100% 300%",
-          backgroundPosition: "50% 0%",
-          backgroundRepeat: "no-repeat",
-        }}
-      />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none fixed inset-0"
-        style={{
-          zIndex: -1,
-          background: "rgba(6,12,10,0.58)",
-        }}
-      />
-    </>
+    <div
+      ref={ref}
+      aria-hidden="true"
+      className="pointer-events-none fixed inset-0"
+      style={{
+        zIndex: -2,
+        background: "linear-gradient(to bottom, #FFAD39 0%, #68FF90 100%)",
+        backgroundSize: "100% 300%",
+        backgroundPosition: "50% 0%",
+        backgroundRepeat: "no-repeat",
+      }}
+    />
   );
 }

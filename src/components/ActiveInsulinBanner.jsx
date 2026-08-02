@@ -682,9 +682,9 @@ function MetricCard({ label, value, sub, status, color, tooltipId, openTooltip, 
       whileTap={{ scale: 0.97 }}
       className="metric-card relative flex min-h-[112px] flex-col justify-between overflow-hidden rounded-2xl border p-4 backdrop-blur-sm"
       style={{
-        background: "linear-gradient(145deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0))",
+        background: "linear-gradient(160deg, rgba(12,20,16,0.86), rgba(8,14,11,0.80))",
         borderColor: "rgba(255,255,255,0.16)",
-        boxShadow: "0 12px 40px rgba(0,0,0,0.10), 0 4px 12px rgba(0,0,0,0.06), inset 0 1px 1px rgba(255,255,255,0.22), inset 0 -1px 1px rgba(255,255,255,0.05)",
+        boxShadow: "0 14px 40px rgba(0,0,0,0.28), 0 4px 12px rgba(0,0,0,0.18), inset 0 1px 1px rgba(255,255,255,0.18), inset 0 -1px 1px rgba(255,255,255,0.04)",
       }}
     >
       <div
@@ -735,9 +735,9 @@ function ActiveInsulinDetailCard({ totalUnits, breakdown }) {
       whileTap={{ scale: 0.985 }}
       className="metric-card relative col-span-2 overflow-hidden rounded-2xl border p-4 backdrop-blur-sm"
       style={{
-        background: "linear-gradient(145deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0))",
+        background: "linear-gradient(160deg, rgba(12,20,16,0.86), rgba(8,14,11,0.80))",
         borderColor: "rgba(255,255,255,0.16)",
-        boxShadow: "0 12px 40px rgba(0,0,0,0.10), 0 4px 12px rgba(0,0,0,0.06), inset 0 1px 1px rgba(255,255,255,0.22), inset 0 -1px 1px rgba(255,255,255,0.05)",
+        boxShadow: "0 14px 40px rgba(0,0,0,0.28), 0 4px 12px rgba(0,0,0,0.18), inset 0 1px 1px rgba(255,255,255,0.18), inset 0 -1px 1px rgba(255,255,255,0.04)",
       }}
     >
       <div
@@ -791,8 +791,8 @@ function SupportiveGlucoseMessage({ insight }) {
   return (
     <p
       aria-live="polite"
-      className="text-legible mx-auto mt-3 mb-1 max-w-[90vw] text-center text-[13px] font-medium italic leading-relaxed"
-      style={{ color: "rgba(255,255,255,0.8)" }}
+      className="mx-auto mt-3 mb-1 max-w-[90vw] text-center text-[13px] font-medium italic leading-relaxed"
+      style={{ color: "rgba(8,14,11,0.82)" }}
     >
       "{insight.message}"
     </p>
@@ -1080,10 +1080,10 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
 
         <SupportiveGlucoseMessage insight={supportiveGlucoseInsight} />
 
-        <p className="text-legible mb-2 mt-5 text-[10px] font-bold uppercase tracking-[0.18em] text-white">Glucose Journey</p>
+        <p className="mb-2 mt-5 text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: "rgba(8,14,11,0.72)" }}>Glucose Journey</p>
         {graphSlot}
 
-        <p className="text-legible mb-3 mt-5 text-[10px] font-bold uppercase tracking-[0.18em] text-white">Your Rhythm</p>
+        <p className="mb-3 mt-5 text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: "rgba(8,14,11,0.72)" }}>Your Rhythm</p>
         <div className="grid grid-cols-1 gap-3">
           <div>
             <MetricCard

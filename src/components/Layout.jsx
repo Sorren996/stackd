@@ -159,7 +159,7 @@ export default function Layout() {
             transition={{ type: "spring", stiffness: 220, damping: 28 }}
             className="fixed inset-0 z-40 overflow-y-auto pb-28 pt-16"
             style={{
-              background: "rgba(8,14,11,0.45)",
+              background: "rgba(8,14,11,0.5)",
               backdropFilter: "blur(18px)",
             }}
           >
@@ -183,8 +183,8 @@ export default function Layout() {
               className="relative mx-4 mb-4 grid w-[min(calc(100vw-2rem),28rem)] grid-cols-4 gap-1 overflow-hidden rounded-[2rem] border px-2 py-1.5 backdrop-blur-sm"
               style={{
                 background:
-                  "linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.06))",
-                borderColor: "rgba(255,255,255,0.24)",
+                  "linear-gradient(145deg, rgba(12,20,16,0.88), rgba(8,14,11,0.82))",
+                borderColor: "rgba(255,255,255,0.14)",
                 boxShadow:
                   "0 18px 50px rgba(0,0,0,0.38), inset 0 1px 1px rgba(255,255,255,0.32), inset 0 -1px 1px rgba(255,255,255,0.08)",
               }}

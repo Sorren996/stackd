@@ -59,7 +59,7 @@ export default function Settings() {
             <Link
               key={item.to}
               to={item.to}
-              className="flex items-center gap-4 rounded-3xl border border-white/10 bg-white/[0.02] p-4 backdrop-blur-sm transition hover:bg-white/[0.04] active:scale-[0.99]"
+              className="flex items-center gap-4 rounded-3xl border border-white/10 bg-[rgba(12,20,16,0.78)] p-4 backdrop-blur-sm transition hover:bg-[rgba(12,20,16,0.86)] active:scale-[0.99]"
             >
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-teal-500/20 bg-teal-500/10">
                 <Icon className="h-5 w-5 text-teal-400" />

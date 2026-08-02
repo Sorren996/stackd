@@ -13,10 +13,10 @@ const TREND_ICONS = {
 };
 
 const CARD_STYLE = {
-  background: "linear-gradient(145deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0))",
-  borderColor: "rgba(255,255,255,0.16)",
+  background: "linear-gradient(160deg, rgba(12,20,16,0.86), rgba(8,14,11,0.80))",
+  borderColor: "rgba(255,255,255,0.14)",
   boxShadow:
-    "0 12px 40px rgba(0,0,0,0.10), 0 4px 12px rgba(0,0,0,0.06), inset 0 1px 1px rgba(255,255,255,0.22), inset 0 -1px 1px rgba(255,255,255,0.05)",
+    "0 14px 40px rgba(0,0,0,0.28), 0 4px 12px rgba(0,0,0,0.18), inset 0 1px 1px rgba(255,255,255,0.18), inset 0 -1px 1px rgba(255,255,255,0.04)",
 };
 
 export default function CurrentGlucoseCard({

@@ -427,7 +427,7 @@ export default function InsulinSettings() {
         {/* Target Range Preference */}
         <div className="space-y-3">
           <h3 className="text-sm font-bold text-white uppercase tracking-wider px-1">Target Range Preference</h3>
-          <div className="backdrop-blur-sm bg-white/[0.02] border border-white/10 rounded-3xl p-4 flex gap-4 items-stretch">
+          <div className="backdrop-blur-sm bg-[rgba(12,20,16,0.78)] border border-white/10 rounded-3xl p-4 flex gap-4 items-stretch">
             <button
               onClick={handleSetRecommended}
               className={`shrink-0 w-28 py-3 px-2 rounded-2xl border text-center transition-all flex flex-col items-center justify-center ${
@@ -465,7 +465,7 @@ export default function InsulinSettings() {
         {/* Alerts & Preferences */}
         <div className="space-y-3">
           <h3 className="text-sm font-bold text-white uppercase tracking-wider px-1">Alerts & Preferences</h3>
-          <div className="backdrop-blur-sm bg-white/[0.02] border border-white/10 rounded-3xl p-4 space-y-5">
+          <div className="backdrop-blur-sm bg-[rgba(12,20,16,0.78)] border border-white/10 rounded-3xl p-4 space-y-5">
             <div className="flex items-center justify-between gap-4">
               <div className="space-y-0.5">
                 <Label className="text-sm font-semibold text-white/90 flex items-center gap-2">
@@ -485,7 +485,7 @@ export default function InsulinSettings() {
             Insulin Plan
           </h3>
 
-          <div className="backdrop-blur-sm bg-white/[0.02] border border-white/10 rounded-3xl p-4 space-y-5">
+          <div className="backdrop-blur-sm bg-[rgba(12,20,16,0.78)] border border-white/10 rounded-3xl p-4 space-y-5">
             <p className="text-xs text-white/40">
               Enter only insulin settings prescribed or confirmed by your licensed healthcare professional. This app does not provide medical advice, verify dosing accuracy, or replace clinical judgment. Incorrect values may result in serious hypoglycemia or hyperglycemia. Do not start, stop, or adjust insulin based solely on information provided by this app.
             </p>

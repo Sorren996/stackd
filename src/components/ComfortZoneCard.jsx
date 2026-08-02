@@ -31,9 +31,9 @@ export default function ComfortZoneCard({ percentage }) {
       whileTap={{ scale: 0.97 }}
       className="metric-card relative flex min-h-[112px] flex-col justify-between overflow-hidden rounded-2xl border p-4 backdrop-blur-sm"
       style={{
-        background: "linear-gradient(145deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0))",
-        borderColor: "rgba(255,255,255,0.16)",
-        boxShadow: "0 12px 40px rgba(0,0,0,0.10), 0 4px 12px rgba(0,0,0,0.06), inset 0 1px 1px rgba(255,255,255,0.22), inset 0 -1px 1px rgba(255,255,255,0.05)",
+        background: "linear-gradient(160deg, rgba(12,20,16,0.86), rgba(8,14,11,0.80))",
+        borderColor: "rgba(255,255,255,0.14)",
+        boxShadow: "0 14px 40px rgba(0,0,0,0.28), 0 4px 12px rgba(0,0,0,0.18), inset 0 1px 1px rgba(255,255,255,0.18), inset 0 -1px 1px rgba(255,255,255,0.04)",
       }}
     >
       <div

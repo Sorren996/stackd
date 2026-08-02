@@ -56,7 +56,7 @@ export default function ProfileSettings() {
     <div className="space-y-3">
       <h3 className="text-sm font-bold text-white uppercase tracking-wider px-1">Profile Settings</h3>
 
-      <div className="backdrop-blur-sm bg-white/[0.02] border border-white/10 rounded-3xl p-2">
+      <div className="backdrop-blur-sm bg-[rgba(12,20,16,0.78)] border border-white/10 rounded-3xl p-2">
         {/* Name */}
         <div className="rounded-2xl px-3 py-3">
           <div className="flex items-center justify-between gap-3">
