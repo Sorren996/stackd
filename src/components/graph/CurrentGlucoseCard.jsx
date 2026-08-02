@@ -13,10 +13,11 @@ const TREND_ICONS = {
 };
 
 const CARD_STYLE = {
-  background: "linear-gradient(160deg, rgba(12,20,16,0.86), rgba(8,14,11,0.80))",
-  borderColor: "rgba(255,255,255,0.14)",
+  background: "rgba(255,255,255,0.22)",
+  borderColor: "rgba(255,255,255,0.45)",
   boxShadow:
-    "0 14px 40px rgba(0,0,0,0.28), 0 4px 12px rgba(0,0,0,0.18), inset 0 1px 1px rgba(255,255,255,0.18), inset 0 -1px 1px rgba(255,255,255,0.04)",
+    "0 14px 40px rgba(0,0,0,0.16), 0 4px 12px rgba(0,0,0,0.08), inset 0 1px 1px rgba(255,255,255,0.6), inset 0 -1px 1px rgba(255,255,255,0.2)",
+  backdropFilter: "blur(16px) saturate(140%)",
 };
 
 export default function CurrentGlucoseCard({
@@ -62,7 +63,7 @@ export default function CurrentGlucoseCard({
           }}
         />
         <div className="relative z-10 mb-1 flex items-start justify-between gap-2">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-white/35">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-800">
             Current Glucose
           </span>
           <span
@@ -72,16 +73,16 @@ export default function CurrentGlucoseCard({
         </div>
 
         <div className="relative z-10 mt-1 flex items-end gap-1.5">
-          <span className="text-2xl font-bold leading-none text-white">
+          <span className="text-2xl font-bold leading-none text-emerald-950">
             {glucoseValue ?? "--"}
           </span>
-          <span className="mb-0.5 text-[11px] font-medium text-white/40">mg/dL</span>
-          {latestGlucose && <TrendIcon className="mb-0.5 h-4 w-4" style={{ color: glucoseColor }} />}
+          <span className="mb-0.5 text-[11px] font-medium text-emerald-800">mg/dL</span>
+          {latestGlucose && <TrendIcon className="mb-0.5 h-4 w-4" style={{ color: glucoseColor, filter: "drop-shadow(0 1px 2px rgba(255,255,255,0.5))" }} />}
         </div>
 
         <div className="relative z-10 mt-1">
-          {readingAgeLabel && <p className="text-[11px] text-white/35">{readingAgeLabel}</p>}
-          <span className="mt-1.5 block text-xs font-semibold" style={{ color: glucoseColor }}>
+          {readingAgeLabel && <p className="text-[11px] text-emerald-800">{readingAgeLabel}</p>}
+          <span className="mt-1.5 block text-xs font-semibold" style={{ color: glucoseColor, textShadow: "0 2px 10px rgba(255,255,255,0.55), 0 1px 3px rgba(0,0,0,0.14)" }}>
             {rangeCardLabel}
           </span>
         </div>

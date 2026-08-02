@@ -149,7 +149,7 @@ function TimeAxisTick({ x, y, payload }) {
         x={x}
         y={y + 13}
         textAnchor="middle"
-        fill="rgba(255,255,255,0.28)"
+        fill="rgba(8,14,11,0.5)"
         fontSize={10}
         fontWeight={600}>
         {format(date, "h a")}
@@ -777,7 +777,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       <button
         type="button"
         onClick={scrollToLatestGlucose}
-        className="absolute right-0 top-0 z-30 flex backdrop-blur-sm h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-white/55 shadow-lg transition-colors hover:bg-white/[0.1] hover:text-white/85"
+        className="absolute right-0 top-0 z-30 flex h-8 w-8 items-center justify-center rounded-full border border-white/45 bg-white/40 text-emerald-900 shadow-lg backdrop-blur-sm transition-colors hover:bg-white/60 hover:text-emerald-950"
         aria-label="Scroll to latest glucose">
           <CornerUpRight className="h-4 w-4" />
         </button>
@@ -790,24 +790,27 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           width: "100dvw",
           maxWidth: "100dvw",
           marginLeft: "-50dvw",
-          marginRight: "-50dvw"
+          marginRight: "-50dvw",
+          background: "rgba(255,255,255,0.22)",
+          backdropFilter: "blur(16px) saturate(140%)"
         }}>
       {filters.glucose && glucoseLinePoints.length > 0 &&
       <div className="pointer-events-none absolute left-1/2 top-0 z-20 -translate-x-1/2 px-3 py-1 text-center">
-          <div className="text-2xl font-black leading-none text-white">
-            <span ref={tooltipValueRef}>{formatGlucoseDisplay(glucoseLinePoints[glucoseLinePoints.length - 1].value)}</span> <span className="text-xs font-medium text-white/35">mg/dL</span>
+          <div className="text-soft-shadow text-2xl font-black leading-none text-emerald-950">
+            <span ref={tooltipValueRef}>{formatGlucoseDisplay(glucoseLinePoints[glucoseLinePoints.length - 1].value)}</span> <span className="text-xs font-medium text-emerald-800">mg/dL</span>
           </div>
-          <div ref={tooltipTimeRef} className="mt-1 text-xs font-medium text-white/35">{format(new Date(glucoseLinePoints[glucoseLinePoints.length - 1].time), "h:mm a")}</div>
-          <div ref={tooltipDateRef} className="mt-0.5 text-[10px] font-medium text-white/30">{format(new Date(glucoseLinePoints[glucoseLinePoints.length - 1].time), "EEEE, MMM d")}</div>
+          <div ref={tooltipTimeRef} className="text-soft-shadow mt-1 text-xs font-medium text-emerald-800">{format(new Date(glucoseLinePoints[glucoseLinePoints.length - 1].time), "h:mm a")}</div>
+          <div ref={tooltipDateRef} className="text-soft-shadow mt-0.5 text-[10px] font-medium text-emerald-800">{format(new Date(glucoseLinePoints[glucoseLinePoints.length - 1].time), "EEEE, MMM d")}</div>
         </div>
       }
       {filters.glucose && glucoseLinePoints.length > 0 &&
       <div
         ref={centerMarkerRef}
-        className="pointer-events-none absolute left-1/2 top-0 z-10 h-4 w-4 rounded-full bg-white opacity-0"
+        className="pointer-events-none absolute left-1/2 top-0 z-10 h-4 w-4 rounded-full opacity-0"
         style={{
+          background: "rgba(8,14,11,0.85)",
           transform: "translate3d(-50%, 0, 0) translateY(-50%)",
-          boxShadow: "0 0 0 4px rgba(255,255,255,0.22), 0 0 10px rgba(255,255,255,0.38)",
+          boxShadow: "0 0 0 4px rgba(255,255,255,0.45), 0 0 10px rgba(255,255,255,0.4)",
           willChange: "transform, opacity"
         }} />
       }
@@ -872,10 +875,10 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                 y1={CHART_MARGIN_TOP}
                 x2="0"
                 y2={CHART_HEIGHT - CHART_MARGIN_BOTTOM - X_AXIS_HEIGHT}>
-                <stop offset="0%" stopColor="rgba(255,255,255,0.0)" stopOpacity={0} />
-                <stop offset="10%" stopColor="rgba(255,255,255,0.18)" stopOpacity={0.18} />
-                <stop offset="24%" stopColor="rgba(255,255,255,0.72)" stopOpacity={0.72} />
-                <stop offset="100%" stopColor="rgba(255,255,255,0.72)" stopOpacity={0.72} />
+                <stop offset="0%" stopColor="rgba(6,78,59,0.0)" stopOpacity={0} />
+                <stop offset="10%" stopColor="rgba(6,78,59,0.25)" stopOpacity={0.25} />
+                <stop offset="24%" stopColor="rgba(6,78,59,0.85)" stopOpacity={0.85} />
+                <stop offset="100%" stopColor="rgba(6,78,59,0.85)" stopOpacity={0.85} />
               </linearGradient>
             </defs>
 
@@ -1032,8 +1035,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                 <span
                   className="block h-[7px] w-[7px] rounded-full"
                   style={{
-                    backgroundColor: `rgba(255,255,255,${0.82 * dotOpacity})`,
-                    boxShadow: `0 0 0 2px rgba(255,255,255,${0.14 * dotOpacity}), 0 0 5px rgba(255,255,255,${0.2 * dotOpacity})`,
+                    backgroundColor: `rgba(6,78,59,${0.9 * dotOpacity})`,
+                    boxShadow: `0 0 0 2px rgba(255,255,255,${0.5 * dotOpacity}), 0 0 5px rgba(255,255,255,${0.4 * dotOpacity})`,
                   }}
                 />
               </button>
@@ -1048,8 +1051,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         style={{ opacity: 0, transform: "translateY(4px)", transition: "opacity 350ms ease-in-out, transform 350ms ease-in-out", minHeight: 16 }}
         aria-hidden="true"
       >
-        <AlertTriangle className="h-3 w-3" style={{ color: "rgba(217,169,56,0.7)" }} />
-        <span className="text-[9px] font-medium" style={{ color: "rgba(217,169,56,0.8)" }}>Hight protein/fat meal window</span>
+        <AlertTriangle className="h-3 w-3" style={{ color: "#b45309", filter: "drop-shadow(0 1px 2px rgba(255,255,255,0.5))" }} />
+        <span className="text-soft-shadow text-[9px] font-medium" style={{ color: "#b45309" }}>Hight protein/fat meal window</span>
       </div>
       </div>
 

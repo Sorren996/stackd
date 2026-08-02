@@ -682,9 +682,10 @@ function MetricCard({ label, value, sub, status, color, tooltipId, openTooltip, 
       whileTap={{ scale: 0.97 }}
       className="metric-card relative flex min-h-[112px] flex-col justify-between overflow-hidden rounded-2xl border p-4 backdrop-blur-sm"
       style={{
-        background: "linear-gradient(160deg, rgba(12,20,16,0.86), rgba(8,14,11,0.80))",
-        borderColor: "rgba(255,255,255,0.16)",
-        boxShadow: "0 14px 40px rgba(0,0,0,0.28), 0 4px 12px rgba(0,0,0,0.18), inset 0 1px 1px rgba(255,255,255,0.18), inset 0 -1px 1px rgba(255,255,255,0.04)",
+        background: "rgba(255,255,255,0.22)",
+        borderColor: "rgba(255,255,255,0.45)",
+        boxShadow: "0 14px 40px rgba(0,0,0,0.16), 0 4px 12px rgba(0,0,0,0.08), inset 0 1px 1px rgba(255,255,255,0.6), inset 0 -1px 1px rgba(255,255,255,0.2)",
+        backdropFilter: "blur(16px) saturate(140%)",
       }}
     >
       <div
@@ -699,7 +700,7 @@ function MetricCard({ label, value, sub, status, color, tooltipId, openTooltip, 
       </div>
 
       <div className="relative z-10 mb-1 flex items-start justify-between gap-2">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-white/35">{label}</span>
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-800">{label}</span>
         {tooltipId && (
           <button
             onClick={() => setOpenTooltip(openTooltip === tooltipId ? null : tooltipId)}
@@ -711,11 +712,11 @@ function MetricCard({ label, value, sub, status, color, tooltipId, openTooltip, 
       </div>
 
       <div className="relative z-10 mt-1">
-        <span className="text-2xl font-bold leading-none text-white">{value}</span>
-        {sub && <p className="mt-1 text-[11px] text-white/35">{sub}</p>}
+        <span className="text-2xl font-bold leading-none text-emerald-950">{value}</span>
+        {sub && <p className="mt-1 text-[11px] text-emerald-800">{sub}</p>}
       </div>
 
-      <span className="relative z-10 mt-2 text-xs font-semibold" style={{ color }}>
+      <span className="relative z-10 mt-2 text-xs font-semibold" style={{ color, textShadow: "0 2px 10px rgba(255,255,255,0.55), 0 1px 3px rgba(0,0,0,0.14)" }}>
         {status}
       </span>
       {footer && (
@@ -735,9 +736,10 @@ function ActiveInsulinDetailCard({ totalUnits, breakdown }) {
       whileTap={{ scale: 0.985 }}
       className="metric-card relative col-span-2 overflow-hidden rounded-2xl border p-4 backdrop-blur-sm"
       style={{
-        background: "linear-gradient(160deg, rgba(12,20,16,0.86), rgba(8,14,11,0.80))",
-        borderColor: "rgba(255,255,255,0.16)",
-        boxShadow: "0 14px 40px rgba(0,0,0,0.28), 0 4px 12px rgba(0,0,0,0.18), inset 0 1px 1px rgba(255,255,255,0.18), inset 0 -1px 1px rgba(255,255,255,0.04)",
+        background: "rgba(255,255,255,0.22)",
+        borderColor: "rgba(255,255,255,0.45)",
+        boxShadow: "0 14px 40px rgba(0,0,0,0.16), 0 4px 12px rgba(0,0,0,0.08), inset 0 1px 1px rgba(255,255,255,0.6), inset 0 -1px 1px rgba(255,255,255,0.2)",
+        backdropFilter: "blur(16px) saturate(140%)",
       }}
     >
       <div
@@ -749,16 +751,16 @@ function ActiveInsulinDetailCard({ totalUnits, breakdown }) {
       />
       <div className="relative z-10 flex items-start justify-between gap-4">
         <div>
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-white/35">Insulin on Board</span>
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-800">Insulin on Board</span>
           <div className="mt-2 flex items-end gap-2">
-            <span className="text-4xl font-black leading-none text-white">{Math.round(totalUnits)}</span>
-            <span className="mb-1 text-xs font-semibold text-white/35">units active</span>
+            <span className="text-4xl font-black leading-none text-emerald-950">{Math.round(totalUnits)}</span>
+            <span className="mb-1 text-xs font-semibold text-emerald-800">units active</span>
           </div>
         </div>
         <span className="rounded-full border px-3 py-1 text-xs font-semibold" style={{
-          color: hasBolusIOB ? "#5ba3b8" : "rgba(255,255,255,0.42)",
-          borderColor: hasBolusIOB ? "rgba(6,182,212,0.32)" : "rgba(255,255,255,0.1)",
-          background: hasBolusIOB ? "rgba(6,182,212,0.1)" : "rgba(255,255,255,0.04)",
+          color: hasBolusIOB ? "#065f46" : "rgba(6,78,59,0.6)",
+          borderColor: "rgba(8,14,11,0.14)",
+          background: "rgba(255,255,255,0.35)",
         }}>
           {hasBolusIOB ? "Supporting you" : "Settled"}
         </span>
@@ -768,7 +770,7 @@ function ActiveInsulinDetailCard({ totalUnits, breakdown }) {
         {breakdown.length ? (
           <DoseTimeline doses={breakdown} />
         ) : (
-          <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 text-xs text-white/35">
+          <div className="rounded-xl border border-white/45 bg-white/30 px-3 py-3 text-xs text-emerald-800">
             No bolus insulin on board estimated from current logs.
           </div>
         )}
@@ -791,7 +793,7 @@ function SupportiveGlucoseMessage({ insight }) {
   return (
     <p
       aria-live="polite"
-      className="mx-auto mt-3 mb-1 max-w-[90vw] text-center text-[13px] font-medium italic leading-relaxed"
+      className="text-soft-shadow mx-auto mt-3 mb-1 max-w-[90vw] text-center text-[13px] font-medium italic leading-relaxed"
       style={{ color: "rgba(8,14,11,0.82)" }}
     >
       "{insight.message}"
@@ -1080,10 +1082,10 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
 
         <SupportiveGlucoseMessage insight={supportiveGlucoseInsight} />
 
-        <p className="mb-2 mt-5 text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: "rgba(8,14,11,0.72)" }}>Glucose Journey</p>
+        <p className="text-soft-shadow mb-2 mt-5 text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: "rgba(8,14,11,0.72)" }}>Glucose Journey</p>
         {graphSlot}
 
-        <p className="mb-3 mt-5 text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: "rgba(8,14,11,0.72)" }}>Your Rhythm</p>
+        <p className="text-soft-shadow mb-3 mt-5 text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: "rgba(8,14,11,0.72)" }}>Your Rhythm</p>
         <div className="grid grid-cols-1 gap-3">
           <div>
             <MetricCard
@@ -1098,13 +1100,13 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
               footer={highProteinFatStatus.isActive ? (
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <AlertTriangle className="h-3 w-3 shrink-0 text-amber-400/80" />
-                    <span className="text-[11px] font-semibold text-amber-400/90">Delayed meal response possible</span>
+                    <AlertTriangle className="h-3 w-3 shrink-0 text-amber-800" />
+                    <span className="text-[11px] font-semibold text-amber-800">Delayed meal response possible</span>
                   </div>
-                  <p className="mt-1 pl-[18px] text-[10px] leading-relaxed text-white/40">
+                  <p className="mt-1 pl-[18px] text-[10px] leading-relaxed text-emerald-800">
                     High protein or fat was logged. Glucose effects may be delayed or less predictable.
                   </p>
-                  <p className="mt-1 pl-[18px] text-[10px] font-medium text-amber-400/60">
+                  <p className="mt-1 pl-[18px] text-[10px] font-medium text-amber-800">
                     Monitor through {formatMonitoringEndTime(highProteinFatStatus.endTime)}
                   </p>
                 </div>

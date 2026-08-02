@@ -531,9 +531,9 @@ export default function Dashboard() {
 
       {shouldShowEmptyState ? (
         <div className="flex flex-col items-center justify-center px-4 py-20 text-center">
-          <Activity className="mb-3 h-10 w-10 text-muted-foreground/40" />
-          <h3 className="text-lg font-semibold text-white">Ready to begin</h3>
-          <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+          <Activity className="mb-3 h-10 w-10 text-emerald-900/50" />
+          <h3 className="text-soft-shadow text-lg font-semibold text-emerald-950">Ready to begin</h3>
+          <p className="text-soft-shadow mt-1 max-w-sm text-sm text-emerald-800">
             Log your first dose to see its gentle activity curve unfold on your timeline.
           </p>
         </div>
@@ -562,11 +562,11 @@ export default function Dashboard() {
           </div>
 
           {stackingAlertsEnabled && activeRapidCount > 1 && (
-            <div className="dashboard-stacking-alert backdrop-blur-sm mx-0 mt-4 flex w-full max-w-full min-w-0 items-start gap-3 overflow-hidden rounded-xl border border-white/10 p-4 pb-3">
-              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
+            <div className="dashboard-stacking-alert mx-0 mt-4 flex w-full max-w-full min-w-0 items-start gap-3 overflow-hidden rounded-2xl border border-white/45 p-4 pb-3 backdrop-blur-md" style={{ background: "rgba(255,255,255,0.22)" }}>
+              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" />
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-white">Multiple Active Doses</p>
-                <p className="mt-0.5 text-sm opacity-80">
+                <p className="text-sm font-semibold text-emerald-950">Multiple Active Doses</p>
+                <p className="mt-0.5 text-sm text-emerald-800">
                   {activeRapidCount} rapid-acting doses are active at once. Keep a gentle eye on how you're feeling.
                 </p>
               </div>
@@ -590,7 +590,7 @@ export default function Dashboard() {
       <FloatingActionMenu />
 
       <div className="flex w-full justify-center pt-8 pb-4">
-        <span className="text-[10px] font-medium tracking-wide text-white/20">
+        <span className="text-soft-shadow text-[10px] font-medium tracking-wide text-emerald-900/60">
           {getVersionString()}
         </span>
       </div>

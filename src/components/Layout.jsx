@@ -182,11 +182,11 @@ export default function Layout() {
             <div
               className="relative mx-4 mb-4 grid w-[min(calc(100vw-2rem),28rem)] grid-cols-4 gap-1 overflow-hidden rounded-[2rem] border px-2 py-1.5 backdrop-blur-sm"
               style={{
-                background:
-                  "linear-gradient(145deg, rgba(12,20,16,0.88), rgba(8,14,11,0.82))",
-                borderColor: "rgba(255,255,255,0.14)",
+                background: "rgba(255,255,255,0.22)",
+                borderColor: "rgba(255,255,255,0.45)",
                 boxShadow:
-                  "0 18px 50px rgba(0,0,0,0.38), inset 0 1px 1px rgba(255,255,255,0.32), inset 0 -1px 1px rgba(255,255,255,0.08)",
+                  "0 18px 50px rgba(0,0,0,0.18), inset 0 1px 1px rgba(255,255,255,0.6), inset 0 -1px 1px rgba(255,255,255,0.2)",
+                backdropFilter: "blur(16px) saturate(140%)",
               }}
             >
               <div
@@ -207,7 +207,7 @@ export default function Layout() {
                     key={item.path}
                     to={item.path}
                     className={`relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-[1.55rem] px-2 py-2 text-center transition-colors ${
-                      isActive ? "text-white" : "text-white/45 hover:text-white/75"
+                      isActive ? "text-emerald-950" : "text-emerald-800 hover:text-emerald-950"
                     }`}
                   >
                     {isActive && (
@@ -216,10 +216,10 @@ export default function Layout() {
                         className="absolute inset-0 rounded-[1.55rem]"
                         style={{
                           background:
-                            "linear-gradient(145deg, rgba(255,255,255,0.28), rgba(255,255,255,0.09))",
-                          border: "1px solid rgba(255,255,255,0.34)",
+                            "linear-gradient(145deg, rgba(255,255,255,0.6), rgba(255,255,255,0.32))",
+                          border: "1px solid rgba(255,255,255,0.7)",
                           boxShadow:
-                            "0 10px 24px rgba(0,0,0,0.22), inset 0 1px 1px rgba(255,255,255,0.38), inset 0 -1px 1px rgba(255,255,255,0.1)",
+                            "0 10px 24px rgba(0,0,0,0.16), inset 0 1px 1px rgba(255,255,255,0.7), inset 0 -1px 1px rgba(255,255,255,0.25)",
                         }}
                         transition={{
                           type: "spring",
