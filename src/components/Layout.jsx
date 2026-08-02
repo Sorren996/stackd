@@ -2,6 +2,8 @@ import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { Wind, Leaf, Waves, Settings, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useQuery } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
 import Dashboard from "../pages/Dashboard";
 import HistoryPage from "../pages/History";
 import CoachPage from "../pages/Coach";
@@ -31,6 +33,24 @@ export default function Layout() {
     coach: false,
   }));
   const [coachKeyboardOpen, setCoachKeyboardOpen] = useState(false);
+
+  const { data: settings } = useQuery({
+    queryKey: ["user-settings"],
+    queryFn: () => base44.entities.UserSettings.list("-created_date", 1),
+    staleTime: 60 * 1000,
+  });
+  const notificationsEnabled = settings?.[0]?.coach_insight_notifications_enabled !== false;
+  const { data: unreadInsights = [] } = useQuery({
+    queryKey: ["unread-coach-insights"],
+    queryFn: () => base44.entities.CoachInsight.filter({ status: "unread" }, "-generated_at", 10),
+    staleTime: 60 * 1000,
+    refetchInterval: 2 * 60 * 1000,
+    refetchOnWindowFocus: true,
+    enabled: notificationsEnabled,
+  });
+  const hasUnread = notificationsEnabled && (unreadInsights || []).some(
+    (insight) => !insight.expires_at || new Date(insight.expires_at).getTime() > Date.now()
+  );
 
   useEffect(() => {
     const handler = (e) => setCoachKeyboardOpen(e.detail?.open ?? false);
@@ -76,11 +96,19 @@ export default function Layout() {
           }}
         >
           <div />
-          <img
-            src="https://media.base44.com/images/public/6a1b93f234a8611ee1595134/9cd3c84cf_stackdappiconver3tran.png"
-            alt="Stackd Logo"
-            className="h-9 w-auto object-contain"
-          />
+          <button
+            type="button"
+            onClick={() => navigate("/coach")}
+            aria-label={hasUnread ? "AI Wellness Coach. New insight available." : "AI Wellness Coach. No new insights."}
+            className="relative flex items-center justify-center rounded-full transition-all"
+          >
+            <img
+              src="https://media.base44.com/images/public/6a1b93f234a8611ee1595134/9cd3c84cf_stackdappiconver3tran.png"
+              alt="Stackd Logo"
+              className="h-9 w-auto object-contain transition-all duration-500"
+              style={hasUnread ? { filter: "drop-shadow(0 0 6px rgba(251,191,36,0.85)) drop-shadow(0 0 14px rgba(251,191,36,0.4))" } : undefined}
+            />
+          </button>
 
           <div className="flex items-center justify-self-end gap-2">
             <button

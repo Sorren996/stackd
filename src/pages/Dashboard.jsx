@@ -12,7 +12,6 @@ import GlucoseCard from "../components/GlucoseCard";
 import CarbCard from "../components/CarbCard";
 import { getDoseStatus, INSULIN_PROFILES } from "@/lib/insulinPharmacology";
 import { Activity, AlertTriangle, X, Pencil } from "lucide-react";
-import CoachGateway from "@/components/coach/CoachGateway";
 import HighProteinFatCheckbox from "@/components/HighProteinFatCheckbox";
 import { toast } from "sonner";
 import { getVersionString } from "@/lib/appVersion";
@@ -581,10 +580,6 @@ export default function Dashboard() {
               ))}
             </div>
           )}
-
-          <div className="mt-4">
-            <CoachGateway />
-          </div>
 
           <div className="mt-4">
             <ActiveAlerts doses={recentDoses} />
