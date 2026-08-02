@@ -89,7 +89,8 @@
 
   body {
     @apply text-foreground;
-    background: hsl(160, 14%, 7%);
+    background: linear-gradient(to bottom, #FFAD39 0%, #68FF90 100%);
+    background-attachment: fixed;
     min-height: 100vh;
   }
 }
