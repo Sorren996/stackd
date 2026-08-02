@@ -546,20 +546,24 @@ export default function Dashboard() {
               latestGlucose={latestGlucose}
               glucoseReadings={heroGlucoseReadings}
               carbEntries={recentCarbs}
+              graphSlot={
+                showGraph ? (
+                  <ActivityGraph
+                    doses={graphDoses}
+                    glucoseReadings={graphGlucose}
+                    carbEntries={graphCarbs}
+                    onSelectLog={setEditingLog}
+                  />
+                ) : (
+                  <div className="h-[320px] w-full" />
+                )
+              }
+              onEditGlucose={(reading) => setEditingLog({ type: "glucose", item: reading })}
             />
-            <CoachGateway />
           </div>
 
-          {activeSplitPlans.length > 0 && (
-            <div className="mt-4 space-y-2">
-              {activeSplitPlans.slice(0, 3).map((plan) => (
-                <SplitPlanCard key={plan.id} plan={plan} />
-              ))}
-            </div>
-          )}
-
           {stackingAlertsEnabled && activeRapidCount > 1 && (
-            <div className="dashboard-stacking-alert backdrop-blur-sm mx-0 flex w-full max-w-full min-w-0 items-start gap-3 overflow-hidden rounded-xl border border-white/10 p-4 pb-3">
+            <div className="dashboard-stacking-alert backdrop-blur-sm mx-0 mt-4 flex w-full max-w-full min-w-0 items-start gap-3 overflow-hidden rounded-xl border border-white/10 p-4 pb-3">
               <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-white">Multiple Active Doses</p>
@@ -570,52 +574,20 @@ export default function Dashboard() {
             </div>
           )}
 
-          <div className="mb-2 w-full max-w-full min-w-0">
-            <p className="mt-6 mb-2 px-0 text-[10px] font-bold uppercase tracking-[0.18em] text-white">
-              Glucose Journey
-            </p>
-            {showGraph ? (
-              <ActivityGraph doses={graphDoses} glucoseReadings={graphGlucose} carbEntries={graphCarbs} />
-            ) : (
-              <div className="h-[320px] w-full" />
-            )}
+          {activeSplitPlans.length > 0 && (
+            <div className="mt-4 space-y-2">
+              {activeSplitPlans.slice(0, 3).map((plan) => (
+                <SplitPlanCard key={plan.id} plan={plan} />
+              ))}
+            </div>
+          )}
+
+          <div className="mt-4">
+            <CoachGateway />
           </div>
 
-          <div className="grid w-full max-w-full min-w-0 grid-cols-1 gap-6 overflow-x-hidden border-0 px-0 py-4 lg:grid-cols-3">
-            <div className="min-w-0 max-w-full space-y-2 overflow-x-hidden lg:col-span-2">
-              <p className="mx-4 mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-white">
-                Recent Moments
-              </p>
-              <div className="w-full max-w-full min-w-0 space-y-2 overflow-x-hidden">
-                {(showAllDoses ? recentActivity.slice(0, 15) : recentActivity.slice(0, 5)).map((item) =>
-                  item.feedType === "insulin" ? (
-                    <EditableLog key={`dose-${item.id}`} onEdit={() => setEditingLog({ type: "insulin", item })}>
-                      <DoseCard dose={item} onDelete={(id) => deleteDose.mutate(id)} />
-                    </EditableLog>
-                  ) : item.feedType === "carbs" ? (
-                    <EditableLog key={`carb-${item.id}`} onEdit={() => setEditingLog({ type: "carbs", item })}>
-                      <CarbCard entry={item} onDelete={(id) => deleteCarb.mutate(id)} />
-                    </EditableLog>
-                  ) : (
-                    <EditableLog key={`glucose-${item.id}`} onEdit={() => setEditingLog({ type: "glucose", item })}>
-                      <GlucoseCard reading={item} onDelete={(id) => deleteGlucose.mutate(id)} />
-                    </EditableLog>
-                  ),
-                )}
-              </div>
-              {recentActivity.length > 5 && (
-                <button
-                  onClick={() => setShowAllDoses((value) => !value)}
-                  className="mx-4 mt-1 hidden text-sm font-medium text-[hsl(var(--muted-foreground))] hover:underline"
-                >
-                  {showAllDoses ? "Show less" : `Show more (${Math.min(recentActivity.length, 10) - 5} more)`}
-                </button>
-              )}
-            </div>
-
-            <div className="min-w-0 max-w-full overflow-x-hidden">
-              <ActiveAlerts doses={recentDoses} />
-            </div>
+          <div className="mt-4">
+            <ActiveAlerts doses={recentDoses} />
           </div>
         </>
       )}

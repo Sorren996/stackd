@@ -1,11 +1,12 @@
 import { useMemo, useRef, useEffect, useState } from "react";
 import { Area, XAxis, YAxis, Line, ComposedChart } from "recharts";
-import { generateActivityCurve, getInsulinProfile } from "@/lib/insulinPharmacology";
+import { generateActivityCurve, getDoseIOB, getInsulinProfile } from "@/lib/insulinPharmacology";
 import { PROFILE_COLORS } from "@/lib/carbAbsorption";
 import { format } from "date-fns";
-import { AlertTriangle, CornerUpRight, SlidersHorizontal, Check, Wheat } from "lucide-react";
+import { AlertTriangle, CornerUpRight, SlidersHorizontal, Check, Wheat, Pencil } from "lucide-react";
 import { HIGH_PROTEIN_FAT_MONITORING_HOURS, mergeMonitoringIntervals } from "@/lib/mealMonitoring";
 import { motion, AnimatePresence } from "framer-motion";
+import InfoPopover from "@/components/graph/InfoPopover";
 
 const STEP_MS = 3 * 60 * 1000;
 const HALF_HOUR_MS = 30 * 60 * 1000;
@@ -254,10 +255,19 @@ function FilterDropdown({ filters, onChange, anchorRect }) {
 
 }
 
-export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries = [] }) {
+export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries = [], onSelectLog = null }) {
   const [showFilter, setShowFilter] = useState(false);
   const [filterAnchorRect, setFilterAnchorRect] = useState(null);
   const [filters, setFilters] = useState({ glucose: true, insulin: true, carbs: true });
+  const [activeMarker, setActiveMarker] = useState(null);
+
+  const openMarker = (type, item, rect) => setActiveMarker({ type, item, rect });
+  const closeMarker = () => setActiveMarker(null);
+  const handleEdit = () => {
+    if (!activeMarker || !onSelectLog) return;
+    onSelectLog({ type: activeMarker.type, item: activeMarker.item });
+    closeMarker();
+  };
   const scrollRef = useRef(null);
   const centerMarkerRef = useRef(null);
   const tooltipValueRef = useRef(null);
@@ -540,6 +550,17 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     const clamped = Math.min(Math.max(value, GLUCOSE_MIN), GLUCOSE_MAX);
     return CHART_MARGIN_TOP + (GLUCOSE_MAX - clamped) / (GLUCOSE_MAX - GLUCOSE_MIN) * plotHeight;
   };
+
+  const positionedGlucoseMarkers = useMemo(() =>
+    filteredGlucoseReadings
+      .map((reading) => ({
+        reading,
+        x: (reading.time - domainStart) / totalMs * chartWidth,
+        y: getGlucoseY(reading.value),
+      }))
+      .filter((m) => Number.isFinite(m.x) && Number.isFinite(m.y) && m.x >= 0 && m.x <= chartWidth),
+    [filteredGlucoseReadings, domainStart, totalMs, chartWidth]
+  );
 
   const getHighRangeOpacity = (value) => {
     const pctFromTop = (GLUCOSE_MAX - Math.min(value, GLUCOSE_MAX)) / (GLUCOSE_MAX - GLUCOSE_MIN);
@@ -935,17 +956,21 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                   left: x,
                   transform: isEdgeLeft ? "translateX(0)" : isEdgeRight ? "translateX(-100%)" : "translateX(-50%)"
                 }}>
-                <div
-                  className="relative flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-semibold leading-none"
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); openMarker("insulin", dose, e.currentTarget.getBoundingClientRect()); }}
+                  aria-label={`${formattedUnits} units ${String(dose.insulin_type || "Insulin").split(" ")[0]}`}
+                  className="pointer-events-auto relative flex cursor-pointer items-center rounded-full px-1.5 py-0.5 text-[9px] font-semibold leading-none transition hover:brightness-110"
                   style={{
                     top: labelTop,
                     color: "rgba(91,168,138,0.9)",
                     background: "linear-gradient(145deg, rgba(14,24,21,0.72), rgba(14,24,21,0.42))",
                     border: "1px solid rgba(91,168,138,0.16)",
                     boxShadow: "0 4px 12px rgba(0,0,0,0.22)"
-                  }}>
+                  }}
+                >
                   <span>{formattedUnits}u</span>
-                </div>
+                </button>
               </div>
             );
           })}
@@ -972,22 +997,42 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                     background: `linear-gradient(to bottom, ${color}cc, ${color}33 62%, transparent)`,
                     boxShadow: `0 0 12px ${color}26`
                   }} />
-                <div
-                  className="relative flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold leading-none shadow-lg backdrop-blur-md"
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); openMarker("carbs", entry, e.currentTarget.getBoundingClientRect()); }}
+                  aria-label={`Carbs ${Math.round(entry.carbs)}g`}
+                  className="pointer-events-auto relative flex cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold leading-none shadow-lg backdrop-blur-md transition hover:brightness-110"
                   style={{
                     top: pillTop,
                     color,
                     borderColor: `${color}45`,
                     background: `linear-gradient(145deg, rgba(14,24,21,0.92), rgba(14,24,21,0.62)), ${color}12`,
                     boxShadow: "0 10px 24px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.08)"
-                  }}>
+                  }}
+                >
                   <Wheat className="h-3 w-3" />
                   <span className="text-white/55">Carbs</span>
                   <span className="text-white/90">{Math.round(entry.carbs)}g</span>
-                </div>
+                </button>
               </div>
             );
           })}
+
+          {filters.glucose && positionedGlucoseMarkers.map(({ reading, x, y }) => (
+            <button
+              key={`glucose_marker_${reading.id}`}
+              type="button"
+              onClick={(e) => { e.stopPropagation(); openMarker("glucose", reading, e.currentTarget.getBoundingClientRect()); }}
+              aria-label={`Glucose ${reading.value} mg/dL`}
+              className="pointer-events-auto absolute z-[15] flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full"
+              style={{ left: x, top: y }}
+            >
+              <span
+                className="block h-2.5 w-2.5 rounded-full border-2 border-white/80"
+                style={{ backgroundColor: "rgba(255,255,255,0.9)", boxShadow: "0 0 8px rgba(255,255,255,0.5)" }}
+              />
+            </button>
+          ))}
         </div>
       </div>
       </div>
@@ -1001,6 +1046,64 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         <span className="text-[9px] font-medium" style={{ color: "rgba(217,169,56,0.8)" }}>Hight protein/fat meal window</span>
       </div>
       </div>
+
+      {activeMarker && (
+        <InfoPopover anchorRect={activeMarker.rect} onClose={closeMarker}>
+          {activeMarker.type === "carbs" && (
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-white/40">Nourishment</span>
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-2xl font-black text-white">{Math.round(activeMarker.item.carbs)}</span>
+                <span className="text-xs text-white/40">g carbs</span>
+              </div>
+              <p className="text-xs text-white/70">{activeMarker.item.food_name || activeMarker.item.name || "Food"}</p>
+              <p className="text-[11px] text-white/40">{format(new Date(activeMarker.item.consumed_at), "h:mm a · MMM d")}</p>
+              {onSelectLog && (
+                <button type="button" onClick={handleEdit} className="mt-1 flex w-full items-center justify-center gap-1.5 rounded-xl border border-white/12 py-2 text-xs font-semibold text-white/85 transition hover:bg-white/5" style={{ background: "rgba(255,255,255,0.04)" }}>
+                  <Pencil className="h-3 w-3" /> Edit
+                </button>
+              )}
+            </div>
+          )}
+          {activeMarker.type === "insulin" && (
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-white/40">Insulin</span>
+              <p className="text-sm font-bold text-white">{activeMarker.item.insulin_type}</p>
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-2xl font-black text-white">{activeMarker.item.units % 1 === 0 ? activeMarker.item.units : activeMarker.item.units.toFixed(1)}</span>
+                <span className="text-xs text-white/40">units</span>
+              </div>
+              {(() => {
+                const iob = getDoseIOB(activeMarker.item, Date.now());
+                return iob > 0.01
+                  ? <p className="text-[11px] text-teal-300/80">{Math.round(iob)}u estimated active</p>
+                  : <p className="text-[11px] text-white/40">Support complete</p>;
+              })()}
+              <p className="text-[11px] text-white/40">{format(new Date(activeMarker.item.administered_at), "h:mm a · MMM d")}</p>
+              {onSelectLog && (
+                <button type="button" onClick={handleEdit} className="mt-1 flex w-full items-center justify-center gap-1.5 rounded-xl border border-white/12 py-2 text-xs font-semibold text-white/85 transition hover:bg-white/5" style={{ background: "rgba(255,255,255,0.04)" }}>
+                  <Pencil className="h-3 w-3" /> Edit
+                </button>
+              )}
+            </div>
+          )}
+          {activeMarker.type === "glucose" && (
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-white/40">Glucose</span>
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-3xl font-black text-white">{activeMarker.item.value}</span>
+                <span className="text-xs text-white/40">mg/dL</span>
+              </div>
+              <p className="text-[11px] text-white/40">Manual · {format(new Date(activeMarker.item.recorded_at), "h:mm a · MMM d")}</p>
+              {onSelectLog && (
+                <button type="button" onClick={handleEdit} className="mt-1 flex w-full items-center justify-center gap-1.5 rounded-xl border border-white/12 py-2 text-xs font-semibold text-white/85 transition hover:bg-white/5" style={{ background: "rgba(255,255,255,0.04)" }}>
+                  <Pencil className="h-3 w-3" /> Edit
+                </button>
+              )}
+            </div>
+          )}
+        </InfoPopover>
+      )}
     </div>);
 
 }

@@ -6,8 +6,6 @@ import Dashboard from "../pages/Dashboard";
 import HistoryPage from "../pages/History";
 import CoachPage from "../pages/Coach";
 
-const LATEST_GLUCOSE_CACHE_KEY = "latest_glucose_cache";
-
 const navItems = [
   { path: "/", label: "My Flow", icon: Wind },
   { path: "/history", label: "My Journal", icon: Leaf },
@@ -18,48 +16,6 @@ const navItems = [
 const CachedDashboard = memo(Dashboard);
 const CachedHistoryPage = memo(HistoryPage);
 const CachedCoachPage = memo(CoachPage);
-
-function readCachedLatestGlucose() {
-  if (typeof window === "undefined") return null;
-
-  try {
-    const cached = window.localStorage.getItem(LATEST_GLUCOSE_CACHE_KEY);
-    return cached ? JSON.parse(cached) : null;
-  } catch {
-    return null;
-  }
-}
-
-function getGlucoseValue(reading) {
-  const value = Number(reading?.value ?? reading?.glucose ?? reading?.glucose_value ?? reading?.mg_dl ?? reading?.mgdl ?? reading?.mg_dL);
-  return Number.isFinite(value) ? value : null;
-}
-
-function readTargetRange() {
-  if (typeof window === "undefined") return { low: 70, high: 180 };
-
-  const low = Number(window.localStorage.getItem("target_range_low") || 70);
-  const high = Number(window.localStorage.getItem("target_range_high") || 180);
-
-  return {
-    low: Number.isFinite(low) ? low : 70,
-    high: Number.isFinite(high) ? high : 180,
-  };
-}
-
-const SCENE_IMAGES = {
-  high: "https://res.cloudinary.com/bzqjmwln/image/upload/v1783289511/serene_mountain_cloud_loop_more_visible_iua2rx.gif",
-  range: "https://res.cloudinary.com/bzqjmwln/image/upload/v1783290766/forest_river_cloud_loop_much_less_transparent_isw9wy.gif",
-  low: "https://res.cloudinary.com/bzqjmwln/image/upload/v1783290769/visible_valley_cloud_loop_hfyhph.gif",
-};
-
-function getGlucoseScene(reading, targetRange) {
-  const value = getGlucoseValue(reading);
-  if (value === null) return "range";
-  if (value < targetRange.low) return "low";
-  if (value > targetRange.high) return "high";
-  return "range";
-}
 
 export default function Layout() {
   const location = useLocation();
@@ -74,29 +30,7 @@ export default function Layout() {
     history: false,
     coach: false,
   }));
-  const [latestGlucose, setLatestGlucose] = useState(readCachedLatestGlucose);
   const [coachKeyboardOpen, setCoachKeyboardOpen] = useState(false);
-  const [targetRange, setTargetRange] = useState(readTargetRange);
-  const sceneStatus = useMemo(() => getGlucoseScene(latestGlucose, targetRange), [latestGlucose, targetRange]);
-  const sceneRef = useRef(null);
-  const overlayRef = useRef(null);
-
-  useEffect(() => {
-    const updateLatestGlucose = () => setLatestGlucose(readCachedLatestGlucose());
-    const updateTargetRange = () => setTargetRange(readTargetRange());
-
-    window.addEventListener("latest-glucose-updated", updateLatestGlucose);
-    window.addEventListener("target-range-updated", updateTargetRange);
-    window.addEventListener("storage", updateLatestGlucose);
-    window.addEventListener("storage", updateTargetRange);
-
-    return () => {
-      window.removeEventListener("latest-glucose-updated", updateLatestGlucose);
-      window.removeEventListener("target-range-updated", updateTargetRange);
-      window.removeEventListener("storage", updateLatestGlucose);
-      window.removeEventListener("storage", updateTargetRange);
-    };
-  }, []);
 
   useEffect(() => {
     const handler = (e) => setCoachKeyboardOpen(e.detail?.open ?? false);
@@ -115,72 +49,6 @@ export default function Layout() {
   }, [isDashboardRoute, isHistoryRoute, isCoachRoute]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return undefined;
-
-    let frame = 0;
-    let currentOffset = 0;
-    let targetOffset = 0;
-    let currentOverlay = 0;
-    let targetOverlay = 0;
-
-    const MAX_DARKNESS = 0.6;
-    const SCROLL_RANGE = 500;
-
-    const computeTargetOverlay = () =>
-      isDashboardRoute
-        ? Math.min(MAX_DARKNESS, (window.scrollY / SCROLL_RANGE) * MAX_DARKNESS)
-        : MAX_DARKNESS;
-
-    const updateSceneOffset = () => {
-      frame = 0;
-
-      if (!sceneRef.current) return;
-
-      // Lerp toward target for buttery-smooth parallax — no stutter
-      currentOffset += (targetOffset - currentOffset) * 0.18;
-      currentOverlay += (targetOverlay - currentOverlay) * 0.18;
-
-      if (Math.abs(targetOffset - currentOffset) < 0.15 && Math.abs(targetOverlay - currentOverlay) < 0.005) {
-        currentOffset = targetOffset;
-        currentOverlay = targetOverlay;
-        sceneRef.current.style.transform = `translate3d(0, ${currentOffset}px, 0)`;
-        if (overlayRef.current) overlayRef.current.style.opacity = String(currentOverlay);
-        return;
-      }
-
-      sceneRef.current.style.transform = `translate3d(0, ${currentOffset}px, 0)`;
-      if (overlayRef.current) overlayRef.current.style.opacity = String(currentOverlay);
-      frame = window.requestAnimationFrame(updateSceneOffset);
-    };
-
-    const handleScroll = () => {
-      targetOffset = Math.max(-160, Math.min(0, window.scrollY * -0.12));
-      targetOverlay = computeTargetOverlay();
-      if (frame) return;
-      frame = window.requestAnimationFrame(updateSceneOffset);
-    };
-
-    // Set initial position without animation
-    targetOffset = Math.max(-160, Math.min(0, window.scrollY * -0.12));
-    targetOverlay = computeTargetOverlay();
-    currentOffset = targetOffset;
-    currentOverlay = targetOverlay;
-    if (sceneRef.current) {
-      sceneRef.current.style.transform = `translate3d(0, ${currentOffset}px, 0)`;
-    }
-    if (overlayRef.current) {
-      overlayRef.current.style.opacity = String(currentOverlay);
-    }
-
-    window.addEventListener("scroll", handleScroll, { passive: true });
-
-    return () => {
-      if (frame) window.cancelAnimationFrame(frame);
-      window.removeEventListener("scroll", handleScroll);
-    };
-  }, [isDashboardRoute]);
-
-  useEffect(() => {
     if (isSettingsOpen) {
       const overlay = document.getElementById("settings-overlay");
       if (overlay) overlay.scrollTo({ top: 0, behavior: "auto" });
@@ -193,50 +61,18 @@ export default function Layout() {
 
   return (
     <div className="isolate relative min-h-screen overflow-x-hidden bg-black text-white">
+      {/* Solid static background — deep near-black forest charcoal */}
       <div
         aria-hidden="true"
-        className="pointer-events-none fixed inset-0 -z-20 bg-black"
+        className="pointer-events-none fixed inset-0 -z-10"
+        style={{ background: "hsl(160, 14%, 7%)" }}
       />
-
-      <div
-        ref={sceneRef}
-        aria-hidden="true"
-        className="pointer-events-none fixed inset-x-0 top-0 -z-10 h-[120vh] overflow-hidden bg-black"
-        style={{ transform: "translate3d(0, 0, 0)", willChange: "transform" }}
-      >
-        <AnimatePresence initial={false}>
-          <motion.img
-            key={sceneStatus}
-            src={SCENE_IMAGES[sceneStatus]}
-            alt=""
-            initial={{ opacity: 0, scale: 1.03 }}
-            animate={{ opacity: 0.7, scale: 1.03 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 1.1, ease: "easeInOut" }}
-            className="absolute inset-x-0 top-0 h-[130vh] w-full max-w-none object-cover"
-            style={{
-              filter: "grayscale(0.04) saturate(1.12) contrast(1.02) brightness(1.12)",
-              objectPosition: sceneStatus === "high" ? "center top" : sceneStatus === "low" ? "center 35%" : "center top",
-              transformOrigin: "center top",
-              WebkitMaskImage: "linear-gradient(to bottom, black 0%, black 70%, rgba(0,0,0,0.9) 100%)",
-              maskImage: "linear-gradient(to bottom, black 0%, black 70%, rgba(0,0,0,0.9) 100%)",
-            }}
-          />
-        </AnimatePresence>
-        <div ref={overlayRef} className="absolute inset-0 bg-black" style={{ opacity: 0, willChange: "opacity" }} />
-        <div
-          className="absolute inset-x-0 bottom-0 h-[38vh]"
-          style={{
-            background: "linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.28) 42%, rgba(0,0,0,0.72) 78%, #000000 100%)",
-          }}
-        />
-      </div>
 
       <header className="fixed inset-x-0 top-0 z-50 bg-transparent">
         <div
           className="mx-auto grid h-14 max-w-6xl grid-cols-[1fr_auto_1fr] items-center px-4"
           style={{
-            background: "linear-gradient(to bottom, rgba(0,0,0,0.8), rgba(0,0,0,0.4), transparent)",
+            background: "linear-gradient(to bottom, rgba(0,0,0,0.7), rgba(0,0,0,0.25), transparent)",
           }}
         >
           <div />
@@ -263,7 +99,7 @@ export default function Layout() {
                 transition={{ type: "spring", stiffness: 260, damping: 18 }}
                 className="flex"
               >
-                <Settings className={`h-4 w-4 ${isSettingsOpen ? "text-teal-400" : "text-white/50"}`} />
+                <Settings className={`h-4 w-4 ${isSettingsOpen ? "text-teal-400" : "text-white/55"}`} />
               </motion.span>
             </button>
           </div>
@@ -312,98 +148,98 @@ export default function Layout() {
         )}
       </AnimatePresence>
 
-     <AnimatePresence>
-      {!coachKeyboardOpen && (
-        <motion.nav
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 30 }}
-          transition={{ duration: 0.2 }}
-          className="fixed inset-x-0 bottom-0 z-30 flex justify-center pb-safe"
-        >
-  <div
-    className="relative mx-4 mb-4 grid w-[min(calc(100vw-2rem),28rem)] grid-cols-4 gap-1 overflow-hidden rounded-[2rem] border px-2 py-1.5 backdrop-blur-sm"
-    style={{
-      background:
-        "linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.06))",
-      borderColor: "rgba(255,255,255,0.24)",
-      boxShadow:
-        "0 18px 50px rgba(0,0,0,0.38), inset 0 1px 1px rgba(255,255,255,0.32), inset 0 -1px 1px rgba(255,255,255,0.08)",
-    }}
-  >
-    <div
-      aria-hidden="true"
-      className="pointer-events-none absolute -inset-8 opacity-70"
-      style={{
-        background:
-          "radial-gradient(circle at 25% 0%, rgba(255,255,255,0.26), transparent 34%), radial-gradient(circle at 85% 130%, rgba(45,212,191,0.16), transparent 42%)",
-      }}
-    />
-
-    {navItems.map((item) => {
-      const isActive = location.pathname === item.path && !isSettingsOpen;
-      const Icon = item.icon;
-
-      return (
-        <Link
-          key={item.path}
-          to={item.path}
-          className={`relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-[1.55rem] px-2 py-2 text-center transition-colors ${
-            isActive ? "text-white" : "text-white/45 hover:text-white/75"
-          }`}
-        >
-          {isActive && (
-            <motion.div
-              layoutId="active-nav-tab"
-              className="absolute inset-0 rounded-[1.55rem]"
+      <AnimatePresence>
+        {!coachKeyboardOpen && (
+          <motion.nav
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 30 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-x-0 bottom-0 z-30 flex justify-center pb-safe"
+          >
+            <div
+              className="relative mx-4 mb-4 grid w-[min(calc(100vw-2rem),28rem)] grid-cols-4 gap-1 overflow-hidden rounded-[2rem] border px-2 py-1.5 backdrop-blur-sm"
               style={{
                 background:
-                  "linear-gradient(145deg, rgba(255,255,255,0.28), rgba(255,255,255,0.09))",
-                border: "1px solid rgba(255,255,255,0.34)",
+                  "linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.06))",
+                borderColor: "rgba(255,255,255,0.24)",
                 boxShadow:
-                  "0 10px 24px rgba(0,0,0,0.22), inset 0 1px 1px rgba(255,255,255,0.38), inset 0 -1px 1px rgba(255,255,255,0.1)",
+                  "0 18px 50px rgba(0,0,0,0.38), inset 0 1px 1px rgba(255,255,255,0.32), inset 0 -1px 1px rgba(255,255,255,0.08)",
               }}
-              transition={{
-                type: "spring",
-                stiffness: 460,
-                damping: 34,
-                mass: 0.8,
-              }}
-            />
-          )}
+            >
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute -inset-8 opacity-70"
+                style={{
+                  background:
+                    "radial-gradient(circle at 25% 0%, rgba(255,255,255,0.26), transparent 34%), radial-gradient(circle at 85% 130%, rgba(45,212,191,0.16), transparent 42%)",
+                }}
+              />
 
-          <motion.span
-            className="relative z-10 flex items-center justify-center"
-            animate={{
-              y: isActive ? -1 : 0,
-              scale: isActive ? 1.07 : 1,
-            }}
-            transition={{
-              type: "spring",
-              stiffness: 420,
-              damping: 28,
-            }}
-          >
-            <Icon className="h-5 w-5" />
-          </motion.span>
+              {navItems.map((item) => {
+                const isActive = location.pathname === item.path && !isSettingsOpen;
+                const Icon = item.icon;
 
-          <motion.span
-            className="relative z-10 whitespace-nowrap text-[10px] font-semibold leading-none"
-            animate={{
-              opacity: isActive ? 1 : 0.64,
-              y: isActive ? 0 : 1,
-            }}
-            transition={{ duration: 0.16 }}
-          >
-            {item.label}
-          </motion.span>
-        </Link>
-      );
-    })}
-  </div>
-        </motion.nav>
-      )}
-    </AnimatePresence>
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={`relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-[1.55rem] px-2 py-2 text-center transition-colors ${
+                      isActive ? "text-white" : "text-white/45 hover:text-white/75"
+                    }`}
+                  >
+                    {isActive && (
+                      <motion.div
+                        layoutId="active-nav-tab"
+                        className="absolute inset-0 rounded-[1.55rem]"
+                        style={{
+                          background:
+                            "linear-gradient(145deg, rgba(255,255,255,0.28), rgba(255,255,255,0.09))",
+                          border: "1px solid rgba(255,255,255,0.34)",
+                          boxShadow:
+                            "0 10px 24px rgba(0,0,0,0.22), inset 0 1px 1px rgba(255,255,255,0.38), inset 0 -1px 1px rgba(255,255,255,0.1)",
+                        }}
+                        transition={{
+                          type: "spring",
+                          stiffness: 460,
+                          damping: 34,
+                          mass: 0.8,
+                        }}
+                      />
+                    )}
+
+                    <motion.span
+                      className="relative z-10 flex items-center justify-center"
+                      animate={{
+                        y: isActive ? -1 : 0,
+                        scale: isActive ? 1.07 : 1,
+                      }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 420,
+                        damping: 28,
+                      }}
+                    >
+                      <Icon className="h-5 w-5" />
+                    </motion.span>
+
+                    <motion.span
+                      className="relative z-10 whitespace-nowrap text-[10px] font-semibold leading-none"
+                      animate={{
+                        opacity: isActive ? 1 : 0.64,
+                        y: isActive ? 0 : 1,
+                      }}
+                      transition={{ duration: 0.16 }}
+                    >
+                      {item.label}
+                    </motion.span>
+                  </Link>
+                );
+              })}
+            </div>
+          </motion.nav>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

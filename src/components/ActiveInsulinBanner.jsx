@@ -28,6 +28,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import MealBalanceTooltip from "./MealBalanceTooltip";
 import DoseTimeline from "./DoseTimeline";
 import ComfortZoneCard from "./ComfortZoneCard";
+import CurrentGlucoseCard from "./graph/CurrentGlucoseCard";
 import { getSupportiveGlucoseMessage } from "@/lib/supportiveMessages";
 
 const SAMPLE_STEP_MS = 5 * 60 * 1000;
@@ -790,15 +791,15 @@ function SupportiveGlucoseMessage({ insight }) {
   return (
     <p
       aria-live="polite"
-      className="text-legible-strong mx-auto mt-6 max-w-[85vw] text-center text-[15px] font-medium italic leading-relaxed"
-      style={{ color: "rgba(255,255,255,0.95)" }}
+      className="mx-auto mt-3 mb-1 max-w-[90vw] text-center text-[13px] font-medium italic leading-relaxed"
+      style={{ color: "rgba(255,255,255,0.8)" }}
     >
       "{insight.message}"
     </p>
   );
 }
 
-export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucoseReadings = [], carbEntries = [] }) {
+export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucoseReadings = [], carbEntries = [], graphSlot = null, onEditGlucose = null }) {
   const [openTooltip, setOpenTooltip] = useState(null);
   const [insulinSettings, setInsulinSettings] = useState(readInsulinSettings);
   const [targetRange, setTargetRange] = useState(readTargetRange);
@@ -1060,77 +1061,31 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
       />
 
       <div className="relative -mx-4 px-4 pb-6 pt-2">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 -top-2 mx-auto h-[260px] max-w-[420px] rounded-full"
-          style={{ background: "radial-gradient(ellipse at center, rgba(0,0,0,0.28) 0%, transparent 70%)" }}
-        />
-        <div className="relative z-10 mb-6 flex flex-col items-center pt-2 text-center">
-          <span className="text-legible mb-5 text-[10px] font-bold uppercase tracking-[0.25em] text-white">
-            {supportiveGlucoseInsight?.intent || "Your Journey"}
-          </span>
-          <div className="flex items-end gap-3">
-            <span className="text-legible-strong text-[72px] font-black leading-none text-white sm:text-[88px]">
-              {glucoseValue ?? "--"}
-            </span>
-            {latestGlucose && <TrendIcon className="text-legible mb-3 h-8 w-8" style={{ color: glucoseColor }} />}
-          </div>
-          <span className="text-legible mb-1 text-sm font-medium text-white/45">mg/dL</span>
-          {latestGlucose?.recorded_at && (
-            <span className="text-legible mb-4 text-xs text-white/45">
-              {formatRelativeAge(new Date(latestGlucose.recorded_at).getTime())}
-            </span>
-          )}
-          <div
-            className="relative flex items-center gap-2 overflow-hidden rounded-full border px-4 py-2 backdrop-blur-sm"
-            style={{
-              backgroundColor: `${glucoseColor}18`,
-              borderColor: `${glucoseColor}40`,
-              boxShadow: "0 10px 28px rgba(0,0,0,0.16), inset 0 1px 1px rgba(255,255,255,0.22), inset 0 -1px 1px rgba(255,255,255,0.06)",
-            }}
-          >
-            <span className="relative z-10 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: glucoseColor }} />
-            <span className="relative z-10 text-sm font-semibold" style={{ color: glucoseColor }}>{trend.label}</span>
-          </div>
-          <SupportiveGlucoseMessage insight={supportiveGlucoseInsight} />
+        <div className="relative z-10 grid grid-cols-2 gap-3">
+          <ComfortZoneCard percentage={comfortZonePercentage} />
+          <CurrentGlucoseCard
+            latestGlucose={latestGlucose}
+            glucoseValue={glucoseValue}
+            glucoseColor={glucoseColor}
+            trend={trend}
+            rangeCardLabel={rangeCardLabel}
+            readingAgeLabel={
+              latestGlucose?.recorded_at
+                ? formatRelativeAge(new Date(latestGlucose.recorded_at).getTime())
+                : null
+            }
+            onEdit={onEditGlucose}
+          />
         </div>
 
-        {latestGlucose && (
-          <div
-            className="dashboard-surface relative mb-6 flex items-center gap-3 overflow-hidden rounded-2xl border px-4 py-3 backdrop-blur-sm"
-            style={{
-              background: "linear-gradient(145deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0))",
-              borderColor: "rgba(255,255,255,0.16)",
-              boxShadow: "0 12px 40px rgba(0,0,0,0.10), 0 4px 12px rgba(0,0,0,0.06), inset 0 1px 1px rgba(255,255,255,0.22), inset 0 -1px 1px rgba(255,255,255,0.05)",
-            }}
-          >
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute -inset-6 opacity-50"
-              style={{
-                background: "radial-gradient(circle at 25% 0%, rgba(255,255,255,0.18), transparent 34%), radial-gradient(circle at 92% 118%, rgba(45,212,191,0.08), transparent 42%)",
-              }}
-            />
-            <div className="relative z-10 flex h-5 items-end gap-0.5">
-              {[3, 4, 3, 5, 4, 3, 4, 5, 3].map((height, index) => (
-                <span
-                  key={index}
-                  className="w-0.5 rounded-full"
-                  style={{ height: height * 3, backgroundColor: rangeSparkColor }}
-                />
-              ))}
-            </div>
-            <div className="relative z-10 flex-1">
-              <p className="text-sm font-semibold text-white/80">{rangeCardLabel}</p>
-              <p className="text-xs text-white/35">Target: {targetLow}-{targetHigh} mg/dL</p>
-            </div>
-          </div>
-        )}
+        <SupportiveGlucoseMessage insight={supportiveGlucoseInsight} />
 
-        <p className="text-legible mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-white">Your Rhythm</p>
-        <div className="grid grid-cols-2 gap-3">
-          <ActiveInsulinDetailCard totalUnits={activeUnits} breakdown={activeInsulinBreakdown} />
-          <div className="col-span-2">
+        <p className="text-legible mb-2 mt-5 text-[10px] font-bold uppercase tracking-[0.18em] text-white">Glucose Journey</p>
+        {graphSlot}
+
+        <p className="text-legible mb-3 mt-5 text-[10px] font-bold uppercase tracking-[0.18em] text-white">Your Rhythm</p>
+        <div className="grid grid-cols-1 gap-3">
+          <div>
             <MetricCard
               label="Meal Balance"
               value={mealInsight.value}
@@ -1156,14 +1111,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
               ) : undefined}
             />
           </div>
-          <MetricCard
-            label="Daily Average"
-            value={dailyAverage ? `${dailyAverage}` : "--"}
-            sub={dailyAverage ? "mg/dL" : "No data today"}
-            status={glucoseStatus(dailyAverage)}
-            color={!dailyAverage ? "#5ba88a" : dailyAverage < targetLow ? "#6b92c4" : dailyAverage > targetHigh ? "#d4a056" : "#5ba88a"}
-          />
-          <ComfortZoneCard percentage={comfortZonePercentage} />
+          <ActiveInsulinDetailCard totalUnits={activeUnits} breakdown={activeInsulinBreakdown} />
         </div>
       </div>
     </>
