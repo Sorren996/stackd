@@ -1,7 +1,5 @@
 import { useEffect, useRef } from "react";
 
-// Full-brightness amber->green gradient with parallax. Legibility is handled
-// by dark frosted-glass content cards + dark direct text, not by darkening the background.
 export default function ParallaxBackground() {
   const ref = useRef(null);
 
@@ -35,9 +33,8 @@ export default function ParallaxBackground() {
     <div
       ref={ref}
       aria-hidden="true"
-      className="pointer-events-none fixed inset-0"
+      className="pointer-events-none fixed inset-0 -z-10"
       style={{
-        zIndex: -2,
         background: "linear-gradient(to bottom, #FFAD39 0%, #68FF90 100%)",
         backgroundSize: "100% 300%",
         backgroundPosition: "50% 0%",

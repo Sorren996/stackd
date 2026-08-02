@@ -18,20 +18,20 @@ export default function DocumentModal({ docKey, onClose }) {
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         className="fixed inset-0 z-[300] flex flex-col"
-        style={{ background: "rgba(255,255,255,0.45)", backdropFilter: "blur(20px)" }}
+        style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)" }}
       >
         <div
-          className="flex items-center justify-between border-b border-white/45 px-5 py-4 pt-[max(env(safe-area-inset-top),1rem)]"
-          style={{ background: "rgba(255,255,255,0.3)" }}
+          className="flex items-center justify-between border-b border-white/10 px-5 py-4 pt-[max(env(safe-area-inset-top),1rem)]"
+          style={{ background: "linear-gradient(160deg, hsl(162,12%,9%), hsl(162,10%,6%))" }}
         >
           <div>
-            <h2 className="text-base font-bold text-emerald-950">{doc.title}</h2>
-            <p className="text-[10px] uppercase tracking-wider text-emerald-800/70">Version {doc.version}</p>
+            <h2 className="text-base font-bold text-white">{doc.title}</h2>
+            <p className="text-[10px] uppercase tracking-wider text-white/35">Version {doc.version}</p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-white/45 bg-white/40 text-emerald-900/70 transition hover:text-emerald-950"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/60 transition hover:text-white"
           >
             <X className="h-4 w-4" />
           </button>
@@ -43,14 +43,14 @@ export default function DocumentModal({ docKey, onClose }) {
         >
           <div className="mx-auto max-w-md space-y-4">
             {paragraphs.map((para, i) => (
-              <p key={i} className="text-sm leading-relaxed text-emerald-900 whitespace-pre-line">
+              <p key={i} className="text-sm leading-relaxed text-white/65 whitespace-pre-line">
                 {para}
               </p>
             ))}
           </div>
         </div>
 
-        <div className="border-t border-white/45 px-5 py-3 pb-[max(env(safe-area-inset-bottom),0.75rem)]" style={{ background: "rgba(255,255,255,0.3)" }}>
+        <div className="border-t border-white/10 px-5 py-3 pb-[max(env(safe-area-inset-bottom),0.75rem)]" style={{ background: "linear-gradient(160deg, hsl(162,12%,9%), hsl(162,10%,6%))" }}>
           <button
             type="button"
             onClick={onClose}

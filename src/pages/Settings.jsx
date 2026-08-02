@@ -50,7 +50,7 @@ export default function Settings() {
 
   return (
     <div className="mx-auto max-w-md space-y-6 pb-4 pt-2">
-      <h1 className="text-soft-shadow px-1 text-lg font-bold text-emerald-950">Settings</h1>
+      <h1 className="text-lg font-bold text-white px-1">Settings</h1>
 
       <div className="space-y-3">
         {navItems.map((item) => {
@@ -59,16 +59,16 @@ export default function Settings() {
             <Link
               key={item.to}
               to={item.to}
-              className="flex items-center gap-4 rounded-3xl border border-white/45 bg-white/25 p-4 backdrop-blur-md transition hover:bg-white/35 active:scale-[0.99]"
+              className="flex items-center gap-4 rounded-3xl border border-white/10 bg-white/[0.02] p-4 backdrop-blur-sm transition hover:bg-white/[0.04] active:scale-[0.99]"
             >
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-teal-500/30 bg-teal-500/15">
-                <Icon className="h-5 w-5 text-teal-600" />
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-teal-500/20 bg-teal-500/10">
+                <Icon className="h-5 w-5 text-teal-400" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-emerald-950">{item.title}</p>
-                <p className="mt-0.5 text-xs leading-relaxed text-emerald-800/70">{item.description}</p>
+                <p className="text-sm font-semibold text-white">{item.title}</p>
+                <p className="text-xs text-white/40 mt-0.5 leading-relaxed">{item.description}</p>
               </div>
-              <ChevronRight className="h-5 w-5 shrink-0 text-emerald-900/50" />
+              <ChevronRight className="h-5 w-5 text-white/30 shrink-0" />
             </Link>
           );
         })}
@@ -78,7 +78,7 @@ export default function Settings() {
         type="button"
         onClick={handleLogout}
         disabled={isLoggingOut}
-        className="w-full flex items-center justify-center gap-2 rounded-2xl border border-white/45 py-4 text-emerald-900/70 transition-all text-sm font-medium hover:bg-white/35 hover:text-emerald-950 disabled:opacity-40"
+        className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl border border-white/5 text-white/50 hover:bg-white/5 hover:text-white/80 transition-all text-sm font-medium disabled:opacity-40"
       >
         {isLoggingOut ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogOut className="w-4 h-4" />}
         {isLoggingOut ? "Logging out..." : "Log Out"}

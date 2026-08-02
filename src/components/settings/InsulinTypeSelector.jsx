@@ -12,17 +12,17 @@ export default function InsulinTypeSelector({ selectedTypes, onToggle }) {
             onClick={() => onToggle(name)}
             className={`flex items-center justify-between rounded-2xl border px-3 py-2 text-left transition ${
               selected
-                ? "border-teal-500/50 bg-teal-500/15 text-emerald-950"
-                : "border-white/45 bg-white/25 text-emerald-900/70"
+                ? "border-teal-500/40 bg-teal-500/10 text-white"
+                : "border-white/10 bg-white/[0.03] text-white/45"
             }`}
           >
             <span>
               <span className="block text-sm font-semibold">{name}</span>
-              <span className="text-[10px] uppercase tracking-wider text-emerald-800/70">{profile.category}</span>
+              <span className="text-[10px] uppercase tracking-wider opacity-50">{profile.category}</span>
             </span>
             <span
               className="h-3 w-3 rounded-full"
-              style={{ backgroundColor: selected ? "#0d9488" : "rgba(8,14,11,0.2)" }}
+              style={{ backgroundColor: selected ? "#2dd4bf" : "rgba(255,255,255,0.12)" }}
             />
           </button>
         );

@@ -67,21 +67,21 @@ export default function ConsentManagement() {
       <DocumentModal docKey={activeDoc} onClose={() => setActiveDoc(null)} />
 
       <div className="space-y-3">
-        <h3 className="px-1 text-sm font-bold uppercase tracking-wider text-emerald-950">Legal & Consent</h3>
+        <h3 className="text-sm font-bold text-white uppercase tracking-wider px-1">Legal & Consent</h3>
 
         {/* Status card */}
-        <div className="space-y-4 rounded-3xl border border-white/45 bg-white/25 p-4 backdrop-blur-md">
+        <div className="backdrop-blur-sm bg-white/[0.02] border border-white/10 rounded-3xl p-4 space-y-4">
           <div className="flex items-center gap-3">
             {isComplete && bundleCurrent ? (
-              <CheckCircle2 className="w-5 h-5 shrink-0 text-[#0d9488]" />
+              <CheckCircle2 className="w-5 h-5 shrink-0 text-[#5ba88a]" />
             ) : (
-              <XCircle className="w-5 h-5 shrink-0 text-amber-600" />
+              <XCircle className="w-5 h-5 shrink-0 text-amber-400" />
             )}
             <div>
-              <p className="text-sm font-semibold text-emerald-950">
+              <p className="text-sm font-semibold text-white/90">
                 {isComplete && bundleCurrent ? "All acknowledgments current" : "Acknowledgments required"}
               </p>
-              <p className="text-xs text-emerald-800/70">
+              <p className="text-xs text-white/40">
                 {isComplete && bundleCurrent
                   ? "Your acknowledgments are up to date."
                   : "Please complete the required acknowledgments."}
@@ -90,20 +90,20 @@ export default function ConsentManagement() {
           </div>
 
           {latestAck?.accepted_at && (
-            <div className="space-y-1 border-t border-white/30 pt-3">
+            <div className="space-y-1 border-t border-white/8 pt-3">
               <div className="flex justify-between">
-                <span className="text-xs text-emerald-800/60">Last accepted</span>
-                <span className="text-xs font-medium text-emerald-900">
+                <span className="text-xs text-white/35">Last accepted</span>
+                <span className="text-xs font-medium text-white/60">
                   {format(new Date(latestAck.accepted_at), "MMM d, yyyy 'at' h:mm a")}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-xs text-emerald-800/60">Bundle version</span>
-                <span className="text-xs font-medium text-emerald-900">{latestAck.acknowledgment_bundle_version}</span>
+                <span className="text-xs text-white/35">Bundle version</span>
+                <span className="text-xs font-medium text-white/60">{latestAck.acknowledgment_bundle_version}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-xs text-emerald-800/60">Health data consent</span>
-                <span className="text-xs font-medium" style={{ color: user?.health_data_consent_active ? "#0d9488" : "#b45309" }}>
+                <span className="text-xs text-white/35">Health data consent</span>
+                <span className="text-xs font-medium" style={{ color: user?.health_data_consent_active ? "#5ba88a" : "#d4a056" }}>
                   {user?.health_data_consent_active ? "Active" : "Withdrawn"}
                 </span>
               </div>
@@ -112,46 +112,46 @@ export default function ConsentManagement() {
         </div>
 
         {/* Document links */}
-        <div className="rounded-3xl border border-white/45 bg-white/25 p-2 backdrop-blur-md">
+        <div className="backdrop-blur-sm bg-white/[0.02] border border-white/10 rounded-3xl p-2">
           {Object.entries(LEGAL_DOCUMENTS).map(([key, doc]) => (
             <button
               key={key}
               type="button"
               onClick={() => setActiveDoc(key)}
-              className="flex w-full items-center justify-between rounded-2xl px-3 py-3 transition hover:bg-white/40"
+              className="flex w-full items-center justify-between rounded-2xl px-3 py-3 transition hover:bg-white/5"
             >
               <div className="flex items-center gap-3">
-                <FileText className="w-4 h-4 text-emerald-800/70" />
+                <FileText className="w-4 h-4 text-white/40" />
                 <div className="text-left">
-                  <p className="text-sm font-medium text-emerald-950">{doc.title}</p>
-                  <p className="text-[10px] text-emerald-800/60">Version {doc.version}</p>
+                  <p className="text-sm font-medium text-white/80">{doc.title}</p>
+                  <p className="text-[10px] text-white/30">Version {doc.version}</p>
                 </div>
               </div>
-              <ChevronRight className="w-4 h-4 text-emerald-900/50" />
+              <ChevronRight className="w-4 h-4 text-white/30" />
             </button>
           ))}
         </div>
 
         {/* Acknowledgment history */}
         {ackRecords.length > 0 && (
-          <div className="space-y-3 rounded-3xl border border-white/45 bg-white/25 p-4 backdrop-blur-md">
-            <p className="text-xs font-bold uppercase tracking-wider text-emerald-900/70">Acknowledgment History</p>
+          <div className="backdrop-blur-sm bg-white/[0.02] border border-white/10 rounded-3xl p-4 space-y-3">
+            <p className="text-xs font-bold text-white/50 uppercase tracking-wider">Acknowledgment History</p>
             <div className="space-y-2">
               {ackRecords.slice(0, 5).map((record) => (
-                <div key={record.id} className="flex items-center justify-between rounded-xl bg-white/30 px-3 py-2">
+                <div key={record.id} className="flex items-center justify-between rounded-xl bg-white/[0.02] px-3 py-2">
                   <div>
-                    <p className="text-xs font-medium text-emerald-900">
+                    <p className="text-xs font-medium text-white/70">
                       {record.consent_source.replace(/_/g, " ")}
                     </p>
-                    <p className="text-[10px] text-emerald-800/60">
+                    <p className="text-[10px] text-white/30">
                       {format(new Date(record.accepted_at || record.created_date), "MMM d, yyyy")}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
                     {record.withdrawn_at && (
-                      <span className="text-[10px] font-medium text-amber-700">withdrawn</span>
+                      <span className="text-[10px] font-medium text-amber-400/60">withdrawn</span>
                     )}
-                    <span className="text-[10px] text-emerald-800/60">v{record.acknowledgment_bundle_version}</span>
+                    <span className="text-[10px] text-white/30">v{record.acknowledgment_bundle_version}</span>
                   </div>
                 </div>
               ))}
@@ -164,16 +164,16 @@ export default function ConsentManagement() {
           <button
             type="button"
             onClick={() => setShowWithdrawModal(true)}
-            className="w-full flex items-center justify-between rounded-2xl border border-amber-500/40 bg-amber-500/10 px-4 py-3.5 transition hover:bg-amber-500/20"
+            className="w-full flex items-center justify-between rounded-2xl border border-amber-500/15 bg-amber-500/[0.03] px-4 py-3.5 transition hover:bg-amber-500/[0.06]"
           >
             <div className="flex items-center gap-3">
-              <Shield className="w-4 h-4 text-amber-600" />
+              <Shield className="w-4 h-4 text-amber-400/70" />
               <div className="text-left">
-                <p className="text-sm font-medium text-emerald-900">Withdraw Health Data Consent</p>
-                <p className="text-[10px] text-emerald-800/60">Revoke consent and review acknowledgments again</p>
+                <p className="text-sm font-medium text-white/70">Withdraw Health Data Consent</p>
+                <p className="text-[10px] text-white/30">Revoke consent and review acknowledgments again</p>
               </div>
             </div>
-            <ChevronRight className="w-4 h-4 text-emerald-900/50" />
+            <ChevronRight className="w-4 h-4 text-white/30" />
           </button>
         )}
       </div>
@@ -186,8 +186,7 @@ export default function ConsentManagement() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[250] flex items-center justify-center p-4"
-              style={{ background: "rgba(255,255,255,0.45)", backdropFilter: "blur(20px)" }}
+              className="fixed inset-0 z-[250] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
               onClick={() => !isWithdrawing && setShowWithdrawModal(false)}
             >
               <motion.div
@@ -195,64 +194,64 @@ export default function ConsentManagement() {
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.96, opacity: 0 }}
                 transition={{ type: "spring", stiffness: 400, damping: 32 }}
-                className="w-full max-w-md rounded-3xl border border-white/50 p-5"
-                style={{ background: "rgba(255,255,255,0.4)", backdropFilter: "blur(20px)" }}
+                className="w-full max-w-md rounded-3xl border border-white/10 p-5"
+                style={{ background: "linear-gradient(165deg, rgba(18,28,23,0.97), rgba(10,16,13,0.98))", backdropFilter: "blur(20px)" }}
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="mb-4 flex items-start gap-3">
-                  <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5 text-amber-600" />
-                  <div>
-                    <h3 className="text-base font-bold text-emerald-950">Withdraw Health Data Consent?</h3>
-                    <p className="mt-1 text-xs text-emerald-800/70">
-                      Withdrawing consent will affect your access to Stackd's features.
-                    </p>
+                <AlertTriangle className="w-5 h-5 shrink-0 text-amber-400 mt-0.5" />
+                <div>
+                  <h3 className="text-base font-bold text-white">Withdraw Health Data Consent?</h3>
+                  <p className="mt-1 text-xs text-white/50">
+                    Withdrawing consent will affect your access to Stackd's features.
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-2.5 mb-5">
+                {[
+                  "All health-related features will be locked until you re-complete the acknowledgment flow.",
+                  "Your existing health data will remain stored unless you explicitly delete it.",
+                  "You can request full data deletion from Settings at any time.",
+                  "Legally required acknowledgment records may be retained for compliance.",
+                  "Withdrawing consent does not automatically cancel any subscription.",
+                ].map((item, i) => (
+                  <div key={i} className="flex items-start gap-2">
+                    <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-white/30" />
+                    <p className="text-xs leading-relaxed text-white/55">{item}</p>
                   </div>
-                </div>
-                <div className="space-y-2.5 mb-5">
-                  {[
-                    "All health-related features will be locked until you re-complete the acknowledgment flow.",
-                    "Your existing health data will remain stored unless you explicitly delete it.",
-                    "You can request full data deletion from Settings at any time.",
-                    "Legally required acknowledgment records may be retained for compliance.",
-                    "Withdrawing consent does not automatically cancel any subscription.",
-                  ].map((item, i) => (
-                    <div key={i} className="flex items-start gap-2">
-                      <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-emerald-900/40" />
-                      <p className="text-xs leading-relaxed text-emerald-900">{item}</p>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowWithdrawModal(false)}
-                    disabled={isWithdrawing}
-                    className="flex-1 rounded-2xl border border-white/45 py-3 text-sm font-medium text-emerald-900/70 transition hover:bg-white/35 disabled:opacity-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleWithdraw}
-                    disabled={isWithdrawing}
-                    className="flex-1 rounded-2xl py-3 text-sm font-semibold text-white transition active:scale-[0.98] disabled:opacity-50"
-                    style={{ background: "linear-gradient(145deg, rgba(212,160,86,0.9), rgba(201,112,96,0.85))" }}
-                  >
-                    {isWithdrawing ? (
-                      <span className="flex items-center justify-center gap-2">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Withdrawing...
-                      </span>
-                    ) : (
-                      "Withdraw Consent"
-                    )}
-                  </button>
-                </div>
-              </motion.div>
+                ))}
+              </div>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowWithdrawModal(false)}
+                  disabled={isWithdrawing}
+                  className="flex-1 rounded-2xl border border-white/10 py-3 text-sm font-medium text-white/60 transition hover:bg-white/5 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleWithdraw}
+                  disabled={isWithdrawing}
+                  className="flex-1 rounded-2xl py-3 text-sm font-semibold text-white transition active:scale-[0.98] disabled:opacity-50"
+                  style={{ background: "linear-gradient(145deg, rgba(212,160,86,0.85), rgba(201,112,96,0.75))" }}
+                >
+                  {isWithdrawing ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Withdrawing...
+                    </span>
+                  ) : (
+                    "Withdraw Consent"
+                  )}
+                </button>
+              </div>
             </motion.div>
-          </AnimatePresence>,
-          document.body
-        )}
-    </>
-  );
-}
+            </motion.div>
+            </AnimatePresence>,
+            document.body
+            )}
+            </>
+            );
+            }

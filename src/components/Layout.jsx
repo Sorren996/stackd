@@ -80,13 +80,19 @@ export default function Layout() {
   };
 
   return (
-    <div className="isolate relative min-h-screen overflow-x-hidden text-white">
+    <div className="isolate relative min-h-screen overflow-x-hidden bg-black text-white">
+      {/* Solid static background — deep near-black forest charcoal */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-0 -z-10"
+        style={{ background: "hsl(160, 14%, 7%)" }}
+      />
 
       <header className="fixed inset-x-0 top-0 z-50 bg-transparent">
         <div
           className="mx-auto grid h-14 max-w-6xl grid-cols-[1fr_auto_1fr] items-center px-4"
           style={{
-            background: "linear-gradient(to bottom, rgba(255,255,255,0.5), rgba(255,255,255,0.15), transparent)",
+            background: "linear-gradient(to bottom, rgba(0,0,0,0.7), rgba(0,0,0,0.25), transparent)",
           }}
         >
           <div />
@@ -111,8 +117,8 @@ export default function Layout() {
               aria-label="Open settings"
               className="flex h-9 w-9 items-center justify-center rounded-full backdrop-blur-sm border transition-all"
               style={{
-                background: isSettingsOpen ? "rgba(20,184,166,0.15)" : "rgba(255,255,255,0.3)",
-                borderColor: isSettingsOpen ? "rgba(20,184,166,0.45)" : "rgba(255,255,255,0.45)",
+                background: isSettingsOpen ? "rgba(20,184,166,0.1)" : "rgba(255,255,255,0.05)",
+                borderColor: isSettingsOpen ? "rgba(20,184,166,0.35)" : "rgba(255,255,255,0.05)",
                 boxShadow: isSettingsOpen ? "0 0 18px rgba(20,184,166,0.35)" : "none",
               }}
             >
@@ -121,7 +127,7 @@ export default function Layout() {
                 transition={{ type: "spring", stiffness: 260, damping: 18 }}
                 className="flex"
               >
-                <Settings className={`h-4 w-4 ${isSettingsOpen ? "text-teal-600" : "text-emerald-900/70"}`} />
+                <Settings className={`h-4 w-4 ${isSettingsOpen ? "text-teal-400" : "text-white/55"}`} />
               </motion.span>
             </button>
           </div>
@@ -159,8 +165,8 @@ export default function Layout() {
             transition={{ type: "spring", stiffness: 220, damping: 28 }}
             className="fixed inset-0 z-40 overflow-y-auto pb-28 pt-16"
             style={{
-              background: "rgba(255,255,255,0.4)",
-              backdropFilter: "blur(20px)",
+              background: "rgba(8,14,11,0.97)",
+              backdropFilter: "blur(16px)",
             }}
           >
             <div className="px-4">
@@ -182,11 +188,11 @@ export default function Layout() {
             <div
               className="relative mx-4 mb-4 grid w-[min(calc(100vw-2rem),28rem)] grid-cols-4 gap-1 overflow-hidden rounded-[2rem] border px-2 py-1.5 backdrop-blur-sm"
               style={{
-                background: "rgba(255,255,255,0.22)",
-                borderColor: "rgba(255,255,255,0.45)",
+                background:
+                  "linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.06))",
+                borderColor: "rgba(255,255,255,0.24)",
                 boxShadow:
-                  "0 18px 50px rgba(0,0,0,0.18), inset 0 1px 1px rgba(255,255,255,0.6), inset 0 -1px 1px rgba(255,255,255,0.2)",
-                backdropFilter: "blur(16px) saturate(140%)",
+                  "0 18px 50px rgba(0,0,0,0.38), inset 0 1px 1px rgba(255,255,255,0.32), inset 0 -1px 1px rgba(255,255,255,0.08)",
               }}
             >
               <div
@@ -207,7 +213,7 @@ export default function Layout() {
                     key={item.path}
                     to={item.path}
                     className={`relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-[1.55rem] px-2 py-2 text-center transition-colors ${
-                      isActive ? "text-emerald-950" : "text-emerald-800 hover:text-emerald-950"
+                      isActive ? "text-white" : "text-white/45 hover:text-white/75"
                     }`}
                   >
                     {isActive && (
@@ -216,10 +222,10 @@ export default function Layout() {
                         className="absolute inset-0 rounded-[1.55rem]"
                         style={{
                           background:
-                            "linear-gradient(145deg, rgba(255,255,255,0.6), rgba(255,255,255,0.32))",
-                          border: "1px solid rgba(255,255,255,0.7)",
+                            "linear-gradient(145deg, rgba(255,255,255,0.28), rgba(255,255,255,0.09))",
+                          border: "1px solid rgba(255,255,255,0.34)",
                           boxShadow:
-                            "0 10px 24px rgba(0,0,0,0.16), inset 0 1px 1px rgba(255,255,255,0.7), inset 0 -1px 1px rgba(255,255,255,0.25)",
+                            "0 10px 24px rgba(0,0,0,0.22), inset 0 1px 1px rgba(255,255,255,0.38), inset 0 -1px 1px rgba(255,255,255,0.1)",
                         }}
                         transition={{
                           type: "spring",

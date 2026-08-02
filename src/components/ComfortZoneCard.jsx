@@ -31,10 +31,9 @@ export default function ComfortZoneCard({ percentage }) {
       whileTap={{ scale: 0.97 }}
       className="metric-card relative flex min-h-[112px] flex-col justify-between overflow-hidden rounded-2xl border p-4 backdrop-blur-sm"
       style={{
-        background: "rgba(255,255,255,0.22)",
-        borderColor: "rgba(255,255,255,0.45)",
-        boxShadow: "0 14px 40px rgba(0,0,0,0.16), 0 4px 12px rgba(0,0,0,0.08), inset 0 1px 1px rgba(255,255,255,0.6), inset 0 -1px 1px rgba(255,255,255,0.2)",
-        backdropFilter: "blur(16px) saturate(140%)",
+        background: "linear-gradient(145deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0))",
+        borderColor: "rgba(255,255,255,0.16)",
+        boxShadow: "0 12px 40px rgba(0,0,0,0.10), 0 4px 12px rgba(0,0,0,0.06), inset 0 1px 1px rgba(255,255,255,0.22), inset 0 -1px 1px rgba(255,255,255,0.05)",
       }}
     >
       <div
@@ -49,15 +48,15 @@ export default function ComfortZoneCard({ percentage }) {
       </div>
 
       <div className="relative z-10 mb-1 flex items-start justify-between gap-2">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-800">Daily Balance</span>
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-white/35">Daily Balance</span>
       </div>
 
       <div className="relative z-10 mt-1">
-        <span className="text-2xl font-bold leading-none text-emerald-950">{displayValue}</span>
-        <p className="mt-1 text-[11px] text-emerald-800">Time in Comfort Zone</p>
+        <span className="text-2xl font-bold leading-none text-white">{displayValue}</span>
+        <p className="mt-1 text-[11px] text-white/35">Time in Comfort Zone</p>
       </div>
 
-      <span className="relative z-10 mt-2 text-xs font-semibold" style={{ color: status.color, textShadow: "0 2px 10px rgba(255,255,255,0.55), 0 1px 3px rgba(0,0,0,0.14)" }}>
+      <span className="relative z-10 mt-2 text-xs font-semibold" style={{ color: status.color }}>
         {status.label}
       </span>
     </motion.div>

@@ -66,52 +66,45 @@ export default function PrivacyConsent() {
 
       {/* Privacy Notice */}
       <div className="space-y-3">
-        <h3 className="px-1 text-sm font-bold uppercase tracking-wider text-emerald-950">Privacy</h3>
-        <div className="space-y-3 rounded-3xl border border-white/45 bg-white/25 p-4 backdrop-blur-md">
+        <h3 className="text-sm font-bold text-white uppercase tracking-wider px-1">Privacy</h3>
+        <div className="backdrop-blur-sm bg-white/[0.02] border border-white/10 rounded-3xl p-4 space-y-3">
           <div className="flex items-start gap-3">
-            <Shield className="w-4 h-4 mt-0.5 shrink-0 text-teal-600" />
+            <Shield className="w-4 h-4 text-teal-400 mt-0.5 shrink-0" />
             <div className="space-y-1.5">
-              <p className="text-sm font-semibold text-emerald-950">Your data is private & secure</p>
-              <p className="text-xs leading-relaxed text-emerald-800/70">
+              <p className="text-sm font-semibold text-white/90">Your data is private & secure</p>
+              <p className="text-xs text-white/40 leading-relaxed">
                 All health data logged in Stackd — including glucose readings, insulin doses, and carbohydrate entries — is stored securely and is only accessible by you. We do not share, sell, or transmit your personal health information to any third parties.
               </p>
-              <p className="text-xs leading-relaxed text-emerald-800/70">
+              <p className="text-xs text-white/40 leading-relaxed">
                 Data is encrypted in transit and at rest. You can export or delete your data at any time from this settings page.
               </p>
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={handleExportCSV}
-            disabled={isExporting}
-            className="w-full flex items-center justify-center gap-2 rounded-2xl border border-white/45 bg-white/35 py-3 text-sm font-medium text-emerald-900/80 transition hover:bg-white/45 disabled:opacity-50"
-          >
-            {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-            {isExporting ? "Exporting..." : "Export 30 days of data (CSV)"}
-          </button>
+       
+         
         </div>
       </div>
 
       {/* Delete Account */}
       <div className="space-y-3">
-        <h3 className="px-1 text-sm font-bold uppercase tracking-wider text-emerald-950">Danger Zone</h3>
+        <h3 className="text-sm font-bold text-white uppercase tracking-wider px-1">Danger Zone</h3>
         {!showDeleteConfirm ? (
           <button
             type="button"
             onClick={() => setShowDeleteConfirm(true)}
-            className="w-full flex items-center justify-center gap-2 rounded-2xl border border-red-500/40 py-4 text-red-700 transition-all hover:bg-red-500/10 hover:text-red-800 text-sm font-medium"
+            className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl border border-red-500/10 text-red-500/50 hover:bg-red-500/5 hover:text-red-400 transition-all text-sm font-medium"
           >
             <Trash2 className="w-4 h-4" />
             Delete Account
           </button>
         ) : (
-          <div className="space-y-4 rounded-3xl border border-red-500/30 bg-red-500/10 p-5 backdrop-blur-md">
+          <div className="bg-red-950/30 border border-red-500/20 rounded-3xl p-5 space-y-4">
             <div className="flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5 text-red-600" />
+              <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-bold text-red-700">This action cannot be undone</p>
-                <p className="mt-1 text-xs leading-relaxed text-red-700/80">
+                <p className="text-sm font-bold text-red-300">This action cannot be undone</p>
+                <p className="text-xs text-red-400/70 mt-1 leading-relaxed">
                   All your data — glucose readings, insulin doses, carbohydrate logs, and account information — will be permanently and irreversibly deleted. There is no way to recover this data.
                 </p>
               </div>
@@ -120,7 +113,7 @@ export default function PrivacyConsent() {
               <button
                 type="button"
                 onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 rounded-2xl border border-white/45 py-3 text-emerald-900/70 transition-all hover:bg-white/35 text-sm font-medium"
+                className="flex-1 text-sm py-3 rounded-2xl border border-white/10 text-white/60 hover:bg-white/5 transition-all text-sm font-medium"
               >
                 Cancel
               </button>
@@ -128,7 +121,7 @@ export default function PrivacyConsent() {
                 type="button"
                 onClick={handleDeleteAccount}
                 disabled={isDeletingAccount}
-                className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-red-600 py-3 text-white transition-all hover:bg-red-700 font-semibold disabled:opacity-50"
+                className="flex-1 text-sm py-3 rounded-2xl bg-red-600/80 hover:bg-red-600 text-white transition-all font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {isDeletingAccount ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                 {isDeletingAccount ? "Deleting..." : "Yes, Delete Everything"}
