@@ -35,7 +35,7 @@ export default function ParallaxBackground() {
       aria-hidden="true"
       className="pointer-events-none fixed inset-0 -z-10"
       style={{
-        background: "linear-gradient(to bottom, #081018 0%, #102821 100%)",
+        background: "linear-gradient(to bottom, #337B66 0%, #112232 100%)",
         backgroundSize: "100% 300%",
         backgroundPosition: "50% 0%",
         backgroundRepeat: "no-repeat",
