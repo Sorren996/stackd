@@ -791,7 +791,7 @@ function SupportiveGlucoseMessage({ insight }) {
   return (
     <p
       aria-live="polite"
-      className="mx-auto mt-3 mb-1 max-w-[90vw] text-center text-[13px] font-medium italic leading-relaxed"
+      className="text-legible mx-auto mt-3 mb-1 max-w-[90vw] text-center text-[13px] font-medium italic leading-relaxed"
       style={{ color: "rgba(255,255,255,0.8)" }}
     >
       "{insight.message}"

@@ -159,8 +159,8 @@ export default function Layout() {
             transition={{ type: "spring", stiffness: 220, damping: 28 }}
             className="fixed inset-0 z-40 overflow-y-auto pb-28 pt-16"
             style={{
-              background: "rgba(8,14,11,0.97)",
-              backdropFilter: "blur(16px)",
+              background: "rgba(8,14,11,0.45)",
+              backdropFilter: "blur(18px)",
             }}
           >
             <div className="px-4">
