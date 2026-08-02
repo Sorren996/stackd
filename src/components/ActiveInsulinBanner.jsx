@@ -1061,7 +1061,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
       />
 
       <div className="relative -mx-4 px-4 pb-6 pt-2">
-        <div className="relative z-10 grid grid-cols-2 gap-3">
+        <div className="relative z-10 mt-14 grid grid-cols-2 gap-3">
           <ComfortZoneCard percentage={comfortZonePercentage} />
           <CurrentGlucoseCard
             latestGlucose={latestGlucose}

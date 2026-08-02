@@ -53,7 +53,7 @@ export default function CoachGateway() {
         onClick={() => navigate("/coach")}
         whileTap={{ scale: 0.9 }}
         aria-label={ariaLabel}
-        className="pointer-events-auto relative flex items-center justify-center rounded-full border backdrop-blur-sm transition my-10 mx-8 h-8 w-8"
+        className="pointer-events-auto relative flex items-center justify-center rounded-full border backdrop-blur-sm transition h-8 w-8"
         style={{
           background: hasUnread ?
           "linear-gradient(145deg, rgba(251,191,36,0.15), rgba(251,191,36,0.04))" :

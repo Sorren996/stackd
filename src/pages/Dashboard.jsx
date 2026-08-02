@@ -522,7 +522,7 @@ export default function Dashboard() {
     recentCarbs.length === 0;
 
   return (
-    <div className="dashboard-page w-full max-w-full min-w-0 space-y-0 overflow-visible">
+    <div className="dashboard-page relative w-full max-w-full min-w-0 space-y-0 overflow-visible">
       <EditLogSheet
         log={editingLog}
         onClose={() => setEditingLog(null)}
@@ -540,7 +540,7 @@ export default function Dashboard() {
         </div>
       ) : (
         <>
-          <div className="relative w-full max-w-full min-w-0 overflow-x-hidden">
+          <div className="relative w-full max-w-full min-w-0">
             <ActiveInsulinBanner
               doses={recentDoses}
               latestGlucose={latestGlucose}

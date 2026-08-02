@@ -1018,21 +1018,27 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             );
           })}
 
-          {filters.glucose && positionedGlucoseMarkers.map(({ reading, x, y }) => (
-            <button
-              key={`glucose_marker_${reading.id}`}
-              type="button"
-              onClick={(e) => { e.stopPropagation(); openMarker("glucose", reading, e.currentTarget.getBoundingClientRect()); }}
-              aria-label={`Glucose ${reading.value} mg/dL`}
-              className="pointer-events-auto absolute z-[15] flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full"
-              style={{ left: x, top: y }}
-            >
-              <span
-                className="block h-2.5 w-2.5 rounded-full border-2 border-white/80"
-                style={{ backgroundColor: "rgba(255,255,255,0.9)", boxShadow: "0 0 8px rgba(255,255,255,0.5)" }}
-              />
-            </button>
-          ))}
+          {filters.glucose && positionedGlucoseMarkers.map(({ reading, x, y }) => {
+            const dotOpacity = getHighRangeOpacity(reading.value);
+            return (
+              <button
+                key={`glucose_marker_${reading.id}`}
+                type="button"
+                onClick={(e) => { e.stopPropagation(); openMarker("glucose", reading, e.currentTarget.getBoundingClientRect()); }}
+                aria-label={`Glucose ${reading.value} mg/dL`}
+                className="pointer-events-auto absolute z-[15] flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full"
+                style={{ left: x, top: y }}
+              >
+                <span
+                  className="block h-[7px] w-[7px] rounded-full"
+                  style={{
+                    backgroundColor: `rgba(255,255,255,${0.82 * dotOpacity})`,
+                    boxShadow: `0 0 0 2px rgba(255,255,255,${0.14 * dotOpacity}), 0 0 5px rgba(255,255,255,${0.2 * dotOpacity})`,
+                  }}
+                />
+              </button>
+            );
+          })}
         </div>
       </div>
       </div>
