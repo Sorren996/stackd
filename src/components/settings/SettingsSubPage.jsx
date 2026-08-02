@@ -10,12 +10,12 @@ export default function SettingsSubPage({ title, children }) {
         <button
           type="button"
           onClick={() => navigate("/settings")}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/60 transition hover:text-white"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/45 bg-white/30 text-emerald-900/70 transition hover:text-emerald-950"
           aria-label="Back to Settings"
         >
           <ChevronLeft className="h-5 w-5" />
         </button>
-        <h1 className="text-lg font-bold text-white">{title}</h1>
+        <h1 className="text-soft-shadow text-lg font-bold text-emerald-950">{title}</h1>
       </div>
       {children}
     </div>

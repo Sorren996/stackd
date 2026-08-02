@@ -72,8 +72,8 @@ function SettingHelpButton({ id, openHelp, setOpenHelp }) {
       }}
       className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition ${
         openHelp === id
-          ? "border-teal-400/40 bg-teal-500/10 text-teal-300"
-          : "border-white/10 bg-white/5 text-white/35 hover:text-teal-300"
+          ? "border-teal-500/50 bg-teal-500/15 text-teal-700"
+          : "border-white/45 bg-white/40 text-emerald-800/70 hover:text-teal-700"
       }`}
       aria-label={`${help.title} help`}
     >
@@ -101,7 +101,8 @@ function SettingsHelpOverlay({ openHelp, onClose }) {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.16 }}
-          className="fixed inset-0 z-[999] bg-black/45"
+          className="fixed inset-0 z-[999]"
+          style={{ background: "rgba(255,255,255,0.45)", backdropFilter: "blur(16px)" }}
           onClick={onClose}
         >
           <motion.div
@@ -110,22 +111,23 @@ function SettingsHelpOverlay({ openHelp, onClose }) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 30, scale: 0.95 }}
             transition={{ type: "spring", stiffness: 460, damping: 32, mass: 0.85 }}
-            className="fixed bottom-24 left-4 right-4 mx-auto w-auto max-w-sm rounded-2xl border border-white/10 bg-[hsl(162,10%,10%)] p-4 text-left shadow-2xl sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-24 sm:w-full sm:-translate-x-1/2"
+            className="fixed bottom-24 left-4 right-4 mx-auto w-auto max-w-sm rounded-2xl border border-white/50 p-4 text-left shadow-2xl sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-24 sm:w-full sm:-translate-x-1/2"
+            style={{ background: "rgba(255,255,255,0.4)", backdropFilter: "blur(20px)" }}
             onClick={(event) => event.stopPropagation()}
           >
             <div className="mb-2 flex items-start justify-between gap-3">
-              <p className="text-sm font-semibold text-white">{help.title}</p>
+              <p className="text-sm font-semibold text-emerald-950">{help.title}</p>
               <button
                 type="button"
                 onClick={onClose}
-                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/5 text-white/35"
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/40 text-emerald-900/60"
                 aria-label="Close help"
               >
                 x
               </button>
             </div>
-            <p className="text-xs leading-relaxed text-white/55">{help.body}</p>
-            <p className="mt-2 text-[10px] leading-relaxed text-white/30">
+            <p className="text-xs leading-relaxed text-emerald-800">{help.body}</p>
+            <p className="mt-2 text-[10px] leading-relaxed text-emerald-800/60">
               This is for app estimates only and is not dosing advice.
             </p>
           </motion.div>
@@ -167,7 +169,8 @@ function CustomInputTray({ open, onClose, title, children, anchorRef }) {
   return createPortal(
     <>
       <div
-        className="fixed inset-0 z-[1000] bg-black/25"
+        className="fixed inset-0 z-[1000]"
+        style={{ background: "rgba(255,255,255,0.4)", backdropFilter: "blur(12px)" }}
         onPointerDown={absorb}
         onPointerUp={absorb}
         onClick={(event) => {
@@ -176,19 +179,20 @@ function CustomInputTray({ open, onClose, title, children, anchorRef }) {
         }}
       />
       <div
-        className="fixed inset-x-0 bottom-0 z-[1001] min-h-[34dvh] rounded-t-3xl border border-white/10 bg-[hsl(162,10%,8%)] px-4 pb-[max(env(safe-area-inset-bottom),0.85rem)] pt-3 shadow-[0_-24px_60px_rgba(0,0,0,0.55)]"
+        className="fixed inset-x-0 bottom-0 z-[1001] min-h-[34dvh] rounded-t-3xl border border-white/50 px-4 pb-[max(env(safe-area-inset-bottom),0.85rem)] pt-3"
+        style={{ background: "rgba(255,255,255,0.45)", backdropFilter: "blur(20px)", boxShadow: "0 -24px 60px rgba(0,0,0,0.18)" }}
         onPointerDown={(event) => event.stopPropagation()}
         onClick={(event) => event.stopPropagation()}
       >
         <div className="mb-3 flex items-center justify-between">
-          <p className="text-sm font-semibold text-white/60">{title}</p>
+          <p className="text-sm font-semibold text-emerald-900/70">{title}</p>
           <button
             type="button"
             onClick={(event) => {
               absorb(event);
               onClose();
             }}
-            className="rounded-full bg-white/10 px-4 py-1.5 text-sm font-semibold text-teal-200"
+            className="rounded-full bg-white/50 px-4 py-1.5 text-sm font-semibold text-teal-700"
           >
             Done
           </button>
@@ -213,9 +217,9 @@ function NumberPadField({ label, value, onChange, placeholder = "--", decimal = 
   };
 
   return (
-    <div ref={fieldRef} className={`rounded-xl border border-white/10 bg-white/5 px-3 py-2 ${className}`}>
+    <div ref={fieldRef} className={`rounded-xl border border-white/45 bg-white/30 px-3 py-2 ${className}`}>
       <button type="button" onClick={() => setOpen((value) => !value)} className="flex min-h-10 w-full flex-col items-start justify-center gap-0.5 text-left">
-        <span className="max-w-full truncate text-base font-bold leading-tight text-white">{textValue || placeholder}</span>
+        <span className="max-w-full truncate text-base font-bold leading-tight text-emerald-950">{textValue || placeholder}</span>
       </button>
       <CustomInputTray open={open} onClose={() => setOpen(false)} title={label} anchorRef={fieldRef}>
         <div className="grid grid-cols-3 gap-2.5">
@@ -227,7 +231,7 @@ function NumberPadField({ label, value, onChange, placeholder = "--", decimal = 
                 event.stopPropagation();
                 press(key);
               }}
-              className="h-14 rounded-2xl border border-white/10 bg-white/[0.06] text-xl font-bold text-white/85 transition hover:bg-white/10 active:scale-[0.98]"
+              className="h-14 rounded-2xl border border-white/45 bg-white/40 text-xl font-bold text-emerald-950 transition hover:bg-white/55 active:scale-[0.98]"
             >
               {key === "back" ? "Back" : key === "clear" ? "Clear" : key}
             </button>
@@ -426,25 +430,24 @@ export default function InsulinSettings() {
       <div className="space-y-6">
         {/* Target Range Preference */}
         <div className="space-y-3">
-          <h3 className="text-sm font-bold text-white uppercase tracking-wider px-1">Target Range Preference</h3>
-          <div className="backdrop-blur-sm bg-[rgba(12,20,16,0.78)] border border-white/10 rounded-3xl p-4 flex gap-4 items-stretch">
+          <h3 className="px-1 text-sm font-bold uppercase tracking-wider text-emerald-950">Target Range Preference</h3>
+          <div className="flex gap-4 items-stretch rounded-3xl border border-white/45 bg-white/25 p-4 backdrop-blur-md">
             <button
               onClick={handleSetRecommended}
               className={`shrink-0 w-28 py-3 px-2 rounded-2xl border text-center transition-all flex flex-col items-center justify-center ${
               isRecommended ?
-              "bg-teal-500/10 border-teal-500/40 text-white" :
-              "bg-white/[0.01] border-white/5 text-white/40 hover:bg-white/[0.03]"}`
+              "bg-teal-500/15 border-teal-500/50 text-emerald-950" :
+              "bg-white/25 border-white/40 text-emerald-900/70 hover:bg-white/35"}`
               }>
-              
-              <div className="text-[10px] font-bold uppercase tracking-wider opacity-60">Recommended</div>
+              <div className="text-[10px] font-bold uppercase tracking-wider opacity-70">Recommended</div>
               <div className="text-base font-extrabold mt-1">70–180</div>
-              <div className="text-[9px] text-white/30 mt-0.5">mg/dL</div>
+              <div className="text-[9px] text-emerald-800/60 mt-0.5">mg/dL</div>
             </button>
 
             <div className="flex-1 flex flex-col justify-center space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-[10px] text-white/40 uppercase tracking-wider">Custom Range</span>
-                <span className="text-sm font-bold text-teal-400">{targetLow}–{targetHigh} mg/dL</span>
+                <span className="text-[10px] text-emerald-800/70 uppercase tracking-wider">Custom Range</span>
+                <span className="text-sm font-bold text-teal-700">{targetLow}–{targetHigh} mg/dL</span>
               </div>
               <Slider
                 min={70}
@@ -453,8 +456,8 @@ export default function InsulinSettings() {
                 value={[targetLow, targetHigh]}
                 onValueChange={handleSliderChange}
                 className="cursor-pointer" />
-              
-              <div className="flex justify-between text-[10px] text-white/20">
+
+              <div className="flex justify-between text-[10px] text-emerald-800/50">
                 <span>70</span>
                 <span>250</span>
               </div>
@@ -464,15 +467,15 @@ export default function InsulinSettings() {
 
         {/* Alerts & Preferences */}
         <div className="space-y-3">
-          <h3 className="text-sm font-bold text-white uppercase tracking-wider px-1">Alerts & Preferences</h3>
-          <div className="backdrop-blur-sm bg-[rgba(12,20,16,0.78)] border border-white/10 rounded-3xl p-4 space-y-5">
+          <h3 className="px-1 text-sm font-bold uppercase tracking-wider text-emerald-950">Alerts & Preferences</h3>
+          <div className="space-y-5 rounded-3xl border border-white/45 bg-white/25 p-4 backdrop-blur-md">
             <div className="flex items-center justify-between gap-4">
               <div className="space-y-0.5">
-                <Label className="text-sm font-semibold text-white/90 flex items-center gap-2">
-                  <Target className="w-4 h-4 text-teal-400" />
+                <Label className="text-sm font-semibold text-emerald-950 flex items-center gap-2">
+                  <Target className="w-4 h-4 text-teal-600" />
                   Insulin Stacking Warnings
                 </Label>
-                <p className="text-sm text-white/40">Alert when multiple rapid doses overlap</p>
+                <p className="text-sm text-emerald-800/70">Alert when multiple rapid doses overlap</p>
               </div>
               <Switch checked={stackingAlerts} onCheckedChange={handleStackingToggle} />
             </div>
@@ -481,20 +484,20 @@ export default function InsulinSettings() {
 
         {/* Insulin Plan */}
         <div className="space-y-3">
-          <h3 className="text-sm font-bold text-white uppercase tracking-wider px-1">
+          <h3 className="px-1 text-sm font-bold uppercase tracking-wider text-emerald-950">
             Insulin Plan
           </h3>
 
-          <div className="backdrop-blur-sm bg-[rgba(12,20,16,0.78)] border border-white/10 rounded-3xl p-4 space-y-5">
-            <p className="text-xs text-white/40">
+          <div className="space-y-5 rounded-3xl border border-white/45 bg-white/25 p-4 backdrop-blur-md">
+            <p className="text-xs text-emerald-800/70">
               Enter only insulin settings prescribed or confirmed by your licensed healthcare professional. This app does not provide medical advice, verify dosing accuracy, or replace clinical judgment. Incorrect values may result in serious hypoglycemia or hyperglycemia. Do not start, stop, or adjust insulin based solely on information provided by this app.
             </p>
 
             <div className="space-y-2">
-              <Label htmlFor="insulin-sensitivity" className="text-sm font-semibold text-white/90">
+              <Label htmlFor="insulin-sensitivity" className="text-sm font-semibold text-emerald-950">
                 Insulin sensitivity
               </Label>
-              <p className="text-xs text-white/40">
+              <p className="text-xs text-emerald-800/70">
                 How much 1 unit of insulin typically lowers your glucose.
               </p>
               <div className="flex items-center gap-3">
@@ -509,15 +512,15 @@ export default function InsulinSettings() {
                   maxLength={3}
                   className="w-24"
                 />
-                <span className="text-xs text-white/40">mg/dL per unit</span>
+                <span className="text-xs text-emerald-800/70">mg/dL per unit</span>
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="correction-target" className="text-sm font-semibold text-white/90">
+              <Label htmlFor="correction-target" className="text-sm font-semibold text-emerald-950">
                 Correction target
               </Label>
-              <p className="text-xs text-white/40">
+              <p className="text-xs text-emerald-800/70">
                 Glucose baseline used when estimating correction insulin.
               </p>
               <div className="flex items-center gap-3">
@@ -532,15 +535,15 @@ export default function InsulinSettings() {
                   maxLength={3}
                   className="w-24"
                 />
-                <span className="text-xs text-white/40">mg/dL</span>
+                <span className="text-xs text-emerald-800/70">mg/dL</span>
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="meal-insulin" className="text-sm font-semibold text-white/90">
+              <Label htmlFor="meal-insulin" className="text-sm font-semibold text-emerald-950">
                 Meal insulin
               </Label>
-              <p className="text-xs text-white/40">
+              <p className="text-xs text-emerald-800/70">
                 Insulin units used to cover 5 grams of carbohydrates.
               </p>
               <div className="flex items-center gap-3">
@@ -554,40 +557,40 @@ export default function InsulinSettings() {
                   maxLength={5}
                   className="w-24"
                 />
-                <span className="text-xs text-white/40">units per 5 g</span>
+                <span className="text-xs text-emerald-800/70">units per 5 g</span>
               </div>
             </div>
 
-            <div className="space-y-3 border-t border-white/10 pt-4">
+            <div className="space-y-3 border-t border-white/30 pt-4">
               <div className="flex min-h-6 items-center justify-between gap-2">
-                <Label className="text-sm font-semibold text-white/90">
+                <Label className="text-sm font-semibold text-emerald-950">
                   My insulin library
                 </Label>
                 <SettingHelpButton id="library" openHelp={openHelp} setOpenHelp={setOpenHelp} />
               </div>
-              <p className="text-xs text-white/40">
+              <p className="text-xs text-emerald-800/70">
                 Every insulin type you use. Only these appear when logging a dose.
               </p>
               <InsulinTypeSelector selectedTypes={insulinLibrary} onToggle={toggleInsulinLibrary} />
             </div>
 
-            <div className="space-y-3 border-t border-white/10 pt-4">
+            <div className="space-y-3 border-t border-white/30 pt-4">
               <div className="flex min-h-6 items-center justify-between gap-2">
-                <Label className="text-sm font-semibold text-white/90">
+                <Label className="text-sm font-semibold text-emerald-950">
                   Meal/correction insulin types
                 </Label>
                 <SettingHelpButton id="types" openHelp={openHelp} setOpenHelp={setOpenHelp} />
               </div>
-              <p className="text-xs text-white/40">
+              <p className="text-xs text-emerald-800/70">
                 The subset of your library used for meal coverage and corrections.
               </p>
               <InsulinTypeSelector selectedTypes={mealInsulinTypes} onToggle={toggleMealInsulinType} />
             </div>
 
-            <div className="grid grid-cols-2 gap-3 border-t border-white/10 pt-4">
+            <div className="grid grid-cols-2 gap-3 border-t border-white/30 pt-4">
               <div className="space-y-2">
                 <div className="flex min-h-6 items-center justify-between gap-2">
-                  <Label htmlFor="meal-outcome-window" className="text-sm font-semibold text-white/90">
+                  <Label htmlFor="meal-outcome-window" className="text-sm font-semibold text-emerald-950">
                     Meal review
                   </Label>
                   <SettingHelpButton id="review" openHelp={openHelp} setOpenHelp={setOpenHelp} />
@@ -604,13 +607,13 @@ export default function InsulinSettings() {
                     maxLength={3}
                     className="w-20"
                   />
-                  <span className="text-xs text-white/40">min</span>
+                  <span className="text-xs text-emerald-800/70">min</span>
                 </div>
               </div>
 
               <div className="space-y-2">
                 <div className="flex min-h-6 items-center justify-between gap-2">
-                  <Label htmlFor="pre-meal-window" className="text-sm font-semibold text-white/90">
+                  <Label htmlFor="pre-meal-window" className="text-sm font-semibold text-emerald-950">
                     Pre-meal insulin
                   </Label>
                   <SettingHelpButton id="pre" openHelp={openHelp} setOpenHelp={setOpenHelp} />
@@ -627,13 +630,13 @@ export default function InsulinSettings() {
                     maxLength={3}
                     className="w-20"
                   />
-                  <span className="text-xs text-white/40">min</span>
+                  <span className="text-xs text-emerald-800/70">min</span>
                 </div>
               </div>
 
               <div className="space-y-2">
                 <div className="flex min-h-6 items-center justify-between gap-2">
-                  <Label htmlFor="post-meal-window" className="text-sm font-semibold text-white/90">
+                  <Label htmlFor="post-meal-window" className="text-sm font-semibold text-emerald-950">
                     Post-meal insulin
                   </Label>
                   <SettingHelpButton id="post" openHelp={openHelp} setOpenHelp={setOpenHelp} />
@@ -650,7 +653,7 @@ export default function InsulinSettings() {
                     maxLength={3}
                     className="w-20"
                   />
-                  <span className="text-xs text-white/40">min</span>
+                  <span className="text-xs text-emerald-800/70">min</span>
                 </div>
               </div>
             </div>
@@ -664,7 +667,7 @@ export default function InsulinSettings() {
             disabled={isSaving}
             className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl font-semibold text-white transition-all disabled:opacity-50"
             style={{
-              background: "linear-gradient(145deg, rgba(91,168,138,0.85), rgba(91,163,184,0.72))",
+              background: "linear-gradient(145deg, rgba(91,168,138,0.9), rgba(91,163,184,0.8))",
               boxShadow: "0 8px 28px rgba(91,163,184,0.22), inset 0 1px 1px rgba(255,255,255,0.2)",
             }}
           >
@@ -672,9 +675,9 @@ export default function InsulinSettings() {
             {isSaving ? "Saving..." : saveSuccess ? "Saved!" : "Save to My Account"}
           </button>
           {saveError && (
-            <p className="text-xs text-center text-red-400/80 px-4">{saveError}</p>
+            <p className="text-xs text-center text-red-700 px-4">{saveError}</p>
           )}
-          <p className="text-[10px] text-center text-white/30 px-4">
+          <p className="text-[10px] text-center text-emerald-800/60 px-4">
             Your settings are saved securely to your account and follow you across devices.
           </p>
         </div>

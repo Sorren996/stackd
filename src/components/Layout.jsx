@@ -86,7 +86,7 @@ export default function Layout() {
         <div
           className="mx-auto grid h-14 max-w-6xl grid-cols-[1fr_auto_1fr] items-center px-4"
           style={{
-            background: "linear-gradient(to bottom, rgba(0,0,0,0.7), rgba(0,0,0,0.25), transparent)",
+            background: "linear-gradient(to bottom, rgba(255,255,255,0.5), rgba(255,255,255,0.15), transparent)",
           }}
         >
           <div />
@@ -111,8 +111,8 @@ export default function Layout() {
               aria-label="Open settings"
               className="flex h-9 w-9 items-center justify-center rounded-full backdrop-blur-sm border transition-all"
               style={{
-                background: isSettingsOpen ? "rgba(20,184,166,0.1)" : "rgba(255,255,255,0.05)",
-                borderColor: isSettingsOpen ? "rgba(20,184,166,0.35)" : "rgba(255,255,255,0.05)",
+                background: isSettingsOpen ? "rgba(20,184,166,0.15)" : "rgba(255,255,255,0.3)",
+                borderColor: isSettingsOpen ? "rgba(20,184,166,0.45)" : "rgba(255,255,255,0.45)",
                 boxShadow: isSettingsOpen ? "0 0 18px rgba(20,184,166,0.35)" : "none",
               }}
             >
@@ -121,7 +121,7 @@ export default function Layout() {
                 transition={{ type: "spring", stiffness: 260, damping: 18 }}
                 className="flex"
               >
-                <Settings className={`h-4 w-4 ${isSettingsOpen ? "text-teal-400" : "text-white/55"}`} />
+                <Settings className={`h-4 w-4 ${isSettingsOpen ? "text-teal-600" : "text-emerald-900/70"}`} />
               </motion.span>
             </button>
           </div>
@@ -159,8 +159,8 @@ export default function Layout() {
             transition={{ type: "spring", stiffness: 220, damping: 28 }}
             className="fixed inset-0 z-40 overflow-y-auto pb-28 pt-16"
             style={{
-              background: "rgba(8,14,11,0.5)",
-              backdropFilter: "blur(18px)",
+              background: "rgba(255,255,255,0.4)",
+              backdropFilter: "blur(20px)",
             }}
           >
             <div className="px-4">
