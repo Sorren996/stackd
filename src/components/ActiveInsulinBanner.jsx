@@ -255,7 +255,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
   if (!groups.length) {
     return {
       value: "No meal data",
-      status: "Log carbs to assess coverage",
+      status: "Log carbs to see your rhythm",
       color: "#d4a056",
       sub: "Waiting for carb log",
       details: null,
@@ -372,14 +372,14 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
     .sort((a, b) => b.iob - a.iob);
 
   let value = `${estimatedAdditionalUnits.toFixed(1)}u`;
-  let status = "Suggested support";
+  let status = "Rhythm preview";
   let color = "#5ba88a";
   let sub = `${Math.round(mealGroup.carbs)}g carbs · ${loggedTotalUnits.toFixed(1)}u logged`;
 
   // --- Point-in-time assessment (fixed at meal time, does not change as IOB decays) ---
   if (ratio === null) {
     value = "Review";
-    status = "Not enough data to estimate";
+    status = "Not enough data to preview your rhythm";
     color = "#d4a056";
   } else if (correctionGlucoseLow) {
     value = "Review";
@@ -387,19 +387,19 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
     color = "#6b92c4";
   } else if (ratio < 0.75) {
     value = `${estimatedAdditionalUnits.toFixed(1)}u`;
-    status = "Light coverage - below estimate";
+    status = "Below your historical rhythm";
     color = "#c97060";
   } else if (ratio > 1.25) {
-    value = "Generous dose";
-    status = `${coverageGapAbs.toFixed(1)}u above estimate`;
+    value = "Above rhythm";
+    status = `${coverageGapAbs.toFixed(1)}u above your historical rhythm`;
     color = "#6b92c4";
   } else if (!correctionGlucoseAvailable) {
     value = `${expectedMealUnits.toFixed(1)}u`;
-    status = "Meal estimate - glucose unavailable";
+    status = "Rhythm preview - glucose unavailable";
     color = "#d4a056";
   } else {
-    value = "Well balanced";
-    status = "Nicely aligned";
+    value = "In rhythm";
+    status = "Matches your historical rhythm";
     color = "#5ba88a";
   }
 

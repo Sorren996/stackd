@@ -76,10 +76,10 @@ export default function MealBalanceTooltip({ mealInsight, open, onClose, monitor
             <span>{mealInsight.details.loggedTotalUnits.toFixed(1)}u logged</span>
             {mealInsight.details.coveragePercent !== null && (
               <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ color: mealInsight.color, background: `${mealInsight.color}15` }}>
-                {mealInsight.details.coveragePercent}% coverage
+                {mealInsight.details.coveragePercent}% of rhythm
               </span>
             )}
-            <span>{mealInsight.details.grossDoseEstimate.toFixed(1)}u estimated</span>
+            <span>{mealInsight.details.grossDoseEstimate.toFixed(1)}u rhythm preview</span>
           </div>
           <div className="relative h-2.5 overflow-hidden rounded-full bg-white/10">
             <div
@@ -190,7 +190,7 @@ export default function MealBalanceTooltip({ mealInsight, open, onClose, monitor
         {/* Numbers breakdown */}
         {mealInsight.details && mealInsight.details.grossDoseEstimate > 0 && mealInsight.details.meal?.carbs > 0 && (
           <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 space-y-1.5">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-white/30">How the Numbers Align</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-white/30">How the Rhythm Lines Up</p>
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-baseline gap-1.5 min-w-0">
                 <span className="text-[11px] font-medium text-white/50">Nourishment</span>
@@ -217,7 +217,7 @@ export default function MealBalanceTooltip({ mealInsight, open, onClose, monitor
               </span>
             </div>
             <div className="flex items-center justify-between gap-2 border-t border-white/10 pt-1.5">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-white/55">Suggested Support</span>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-white/55">Rhythm Preview</span>
               <span className="text-[15px] font-bold" style={{ color: mealInsight.color }}>
                 {mealInsight.details.estimatedAdditionalUnits.toFixed(1)}u
               </span>
@@ -230,13 +230,13 @@ export default function MealBalanceTooltip({ mealInsight, open, onClose, monitor
           <p className="text-[10px] font-semibold uppercase tracking-wider text-white/30">How This Works</p>
           <div className="space-y-1.5 text-[11px] leading-relaxed text-white/40">
             <p>
-              <span className="font-semibold text-white/55">Carb estimate</span> — your carbs are divided by your meal ratio to estimate how much insulin your meal needs.
+              <span className="font-semibold text-white/55">Carb rhythm</span> — your carbs are compared to your meal ratio to preview the support your meal typically calls for.
             </p>
             <p>
-              <span className="font-semibold text-white/55">Correction factor</span> — if a glucose reading near your meal is above range, we estimate extra support based on your sensitivity.
+              <span className="font-semibold text-white/55">Gentle adjustment</span> — if a reading near your meal is above your range, we preview a little extra support based on your sensitivity.
             </p>
             <p>
-              <span className="font-semibold text-white/55">What you logged</span> — the insulin you already took is compared to that estimate so you can see how things line up.
+              <span className="font-semibold text-white/55">What you logged</span> — the support you already gave is compared to that preview so you can see how things line up.
             </p>
           </div>
         </div>
