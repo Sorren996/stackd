@@ -325,6 +325,31 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const highPct = ((GLUCOSE_MAX - targetHigh) / rangeTotal * 100).toFixed(1);
   const lowPct = ((GLUCOSE_MAX - targetLow) / rangeTotal * 100).toFixed(1);
 
+  // Glucose line gradient stops, fully derived from the user's target range so
+  // the red / white / amber transitions track custom ranges (not just the 70–180 preset).
+  // Stops are clamped to monotonically increasing offsets to avoid invalid gradients
+  // when the target band is narrow or sits near the chart edges.
+  const lineGradStops = useMemo(() => {
+    const hi = Number(highPct);
+    const lo = Number(lowPct);
+    const fadeIn = Math.min(Math.max(4, hi * 0.4), Math.max(4, hi - 3));
+    const raw = [
+      { offset: 0, color: "#ef4444", opacity: 0 },
+      { offset: fadeIn, color: "#ef4444", opacity: 0.18 },
+      { offset: Math.max(0, hi - 3), color: "#ef4444", opacity: 0.72 },
+      { offset: Math.min(100, hi + 3), color: "#ffffff", opacity: 0.72 },
+      { offset: Math.max(0, lo - 3), color: "#ffffff", opacity: 0.72 },
+      { offset: Math.min(100, lo + 3), color: "#fbbf24", opacity: 0.72 },
+      { offset: 100, color: "#fbbf24", opacity: 0.72 },
+    ];
+    let prev = 0;
+    return raw.map((stop) => {
+      const offset = Math.max(prev, Math.min(100, stop.offset));
+      prev = offset;
+      return { ...stop, offset };
+    });
+  }, [highPct, lowPct]);
+
   // Only include doses/carbs if their filter is on
   const filteredDoses = filters.insulin ? doses : [];
   const filteredCarbEntries = filters.carbs ? carbEntries.map(normalizeCarbEntry).filter((entry) => entry.carbs > 0 && entry.consumed_at) : [];
@@ -872,14 +897,14 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                 y1={CHART_MARGIN_TOP}
                 x2="0"
                 y2={CHART_HEIGHT - CHART_MARGIN_BOTTOM - X_AXIS_HEIGHT}>
-                <stop offset="0%" stopColor="#ef4444" stopOpacity={0} />
-                <stop offset="10%" stopColor="#ef4444" stopOpacity={0.18} />
-                <stop offset="24%" stopColor="#ef4444" stopOpacity={0.72} />
-                <stop offset={`${Math.max(24, Number(highPct) - 3)}%`} stopColor="#ef4444" stopOpacity={0.72} />
-                <stop offset={`${Math.min(100, Number(highPct) + 3)}%`} stopColor="#ffffff" stopOpacity={0.72} />
-                <stop offset={`${Math.max(0, Number(lowPct) - 3)}%`} stopColor="#ffffff" stopOpacity={0.72} />
-                <stop offset={`${Math.min(100, Number(lowPct) + 3)}%`} stopColor="#fbbf24" stopOpacity={0.72} />
-                <stop offset="100%" stopColor="#fbbf24" stopOpacity={0.72} />
+                {lineGradStops.map((stop, index) => (
+                  <stop
+                    key={`glucose_line_stop_${index}`}
+                    offset={`${stop.offset}%`}
+                    stopColor={stop.color}
+                    stopOpacity={stop.opacity}
+                  />
+                ))}
               </linearGradient>
             </defs>
 
