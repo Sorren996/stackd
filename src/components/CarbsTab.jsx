@@ -57,7 +57,7 @@ function readImageAsDataUrl(file) {
   });
 }
 
-export default function CarbsTab({ onSubmit, isPending, onDirtyChange }) {
+export default function CarbsTab({ open, onSubmit, isPending, onDirtyChange }) {
   const [mode, setMode] = useState("estimate");
   const [mealText, setMealText] = useState("");
   const [mealPhoto, setMealPhoto] = useState(null);
@@ -82,6 +82,14 @@ export default function CarbsTab({ onSubmit, isPending, onDirtyChange }) {
       Boolean(mealText || mealPhotoFile || estimatedMeal || customFoodName || customCarbs || selectedFoods.length > 0)
     );
   }, [mealText, mealPhotoFile, estimatedMeal, customFoodName, customCarbs, selectedFoods, onDirtyChange]);
+
+  // Refresh the consumed time whenever the form opens so a long-lived PWA
+  // session never shows a stale time from when the tab was mounted.
+  useEffect(() => {
+    if (!open) return;
+    setCarbTime(new Date().toTimeString().slice(0, 5));
+    setCarbDate(getTodayDateValue());
+  }, [open]);
 
   useEffect(() => {
     base44.entities.CarbEntry.list("-consumed_at", 20).then((entries) => {

@@ -164,6 +164,16 @@ export default function DoseForm({ open, onOpenChange, mode = "insulin" }) {
     setRenderSheet(open);
   }, [open]);
 
+  // Refresh timestamps whenever the form opens so a long-lived PWA session
+  // never shows a stale time from when the form was preloaded in the background.
+  useEffect(() => {
+    if (!open) return;
+    setInsulinTime(new Date().toTimeString().slice(0, 5));
+    setInsulinDate(getTodayDateValue());
+    setGlucoseTime(new Date().toTimeString().slice(0, 5));
+    setGlucoseDate(getTodayDateValue());
+  }, [open]);
+
   const requestClose = () => {
     setRenderSheet(false);
     onOpenChange?.(false);
@@ -566,7 +576,7 @@ export default function DoseForm({ open, onOpenChange, mode = "insulin" }) {
                 {mode === "carbs" ? (
                   <div className="min-h-0 flex-1 overflow-y-auto">
                     <Suspense fallback={<div className="flex h-full items-center justify-center text-sm text-white/35">Loading...</div>}>
-                      <CarbsTab onSubmit={handleSubmitCarbs} isPending={loggingTab === "carbs" || createCarb.isPending} onDirtyChange={setCarbsDirty} />
+                      <CarbsTab open={open} onSubmit={handleSubmitCarbs} isPending={loggingTab === "carbs" || createCarb.isPending} onDirtyChange={setCarbsDirty} />
                     </Suspense>
                   </div>
                 ) : mode === "insulin" ? (
