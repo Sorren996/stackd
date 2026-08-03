@@ -169,7 +169,7 @@ export default function Layout() {
       </AnimatePresence>
 
       <AnimatePresence>
-        {!coachKeyboardOpen && (
+        {!coachKeyboardOpen && !isSettingsOpen && (
           <motion.nav
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
