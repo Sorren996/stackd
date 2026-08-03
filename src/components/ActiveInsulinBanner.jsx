@@ -1071,7 +1071,17 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
         <SupportiveGlucoseMessage insight={supportiveGlucoseInsight} />
 
 
-        {graphSlot}
+          {stackingAlertsEnabled && activeRapidCount > 1 && (
+            <div className="dashboard-stacking-alert backdrop-blur-sm mx-0 mt-4 flex w-full max-w-full min-w-0 items-start gap-3 overflow-hidden rounded-xl border border-white/10 p-4 pb-3">
+              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-white">Multiple Active Doses</p>
+                <p className="mt-0.5 text-sm opacity-80">
+                  {activeRapidCount} rapid-acting doses are active at once. Keep a gentle eye on how you're feeling.
+                </p>
+              </div>
+            </div>
+          )}
 
         <p className="text-legible mb-3 mt-5 text-[10px] font-bold uppercase tracking-[0.18em] text-white">Your Rhythm</p>
         <div className="grid grid-cols-1 gap-3">
