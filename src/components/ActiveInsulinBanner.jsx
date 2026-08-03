@@ -31,6 +31,7 @@ import ComfortZoneCard from "./ComfortZoneCard";
 import CurrentGlucoseCard from "./graph/CurrentGlucoseCard";
 import { getSupportiveGlucoseMessage } from "@/lib/supportiveMessages";
 import { computeTimeInRange } from "@/lib/timeInRange";
+import { computeGlucoseTrend } from "@/lib/glucoseTrend";
 
 const SAMPLE_STEP_MS = 5 * 60 * 1000;
 const MINUTE_MS = 60 * 1000;
@@ -983,15 +984,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
     return computeTimeInRange(readingsToday, insulinSettings.targetLow, insulinSettings.targetHigh);
   }, [safeGlucoseReadings, insulinSettings.targetLow, insulinSettings.targetHigh]);
 
-  const trend = useMemo(() => {
-    if (safeGlucoseReadings.length < 2) return { icon: "right", label: "Stable" };
-    const difference = safeGlucoseReadings[0].value - safeGlucoseReadings[1].value;
-    if (difference >= 7) return { icon: "up", label: "Rising" };
-    if (difference >= 4) return { icon: "up-right", label: "Slowly rising" };
-    if (difference >= -3) return { icon: "right", label: "Stable" };
-    if (difference >= -6) return { icon: "down-right", label: "Slowly falling" };
-    return { icon: "down", label: "Falling" };
-  }, [safeGlucoseReadings]);
+  const trend = useMemo(() => computeGlucoseTrend(safeGlucoseReadings), [safeGlucoseReadings]);
 
   const glucoseValue = latestGlucose?.value;
   const targetLow = targetRange.low;
