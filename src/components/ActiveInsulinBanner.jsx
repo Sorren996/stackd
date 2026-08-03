@@ -680,7 +680,7 @@ function MetricCard({ label, value, sub, status, color, tooltipId, openTooltip, 
   return (
     <motion.div
       whileTap={{ scale: 0.97 }}
-      className="metric-card relative flex min-h-[112px] flex-col justify-between overflow-hidden rounded-2xl border p-4 backdrop-blur-sm"
+      className="metric-card relative col-span-2 overflow-hidden rounded-2xl border p-4 backdrop-blur-sm"
       style={{
         background: "linear-gradient(145deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0))",
         borderColor: "rgba(255,255,255,0.16)",
