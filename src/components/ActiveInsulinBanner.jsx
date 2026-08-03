@@ -1075,32 +1075,30 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
 
         <p className="text-legible mb-3 mt-5 text-[10px] font-bold uppercase tracking-[0.18em] text-white">Your Rhythm</p>
         <div className="grid grid-cols-1 gap-3">
-          <div>
-            <MetricCard
-              label="Meal Balance"
-              value={mealInsight.value}
-              sub={mealInsight.sub}
-              status={mealInsight.status}
-              color={mealInsight.color}
-              tooltipId="net-carbs"
-              openTooltip={openTooltip}
-              setOpenTooltip={setOpenTooltip}
-              footer={highProteinFatStatus.isActive ? (
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <AlertTriangle className="h-3 w-3 shrink-0 text-amber-400/80" />
-                    <span className="text-[11px] font-semibold text-amber-400/90">Delayed meal response possible</span>
-                  </div>
-                  <p className="mt-1 pl-[18px] text-[10px] leading-relaxed text-white/40">
-                    High protein or fat was logged. Glucose effects may be delayed or less predictable.
-                  </p>
-                  <p className="mt-1 pl-[18px] text-[10px] font-medium text-amber-400/60">
-                    Monitor through {formatMonitoringEndTime(highProteinFatStatus.endTime)}
-                  </p>
+          <MetricCard
+            label="Meal Balance"
+            value={mealInsight.value}
+            sub={mealInsight.sub}
+            status={mealInsight.status}
+            color={mealInsight.color}
+            tooltipId="net-carbs"
+            openTooltip={openTooltip}
+            setOpenTooltip={setOpenTooltip}
+            footer={highProteinFatStatus.isActive ? (
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <AlertTriangle className="h-3 w-3 shrink-0 text-amber-400/80" />
+                  <span className="text-[11px] font-semibold text-amber-400/90">Delayed meal response possible</span>
                 </div>
-              ) : undefined}
-            />
-          </div>
+                <p className="mt-1 pl-[18px] text-[10px] leading-relaxed text-white/40">
+                  High protein or fat was logged. Glucose effects may be delayed or less predictable.
+                </p>
+                <p className="mt-1 pl-[18px] text-[10px] font-medium text-amber-400/60">
+                  Monitor through {formatMonitoringEndTime(highProteinFatStatus.endTime)}
+                </p>
+              </div>
+            ) : undefined}
+          />
           <ActiveInsulinDetailCard totalUnits={activeUnits} breakdown={activeInsulinBreakdown} />
         </div>
       </div>
