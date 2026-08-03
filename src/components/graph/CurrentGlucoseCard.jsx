@@ -82,10 +82,7 @@ export default function CurrentGlucoseCard({
           <span className="text-[10px] font-semibold uppercase tracking-wider text-white/35">
             Current Glucose
           </span>
-          <span
-            className="h-2 w-2 shrink-0 rounded-full"
-            style={{ backgroundColor: glucoseColor }}
-          />
+
         </div>
 
         <div className="relative z-10 mt-1 flex items-end gap-1.5">
