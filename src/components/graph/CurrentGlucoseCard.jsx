@@ -19,6 +19,20 @@ const CARD_STYLE = {
     "0 12px 40px rgba(0,0,0,0.10), 0 4px 12px rgba(0,0,0,0.06), inset 0 1px 1px rgba(255,255,255,0.22), inset 0 -1px 1px rgba(255,255,255,0.05)",
 };
 
+function AmbientOrb({ color, duration = 6 }) {
+  return (
+    <motion.div
+      animate={{ scale: [1, 1.18, 1], opacity: [0.45, 0.7, 0.45] }}
+      transition={{ duration, repeat: Infinity, ease: "easeInOut" }}
+      className="h-14 w-14 rounded-full"
+      style={{
+        background: `radial-gradient(circle, ${color}cc 0%, ${color}44 50%, transparent 75%)`,
+        filter: "blur(8px)",
+      }}
+    />
+  );
+}
+
 export default function CurrentGlucoseCard({
   latestGlucose,
   glucoseValue,
@@ -61,6 +75,9 @@ export default function CurrentGlucoseCard({
               "radial-gradient(circle at 25% 0%, rgba(255,255,255,0.18), transparent 34%), radial-gradient(circle at 92% 118%, rgba(45,212,191,0.08), transparent 42%)",
           }}
         />
+        <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2">
+          <AmbientOrb color={glucoseColor} />
+        </div>
         <div className="relative z-10 mb-1 flex items-start justify-between gap-2">
           <span className="text-[10px] font-semibold uppercase tracking-wider text-white/35">
             Current Glucose

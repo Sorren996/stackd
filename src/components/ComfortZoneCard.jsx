@@ -16,10 +16,9 @@ function AmbientOrb({ color, duration = 6 }) {
 
 function getComfortStatus(percentage) {
   if (percentage === null) return { label: "Waiting for today", color: "rgba(255,255,255,0.5)" };
-  if (percentage >= 80) return { label: "Flowing beautifully", color: "#5ba88a" };
-  if (percentage >= 50) return { label: "Finding your rhythm", color: "#5ba88a" };
-  if (percentage >= 25) return { label: "Gentle progress today", color: "#d4a056" };
-  return { label: "Every moment counts", color: "#d4a056" };
+  if (percentage >= 70) return { label: "Flowing beautifully", color: "#5ba88a" };
+  if (percentage >= 50) return { label: "Finding your rhythm", color: "#d4a056" };
+  return { label: "Every moment counts", color: "#e07a6b" };
 }
 
 export default function ComfortZoneCard({ percentage }) {
@@ -44,7 +43,7 @@ export default function ComfortZoneCard({ percentage }) {
         }}
       />
       <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2">
-        <AmbientOrb color="#ffffff" />
+        <AmbientOrb color={status.color} />
       </div>
 
       <div className="relative z-10 mb-1 flex items-start justify-between gap-2">
