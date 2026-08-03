@@ -14,6 +14,12 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
+    let body: any = {};
+    try { body = await req.json(); } catch { /* empty body is fine */ }
+    // Minutes the user's local clock is behind UTC (from getTimezoneOffset()).
+    // Used to bucket each log into the calendar day the user actually experienced.
+    const tzOffsetMinutes = Number(body.tzOffsetMinutes) || 0;
+
     const dayMs = 24 * 60 * 60 * 1000;
     const now = new Date();
     const rangeEnd = now.toISOString();
@@ -52,7 +58,9 @@ Deno.serve(async (req) => {
     const dayKey = (ts: string) => {
       const d = new Date(ts);
       if (Number.isNaN(d.getTime())) return null;
-      return d.toISOString().slice(0, 10);
+      // Shift from UTC to the user's local wall-clock so the day bucket
+      // matches the calendar day they experienced.
+      return new Date(d.getTime() - tzOffsetMinutes * 60000).toISOString().slice(0, 10);
     };
     const ensure = (day: string) => {
       if (!dayMap[day]) {

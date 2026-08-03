@@ -294,7 +294,9 @@ export default function History() {
   const { data: summary, isLoading: loadingSummary } = useQuery({
     queryKey: ["history-summary"],
     queryFn: async () => {
-      const res = await base44.functions.invoke("getHistorySummary", {});
+      const res = await base44.functions.invoke("getHistorySummary", {
+        tzOffsetMinutes: new Date().getTimezoneOffset(),
+      });
       return res.data;
     },
     staleTime: 5 * 60 * 1000,
@@ -316,8 +318,8 @@ export default function History() {
   const { data: dayLogs = [], isLoading: loadingDayLogs } = useQuery({
     queryKey: ["history-day-logs", selectedDay],
     queryFn: async () => {
-      const start = `${selectedDay}T00:00:00`;
-      const end = `${selectedDay}T23:59:59`;
+      const start = new Date(`${selectedDay}T00:00:00`).toISOString();
+      const end = new Date(`${selectedDay}T23:59:59`).toISOString();
       const [glucose, carbs, insulin] = await Promise.all([
         base44.entities.GlucoseReading.filter({ recorded_at: { $gte: start, $lte: end } }, "-recorded_at", 500),
         base44.entities.CarbEntry.filter({ consumed_at: { $gte: start, $lte: end } }, "-consumed_at", 500),
