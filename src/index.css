@@ -103,4 +103,12 @@
   .text-legible-strong {
     text-shadow: 0 2px 8px rgba(0, 0, 0, 0.45), 0 0 1px rgba(0, 0, 0, 0.3);
   }
+
+  /* Glass surface matching the main page cards — subtle gradient, soft inset glow */
+  .glass-card {
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01));
+    border-color: rgba(255, 255, 255, 0.16);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1), 0 4px 12px rgba(0, 0, 0, 0.06), inset 0 1px 1px rgba(255, 255, 255, 0.22), inset 0 -1px 1px rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(4px);
+  }
 }

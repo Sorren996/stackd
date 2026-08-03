@@ -70,7 +70,7 @@ export default function ConsentManagement() {
         <h3 className="text-sm font-bold text-white uppercase tracking-wider px-1">Legal & Consent</h3>
 
         {/* Status card */}
-        <div className="backdrop-blur-sm bg-white/[0.02] border border-white/10 rounded-3xl p-4 space-y-4">
+        <div className="glass-card border rounded-3xl p-4 space-y-4">
           <div className="flex items-center gap-3">
             {isComplete && bundleCurrent ? (
               <CheckCircle2 className="w-5 h-5 shrink-0 text-[#5ba88a]" />
@@ -112,7 +112,7 @@ export default function ConsentManagement() {
         </div>
 
         {/* Document links */}
-        <div className="backdrop-blur-sm bg-white/[0.02] border border-white/10 rounded-3xl p-2">
+        <div className="glass-card border rounded-3xl p-2">
           {Object.entries(LEGAL_DOCUMENTS).map(([key, doc]) => (
             <button
               key={key}
@@ -134,7 +134,7 @@ export default function ConsentManagement() {
 
         {/* Acknowledgment history */}
         {ackRecords.length > 0 && (
-          <div className="backdrop-blur-sm bg-white/[0.02] border border-white/10 rounded-3xl p-4 space-y-3">
+          <div className="glass-card border rounded-3xl p-4 space-y-3">
             <p className="text-xs font-bold text-white/50 uppercase tracking-wider">Acknowledgment History</p>
             <div className="space-y-2">
               {ackRecords.slice(0, 5).map((record) => (

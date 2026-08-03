@@ -84,7 +84,7 @@ export default function CoachPreferences() {
   return (
     <div className="space-y-6">
       {/* Consent status */}
-      <div className="backdrop-blur-sm bg-white/[0.02] border border-white/10 rounded-3xl p-4">
+      <div className="glass-card border rounded-3xl p-4">
         <div className="flex items-center gap-3">
           <Shield className="w-5 h-5 shrink-0 text-teal-400" />
           <div>
@@ -103,7 +103,7 @@ export default function CoachPreferences() {
       {/* Preferences */}
       <div className="space-y-3">
         <h3 className="text-sm font-bold text-white uppercase tracking-wider px-1">Preferences</h3>
-        <div className="backdrop-blur-sm bg-white/[0.02] border border-white/10 rounded-3xl p-2">
+        <div className="glass-card border rounded-3xl p-2">
           {preferences.map((pref, index) => {
             const Icon = pref.icon;
             return (
@@ -134,7 +134,7 @@ export default function CoachPreferences() {
       {/* Data categories */}
       <div className="space-y-3">
         <h3 className="text-sm font-bold text-white uppercase tracking-wider px-1">Data Access</h3>
-        <div className="backdrop-blur-sm bg-white/[0.02] border border-white/10 rounded-3xl p-4 space-y-2.5">
+        <div className="glass-card border rounded-3xl p-4 space-y-2.5">
           {[
             { label: "Glucose readings", enabled: consentActive },
             { label: "Meal and nourishment logs", enabled: consentActive },
@@ -159,7 +159,7 @@ export default function CoachPreferences() {
           type="button"
           onClick={handleClearAllInsights}
           disabled={isClearing}
-          className="w-full flex items-center gap-4 rounded-3xl border border-white/10 bg-white/[0.02] p-4 backdrop-blur-sm transition hover:bg-white/[0.04] active:scale-[0.99] disabled:opacity-40"
+          className="w-full flex items-center gap-4 rounded-3xl glass-card border p-4 transition hover:bg-white/[0.04] active:scale-[0.99] disabled:opacity-40"
         >
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-red-500/20 bg-red-500/10">
             {isClearing ? <Loader2 className="h-5 w-5 text-red-400 animate-spin" /> : <Trash2 className="h-5 w-5 text-red-400" />}
@@ -172,7 +172,7 @@ export default function CoachPreferences() {
 
         <Link
           to="/settings/privacy-consent"
-          className="w-full flex items-center gap-4 rounded-3xl border border-white/10 bg-white/[0.02] p-4 backdrop-blur-sm transition hover:bg-white/[0.04] active:scale-[0.99]"
+          className="w-full flex items-center gap-4 rounded-3xl glass-card border p-4 transition hover:bg-white/[0.04] active:scale-[0.99]"
         >
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-amber-500/20 bg-amber-500/10">
             <Shield className="h-5 w-5 text-amber-400" />

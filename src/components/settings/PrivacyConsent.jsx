@@ -67,7 +67,7 @@ export default function PrivacyConsent() {
       {/* Privacy Notice */}
       <div className="space-y-3">
         <h3 className="text-sm font-bold text-white uppercase tracking-wider px-1">Privacy</h3>
-        <div className="backdrop-blur-sm bg-white/[0.02] border border-white/10 rounded-3xl p-4 space-y-3">
+        <div className="glass-card border rounded-3xl p-4 space-y-3">
           <div className="flex items-start gap-3">
             <Shield className="w-4 h-4 text-teal-400 mt-0.5 shrink-0" />
             <div className="space-y-1.5">
