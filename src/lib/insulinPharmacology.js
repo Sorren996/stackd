@@ -412,6 +412,12 @@ export function getTotalBasalActivity(doses, atTime = Date.now()) {
   }, 0);
 }
 
+export function getTotalIOB(doses, atTime = Date.now()) {
+  return (Array.isArray(doses) ? doses : []).reduce((sum, dose) => {
+    return sum + getDoseIOB(dose, atTime);
+  }, 0);
+}
+
 export function getDoseStatus(dose, atTime = Date.now()) {
   const profile = getInsulinProfile(dose?.insulin_type);
   const units = getDoseUnits(dose);
@@ -435,9 +441,9 @@ export function getDoseStatus(dose, atTime = Date.now()) {
   }
 
   if (!timing.hasPeak) {
-    if (elapsed < timing.onset) return { phase: "waiting", label: "Absorbing - not yet active", activity, iob };
-    if (elapsed > timing.duration * 0.78) return { phase: "low_activity", label: "Low residual activity", activity, iob };
-    return { phase: "steady", label: "Active - steady coverage", activity, iob };
+    if (elapsed < timing.onset) return { phase: "waiting", label: "Absorbing gently", activity, iob };
+    if (elapsed > timing.duration * 0.78) return { phase: "low_activity", label: "Gently winding down", activity, iob };
+    return { phase: "steady", label: "Active in the background", activity, iob };
   }
 
   if (elapsed < timing.onset) return { phase: "waiting", label: "Absorbing - not yet active", activity, iob };

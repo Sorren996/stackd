@@ -10,7 +10,7 @@ import { isActivePlan, cancelSplitPlansForMeal, cleanupSplitPlansForDose } from 
 import DoseCard from "../components/DoseCard";
 import GlucoseCard from "../components/GlucoseCard";
 import CarbCard from "../components/CarbCard";
-import { getDoseStatus, INSULIN_PROFILES } from "@/lib/insulinPharmacology";
+import { getDoseStatus, getInsulinCategory, INSULIN_PROFILES } from "@/lib/insulinPharmacology";
 import { Activity, AlertTriangle, X, Pencil } from "lucide-react";
 import HighProteinFatCheckbox from "@/components/HighProteinFatCheckbox";
 import { toast } from "sonner";
@@ -446,6 +446,13 @@ export default function Dashboard() {
     onError: () => toast.error("Unable to update log. Please try again."),
   });
 
+  const handleDeleteLog = (log) => {
+    if (!log?.type || !log?.item?.id) return;
+    if (log.type === "insulin") deleteDose.mutate(log.item.id);
+    else if (log.type === "glucose") deleteGlucose.mutate(log.item.id);
+    else deleteCarb.mutate(log.item.id);
+  };
+
   const recentDoses = doses.filter((dose) => {
     const age = Date.now() - new Date(dose.administered_at).getTime();
     return age < TWO_DAYS_MS;
@@ -488,7 +495,7 @@ export default function Dashboard() {
     return activeDoses.filter(
       (item) =>
         ["rising", "near_peak", "peak", "declining", "low_activity"].includes(item.status.phase) &&
-        ["Rapid-Acting", "Short-Acting"].includes(INSULIN_PROFILES[item.dose.insulin_type]?.category),
+        ["Rapid-Acting", "Short-Acting"].includes(getInsulinCategory(item.dose.insulin_type)),
     ).length;
   }, [recentDoses]);
 
@@ -552,6 +559,7 @@ export default function Dashboard() {
                     glucoseReadings={graphGlucose}
                     carbEntries={graphCarbs}
                     onSelectLog={setEditingLog}
+                    onDeleteLog={handleDeleteLog}
                   />
                 ) : (
                   <div className="h-[320px] w-full" />

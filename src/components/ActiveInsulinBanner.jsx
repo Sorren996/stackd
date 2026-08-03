@@ -15,7 +15,10 @@ import {
   getDoseIOB,
   getDoseStatus,
   getDoseTimingInfo,
+  getInsulinCategory,
+  getInsulinProfile,
   getTotalBolusIOB,
+  getTotalIOB,
   INSULIN_PROFILES,
   isBolusInsulinType,
 } from "@/lib/insulinPharmacology";
@@ -866,18 +869,17 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
     () => safeDoses.filter((dose) => isMealCoverageInsulin(dose, insulinSettings)),
     [safeDoses, insulinSettings]
   );
-  const activeUnits = useMemo(() => getTotalBolusIOB(safeDoses, Date.now()), [safeDoses, nowMinute]);
+  const activeUnits = useMemo(() => getTotalIOB(safeDoses, Date.now()), [safeDoses, nowMinute]);
   const activeMealUnits = useMemo(() => getTotalMealIOB(mealCoverageDoses, Date.now()), [mealCoverageDoses, nowMinute]);
   const activeCorrectionUnits = useMemo(() => getTotalCorrectionIOB(mealCoverageDoses, Date.now()), [mealCoverageDoses, nowMinute]);
   const activeInsulinBreakdown = useMemo(() => {
     const now = Date.now();
     return safeDoses
-      .filter((dose) => isBolusInsulinType(dose?.insulin_type))
       .map((dose) => {
         const iob = getDoseIOB(dose, now);
-        if (iob < 0.9) return null;
+        if (iob < 0.05) return null;
 
-          const profile = INSULIN_PROFILES[dose.insulin_type];
+          const profile = getInsulinProfile(dose.insulin_type);
           const status = getDoseStatus(dose, now);
           return {
             id: dose.id,
@@ -1043,7 +1045,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
       .filter(
         (item) =>
           ["rising", "near_peak", "peak", "declining", "low_activity"].includes(item.status.phase) &&
-          ["Rapid-Acting", "Short-Acting"].includes(INSULIN_PROFILES[item.dose.insulin_type]?.category)
+          ["Rapid-Acting", "Short-Acting"].includes(getInsulinCategory(item.dose.insulin_type))
       ).length;
   }, [safeDoses, nowMinute]);
 

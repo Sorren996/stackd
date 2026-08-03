@@ -1,9 +1,9 @@
 import { useMemo, useRef, useEffect, useState } from "react";
 import { Area, XAxis, YAxis, Line, ComposedChart } from "recharts";
-import { generateActivityCurve, getDoseIOB, getInsulinProfile } from "@/lib/insulinPharmacology";
+import { generateActivityCurve, getDoseIOB, getInsulinProfile, isBasalInsulinType } from "@/lib/insulinPharmacology";
 import { PROFILE_COLORS } from "@/lib/carbAbsorption";
 import { format } from "date-fns";
-import { AlertTriangle, CornerUpRight, SlidersHorizontal, Check, Wheat, Pencil } from "lucide-react";
+import { AlertTriangle, CornerUpRight, SlidersHorizontal, Check, Wheat, Pencil, Trash2 } from "lucide-react";
 import { HIGH_PROTEIN_FAT_MONITORING_HOURS, mergeMonitoringIntervals } from "@/lib/mealMonitoring";
 import { motion, AnimatePresence } from "framer-motion";
 import InfoPopover from "@/components/graph/InfoPopover";
@@ -255,17 +255,30 @@ function FilterDropdown({ filters, onChange, anchorRect }) {
 
 }
 
-export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries = [], onSelectLog = null }) {
+export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries = [], onSelectLog = null, onDeleteLog = null }) {
   const [showFilter, setShowFilter] = useState(false);
   const [filterAnchorRect, setFilterAnchorRect] = useState(null);
   const [filters, setFilters] = useState({ glucose: true, insulin: true, carbs: true });
   const [activeMarker, setActiveMarker] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const openMarker = (type, item, rect) => setActiveMarker({ type, item, rect });
-  const closeMarker = () => setActiveMarker(null);
+  const openMarker = (type, item, rect) => {
+    setConfirmDelete(false);
+    setActiveMarker({ type, item, rect });
+  };
+  const closeMarker = () => {
+    setConfirmDelete(false);
+    setActiveMarker(null);
+  };
   const handleEdit = () => {
     if (!activeMarker || !onSelectLog) return;
     onSelectLog({ type: activeMarker.type, item: activeMarker.item });
+    closeMarker();
+  };
+  const handleDelete = () => {
+    if (!activeMarker || !onDeleteLog) return;
+    onDeleteLog({ type: activeMarker.type, item: activeMarker.item });
+    setConfirmDelete(false);
     closeMarker();
   };
   const scrollRef = useRef(null);
@@ -423,7 +436,14 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     plotValue: buildMonotoneSegments(glucoseLinePoints, (point) => Math.min(point.value, GLUCOSE_MAX)),
   }), [glucoseLinePoints]);
 
-  const maxDoseUnits = useMemo(() => Math.max(...filteredDoses.map(getDoseUnits), 1), [filteredDoses]);
+  const maxBolusUnits = useMemo(
+    () => Math.max(...filteredDoses.filter((d) => !isBasalInsulinType(d.insulin_type)).map(getDoseUnits), 1),
+    [filteredDoses]
+  );
+  const maxBasalUnits = useMemo(
+    () => Math.max(...filteredDoses.filter((d) => isBasalInsulinType(d.insulin_type)).map(getDoseUnits), 1),
+    [filteredDoses]
+  );
   const chartData = useMemo(() => {
     if (!doses.length && !glucoseReadings.length && !carbEntries.length) return [];
     const result = [];
@@ -443,7 +463,10 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           const ratio = hi === lo ? 0 : (t - curve[lo].time) / (curve[hi].time - curve[lo].time);
           const activity = curve[lo].activity + ratio * (curve[hi].activity - curve[lo].activity);
           const activeUnits = curve[lo].activeUnits + ratio * (curve[hi].activeUnits - curve[lo].activeUnits);
-          point[key] = activity * (doseUnits / maxDoseUnits) * 70;
+          const isBasal = isBasalInsulinType(dose.insulin_type);
+          const visualMax = isBasal ? 10 : 70;
+          const refMax = isBasal ? maxBasalUnits : maxBolusUnits;
+          point[key] = activity * (doseUnits / refMax) * visualMax;
           point[`${key}_actual`] = activeUnits;
           point[`${key}_activity`] = activity;
           point[`${key}_total`] = doseUnits;
@@ -455,7 +478,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       result.push(point);
     }
     return result;
-  }, [doses, glucoseReadings, carbEntries, filters, domainStart, domainEnd, allCurvesMeta, glucoseMap]);
+  }, [doses, glucoseReadings, carbEntries, filters, domainStart, domainEnd, allCurvesMeta, glucoseMap, maxBolusUnits, maxBasalUnits]);
 
   const doseKeys = useMemo(() =>
   filteredDoses.map((dose, index) => ({
@@ -1093,11 +1116,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               </div>
               <p className="text-xs text-white/70">{activeMarker.item.food_name || activeMarker.item.name || "Food"}</p>
               <p className="text-[11px] text-white/40">{format(new Date(activeMarker.item.consumed_at), "h:mm a · MMM d")}</p>
-              {onSelectLog && (
-                <button type="button" onClick={handleEdit} className="mt-1 flex w-full items-center justify-center gap-1.5 rounded-xl border border-white/12 py-2 text-xs font-semibold text-white/85 transition hover:bg-white/5" style={{ background: "rgba(255,255,255,0.04)" }}>
-                  <Pencil className="h-3 w-3" /> Edit
-                </button>
-              )}
+
             </div>
           )}
           {activeMarker.type === "insulin" && (
@@ -1115,11 +1134,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                   : <p className="text-[11px] text-white/40">Support complete</p>;
               })()}
               <p className="text-[11px] text-white/40">{format(new Date(activeMarker.item.administered_at), "h:mm a · MMM d")}</p>
-              {onSelectLog && (
-                <button type="button" onClick={handleEdit} className="mt-1 flex w-full items-center justify-center gap-1.5 rounded-xl border border-white/12 py-2 text-xs font-semibold text-white/85 transition hover:bg-white/5" style={{ background: "rgba(255,255,255,0.04)" }}>
-                  <Pencil className="h-3 w-3" /> Edit
-                </button>
-              )}
+
             </div>
           )}
           {activeMarker.type === "glucose" && (
@@ -1130,10 +1145,29 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                 <span className="text-xs text-white/40">mg/dL</span>
               </div>
               <p className="text-[11px] text-white/40">Manual · {format(new Date(activeMarker.item.recorded_at), "h:mm a · MMM d")}</p>
-              {onSelectLog && (
-                <button type="button" onClick={handleEdit} className="mt-1 flex w-full items-center justify-center gap-1.5 rounded-xl border border-white/12 py-2 text-xs font-semibold text-white/85 transition hover:bg-white/5" style={{ background: "rgba(255,255,255,0.04)" }}>
+
+            </div>
+          )}
+
+          {(onSelectLog || onDeleteLog) && (
+            <div className="mt-2 flex gap-2">
+              {onSelectLog && !confirmDelete && (
+                <button type="button" onClick={handleEdit} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-white/12 py-2 text-xs font-semibold text-white/85 transition hover:bg-white/5" style={{ background: "rgba(255,255,255,0.04)" }}>
                   <Pencil className="h-3 w-3" /> Edit
                 </button>
+              )}
+              {onDeleteLog && !confirmDelete && (
+                <button type="button" onClick={() => setConfirmDelete(true)} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-rose-400/20 py-2 text-xs font-semibold text-rose-300/80 transition hover:bg-rose-500/10" style={{ background: "rgba(244,63,94,0.04)" }}>
+                  <Trash2 className="h-3 w-3" /> Remove
+                </button>
+              )}
+              {confirmDelete && (
+                <>
+                  <button type="button" onClick={() => setConfirmDelete(false)} className="flex-1 rounded-xl border border-white/12 py-2 text-xs font-semibold text-white/70 transition hover:bg-white/5" style={{ background: "rgba(255,255,255,0.04)" }}>Keep it</button>
+                  <button type="button" onClick={handleDelete} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-rose-400/30 py-2 text-xs font-semibold text-rose-200 transition hover:bg-rose-500/20" style={{ background: "rgba(244,63,94,0.12)" }}>
+                    <Trash2 className="h-3 w-3" /> Confirm remove
+                  </button>
+                </>
               )}
             </div>
           )}
