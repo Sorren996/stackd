@@ -1053,7 +1053,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         aria-hidden="true"
       >
         <AlertTriangle className="h-3 w-3" style={{ color: "rgba(217,169,56,0.7)" }} />
-        <span className="text-[9px] font-medium" style={{ color: "rgba(217,169,56,0.8)" }}>Delayed glucose response</span>
+        <span className="text-[9px] font-medium" style={{ color: "rgba(217,169,56,0.8)" }}>Delayed glucose response. Monitor for extended high's and low's.</span>
       </div>
       </div>
 
