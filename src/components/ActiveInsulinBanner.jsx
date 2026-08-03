@@ -1080,7 +1080,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
 
         <SupportiveGlucoseMessage insight={supportiveGlucoseInsight} />
 
-        <p className="text-legible mb-2 mt-5 text-[10px] font-bold uppercase tracking-[0.18em] text-white">Glucose Journey</p>
+
         {graphSlot}
 
         <p className="text-legible mb-3 mt-5 text-[10px] font-bold uppercase tracking-[0.18em] text-white">Your Rhythm</p>
