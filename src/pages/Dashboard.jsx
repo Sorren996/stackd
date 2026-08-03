@@ -561,18 +561,6 @@ export default function Dashboard() {
             />
           </div>
 
-          {stackingAlertsEnabled && activeRapidCount > 1 && (
-            <div className="dashboard-stacking-alert backdrop-blur-sm mx-0 mt-4 flex w-full max-w-full min-w-0 items-start gap-3 overflow-hidden rounded-xl border border-white/10 p-4 pb-3">
-              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-white">Multiple Active Doses</p>
-                <p className="mt-0.5 text-sm opacity-80">
-                  {activeRapidCount} rapid-acting doses are active at once. Keep a gentle eye on how you're feeling.
-                </p>
-              </div>
-            </div>
-          )}
-
           {activeSplitPlans.length > 0 && (
             <div className="mt-4 space-y-2">
               {activeSplitPlans.slice(0, 3).map((plan) => (

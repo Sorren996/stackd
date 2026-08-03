@@ -1099,7 +1099,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
           </div>
         )}
 
-        <p className="text-legible mb-3 mt-5 text-[10px] font-bold uppercase tracking-[0.18em] text-white">Your Rhythm</p>
+        <p className="text-legible mb-3 mt-4 text-[10px] font-bold uppercase tracking-[0.18em] text-white">Your Rhythm</p>
         <div className="grid grid-cols-1 gap-3">
           <MetricCard
             label="Meal Balance"
