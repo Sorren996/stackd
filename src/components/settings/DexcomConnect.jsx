@@ -12,6 +12,7 @@ export default function DexcomConnect() {
   const { data: connection, isLoading } = useQuery({
     queryKey: ["dexcom-connection"],
     queryFn: () => base44.entities.DexcomConnection.list("-created_date", 1),
+    refetchOnWindowFocus: true,
   });
 
   const current = connection?.[0];
@@ -21,7 +22,11 @@ export default function DexcomConnect() {
     setConnecting(true);
     try {
       const res = await base44.functions.invoke("getDexcomAuthUrl", {});
-      window.location.href = res.data.authUrl;
+      // Open in a fresh top-level tab so the OAuth callback loads at the
+      // browser's top level — published apps block embedding in frames,
+      // which is what causes a "refused to connect" after the redirect.
+      window.open(res.data.authUrl, "_blank");
+      setConnecting(false);
     } catch {
       toast.error("We couldn't start the connection. Please try again.");
       setConnecting(false);

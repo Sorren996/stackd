@@ -28,7 +28,16 @@ export default function DexcomCallback() {
       try {
         await base44.functions.invoke("dexcomCallback", { code });
         setStatus("success");
-        setTimeout(() => navigate("/settings/dexcom", { replace: true }), 1500);
+        setTimeout(() => {
+          // This tab was opened by the settings page; close it so the user
+          // lands back on the (now refreshed) Glucose Source settings.
+          if (window.opener && !window.opener.closed) {
+            window.opener.focus();
+            window.close();
+          }
+          // Fallback if the browser blocks closing a scripted tab.
+          navigate("/settings/dexcom", { replace: true });
+        }, 1500);
       } catch (err) {
         setStatus("error");
         setError(err?.message || "We couldn't complete the connection.");
