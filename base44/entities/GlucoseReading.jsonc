@@ -2,6 +2,10 @@
   "name": "GlucoseReading",
   "type": "object",
   "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "Explicit user ID for service-role created readings (e.g. from a connected glucose source). Lets the owning user read imported readings."
+    },
     "value": {
       "type": "number",
       "description": "Blood glucose value in mg/dL"
@@ -10,6 +14,15 @@
       "type": "string",
       "format": "date-time",
       "description": "When the reading was taken"
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "manual",
+        "dexcom"
+      ],
+      "default": "manual",
+      "description": "Whether this reading was entered by hand or imported from a connected glucose source"
     },
     "notes": {
       "type": "string",
@@ -30,7 +43,14 @@
       "created_by_id": "{{user.id}}"
     },
     "read": {
-      "created_by_id": "{{user.id}}"
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.user_id": "{{user.id}}"
+        }
+      ]
     },
     "update": {
       "$and": [
