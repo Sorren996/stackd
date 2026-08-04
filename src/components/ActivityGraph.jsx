@@ -366,8 +366,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       { offset: Math.max(0, hi - 3), color: "#ef4444", opacity: 0.72 },
       { offset: Math.min(100, hi + 3), color: "#ffffff", opacity: 0.72 },
       { offset: Math.max(0, lo - 3), color: "#ffffff", opacity: 0.72 },
-      { offset: Math.min(100, lo + 3), color: "#6b92c4", opacity: 0.72 },
-      { offset: 100, color: "#6b92c4", opacity: 0.72 },
+      { offset: Math.min(100, lo + 3), color: "#fbbf24", opacity: 0.72 },
+      { offset: 100, color: "#fbbf24", opacity: 0.72 },
     ];
     let prev = 0;
     return raw.map((stop) => {
