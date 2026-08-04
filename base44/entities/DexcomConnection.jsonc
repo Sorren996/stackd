@@ -1,0 +1,65 @@
+{
+  "name": "DexcomConnection",
+  "type": "object",
+  "properties": {
+    "access_token": {
+      "type": "string",
+      "description": "OAuth access token for the user's Dexcom sandbox account"
+    },
+    "refresh_token": {
+      "type": "string",
+      "description": "OAuth refresh token used to obtain new access tokens"
+    },
+    "token_type": {
+      "type": "string",
+      "default": "bearer",
+      "description": "Token type returned by Dexcom"
+    },
+    "expires_in": {
+      "type": "number",
+      "description": "Access token lifetime in seconds, as returned by Dexcom"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the access token expires"
+    },
+    "scope": {
+      "type": "string",
+      "description": "OAuth scopes granted"
+    },
+    "connected_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the user connected their Dexcom account"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "connected",
+        "disconnected",
+        "error"
+      ],
+      "default": "connected",
+      "description": "Current state of the Dexcom connection"
+    }
+  },
+  "required": [
+    "access_token",
+    "status"
+  ],
+  "rls": {
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}
