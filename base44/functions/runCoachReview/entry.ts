@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
+import { canCreateInsight } from '../../shared/insightGating.ts';
 
 Deno.serve(async (req) => {
   try {
@@ -145,38 +146,43 @@ Deno.serve(async (req) => {
         });
 
         if (analysis && analysis.hasObservation && analysis.title && analysis.summary) {
-          const grouping = analysis.timeOfDayGrouping || analysis.mealGrouping || 'general';
-          const deduplicationKey = `${userId}:${analysis.insightType}:${grouping}:${reviewType}`;
+          // Selective gating: respect the daily cap and minimum spacing so
+          // insights stay rare and well-spaced rather than piling up.
+          const allowed = await canCreateInsight(sr, userId, now);
+          if (allowed) {
+            const grouping = analysis.timeOfDayGrouping || analysis.mealGrouping || 'general';
+            const deduplicationKey = `${userId}:${analysis.insightType}:${grouping}:${reviewType}`;
 
-          // Idempotency: check for existing insight with same deduplication key
-          const existing = await sr.entities.CoachInsight.filter({
-            deduplication_key: deduplicationKey,
-            created_by_id: userId,
-          });
-
-          if (existing.length === 0) {
-            const expiresAt = new Date(now.getTime() + expiryDays * dayMs);
-            await sr.entities.CoachInsight.create({
-              created_by_id: userId,
-              user_id: userId,
-              insight_type: analysis.insightType,
-              title: analysis.title,
-              summary: analysis.summary,
-              observation_start_at: startISO,
-              observation_end_at: endISO,
-              supporting_glucose_log_ids: analysis.supportingGlucoseLogIds || [],
-              supporting_carb_log_ids: analysis.supportingCarbLogIds || [],
-              supporting_insulin_log_ids: analysis.supportingInsulinLogIds || [],
-              supporting_journal_entry_ids: analysis.supportingJournalEntryIds || [],
-              status: 'unread',
+            // Idempotency: check for existing insight with same deduplication key
+            const existing = await sr.entities.CoachInsight.filter({
               deduplication_key: deduplicationKey,
-              generated_at: now.toISOString(),
-              expires_at: expiresAt.toISOString(),
-              model_version: 'automatic',
-              analysis_version: '1.0',
-              review_type: reviewType,
+              created_by_id: userId,
             });
-            insightsCreated++;
+
+            if (existing.length === 0) {
+              const expiresAt = new Date(now.getTime() + expiryDays * dayMs);
+              await sr.entities.CoachInsight.create({
+                created_by_id: userId,
+                user_id: userId,
+                insight_type: analysis.insightType,
+                title: analysis.title,
+                summary: analysis.summary,
+                observation_start_at: startISO,
+                observation_end_at: endISO,
+                supporting_glucose_log_ids: analysis.supportingGlucoseLogIds || [],
+                supporting_carb_log_ids: analysis.supportingCarbLogIds || [],
+                supporting_insulin_log_ids: analysis.supportingInsulinLogIds || [],
+                supporting_journal_entry_ids: analysis.supportingJournalEntryIds || [],
+                status: 'unread',
+                deduplication_key: deduplicationKey,
+                generated_at: now.toISOString(),
+                expires_at: expiresAt.toISOString(),
+                model_version: 'automatic',
+                analysis_version: '1.0',
+                review_type: reviewType,
+              });
+              insightsCreated++;
+            }
           }
         }
 
@@ -207,7 +213,7 @@ Deno.serve(async (req) => {
 });
 
 function buildAnalysisPrompt(data: any, reviewType: string): string {
-  return `You are reviewing wellness logs for a ${reviewType} check-in. Your job is to identify ONE useful, non-clinical pattern worth sharing with the user — or determine that nothing noteworthy is present.
+  return `You are reviewing wellness logs for a ${reviewType} check-in. Your job is to identify ONE genuinely meaningful, non-clinical pattern worth sharing with the user — or determine that nothing noteworthy is present.
 
 ## STRICT BOUNDARIES — NEVER VIOLATE
 - You MUST NOT provide dosing advice, medication recommendations, or clinical assessments.
@@ -218,6 +224,11 @@ function buildAnalysisPrompt(data: any, reviewType: string): string {
 - You MUST NOT infer mood, stress, sleep, exercise, or illness unless the user logged it.
 - You MUST NOT use absolute language (always, never, definitely, proves, means that).
 - Only describe what you actually see in the data using calm, warm, natural language.
+
+## MEANINGFULNESS — ONLY SURFACE WHAT TEACHES SOMETHING
+- Do NOT surface an observation that merely restates data. "Your glucose stayed steady from 2pm to 4pm", "you logged 3 meals today", or "your numbers were in range this morning" are NOT insights — they are restatements. Reject them.
+- Only surface an observation if it reveals a connection, a recurring tendency, or a meaningful contrast the user can genuinely learn from — for example: a specific meal that has shown a similar response more than once, a time of day that tends to unfold differently from the rest, a journal mood that lines up with glucose rhythms, or a habit worth noticing.
+- It is far better to set hasObservation=false and share nothing than to share something obvious. Selectivity is the whole point — the user should feel each note carries real meaning.
 
 ## EVIDENCE REQUIREMENTS
 - Require at least 3 supporting events before calling something a recurring pattern.
@@ -230,9 +241,9 @@ ${JSON.stringify(data, null, 2)}
 
 ## INSTRUCTIONS
 1. Look for patterns in: meal timing, glucose changes after meals, time-of-day tendencies, journal themes, positive consistency, or logging patterns.
-2. If you find a worthwhile pattern with enough supporting evidence, set hasObservation=true. Provide a concise title, a 1-2 sentence conversational summary, and the supporting record IDs.
-3. If you don't find a meaningful pattern, or there isn't enough data, set hasObservation=false with empty fields.
-4. The summary should sound like a caring friend noticing something — not a clinical report.
+2. If you find a worthwhile pattern with enough supporting evidence AND genuine meaning, set hasObservation=true. Provide a concise title, a 1-2 sentence conversational summary, and the supporting record IDs.
+3. If the only thing you can say restates the data, or there isn't enough evidence, set hasObservation=false with empty fields.
+4. The summary should sound like a caring friend noticing something genuinely interesting — not a clinical report, and not a status update.
 
 Respond with the JSON schema.`;
 }

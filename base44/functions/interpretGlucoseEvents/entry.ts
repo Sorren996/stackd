@@ -9,10 +9,10 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 import { buildInsightFingerprint } from '../../shared/insightFingerprint.ts';
 import { ANALYSIS_VERSION, PROMPT_VERSION } from '../../shared/analysisVersion.ts';
+import { canCreateInsight } from '../../shared/insightGating.ts';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const LOOKBACK_DAYS = 2;
-const MAX_EVENTS_PER_USER = 5;
 
 const INSIGHT_TYPE_BY_EVENT: Record<string, string> = {
   high: 'high_event',
@@ -64,13 +64,25 @@ export default async function(req: Request): Promise<Response> {
           .filter((id: any) => Boolean(id))
       );
 
-      const pending = events.filter((e: any) => !interpretedIds.has(e.id)).slice(0, MAX_EVENTS_PER_USER);
+      let pending = events.filter((e: any) => !interpretedIds.has(e.id));
       if (!pending.length) continue;
+
+      // Selective gating: respect the shared daily cap and minimum spacing so
+      // event-based insights don't pile on top of pattern insights.
+      const allowed = await canCreateInsight(sr, userId, now);
+      if (!allowed) continue;
+
+      // Surface only the single most notable event this run — longer excursions
+      // carry more to reflect on, and keeping to one per run preserves spacing.
+      pending.sort((a: any, b: any) =>
+        (Number(b.duration_minutes) || 0) - (Number(a.duration_minutes) || 0)
+      );
+      const focus = pending.slice(0, 1);
 
       let aiInsights: any[] = [];
       try {
         const res: any = await sr.integrations.Core.InvokeLLM({
-          prompt: buildPrompt(pending),
+          prompt: buildPrompt(focus),
           response_json_schema: {
             type: 'object',
             properties: {
@@ -97,7 +109,7 @@ export default async function(req: Request): Promise<Response> {
       }
 
       const records: any[] = [];
-      for (const e of pending) {
+      for (const e of focus) {
         const ai = aiInsights.find((i: any) => i.source_event_id === e.id);
         const valid = ai && typeof ai.title === 'string' && ai.title.trim() && typeof ai.message === 'string' && ai.message.trim();
         const fallback = deterministicFallback(e);
@@ -172,6 +184,10 @@ function buildPrompt(events: any[]): string {
 - You MUST NOT use absolute language (always, never, definitely, proves, means).
 - Speak in calm, natural, uplifting language. Frame excursions as check-ins, not failures.
 - Describe only what the verified data shows; do not invent values or context.
+
+## MEANINGFULNESS
+- Highlight what makes this event genuinely notable — a connection, a timing pattern, or how the recovery unfolded — not just a restatement of the numbers.
+- If the event is minor or unremarkable, keep the message honest and brief rather than overstating its importance.
 
 ## EVENTS (verified, from real logs)
 ${JSON.stringify(events, null, 2)}

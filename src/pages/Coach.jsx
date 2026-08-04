@@ -9,6 +9,7 @@ import MessageBubble from "@/components/coach/MessageBubble";
 import InsightMessage from "@/components/coach/InsightMessage";
 import TypingIndicator from "@/components/coach/TypingIndicator";
 import { consumeSurfaceInsight, onSurfaceInsight } from "@/lib/coachInsightSurface";
+import { selectSurfaceableInsights } from "@/lib/insightGating";
 
 const AGENT_NAME = "coach";
 const LAST_VISIT_KEY = "ai_coach_last_visit";
@@ -58,9 +59,9 @@ export default function Coach() {
     refetchOnWindowFocus: true,
   });
 
-  const validUnreadInsights = (unreadInsights || []).filter(
-    (i) => !i.expires_at || new Date(i.expires_at).getTime() > Date.now()
-  );
+  // Apply the surfacing gate (max 2/day, ≥8h apart) so only a few selective,
+  // well-spaced insights ever appear in the chat — never a flood on reopen.
+  const validUnreadInsights = selectSurfaceableInsights(unreadInsights || []);
   const newestInsight = validUnreadInsights[0] || null;
 
   // Track insights shown in the chat. Unread ones render at the bottom of the

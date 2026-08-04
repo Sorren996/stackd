@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import Dashboard from "../pages/Dashboard";
 import { requestSurfaceInsight } from "@/lib/coachInsightSurface";
+import { selectSurfaceableInsights } from "@/lib/insightGating";
 import HistoryPage from "../pages/History";
 import CoachPage from "../pages/Coach";
 
@@ -49,9 +50,11 @@ export default function Layout() {
     refetchOnWindowFocus: true,
     enabled: notificationsEnabled,
   });
-  const hasUnread = notificationsEnabled && (unreadInsights || []).some(
-    (insight) => !insight.expires_at || new Date(insight.expires_at).getTime() > Date.now()
-  );
+  // Only glow when a surfaceable insight exists (max 2/day, ≥8h apart).
+  const surfaceableInsights = notificationsEnabled
+    ? selectSurfaceableInsights(unreadInsights || [])
+    : [];
+  const hasUnread = surfaceableInsights.length > 0;
 
   useEffect(() => {
     const handler = (e) => setCoachKeyboardOpen(e.detail?.open ?? false);
@@ -82,9 +85,7 @@ export default function Layout() {
 
   const handleLogoClick = () => {
     if (hasUnread) {
-      const newest = (unreadInsights || []).find(
-        (i) => !i.expires_at || new Date(i.expires_at).getTime() > Date.now()
-      );
+      const newest = surfaceableInsights[0];
       if (newest) requestSurfaceInsight(newest.id);
     }
     navigate("/coach");
