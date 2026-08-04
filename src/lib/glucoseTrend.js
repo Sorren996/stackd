@@ -16,7 +16,7 @@
 
 const STEP_MS = 5 * 60 * 1000;
 const MAX_SPAN_MS = 3 * 60 * 60 * 1000;
-const MAX_POINTS = 6;
+const MAX_POINTS = 3;
 
 const RATE_FAST = 3;   // mg/dL per minute
 const RATE_SLOW = 1;
@@ -49,6 +49,24 @@ export function computeGlucoseTrend(readings) {
     .sort((a, b) => a.t - b.t);
 
   if (points.length < 2) return { icon: "right", label: "Stable" };
+
+  // Acute change override: when the last two readings show a meaningful move,
+  // surface it immediately so the card reflects what just happened rather than
+  // being smoothed away by the regression over older points.
+  const last = points[points.length - 1];
+  const prev = points[points.length - 2];
+  if (last && prev) {
+    const gapMin = (last.t - prev.t) / 60000;
+    const delta = last.v - prev.v;
+    const absDelta = Math.abs(delta);
+    if (gapMin > 0 && gapMin <= 45) {
+      if (absDelta >= 25) return { icon: delta > 0 ? "up" : "down", label: delta > 0 ? "Rising" : "Falling" };
+      if (absDelta >= 12) return { icon: delta > 0 ? "up-right" : "down-right", label: delta > 0 ? "Slowly rising" : "Slowly falling" };
+    } else if (gapMin > 45 && gapMin <= 180) {
+      if (absDelta >= 40) return { icon: delta > 0 ? "up" : "down", label: delta > 0 ? "Rising" : "Falling" };
+      if (absDelta >= 20) return { icon: delta > 0 ? "up-right" : "down-right", label: delta > 0 ? "Slowly rising" : "Slowly falling" };
+    }
+  }
 
   const recent = points.slice(-MAX_POINTS);
   const newest = recent[recent.length - 1].t;
