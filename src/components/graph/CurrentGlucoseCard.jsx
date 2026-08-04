@@ -120,7 +120,7 @@ export default function CurrentGlucoseCard({
                 {format(new Date(latestGlucose.recorded_at), "h:mm a · MMM d")}
               </p>
             )}
-            {onEdit && latestGlucose && (
+            {onEdit && latestGlucose && latestGlucose.source !== "dexcom" && (
               <button
                 type="button"
                 onClick={() => {

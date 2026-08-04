@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Syringe, Droplets, Wheat } from "lucide-react";
 import DoseForm from "@/components/DoseForm";
+import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 
 const ACTIONS = [
   { id: "insulin", label: "Support", Icon: Syringe, color: "91,163,184" },
@@ -10,10 +11,18 @@ const ACTIONS = [
 ];
 
 export default function FloatingActionMenu() {
+  const { connected } = useDexcomConnection();
   const [expanded, setExpanded] = useState(false);
   const [selectedMode, setSelectedMode] = useState(null);
   const [doseFormOpen, setDoseFormOpen] = useState(false);
   const [doseFormPreloaded, setDoseFormPreloaded] = useState(false);
+
+  // When a glucose source is connected, readings flow in automatically —
+  // step aside so manual glucose logging doesn't compete with the sensor.
+  const actions = useMemo(
+    () => (connected ? ACTIONS.filter((a) => a.id !== "glucose") : ACTIONS),
+    [connected]
+  );
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -59,11 +68,11 @@ export default function FloatingActionMenu() {
       <div className="fixed bottom-24 right-5 z-50 flex flex-col items-end gap-3">
         <AnimatePresence>
           {expanded && !doseFormOpen &&
-            ACTIONS.slice()
+            actions.slice()
               .reverse()
               .map((action, index) => {
                 const ActionIcon = action.Icon;
-                const delay = (ACTIONS.length - 1 - index) * 0.06;
+                const delay = (actions.length - 1 - index) * 0.06;
                 return (
                   <motion.button
                     key={action.id}
