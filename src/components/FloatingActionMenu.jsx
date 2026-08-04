@@ -73,20 +73,40 @@ export default function FloatingActionMenu() {
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0, y: 30 }}
                     transition={{ type: "spring", stiffness: 380, damping: 22, delay }}
-                    whileTap={{ scale: 0.88 }}
-                    className="flex h-14 w-14 items-center justify-center rounded-full border backdrop-blur-sm"
-                    style={{
-                      background:
-                        "linear-gradient(145deg, rgba(255,255,255,0.14), rgba(255,255,255,0.04))",
-                      borderColor: `rgba(${action.color},0.5)`,
-                      boxShadow: `0 8px 24px rgba(${action.color},0.25), inset 0 1px 1px rgba(255,255,255,0.2)`,
-                    }}
+                    whileTap={{ scale: 0.92 }}
+                    className="flex items-center justify-center gap-3"
                     aria-label={action.label}
                   >
-                    <ActionIcon
-                      className="h-6 w-6"
-                      style={{ color: `rgba(${action.color},0.95)` }}
-                    />
+                    <motion.span
+                      initial={{ opacity: 0, x: 8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 8 }}
+                      transition={{ delay: delay + 0.04 }}
+                      className="rounded-full border px-3 py-1.5 text-sm font-semibold backdrop-blur-sm"
+                      style={{
+                        color: `rgba(${action.color},1)`,
+                        background:
+                          "linear-gradient(145deg, rgba(15,24,22,0.9), rgba(15,24,22,0.72))",
+                        borderColor: `rgba(${action.color},0.5)`,
+                        boxShadow: `0 6px 18px rgba(${action.color},0.22)`,
+                      }}
+                    >
+                      {action.label}
+                    </motion.span>
+                    <motion.span
+                      className="flex h-14 w-14 items-center justify-center rounded-full border backdrop-blur-sm"
+                      style={{
+                        background:
+                          "linear-gradient(145deg, rgba(255,255,255,0.14), rgba(255,255,255,0.04))",
+                        borderColor: `rgba(${action.color},0.5)`,
+                        boxShadow: `0 8px 24px rgba(${action.color},0.25), inset 0 1px 1px rgba(255,255,255,0.2)`,
+                      }}
+                    >
+                      <ActionIcon
+                        className="h-7 w-7"
+                        style={{ color: `rgba(${action.color},0.95)` }}
+                      />
+                    </motion.span>
                   </motion.button>
                 );
               })}
