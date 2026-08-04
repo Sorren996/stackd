@@ -10,6 +10,7 @@
   }
 
   :root {
+    color-scheme: dark;
     --font-sans: 'Montserrat', system-ui;
     --background: 160 12% 7%;
     --foreground: 160 8% 92%;
@@ -92,6 +93,7 @@
     background: linear-gradient(to bottom, #112232 0%, #0F241F 100%);
     background-attachment: fixed;
     min-height: 100vh;
+    color-scheme: dark;
   }
 }
 
