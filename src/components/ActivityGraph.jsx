@@ -1121,10 +1121,11 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                 style={{ left: x, top: y }}
               >
                 <span
-                  className="block h-[7px] w-[7px] rounded-full"
+                  className="block w-[3px] rounded-full"
                   style={{
-                    backgroundColor: `rgba(255,255,255,${0.82 * dotOpacity})`,
-                    boxShadow: `0 0 0 2px rgba(255,255,255,${0.14 * dotOpacity}), 0 0 5px rgba(255,255,255,${0.2 * dotOpacity})`,
+                    height: 18,
+                    background: `linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,${0.9 * dotOpacity}) 50%, rgba(255,255,255,0) 100%)`,
+                    boxShadow: `0 0 4px rgba(255,255,255,${0.25 * dotOpacity})`,
                   }}
                 />
               </button>
