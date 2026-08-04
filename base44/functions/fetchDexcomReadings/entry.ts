@@ -73,14 +73,61 @@ export default async function(req) {
           }
         }
 
-        // Fetch window: from the last successful fetch, or the last 24h if none.
         const lastFetched = conn.last_fetched_at ? new Date(conn.last_fetched_at) : null;
-        const startDate = (lastFetched && lastFetched > new Date(now.getTime() - 24 * 60 * 60 * 1000))
-          ? lastFetched
-          : new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+        // Ask Dexcom where data actually exists. The sandbox stores simulated
+        // readings at a fixed historical range (not the current time), so a
+        // naive "last 24h from now" window returns nothing. In production the
+        // range end tracks ~now, so this same logic drives incremental sync.
+        let rangeStart = null;
+        let rangeEnd = null;
+        let rawRange = null;
+        try {
+          const drRes = await fetch(`${DEXCOM_SANDBOX_API_BASE}/users/self/dataRange`, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+          if (drRes.ok) {
+            const dr = await drRes.json();
+            rawRange = dr;
+            const egvRange = Array.isArray(dr.egvs) ? dr.egvs[0] : dr.egvs;
+            const pick = (v) => (typeof v === "string" ? v : (v && (v.systemTime || v.displayTime)) || null);
+            if (egvRange) {
+              if (pick(egvRange.start)) rangeStart = new Date(pick(egvRange.start));
+              if (pick(egvRange.end)) rangeEnd = new Date(pick(egvRange.end));
+            }
+          }
+        } catch { /* fall back to a time-based window below */ }
+
+        const valid = (d) => d && !Number.isNaN(d.getTime());
+        if (!valid(rangeStart)) rangeStart = null;
+        if (!valid(rangeEnd)) rangeEnd = null;
+
+        let startDate;
+        let endDate = now;
+        if (rangeEnd) {
+          endDate = rangeEnd.getTime() > now.getTime() ? now : rangeEnd;
+          if (lastFetched && rangeStart && lastFetched.getTime() > rangeStart.getTime() && lastFetched.getTime() < rangeEnd.getTime()) {
+            startDate = lastFetched;
+          } else {
+            // First pull (or sandbox re-query): grab the most recent 24h of
+            // whatever data Dexcom actually has.
+            startDate = new Date(endDate.getTime() - 24 * 60 * 60 * 1000);
+            if (rangeStart && startDate.getTime() < rangeStart.getTime()) startDate = rangeStart;
+          }
+        } else {
+          endDate = now;
+          startDate = (lastFetched && lastFetched.getTime() > now.getTime() - 24 * 60 * 60 * 1000)
+            ? lastFetched
+            : new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        }
+
+        if (startDate.getTime() >= endDate.getTime()) {
+          results.push({ owner, status: "ok", imported: 0, fetched: 0, range: { start: rangeStart, end: rangeEnd } });
+          continue;
+        }
 
         const egvRes = await fetch(
-          `${DEXCOM_SANDBOX_API_BASE}/users/self/egvs?startDate=${formatDexcomDate(startDate)}&endDate=${formatDexcomDate(now)}`,
+          `${DEXCOM_SANDBOX_API_BASE}/users/self/egvs?startDate=${formatDexcomDate(startDate)}&endDate=${formatDexcomDate(endDate)}`,
           { headers: { Authorization: `Bearer ${accessToken}` } }
         );
 
@@ -92,6 +139,7 @@ export default async function(req) {
 
         const egvData = await egvRes.json();
         const egvs = egvData.egvs || egvData.EGVS || [];
+        const egvDiag = { keys: Object.keys(egvData || {}), sample: JSON.stringify(egvData).slice(0, 400) };
 
         // Build a set of already-imported timestamps for this user to dedupe.
         const existing = await sr.entities.GlucoseReading.filter(
@@ -124,10 +172,10 @@ export default async function(req) {
         }
 
         await sr.entities.DexcomConnection.update(conn.id, {
-          last_fetched_at: now.toISOString(),
+          last_fetched_at: endDate.toISOString(),
         });
 
-        results.push({ owner, status: "ok", imported: toCreate.length, fetched: egvs.length });
+        results.push({ owner, status: "ok", imported: toCreate.length, fetched: egvs.length, range: { start: rangeStart, end: rangeEnd }, rawRange, egvDiag });
       } catch (error) {
         results.push({ owner, status: "error", details: error.message });
       }
