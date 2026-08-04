@@ -31,6 +31,13 @@ export default function Register() {
       await base44.auth.register({ email, password });
       setShowOtp(true);
     } catch (err) {
+      const msg = String(err?.message || "").toLowerCase();
+      if (msg.includes("exist") || msg.includes("already") || msg.includes("registered") || msg.includes("taken")) {
+        const params = new URLSearchParams({ existing: "1" });
+        if (email) params.set("email", email);
+        window.location.href = `/login?${params.toString()}`;
+        return;
+      }
       setError(err.message || "Registration failed");
     } finally {
       setLoading(false);
@@ -41,10 +48,8 @@ export default function Register() {
     setError("");
     setLoading(true);
     try {
-      const result = await base44.auth.verifyOtp({ email, otpCode });
-      if (result?.access_token) {
-        base44.auth.setToken(result.access_token);
-      }
+      await base44.auth.verifyOtp({ email, otpCode });
+      await base44.auth.loginViaEmailPassword(email, password);
       window.location.href = "/";
     } catch (err) {
       setError(err.message || "Invalid verification code");

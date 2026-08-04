@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,10 +9,18 @@ import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
 
 export default function Login() {
+  const [searchParams] = useSearchParams();
+  const isExisting = searchParams.get("existing") === "1";
+  const prefilledEmail = searchParams.get("email") || "";
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (prefilledEmail) setEmail(prefilledEmail);
+  }, [prefilledEmail]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -63,6 +71,13 @@ export default function Login() {
           <span className="bg-card px-3 text-muted-foreground">or</span>
         </div>
       </div>
+
+      {isExisting &&
+      <div className="mb-4 rounded-2xl border border-teal-500/20 bg-teal-500/[0.06] p-4 text-sm text-white/80 leading-relaxed">
+          <p className="font-semibold text-white">It looks like you already have an account.</p>
+          <p className="mt-1 text-xs text-white/50">Log in below, or use <Link to="/forgot-password" className="text-primary font-medium hover:underline">forgot password</Link> to reset it.</p>
+        </div>
+      }
 
       {error &&
       <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
