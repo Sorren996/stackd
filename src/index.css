@@ -95,6 +95,15 @@
     min-height: 100vh;
     color-scheme: dark;
   }
+
+  /* Force dark mode on all native input controls (keyboards, numpads,
+     date/time pickers) regardless of the device's system appearance. */
+  input, textarea, select,
+  input::placeholder, textarea::placeholder,
+  input[type="date"], input[type="time"], input[type="datetime-local"],
+  input[type="number"], input[type="text"], input[type="email"], input[type="password"] {
+    color-scheme: dark;
+  }
 }
 
 @layer utilities {
