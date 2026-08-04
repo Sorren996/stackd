@@ -104,15 +104,20 @@ export default async function(req) {
 
         let startDate;
         let endDate = now;
+        const MAX_RANGE_MS = 90 * 24 * 60 * 60 * 1000;
         if (rangeEnd) {
           endDate = rangeEnd.getTime() > now.getTime() ? now : rangeEnd;
           if (lastFetched && rangeStart && lastFetched.getTime() > rangeStart.getTime() && lastFetched.getTime() < rangeEnd.getTime()) {
+            // Incremental: pick up where the last successful fetch left off.
             startDate = lastFetched;
           } else {
-            // First pull (or sandbox re-query): grab the most recent 24h of
-            // whatever data Dexcom actually has.
-            startDate = new Date(endDate.getTime() - 24 * 60 * 60 * 1000);
-            if (rangeStart && startDate.getTime() < rangeStart.getTime()) startDate = rangeStart;
+            // First pull (or sandbox re-query): start from the oldest available
+            // reading. Dexcom caps any single EGV query at 90 days, so we walk
+            // forward in ≤90-day chunks on successive runs until we catch up to
+            // the most recent data. (In production rangeStart ≈ now, so this is
+            // a single recent pull; in the sandbox the simulated readings live
+            // at the historical start of the data range.)
+            startDate = rangeStart || new Date(endDate.getTime() - MAX_RANGE_MS);
           }
         } else {
           endDate = now;
@@ -120,6 +125,8 @@ export default async function(req) {
             ? lastFetched
             : new Date(now.getTime() - 24 * 60 * 60 * 1000);
         }
+        // Dexcom rejects any EGV query wider than 90 days.
+        endDate = new Date(Math.min(endDate.getTime(), startDate.getTime() + MAX_RANGE_MS));
 
         if (startDate.getTime() >= endDate.getTime()) {
           results.push({ owner, status: "ok", imported: 0, fetched: 0, range: { start: rangeStart, end: rangeEnd } });
