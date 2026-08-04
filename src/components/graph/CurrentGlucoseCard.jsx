@@ -86,11 +86,11 @@ export default function CurrentGlucoseCard({
         </div>
 
         <div className="relative z-10 mt-1 flex items-end gap-1.5">
-          <span className="text-2xl font-bold leading-none text-white">
+          <span className="text-4xl font-black leading-none text-white">
             {glucoseValue ?? "--"}
           </span>
-          <span className="mb-0.5 text-[11px] font-medium text-white/40">mg/dL</span>
-          {latestGlucose && <TrendIcon className="mb-0.5 h-4 w-4" style={{ color: glucoseColor }} />}
+          <span className="mb-1 text-[11px] font-medium text-white/40">mg/dL</span>
+          {latestGlucose && <TrendIcon className="mb-1 h-4 w-4" style={{ color: glucoseColor }} />}
         </div>
 
         <div className="relative z-10 mt-1">
