@@ -860,7 +860,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         }} />
       }
       {filters.glucose && filteredGlucoseReadings.length > 0 && (
-        <div className="pointer-events-none absolute right-1.5 top-0 z-20" style={{ height: CHART_HEIGHT }}>
+        <div className="pointer-events-none absolute right-4 top-0 z-20" style={{ height: CHART_HEIGHT }}>
           <span
             className="absolute right-0 text-[11px] font-bold leading-none text-amber-400"
             style={{ top: getGlucoseY(targetHigh), transform: "translateY(-120%)" }}
