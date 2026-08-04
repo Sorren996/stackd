@@ -1,5 +1,5 @@
 import { useMemo, useRef, useEffect, useState } from "react";
-import { Area, XAxis, YAxis, Line, ComposedChart } from "recharts";
+import { Area, XAxis, YAxis, Line, ComposedChart, ReferenceLine } from "recharts";
 import { generateActivityCurve, getDoseIOB, getInsulinProfile, isBasalInsulinType } from "@/lib/insulinPharmacology";
 import { PROFILE_COLORS } from "@/lib/carbAbsorption";
 import { format } from "date-fns";
@@ -859,6 +859,22 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           willChange: "transform, opacity"
         }} />
       }
+      {filters.glucose && filteredGlucoseReadings.length > 0 && (
+        <div className="pointer-events-none absolute right-1.5 top-0 z-20" style={{ height: CHART_HEIGHT }}>
+          <span
+            className="absolute right-0 text-[11px] font-bold leading-none text-amber-400"
+            style={{ top: getGlucoseY(targetHigh), transform: "translateY(-120%)" }}
+          >
+            {Math.round(targetHigh)}
+          </span>
+          <span
+            className="absolute right-0 text-[11px] font-bold leading-none text-amber-400"
+            style={{ top: getGlucoseY(targetLow), transform: "translateY(20%)" }}
+          >
+            {Math.round(targetLow)}
+          </span>
+        </div>
+      )}
       {/* monitoring gradient bands live inside the scrollable chart below */}
       <div
         ref={scrollRef}
@@ -959,6 +975,13 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               legendType="none" />
 
             }
+
+            {filters.glucose && filteredGlucoseReadings.length > 0 && (
+              <>
+                <ReferenceLine yAxisId="glucose" y={targetHigh} stroke="#fbbf24" strokeOpacity={0.55} strokeWidth={2.5} />
+                <ReferenceLine yAxisId="glucose" y={targetLow} stroke="#fbbf24" strokeOpacity={0.55} strokeWidth={2.5} />
+              </>
+            )}
 
             {doseKeys.map((k) =>
             <Area
