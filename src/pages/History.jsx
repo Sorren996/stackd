@@ -4,6 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import { ChevronLeft, X } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import { motion, AnimatePresence } from "framer-motion";
 import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
 import { DateScrollField, TimeScrollField, NumberPadField, TextPadField, SelectField } from "@/components/FormInputFields";
 import HighProteinFatCheckbox from "@/components/HighProteinFatCheckbox";
@@ -278,6 +279,7 @@ export default function History() {
   const [selectedDay, setSelectedDay] = useState(null);
   const [editingLog, setEditingLog] = useState(null);
   const [targetRange, setTargetRange] = useState(readTargetRange);
+  const [direction, setDirection] = useState(1);
 
   useEffect(() => {
     const updateTargetRange = () => setTargetRange(readTargetRange());
@@ -420,21 +422,25 @@ export default function History() {
   });
 
   const handleSelectMonth = (key) => {
+    setDirection(1);
     setSelectedMonth(key);
     setLevel("week");
   };
 
   const handleSelectWeek = (key) => {
+    setDirection(1);
     setSelectedWeek(key);
     setLevel("day");
   };
 
   const handleSelectDay = (date) => {
+    setDirection(1);
     setSelectedDay(date);
     setLevel("timeline");
   };
 
   const goBack = () => {
+    setDirection(-1);
     if (level === "timeline") {
       setLevel("day");
       setSelectedDay(null);
@@ -496,28 +502,39 @@ export default function History() {
         </div>
       </div>
 
-      {level === "month" && (
-        <HistoryMonthView months={months} onSelectMonth={handleSelectMonth} />
-      )}
+      <AnimatePresence mode="wait" custom={direction}>
+        <motion.div
+          key={level}
+          custom={direction}
+          initial={{ opacity: 0, x: direction > 0 ? 28 : -28 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: direction > 0 ? -28 : 28 }}
+          transition={{ duration: 0.28, ease: [0.4, 0, 0.2, 1] }}
+        >
+          {level === "month" && (
+            <HistoryMonthView months={months} onSelectMonth={handleSelectMonth} />
+          )}
 
-      {level === "week" && currentMonth && (
-        <HistoryWeekView weeks={weeks} onSelectWeek={handleSelectWeek} />
-      )}
+          {level === "week" && currentMonth && (
+            <HistoryWeekView weeks={weeks} onSelectWeek={handleSelectWeek} />
+          )}
 
-      {level === "day" && currentWeek && (
-        <HistoryDayView days={weekDays} onSelectDay={handleSelectDay} />
-      )}
+          {level === "day" && currentWeek && (
+            <HistoryDayView days={weekDays} onSelectDay={handleSelectDay} />
+          )}
 
-      {level === "timeline" && selectedDay && (
-        <HistoryTimelineView
-          logs={dayLogs}
-          loading={loadingDayLogs}
-          onEdit={(payload) => setEditingLog(payload)}
-          onDeleteDose={(id) => deleteDose.mutate(id)}
-          onDeleteGlucose={(id) => deleteGlucose.mutate(id)}
-          onDeleteCarb={(id) => deleteCarb.mutate(id)}
-        />
-      )}
+          {level === "timeline" && selectedDay && (
+            <HistoryTimelineView
+              logs={dayLogs}
+              loading={loadingDayLogs}
+              onEdit={(payload) => setEditingLog(payload)}
+              onDeleteDose={(id) => deleteDose.mutate(id)}
+              onDeleteGlucose={(id) => deleteGlucose.mutate(id)}
+              onDeleteCarb={(id) => deleteCarb.mutate(id)}
+            />
+          )}
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 }
