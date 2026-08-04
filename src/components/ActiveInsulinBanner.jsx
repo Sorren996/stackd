@@ -36,6 +36,7 @@ import CurrentGlucoseCard from "./graph/CurrentGlucoseCard";
 import { getSupportiveGlucoseMessage } from "@/lib/supportiveMessages";
 import { computeTimeInRange } from "@/lib/timeInRange";
 import { computeGlucoseTrend } from "@/lib/glucoseTrend";
+import { isRescueCarbEntry } from "@/lib/rescueCarbDetection";
 
 // Flip to false to instantly revert to the original dense dashboard layout.
 const CLEAN_LAYOUT = true;
@@ -182,10 +183,11 @@ function isMealCoverageInsulin(dose, insulinSettings = {}) {
   return selectedTypes.includes(dose.insulin_type);
 }
 
-function buildMealEventGroups(carbEntries, doses, insulinSettings = {}) {
+function buildMealEventGroups(carbEntries, doses, insulinSettings = {}, glucoseReadings = [], targetLow = 70) {
   const preMealWindowMs = (insulinSettings.preMealWindowMinutes ?? DEFAULT_PRE_MEAL_WINDOW_MINUTES) * MINUTE_MS;
   const postMealWindowMs = (insulinSettings.postMealWindowMinutes ?? DEFAULT_POST_MEAL_WINDOW_MINUTES) * MINUTE_MS;
   const carbEvents = (Array.isArray(carbEntries) ? carbEntries : [])
+    .filter((entry) => !isRescueCarbEntry(entry, glucoseReadings, doses, targetLow))
     .map((entry) => ({
       type: "carb",
       time: getEntryTime(entry),
@@ -259,9 +261,32 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
     };
   }
 
-  const groups = buildMealEventGroups(carbEntries, doses, insulinSettings).sort((a, b) => b.mealTime - a.mealTime);
+  const groups = buildMealEventGroups(carbEntries, doses, insulinSettings, glucoseReadings, insulinSettings.targetLow).sort((a, b) => b.mealTime - a.mealTime);
+
+  // Detect recent rescue carbs (proactive low prevention) so we can acknowledge
+  // them supportively instead of treating them as an under-dosed meal.
+  const nowForRescue = Date.now();
+  const recentRescueCarbs = (Array.isArray(carbEntries) ? carbEntries : [])
+    .filter((entry) => {
+      const entryTime = getEntryTime(entry);
+      return (
+        Number.isFinite(entryTime) &&
+        nowForRescue - entryTime < 2 * 60 * MINUTE_MS &&
+        isRescueCarbEntry(entry, glucoseReadings, doses, insulinSettings.targetLow)
+      );
+    });
+  const rescueCarbsTotal = recentRescueCarbs.reduce((sum, entry) => sum + Number(entry.carbs || 0), 0);
 
   if (!groups.length) {
+    if (recentRescueCarbs.length) {
+      return {
+        value: "Gentle support",
+        status: "Nourishment added to lift your trend",
+        color: "#5ba88a",
+        sub: `${Math.round(rescueCarbsTotal)}g supportive nourishment`,
+        details: null,
+      };
+    }
     return {
       value: "No meal data",
       status: "Log carbs to see your rhythm",
@@ -514,16 +539,29 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
   }
 
   if (!mealStillUnderReview) {
-    value = "Window passed";
-    status = "Nice job staying on top of it";
-    color = "#5ba88a";
-    sub = `${Math.round(mealGroup.carbs)}g meal reviewed`;
+    if (recentRescueCarbs.length) {
+      value = "Gentle support";
+      status = "Nourishment added to lift your trend";
+      color = "#5ba88a";
+      sub = `${Math.round(rescueCarbsTotal)}g supportive nourishment`;
 
-    outcomeAssessment = {
-      label: "Meal window passed",
-      message: "Meal window has passed. Nice job staying on top of it.",
-      color: "#5ba88a",
-    };
+      outcomeAssessment = {
+        label: "Gentle support",
+        message: "You added nourishment to lift a gentle dip. Nicely done catching your rhythm early.",
+        color: "#5ba88a",
+      };
+    } else {
+      value = "Window passed";
+      status = "Nice job staying on top of it";
+      color = "#5ba88a";
+      sub = `${Math.round(mealGroup.carbs)}g meal reviewed`;
+
+      outcomeAssessment = {
+        label: "Meal window passed",
+        message: "Meal window has passed. Nice job staying on top of it.",
+        color: "#5ba88a",
+      };
+    }
   }
 
   return {

@@ -39,11 +39,6 @@ function readInsulinLibrary() {
   return getDefaultInsulinLibrary();
 }
 
-const dosePurposeOptions = [
-  { value: "meal", label: "Meal", description: "Carb coverage" },
-  { value: "correction", label: "Correction", description: "Glucose correction" },
-];
-
 const ACCENT_COLORS = {
   insulin: "rgba(91,163,184,0.12)",
   glucose: "rgba(91,168,138,0.12)",
@@ -61,7 +56,6 @@ function createInsulinRow(defaults = {}) {
     id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
     insulinType: "",
     units: "",
-    purpose: "meal",
     ...defaults,
   };
 }
@@ -368,7 +362,6 @@ export default function DoseForm({ open, onOpenChange, mode = "insulin" }) {
       ...rows,
       createInsulinRow({
         insulinType: previous?.insulinType || "",
-        purpose: previous?.purpose || "meal",
       }),
     ]);
   };
@@ -460,19 +453,11 @@ export default function DoseForm({ open, onOpenChange, mode = "insulin" }) {
       const existing = groups[row.insulinType] || {
         insulin_type: row.insulinType,
         units: 0,
-        meal_units: 0,
-        correction_units: 0,
         administered_at: administeredAt.toISOString(),
         notes: insulinNotes || undefined,
       };
 
       existing.units += units;
-      if (row.purpose === "correction") {
-        existing.correction_units += units;
-      } else {
-        existing.meal_units += units;
-      }
-
       groups[row.insulinType] = existing;
       return groups;
     }, {});
@@ -600,12 +585,6 @@ export default function DoseForm({ open, onOpenChange, mode = "insulin" }) {
                                 placeholder="0"
                                 maxLength={4}
                                 large
-                              />
-                              <SelectField
-                                label="Purpose"
-                                value={row.purpose}
-                                onChange={(value) => updateInsulinRow(row.id, { purpose: value })}
-                                options={dosePurposeOptions}
                               />
                             </div>
                             {insulinRows.length > 1 && (
