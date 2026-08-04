@@ -61,19 +61,10 @@ export default function Coach() {
   );
   const newestInsight = validUnreadInsights[0] || null;
 
-  useEffect(() => {
-    if (!newestInsight?.id) return;
-    const insightId = newestInsight.id;
-    const timer = setTimeout(() => {
-      base44.entities.CoachInsight.update(insightId, {
-        status: "read",
-        read_at: new Date().toISOString(),
-      })
-        .then(() => queryClient.invalidateQueries({ queryKey: ["unread-coach-insights"] }))
-        .catch(() => {});
-    }, 2500);
-    return () => clearTimeout(timer);
-  }, [newestInsight?.id]);
+  // The logo glow persists until the user actually acknowledges the insight —
+  // by talking about it, dismissing it, or tapping the glowing logo (which
+  // surfaces it in chat). See handleTalkAboutInsight, handleDismissInsight,
+  // and the logo-surface effect below.
 
   const handleDismissInsight = async (insight) => {
     try {
@@ -91,6 +82,12 @@ export default function Coach() {
   const handleTalkAboutInsight = (insight) => {
     const message = `I'd like to talk about this insight (insight ID: ${insight.id}): ${insight.title}. ${insight.summary}`;
     handleSend(message);
+    base44.entities.CoachInsight.update(insight.id, {
+      status: "read",
+      read_at: new Date().toISOString(),
+    })
+      .then(() => queryClient.invalidateQueries({ queryKey: ["unread-coach-insights"] }))
+      .catch(() => {});
   };
 
   const handleSaveInsightToJournal = async (insight) => {

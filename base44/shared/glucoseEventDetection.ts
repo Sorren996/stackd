@@ -64,7 +64,7 @@ function nonBasalDoses(doses: any[]): any[] {
   return (Array.isArray(doses) ? doses : []).filter((d) => !isBasalType(d?.insulin_type));
 }
 
-function isCorrectionDose(dose: any): boolean {
+export function isCorrectionDose(dose: any): boolean {
   const meal = Number(dose?.meal_units) || 0;
   const correction = Number(dose?.correction_units) || 0;
   if (correction > 0 && correction >= meal) return true;
