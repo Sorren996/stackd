@@ -1,0 +1,58 @@
+{
+  "name": "MealMatchFeedback",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "Explicit user ID for service-role created feedback"
+    },
+    "current_meal_name": {
+      "type": "string",
+      "description": "Normalized name of the current meal the user was logging"
+    },
+    "current_meal_fingerprint": {
+      "type": "object",
+      "description": "Fingerprint of the current meal"
+    },
+    "historical_meal_name": {
+      "type": "string",
+      "description": "Normalized name of the historical meal that was suggested"
+    },
+    "historical_meal_fingerprint": {
+      "type": "object",
+      "description": "Fingerprint of the historical meal that was suggested"
+    },
+    "historical_analysis_id": {
+      "type": "string",
+      "description": "ID of the MealResponseAnalysis that was suggested"
+    },
+    "feedback_type": {
+      "type": "string",
+      "enum": [
+        "same_meal",
+        "similar_meal",
+        "not_same_meal"
+      ],
+      "description": "How the user rated the suggested match"
+    }
+  },
+  "required": [
+    "current_meal_name",
+    "historical_meal_name",
+    "feedback_type"
+  ],
+  "rls": {
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

@@ -7,6 +7,8 @@ import HighProteinFatCheckbox from "@/components/HighProteinFatCheckbox";
 import { toast } from "sonner";
 import { DateScrollField, TimeScrollField, NumberPadField, TextPadField } from "@/components/FormInputFields";
 import SplitDosePlanner from "@/components/splitdose/SplitDosePlanner";
+import { findMealMemory } from "@/lib/mealMemory";
+import MealMemoryModal from "@/components/MealMemoryModal";
 
 const CARB_COLOR = "#d97706";
 const PROFILE_COLORS = { fast: "#ef4444", medium: "#f59e0b", slow: "#a78bfa" };
@@ -73,6 +75,10 @@ export default function CarbsTab({ open, onSubmit, isPending, onDirtyChange }) {
   const [carbTime, setCarbTime] = useState(() => new Date().toTimeString().slice(0, 5));
   const [carbDate, setCarbDate] = useState(getTodayDateValue);
   const [isHighProteinFat, setIsHighProteinFat] = useState(false);
+  const [memoryMatch, setMemoryMatch] = useState(null);
+  const [memoryCurrent, setMemoryCurrent] = useState(null);
+  const [memoryPending, setMemoryPending] = useState(null);
+  const [isCheckingMemory, setIsCheckingMemory] = useState(false);
 
   const nowTimeString = new Date().toTimeString().slice(0, 5);
   const todayDateValue = getTodayDateValue();
@@ -144,14 +150,58 @@ export default function CarbsTab({ open, onSubmit, isPending, onDirtyChange }) {
     return (carbs / gramsPerUnit).toFixed(1);
   }, [estimatedMeal, customCarbs, totalCarbs]);
 
+  const gateMealName = isEstimateMode
+    ? estimatedMeal?.mealName
+    : isCustomMode
+      ? customFoodName
+      : selectedFoods.length === 1
+        ? selectedFoods[0].food.name
+        : selectedFoods.map((f) => f.food.name).join(" ");
+  const gateCarbs = isEstimateMode ? Number(estimatedMeal?.carbs) : isCustomMode ? Number(customCarbs) : totalCarbs;
+
+  const gateThenSubmit = async (realSubmit) => {
+    const name = String(gateMealName || "").trim();
+    const carbs = Number(gateCarbs) || 0;
+    if (!name || carbs <= 0) { realSubmit(); return; }
+
+    setIsCheckingMemory(true);
+    try {
+      const result = await findMealMemory({ mealName: name, carbs, highProteinFat: isHighProteinFat, mealTime: Date.now() });
+      if (result?.found && result.best) {
+        setMemoryMatch(result.best);
+        setMemoryCurrent({ mealName: name, carbs, fingerprint: result.currentFingerprint, normalized_name: result.currentFingerprint?.normalized_name || name });
+        setMemoryPending(() => realSubmit);
+        return;
+      }
+    } catch {
+      // Memory lookup is best-effort; never block logging.
+    } finally {
+      setIsCheckingMemory(false);
+    }
+    realSubmit();
+  };
+
+  const handleMemoryContinue = () => {
+    const fn = memoryPending;
+    setMemoryMatch(null);
+    setMemoryCurrent(null);
+    setMemoryPending(null);
+    if (typeof fn === "function") fn();
+  };
+  const handleMemoryClose = () => {
+    setMemoryMatch(null);
+    setMemoryCurrent(null);
+    setMemoryPending(null);
+  };
+
   const handleSplitConfirm = (planData) => {
     if (!canSubmitCarbs) {
       toast.error("Complete your meal entry before confirming the split plan.");
       return;
     }
-    if (isEstimateMode) handleSubmitEstimate(planData);
-    else if (isCustomMode) handleSubmitCustom(planData);
-    else handleSubmitManual(planData);
+    if (isEstimateMode) gateThenSubmit(() => handleSubmitEstimate(planData));
+    else if (isCustomMode) gateThenSubmit(() => handleSubmitCustom(planData));
+    else gateThenSubmit(() => handleSubmitManual(planData));
   };
 
   const updateEstimatedMeal = (patch) => {
@@ -731,8 +781,8 @@ Do not give insulin dosing advice.
         <div className={`shrink-0 px-5 pb-6 pt-2 ${isEstimateMode && isEstimatingMeal ? "hidden" : ""}`}>
           <button
             type="button"
-            onClick={isCustomMode ? handleSubmitCustom : isEstimateMode ? handleSubmitEstimate : handleSubmitManual}
-            disabled={isPending || isEstimatingMeal || !canSubmitCarbs}
+            onClick={isCustomMode ? () => gateThenSubmit(handleSubmitCustom) : isEstimateMode ? () => gateThenSubmit(handleSubmitEstimate) : () => gateThenSubmit(handleSubmitManual)}
+            disabled={isPending || isEstimatingMeal || isCheckingMemory || !canSubmitCarbs}
             className="flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-base font-semibold text-white transition-all disabled:opacity-40"
             style={{ background: "linear-gradient(145deg, rgba(217,119,6,0.9), rgba(180,83,9,0.85))", boxShadow: "0 8px 24px rgba(217,119,6,0.25), inset 0 1px 1px rgba(255,255,255,0.2)" }}
           >
@@ -740,6 +790,11 @@ Do not give insulin dosing advice.
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Logging...
+              </>
+            ) : isCheckingMemory ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Checking past meals...
               </>
             ) : isCustomMode ? (
               <>
@@ -759,6 +814,14 @@ Do not give insulin dosing advice.
           </button>
         </div>
       </div>
+
+      <MealMemoryModal
+        open={!!memoryMatch}
+        match={memoryMatch}
+        currentMeal={memoryCurrent}
+        onContinue={handleMemoryContinue}
+        onClose={handleMemoryClose}
+      />
     </>
   );
 }

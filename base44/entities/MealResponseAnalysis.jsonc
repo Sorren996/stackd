@@ -1,0 +1,202 @@
+{
+  "name": "MealResponseAnalysis",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "Explicit user ID for service-role created analyses"
+    },
+    "meal_log_id": {
+      "type": "string",
+      "description": "ID of the CarbEntry meal this analysis reviews"
+    },
+    "meal_name_original": {
+      "type": "string",
+      "description": "Original meal name as logged"
+    },
+    "meal_name_normalized": {
+      "type": "string",
+      "description": "Normalized meal name used for matching"
+    },
+    "meal_fingerprint": {
+      "type": "object",
+      "description": "Normalized meal fingerprint used for retrospective matching"
+    },
+    "carbs_logged": {
+      "type": "number",
+      "description": "Carbohydrate grams logged for this meal"
+    },
+    "high_protein_fat": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the meal was flagged high protein or high fat"
+    },
+    "meal_time": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the meal was consumed"
+    },
+    "analysis_window_end": {
+      "type": "string",
+      "format": "date-time",
+      "description": "End of the response window analyzed (typically 4-6 hours after meal)"
+    },
+    "starting_glucose": {
+      "type": "number",
+      "description": "Glucose value near the meal time, mg/dL"
+    },
+    "starting_trend": {
+      "type": "string",
+      "enum": [
+        "rising",
+        "steady",
+        "falling",
+        "unknown"
+      ],
+      "description": "Glucose trend at the meal time"
+    },
+    "starting_slope": {
+      "type": "number",
+      "description": "Estimated glucose rate of change at meal time, mg/dL per minute"
+    },
+    "peak_glucose": {
+      "type": "number",
+      "description": "Highest glucose during the response window"
+    },
+    "peak_time": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the peak glucose occurred"
+    },
+    "lowest_glucose": {
+      "type": "number",
+      "description": "Lowest glucose during the response window"
+    },
+    "lowest_time": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the lowest glucose occurred"
+    },
+    "glucose_at_4_hours": {
+      "type": "number",
+      "description": "Glucose value near four hours after the meal"
+    },
+    "maximum_glucose_rise": {
+      "type": "number",
+      "description": "Largest rise from starting glucose during the window"
+    },
+    "time_in_user_range": {
+      "type": "number",
+      "description": "Percentage of the response window spent in the user's target range"
+    },
+    "initial_insulin_units": {
+      "type": "number",
+      "description": "Insulin units associated with the meal at or near meal time"
+    },
+    "initial_insulin_type": {
+      "type": "string",
+      "description": "Insulin type used for the initial meal support"
+    },
+    "initial_insulin_time": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the initial meal insulin was administered"
+    },
+    "additional_insulin_units": {
+      "type": "number",
+      "description": "Additional insulin units logged during the response window"
+    },
+    "additional_insulin_details": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "default": [],
+      "description": "Per-dose details for additional insulin during the window"
+    },
+    "total_insulin_units": {
+      "type": "number",
+      "description": "Total insulin units logged during the response window"
+    },
+    "active_insulin_at_start": {
+      "type": "number",
+      "description": "Estimated active insulin already present when the meal was logged"
+    },
+    "rescue_carbs": {
+      "type": "number",
+      "description": "Carbohydrate grams logged as rescue carbs during the window"
+    },
+    "overlapping_meal": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether another meal or substantial snack was logged during the window"
+    },
+    "confounding_events": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "Detected confounding factors that reduce confidence"
+    },
+    "outcome_classification": {
+      "type": "string",
+      "enum": [
+        "well_supported",
+        "may_need_more",
+        "may_have_more_than_needed",
+        "mixed_or_delayed",
+        "unclear"
+      ],
+      "description": "Cautious retrospective classification of the response"
+    },
+    "confidence_score": {
+      "type": "number",
+      "description": "Confidence in the analysis from 0 to 1"
+    },
+    "analysis_status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "complete",
+        "incomplete"
+      ],
+      "default": "pending",
+      "description": "Whether the four-hour analysis has been completed"
+    },
+    "needs_rerun": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the analysis should be recomputed when late data arrives"
+    },
+    "target_range_low": {
+      "type": "number",
+      "description": "User target range low used for this analysis"
+    },
+    "target_range_high": {
+      "type": "number",
+      "description": "User target range high used for this analysis"
+    }
+  },
+  "required": [
+    "meal_log_id",
+    "meal_name_original",
+    "carbs_logged",
+    "meal_time",
+    "analysis_status"
+  ],
+  "rls": {
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}
