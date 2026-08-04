@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { motion, AnimatePresence } from "framer-motion";
 import { Send, Leaf, BookOpen, X } from "lucide-react";
@@ -23,7 +23,9 @@ export default function Coach() {
   const [isTyping, setIsTyping] = useState(false);
   const [loadingConversations, setLoadingConversations] = useState(true);
   const [showJournalModal, setShowJournalModal] = useState(false);
+  const [surfacedInsights, setSurfacedInsights] = useState([]);
   const messagesEndRef = useRef(null);
+  const initialScrollDone = useRef(false);
   const scrollContainerRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const typingSafetyRef = useRef(null);
@@ -61,12 +63,26 @@ export default function Coach() {
   );
   const newestInsight = validUnreadInsights[0] || null;
 
+  // Track insights shown in the chat. Unread ones render at the bottom of the
+  // conversation; when acknowledged they lock into the flow at that position so
+  // new messages generate underneath them.
+  useEffect(() => {
+    if (!newestInsight) return;
+    setSurfacedInsights((prev) => {
+      if (prev.some((s) => s.insight.id === newestInsight.id)) return prev;
+      return [...prev, { insight: newestInsight, acknowledged: false, insertAfterIndex: null }];
+    });
+  }, [newestInsight]);
+
   // The logo glow persists until the user actually acknowledges the insight —
   // by talking about it, dismissing it, or tapping the glowing logo (which
-  // surfaces it in chat). See handleTalkAboutInsight, handleDismissInsight,
-  // and the logo-surface effect below.
+  // surfaces it in chat).
 
   const handleDismissInsight = async (insight) => {
+    queryClient.setQueryData(["unread-coach-insights"], (old = []) =>
+      (old || []).filter((i) => i.id !== insight.id)
+    );
+    setSurfacedInsights((prev) => prev.filter((s) => s.insight.id !== insight.id));
     try {
       await base44.entities.CoachInsight.update(insight.id, {
         status: "dismissed",
@@ -80,7 +96,18 @@ export default function Coach() {
   };
 
   const handleTalkAboutInsight = (insight) => {
-    const message = `I'd like to talk about this insight (insight ID: ${insight.id}): ${insight.title}. ${insight.summary}`;
+    // Optimistically drop from the unread cache so the logo glow stops instantly.
+    queryClient.setQueryData(["unread-coach-insights"], (old = []) =>
+      (old || []).filter((i) => i.id !== insight.id)
+    );
+    setSurfacedInsights((prev) =>
+      prev.map((s) =>
+        s.insight.id === insight.id
+          ? { ...s, acknowledged: true, insertAfterIndex: messages.length }
+          : s
+      )
+    );
+    const message = `Let's talk about this observation — ${insight.title}: ${insight.summary || insight.message}`;
     handleSend(message);
     base44.entities.CoachInsight.update(insight.id, {
       status: "read",
@@ -120,12 +147,6 @@ export default function Coach() {
     if (!insight) return;
     surfaceRequestRef.current = null;
     handleTalkAboutInsight(insight);
-    base44.entities.CoachInsight.update(insight.id, {
-      status: "read",
-      read_at: new Date().toISOString(),
-    })
-      .then(() => queryClient.invalidateQueries({ queryKey: ["unread-coach-insights"] }))
-      .catch(() => {});
   }, [validUnreadInsights, loadingConversations]);
 
   useEffect(() => {
@@ -146,10 +167,16 @@ export default function Coach() {
   }, [activeConversationId]);
 
   useEffect(() => {
-    if (messagesEndRef.current && scrollContainerRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    if (messages.length === 0 && surfacedInsights.length === 0) return;
+    if (!initialScrollDone.current) {
+      el.scrollTop = el.scrollHeight;
+      initialScrollDone.current = true;
+    } else {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
     }
-  }, [messages]);
+  }, [messages, surfacedInsights]);
 
   const loadConversations = async () => {
     try {
@@ -251,6 +278,32 @@ export default function Coach() {
     }
   };
 
+  const hasContent = messages.length > 0 || surfacedInsights.length > 0 || loadingConversations;
+
+  const renderList = useMemo(() => {
+    const acknowledged = surfacedInsights.filter((s) => s.acknowledged);
+    const unread = surfacedInsights.filter((s) => !s.acknowledged);
+    const byIndex = {};
+    acknowledged.forEach((s) => {
+      const idx = Math.min(s.insertAfterIndex ?? 0, messages.length);
+      (byIndex[idx] = byIndex[idx] || []).push(s);
+    });
+    const list = [];
+    (byIndex[0] || []).forEach((s) =>
+      list.push({ kind: "insight", insight: s.insight, acknowledged: true })
+    );
+    for (let i = 0; i < messages.length; i++) {
+      list.push({ kind: "message", message: messages[i] });
+      (byIndex[i + 1] || []).forEach((s) =>
+        list.push({ kind: "insight", insight: s.insight, acknowledged: true })
+      );
+    }
+    unread.forEach((s) =>
+      list.push({ kind: "insight", insight: s.insight, acknowledged: false })
+    );
+    return list;
+  }, [messages, surfacedInsights]);
+
   if (!handshakeAccepted) {
     return <AIHandshake onAccept={handleAcceptHandshake} />;
   }
@@ -295,11 +348,11 @@ export default function Coach() {
       {/* Messages */}
       <div
         ref={scrollContainerRef}
-        className="min-h-0 flex-1 overflow-y-auto px-5"
+        className={`min-h-0 flex-1 overflow-y-auto px-5 flex flex-col ${hasContent ? "justify-end" : "justify-center"}`}
         style={{ scrollbarWidth: "none" }}
       >
         <div className="space-y-4 py-4">
-          {messages.length === 0 && !loadingConversations && (
+          {messages.length === 0 && surfacedInsights.length === 0 && !loadingConversations && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -316,15 +369,18 @@ export default function Coach() {
               </p>
             </motion.div>
           )}
-          {messages.map((message, idx) => (
-            <MessageBubble key={idx} message={message} />
-          ))}
-          {newestInsight && (
-            <InsightMessage
-              insight={newestInsight}
-              onTalkAbout={handleTalkAboutInsight}
-              onDismiss={handleDismissInsight}
-            />
+          {renderList.map((item, idx) =>
+            item.kind === "message" ? (
+              <MessageBubble key={`m-${idx}`} message={item.message} />
+            ) : (
+              <InsightMessage
+                key={`i-${item.insight.id}`}
+                insight={item.insight}
+                acknowledged={item.acknowledged}
+                onTalkAbout={handleTalkAboutInsight}
+                onDismiss={handleDismissInsight}
+              />
+            )
           )}
           <div ref={messagesEndRef} />
         </div>
