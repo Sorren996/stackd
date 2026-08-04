@@ -26,15 +26,17 @@ export default function Register() {
       setError("Passwords do not match");
       return;
     }
+    const cleanEmail = email.trim().toLowerCase();
+    setEmail(cleanEmail);
     setLoading(true);
     try {
-      await base44.auth.register({ email, password });
+      await base44.auth.register({ email: cleanEmail, password });
       setShowOtp(true);
     } catch (err) {
       const msg = String(err?.message || "").toLowerCase();
       if (msg.includes("exist") || msg.includes("already") || msg.includes("registered") || msg.includes("taken")) {
         const params = new URLSearchParams({ existing: "1" });
-        if (email) params.set("email", email);
+        params.set("email", cleanEmail);
         window.location.href = `/login?${params.toString()}`;
         return;
       }
@@ -47,9 +49,10 @@ export default function Register() {
   const handleVerify = async () => {
     setError("");
     setLoading(true);
+    const cleanEmail = email.trim().toLowerCase();
     try {
-      await base44.auth.verifyOtp({ email, otpCode });
-      await base44.auth.loginViaEmailPassword(email, password);
+      await base44.auth.verifyOtp({ email: cleanEmail, otpCode: otpCode.trim() });
+      await base44.auth.loginViaEmailPassword(cleanEmail, password);
       window.location.href = "/";
     } catch (err) {
       setError(err.message || "Invalid verification code");
@@ -61,7 +64,7 @@ export default function Register() {
   const handleResend = async () => {
     setError("");
     try {
-      await base44.auth.resendOtp(email);
+      await base44.auth.resendOtp(email.trim().toLowerCase());
       toast({
         title: "Code sent",
         description: "Check your email for the new code."

@@ -26,8 +26,9 @@ export default function Login() {
     e.preventDefault();
     setError("");
     setLoading(true);
+    const cleanEmail = email.trim().toLowerCase();
     try {
-      await base44.auth.loginViaEmailPassword(email, password);
+      await base44.auth.loginViaEmailPassword(cleanEmail, password);
       window.location.href = "/";
     } catch (err) {
       setError(err.message || "Invalid email or password");
