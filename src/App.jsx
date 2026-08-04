@@ -22,6 +22,8 @@ import InsulinSettingsPage from './pages/InsulinSettingsPage';
 import ProfileSettingsPage from './pages/ProfileSettingsPage';
 import PrivacyConsentPage from './pages/PrivacyConsentPage';
 import CoachPreferencesPage from './pages/CoachPreferencesPage';
+import DexcomSettingsPage from './pages/DexcomSettingsPage';
+import DexcomCallback from './pages/DexcomCallback';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { Navigate } from 'react-router-dom';
 import SplashScreen from "@/components/SplashScreen";
@@ -232,6 +234,8 @@ const AuthenticatedApp = () => {
           <Route path="/settings/profile" element={<ProfileSettingsPage />} />
           <Route path="/settings/privacy-consent" element={<PrivacyConsentPage />} />
           <Route path="/settings/coach" element={<CoachPreferencesPage />} />
+          <Route path="/settings/dexcom" element={<DexcomSettingsPage />} />
+          <Route path="/auth/callback" element={<DexcomCallback />} />
           <Route path="/split-plan/:planId" element={<SplitPlanReview />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
