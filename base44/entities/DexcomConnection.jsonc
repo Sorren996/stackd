@@ -33,6 +33,11 @@
       "format": "date-time",
       "description": "When the user connected their Dexcom account"
     },
+    "last_fetched_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the auto-sync last pulled readings for this connection"
+    },
     "status": {
       "type": "string",
       "enum": [
