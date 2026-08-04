@@ -28,6 +28,7 @@ import SplashScreen from "@/components/SplashScreen";
 import { AnimatePresence } from "framer-motion";
 import { base44 } from "@/api/base44Client";
 import RequiredAcknowledgments from "@/pages/RequiredAcknowledgments";
+import OAuthConsent from "@/pages/OAuthConsent";
 import SplitPlanReview from "@/pages/SplitPlanReview";
 import { ACKNOWLEDGMENT_VERSIONS, CHECKBOX_KEYS } from "@/lib/acknowledgmentConfig";
 import { loadUserSettings, migrateLocalSettingsIfNeeded, cacheSettingsLocally } from "@/lib/userSettings";
@@ -199,6 +200,7 @@ const AuthenticatedApp = () => {
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/oauth/consent" element={<OAuthConsent />} />
         <Route path="*" element={<SplashScreen showAuth />} />
       </Routes>
     );
@@ -222,6 +224,7 @@ const AuthenticatedApp = () => {
   return (
     <>
       <Routes>
+        <Route path="/oauth/consent" element={<OAuthConsent />} />
         <Route element={<Layout />}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/history" element={<History />} />
