@@ -146,7 +146,6 @@ export default async function(req) {
 
         const egvData = await egvRes.json();
         const egvs = egvData.egvs || egvData.EGVS || [];
-        const egvDiag = { keys: Object.keys(egvData || {}), sample: JSON.stringify(egvData).slice(0, 400) };
 
         // Build a set of already-imported timestamps for this user to dedupe.
         const existing = await sr.entities.GlucoseReading.filter(
@@ -182,7 +181,7 @@ export default async function(req) {
           last_fetched_at: endDate.toISOString(),
         });
 
-        results.push({ owner, status: "ok", imported: toCreate.length, fetched: egvs.length, range: { start: rangeStart, end: rangeEnd }, rawRange, egvDiag });
+        results.push({ owner, status: "ok", imported: toCreate.length, fetched: egvs.length, range: { start: rangeStart, end: rangeEnd } });
       } catch (error) {
         results.push({ owner, status: "error", details: error.message });
       }
