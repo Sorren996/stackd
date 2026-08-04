@@ -37,6 +37,9 @@ import { getSupportiveGlucoseMessage } from "@/lib/supportiveMessages";
 import { computeTimeInRange } from "@/lib/timeInRange";
 import { computeGlucoseTrend } from "@/lib/glucoseTrend";
 
+// Flip to false to instantly revert to the original dense dashboard layout.
+const CLEAN_LAYOUT = true;
+
 const SAMPLE_STEP_MS = 5 * 60 * 1000;
 const MINUTE_MS = 60 * 1000;
 const DEFAULT_PRE_MEAL_WINDOW_MINUTES = 45;
@@ -1105,8 +1108,9 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
 
         <SupportiveGlucoseMessage insight={supportiveGlucoseInsight} />
 
-
-        {graphSlot}
+        <div className={CLEAN_LAYOUT ? "mt-5" : ""}>
+          {graphSlot}
+        </div>
 
         {stackingAlertsEnabled && activeRapidCount > 1 && (
           <div className="dashboard-stacking-alert backdrop-blur-sm mx-0 mt-4 flex w-full max-w-full min-w-0 items-start gap-3 overflow-hidden rounded-xl border border-white/10 p-4 pb-3">
@@ -1120,7 +1124,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
           </div>
         )}
 
-        <p className="text-legible mb-3 mt-4 text-[10px] font-bold uppercase tracking-[0.18em] text-white">Your Rhythm</p>
+        <p className={`text-legible mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-white ${CLEAN_LAYOUT ? "mt-8 opacity-70" : "mt-4"}`}>Your Rhythm</p>
         <div className="grid grid-cols-1 gap-3">
           <MetricCard
             label="Meal Balance"
