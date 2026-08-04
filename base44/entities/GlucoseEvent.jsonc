@@ -96,6 +96,10 @@
       "type": "number",
       "description": "Carbohydrate grams logged to treat a low during the event"
     },
+    "metrics": {
+      "type": "object",
+      "description": "Event-specific aggregate metrics (e.g. overnight average, variability, rise-window counts) that do not fit the scalar fields"
+    },
     "time_to_return_to_range_minutes": {
       "type": "number",
       "description": "Minutes from start until glucose re-entered the target range"

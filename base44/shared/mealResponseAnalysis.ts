@@ -9,22 +9,22 @@ const MINUTE_MS = 60 * 1000;
 
 const BASAL_HINTS = ["lantus", "levemir", "tresiba", "toujeo", "basaglar", "nph", "novolin n", "humulin n", "degludec", "detemir", "glargine"];
 
-function isBasalType(insulinType: string): boolean {
+export function isBasalType(insulinType: string): boolean {
   const lower = String(insulinType || "").toLowerCase();
   return BASAL_HINTS.some((h) => lower.includes(h));
 }
 
-function timeOf(entry: any, field: string): number {
+export function timeOf(entry: any, field: string): number {
   const t = entry?.[field];
   if (!t) return NaN;
   return new Date(t).getTime();
 }
 
-function clamp(v: number, min: number, max: number) {
+export function clamp(v: number, min: number, max: number) {
   return Math.max(min, Math.min(max, v));
 }
 
-function nearestReading(readings: number[][], target: number, maxDistanceMs: number): { value: number; time: number } | null {
+export function nearestReading(readings: number[][], target: number, maxDistanceMs: number): { value: number; time: number } | null {
   let best: { value: number; time: number; dist: number } | null = null;
   for (const [t, v] of readings) {
     if (!Number.isFinite(t) || !Number.isFinite(v)) continue;
@@ -35,7 +35,7 @@ function nearestReading(readings: number[][], target: number, maxDistanceMs: num
   return best ? { value: best.value, time: best.time } : null;
 }
 
-function slopeAt(readings: number[][], target: number, windowMs: number): { slope: number; trend: string } {
+export function slopeAt(readings: number[][], target: number, windowMs: number): { slope: number; trend: string } {
   const start = target - windowMs;
   const inWindow = readings.filter(([t, v]) => t >= start && t <= target && Number.isFinite(v));
   if (inWindow.length < 2) return { slope: 0, trend: "unknown" };
@@ -53,7 +53,7 @@ function slopeAt(readings: number[][], target: number, windowMs: number): { slop
 
 // Time-weighted in-range percentage across the window using linear interpolation
 // at a fixed sampling interval.
-function timeInRange(readings: number[][], windowStart: number, windowEnd: number, low: number, high: number): number {
+export function timeInRange(readings: number[][], windowStart: number, windowEnd: number, low: number, high: number): number {
   if (!readings.length) return 0;
   const step = 5 * MINUTE_MS;
   const sorted = readings.slice().sort((a, b) => a[0] - b[0]);
@@ -84,7 +84,7 @@ function timeInRange(readings: number[][], windowStart: number, windowEnd: numbe
 }
 
 // Rough IOB estimate for a dose at a target time using linear decay.
-function doseIobAt(dose: any, targetTime: number): number {
+export function doseIobAt(dose: any, targetTime: number): number {
   const units = Number(dose?.units);
   if (!Number.isFinite(units) || units <= 0) return 0;
   const doseTime = timeOf(dose, "administered_at");
