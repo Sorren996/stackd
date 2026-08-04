@@ -1121,9 +1121,9 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                 style={{ left: x, top: y }}
               >
                 <span
-                  className="block w-[3px] rounded-full"
+                  className="block w-[1.5px] rounded-full"
                   style={{
-                    height: 18,
+                    height: 12,
                     background: `linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,${0.9 * dotOpacity}) 50%, rgba(255,255,255,0) 100%)`,
                     boxShadow: `0 0 4px rgba(255,255,255,${0.25 * dotOpacity})`,
                   }}
