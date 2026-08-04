@@ -35,9 +35,21 @@ export default function Register() {
     } catch (err) {
       const msg = String(err?.message || "").toLowerCase();
       if (msg.includes("exist") || msg.includes("already") || msg.includes("registered") || msg.includes("taken")) {
-        const params = new URLSearchParams({ existing: "1" });
-        params.set("email", cleanEmail);
-        window.location.href = `/login?${params.toString()}`;
+        // An account already exists for this email. If it's still unverified,
+        // resend the OTP so the user can finish verifying it; otherwise send
+        // them to log in.
+        try {
+          await base44.auth.resendOtp(cleanEmail);
+          setShowOtp(true);
+          toast({
+            title: "Let's pick up where you left off",
+            description: "We sent a fresh verification code to finish setting up your account."
+          });
+        } catch {
+          const params = new URLSearchParams({ existing: "1" });
+          params.set("email", cleanEmail);
+          window.location.href = `/login?${params.toString()}`;
+        }
         return;
       }
       setError(err.message || "Registration failed");
