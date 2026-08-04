@@ -35,6 +35,21 @@ import { loadUserSettings, migrateLocalSettingsIfNeeded, cacheSettingsLocally } 
 const AuthenticatedApp = () => {
   const { user, isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, isAuthenticated, handleSessionExpired } = useAuth();
   const [dataReady, setDataReady] = useState(false);
+  const [graphReady, setGraphReady] = useState(false);
+
+  useEffect(() => {
+    const handler = () => setGraphReady(true);
+    window.addEventListener("dashboard-graph-ready", handler);
+    return () => window.removeEventListener("dashboard-graph-ready", handler);
+  }, []);
+
+  // Safety fallback: never trap the user behind the splash if the graph
+  // signal never arrives (e.g. landing on a non-dashboard route).
+  useEffect(() => {
+    if (!dataReady || graphReady) return;
+    const id = setTimeout(() => setGraphReady(true), 5000);
+    return () => clearTimeout(id);
+  }, [dataReady, graphReady]);
 
   // Wire global auth-failure handler so any 401/403 during a query or mutation
   // triggers the centralized session-expiration flow.
@@ -60,6 +75,20 @@ const AuthenticatedApp = () => {
 
     let cancelled = false;
     const prefetchData = async () => {
+      // Background prefetch for secondary pages — fired without awaiting so
+      // the splash can dismiss as soon as the Dashboard data is ready.
+      queryClientInstance
+        .prefetchQuery({
+          queryKey: ["history-summary"],
+          queryFn: async () => {
+            const res = await base44.functions.invoke("getHistorySummary", {
+              tzOffsetMinutes: new Date().getTimezoneOffset(),
+            });
+            return res.data;
+          },
+        })
+        .catch(() => {});
+
       await Promise.all([
         queryClientInstance.prefetchQuery({
           queryKey: ["user-settings"],
@@ -191,21 +220,26 @@ const AuthenticatedApp = () => {
 
   // Render the main app
   return (
-    <Routes>
-      <Route element={<Layout />}>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/history" element={<History />} />
-        <Route path="/analytics" element={<Analytics />} />
-        <Route path="/coach" element={<Coach />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/settings/insulin" element={<InsulinSettingsPage />} />
-        <Route path="/settings/profile" element={<ProfileSettingsPage />} />
-        <Route path="/settings/privacy-consent" element={<PrivacyConsentPage />} />
-        <Route path="/settings/coach" element={<CoachPreferencesPage />} />
-        <Route path="/split-plan/:planId" element={<SplitPlanReview />} />
-      </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <>
+      <Routes>
+        <Route element={<Layout />}>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/history" element={<History />} />
+          <Route path="/analytics" element={<Analytics />} />
+          <Route path="/coach" element={<Coach />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/settings/insulin" element={<InsulinSettingsPage />} />
+          <Route path="/settings/profile" element={<ProfileSettingsPage />} />
+          <Route path="/settings/privacy-consent" element={<PrivacyConsentPage />} />
+          <Route path="/settings/coach" element={<CoachPreferencesPage />} />
+          <Route path="/split-plan/:planId" element={<SplitPlanReview />} />
+        </Route>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+      <AnimatePresence>
+        {!graphReady && <SplashScreen />}
+      </AnimatePresence>
+    </>
   );
 };
 

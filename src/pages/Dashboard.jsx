@@ -309,6 +309,18 @@ export default function Dashboard() {
     return () => clearTimeout(id);
   }, []);
 
+  useEffect(() => {
+    if (!showGraph) return;
+    // The graph slot has committed — let two frames paint before dismissing
+    // the splash so the user never sees the graph pop in.
+    const rafId = requestAnimationFrame(() =>
+      requestAnimationFrame(() =>
+        window.dispatchEvent(new CustomEvent("dashboard-graph-ready"))
+      )
+    );
+    return () => cancelAnimationFrame(rafId);
+  }, [showGraph]);
+
   const { data: doses = [], isLoading: loadingDoses } = useQuery({
     queryKey: ["insulin-doses"],
     queryFn: () => base44.entities.InsulinDose.list("-administered_at", 100),
