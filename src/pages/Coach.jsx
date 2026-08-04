@@ -6,7 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import AIHandshake, { hasAcceptedAIHandshake, acceptAIHandshake } from "@/components/coach/AIHandshake";
 import MessageBubble from "@/components/coach/MessageBubble";
-import CoachInsightCard from "@/components/coach/CoachInsightCard";
+import InsightMessage from "@/components/coach/InsightMessage";
 import TypingIndicator from "@/components/coach/TypingIndicator";
 import { consumeSurfaceInsight, onSurfaceInsight } from "@/lib/coachInsightSurface";
 
@@ -292,18 +292,6 @@ export default function Coach() {
         </p>
       </div>
 
-      {/* Unread insight */}
-      {newestInsight && (
-        <div className="shrink-0 px-5 pt-2">
-          <CoachInsightCard
-            insight={newestInsight}
-            onTalkAbout={handleTalkAboutInsight}
-            onDismiss={handleDismissInsight}
-            onSaveToJournal={handleSaveInsightToJournal}
-          />
-        </div>
-      )}
-
       {/* Messages */}
       <div
         ref={scrollContainerRef}
@@ -331,6 +319,13 @@ export default function Coach() {
           {messages.map((message, idx) => (
             <MessageBubble key={idx} message={message} />
           ))}
+          {newestInsight && (
+            <InsightMessage
+              insight={newestInsight}
+              onTalkAbout={handleTalkAboutInsight}
+              onDismiss={handleDismissInsight}
+            />
+          )}
           <div ref={messagesEndRef} />
         </div>
       </div>
