@@ -896,7 +896,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
     return safeDoses
       .map((dose) => {
         const iob = getDoseIOB(dose, now);
-        if (iob < 0.05) return null;
+        if (iob < 0.5) return null;
 
           const profile = getInsulinProfile(dose.insulin_type);
           const status = getDoseStatus(dose, now);
