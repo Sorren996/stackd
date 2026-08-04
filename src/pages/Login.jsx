@@ -48,7 +48,7 @@ export default function Login() {
       
       <Button
         variant="outline"
-        className="w-full h-12 text-sm font-medium mb-6 text-[hsl(var(--popover))]"
+        className="w-full h-12 text-sm font-medium mb-6 text-foreground"
         onClick={handleGoogle}>
         
         <GoogleIcon className="w-5 h-5 mr-2" />
@@ -70,8 +70,8 @@ export default function Login() {
         </div>
       }
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-2 text-[hsl(var(--popover))]">
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <div className="space-y-2 text-foreground">
           <Label htmlFor="email">Email</Label>
           <div className="relative">
             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
@@ -88,7 +88,7 @@ export default function Login() {
             
           </div>
         </div>
-        <div className="space-y-2 text-[hsl(var(--popover))]">
+        <div className="space-y-2 text-foreground">
           <div className="flex items-center justify-between">
             <Label htmlFor="password">Password</Label>
             <Link to="/forgot-password" className="text-sm text-primary hover:underline">

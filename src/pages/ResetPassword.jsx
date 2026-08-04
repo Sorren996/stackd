@@ -46,7 +46,7 @@ export default function ResetPassword() {
           </Link>
         }>
         
-        <p className="text-sm text-center text-[hsl(var(--popover))]">The link you used appears to be incomplete. Please request a new password reset email.
+        <p className="text-sm text-center text-foreground">The link you used appears to be incomplete. Please request a new password reset email.
 
         </p>
       </AuthLayout>);
@@ -64,8 +64,8 @@ export default function ResetPassword() {
           {error}
         </div>
       }
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-2">
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <div className="space-y-2 text-foreground">
           <Label htmlFor="password">New Password</Label>
           <div className="relative">
             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
@@ -82,7 +82,7 @@ export default function ResetPassword() {
             
           </div>
         </div>
-        <div className="space-y-2">
+        <div className="space-y-2 text-foreground">
           <Label htmlFor="confirm">Confirm Password</Label>
           <div className="relative">
             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
@@ -98,7 +98,7 @@ export default function ResetPassword() {
             
           </div>
         </div>
-        <Button type="submit" className="w-full h-12 font-medium" disabled={loading}>
+        <Button type="submit" className="w-full h-12 font-medium bg-[hsl(var(--chart-1))]" disabled={loading}>
           {loading ?
           <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
