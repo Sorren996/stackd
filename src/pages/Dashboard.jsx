@@ -3,7 +3,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import ActivityGraph from "../components/ActivityGraph";
 import ActiveInsulinBanner from "../components/ActiveInsulinBanner";
-import ActiveAlerts from "../components/ActiveAlerts";
 import FloatingActionMenu from "@/components/FloatingActionMenu";
 import SplitPlanCard from "@/components/splitdose/SplitPlanCard";
 import { isActivePlan, cancelSplitPlansForMeal, cleanupSplitPlansForDose } from "@/lib/splitDoseUtils";
@@ -577,9 +576,7 @@ export default function Dashboard() {
             </div>
           )}
 
-          <div className="mt-4">
-            <ActiveAlerts doses={recentDoses} />
-          </div>
+
         </>
       )}
 
