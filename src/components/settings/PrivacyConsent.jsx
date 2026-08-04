@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import ConsentManagement from "@/components/settings/ConsentManagement";
 
 export default function PrivacyConsent() {
-  const { authLogout } = useAuth();
+  const { logout } = useAuth();
   const queryClient = useQueryClient();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
@@ -15,18 +15,23 @@ export default function PrivacyConsent() {
 
   const handleDeleteAccount = async () => {
     setIsDeletingAccount(true);
-    const [doses, readings, carbs] = await Promise.all([
-      base44.entities.InsulinDose.list("-administered_at", 5000),
-      base44.entities.GlucoseReading.list("-recorded_at", 5000),
-      base44.entities.CarbEntry.list("-consumed_at", 5000),
-    ]);
-    await Promise.all([
-      ...doses.map((d) => base44.entities.InsulinDose.delete(d.id)),
-      ...readings.map((r) => base44.entities.GlucoseReading.delete(r.id)),
-      ...carbs.map((c) => base44.entities.CarbEntry.delete(c.id)),
-    ]);
-    queryClient.clear();
-    await authLogout(true);
+    try {
+      const [doses, readings, carbs] = await Promise.all([
+        base44.entities.InsulinDose.list("-administered_at", 5000),
+        base44.entities.GlucoseReading.list("-recorded_at", 5000),
+        base44.entities.CarbEntry.list("-consumed_at", 5000),
+      ]);
+      await Promise.all([
+        ...doses.map((d) => base44.entities.InsulinDose.delete(d.id)),
+        ...readings.map((r) => base44.entities.GlucoseReading.delete(r.id)),
+        ...carbs.map((c) => base44.entities.CarbEntry.delete(c.id)),
+      ]);
+      queryClient.clear();
+      await logout(true);
+    } catch {
+      toast.error("We couldn't finish deleting your data. Please try again.");
+      setIsDeletingAccount(false);
+    }
   };
 
   const handleExportCSV = async () => {

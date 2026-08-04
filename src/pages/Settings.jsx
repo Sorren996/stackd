@@ -6,7 +6,7 @@ import { Activity, User, Shield, LogOut, Loader2, ChevronRight, Leaf } from "luc
 import { toast } from "sonner";
 
 export default function Settings() {
-  const { authLogout } = useAuth();
+  const { logout } = useAuth();
   const queryClient = useQueryClient();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
@@ -14,7 +14,7 @@ export default function Settings() {
     setIsLoggingOut(true);
     try {
       queryClient.clear();
-      await authLogout(true);
+      await logout(true);
     } catch {
       toast.error("Something didn't go as expected. Please try again.");
       setIsLoggingOut(false);
