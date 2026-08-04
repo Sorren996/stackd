@@ -15,9 +15,31 @@
         "journal_reflection",
         "logging_pattern",
         "positive_consistency",
-        "weekly_reflection"
+        "weekly_reflection",
+        "meal_response",
+        "high_event",
+        "low_event",
+        "correction_response",
+        "overnight_pattern",
+        "daily_summary"
       ],
       "description": "Category of the wellness observation"
+    },
+    "insight_category": {
+      "type": "string",
+      "description": "Structured insight category (meal_response, high_event, low_event, correction_response, overnight_pattern, daily_summary, meal_pattern, etc.)"
+    },
+    "source_event_id": {
+      "type": "string",
+      "description": "ID of the GlucoseEvent or MealResponseAnalysis this insight explains"
+    },
+    "source_event_type": {
+      "type": "string",
+      "description": "Type of the source event (meal_response, high, low, correction_response, overnight, pattern)"
+    },
+    "pattern_id": {
+      "type": "string",
+      "description": "ID of the UserPatternProfile this insight references, for pattern-based insights"
     },
     "title": {
       "type": "string",
@@ -25,7 +47,64 @@
     },
     "summary": {
       "type": "string",
-      "description": "Conversational observation text grounded in real data"
+      "description": "Conversational observation text grounded in real data (legacy field, kept for backward compatibility)"
+    },
+    "message": {
+      "type": "string",
+      "description": "Primary two-to-four sentence insight message grounded in verified event data"
+    },
+    "priority": {
+      "type": "number",
+      "description": "Ranking priority (1 highest). Used to select which insights surface each day."
+    },
+    "confidence": {
+      "type": "number",
+      "description": "Confidence in the insight, 0 to 1"
+    },
+    "supporting_metrics": {
+      "type": "object",
+      "description": "Structured metrics backing the insight, used for display and validation"
+    },
+    "insight_fingerprint": {
+      "type": "string",
+      "description": "Deterministic key (user + event + category + pattern + version) to prevent duplicate insights"
+    },
+    "deduplication_key": {
+      "type": "string",
+      "description": "Legacy deduplication key, kept for backward compatibility"
+    },
+    "generated_by": {
+      "type": "string",
+      "enum": [
+        "deterministic",
+        "ai"
+      ],
+      "default": "deterministic",
+      "description": "Whether the message was produced by the AI model or the deterministic fallback"
+    },
+    "model_name": {
+      "type": "string",
+      "description": "AI model used to generate this insight, when AI-generated"
+    },
+    "model_version": {
+      "type": "string",
+      "description": "Legacy model version field, kept for backward compatibility"
+    },
+    "prompt_version": {
+      "type": "string",
+      "description": "Version of the AI prompt used to generate this insight"
+    },
+    "analysis_version": {
+      "type": "string",
+      "description": "Version of the analysis logic backing this insight"
+    },
+    "review_type": {
+      "type": "string",
+      "enum": [
+        "daily",
+        "weekly"
+      ],
+      "description": "Whether this insight came from a daily or weekly review"
     },
     "observation_start_at": {
       "type": "string",
@@ -80,14 +159,10 @@
       "default": "unread",
       "description": "Whether the user has seen or dismissed this insight"
     },
-    "deduplication_key": {
-      "type": "string",
-      "description": "Deterministic key to prevent duplicate insights for the same pattern"
-    },
-    "generated_at": {
+    "shown_at": {
       "type": "string",
       "format": "date-time",
-      "description": "When the insight was generated"
+      "description": "When the insight was first displayed to the user"
     },
     "read_at": {
       "type": "string",
@@ -99,33 +174,36 @@
       "format": "date-time",
       "description": "When the user dismissed the insight"
     },
+    "user_feedback": {
+      "type": "string",
+      "enum": [
+        "helpful",
+        "not_helpful",
+        "incorrect_association",
+        "not_same_meal",
+        "missing_context"
+      ],
+      "description": "How the user rated this insight, if they provided feedback"
+    },
+    "user_feedback_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the user submitted feedback for this insight"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the insight was generated"
+    },
     "expires_at": {
       "type": "string",
       "format": "date-time",
       "description": "When the insight is no longer timely or relevant"
-    },
-    "model_version": {
-      "type": "string",
-      "description": "AI model used to generate this insight"
-    },
-    "analysis_version": {
-      "type": "string",
-      "description": "Version of the analysis logic"
-    },
-    "review_type": {
-      "type": "string",
-      "enum": [
-        "daily",
-        "weekly"
-      ],
-      "description": "Whether this insight came from a daily or weekly review"
     }
   },
   "required": [
     "insight_type",
     "title",
-    "summary",
-    "deduplication_key",
     "generated_at",
     "status"
   ],
@@ -134,7 +212,14 @@
       "created_by_id": "{{user.id}}"
     },
     "read": {
-      "created_by_id": "{{user.id}}"
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.user_id": "{{user.id}}"
+        }
+      ]
     },
     "update": {
       "created_by_id": "{{user.id}}"
