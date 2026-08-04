@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import Dashboard from "../pages/Dashboard";
+import { requestSurfaceInsight } from "@/lib/coachInsightSurface";
 import HistoryPage from "../pages/History";
 import CoachPage from "../pages/Coach";
 
@@ -79,6 +80,16 @@ export default function Layout() {
     navigate(isSettingsOpen ? "/" : "/settings");
   };
 
+  const handleLogoClick = () => {
+    if (hasUnread) {
+      const newest = (unreadInsights || []).find(
+        (i) => !i.expires_at || new Date(i.expires_at).getTime() > Date.now()
+      );
+      if (newest) requestSurfaceInsight(newest.id);
+    }
+    navigate("/coach");
+  };
+
   return (
     <div className="isolate relative min-h-screen overflow-x-hidden text-white">
       <header className="fixed inset-x-0 top-0 z-50 bg-transparent">
@@ -91,7 +102,7 @@ export default function Layout() {
           <div />
           <button
             type="button"
-            onClick={() => navigate("/coach")}
+            onClick={handleLogoClick}
             aria-label={hasUnread ? "AI Wellness Coach. New insight available." : "AI Wellness Coach. No new insights."}
             className="relative flex items-center justify-center rounded-full transition-all"
           >

@@ -8,6 +8,7 @@ import AIHandshake, { hasAcceptedAIHandshake, acceptAIHandshake } from "@/compon
 import MessageBubble from "@/components/coach/MessageBubble";
 import CoachInsightCard from "@/components/coach/CoachInsightCard";
 import TypingIndicator from "@/components/coach/TypingIndicator";
+import { consumeSurfaceInsight, onSurfaceInsight } from "@/lib/coachInsightSurface";
 
 const AGENT_NAME = "coach";
 const LAST_VISIT_KEY = "ai_coach_last_visit";
@@ -26,6 +27,7 @@ export default function Coach() {
   const scrollContainerRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const typingSafetyRef = useRef(null);
+  const surfaceRequestRef = useRef(null);
   const queryClient = useQueryClient();
 
   const beginTyping = () => {
@@ -103,6 +105,31 @@ export default function Coach() {
       toast.error("Could not save to journal");
     }
   };
+
+  // Surface a requested insight (from the glowing logo) as an in-chat message
+  // rather than a card/modal. On mount we consume any pending request; while
+  // kept-alive we listen for live requests.
+  useEffect(() => {
+    surfaceRequestRef.current = consumeSurfaceInsight();
+    return onSurfaceInsight((id) => {
+      surfaceRequestRef.current = id;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (loadingConversations || !surfaceRequestRef.current) return;
+    const id = surfaceRequestRef.current;
+    const insight = validUnreadInsights.find((i) => i.id === id);
+    if (!insight) return;
+    surfaceRequestRef.current = null;
+    handleTalkAboutInsight(insight);
+    base44.entities.CoachInsight.update(insight.id, {
+      status: "read",
+      read_at: new Date().toISOString(),
+    })
+      .then(() => queryClient.invalidateQueries({ queryKey: ["unread-coach-insights"] }))
+      .catch(() => {});
+  }, [validUnreadInsights, loadingConversations]);
 
   useEffect(() => {
     if (!handshakeAccepted) return;
