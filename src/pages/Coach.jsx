@@ -78,35 +78,41 @@ export default function Coach() {
   // by talking about it, dismissing it, or tapping the glowing logo (which
   // surfaces it in chat).
 
-  const handleDismissInsight = async (insight) => {
+  const neutralizeInsight = (insight) => {
+    // Any interaction (talk about / dismiss) neutralizes the insight: it stays
+    // visible in the flow but loses its amber highlight and action buttons,
+    // and is dropped from the unread cache so the logo glow stops instantly.
     queryClient.setQueryData(["unread-coach-insights"], (old = []) =>
       (old || []).filter((i) => i.id !== insight.id)
     );
-    setSurfacedInsights((prev) => prev.filter((s) => s.insight.id !== insight.id));
+    setSurfacedInsights((prev) => {
+      const exists = prev.some((s) => s.insight.id === insight.id);
+      if (exists) {
+        return prev.map((s) =>
+          s.insight.id === insight.id
+            ? { ...s, acknowledged: true, insertAfterIndex: s.insertAfterIndex ?? messages.length }
+            : s
+        );
+      }
+      return [...prev, { insight, acknowledged: true, insertAfterIndex: messages.length }];
+    });
+  };
+
+  const handleDismissInsight = async (insight) => {
+    neutralizeInsight(insight);
     try {
       await base44.entities.CoachInsight.update(insight.id, {
         status: "dismissed",
         dismissed_at: new Date().toISOString(),
       });
       queryClient.invalidateQueries({ queryKey: ["unread-coach-insights"] });
-      toast.success("Insight dismissed");
     } catch {
-      toast.error("Could not dismiss insight");
+      // Neutral state already applied optimistically
     }
   };
 
   const handleTalkAboutInsight = (insight) => {
-    // Optimistically drop from the unread cache so the logo glow stops instantly.
-    queryClient.setQueryData(["unread-coach-insights"], (old = []) =>
-      (old || []).filter((i) => i.id !== insight.id)
-    );
-    setSurfacedInsights((prev) =>
-      prev.map((s) =>
-        s.insight.id === insight.id
-          ? { ...s, acknowledged: true, insertAfterIndex: messages.length }
-          : s
-      )
-    );
+    neutralizeInsight(insight);
     const message = `Let's talk about this observation — ${insight.title}: ${insight.summary || insight.message}`;
     handleSend(message);
     base44.entities.CoachInsight.update(insight.id, {

@@ -1,11 +1,27 @@
 import { motion } from "framer-motion";
 import { Leaf, MessageCircle } from "lucide-react";
 
-// Renders a CoachInsight as an inline chat-style message inside the scrollable
-// conversation. When `acknowledged` is false it shows "Talk about this" and
-// "Dismiss insight" actions; once acknowledged it reads as a normal past
-// message with no actions (it is a message, not a closable modal).
+// Renders a CoachInsight as an inline chat-style message. While unread it uses
+// an amber highlight with "Talk about this" / "Dismiss insight" actions. Once
+// acknowledged (any interaction) it turns to a neutral, read-only message —
+// no buttons, no amber — and the conversation flows underneath it.
 export default function InsightMessage({ insight, onTalkAbout, onDismiss, acknowledged }) {
+  const accent = acknowledged
+    ? {
+        avatarBg: "radial-gradient(circle, rgba(91,168,138,0.2) 0%, rgba(91,163,184,0.06) 70%, transparent 100%)",
+        leafClass: "text-teal-300/80",
+        labelClass: "text-white/40",
+        bubbleBg: "linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))",
+        bubbleBorder: "rgba(255,255,255,0.1)",
+      }
+    : {
+        avatarBg: "radial-gradient(circle, rgba(251,191,36,0.22) 0%, transparent 70%)",
+        leafClass: "text-amber-300/90",
+        labelClass: "text-amber-300/70",
+        bubbleBg: "linear-gradient(145deg, rgba(251,191,36,0.07), rgba(91,168,138,0.04))",
+        bubbleBorder: "rgba(251,191,36,0.18)",
+      };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
@@ -15,18 +31,15 @@ export default function InsightMessage({ insight, onTalkAbout, onDismiss, acknow
     >
       <div
         className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full"
-        style={{ background: "radial-gradient(circle, rgba(251,191,36,0.22) 0%, transparent 70%)" }}
+        style={{ background: accent.avatarBg }}
       >
-        <Leaf className="h-3.5 w-3.5 text-amber-300/90" />
+        <Leaf className={`h-3.5 w-3.5 ${accent.leafClass}`} />
       </div>
       <div
-        className="max-w-[88%] rounded-2xl border p-3"
-        style={{
-          background: "linear-gradient(145deg, rgba(251,191,36,0.07), rgba(91,168,138,0.04))",
-          borderColor: "rgba(251,191,36,0.18)",
-        }}
+        className="max-w-[88%] rounded-2xl border p-3 transition-colors duration-300"
+        style={{ background: accent.bubbleBg, borderColor: accent.bubbleBorder }}
       >
-        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-300/70">
+        <span className={`text-[10px] font-bold uppercase tracking-wider ${accent.labelClass}`}>
           Wellness note
         </span>
         <p className="mt-1 text-sm font-semibold text-white">{insight.title}</p>
