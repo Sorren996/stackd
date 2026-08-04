@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { X } from "lucide-react";
+import { ChevronDown, X } from "lucide-react";
 
 function TooltipPopover({ title, description, onClose, children }) {
   return (
@@ -53,6 +54,8 @@ function TooltipPopover({ title, description, onClose, children }) {
 }
 
 export default function MealBalanceTooltip({ mealInsight, open, onClose, monitoringStatus, glucoseTrend }) {
+  const [showDetails, setShowDetails] = useState(false);
+
   if (!open || !mealInsight?.details) return null;
 
   return (
@@ -70,45 +73,35 @@ export default function MealBalanceTooltip({ mealInsight, open, onClose, monitor
           <p className="mt-0.5 text-xs text-white/50">{mealInsight.status}</p>
         </div>
 
-        {/* Balance bar with coverage % */}
-        <div className="space-y-1.5">
-          <div className="flex justify-between items-center text-[11px] font-medium text-white/40">
-            <span>{mealInsight.details.loggedTotalUnits.toFixed(1)}u logged</span>
-            {mealInsight.details.coveragePercent !== null && (
-              <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ color: mealInsight.color, background: `${mealInsight.color}15` }}>
-                {mealInsight.details.coveragePercent}% of rhythm
-              </span>
-            )}
-            <span>{mealInsight.details.grossDoseEstimate.toFixed(1)}u rhythm preview</span>
+        {/* Nourishment story — the human message first */}
+        {mealInsight.details.outcomeAssessment && (
+          <div
+            className="rounded-xl border p-3"
+            style={{
+              borderColor: `${mealInsight.details.outcomeAssessment.color}30`,
+              background: `${mealInsight.details.outcomeAssessment.color}0a`,
+            }}
+          >
+            <p className="text-xs font-semibold" style={{ color: mealInsight.details.outcomeAssessment.color }}>
+              {mealInsight.details.outcomeAssessment.label}
+            </p>
+            <p className="mt-1 text-[11px] leading-relaxed text-white/45">
+              {mealInsight.details.outcomeAssessment.message}
+            </p>
           </div>
-          <div className="relative h-2.5 overflow-hidden rounded-full bg-white/10">
-            <div
-              className="absolute inset-y-0 left-0 rounded-full bg-white/20"
-              style={{ width: `${Math.min(100, Math.max(4, mealInsight.details.grossDoseEstimate * 12))}%` }}
-            />
-            <div
-              className="absolute inset-y-0 left-0 rounded-full"
-              style={{
-                width: `${Math.min(100, Math.max(4, mealInsight.details.loggedTotalUnits * 12))}%`,
-                backgroundColor: mealInsight.color,
-              }}
-            />
-          </div>
-        </div>
+        )}
 
-        {/* Key numbers — color-coded */}
+        {/* Nourishment & Support — simple, no split */}
         <div className="grid grid-cols-2 gap-2.5">
           <div className="rounded-xl border p-3 text-center" style={{ borderColor: `${mealInsight.color}30`, background: `${mealInsight.color}08` }}>
             <p className="text-[10px] font-semibold uppercase tracking-wider text-white/30">Nourishment</p>
             <p className="mt-1 text-lg font-bold text-white">{Math.round(mealInsight.details.meal.carbs)}g</p>
-            <p className="mt-0.5 text-[10px] text-white/30">~{mealInsight.details.gramsPerUnit.toFixed(1)}g per unit</p>
+            <p className="mt-0.5 text-[10px] text-white/30">carbs enjoyed</p>
           </div>
           <div className="rounded-xl border p-3 text-center" style={{ borderColor: `${mealInsight.color}30`, background: `${mealInsight.color}08` }}>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-white/30">Support Logged</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-white/30">Support Given</p>
             <p className="mt-1 text-lg font-bold text-white">{mealInsight.details.loggedTotalUnits.toFixed(1)}u</p>
-            <p className="mt-0.5 text-[10px] text-white/30">
-              {mealInsight.details.loggedMealUnits.toFixed(1)} meal + {mealInsight.details.loggedCorrectionUnits.toFixed(1)} restoration
-            </p>
+            <p className="mt-0.5 text-[10px] text-white/30">insulin logged</p>
           </div>
         </div>
 
@@ -145,24 +138,6 @@ export default function MealBalanceTooltip({ mealInsight, open, onClose, monitor
           </div>
         )}
 
-        {/* Continuous outcome assessment */}
-        {mealInsight.details.outcomeAssessment && (
-          <div
-            className="rounded-xl border p-3"
-            style={{
-              borderColor: `${mealInsight.details.outcomeAssessment.color}30`,
-              background: `${mealInsight.details.outcomeAssessment.color}0a`,
-            }}
-          >
-            <p className="text-xs font-semibold" style={{ color: mealInsight.details.outcomeAssessment.color }}>
-              {mealInsight.details.outcomeAssessment.label}
-            </p>
-            <p className="mt-1 text-[11px] leading-relaxed text-white/45">
-              {mealInsight.details.outcomeAssessment.message}
-            </p>
-          </div>
-        )}
-
         {monitoringStatus?.isActive && (
           <div className="rounded-xl border p-3" style={{ borderColor: "rgba(217,169,56,0.25)", background: "rgba(217,169,56,0.06)" }}>
             <p className="text-xs font-semibold text-amber-400/90">High protein/fat meal monitoring</p>
@@ -187,59 +162,74 @@ export default function MealBalanceTooltip({ mealInsight, open, onClose, monitor
           </div>
         )}
 
-        {/* Numbers breakdown */}
-        {mealInsight.details && mealInsight.details.grossDoseEstimate > 0 && mealInsight.details.meal?.carbs > 0 && (
-          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 space-y-1.5">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-white/30">How the Rhythm Lines Up</p>
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-baseline gap-1.5 min-w-0">
-                <span className="text-[11px] font-medium text-white/50">Nourishment</span>
-                <span className="text-[9px] text-white/25 truncate">
-                  {Math.round(mealInsight.details.meal.carbs)}g ÷ {mealInsight.details.gramsPerUnit.toFixed(1)}g/u
-                </span>
+        {/* More details — collapsible */}
+        <button
+          type="button"
+          onClick={() => setShowDetails(!showDetails)}
+          className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2.5 text-left transition hover:bg-white/[0.04]"
+        >
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-white/40">More details</span>
+          <ChevronDown className={`h-4 w-4 text-white/40 transition-transform ${showDetails ? "rotate-180" : ""}`} />
+        </button>
+        <AnimatePresence initial={false}>
+          {showDetails && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.22 }}
+              className="overflow-hidden"
+            >
+              <div className="space-y-3 pt-1">
+                {mealInsight.details.grossDoseEstimate > 0 && mealInsight.details.meal?.carbs > 0 && (
+                  <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 space-y-1.5">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-white/30">How the Rhythm Lines Up</p>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[11px] font-medium text-white/50">Nourishment</span>
+                      <span className="text-[12px] font-semibold text-white/65">
+                        {mealInsight.details.expectedMealUnits.toFixed(1)}u
+                      </span>
+                    </div>
+                    {mealInsight.details.correctionUnitsNeeded > 0.01 && (
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[11px] font-medium text-white/50">Gentle Adjustment</span>
+                        <span className="text-[12px] font-semibold text-white/65">
+                          +{mealInsight.details.correctionUnitsNeeded.toFixed(1)}u
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[11px] font-medium text-white/50">Already Logged</span>
+                      <span className="text-[12px] font-semibold text-white/65">
+                        −{mealInsight.details.loggedTotalUnits.toFixed(1)}u
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2 border-t border-white/10 pt-1.5">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-white/55">Rhythm Preview</span>
+                      <span className="text-[15px] font-bold" style={{ color: mealInsight.color }}>
+                        {mealInsight.details.estimatedAdditionalUnits.toFixed(1)}u
+                      </span>
+                    </div>
+                  </div>
+                )}
+                <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3 space-y-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-white/30">How This Works</p>
+                  <div className="space-y-1.5 text-[11px] leading-relaxed text-white/40">
+                    <p>
+                      <span className="font-semibold text-white/55">Carb rhythm</span> — your carbs are compared to your meal ratio to preview the support your meal typically calls for.
+                    </p>
+                    <p>
+                      <span className="font-semibold text-white/55">Gentle adjustment</span> — if a reading near your meal is above your range, we preview a little extra support based on your sensitivity.
+                    </p>
+                    <p>
+                      <span className="font-semibold text-white/55">What you logged</span> — the support you already gave is compared to that preview so you can see how things line up.
+                    </p>
+                  </div>
+                </div>
               </div>
-              <span className="text-[12px] font-semibold text-white/65 shrink-0">
-                {mealInsight.details.expectedMealUnits.toFixed(1)}u
-              </span>
-            </div>
-            {mealInsight.details.correctionUnitsNeeded > 0.01 && (
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[11px] font-medium text-white/50">Gentle Adjustment</span>
-                <span className="text-[12px] font-semibold text-white/65">
-                  +{mealInsight.details.correctionUnitsNeeded.toFixed(1)}u
-                </span>
-              </div>
-            )}
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-[11px] font-medium text-white/50">Already Logged</span>
-              <span className="text-[12px] font-semibold text-white/65">
-                −{mealInsight.details.loggedTotalUnits.toFixed(1)}u
-              </span>
-            </div>
-            <div className="flex items-center justify-between gap-2 border-t border-white/10 pt-1.5">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-white/55">Rhythm Preview</span>
-              <span className="text-[15px] font-bold" style={{ color: mealInsight.color }}>
-                {mealInsight.details.estimatedAdditionalUnits.toFixed(1)}u
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* How it works */}
-        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3 space-y-2">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-white/30">How This Works</p>
-          <div className="space-y-1.5 text-[11px] leading-relaxed text-white/40">
-            <p>
-              <span className="font-semibold text-white/55">Carb rhythm</span> — your carbs are compared to your meal ratio to preview the support your meal typically calls for.
-            </p>
-            <p>
-              <span className="font-semibold text-white/55">Gentle adjustment</span> — if a reading near your meal is above your range, we preview a little extra support based on your sensitivity.
-            </p>
-            <p>
-              <span className="font-semibold text-white/55">What you logged</span> — the support you already gave is compared to that preview so you can see how things line up.
-            </p>
-          </div>
-        </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Encouraging note */}
         <p className="text-center text-[11px] leading-relaxed text-white/35">
