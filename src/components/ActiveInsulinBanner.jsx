@@ -21,6 +21,7 @@ import {
   getTotalIOB,
   INSULIN_PROFILES,
   isBolusInsulinType,
+  isBasalInsulinType,
 } from "@/lib/insulinPharmacology";
 import {
   generateCarbCurve,
@@ -734,6 +735,12 @@ function MetricCard({ label, value, sub, status, color, tooltipId, openTooltip, 
 
 function ActiveInsulinDetailCard({ totalUnits, breakdown }) {
   const hasBolusIOB = totalUnits > 0.01;
+  const bolusUnits = breakdown
+    .filter((dose) => !isBasalInsulinType(dose.type))
+    .reduce((sum, dose) => sum + dose.iob, 0);
+  const basalUnits = breakdown
+    .filter((dose) => isBasalInsulinType(dose.type))
+    .reduce((sum, dose) => sum + dose.iob, 0);
 
   return (
     <motion.div
@@ -753,13 +760,7 @@ function ActiveInsulinDetailCard({ totalUnits, breakdown }) {
         }}
       />
       <div className="relative z-10 flex items-start justify-between gap-4">
-        <div>
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-white/35">Insulin on Board</span>
-          <div className="mt-2 flex items-end gap-2">
-            <span className="text-4xl font-black leading-none text-white">{Math.round(totalUnits)}</span>
-            <span className="mb-1 text-xs font-semibold text-white/35">units active</span>
-          </div>
-        </div>
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-white/35">Insulin on Board</span>
         <span className="rounded-full border px-3 py-1 text-xs font-semibold" style={{
           color: hasBolusIOB ? "#5ba3b8" : "rgba(255,255,255,0.42)",
           borderColor: hasBolusIOB ? "rgba(6,182,212,0.32)" : "rgba(255,255,255,0.1)",
@@ -767,6 +768,24 @@ function ActiveInsulinDetailCard({ totalUnits, breakdown }) {
         }}>
           {hasBolusIOB ? "Supporting you" : "Settled"}
         </span>
+      </div>
+
+      <div className="relative z-10 mt-2 flex items-center">
+        <div className="flex flex-1 flex-col">
+          <div className="flex items-end gap-1.5">
+            <span className="text-4xl font-black leading-none text-white">{Math.round(bolusUnits)}</span>
+            <span className="mb-1 text-[10px] font-medium text-white/35">u</span>
+          </div>
+          <span className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-white/40">Bolus active</span>
+        </div>
+        <div className="mx-3 w-px self-stretch bg-white/10" />
+        <div className="flex flex-1 flex-col">
+          <div className="flex items-end gap-1.5">
+            <span className="text-4xl font-black leading-none text-white">{Math.round(basalUnits)}</span>
+            <span className="mb-1 text-[10px] font-medium text-white/35">u</span>
+          </div>
+          <span className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-white/40">Basal active</span>
+        </div>
       </div>
 
       <div className="relative z-10 mt-4">

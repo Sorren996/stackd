@@ -127,7 +127,7 @@ export default function MealMemoryModal({ open, match, currentMeal, onContinue, 
           exit={{ y: 20, scale: 0.98, opacity: 0 }}
           transition={{ type: "spring", stiffness: 320, damping: 30 }}
           onClick={(e) => e.stopPropagation()}
-          className="meal-memory-modal w-full max-w-md overflow-y-auto rounded-3xl border p-5"
+          className="meal-memory-modal w-full max-w-md max-h-[calc(100dvh-3rem)] overflow-y-auto rounded-3xl border p-5"
           style={{
             background: "linear-gradient(165deg, rgba(18,28,23,0.96), rgba(10,16,13,0.97))",
             borderColor: "rgba(255,255,255,0.14)",
