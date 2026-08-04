@@ -850,7 +850,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         className={`absolute left-1/2 top-0 z-20 -translate-x-1/2 px-3 py-1 text-center ${(onSelectLog || onDeleteLog) ? "cursor-pointer" : "pointer-events-none"}`}
       >
           {(onSelectLog || onDeleteLog) && (
-            <span className="absolute -top-1.5 -left-1.5 flex h-4 w-4 items-center justify-center rounded-full border border-white/15 bg-white/[0.08] text-white/45">
+            <span className="absolute left-0 top-1/2 flex h-4 w-4 -translate-y-1/2 translate-x-[-140%] items-center justify-center rounded-full border border-white/15 bg-white/[0.08] text-white/45">
               <Info className="h-2.5 w-2.5" />
             </span>
           )}
