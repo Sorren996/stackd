@@ -485,7 +485,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     key: getDoseKey(dose, index),
     label: String(dose.insulin_type || "Insulin").split(" ")[0],
     units: getDoseUnits(dose),
-    color: getInsulinProfile(dose.insulin_type)?.color || "#888"
+    color: getInsulinProfile(dose.insulin_type)?.color || "#888",
+    isBasal: isBasalInsulinType(dose.insulin_type)
   })),
   [filteredDoses]
   );
@@ -983,7 +984,22 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               </>
             )}
 
-            {doseKeys.map((k) =>
+            {doseKeys.filter((k) => k.isBasal).map((k) =>
+            <Area
+              key={k.key}
+              yAxisId="insulin"
+              type="basis"
+              dataKey={k.key}
+              name={k.label}
+              stroke="none"
+              fill={`url(#insulin_fill_${k.key})`}
+              fillOpacity={0.6}
+              dot={false}
+              activeDot={false}
+              isAnimationActive={false} />
+
+            )}
+            {doseKeys.filter((k) => !k.isBasal).map((k) =>
             <Area
               key={k.key}
               yAxisId="insulin"
