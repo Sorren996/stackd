@@ -1,0 +1,110 @@
+{
+  "name": "AnalysisJob",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "User this job analyzes. Set for service-created jobs so the owning user can read them."
+    },
+    "job_type": {
+      "type": "string",
+      "enum": [
+        "incremental",
+        "meal_completion",
+        "daily",
+        "backfill",
+        "manual"
+      ],
+      "description": "What kind of analysis this job runs"
+    },
+    "trigger_record_id": {
+      "type": "string",
+      "description": "ID of the log that triggered this job, if any"
+    },
+    "trigger_record_type": {
+      "type": "string",
+      "description": "Type of record that triggered this job (insulin, glucose, carb, high_event, low_event, daily, manual)"
+    },
+    "scheduled_for": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the job should run"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "processing",
+        "completed",
+        "completed_no_insight",
+        "failed",
+        "retry_scheduled"
+      ],
+      "default": "pending",
+      "description": "Lifecycle state of the job"
+    },
+    "attempt_count": {
+      "type": "number",
+      "default": 0,
+      "description": "How many times this job has been attempted"
+    },
+    "max_attempts": {
+      "type": "number",
+      "default": 5,
+      "description": "Maximum attempts before the job stops retrying"
+    },
+    "next_retry_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the next retry should occur"
+    },
+    "last_error": {
+      "type": "string",
+      "description": "The exact error from the most recent failed attempt"
+    },
+    "locked_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When a worker locked this job for processing"
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the job finished (successfully or not)"
+    },
+    "analysis_version": {
+      "type": "string",
+      "description": "Analysis logic version that produced this job"
+    },
+    "result_summary": {
+      "type": "object",
+      "description": "Compact summary of what the job produced (events detected, insights generated)"
+    }
+  },
+  "required": [
+    "job_type",
+    "status",
+    "scheduled_for"
+  ],
+  "rls": {
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.user_id": "{{user.id}}"
+        }
+      ]
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

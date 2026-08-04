@@ -1,0 +1,160 @@
+{
+  "name": "GlucoseEvent",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "User this event belongs to. Set for service-created records so the owning user can read them."
+    },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "high",
+        "low",
+        "correction_response",
+        "overnight"
+      ],
+      "description": "Category of glucose excursion"
+    },
+    "start_time": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the event began"
+    },
+    "end_time": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the event ended (glucose returned to range or event classified as resolved)"
+    },
+    "starting_glucose": {
+      "type": "number",
+      "description": "Glucose value at event start, mg/dL"
+    },
+    "peak_glucose": {
+      "type": "number",
+      "description": "Highest glucose during the event, mg/dL"
+    },
+    "peak_time": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the peak glucose occurred"
+    },
+    "lowest_glucose": {
+      "type": "number",
+      "description": "Lowest glucose during the event, mg/dL"
+    },
+    "lowest_time": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the lowest glucose occurred"
+    },
+    "ending_glucose": {
+      "type": "number",
+      "description": "Glucose value when the event ended, mg/dL"
+    },
+    "duration_minutes": {
+      "type": "number",
+      "description": "Total duration of the event in minutes"
+    },
+    "rate_of_rise": {
+      "type": "number",
+      "description": "Average mg/dL per minute during the rising phase"
+    },
+    "associated_meal_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "CarbEntry IDs preceding or overlapping the event"
+    },
+    "associated_insulin_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "InsulinDose IDs preceding or during the event"
+    },
+    "associated_activity_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "Activity or context record IDs related to the event"
+    },
+    "active_insulin_at_start": {
+      "type": "number",
+      "description": "Estimated units of active insulin when the event began"
+    },
+    "additional_insulin_units": {
+      "type": "number",
+      "description": "Insulin logged during the event"
+    },
+    "rescue_carbs": {
+      "type": "number",
+      "description": "Carbohydrate grams logged to treat a low during the event"
+    },
+    "time_to_return_to_range_minutes": {
+      "type": "number",
+      "description": "Minutes from start until glucose re-entered the target range"
+    },
+    "remained_unresolved": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether glucose never returned to range within the analysis window"
+    },
+    "confounders": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "Detected factors that reduce confidence (exercise, illness, overlapping meals, alcohol, etc.)"
+    },
+    "classification": {
+      "type": "string",
+      "description": "Structured outcome classification produced by backend rules"
+    },
+    "confidence": {
+      "type": "number",
+      "description": "Confidence in the event detection and classification, 0 to 1"
+    },
+    "analysis_version": {
+      "type": "string",
+      "description": "Analysis logic version that produced this event"
+    },
+    "source_analysis_job_id": {
+      "type": "string",
+      "description": "AnalysisJob that produced this event, for auditing"
+    }
+  },
+  "required": [
+    "event_type",
+    "start_time",
+    "classification",
+    "confidence"
+  ],
+  "rls": {
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.user_id": "{{user.id}}"
+        }
+      ]
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

@@ -59,6 +59,10 @@
       "type": "number",
       "description": "Estimated glucose rate of change at meal time, mg/dL per minute"
     },
+    "insulin_minutes_before_meal": {
+      "type": "number",
+      "description": "Minutes the initial dose preceded the meal (negative if dosed after eating)"
+    },
     "peak_glucose": {
       "type": "number",
       "description": "Highest glucose during the response window"
@@ -77,9 +81,17 @@
       "format": "date-time",
       "description": "When the lowest glucose occurred"
     },
+    "glucose_at_2_hours": {
+      "type": "number",
+      "description": "Glucose value near two hours after the meal"
+    },
     "glucose_at_4_hours": {
       "type": "number",
       "description": "Glucose value near four hours after the meal"
+    },
+    "glucose_at_6_hours": {
+      "type": "number",
+      "description": "Glucose value near six hours after the meal, analyzed for high fat or protein meals"
     },
     "maximum_glucose_rise": {
       "type": "number",
@@ -88,6 +100,23 @@
     "time_in_user_range": {
       "type": "number",
       "description": "Percentage of the response window spent in the user's target range"
+    },
+    "time_above_range_minutes": {
+      "type": "number",
+      "description": "Minutes spent above the user's target range during the window"
+    },
+    "time_below_range_minutes": {
+      "type": "number",
+      "description": "Minutes spent below the user's target range during the window"
+    },
+    "return_to_range_minutes": {
+      "type": "number",
+      "description": "Minutes from the first out-of-range excursion until glucose re-entered the target range"
+    },
+    "returned_near_starting": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether glucose returned near its starting value by the end of the window"
     },
     "initial_insulin_units": {
       "type": "number",
@@ -143,6 +172,17 @@
       "type": "string",
       "enum": [
         "well_supported",
+        "early_spike_then_recovered",
+        "prolonged_high",
+        "delayed_rise",
+        "additional_insulin_required",
+        "possible_excess_support",
+        "low_after_meal",
+        "high_then_low",
+        "minimal_glucose_rise",
+        "incomplete_data",
+        "confounded",
+        "unresolved",
         "may_need_more",
         "may_have_more_than_needed",
         "mixed_or_delayed",
@@ -176,6 +216,14 @@
     "target_range_high": {
       "type": "number",
       "description": "User target range high used for this analysis"
+    },
+    "analysis_version": {
+      "type": "string",
+      "description": "Analysis logic version that produced this analysis"
+    },
+    "source_event_id": {
+      "type": "string",
+      "description": "Linked GlucoseEvent record, when one was created for this meal response"
     }
   },
   "required": [

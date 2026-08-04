@@ -1,0 +1,103 @@
+{
+  "name": "UserPatternProfile",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "User this pattern belongs to. Set for service-created records so the owning user can read them."
+    },
+    "pattern_type": {
+      "type": "string",
+      "enum": [
+        "meal_response",
+        "time_of_day",
+        "overnight",
+        "correction",
+        "exercise",
+        "similar_meal"
+      ],
+      "description": "Category of recurring pattern"
+    },
+    "pattern_key": {
+      "type": "string",
+      "description": "Deterministic key identifying this specific pattern (e.g. meal fingerprint hash, hour window)"
+    },
+    "sample_size": {
+      "type": "number",
+      "default": 1,
+      "description": "Number of qualifying occurrences observed"
+    },
+    "supporting_event_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "Event or analysis IDs that support this pattern"
+    },
+    "metrics": {
+      "type": "object",
+      "description": "Aggregate observations: typical rise, time to peak, outcome distribution, confidence, etc."
+    },
+    "confidence": {
+      "type": "number",
+      "description": "Confidence in the pattern, 0 to 1"
+    },
+    "first_observed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this pattern was first observed"
+    },
+    "last_observed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the most recent qualifying occurrence was observed"
+    },
+    "last_presented_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this pattern was last surfaced to the user as an insight, for cooldown control"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "developing",
+        "established",
+        "archived"
+      ],
+      "default": "developing",
+      "description": "Whether the pattern is still emerging, established, or no longer relevant"
+    },
+    "analysis_version": {
+      "type": "string",
+      "description": "Analysis logic version that produced or last updated this pattern"
+    }
+  },
+  "required": [
+    "pattern_type",
+    "pattern_key",
+    "sample_size",
+    "status"
+  ],
+  "rls": {
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.user_id": "{{user.id}}"
+        }
+      ]
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}
