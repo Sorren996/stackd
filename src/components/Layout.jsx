@@ -106,10 +106,24 @@ export default function Layout() {
             aria-label={hasUnread ? "AI Wellness Coach. New insight available." : "AI Wellness Coach. No new insights."}
             className="relative flex items-center justify-center rounded-full transition-all"
           >
-            <img
+            {hasUnread && (
+              <motion.span
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 rounded-full"
+                style={{
+                  background:
+                    "radial-gradient(circle, rgba(251,191,36,0.6) 0%, rgba(251,191,36,0.22) 42%, transparent 70%)",
+                }}
+                animate={{ scale: [1, 1.45, 1], opacity: [0.5, 0.95, 0.5] }}
+                transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+              />
+            )}
+            <motion.img
               src="https://media.base44.com/images/public/6a1b93f234a8611ee1595134/9cd3c84cf_stackdappiconver3tran.png"
               alt="Stackd Logo"
-              className="h-9 w-auto object-contain transition-all duration-500"
+              className="relative z-10 h-9 w-auto object-contain"
+              animate={hasUnread ? { scale: [1, 1.08, 1] } : { scale: 1 }}
+              transition={hasUnread ? { duration: 1.8, repeat: Infinity, ease: "easeInOut" } : { duration: 0.3 }}
               style={hasUnread ? { filter: "drop-shadow(0 0 6px rgba(251,191,36,0.85)) drop-shadow(0 0 14px rgba(251,191,36,0.4))" } : undefined}
             />
           </button>

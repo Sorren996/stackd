@@ -1,0 +1,227 @@
+// AI Coach Insight Engine — Stage 2 AI interpretation.
+// Takes stored GlucoseEvent records that have not yet been turned into a
+// CoachInsight and asks the LLM to write a warm, non-clinical observation for
+// each. Falls back to a deterministic supportive message if the model is
+// unavailable or returns invalid output. Runs on a schedule with no user
+// context, so it uses the service role and only reads data for users with
+// active health-data consent.
+
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
+import { buildInsightFingerprint } from '../../shared/insightFingerprint.ts';
+import { ANALYSIS_VERSION, PROMPT_VERSION } from '../../shared/analysisVersion.ts';
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const LOOKBACK_DAYS = 2;
+const MAX_EVENTS_PER_USER = 5;
+
+const INSIGHT_TYPE_BY_EVENT: Record<string, string> = {
+  high: 'high_event',
+  low: 'low_event',
+  correction_response: 'correction_response',
+  overnight: 'overnight_pattern',
+};
+
+export default async function(req: Request): Promise<Response> {
+  try {
+    const base44 = createClientFromRequest(req);
+    const sr = base44.asServiceRole;
+    const now = new Date();
+    const sinceISO = new Date(now.getTime() - LOOKBACK_DAYS * DAY_MS).toISOString();
+
+    const allSettings = await sr.entities.UserSettings.list('-created_date', 50);
+
+    let processed = 0;
+    let insightsCreated = 0;
+    const errors: any[] = [];
+
+    for (const settings of allSettings) {
+      const userId = settings.created_by_id;
+      if (!userId) continue;
+      if (settings.coach_reviews_enabled === false) continue;
+
+      // Consent gate — withdrawing consent stops interpretation too.
+      try {
+        const users = await sr.entities.User.filter({ id: userId }, '-created_date', 1);
+        if (!users[0] || users[0].health_data_consent_active === false) continue;
+      } catch {
+        continue;
+      }
+
+      const events = await sr.entities.GlucoseEvent.filter(
+        { user_id: userId, start_time: { $gte: sinceISO } },
+        '-start_time', 20
+      );
+      if (!events.length) continue;
+
+      // Find which events already have an insight (source_event_id set).
+      const existing = await sr.entities.CoachInsight.filter(
+        { user_id: userId },
+        '-generated_at', 50
+      );
+      const interpretedIds = new Set(
+        existing
+          .map((i: any) => i.source_event_id)
+          .filter((id: any) => Boolean(id))
+      );
+
+      const pending = events.filter((e: any) => !interpretedIds.has(e.id)).slice(0, MAX_EVENTS_PER_USER);
+      if (!pending.length) continue;
+
+      let aiInsights: any[] = [];
+      try {
+        const res: any = await sr.integrations.Core.InvokeLLM({
+          prompt: buildPrompt(pending),
+          response_json_schema: {
+            type: 'object',
+            properties: {
+              insights: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    source_event_id: { type: 'string' },
+                    title: { type: 'string' },
+                    message: { type: 'string' },
+                    confidence: { type: 'number' },
+                  },
+                },
+              },
+            },
+            required: ['insights'],
+          },
+        });
+        aiInsights = Array.isArray(res?.insights) ? res.insights : [];
+      } catch (llmError: any) {
+        console.log(`[interpretGlucoseEvents] LLM failed for ${userId}: ${llmError.message}`);
+        aiInsights = [];
+      }
+
+      const records: any[] = [];
+      for (const e of pending) {
+        const ai = aiInsights.find((i: any) => i.source_event_id === e.id);
+        const valid = ai && typeof ai.title === 'string' && ai.title.trim() && typeof ai.message === 'string' && ai.message.trim();
+        const fallback = deterministicFallback(e);
+        const title = valid ? ai.title.trim() : fallback.title;
+        const message = valid ? ai.message.trim() : fallback.message;
+        const confidence = valid && Number.isFinite(ai.confidence) ? ai.confidence : fallback.confidence;
+        const generatedBy = valid ? 'ai' : 'deterministic';
+        const insightType = INSIGHT_TYPE_BY_EVENT[e.event_type] || 'glucose_rhythm';
+
+        const fingerprint = buildInsightFingerprint(userId, e.id, insightType, undefined, ANALYSIS_VERSION);
+
+        // Dedup by fingerprint — one insight per event per analysis version.
+        const dup = await sr.entities.CoachInsight.filter(
+          { user_id: userId, insight_fingerprint: fingerprint },
+          '-generated_at', 1
+        );
+        if (dup.length) continue;
+
+        records.push({
+          user_id: userId,
+          created_by_id: userId,
+          insight_type: insightType,
+          insight_category: e.event_type,
+          source_event_id: e.id,
+          source_event_type: e.event_type,
+          title,
+          summary: message,
+          message,
+          priority: 1,
+          confidence,
+          supporting_metrics: {
+            classification: e.classification,
+            duration_minutes: e.duration_minutes,
+            peak_glucose: e.peak_glucose,
+            lowest_glucose: e.lowest_glucose,
+          },
+          insight_fingerprint: fingerprint,
+          generated_by: generatedBy,
+          prompt_version: PROMPT_VERSION,
+          analysis_version: ANALYSIS_VERSION,
+          status: 'unread',
+          generated_at: now.toISOString(),
+          expires_at: new Date(now.getTime() + 3 * DAY_MS).toISOString(),
+        });
+      }
+
+      if (records.length) {
+        await sr.entities.CoachInsight.bulkCreate(records);
+        insightsCreated += records.length;
+      }
+      processed++;
+    }
+
+    console.log(`[interpretGlucoseEvents] processed=${processed} insightsCreated=${insightsCreated}`);
+
+    return Response.json({ processed, insightsCreated, errors: errors.length ? errors : undefined });
+  } catch (error) {
+    console.error('[interpretGlucoseEvents] fatal:', error.message);
+    return Response.json({ error: error.message }, { status: 500 });
+  }
+}
+
+function buildPrompt(events: any[]): string {
+  return `You are the Stackd Wellness Coach. A deterministic engine has already identified and verified the following glucose events from the user's actual logged data. Your job is to write ONE warm, supportive, two-to-four-sentence observation for each event — the kind of thing a caring friend who is good at noticing patterns would say.
+
+## STRICT BOUNDARIES — NEVER VIOLATE
+- You MUST NOT provide dosing, insulin, medication, or treatment advice.
+- You MUST NOT say a dose was too high, too low, an overdose, or an underdose.
+- You MUST NOT recommend corrections, split doses, ratio changes, or timing changes.
+- You MUST NOT use clinical labels (uncontrolled, hypoglycemia, insulin resistance, dawn phenomenon, etc.).
+- You MUST NOT claim causation from timing alone.
+- You MUST NOT use absolute language (always, never, definitely, proves, means).
+- Speak in calm, natural, uplifting language. Frame excursions as check-ins, not failures.
+- Describe only what the verified data shows; do not invent values or context.
+
+## EVENTS (verified, from real logs)
+${JSON.stringify(events, null, 2)}
+
+## INSTRUCTIONS
+For each event, return an object with:
+- source_event_id: the event id
+- title: a short, warm headline (max ~40 characters)
+- message: 2-4 sentences, grounded in the event's values (glucose, duration, time of day), non-clinical and supportive
+- confidence: 0 to 1 based on data completeness (use the event's confidence as a guide)
+
+Keep each message distinct and specific to that event. Respond with the JSON schema.`;
+}
+
+function deterministicFallback(e: any): { title: string; message: string; confidence: number } {
+  const time = e.start_time ? new Date(e.start_time).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : 'earlier';
+  const dur = Number.isFinite(e.duration_minutes) ? Math.round(e.duration_minutes) : null;
+  const durText = dur ? ` over about ${dur} minutes` : '';
+
+  if (e.event_type === 'high') {
+    return {
+      title: 'A gentle rise to notice',
+      message: `Your glucose rose above your target range${durText} starting around ${time}, reaching ${Math.round(e.peak_glucose)} before easing back. That's useful information to have captured — it gives you a clearer picture of how the day unfolded. I'm keeping an eye on how this fits with your other recent entries.`,
+      confidence: 0.6,
+    };
+  }
+  if (e.event_type === 'low') {
+    return {
+      title: 'A dip worth noticing',
+      message: `Your glucose dipped below your target range${durText} around ${time}, down to ${Math.round(e.lowest_glucose)} before recovering. I'm glad this was logged so you can see the full picture. I'll keep watching how your evenings and recoveries are trending.`,
+      confidence: 0.6,
+    };
+  }
+  if (e.event_type === 'correction_response') {
+    return {
+      title: 'How a correction unfolded',
+      message: `A correction entry around ${time} was followed by your glucose moving toward your target range${durText}. Capturing the full sequence like this makes it easier to spot how these moments tend to go. I'll keep this in mind as I learn your patterns.`,
+      confidence: 0.55,
+    };
+  }
+  if (e.event_type === 'overnight') {
+    return {
+      title: 'An overnight check-in',
+      message: `Overnight around ${time}, your glucose traced a path that stayed mostly within your range${durText}. Nights like this are helpful to have on record. I'll keep watching your overnight rhythms as more data comes in.`,
+      confidence: 0.55,
+    };
+  }
+  return {
+    title: 'A moment to notice',
+    message: `I recorded a glucose event around ${time} and want to keep it on your radar as part of your bigger picture. Logging these moments helps me learn your unique rhythms over time.`,
+    confidence: 0.5,
+  };
+}
