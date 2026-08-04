@@ -3,7 +3,7 @@ import { Area, XAxis, YAxis, Line, ComposedChart, ReferenceLine } from "recharts
 import { generateActivityCurve, getDoseIOB, getInsulinProfile, isBasalInsulinType } from "@/lib/insulinPharmacology";
 import { PROFILE_COLORS } from "@/lib/carbAbsorption";
 import { format } from "date-fns";
-import { AlertTriangle, CornerUpRight, SlidersHorizontal, Check, Wheat, Pencil, Trash2 } from "lucide-react";
+import { AlertTriangle, CornerUpRight, SlidersHorizontal, Check, Wheat, Pencil, Trash2, Info } from "lucide-react";
 import { HIGH_PROTEIN_FAT_MONITORING_HOURS, mergeMonitoringIntervals } from "@/lib/mealMonitoring";
 import { motion, AnimatePresence } from "framer-motion";
 import InfoPopover from "@/components/graph/InfoPopover";
@@ -280,6 +280,20 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     onDeleteLog({ type: activeMarker.type, item: activeMarker.item });
     setConfirmDelete(false);
     closeMarker();
+  };
+
+  const handleIndicatorClick = (e) => {
+    if (!filteredGlucoseReadings.length) return;
+    const scrollLeft = scrollRef.current?.scrollLeft ?? maxScrollLeft;
+    const centerTime = getCenterTimeForScroll(scrollLeft);
+    let nearest = null;
+    for (const reading of filteredGlucoseReadings) {
+      const dist = Math.abs(reading.time - centerTime);
+      if (!nearest || dist < nearest.dist) nearest = { reading, dist };
+    }
+    if (nearest?.reading) {
+      openMarker("glucose", nearest.reading, e.currentTarget.getBoundingClientRect());
+    }
   };
   const scrollRef = useRef(null);
   const centerMarkerRef = useRef(null);
@@ -600,17 +614,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     return CHART_MARGIN_TOP + (GLUCOSE_MAX - clamped) / (GLUCOSE_MAX - GLUCOSE_MIN) * plotHeight;
   };
 
-  const positionedGlucoseMarkers = useMemo(() =>
-    filteredGlucoseReadings
-      .map((reading) => ({
-        reading,
-        x: (reading.time - domainStart) / totalMs * chartWidth,
-        y: getGlucoseY(reading.value),
-      }))
-      .filter((m) => Number.isFinite(m.x) && Number.isFinite(m.y) && m.x >= 0 && m.x <= chartWidth),
-    [filteredGlucoseReadings, domainStart, totalMs, chartWidth]
-  );
-
   const getHighRangeOpacity = (value) => {
     const pctFromTop = (GLUCOSE_MAX - Math.min(value, GLUCOSE_MAX)) / (GLUCOSE_MAX - GLUCOSE_MIN);
     if (pctFromTop <= 0) return 0;
@@ -842,7 +845,15 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           marginRight: "-50dvw"
         }}>
       {filters.glucose && glucoseLinePoints.length > 0 &&
-      <div className="pointer-events-none absolute left-1/2 top-0 z-20 -translate-x-1/2 px-3 py-1 text-center">
+      <div
+        onClick={(onSelectLog || onDeleteLog) ? handleIndicatorClick : undefined}
+        className={`absolute left-1/2 top-0 z-20 -translate-x-1/2 px-3 py-1 text-center ${(onSelectLog || onDeleteLog) ? "cursor-pointer" : "pointer-events-none"}`}
+      >
+          {(onSelectLog || onDeleteLog) && (
+            <span className="absolute -top-1.5 -left-1.5 flex h-4 w-4 items-center justify-center rounded-full border border-white/15 bg-white/[0.08] text-white/45">
+              <Info className="h-2.5 w-2.5" />
+            </span>
+          )}
           <div className="text-2xl font-black leading-none text-white">
             <span ref={tooltipValueRef}>{formatGlucoseDisplay(glucoseLinePoints[glucoseLinePoints.length - 1].value)}</span> <span className="text-xs font-medium text-white/35">mg/dL</span>
           </div>
@@ -1109,28 +1120,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             );
           })}
 
-          {filters.glucose && positionedGlucoseMarkers.map(({ reading, x, y }) => {
-            const dotOpacity = getHighRangeOpacity(reading.value);
-            return (
-              <button
-                key={`glucose_marker_${reading.id}`}
-                type="button"
-                onClick={(e) => { e.stopPropagation(); openMarker("glucose", reading, e.currentTarget.getBoundingClientRect()); }}
-                aria-label={`Glucose ${reading.value} mg/dL`}
-                className="pointer-events-auto absolute z-[15] flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full"
-                style={{ left: x, top: y }}
-              >
-                <span
-                  className="block w-[1.5px] rounded-full"
-                  style={{
-                    height: 12,
-                    background: `linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,${0.9 * dotOpacity}) 50%, rgba(255,255,255,0) 100%)`,
-                    boxShadow: `0 0 4px rgba(255,255,255,${0.25 * dotOpacity})`,
-                  }}
-                />
-              </button>
-            );
-          })}
         </div>
       </div>
       </div>
