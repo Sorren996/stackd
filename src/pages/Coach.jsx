@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import AIHandshake, { hasAcceptedAIHandshake, acceptAIHandshake } from "@/components/coach/AIHandshake";
 import MessageBubble from "@/components/coach/MessageBubble";
 import CoachInsightCard from "@/components/coach/CoachInsightCard";
+import TypingIndicator from "@/components/coach/TypingIndicator";
 
 const AGENT_NAME = "coach";
 const LAST_VISIT_KEY = "ai_coach_last_visit";
@@ -18,11 +19,32 @@ export default function Coach() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
   const [loadingConversations, setLoadingConversations] = useState(true);
   const [showJournalModal, setShowJournalModal] = useState(false);
   const messagesEndRef = useRef(null);
   const scrollContainerRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
+  const typingSafetyRef = useRef(null);
   const queryClient = useQueryClient();
+
+  const beginTyping = () => {
+    setIsTyping(true);
+    if (typingSafetyRef.current) clearTimeout(typingSafetyRef.current);
+    typingSafetyRef.current = setTimeout(() => setIsTyping(false), 45000);
+  };
+
+  const endTypingDebounced = (messages) => {
+    const last = messages?.[messages.length - 1];
+    if (last?.role !== "assistant") return;
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => setIsTyping(false), 1500);
+  };
+
+  useEffect(() => () => {
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    if (typingSafetyRef.current) clearTimeout(typingSafetyRef.current);
+  }, []);
 
   const { data: unreadInsights = [] } = useQuery({
     queryKey: ["unread-coach-insights"],
@@ -93,7 +115,7 @@ export default function Coach() {
 
     const unsubscribe = base44.agents.subscribeToConversation(activeConversationId, (data) => {
       setMessages(data.messages || []);
-      setIsSending(false);
+      endTypingDebounced(data.messages);
     });
 
     return () => unsubscribe();
@@ -140,11 +162,15 @@ export default function Coach() {
   };
 
   const handleSend = async (overrideMessage) => {
-    const trimmed = (overrideMessage || input).trim();
+    // Ignore non-string overrides — button onClick passes a MouseEvent which
+    // would otherwise be coerced here and break .trim().
+    const source = typeof overrideMessage === "string" ? overrideMessage : input;
+    const trimmed = source.trim();
     if (!trimmed || isSending) return;
 
     setInput("");
     setIsSending(true);
+    beginTyping();
 
     let conversationId = activeConversationId;
     let conversation = conversations.find((c) => c.id === conversationId);
@@ -160,6 +186,7 @@ export default function Coach() {
         setConversations((prev) => [conversation, ...prev]);
       } catch {
         setIsSending(false);
+        setIsTyping(false);
         return;
       }
     }
@@ -168,8 +195,10 @@ export default function Coach() {
 
     try {
       await base44.agents.addMessage(conversation, { role: "user", content: trimmed });
+      setIsSending(false);
     } catch {
       setIsSending(false);
+      setIsTyping(false);
       setMessages((prev) => [
         ...prev,
         { role: "assistant", content: "I had trouble receiving that — please try again in a moment." },
@@ -284,6 +313,9 @@ export default function Coach() {
 
       {/* Input bar */}
       <div className="shrink-0 px-4 pt-2">
+        <AnimatePresence>
+          {isTyping && <TypingIndicator />}
+        </AnimatePresence>
         <div
           className="flex w-full items-end gap-2 rounded-2xl border p-3"
           style={{
@@ -307,7 +339,7 @@ export default function Coach() {
           <motion.button
             whileTap={{ scale: 0.9 }}
             type="button"
-            onClick={handleSend}
+            onClick={() => handleSend()}
             disabled={!input.trim() || isSending}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition disabled:opacity-30"
             style={{
