@@ -149,6 +149,16 @@
       "type": "string",
       "format": "date-time",
       "description": "When the user tagged the cause of this spike event"
+    },
+    "user_dismissed": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the user dismissed this spike without logging a cause."
+    },
+    "user_dismissed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the user dismissed this spike event."
     }
   },
   "required": [
@@ -172,10 +182,24 @@
       ]
     },
     "update": {
-      "created_by_id": "{{user.id}}"
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.user_id": "{{user.id}}"
+        }
+      ]
     },
     "delete": {
-      "created_by_id": "{{user.id}}"
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.user_id": "{{user.id}}"
+        }
+      ]
     }
   }
 }
