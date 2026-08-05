@@ -43,6 +43,19 @@
       "default": false,
       "description": "Whether this meal was flagged as high protein or high fat for monitoring purposes"
     },
+    "classification": {
+      "type": "string",
+      "enum": [
+        "meal",
+        "snack",
+        "rescue_carbs"
+      ],
+      "description": "AI-assisted classification of this nourishment entry. Set automatically by the classifyLogEntry backend function shortly after creation."
+    },
+    "classification_reasoning": {
+      "type": "string",
+      "description": "Brief wellness-focused reasoning behind the AI classification"
+    },
     "notes": {
       "type": "string",
       "description": "Optional notes"

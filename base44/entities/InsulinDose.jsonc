@@ -22,6 +22,19 @@
       "type": "string",
       "format": "date-time"
     },
+    "classification": {
+      "type": "string",
+      "enum": [
+        "meal",
+        "correction",
+        "rescue_insulin"
+      ],
+      "description": "AI-assisted classification of this support dose. Set automatically by the classifyLogEntry backend function shortly after creation."
+    },
+    "classification_reasoning": {
+      "type": "string",
+      "description": "Brief wellness-focused reasoning behind the AI classification"
+    },
     "notes": {
       "type": "string"
     },

@@ -187,7 +187,11 @@ function buildMealEventGroups(carbEntries, doses, insulinSettings = {}, glucoseR
   const preMealWindowMs = (insulinSettings.preMealWindowMinutes ?? DEFAULT_PRE_MEAL_WINDOW_MINUTES) * MINUTE_MS;
   const postMealWindowMs = (insulinSettings.postMealWindowMinutes ?? DEFAULT_POST_MEAL_WINDOW_MINUTES) * MINUTE_MS;
   const carbEvents = (Array.isArray(carbEntries) ? carbEntries : [])
-    .filter((entry) => !isRescueCarbEntry(entry, glucoseReadings, doses, targetLow))
+    .filter((entry) => {
+      if (entry.classification === "rescue_carbs") return false;
+      if (entry.classification === "meal" || entry.classification === "snack") return true;
+      return !isRescueCarbEntry(entry, glucoseReadings, doses, targetLow);
+    })
     .map((entry) => ({
       type: "carb",
       time: getEntryTime(entry),
@@ -272,7 +276,8 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
       return (
         Number.isFinite(entryTime) &&
         nowForRescue - entryTime < 2 * 60 * MINUTE_MS &&
-        isRescueCarbEntry(entry, glucoseReadings, doses, insulinSettings.targetLow)
+        (entry.classification === "rescue_carbs" ||
+         (!entry.classification && isRescueCarbEntry(entry, glucoseReadings, doses, insulinSettings.targetLow)))
       );
     });
   const rescueCarbsTotal = recentRescueCarbs.reduce((sum, entry) => sum + Number(entry.carbs || 0), 0);
