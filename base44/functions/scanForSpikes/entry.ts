@@ -17,6 +17,26 @@ const DETECTION = {
   maxGapMinutes: 15,
 };
 
+function generateAssumedReadings(readings, maxGapMinutes) {
+  if (readings.length < 2) return readings;
+  const stepMs = maxGapMinutes * 60 * 1000;
+  const result = [readings[0]];
+  for (let i = 1; i < readings.length; i++) {
+    const prev = readings[i - 1];
+    const curr = readings[i];
+    if (curr.time - prev.time > stepMs) {
+      let t = prev.time + stepMs;
+      while (t < curr.time - stepMs / 2) {
+        const fraction = (t - prev.time) / (curr.time - prev.time);
+        result.push({ time: t, value: Math.round(prev.value + (curr.value - prev.value) * fraction) });
+        t += stepMs;
+      }
+    }
+    result.push(curr);
+  }
+  return result;
+}
+
 function detectSpikes(readings) {
   if (readings.length < 3) return [];
 
@@ -119,7 +139,10 @@ export default async function(req) {
       .filter((r) => Number.isFinite(r.time) && Number.isFinite(r.value))
       .sort((a, b) => a.time - b.time);
 
-    const spikes = detectSpikes(readings);
+    // Interpolate assumed readings between real ones when gaps exceed 5 min,
+    // mirroring the client-side logic so detection is consistent.
+    const assumed = generateAssumedReadings(readings, 5);
+    const spikes = detectSpikes(assumed);
 
     // Avoid duplicating events that are already tracked
     const existing = await base44.entities.GlucoseEvent.filter(
