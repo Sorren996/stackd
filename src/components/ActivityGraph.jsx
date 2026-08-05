@@ -931,7 +931,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           scheduleCenterGlucoseUpdate(el.scrollLeft);
         }}
         style={{ WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
-        <div className="relative" style={{ width: chartWidth, height: CHART_HEIGHT }}>
+        <div className="relative" style={{ width: chartWidth, height: CHART_HEIGHT + 28 }}>
           {positionedMonitoringIntervals.map((iv, idx) => (
             <div
               key={`monitoring_band_${idx}`}
@@ -1156,7 +1156,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               x={spike.x}
               taggedCause={spike.taggedCause}
               chartHeight={CHART_HEIGHT}
-              xAxisHeight={X_AXIS_HEIGHT}
               onTag={() => setSpikeTagTarget(spike)}
             />
           ))}
