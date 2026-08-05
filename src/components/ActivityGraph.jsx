@@ -638,7 +638,9 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           const eventStart = new Date(e.start_time).getTime();
           return Math.abs(eventStart - spikeStart) < 5 * 60 * 1000;
         });
-        return { ...spike, x, taggedCause: existingEvent?.user_tagged_cause || null, eventId: existingEvent?.id || null };
+        const dismissed = existingEvent?.user_dismissed === true;
+        const taggedCause = existingEvent?.user_tagged_cause || null;
+        return { ...spike, x, taggedCause, dismissed, handled: taggedCause !== null || dismissed, eventId: existingEvent?.id || null };
       })
       .filter(Boolean);
 
@@ -650,6 +652,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       const alreadyDetected = detectedStarts.some((ds) => Math.abs(ds - eventStart) < 5 * 60 * 1000);
       if (alreadyDetected) continue;
       const x = (eventStart - domainStart) / totalMs * chartWidth;
+      const dismissed = e.user_dismissed === true;
+      const taggedCause = e.user_tagged_cause || null;
       markers.push({
         startTime: e.start_time,
         peakTime: e.peak_time || e.end_time,
@@ -659,7 +663,9 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         durationMinutes: e.duration_minutes,
         rateOfRise: e.rate_of_rise,
         x,
-        taggedCause: e.user_tagged_cause || null,
+        taggedCause,
+        dismissed,
+        handled: taggedCause !== null || dismissed,
         eventId: e.id,
       });
     }
@@ -1183,7 +1189,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             <SpikeMarker
               key={`spike_${idx}`}
               x={spike.x}
-              taggedCause={spike.taggedCause}
+              handled={spike.handled}
               chartHeight={CHART_HEIGHT}
               onTag={() => setSpikeTagTarget(spike)}
             />

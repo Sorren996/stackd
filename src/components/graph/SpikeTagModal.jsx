@@ -54,6 +54,40 @@ export default function SpikeTagModal({ spike, onClose }) {
     }
   };
 
+  const handleDismiss = async () => {
+    setIsSaving(true);
+    try {
+      if (spike.eventId) {
+        await base44.entities.GlucoseEvent.update(spike.eventId, {
+          user_dismissed: true,
+          user_dismissed_at: new Date().toISOString(),
+        });
+      } else {
+        await base44.entities.GlucoseEvent.create({
+          event_type: "spike",
+          start_time: spike.startTime,
+          end_time: spike.peakTime,
+          starting_glucose: spike.startGlucose,
+          peak_glucose: spike.peakGlucose,
+          peak_time: spike.peakTime,
+          duration_minutes: spike.durationMinutes,
+          rate_of_rise: spike.rateOfRise,
+          user_dismissed: true,
+          user_dismissed_at: new Date().toISOString(),
+          classification: "user_dismissed",
+          confidence: 1,
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ["spike-events"] });
+      toast.success("Okay — we'll set that moment aside.");
+      onClose();
+    } catch {
+      toast.error("Could not save right now — please try again.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const startTime = new Date(spike.startTime);
 
   return (
@@ -234,19 +268,30 @@ export default function SpikeTagModal({ spike, onClose }) {
           className="shrink-0 px-6 pb-6 pt-4"
           style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}
         >
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={!selectedCause || isSaving}
-            className="w-full rounded-2xl py-3.5 text-sm font-semibold text-white transition disabled:opacity-30"
-            style={{
-              background: "linear-gradient(145deg, rgba(91,168,138,0.82), rgba(91,163,184,0.68))",
-              boxShadow:
-                "0 8px 24px rgba(91,163,184,0.18), inset 0 1px 1px rgba(255,255,255,0.22), inset 0 -1px 1px rgba(255,255,255,0.04)",
-            }}
-          >
-            {isSaving ? "Saving your reflection…" : "Save this reflection"}
-          </button>
+          <div className="flex gap-2.5">
+            <button
+              type="button"
+              onClick={handleDismiss}
+              disabled={isSaving}
+              className="flex-1 rounded-2xl border border-white/10 py-3.5 text-sm font-semibold text-white/55 transition hover:bg-white/5 disabled:opacity-30"
+              style={{ background: "rgba(255,255,255,0.03)" }}
+            >
+              Dismiss
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={!selectedCause || isSaving}
+              className="flex-[1.5] rounded-2xl py-3.5 text-sm font-semibold text-white transition disabled:opacity-30"
+              style={{
+                background: "linear-gradient(145deg, rgba(91,168,138,0.82), rgba(91,163,184,0.68))",
+                boxShadow:
+                  "0 8px 24px rgba(91,163,184,0.18), inset 0 1px 1px rgba(255,255,255,0.22), inset 0 -1px 1px rgba(255,255,255,0.04)",
+              }}
+            >
+              {isSaving ? "Saving…" : "Save reflection"}
+            </button>
+          </div>
         </div>
       </motion.div>
     </motion.div>
