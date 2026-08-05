@@ -10,7 +10,7 @@ import InfoPopover from "@/components/graph/InfoPopover";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
-import { detectSpikes } from "@/lib/spikeDetection";
+import { detectSpikes, generateAssumedReadings } from "@/lib/spikeDetection";
 import SpikeMarker from "@/components/graph/SpikeMarker";
 import SpikeTagModal from "@/components/graph/SpikeTagModal";
 
@@ -478,7 +478,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   [glucoseMap]
   );
 
-  const detectedSpikes = useMemo(() => detectSpikes(filteredGlucoseReadings), [filteredGlucoseReadings]);
+  const assumedReadings = useMemo(() => generateAssumedReadings(filteredGlucoseReadings), [filteredGlucoseReadings]);
+  const detectedSpikes = useMemo(() => detectSpikes(assumedReadings), [assumedReadings]);
 
   const glucoseCurveSegments = useMemo(() => ({
     value: buildMonotoneSegments(glucoseLinePoints, (point) => point.value),
@@ -1278,7 +1279,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             </div>
           )}
 
-          {(onSelectLog || onDeleteLog) && !(activeMarker.type === "glucose" && activeMarker.item.source !== "manual") && (
+          {(onSelectLog || onDeleteLog) && !(activeMarker.type === "glucose" && activeMarker.item.source === "dexcom") && (
             <div className="mt-2 flex gap-2">
               {onSelectLog && !confirmDelete && (
                 <button type="button" onClick={handleEdit} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-white/12 py-2 text-xs font-semibold text-white/85 transition hover:bg-white/5" style={{ background: "rgba(255,255,255,0.04)" }}>

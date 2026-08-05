@@ -15,6 +15,47 @@ const DEFAULTS = {
   maxGapMinutes: 15,      // gaps larger than this break a spike run
 };
 
+// Generates assumed (interpolated) readings between real readings when gaps
+// exceed maxGapMinutes. These are purely client-side — never stored in the DB —
+// and exist so daily balance and spike detection see a continuous timeline even
+// when the user has gaps between manual or CGM readings.
+export function generateAssumedReadings(glucoseReadings, maxGapMinutes = 5) {
+  const readings = (Array.isArray(glucoseReadings) ? glucoseReadings : [])
+    .map((r) => ({
+      time: new Date(r.recorded_at || r.created_at || r.created_date).getTime(),
+      value: Number(r.value ?? r.glucose ?? r.mgdl ?? r.mg_dL),
+    }))
+    .filter((r) => Number.isFinite(r.time) && Number.isFinite(r.value))
+    .sort((a, b) => a.time - b.time);
+
+  if (readings.length < 2) return readings;
+
+  const stepMs = maxGapMinutes * 60 * 1000;
+  const result = [readings[0]];
+
+  for (let i = 1; i < readings.length; i++) {
+    const prev = readings[i - 1];
+    const curr = readings[i];
+    const gapMs = curr.time - prev.time;
+
+    if (gapMs > stepMs) {
+      let t = prev.time + stepMs;
+      while (t < curr.time - stepMs / 2) {
+        const fraction = (t - prev.time) / (curr.time - prev.time);
+        result.push({
+          time: t,
+          value: Math.round(prev.value + (curr.value - prev.value) * fraction),
+        });
+        t += stepMs;
+      }
+    }
+
+    result.push(curr);
+  }
+
+  return result;
+}
+
 export function detectSpikes(glucoseReadings, options = {}) {
   const config = { ...DEFAULTS, ...options };
 
