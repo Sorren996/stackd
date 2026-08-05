@@ -10,7 +10,7 @@ const DEFAULTS = {
   minRiseMgDl: 40,       // total rise needed to count as a spike
   minRatePerMin: 2,      // mg/dL/min to start a spike
   sustainRatePerMin: 0.5, // rate above which the spike is still "rising"
-  minDurationMinutes: 10,
+  minDurationMinutes: 45,
   maxGapMinutes: 15,      // gaps larger than this break a spike run
 };
 
