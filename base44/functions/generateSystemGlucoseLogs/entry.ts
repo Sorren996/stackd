@@ -1,19 +1,12 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 
-// Scheduled every 5 minutes. For every user with glucose history, if their
-// most recent reading is older than the current 5-minute window, a "system"
-// reading is created that carries forward the last known value. This gives
-// the AI Coach a continuous picture of where glucose has been sitting during
-// sensor gaps, so reviews are grounded in a full timeline rather than sparse
-// snapshots. System readings are tagged source: "system" so the Coach can
-// distinguish carried-forward state from fresh measurements.
+// Triggered when a user logs a new glucose reading (manual or CGM). Fills the
+// gap between the previous real reading and the new one with "system"
+// carry-forward readings at 5-minute intervals, giving the AI Coach a
+// continuous timeline during gaps. System readings are filtered out of the
+// ActivityGraph display so the graph only shows real readings.
 
-const BUCKET_MS = 5 * 60 * 1000;
-const LOOKBACK_MS = 6 * 60 * 60 * 1000;
-
-function bucketFloor(date) {
-  return Math.floor(date.getTime() / BUCKET_MS) * BUCKET_MS;
-}
+const STEP_MS = 5 * 60 * 1000;
 
 function ownerOf(reading) {
   return reading.user_id || reading.created_by_id;
@@ -24,54 +17,76 @@ export default async function(req) {
     const base44 = createClientFromRequest(req);
     const sr = base44.asServiceRole;
 
-    const now = new Date();
-    const currentBucket = bucketFloor(now);
-    const lookbackStart = new Date(now.getTime() - LOOKBACK_MS);
+    // Entity event payload: { event: { type, entity_name, entity_id }, data }
+    const body = await req.json().catch(() => ({}));
+    let current = body?.data;
+    const entityId = body?.event?.entity_id;
 
-    // Pull recent readings to identify active users and their latest values.
-    const recent = await sr.entities.GlucoseReading.filter(
-      { recorded_at: { $gte: lookbackStart.toISOString() } },
+    // If the payload was too large, fetch the reading by ID.
+    if (!current && entityId) {
+      current = await sr.entities.GlucoseReading.get(entityId);
+    }
+
+    if (!current) {
+      return Response.json({ skipped: true, reason: 'no_reading_data' });
+    }
+
+    // Only fill gaps for real readings, never for system carry-forwards.
+    if (current.source === 'system') {
+      return Response.json({ skipped: true, reason: 'system_source' });
+    }
+
+    const owner = ownerOf(current);
+    if (!owner) {
+      return Response.json({ skipped: true, reason: 'no_owner' });
+    }
+
+    const newTime = new Date(current.recorded_at).getTime();
+    const newValue = Number(current.value);
+    if (!Number.isFinite(newTime) || !Number.isFinite(newValue)) {
+      return Response.json({ skipped: true, reason: 'invalid_value' });
+    }
+
+    // Find the most recent real reading before this one for the same user.
+    const candidates = await sr.entities.GlucoseReading.filter(
+      { recorded_at: { $lt: current.recorded_at } },
       '-recorded_at',
-      1000
+      50
     );
 
-    // Group by owner, keeping only the most recent reading per user.
-    const latestByOwner = new Map();
-    for (const r of recent) {
-      const owner = ownerOf(r);
-      if (!owner) continue;
-      if (!latestByOwner.has(owner)) {
-        latestByOwner.set(owner, r);
-      }
+    let prevReading = null;
+    for (const r of candidates) {
+      if (ownerOf(r) !== owner) continue;
+      if (r.source === 'system') continue;
+      prevReading = r;
+      break;
+    }
+
+    if (!prevReading) {
+      return Response.json({ skipped: true, reason: 'no_previous_reading' });
+    }
+
+    const prevTime = new Date(prevReading.recorded_at).getTime();
+    const prevValue = Number(prevReading.value);
+    const gapMs = newTime - prevTime;
+
+    // Only fill if the gap is larger than the step interval.
+    if (gapMs <= STEP_MS || !Number.isFinite(prevValue)) {
+      return Response.json({ skipped: true, reason: 'gap_too_small' });
     }
 
     const toCreate = [];
-    const summary = [];
-
-    for (const [owner, latest] of latestByOwner) {
-      const latestTime = new Date(latest.recorded_at).getTime();
-
-      // If the latest reading already falls within the current 5-min window
-      // (including a previous system carry-forward), nothing to fill.
-      if (latestTime >= currentBucket) {
-        summary.push({ owner, status: 'current' });
-        continue;
-      }
-
-      const value = Number(latest.value);
-      if (!Number.isFinite(value)) {
-        summary.push({ owner, status: 'invalid_value' });
-        continue;
-      }
-
+    let t = prevTime + STEP_MS;
+    while (t < newTime - STEP_MS / 2) {
+      const fraction = (t - prevTime) / (newTime - prevTime);
       toCreate.push({
         user_id: owner,
-        value,
-        recorded_at: new Date(currentBucket).toISOString(),
+        value: Math.round(prevValue + (newValue - prevValue) * fraction),
+        recorded_at: new Date(t).toISOString(),
         source: 'system',
-        notes: 'System-generated carry-forward of last known glucose value during a sensor gap.',
+        notes: 'System-generated interpolation between two real readings.',
       });
-      summary.push({ owner, status: 'filled', carriedFrom: latest.recorded_at, value });
+      t += STEP_MS;
     }
 
     if (toCreate.length) {
@@ -79,10 +94,10 @@ export default async function(req) {
     }
 
     return Response.json({
-      processed: latestByOwner.size,
       generated: toCreate.length,
-      bucket: new Date(currentBucket).toISOString(),
-      summary,
+      owner,
+      from: prevReading.recorded_at,
+      to: current.recorded_at,
     });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });

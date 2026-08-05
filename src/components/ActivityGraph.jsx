@@ -395,6 +395,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
   const sortedGlucoseReadings = useMemo(() =>
   glucoseReadings.
+  filter((reading) => reading.source !== "system").
   map((reading) => ({
     ...reading,
     time: getReadingTime(reading),
