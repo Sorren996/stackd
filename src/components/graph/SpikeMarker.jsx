@@ -1,0 +1,48 @@
+import { motion } from "framer-motion";
+import { TrendingUp } from "lucide-react";
+
+// Small clickable spike indicator rendered below the time axis on the
+// ActivityGraph. Untagged spikes pulse gently in amber to invite reflection;
+// tagged spikes settle into a calm teal.
+export default function SpikeMarker({ x, taggedCause, onTag, chartHeight, xAxisHeight }) {
+  const top = chartHeight - 20;
+
+  return (
+    <div
+      className="pointer-events-none absolute"
+      style={{ left: x, top, transform: "translateX(-50%)" }}
+    >
+      <motion.button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onTag();
+        }}
+        whileTap={{ scale: 0.85 }}
+        aria-label={taggedCause ? `Spike tagged: ${taggedCause}` : "Reflect on this glucose rise"}
+        className="pointer-events-auto flex h-5 w-5 items-center justify-center rounded-full transition hover:brightness-125"
+        style={{
+          background: taggedCause
+            ? "linear-gradient(145deg, rgba(91,168,138,0.45), rgba(91,163,184,0.25))"
+            : "linear-gradient(145deg, rgba(251,191,36,0.45), rgba(251,191,36,0.15))",
+          border: `1px solid ${taggedCause ? "rgba(91,168,138,0.45)" : "rgba(251,191,36,0.5)"}`,
+          boxShadow: taggedCause
+            ? "0 2px 8px rgba(91,168,138,0.2)"
+            : "0 0 10px rgba(251,191,36,0.35)",
+        }}
+        animate={
+          taggedCause
+            ? { scale: 1 }
+            : { scale: [1, 1.12, 1] }
+        }
+        transition={
+          taggedCause
+            ? { duration: 0.2 }
+            : { duration: 2, repeat: Infinity, ease: "easeInOut" }
+        }
+      >
+        <TrendingUp className="h-3 w-3 text-white/85" />
+      </motion.button>
+    </div>
+  );
+}

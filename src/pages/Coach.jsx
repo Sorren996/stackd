@@ -153,7 +153,18 @@ export default function Coach() {
     const insight = validUnreadInsights.find((i) => i.id === id);
     if (!insight) return;
     surfaceRequestRef.current = null;
-    handleTalkAboutInsight(insight);
+    // The insight is already rendered as a fully-loaded InsightMessage card
+    // via the newestInsight effect — no AI streaming needed. Just mark it
+    // as read so the logo glow settles, and scroll to make it visible.
+    base44.entities.CoachInsight.update(insight.id, {
+      status: "read",
+      read_at: new Date().toISOString(),
+    })
+      .then(() => queryClient.invalidateQueries({ queryKey: ["unread-coach-insights"] }))
+      .catch(() => {});
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    }, 100);
   }, [validUnreadInsights, loadingConversations]);
 
   useEffect(() => {

@@ -6,6 +6,10 @@
       "type": "string",
       "description": "Display name of the user these settings belong to, for identification in the backend."
     },
+    "timezone": {
+      "type": "string",
+      "description": "User's IANA timezone identifier (e.g. America/Chicago), saved from the browser so the AI Coach can reference times in the user's local timezone."
+    },
     "insulin_sensitivity_mgdl_per_unit": {
       "type": "number",
       "description": "How much 1 unit of insulin typically lowers glucose (mg/dL per unit). Must come from the user's established insulin plan."

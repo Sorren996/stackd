@@ -146,6 +146,11 @@ const AuthenticatedApp = () => {
       const settings = queryClientInstance.getQueryData(["user-settings"]);
       if (settings && user?.id) {
         cacheSettingsLocally(user.id, settings);
+        // Save the browser timezone so the AI Coach can reference local times.
+        const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        if (browserTz && settings.timezone !== browserTz) {
+          base44.entities.UserSettings.update(settings.id, { timezone: browserTz }).catch(() => {});
+        }
         if (typeof window !== "undefined") {
           window.dispatchEvent(new Event("target-range-updated"));
           window.dispatchEvent(new Event("insulin-settings-updated"));

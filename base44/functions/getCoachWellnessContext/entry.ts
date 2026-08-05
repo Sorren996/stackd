@@ -37,6 +37,31 @@ Deno.serve(async (req) => {
       insightId,
     } = body;
 
+    // Read the user's timezone from UserSettings (saved by the frontend)
+    // so the AI Coach can reference times in the user's local timezone.
+    let userTimezone = timezone;
+    try {
+      const settingsRecords = await base44.entities.UserSettings.list('-created_date', 1);
+      if (settingsRecords[0]?.timezone) {
+        userTimezone = settingsRecords[0].timezone;
+      }
+    } catch { /* non-fatal */ }
+
+    let userLocalTime: string | null = null;
+    try {
+      userLocalTime = new Intl.DateTimeFormat('en-US', {
+        timeZone: userTimezone,
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        timeZoneName: 'short',
+      }).format(new Date());
+    } catch {
+      userLocalTime = new Date().toUTCString();
+    }
+
     // Calculate time window
     const now = new Date();
     let rangeStart: Date;
@@ -92,6 +117,8 @@ Deno.serve(async (req) => {
     const result: any = {
       requestedAt: now.toISOString(),
       timezone,
+      userTimezone,
+      userLocalTime,
       range: { start: startISO, end: endISO },
       insightContext,
       glucoseLogs: [],

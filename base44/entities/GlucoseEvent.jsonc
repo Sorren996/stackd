@@ -12,7 +12,8 @@
         "high",
         "low",
         "correction_response",
-        "overnight"
+        "overnight",
+        "spike"
       ],
       "description": "Category of glucose excursion"
     },
@@ -132,6 +133,22 @@
     "source_analysis_job_id": {
       "type": "string",
       "description": "AnalysisJob that produced this event, for auditing"
+    },
+    "user_tagged_cause": {
+      "type": "string",
+      "enum": [
+        "stress",
+        "dawn_effect",
+        "meal",
+        "workout",
+        "other"
+      ],
+      "description": "User-identified cause of a spike event, set when the user taps the spike icon on the activity graph."
+    },
+    "user_tagged_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the user tagged the cause of this spike event"
     }
   },
   "required": [
