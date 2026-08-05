@@ -10,6 +10,7 @@ const LOCK_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
 // client-side fallback — once it crosses the 14-day editable window.
 export function isLogLocked(item) {
   if (item?.is_locked === true) return true;
+  if (item?.source && item?.source !== "manual") return true;
   const ts = item?.recorded_at || item?.consumed_at || item?.administered_at;
   if (!ts) return false;
   const t = new Date(ts).getTime();

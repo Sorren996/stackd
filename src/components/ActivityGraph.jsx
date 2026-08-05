@@ -1273,12 +1273,12 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                 <span className="text-3xl font-black text-white">{activeMarker.item.value}</span>
                 <span className="text-xs text-white/40">mg/dL</span>
               </div>
-              <p className="text-[11px] text-white/40">Manual · {format(new Date(activeMarker.item.recorded_at), "h:mm a · MMM d")}</p>
+              <p className="text-[11px] text-white/40">{activeMarker.item.source === "dexcom" ? "CGM" : activeMarker.item.source === "system" ? "System" : "Manual"} · {format(new Date(activeMarker.item.recorded_at), "h:mm a · MMM d")}</p>
 
             </div>
           )}
 
-          {(onSelectLog || onDeleteLog) && (
+          {(onSelectLog || onDeleteLog) && !(activeMarker.type === "glucose" && activeMarker.item.source !== "manual") && (
             <div className="mt-2 flex gap-2">
               {onSelectLog && !confirmDelete && (
                 <button type="button" onClick={handleEdit} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-white/12 py-2 text-xs font-semibold text-white/85 transition hover:bg-white/5" style={{ background: "rgba(255,255,255,0.04)" }}>
