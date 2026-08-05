@@ -3,13 +3,12 @@ import { Area, XAxis, YAxis, Line, ComposedChart, ReferenceLine } from "recharts
 import { generateActivityCurve, getDoseIOB, getInsulinProfile, isBasalInsulinType } from "@/lib/insulinPharmacology";
 import { PROFILE_COLORS } from "@/lib/carbAbsorption";
 import { format } from "date-fns";
-import { AlertTriangle, CornerUpRight, SlidersHorizontal, Check, Wheat, Pencil, Trash2, Info, Zap } from "lucide-react";
+import { AlertTriangle, CornerUpRight, SlidersHorizontal, Check, Wheat, Pencil, Trash2, Info } from "lucide-react";
 import { HIGH_PROTEIN_FAT_MONITORING_HOURS, mergeMonitoringIntervals } from "@/lib/mealMonitoring";
 import { motion, AnimatePresence } from "framer-motion";
 import InfoPopover from "@/components/graph/InfoPopover";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { toast } from "sonner";
 import { detectSpikes, generateAssumedReadings } from "@/lib/spikeDetection";
 import SpikeMarker from "@/components/graph/SpikeMarker";
 import SpikeTagModal from "@/components/graph/SpikeTagModal";
@@ -268,8 +267,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const [activeMarker, setActiveMarker] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [spikeTagTarget, setSpikeTagTarget] = useState(null);
-  const [isScanningSpikes, setIsScanningSpikes] = useState(false);
-  const queryClient = useQueryClient();
 
   const openMarker = (type, item, rect) => {
     setConfirmDelete(false);
@@ -289,24 +286,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     onDeleteLog({ type: activeMarker.type, item: activeMarker.item });
     setConfirmDelete(false);
     closeMarker();
-  };
-
-  const handleScanSpikes = async () => {
-    setIsScanningSpikes(true);
-    try {
-      const res = await base44.functions.invoke("scanForSpikes", {});
-      queryClient.invalidateQueries({ queryKey: ["spike-events"] });
-      const created = res.data?.created ?? 0;
-      if (created > 0) {
-        toast.success(`Found ${created} new rise${created === 1 ? "" : "s"} to reflect on.`);
-      } else {
-        toast.success("All caught up — no new rises found for today.");
-      }
-    } catch {
-      toast.error("Could not scan right now — please try again.");
-    } finally {
-      setIsScanningSpikes(false);
-    }
   };
 
   const handleIndicatorClick = (e) => {
@@ -893,19 +872,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             }
           </button>
         </div>
-
-        {/* Force scan button */}
-        <button
-          onClick={handleScanSpikes}
-          disabled={isScanningSpikes}
-          aria-label="Scan today for rises"
-          className={`w-8 h-8 flex items-center rounded-xl border transition-all justify-center ${
-            isScanningSpikes
-              ? "bg-amber-500/10 border-amber-500/30 text-amber-400"
-              : "border-white/5 bg-white/[0.03] text-white/40 hover:text-white/80 hover:bg-white/[0.08]"
-          }`}>
-          <Zap className={`w-4 h-4 ${isScanningSpikes ? "animate-pulse" : ""}`} />
-        </button>
 
         {/* Portal-style backdrop + dropdown rendered outside flow */}
         <AnimatePresence>

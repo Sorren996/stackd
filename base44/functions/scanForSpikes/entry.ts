@@ -1,10 +1,10 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 
-// Force-scans the last 24 hours of glucose readings for rapid, sustained
-// rises ("spikes") and persists any that aren't already tracked as
-// GlucoseEvent records. This gives the ActivityGraph and the AI Coach a
-// stable set of spike events to reference, and lets the user reflect on
-// them via the spike-tagging modal. Triggered manually from the graph.
+// Scheduled every 5 minutes. Scans the last 24 hours of glucose readings for
+// each user, detecting rapid, sustained rises ("spikes") of 40+ mg/dL lasting
+// between 10 and 75 minutes. Persists any new spikes as GlucoseEvent records
+// (with user_id set) so the ActivityGraph can surface interactive spike
+// markers the user can reflect on.
 
 const MINUTE_MS = 60 * 1000;
 
@@ -13,7 +13,7 @@ const DETECTION = {
   minRatePerMin: 2,
   sustainRatePerMin: 0.5,
   minDurationMinutes: 10,
-  maxDurationMinutes: 60,
+  maxDurationMinutes: 75,
   maxGapMinutes: 15,
 };
 
@@ -116,73 +116,97 @@ function deduplicateSpikes(spikes) {
   return result;
 }
 
+function ownerOf(record) {
+  return record.user_id || record.created_by_id;
+}
+
 export default async function(req) {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    const sr = base44.asServiceRole;
 
     const now = new Date();
     const windowStart = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
-    const records = await base44.entities.GlucoseReading.filter(
+    // Pull all glucose readings from the last 24 hours across all users.
+    const records = await sr.entities.GlucoseReading.filter(
       { recorded_at: { $gte: windowStart.toISOString() } },
       'recorded_at',
-      1000
+      5000
     );
 
-    const readings = records
-      .map((r) => ({
-        time: new Date(r.recorded_at).getTime(),
-        value: Number(r.value),
-      }))
-      .filter((r) => Number.isFinite(r.time) && Number.isFinite(r.value))
-      .sort((a, b) => a.time - b.time);
+    // Group readings by owner.
+    const byOwner = new Map();
+    for (const r of records) {
+      const owner = ownerOf(r);
+      if (!owner) continue;
+      if (!byOwner.has(owner)) byOwner.set(owner, []);
+      byOwner.get(owner).push(r);
+    }
 
-    // Interpolate assumed readings between real ones when gaps exceed 5 min,
-    // mirroring the client-side logic so detection is consistent.
-    const assumed = generateAssumedReadings(readings, 5);
-    const spikes = detectSpikes(assumed);
-
-    // Avoid duplicating events that are already tracked
-    const existing = await base44.entities.GlucoseEvent.filter(
+    // Fetch existing spike events to avoid duplicates, grouped by owner.
+    const existing = await sr.entities.GlucoseEvent.filter(
       { event_type: 'spike', start_time: { $gte: windowStart.toISOString() } },
       '-created_date',
-      100
+      500
     );
-    const existingStarts = existing.map((e) => new Date(e.start_time).getTime());
+    const existingByOwner = new Map();
+    for (const e of existing) {
+      const owner = ownerOf(e);
+      if (!owner) continue;
+      if (!existingByOwner.has(owner)) existingByOwner.set(owner, []);
+      existingByOwner.get(owner).push(new Date(e.start_time).getTime());
+    }
 
     const toCreate = [];
-    for (const spike of spikes) {
-      const startTime = new Date(spike.startTime).getTime();
-      const alreadyExists = existingStarts.some(
-        (t) => Math.abs(t - startTime) < 5 * MINUTE_MS
-      );
-      if (!alreadyExists) {
-        toCreate.push({
-          event_type: 'spike',
-          start_time: spike.startTime,
-          end_time: spike.peakTime,
-          starting_glucose: spike.startGlucose,
-          peak_glucose: spike.peakGlucose,
-          peak_time: spike.peakTime,
-          duration_minutes: spike.durationMinutes,
-          rate_of_rise: spike.rateOfRise,
-          classification: 'auto_detected',
-          confidence: 0.8,
-        });
+    let totalDetected = 0;
+
+    for (const [owner, ownerRecords] of byOwner) {
+      const readings = ownerRecords
+        .map((r) => ({
+          time: new Date(r.recorded_at).getTime(),
+          value: Number(r.value),
+        }))
+        .filter((r) => Number.isFinite(r.time) && Number.isFinite(r.value))
+        .sort((a, b) => a.time - b.time);
+
+      const assumed = generateAssumedReadings(readings, 5);
+      const spikes = detectSpikes(assumed);
+
+      const existingStarts = existingByOwner.get(owner) || [];
+
+      for (const spike of spikes) {
+        const startTime = new Date(spike.startTime).getTime();
+        const alreadyExists = existingStarts.some(
+          (t) => Math.abs(t - startTime) < 5 * MINUTE_MS
+        );
+        totalDetected++;
+        if (!alreadyExists) {
+          toCreate.push({
+            user_id: owner,
+            event_type: 'spike',
+            start_time: spike.startTime,
+            end_time: spike.peakTime,
+            starting_glucose: spike.startGlucose,
+            peak_glucose: spike.peakGlucose,
+            peak_time: spike.peakTime,
+            duration_minutes: spike.durationMinutes,
+            rate_of_rise: spike.rateOfRise,
+            classification: 'auto_detected',
+            confidence: 0.8,
+          });
+        }
       }
     }
 
     if (toCreate.length) {
-      await base44.entities.GlucoseEvent.bulkCreate(toCreate);
+      await sr.entities.GlucoseEvent.bulkCreate(toCreate);
     }
 
     return Response.json({
-      detected: spikes.length,
+      usersScanned: byOwner.size,
+      detected: totalDetected,
       created: toCreate.length,
-      alreadyTracked: spikes.length - toCreate.length,
-      spikes,
     });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });

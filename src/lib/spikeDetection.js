@@ -11,7 +11,7 @@ const DEFAULTS = {
   minRatePerMin: 2,      // mg/dL/min to start a spike
   sustainRatePerMin: 0.5, // rate above which the spike is still "rising"
   minDurationMinutes: 10,
-  maxDurationMinutes: 60,  // spikes longer than this are not flagged
+  maxDurationMinutes: 75,  // spikes longer than this are not flagged
   maxGapMinutes: 15,      // gaps larger than this break a spike run
 };
 
