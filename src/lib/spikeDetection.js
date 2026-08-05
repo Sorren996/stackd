@@ -10,7 +10,8 @@ const DEFAULTS = {
   minRiseMgDl: 40,       // total rise needed to count as a spike
   minRatePerMin: 2,      // mg/dL/min to start a spike
   sustainRatePerMin: 0.5, // rate above which the spike is still "rising"
-  minDurationMinutes: 45,
+  minDurationMinutes: 10,
+  maxDurationMinutes: 60,  // spikes longer than this are not flagged
   maxGapMinutes: 15,      // gaps larger than this break a spike run
 };
 
@@ -74,7 +75,8 @@ export function detectSpikes(glucoseReadings, options = {}) {
 
     if (
       riseAmount >= config.minRiseMgDl &&
-      durationMinutes >= config.minDurationMinutes
+      durationMinutes >= config.minDurationMinutes &&
+      durationMinutes <= config.maxDurationMinutes
     ) {
       spikes.push({
         startTime: new Date(startTime).toISOString(),
