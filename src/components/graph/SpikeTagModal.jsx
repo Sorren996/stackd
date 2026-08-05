@@ -23,20 +23,27 @@ export default function SpikeTagModal({ spike, onClose }) {
     if (!selectedCause) return;
     setIsSaving(true);
     try {
-      await base44.entities.GlucoseEvent.create({
-        event_type: "spike",
-        start_time: spike.startTime,
-        end_time: spike.peakTime,
-        starting_glucose: spike.startGlucose,
-        peak_glucose: spike.peakGlucose,
-        peak_time: spike.peakTime,
-        duration_minutes: spike.durationMinutes,
-        rate_of_rise: spike.rateOfRise,
-        user_tagged_cause: selectedCause,
-        user_tagged_at: new Date().toISOString(),
-        classification: "user_tagged",
-        confidence: 1,
-      });
+      if (spike.eventId) {
+        await base44.entities.GlucoseEvent.update(spike.eventId, {
+          user_tagged_cause: selectedCause,
+          user_tagged_at: new Date().toISOString(),
+        });
+      } else {
+        await base44.entities.GlucoseEvent.create({
+          event_type: "spike",
+          start_time: spike.startTime,
+          end_time: spike.peakTime,
+          starting_glucose: spike.startGlucose,
+          peak_glucose: spike.peakGlucose,
+          peak_time: spike.peakTime,
+          duration_minutes: spike.durationMinutes,
+          rate_of_rise: spike.rateOfRise,
+          user_tagged_cause: selectedCause,
+          user_tagged_at: new Date().toISOString(),
+          classification: "user_tagged",
+          confidence: 1,
+        });
+      }
       queryClient.invalidateQueries({ queryKey: ["spike-events"] });
       toast.success("Thank you for reflecting on that moment.");
       onClose();

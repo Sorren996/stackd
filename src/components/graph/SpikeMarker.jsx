@@ -9,7 +9,7 @@ export default function SpikeMarker({ x, taggedCause, onTag, chartHeight }) {
 
   return (
     <div
-      className="pointer-events-none absolute"
+      className="pointer-events-none absolute z-[15]"
       style={{ left: x, top, transform: "translateX(-50%)" }}
     >
       <motion.button

@@ -645,7 +645,9 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   }, [filteredDoses, domainStart, domainEnd, totalMs, chartWidth, chartData, plotHeight]);
 
   const positionedSpikeMarkers = useMemo(() => {
-    return detectedSpikes
+    const detectedStarts = detectedSpikes.map((s) => new Date(s.startTime).getTime());
+
+    const markers = detectedSpikes
       .map((spike) => {
         const spikeStart = new Date(spike.startTime).getTime();
         if (spikeStart < domainStart || spikeStart > domainEnd) return null;
@@ -655,9 +657,33 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           const eventStart = new Date(e.start_time).getTime();
           return Math.abs(eventStart - spikeStart) < 5 * 60 * 1000;
         });
-        return { ...spike, x, taggedCause: existingEvent?.user_tagged_cause || null };
+        return { ...spike, x, taggedCause: existingEvent?.user_tagged_cause || null, eventId: existingEvent?.id || null };
       })
       .filter(Boolean);
+
+    // Also surface backend-tracked spikes the client-side detection may have missed
+    for (const e of spikeEvents) {
+      if (!e.start_time) continue;
+      const eventStart = new Date(e.start_time).getTime();
+      if (eventStart < domainStart || eventStart > domainEnd) continue;
+      const alreadyDetected = detectedStarts.some((ds) => Math.abs(ds - eventStart) < 5 * 60 * 1000);
+      if (alreadyDetected) continue;
+      const x = (eventStart - domainStart) / totalMs * chartWidth;
+      markers.push({
+        startTime: e.start_time,
+        peakTime: e.peak_time || e.end_time,
+        startGlucose: e.starting_glucose,
+        peakGlucose: e.peak_glucose,
+        riseAmount: (e.peak_glucose || 0) - (e.starting_glucose || 0),
+        durationMinutes: e.duration_minutes,
+        rateOfRise: e.rate_of_rise,
+        x,
+        taggedCause: e.user_tagged_cause || null,
+        eventId: e.id,
+      });
+    }
+
+    return markers;
   }, [detectedSpikes, spikeEvents, domainStart, domainEnd, totalMs, chartWidth]);
 
   const getGlucoseY = (value) => {
