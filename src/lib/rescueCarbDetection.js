@@ -20,6 +20,12 @@ export function isRescueCarbEntry(entry, glucoseReadings = [], doses = [], targe
   const entryTime = new Date(entry.consumed_at).getTime();
   if (!Number.isFinite(entryTime)) return false;
 
+  // Rescue carbs are small, quick-sugar amounts (typically ≤15g) taken to lift
+  // a dipping trend. A substantial carb entry is a meal or snack — never rescue
+  // carbs — even if insulin was dosed first and glucose is trending down.
+  const carbs = Number(entry.carbs);
+  if (Number.isFinite(carbs) && carbs >= 25) return false;
+
   const readingsBefore = (Array.isArray(glucoseReadings) ? glucoseReadings : [])
     .map((r) => ({ t: new Date(r.recorded_at).getTime(), v: Number(r.value) }))
     .filter((p) => Number.isFinite(p.t) && Number.isFinite(p.v) && p.t <= entryTime)

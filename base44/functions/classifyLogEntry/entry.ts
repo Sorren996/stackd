@@ -91,7 +91,7 @@ export default async function(req: Request): Promise<Response> {
 
 Classify this ${isCarb ? 'food entry' : 'insulin dose'} into exactly one of these categories:
 ${isCarb
-  ? '- "meal": A substantial eating occasion — breakfast, lunch, dinner, or a large combo of real foods (e.g. "wings and popcorn", "spaghetti", "chicken sandwich and fries"). Typically 30g+ carbs with real food.\n- "snack": A lighter bite between meals (e.g. a small treat, fruit, handful of something). Typically under 30g carbs.\n- "rescue_carbs": Quick-sugar carbs taken to lift a dipping glucose trend — gummies, juice, glucose tablets — when glucose is trending down or already low.'
+  ? '- "meal": A substantial eating occasion — breakfast, lunch, dinner, or a large combo of real foods (e.g. "wings and popcorn", "spaghetti", "chicken sandwich and fries"). Typically 30g+ carbs with real food.\n- "snack": A lighter bite between meals (e.g. a small treat, fruit, handful of something). Typically under 30g carbs.\n- "rescue_carbs": Quick-sugar carbs taken to lift a dipping glucose trend — gummies, juice, glucose tablets — when glucose is trending down or already low. Always small amounts (typically ≤15g).'
   : '- "meal": Insulin timed to support a food occasion.\n- "correction": Insulin given to gently bring glucose back toward a comfortable range, not tied to food.\n- "rescue_insulin": An urgent or unplanned dose when glucose is unexpectedly well above the comfortable range.'}
 
 Context — recent glucose readings (mg/dL, minutes from this log; negative = before, positive = after):
@@ -107,7 +107,7 @@ The entry to classify:
 ${JSON.stringify(logEntry)}
 
 Guidance:
-- For food: if glucose was trending down or near/below ~70 mg/dL when the food was logged, and it is quick-sugar (gummies, juice, candy), lean toward "rescue_carbs". If it is a real food combo or a substantial amount, lean toward "meal". Small treats between meals are "snack".
+- For food: if glucose was trending down or near/below ~70 mg/dL when the food was logged, and it is quick-sugar (gummies, juice, candy), lean toward "rescue_carbs". IMPORTANT: rescue_carbs is always small (typically ≤15g). A large carb amount (25g+) is a meal or snack, never rescue_carbs — even if insulin was dosed first and glucose is trending down. If it is a real food combo or a substantial amount, lean toward "meal". Small treats between meals are "snack".
 - For insulin: if a food entry was logged within ~90 minutes, lean toward "meal". If glucose was high with no nearby food, lean toward "correction" or "rescue_insulin" (use "rescue_insulin" for more urgent/very-high situations).
 
 Respond as JSON with:
