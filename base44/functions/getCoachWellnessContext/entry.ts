@@ -151,7 +151,8 @@ Deno.serve(async (req) => {
           '-recorded_at', 500
         );
         result.glucoseLogs = records.map((r: any) => ({
-          id: r.id, value: r.value, recorded_at: r.recorded_at, notes: r.notes || null,
+          id: r.id, value: r.value, recorded_at: r.recorded_at,
+          source: r.source || 'manual', notes: r.notes || null,
         }));
         result.metadata.glucoseLogCount = records.length;
       } catch (e) {
