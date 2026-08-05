@@ -931,7 +931,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           scheduleCenterGlucoseUpdate(el.scrollLeft);
         }}
         style={{ WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
-        <div className="relative" style={{ width: chartWidth, height: CHART_HEIGHT + 28 }}>
+        <div className="relative" style={{ width: chartWidth, height: CHART_HEIGHT + 36 }}>
           {positionedMonitoringIntervals.map((iv, idx) => (
             <div
               key={`monitoring_band_${idx}`}

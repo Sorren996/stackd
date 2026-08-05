@@ -1,17 +1,17 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { X, TrendingUp } from "lucide-react";
+import { X, TrendingUp, Utensils, Wind, Sunrise, Activity, Sparkles } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
 const CAUSE_OPTIONS = [
-  { value: "meal", label: "A Meal", emoji: "🍃", description: "Nourishment moved through" },
-  { value: "stress", label: "A Stressful Moment", emoji: "🌊", description: "A demanding wave" },
-  { value: "dawn_effect", label: "Morning Dawn", emoji: "🌅", description: "Your body's natural waking rhythm" },
-  { value: "workout", label: "Movement", emoji: "🪵", description: "Activity that shifted things" },
-  { value: "other", label: "Something Else", emoji: "🌙", description: "Another gentle factor" },
+  { value: "meal", label: "A Meal", Icon: Utensils, color: "#5ba88a", description: "Nourishment moved through" },
+  { value: "stress", label: "A Stressful Moment", Icon: Wind, color: "#6b92c4", description: "A demanding wave" },
+  { value: "dawn_effect", label: "Morning Dawn", Icon: Sunrise, color: "#fbbf24", description: "Your body's natural waking rhythm" },
+  { value: "workout", label: "Movement", Icon: Activity, color: "#34d399", description: "Activity that shifted things" },
+  { value: "other", label: "Something Else", Icon: Sparkles, color: "#a78bfa", description: "Another gentle factor" },
 ];
 
 export default function SpikeTagModal({ spike, onClose }) {
@@ -63,7 +63,7 @@ export default function SpikeTagModal({ spike, onClose }) {
         exit={{ y: "100%", opacity: 0 }}
         transition={{ type: "spring", stiffness: 360, damping: 32 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-t-[2rem] border sm:rounded-[2rem]"
+        className="flex max-h-[88dvh] w-full max-w-md flex-col overflow-hidden rounded-t-[2rem] border sm:rounded-[2rem]"
         style={{
           background: "linear-gradient(165deg, hsl(162,12%,10%), hsl(162,10%,5%))",
           borderColor: "rgba(255,255,255,0.14)",
@@ -72,9 +72,9 @@ export default function SpikeTagModal({ spike, onClose }) {
           backdropFilter: "blur(8px)",
         }}
       >
-        {/* Header band */}
+        {/* Header — fixed */}
         <div
-          className="px-6 pb-5 pt-6"
+          className="shrink-0 px-6 pb-5 pt-6"
           style={{
             borderBottom: "1px solid rgba(255,255,255,0.08)",
             background: "linear-gradient(180deg, rgba(251,191,36,0.04), transparent)",
@@ -107,8 +107,8 @@ export default function SpikeTagModal({ spike, onClose }) {
           </div>
         </div>
 
-        {/* Body */}
-        <div className="px-6 py-5">
+        {/* Body — scrollable */}
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5" style={{ scrollbarWidth: "none" }}>
           {/* Spike summary */}
           <div
             className="rounded-2xl border p-4"
@@ -159,6 +159,7 @@ export default function SpikeTagModal({ spike, onClose }) {
           <div className="grid grid-cols-1 gap-2.5">
             {CAUSE_OPTIONS.map((option) => {
               const isSelected = selectedCause === option.value;
+              const { Icon, color } = option;
               return (
                 <button
                   key={option.value}
@@ -168,9 +169,9 @@ export default function SpikeTagModal({ spike, onClose }) {
                   style={
                     isSelected
                       ? {
-                          background: "linear-gradient(145deg, rgba(251,191,36,0.1), rgba(91,168,138,0.04))",
-                          borderColor: "rgba(251,191,36,0.32)",
-                          boxShadow: "inset 0 1px 1px rgba(255,255,255,0.08), 0 0 12px rgba(251,191,36,0.08)",
+                          background: `linear-gradient(145deg, ${color}1a, ${color}08)`,
+                          borderColor: `${color}52`,
+                          boxShadow: `inset 0 1px 1px rgba(255,255,255,0.08), 0 0 14px ${color}14`,
                         }
                       : {
                           background: "linear-gradient(145deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01))",
@@ -179,15 +180,19 @@ export default function SpikeTagModal({ spike, onClose }) {
                   }
                 >
                   <span
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border text-base"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border"
                     style={{
                       background: isSelected
-                        ? "radial-gradient(circle, rgba(251,191,36,0.12), transparent 70%)"
+                        ? `radial-gradient(circle, ${color}22, transparent 70%)`
                         : "rgba(255,255,255,0.03)",
-                      borderColor: isSelected ? "rgba(251,191,36,0.22)" : "rgba(255,255,255,0.06)",
+                      borderColor: isSelected ? `${color}3a` : "rgba(255,255,255,0.06)",
                     }}
                   >
-                    {option.emoji}
+                    <Icon
+                      className="h-4 w-4"
+                      style={{ color: isSelected ? color : "rgba(255,255,255,0.4)" }}
+                      strokeWidth={2}
+                    />
                   </span>
                   <div className="min-w-0 flex-1">
                     <p
@@ -204,11 +209,11 @@ export default function SpikeTagModal({ spike, onClose }) {
                       animate={{ scale: 1 }}
                       className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
                       style={{
-                        background: "linear-gradient(145deg, rgba(251,191,36,0.4), rgba(251,191,36,0.2))",
-                        border: "1px solid rgba(251,191,36,0.5)",
+                        background: `${color}66`,
+                        border: `1px solid ${color}80`,
                       }}
                     >
-                      <span className="h-1.5 w-1.5 rounded-full bg-amber-200" />
+                      <span className="h-1.5 w-1.5 rounded-full" style={{ background: color }} />
                     </motion.div>
                   )}
                 </button>
@@ -217,9 +222,9 @@ export default function SpikeTagModal({ spike, onClose }) {
           </div>
         </div>
 
-        {/* Footer */}
+        {/* Footer — fixed */}
         <div
-          className="px-6 pb-6 pt-4"
+          className="shrink-0 px-6 pb-6 pt-4"
           style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}
         >
           <button
