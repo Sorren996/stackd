@@ -37,7 +37,8 @@ function generateAssumedReadings(readings, maxGapMinutes) {
   return result;
 }
 
-function detectSpikes(readings) {
+// Rate-based detector — flags steep, sustained climbs.
+function detectRateSpikes(readings) {
   if (readings.length < 3) return [];
 
   const spikes = [];
@@ -93,7 +94,61 @@ function detectSpikes(readings) {
     i = j + 1;
   }
 
-  return deduplicateSpikes(spikes);
+  return spikes;
+}
+
+// Window-based detector — flags any rise of 40+ mg/dL whose peak falls within
+// 75 minutes of the start, catching gentle, prolonged climbs the rate detector
+// misses. Scans each reading as a candidate start and tracks the highest peak
+// before glucose reverses or the 75-minute window closes.
+function detectWindowSpikes(readings) {
+  if (readings.length < 2) return [];
+
+  const spikes = [];
+  const windowMs = DETECTION.maxDurationMinutes * MINUTE_MS;
+
+  for (let i = 0; i < readings.length - 1; i++) {
+    const startTime = readings[i].time;
+    const startGlucose = readings[i].value;
+    const windowEnd = startTime + windowMs;
+
+    let peakGlucose = startGlucose;
+    let peakTime = startTime;
+
+    for (let j = i + 1; j < readings.length; j++) {
+      if (readings[j].time > windowEnd) break;
+      const gap = readings[j].time - readings[j - 1].time;
+      if (gap > DETECTION.maxGapMinutes * MINUTE_MS) break;
+
+      if (readings[j].value > peakGlucose) {
+        peakGlucose = readings[j].value;
+        peakTime = readings[j].time;
+      }
+    }
+
+    const riseAmount = peakGlucose - startGlucose;
+    const durationMinutes = (peakTime - startTime) / MINUTE_MS;
+
+    if (riseAmount >= DETECTION.minRiseMgDl && durationMinutes > 0) {
+      spikes.push({
+        startTime: new Date(startTime).toISOString(),
+        peakTime: new Date(peakTime).toISOString(),
+        startGlucose: Math.round(startGlucose),
+        peakGlucose: Math.round(peakGlucose),
+        riseAmount: Math.round(riseAmount),
+        durationMinutes: Math.round(durationMinutes),
+        rateOfRise: Math.round((riseAmount / durationMinutes) * 10) / 10,
+      });
+    }
+  }
+
+  return spikes;
+}
+
+function detectSpikes(readings) {
+  const rateSpikes = detectRateSpikes(readings);
+  const windowSpikes = detectWindowSpikes(readings);
+  return deduplicateSpikes([...rateSpikes, ...windowSpikes]);
 }
 
 function deduplicateSpikes(spikes) {
