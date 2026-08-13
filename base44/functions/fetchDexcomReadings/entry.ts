@@ -2,13 +2,31 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 import { secrets } from 'base44:runtime';
 import { DEXCOM_TOKEN_URL, DEXCOM_API_BASE } from "../../shared/dexcomConfig.ts";
 
-// Scheduled auto-sync for connected glucose sources.
-// Runs with the service role — there is no user context on a schedule.
-// For every active Dexcom connection it refreshes the access token if it's
-// about to expire, pulls new EGV readings since the last successful fetch,
-// dedupes them against already-imported readings, and writes the new ones
-// into the owning user's GlucoseReading records (source: "dexcom").
+// ── Dexcom V3 Sync ──────────────────────────────────────────
+// Pulls new EGV readings from every connected Dexcom source.
+// Uses Dexcom's dataRange endpoint to determine the actual latest
+// available data (accounting for the ~1-hour US G7 upload delay),
+// and tracks the sync cursor as the systemTime of the newest
+// imported record — NOT wall-clock time.
 
+// ── Helpers ─────────────────────────────────────────────────
+
+// Dexcom V3 systemTime may or may not include a UTC offset.
+// Mobile-app-sourced records include offsets; receiver-sourced
+// records do not. If no offset is present, interpret as UTC.
+function parseDexcomTime(value) {
+  if (!value) return null;
+  const s = String(value).trim();
+  // Already has a timezone designator (Z, +hh:mm, -hh:mm, +hhmm, -hhmm)
+  if (/Z$|[+-]\d{2}:?\d{2}$/.test(s)) {
+    return new Date(s);
+  }
+  // No offset — assume UTC
+  return new Date(s + "Z");
+}
+
+// Dexcom V3 expects ISO 8601 UTC timestamps without timezone suffix.
+// The API interprets bare timestamps as UTC.
 function formatDexcomDate(d) {
   const pad = (n) => String(n).padStart(2, "0");
   return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}T${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
@@ -29,6 +47,15 @@ async function refreshTokens(conn, clientId, clientSecret) {
   return await res.json();
 }
 
+// ── Constants ───────────────────────────────────────────────
+
+const MAX_QUERY_WINDOW_MS = 30 * 24 * 60 * 60 * 1000; // Dexcom V3: max 30 days per request
+const INITIAL_SYNC_WINDOW_MS = 24 * 60 * 60 * 1000;   // Initial sync: 24 hours of history
+const INCREMENTAL_OVERLAP_MS = 5 * 60 * 1000;          // Overlap for reliable incremental sync
+const MIN_LOOKBACK_MS = 60 * 60 * 1000;               // Min lookback — covers 1-hour US G7/G6 data delay
+
+// ── Main ────────────────────────────────────────────────────
+
 export default async function(req) {
   try {
     const base44 = createClientFromRequest(req);
@@ -48,12 +75,39 @@ export default async function(req) {
       const owner = conn.created_by_id;
       if (!owner) { results.push({ status: "skipped_no_owner" }); continue; }
 
+      // ── Diagnostic container ──────────────────────────────
+      const diag = {
+        owner,
+        environment: DEXCOM_API_BASE.includes("sandbox") ? "sandbox" : "production-US",
+        api_version: "v3",
+        token_valid: false,
+        token_refreshed: false,
+        server_utc: now.toISOString(),
+        dataRange_http_status: null,
+        dexcom_egvs_start_systemTime: null,
+        dexcom_egvs_end_systemTime: null,
+        last_sync_cursor: conn.last_fetched_at || null,
+        requested_startDate: null,
+        requested_endDate: null,
+        egv_http_status: null,
+        response_recordType: null,
+        response_records_length: 0,
+        records_parsed: 0,
+        records_ignored_duplicates: 0,
+        records_rejected: 0,
+        records_inserted: 0,
+        oldest_egv_systemTime: null,
+        newest_egv_systemTime: null,
+        new_sync_cursor: conn.last_fetched_at || null,
+        status: null,
+      };
+
       try {
         let accessToken = conn.access_token;
         let refreshToken = conn.refresh_token;
         let expiresAt = conn.expires_at ? new Date(conn.expires_at) : null;
 
-        // Refresh if the token is missing or expires within the next 5 minutes.
+        // Refresh if the token is missing or expires within 5 minutes.
         if (!accessToken || !expiresAt || expiresAt.getTime() - now.getTime() < 5 * 60 * 1000) {
           try {
             const refreshed = await refreshTokens(conn, clientId, clientSecret);
@@ -66,89 +120,135 @@ export default async function(req) {
               expires_at: expiresAt.toISOString(),
               expires_in: refreshed.expires_in,
             });
+            diag.token_refreshed = true;
           } catch {
             await sr.entities.DexcomConnection.update(conn.id, { status: "error" });
-            results.push({ owner, status: "refresh_failed" });
+            diag.status = "token_refresh_failed";
+            results.push(diag);
             continue;
           }
         }
+        diag.token_valid = true;
 
-        const lastFetched = conn.last_fetched_at ? new Date(conn.last_fetched_at) : null;
-
-        // Ask Dexcom where data actually exists. The sandbox stores simulated
-        // readings at a fixed historical range (not the current time), so a
-        // naive "last 24h from now" window returns nothing. In production the
-        // range end tracks ~now, so this same logic drives incremental sync.
+        // ── 1. Fetch dataRange ──────────────────────────────
+        // Ask Dexcom where data actually exists. The end timestamp reflects
+        // the latest available record — not wall-clock time — which accounts
+        // for the ~1-hour US G7/G6 mobile app upload delay.
         let rangeStart = null;
         let rangeEnd = null;
-        let rawRange = null;
         try {
           const drRes = await fetch(`${DEXCOM_API_BASE}/users/self/dataRange`, {
             headers: { Authorization: `Bearer ${accessToken}` },
           });
+          diag.dataRange_http_status = drRes.status;
           if (drRes.ok) {
             const dr = await drRes.json();
-            rawRange = dr;
+            // V3: { egvs: { start: { systemTime, displayTime }, end: { ... } } }
+            // V2 fallback: { egvs: [ { start: "str", end: "str" } ] }
             const egvRange = Array.isArray(dr.egvs) ? dr.egvs[0] : dr.egvs;
             const pick = (v) => (typeof v === "string" ? v : (v && (v.systemTime || v.displayTime)) || null);
             if (egvRange) {
-              if (pick(egvRange.start)) rangeStart = new Date(pick(egvRange.start));
-              if (pick(egvRange.end)) rangeEnd = new Date(pick(egvRange.end));
+              if (pick(egvRange.start)) {
+                rangeStart = parseDexcomTime(pick(egvRange.start));
+                diag.dexcom_egvs_start_systemTime = pick(egvRange.start);
+              }
+              if (pick(egvRange.end)) {
+                rangeEnd = parseDexcomTime(pick(egvRange.end));
+                diag.dexcom_egvs_end_systemTime = pick(egvRange.end);
+              }
             }
           }
-        } catch { /* fall back to a time-based window below */ }
+        } catch { /* fall back to time-based window below */ }
 
         const valid = (d) => d && !Number.isNaN(d.getTime());
         if (!valid(rangeStart)) rangeStart = null;
         if (!valid(rangeEnd)) rangeEnd = null;
 
+        // ── 2. Determine query window ─────────────────────
+        // Use Dexcom's reported data range (NOT wall-clock time) to determine
+        // what data is actually available. rangeEnd from Dexcom reflects the
+        // latest available record, which lags behind real-time by ~1 hour.
+        const lastSyncCursor = conn.last_fetched_at ? parseDexcomTime(conn.last_fetched_at) : null;
+        const validCursor = valid(lastSyncCursor);
+
         let startDate;
-        let endDate = now;
-        const MAX_RANGE_MS = 90 * 24 * 60 * 60 * 1000;
-        const INITIAL_SYNC_WINDOW_MS = 24 * 60 * 60 * 1000;
+        let endDate;
+
         if (rangeEnd) {
-          endDate = rangeEnd.getTime() > now.getTime() ? now : rangeEnd;
-          if (lastFetched && rangeStart && lastFetched.getTime() > rangeStart.getTime() && lastFetched.getTime() < rangeEnd.getTime()) {
-            // Incremental: pick up where the last successful fetch left off.
-            startDate = lastFetched;
+          // Use Dexcom's actual latest available data time as the end bound.
+          // rangeEnd from Dexcom reflects the latest uploaded record, which may
+          // lag behind real-time by ~1 hour (US G7/G6 mobile app delay).
+          endDate = rangeEnd;
+          if (validCursor && rangeStart && lastSyncCursor.getTime() > rangeStart.getTime()) {
+            // Incremental sync — start from the last imported record's systemTime
+            // with a small overlap (endDate is exclusive). Ensure we always look
+            // back at least 1 hour to catch delayed data that hasn't appeared yet.
+            startDate = new Date(Math.min(
+              lastSyncCursor.getTime() - INCREMENTAL_OVERLAP_MS,
+              endDate.getTime() - MIN_LOOKBACK_MS
+            ));
+            if (rangeStart && startDate.getTime() < rangeStart.getTime()) {
+              startDate = rangeStart;
+            }
           } else {
-            // First pull: start from 24h ago rather than the full historical
-            // range. Requesting months of legacy sensor data (e.g. old Stelo
-            // readings) can return empty EGV results and never reach current
-            // G7 data, since the 90-day cap keeps the window stuck in the past.
+            // Initial sync — pull 24 hours ending at Dexcom's latest available data
             startDate = new Date(endDate.getTime() - INITIAL_SYNC_WINDOW_MS);
           }
         } else {
+          // dataRange failed — fall back to wall-clock time
           endDate = now;
-          startDate = (lastFetched && lastFetched.getTime() > now.getTime() - INITIAL_SYNC_WINDOW_MS)
-            ? lastFetched
-            : new Date(now.getTime() - INITIAL_SYNC_WINDOW_MS);
+          if (validCursor) {
+            startDate = new Date(lastSyncCursor.getTime() - INCREMENTAL_OVERLAP_MS);
+          } else {
+            startDate = new Date(now.getTime() - INITIAL_SYNC_WINDOW_MS);
+          }
         }
-        // Dexcom rejects any EGV query wider than 90 days.
-        endDate = new Date(Math.min(endDate.getTime(), startDate.getTime() + MAX_RANGE_MS));
+
+        // Dexcom V3 rejects any EGV query wider than 30 days
+        if (endDate.getTime() - startDate.getTime() > MAX_QUERY_WINDOW_MS) {
+          startDate = new Date(endDate.getTime() - MAX_QUERY_WINDOW_MS);
+        }
+
+        diag.requested_startDate = formatDexcomDate(startDate);
+        diag.requested_endDate = formatDexcomDate(endDate);
 
         if (startDate.getTime() >= endDate.getTime()) {
-          results.push({ owner, status: "ok", imported: 0, fetched: 0, range: { start: rangeStart, end: rangeEnd } });
+          diag.status = "no_new_records";
+          results.push(diag);
           continue;
         }
 
+        // ── 3. Fetch EGVs ──────────────────────────────────
         const egvRes = await fetch(
           `${DEXCOM_API_BASE}/users/self/egvs?startDate=${formatDexcomDate(startDate)}&endDate=${formatDexcomDate(endDate)}`,
           { headers: { Authorization: `Bearer ${accessToken}` } }
         );
+        diag.egv_http_status = egvRes.status;
 
         if (!egvRes.ok) {
           const errText = await egvRes.text();
-          results.push({ owner, status: "fetch_failed", details: errText });
+          diag.status = egvRes.status === 404 ? "no_data_in_range" : "dexcom_request_failed";
+          diag.error_detail = errText.slice(0, 200);
+          results.push(diag);
           continue;
         }
 
         const egvData = await egvRes.json();
-        const egvs = egvData.egvs || egvData.EGVS || [];
+        diag.response_recordType = egvData.recordType || null;
 
-        // Fetch ALL existing readings for this user in the window — both
-        // dexcom (for exact dedup) and manual (so Dexcom data can override
-        // manual logs logged at a similar time).
+        // V3: response.records; V2 fallback: response.egvs
+        const records = egvData.records || egvData.egvs || egvData.EGVS || [];
+        diag.response_records_length = records.length;
+
+        if (!records.length) {
+          // No records in this window. Do NOT advance the cursor — data may
+          // still arrive through the 1-hour delay. Keep the previous cursor.
+          diag.status = "no_new_records";
+          results.push(diag);
+          continue;
+        }
+
+        // ── 4. Fetch existing readings for dedup ───────────
         const existing = await sr.entities.GlucoseReading.filter(
           { user_id: owner, recorded_at: { $gte: startDate.toISOString() } },
           "-recorded_at",
@@ -169,15 +269,35 @@ export default async function(req) {
         const PROXIMITY_MS = 5 * 60 * 1000;
         const toCreate = [];
         const manualIdsToDelete = new Set();
-        for (const egv of egvs) {
-          const value = egv.value ?? egv.glucoseValue;
-          if (value == null) continue;
-          const dt = new Date(egv.displayTime || egv.systemTime);
+        let newestSystemTime = null;
+        let oldestSystemTime = null;
+
+        for (const rec of records) {
+          const value = rec.value ?? rec.glucoseValue;
+          if (value == null) {
+            diag.records_rejected++;
+            continue;
+          }
+
+          // Use systemTime as the canonical timestamp (UTC). Fall back to
+          // displayTime only if systemTime is missing.
+          const sysTime = rec.systemTime ? parseDexcomTime(rec.systemTime) : null;
+          const dispTime = rec.displayTime ? parseDexcomTime(rec.displayTime) : null;
+          const dt = sysTime || dispTime;
+          if (!dt || Number.isNaN(dt.getTime())) {
+            diag.records_rejected++;
+            continue;
+          }
           const ts = dt.getTime();
-          if (Number.isNaN(ts) || existingDexcomTimes.has(ts)) continue;
+
+          // Dedup by exact timestamp match
+          if (existingDexcomTimes.has(ts)) {
+            diag.records_ignored_duplicates++;
+            continue;
+          }
           existingDexcomTimes.add(ts);
 
-          // Override any manual reading within 5 minutes of this Dexcom reading
+          // Override any manual reading within 5 minutes
           for (const manual of manualReadings) {
             if (Math.abs(manual.time - ts) < PROXIMITY_MS) {
               manualIdsToDelete.add(manual.id);
@@ -189,28 +309,54 @@ export default async function(req) {
             value,
             recorded_at: dt.toISOString(),
             source: "dexcom",
-            trend: egv.trend || null,
+            trend: rec.trend || null,
           });
+
+          // Track oldest/newest by systemTime
+          if (!oldestSystemTime || ts < oldestSystemTime.getTime()) {
+            oldestSystemTime = dt;
+          }
+          if (!newestSystemTime || ts > newestSystemTime.getTime()) {
+            newestSystemTime = dt;
+          }
+
+          diag.records_parsed++;
         }
 
+        diag.oldest_egv_systemTime = oldestSystemTime ? oldestSystemTime.toISOString() : null;
+        diag.newest_egv_systemTime = newestSystemTime ? newestSystemTime.toISOString() : null;
+
+        // ── 5. Store new readings ──────────────────────────
         if (toCreate.length) {
           await sr.entities.GlucoseReading.bulkCreate(toCreate);
+          diag.records_inserted = toCreate.length;
         }
 
-        // Remove manual readings superseded by fresh Dexcom data
+        // Remove manual readings superseded by Dexcom data
         if (manualIdsToDelete.size) {
           await Promise.all(
             [...manualIdsToDelete].map((id) => sr.entities.GlucoseReading.delete(id))
           );
         }
 
-        await sr.entities.DexcomConnection.update(conn.id, {
-          last_fetched_at: endDate.toISOString(),
-        });
+        // ── 6. Update sync cursor ──────────────────────────
+        // Set the cursor to the systemTime of the newest imported record.
+        // If no records were imported, keep the previous cursor so the next
+        // sync can pick up delayed data.
+        if (newestSystemTime) {
+          const newCursor = newestSystemTime.toISOString();
+          await sr.entities.DexcomConnection.update(conn.id, {
+            last_fetched_at: newCursor,
+          });
+          diag.new_sync_cursor = newCursor;
+        }
 
-        results.push({ owner, status: "ok", imported: toCreate.length, fetched: egvs.length, overridden: manualIdsToDelete.size, query: { start: startDate.toISOString(), end: endDate.toISOString() }, range: { start: rangeStart, end: rangeEnd } });
+        diag.status = toCreate.length > 0 ? "synced" : "no_new_records";
+        results.push(diag);
       } catch (error) {
-        results.push({ owner, status: "error", details: error.message });
+        diag.status = "error";
+        diag.error = error.message;
+        results.push(diag);
       }
     }
 
