@@ -50,11 +50,12 @@ function DigitSlot({ digit, direction }) {
 //   setValue(value, animate) — animate=true triggers per-digit rolling,
 //   animate=false updates instantly (used during scroll-driven updates).
 const GlucoseTicker = forwardRef(({ className = "", initialValue = "" }, ref) => {
+  const initStr = String(initialValue ?? "");
   const [state, setState] = useState({
-    digits: initialValue.split(""),
-    directions: initialValue.split("").map(() => "none"),
+    digits: initStr.split(""),
+    directions: initStr.split("").map(() => "none"),
   });
-  const lastValueRef = useRef(initialValue);
+  const lastValueRef = useRef(initStr);
 
   useImperativeHandle(
     ref,
