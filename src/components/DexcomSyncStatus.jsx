@@ -10,6 +10,8 @@ import {
   CloudOff,
 } from "lucide-react";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
+import { useQuery } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
 
 const ESTIMATED_SYNC_MS = 3 * 60 * 60 * 1000; // 3 hours
 
@@ -49,8 +51,17 @@ export default function DexcomSyncStatus() {
   const { connected, connection } = useDexcomConnection();
   const [showHelp, setShowHelp] = useState(false);
 
+  const { data: latestDexcom = [] } = useQuery({
+    queryKey: ["latest-dexcom-glucose"],
+    queryFn: () => base44.entities.GlucoseReading.filter({ source: "dexcom" }, "-recorded_at", 1),
+    enabled: connected,
+    staleTime: 60 * 1000,
+  });
+
+  const hasDexcomData = latestDexcom.length > 0;
+
   if (!connected || !connection) return null;
-  if (connection.last_fetched_at) return null;
+  if (hasDexcomData) return null;
 
   const connectedAt = connection.connected_at || connection.created_date;
   const connectedTime = connectedAt ? new Date(connectedAt).getTime() : Date.now();

@@ -19,6 +19,14 @@ export default function DexcomConnect() {
   const current = connection?.[0];
   const isConnected = current?.status === "connected";
 
+  const { data: latestDexcom = [] } = useQuery({
+    queryKey: ["latest-dexcom-glucose"],
+    queryFn: () => base44.entities.GlucoseReading.filter({ source: "dexcom" }, "-recorded_at", 1),
+    enabled: isConnected,
+    staleTime: 60 * 1000,
+  });
+  const hasDexcomData = latestDexcom.length > 0;
+
   const handleConnect = async () => {
     setConnecting(true);
     try {
@@ -69,7 +77,7 @@ export default function DexcomConnect() {
             </div>
           ) : isConnected ? (
             <div className="space-y-4">
-              {current?.last_fetched_at ? (
+              {hasDexcomData ? (
                 <div className="flex items-center gap-2 rounded-2xl border border-teal-500/20 bg-teal-500/10 px-4 py-3">
                   <Sparkles className="h-4 w-4 text-teal-300" />
                   <p className="text-xs text-teal-200 font-medium">
