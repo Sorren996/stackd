@@ -335,6 +335,7 @@ export default function Dashboard() {
     queryKey: ["latest-glucose"],
     queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", 1),
     staleTime: 30 * 1000,
+    refetchInterval: dexcomConnected ? 60_000 : false,
     gcTime: GRAPH_DATA_MS,
     initialData: readCachedLatestGlucose,
     placeholderData: () => queryClient.getQueryData(["glucose-readings", "graph"])?.slice(0, 1) ?? [],
@@ -348,6 +349,7 @@ export default function Dashboard() {
     queryKey: ["glucose-readings", "graph"],
     queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", 5000),
     staleTime: GRAPH_DATA_MS,
+    refetchInterval: dexcomConnected ? 120_000 : false,
     gcTime: 30 * 60 * 1000,
     placeholderData: () => queryClient.getQueryData(["glucose-readings", "graph"]) ?? latestGlucoseRows,
   });
