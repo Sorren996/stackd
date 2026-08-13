@@ -15,6 +15,7 @@ import HighProteinFatCheckbox from "@/components/HighProteinFatCheckbox";
 import { toast } from "sonner";
 import { getVersionString } from "@/lib/appVersion";
 import { DateScrollField, TimeScrollField, NumberPadField, TextPadField, SelectField } from "@/components/FormInputFields";
+import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 
 const FRESH_DATA_MS = 60 * 1000;
 const GRAPH_DATA_MS = 5 * 60 * 1000;
@@ -297,6 +298,7 @@ export default function Dashboard() {
   const [showAllDoses, setShowAllDoses] = useState(false);
   const [showGraph, setShowGraph] = useState(false);
   const [editingLog, setEditingLog] = useState(null);
+  const { connected: dexcomConnected } = useDexcomConnection();
   const stackingAlertsEnabled = localStorage.getItem("stacking_alerts_enabled") !== "false";
 
   useEffect(() => {
@@ -571,12 +573,13 @@ export default function Dashboard() {
                     carbEntries={graphCarbs}
                     onSelectLog={setEditingLog}
                     onDeleteLog={handleDeleteLog}
+                    glucoseReadOnly={dexcomConnected}
                   />
                 ) : (
                   <div className="h-[320px] w-full" />
                 )
               }
-              onEditGlucose={(reading) => setEditingLog({ type: "glucose", item: reading })}
+              onEditGlucose={dexcomConnected ? null : (reading) => setEditingLog({ type: "glucose", item: reading })}
             />
           </div>
 

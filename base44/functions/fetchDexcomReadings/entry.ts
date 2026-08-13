@@ -105,25 +105,24 @@ export default async function(req) {
         let startDate;
         let endDate = now;
         const MAX_RANGE_MS = 90 * 24 * 60 * 60 * 1000;
+        const INITIAL_SYNC_WINDOW_MS = 24 * 60 * 60 * 1000;
         if (rangeEnd) {
           endDate = rangeEnd.getTime() > now.getTime() ? now : rangeEnd;
           if (lastFetched && rangeStart && lastFetched.getTime() > rangeStart.getTime() && lastFetched.getTime() < rangeEnd.getTime()) {
             // Incremental: pick up where the last successful fetch left off.
             startDate = lastFetched;
           } else {
-            // First pull (or sandbox re-query): start from the oldest available
-            // reading. Dexcom caps any single EGV query at 90 days, so we walk
-            // forward in ≤90-day chunks on successive runs until we catch up to
-            // the most recent data. (In production rangeStart ≈ now, so this is
-            // a single recent pull; in the sandbox the simulated readings live
-            // at the historical start of the data range.)
-            startDate = rangeStart || new Date(endDate.getTime() - MAX_RANGE_MS);
+            // First pull: start from 24h ago rather than the full historical
+            // range. Requesting months of legacy sensor data (e.g. old Stelo
+            // readings) can return empty EGV results and never reach current
+            // G7 data, since the 90-day cap keeps the window stuck in the past.
+            startDate = new Date(endDate.getTime() - INITIAL_SYNC_WINDOW_MS);
           }
         } else {
           endDate = now;
-          startDate = (lastFetched && lastFetched.getTime() > now.getTime() - 24 * 60 * 60 * 1000)
+          startDate = (lastFetched && lastFetched.getTime() > now.getTime() - INITIAL_SYNC_WINDOW_MS)
             ? lastFetched
-            : new Date(now.getTime() - 24 * 60 * 60 * 1000);
+            : new Date(now.getTime() - INITIAL_SYNC_WINDOW_MS);
         }
         // Dexcom rejects any EGV query wider than 90 days.
         endDate = new Date(Math.min(endDate.getTime(), startDate.getTime() + MAX_RANGE_MS));
@@ -147,24 +146,44 @@ export default async function(req) {
         const egvData = await egvRes.json();
         const egvs = egvData.egvs || egvData.EGVS || [];
 
-        // Build a set of already-imported timestamps for this user to dedupe.
+        // Fetch ALL existing readings for this user in the window — both
+        // dexcom (for exact dedup) and manual (so Dexcom data can override
+        // manual logs logged at a similar time).
         const existing = await sr.entities.GlucoseReading.filter(
-          { user_id: owner, source: "dexcom" },
+          { user_id: owner, recorded_at: { $gte: startDate.toISOString() } },
           "-recorded_at",
-          500
+          1000
         );
-        const existingTimes = new Set(
-          existing.map((r) => new Date(r.recorded_at).getTime())
-        );
+        const existingDexcomTimes = new Set();
+        const manualReadings = [];
+        for (const r of existing) {
+          const t = new Date(r.recorded_at).getTime();
+          if (Number.isNaN(t)) continue;
+          if (r.source === "dexcom") {
+            existingDexcomTimes.add(t);
+          } else if (r.source === "manual") {
+            manualReadings.push({ id: r.id, time: t });
+          }
+        }
 
+        const PROXIMITY_MS = 5 * 60 * 1000;
         const toCreate = [];
+        const manualIdsToDelete = new Set();
         for (const egv of egvs) {
           const value = egv.value ?? egv.glucoseValue;
           if (value == null) continue;
           const dt = new Date(egv.displayTime || egv.systemTime);
           const ts = dt.getTime();
-          if (Number.isNaN(ts) || existingTimes.has(ts)) continue;
-          existingTimes.add(ts);
+          if (Number.isNaN(ts) || existingDexcomTimes.has(ts)) continue;
+          existingDexcomTimes.add(ts);
+
+          // Override any manual reading within 5 minutes of this Dexcom reading
+          for (const manual of manualReadings) {
+            if (Math.abs(manual.time - ts) < PROXIMITY_MS) {
+              manualIdsToDelete.add(manual.id);
+            }
+          }
+
           toCreate.push({
             user_id: owner,
             value,
@@ -177,11 +196,18 @@ export default async function(req) {
           await sr.entities.GlucoseReading.bulkCreate(toCreate);
         }
 
+        // Remove manual readings superseded by fresh Dexcom data
+        if (manualIdsToDelete.size) {
+          await Promise.all(
+            [...manualIdsToDelete].map((id) => sr.entities.GlucoseReading.delete(id))
+          );
+        }
+
         await sr.entities.DexcomConnection.update(conn.id, {
           last_fetched_at: endDate.toISOString(),
         });
 
-        results.push({ owner, status: "ok", imported: toCreate.length, fetched: egvs.length, range: { start: rangeStart, end: rangeEnd } });
+        results.push({ owner, status: "ok", imported: toCreate.length, fetched: egvs.length, overridden: manualIdsToDelete.size, query: { start: startDate.toISOString(), end: endDate.toISOString() }, range: { start: rangeStart, end: rangeEnd } });
       } catch (error) {
         results.push({ owner, status: "error", details: error.message });
       }
