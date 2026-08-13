@@ -31,6 +31,7 @@ import { AnimatePresence } from "framer-motion";
 import { base44 } from "@/api/base44Client";
 import RequiredAcknowledgments from "@/pages/RequiredAcknowledgments";
 import SplitPlanReview from "@/pages/SplitPlanReview";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import { ACKNOWLEDGMENT_VERSIONS, CHECKBOX_KEYS } from "@/lib/acknowledgmentConfig";
 import { loadUserSettings, migrateLocalSettingsIfNeeded, cacheSettingsLocally } from "@/lib/userSettings";
 
@@ -143,18 +144,22 @@ const AuthenticatedApp = () => {
 
       // Cache user settings into localStorage so all pages (Dashboard,
       // ActiveInsulinBanner, etc.) can read them immediately on login.
-      const settings = queryClientInstance.getQueryData(["user-settings"]);
-      if (settings && user?.id) {
-        cacheSettingsLocally(user.id, settings);
-        // Save the browser timezone so the AI Coach can reference local times.
-        const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        if (browserTz && settings.timezone !== browserTz) {
-          base44.entities.UserSettings.update(settings.id, { timezone: browserTz }).catch(() => {});
+      try {
+        const settings = queryClientInstance.getQueryData(["user-settings"]);
+        if (settings && user?.id) {
+          cacheSettingsLocally(user.id, settings);
+          // Save the browser timezone so the AI Coach can reference local times.
+          const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+          if (browserTz && settings.timezone !== browserTz) {
+            base44.entities.UserSettings.update(settings.id, { timezone: browserTz }).catch(() => {});
+          }
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new Event("target-range-updated"));
+            window.dispatchEvent(new Event("insulin-settings-updated"));
+          }
         }
-        if (typeof window !== "undefined") {
-          window.dispatchEvent(new Event("target-range-updated"));
-          window.dispatchEvent(new Event("insulin-settings-updated"));
-        }
+      } catch {
+        // Settings cache failure is non-fatal — don't block the app.
       }
 
       if (!cancelled) setDataReady(true);
@@ -228,23 +233,25 @@ const AuthenticatedApp = () => {
   // Render the main app
   return (
     <>
-      <Routes>
-        <Route element={<Layout />}>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/history" element={<History />} />
-          <Route path="/analytics" element={<Analytics />} />
-          <Route path="/coach" element={<Coach />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/settings/insulin" element={<InsulinSettingsPage />} />
-          <Route path="/settings/profile" element={<ProfileSettingsPage />} />
-          <Route path="/settings/privacy-consent" element={<PrivacyConsentPage />} />
-          <Route path="/settings/coach" element={<CoachPreferencesPage />} />
-          <Route path="/settings/dexcom" element={<DexcomSettingsPage />} />
-          <Route path="/auth/callback" element={<DexcomCallback />} />
-          <Route path="/split-plan/:planId" element={<SplitPlanReview />} />
-        </Route>
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <ErrorBoundary>
+        <Routes>
+          <Route element={<Layout />}>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/history" element={<History />} />
+            <Route path="/analytics" element={<Analytics />} />
+            <Route path="/coach" element={<Coach />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/settings/insulin" element={<InsulinSettingsPage />} />
+            <Route path="/settings/profile" element={<ProfileSettingsPage />} />
+            <Route path="/settings/privacy-consent" element={<PrivacyConsentPage />} />
+            <Route path="/settings/coach" element={<CoachPreferencesPage />} />
+            <Route path="/settings/dexcom" element={<DexcomSettingsPage />} />
+            <Route path="/auth/callback" element={<DexcomCallback />} />
+            <Route path="/split-plan/:planId" element={<SplitPlanReview />} />
+          </Route>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </ErrorBoundary>
       <AnimatePresence>
         {!graphReady && <SplashScreen />}
       </AnimatePresence>

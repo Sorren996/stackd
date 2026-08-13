@@ -348,14 +348,20 @@ export default function Dashboard() {
   // When the latest-glucose query picks up a newer reading before the graph
   // query's next refetch, inject it into the graph cache so the ActivityGraph
   // displays the freshest value immediately — no stale flicker.
+  // Only depends on latestGlucoseRows (not glucoseReadings) to avoid a
+  // feedback loop: setQueryData changes glucoseReadings which would retrigger
+  // this effect.
   useEffect(() => {
-    if (!latestGlucoseRows.length || !glucoseReadings.length) return;
+    if (!latestGlucoseRows.length) return;
     const latest = latestGlucoseRows[0];
-    const graphLatest = glucoseReadings[0];
-    if (!latest?.recorded_at || !graphLatest?.recorded_at) return;
+    if (!latest?.recorded_at) return;
+    const graphData = queryClient.getQueryData(["glucose-readings", "graph"]) ?? [];
+    if (!graphData.length) return;
+    const graphLatest = graphData[0];
+    if (!graphLatest?.recorded_at) return;
     if (new Date(latest.recorded_at).getTime() <= new Date(graphLatest.recorded_at).getTime()) return;
     queryClient.setQueryData(["glucose-readings", "graph"], (old = []) => [latest, ...old]);
-  }, [latestGlucoseRows, glucoseReadings, queryClient]);
+  }, [latestGlucoseRows, queryClient]);
 
   const { data: glucoseReadings = [] } = useQuery({
     queryKey: ["glucose-readings", "graph"],
