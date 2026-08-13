@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { ArrowUp, ArrowUpRight, ArrowRight, ArrowDownRight, ArrowDown, Pencil } from "lucide-react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import InfoPopover from "./InfoPopover";
+import GlucoseTicker from "./GlucoseTicker";
 
 const TREND_ICONS = {
   up: ArrowUp,
@@ -44,7 +45,14 @@ export default function CurrentGlucoseCard({
 }) {
   const [open, setOpen] = useState(false);
   const [anchor, setAnchor] = useState(null);
+  const tickerRef = useRef(null);
   const TrendIcon = TREND_ICONS[trend?.icon] || ArrowRight;
+
+  useEffect(() => {
+    if (tickerRef.current && glucoseValue != null) {
+      tickerRef.current.setValue(String(glucoseValue), true);
+    }
+  }, [glucoseValue]);
 
   const openPopover = (e) => {
     setAnchor(e.currentTarget.getBoundingClientRect());
@@ -86,9 +94,15 @@ export default function CurrentGlucoseCard({
         </div>
 
         <div className="relative z-10 mt-1 flex items-end gap-1.5">
-          <span className="text-4xl font-black leading-none text-white">
-            {glucoseValue ?? "--"}
-          </span>
+          {glucoseValue != null ? (
+            <GlucoseTicker
+              ref={tickerRef}
+              initialValue={String(glucoseValue)}
+              className="text-4xl font-black leading-none text-white"
+            />
+          ) : (
+            <span className="text-4xl font-black leading-none text-white">--</span>
+          )}
           <span className="mb-1 text-[11px] font-medium text-white/40">mg/dL</span>
           {latestGlucose && <TrendIcon className="mb-1 h-4 w-4" style={{ color: glucoseColor }} />}
         </div>
