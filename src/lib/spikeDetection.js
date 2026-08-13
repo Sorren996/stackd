@@ -1,18 +1,22 @@
 // Client-side spike detection for the ActivityGraph.
 // A "spike" is a rapid, sustained glucose rise — the kind the user might want
 // to reflect on (stress, dawn effect, a meal, a workout, etc.).
-// Detection runs on the already-loaded glucose readings, so there is no
-// backend round-trip: icons appear instantly when the graph renders.
+//
+// Detection is purely rate-of-climb based, aligned with Dexcom G7's approach:
+// G7 flags "Rising Fast" at 2 mg/dL/min. We use the same threshold to start
+// a spike, and allow brief plateaus (up to 2 readings) so that a continuous
+// rise with a momentary pause is treated as a single event rather than
+// fragmenting into multiple markers.
 
 const MINUTE_MS = 60 * 1000;
 
 const DEFAULTS = {
-  minRiseMgDl: 40,       // total rise needed to count as a spike
-  minRatePerMin: 2,      // mg/dL/min to start a spike
-  sustainRatePerMin: 0.5, // rate above which the spike is still "rising"
-  minDurationMinutes: 10,
-  maxDurationMinutes: 75,  // spikes longer than this are not flagged
-  maxGapMinutes: 15,      // gaps larger than this break a spike run
+  minRiseMgDl: 40,         // total rise needed to qualify as a spike
+  minRatePerMin: 2,        // Dexcom G7 "Rising Fast" threshold (mg/dL/min)
+  sustainRatePerMin: 1,    // rate above which the spike is still "rising" (Dexcom "rising" = +1 mg/dL/min)
+  maxPlateauReadings: 2,   // brief plateaus allowed before a spike ends
+  declineBreakMgDl: 5,     // a drop of this much ends the spike immediately
+  maxGapMinutes: 15,       // gaps larger than this break a spike run
 };
 
 // Generates assumed (interpolated) readings between real readings when gaps
@@ -69,44 +73,47 @@ export function detectSpikes(glucoseReadings, options = {}) {
 
   if (readings.length < 3) return [];
 
+  const maxGapMs = config.maxGapMinutes * MINUTE_MS;
   const spikes = [];
   let i = 0;
 
   while (i < readings.length - 1) {
     const gap = readings[i + 1].time - readings[i].time;
-    if (gap <= 0 || gap > config.maxGapMinutes * MINUTE_MS) {
-      i++;
-      continue;
-    }
+    if (gap <= 0 || gap > maxGapMs) { i++; continue; }
 
     const rate = (readings[i + 1].value - readings[i].value) / (gap / MINUTE_MS);
+    if (rate < config.minRatePerMin) { i++; continue; }
 
-    if (rate < config.minRatePerMin) {
-      i++;
-      continue;
-    }
-
-    // Potential spike started — extend the run while glucose keeps climbing
+    // Spike started — extend while glucose continues climbing, tolerating
+    // brief plateaus so a continuous rise doesn't fragment.
     const startTime = readings[i].time;
     const startGlucose = readings[i].value;
     let peakGlucose = readings[i + 1].value;
     let peakTime = readings[i + 1].time;
     let j = i + 1;
+    let plateauCount = 0;
 
     while (j < readings.length - 1) {
       const nextGap = readings[j + 1].time - readings[j].time;
-      if (nextGap <= 0 || nextGap > config.maxGapMinutes * MINUTE_MS) break;
+      if (nextGap <= 0 || nextGap > maxGapMs) break;
 
-      const nextRate =
-        (readings[j + 1].value - readings[j].value) / (nextGap / MINUTE_MS);
+      const nextRate = (readings[j + 1].value - readings[j].value) / (nextGap / MINUTE_MS);
 
       if (readings[j + 1].value > peakGlucose) {
         peakGlucose = readings[j + 1].value;
         peakTime = readings[j + 1].time;
       }
 
-      // Stop when the rise clearly stalls or reverses
-      if (nextRate < config.sustainRatePerMin) break;
+      // A clear decline ends the spike immediately
+      if (readings[j + 1].value < readings[j].value - config.declineBreakMgDl) break;
+
+      // Allow brief plateaus before ending the spike
+      if (nextRate < config.sustainRatePerMin) {
+        plateauCount++;
+        if (plateauCount > config.maxPlateauReadings) break;
+      } else {
+        plateauCount = 0;
+      }
 
       j++;
     }
@@ -114,11 +121,7 @@ export function detectSpikes(glucoseReadings, options = {}) {
     const riseAmount = peakGlucose - startGlucose;
     const durationMinutes = (peakTime - startTime) / MINUTE_MS;
 
-    if (
-      riseAmount >= config.minRiseMgDl &&
-      durationMinutes >= config.minDurationMinutes &&
-      durationMinutes <= config.maxDurationMinutes
-    ) {
+    if (riseAmount >= config.minRiseMgDl) {
       spikes.push({
         startTime: new Date(startTime).toISOString(),
         peakTime: new Date(peakTime).toISOString(),
@@ -126,14 +129,14 @@ export function detectSpikes(glucoseReadings, options = {}) {
         peakGlucose: Math.round(peakGlucose),
         riseAmount: Math.round(riseAmount),
         durationMinutes: Math.round(durationMinutes),
-        rateOfRise: Math.round((riseAmount / durationMinutes) * 10) / 10,
+        rateOfRise: Math.round((riseAmount / Math.max(1, durationMinutes)) * 10) / 10,
       });
     }
 
     i = j + 1;
   }
 
-  // Deduplicate spikes that overlap significantly (keep the larger rise)
+  // Deduplicate spikes that overlap or sit close together (keep the larger rise)
   return deduplicateSpikes(spikes);
 }
 
@@ -144,11 +147,10 @@ function deduplicateSpikes(spikes) {
   for (let k = 1; k < sorted.length; k++) {
     const prev = result[result.length - 1];
     const curr = sorted[k];
-    const prevStart = new Date(prev.startTime).getTime();
     const prevEnd = new Date(prev.peakTime).getTime();
     const currStart = new Date(curr.startTime).getTime();
-    // If overlapping within 15 minutes, keep the bigger rise
-    if (currStart - prevEnd < 15 * MINUTE_MS) {
+    // Merge if within 20 minutes of the previous spike's peak
+    if (currStart - prevEnd < 20 * MINUTE_MS) {
       if (curr.riseAmount > prev.riseAmount) {
         result[result.length - 1] = curr;
       }

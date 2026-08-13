@@ -1,20 +1,22 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 
 // Scheduled every 5 minutes. Scans the last 24 hours of glucose readings for
-// each user, detecting rapid, sustained rises ("spikes") of 40+ mg/dL lasting
-// between 10 and 75 minutes. Persists any new spikes as GlucoseEvent records
-// (with user_id set) so the ActivityGraph can surface interactive spike
-// markers the user can reflect on.
+// each user, detecting rapid, sustained rises ("spikes") using a rate-of-climb
+// approach aligned with Dexcom G7's "Rising Fast" threshold (2 mg/dL/min).
+// Brief plateaus are tolerated so a continuous rise with a momentary pause
+// is treated as a single event. No time-window or duration-bound detection.
+// Persists any new spikes as GlucoseEvent records (with user_id set) so the
+// ActivityGraph can surface interactive markers the user can reflect on.
 
 const MINUTE_MS = 60 * 1000;
 
 const DETECTION = {
-  minRiseMgDl: 40,
-  minRatePerMin: 2,
-  sustainRatePerMin: 0.5,
-  minDurationMinutes: 10,
-  maxDurationMinutes: 75,
-  maxGapMinutes: 15,
+  minRiseMgDl: 40,         // total rise needed to qualify as a spike
+  minRatePerMin: 2,        // Dexcom G7 "Rising Fast" threshold (mg/dL/min)
+  sustainRatePerMin: 1,    // rate above which the spike is still "rising"
+  maxPlateauReadings: 2,   // brief plateaus allowed before a spike ends
+  declineBreakMgDl: 5,     // a drop of this much ends the spike immediately
+  maxGapMinutes: 15,       // gaps larger than this break a spike run
 };
 
 function generateAssumedReadings(readings, maxGapMinutes) {
@@ -37,16 +39,19 @@ function generateAssumedReadings(readings, maxGapMinutes) {
   return result;
 }
 
-// Rate-based detector — flags steep, sustained climbs.
+// Rate-of-climb detector — flags steep, sustained climbs using Dexcom G7's
+// "Rising Fast" threshold (2 mg/dL/min). Brief plateaus are tolerated so a
+// continuous rise doesn't fragment into multiple spikes.
 function detectRateSpikes(readings) {
   if (readings.length < 3) return [];
 
+  const maxGapMs = DETECTION.maxGapMinutes * MINUTE_MS;
   const spikes = [];
   let i = 0;
 
   while (i < readings.length - 1) {
     const gap = readings[i + 1].time - readings[i].time;
-    if (gap <= 0 || gap > DETECTION.maxGapMinutes * MINUTE_MS) { i++; continue; }
+    if (gap <= 0 || gap > maxGapMs) { i++; continue; }
 
     const rate = (readings[i + 1].value - readings[i].value) / (gap / MINUTE_MS);
     if (rate < DETECTION.minRatePerMin) { i++; continue; }
@@ -56,10 +61,11 @@ function detectRateSpikes(readings) {
     let peakGlucose = readings[i + 1].value;
     let peakTime = readings[i + 1].time;
     let j = i + 1;
+    let plateauCount = 0;
 
     while (j < readings.length - 1) {
       const nextGap = readings[j + 1].time - readings[j].time;
-      if (nextGap <= 0 || nextGap > DETECTION.maxGapMinutes * MINUTE_MS) break;
+      if (nextGap <= 0 || nextGap > maxGapMs) break;
 
       const nextRate = (readings[j + 1].value - readings[j].value) / (nextGap / MINUTE_MS);
 
@@ -68,18 +74,24 @@ function detectRateSpikes(readings) {
         peakTime = readings[j + 1].time;
       }
 
-      if (nextRate < DETECTION.sustainRatePerMin) break;
+      // A clear decline ends the spike immediately
+      if (readings[j + 1].value < readings[j].value - DETECTION.declineBreakMgDl) break;
+
+      // Allow brief plateaus before ending the spike
+      if (nextRate < DETECTION.sustainRatePerMin) {
+        plateauCount++;
+        if (plateauCount > DETECTION.maxPlateauReadings) break;
+      } else {
+        plateauCount = 0;
+      }
+
       j++;
     }
 
     const riseAmount = peakGlucose - startGlucose;
     const durationMinutes = (peakTime - startTime) / MINUTE_MS;
 
-    if (
-      riseAmount >= DETECTION.minRiseMgDl &&
-      durationMinutes >= DETECTION.minDurationMinutes &&
-      durationMinutes <= DETECTION.maxDurationMinutes
-    ) {
+    if (riseAmount >= DETECTION.minRiseMgDl) {
       spikes.push({
         startTime: new Date(startTime).toISOString(),
         peakTime: new Date(peakTime).toISOString(),
@@ -87,7 +99,7 @@ function detectRateSpikes(readings) {
         peakGlucose: Math.round(peakGlucose),
         riseAmount: Math.round(riseAmount),
         durationMinutes: Math.round(durationMinutes),
-        rateOfRise: Math.round((riseAmount / durationMinutes) * 10) / 10,
+        rateOfRise: Math.round((riseAmount / Math.max(1, durationMinutes)) * 10) / 10,
       });
     }
 
@@ -97,58 +109,8 @@ function detectRateSpikes(readings) {
   return spikes;
 }
 
-// Window-based detector — flags any rise of 40+ mg/dL whose peak falls within
-// 75 minutes of the start, catching gentle, prolonged climbs the rate detector
-// misses. Scans each reading as a candidate start and tracks the highest peak
-// before glucose reverses or the 75-minute window closes.
-function detectWindowSpikes(readings) {
-  if (readings.length < 2) return [];
-
-  const spikes = [];
-  const windowMs = DETECTION.maxDurationMinutes * MINUTE_MS;
-
-  for (let i = 0; i < readings.length - 1; i++) {
-    const startTime = readings[i].time;
-    const startGlucose = readings[i].value;
-    const windowEnd = startTime + windowMs;
-
-    let peakGlucose = startGlucose;
-    let peakTime = startTime;
-
-    for (let j = i + 1; j < readings.length; j++) {
-      if (readings[j].time > windowEnd) break;
-      const gap = readings[j].time - readings[j - 1].time;
-      if (gap > DETECTION.maxGapMinutes * MINUTE_MS) break;
-
-      if (readings[j].value > peakGlucose) {
-        peakGlucose = readings[j].value;
-        peakTime = readings[j].time;
-      }
-    }
-
-    const riseAmount = peakGlucose - startGlucose;
-    const durationMinutes = (peakTime - startTime) / MINUTE_MS;
-
-    if (riseAmount >= DETECTION.minRiseMgDl && durationMinutes > 0) {
-      spikes.push({
-        startTime: new Date(startTime).toISOString(),
-        peakTime: new Date(peakTime).toISOString(),
-        startGlucose: Math.round(startGlucose),
-        peakGlucose: Math.round(peakGlucose),
-        riseAmount: Math.round(riseAmount),
-        durationMinutes: Math.round(durationMinutes),
-        rateOfRise: Math.round((riseAmount / durationMinutes) * 10) / 10,
-      });
-    }
-  }
-
-  return spikes;
-}
-
 function detectSpikes(readings) {
-  const rateSpikes = detectRateSpikes(readings);
-  const windowSpikes = detectWindowSpikes(readings);
-  return deduplicateSpikes([...rateSpikes, ...windowSpikes]);
+  return deduplicateSpikes(detectRateSpikes(readings));
 }
 
 function deduplicateSpikes(spikes) {
@@ -160,7 +122,8 @@ function deduplicateSpikes(spikes) {
     const curr = sorted[k];
     const prevEnd = new Date(prev.peakTime).getTime();
     const currStart = new Date(curr.startTime).getTime();
-    if (currStart - prevEnd < 15 * MINUTE_MS) {
+    // Merge if within 20 minutes of the previous spike's peak
+    if (currStart - prevEnd < 20 * MINUTE_MS) {
       if (curr.riseAmount > prev.riseAmount) {
         result[result.length - 1] = curr;
       }

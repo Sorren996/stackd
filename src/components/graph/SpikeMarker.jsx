@@ -1,10 +1,11 @@
 import { motion } from "framer-motion";
+import { ArrowUp } from "lucide-react";
 
 // Small clickable spike indicator rendered just below the time axis.
 // Untagged spikes pulse gently in amber; tagged spikes settle into teal.
 export default function SpikeMarker({ x, handled, onTag, chartHeight }) {
   const top = chartHeight + 4;
-  const color = handled ? "rgba(91,168,138,0.6)" : "rgba(251,191,36,0.6)";
+  const color = handled ? "rgba(91,168,138,0.7)" : "rgba(251,191,36,0.7)";
 
   return (
     <div
@@ -31,9 +32,7 @@ export default function SpikeMarker({ x, handled, onTag, chartHeight }) {
             : { duration: 2.2, repeat: Infinity, ease: "easeInOut" }
         }
       >
-        <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
-          <path d="M4.5 0L9 7H0L4.5 0Z" fill={color} />
-        </svg>
+        <ArrowUp className="h-3.5 w-3.5" style={{ color }} strokeWidth={2.5} />
       </motion.button>
     </div>
   );
