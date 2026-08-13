@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { subDays } from "date-fns";
 import { motion } from "framer-motion";
 import { Activity } from "lucide-react";
+import { useDexcomConnection } from "@/hooks/useDexcomConnection";
+import { filterReadingsForStats } from "@/lib/timeInRange";
 import ZoneOfBalanceRing from "@/components/analytics/ZoneOfBalanceRing";
 import DailyPatternChart from "@/components/analytics/DailyPatternChart";
 import MomentsOfCare from "@/components/analytics/MomentsOfCare";
@@ -37,6 +39,7 @@ export default function Analytics() {
   });
 
   const [targetRange, setTargetRange] = useState(readTargetRange);
+  const { connected: dexcomConnected } = useDexcomConnection();
 
   useEffect(() => {
     const refresh = () => setTargetRange(readTargetRange());
@@ -50,7 +53,10 @@ export default function Analytics() {
 
   const stats = useMemo(() => {
     const cutoff = subDays(new Date(), 30);
-    const recent = readings.filter((r) => new Date(r.recorded_at) >= cutoff && Number.isFinite(r.value));
+    const recent = filterReadingsForStats(
+      readings.filter((r) => new Date(r.recorded_at) >= cutoff && Number.isFinite(r.value)),
+      dexcomConnected
+    );
 
     if (!recent.length) return null;
 
@@ -102,7 +108,7 @@ export default function Analytics() {
       hourlyAverages,
       segments,
     };
-  }, [readings, targetRange]);
+  }, [readings, targetRange, dexcomConnected]);
 
   if (isLoading) {
     return (

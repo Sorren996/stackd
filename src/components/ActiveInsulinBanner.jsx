@@ -34,8 +34,9 @@ import DoseTimeline from "./DoseTimeline";
 import ComfortZoneCard from "./ComfortZoneCard";
 import CurrentGlucoseCard from "./graph/CurrentGlucoseCard";
 import { getSupportiveGlucoseMessage } from "@/lib/supportiveMessages";
-import { computeTimeInRange } from "@/lib/timeInRange";
+import { computeTimeInRange, filterReadingsForStats, computeTimeInRangeFromReadings } from "@/lib/timeInRange";
 import { computeGlucoseTrend, mapDexcomTrend } from "@/lib/glucoseTrend";
+import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 import { isRescueCarbEntry } from "@/lib/rescueCarbDetection";
 
 // Flip to false to instantly revert to the original dense dashboard layout.
@@ -876,6 +877,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
   const [nowMinute, setNowMinute] = useState(() =>
     Math.floor(Date.now() / MINUTE_MS)
   );
+  const { connected: dexcomConnected } = useDexcomConnection();
   const safeDoses = Array.isArray(doses) ? doses : [];
   const safeGlucoseReadings = Array.isArray(glucoseReadings) ? glucoseReadings : [];
   const safeCarbEntries = Array.isArray(carbEntries) ? carbEntries : [];
@@ -1039,17 +1041,26 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
   const dailyAverage = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const readingsToday = safeGlucoseReadings.filter((reading) => new Date(reading.recorded_at) >= today);
+    const readingsToday = filterReadingsForStats(
+      safeGlucoseReadings.filter((reading) => new Date(reading.recorded_at) >= today),
+      dexcomConnected
+    );
     if (!readingsToday.length) return null;
     return Math.round(readingsToday.reduce((sum, reading) => sum + reading.value, 0) / readingsToday.length);
-  }, [safeGlucoseReadings]);
+  }, [safeGlucoseReadings, dexcomConnected]);
 
   const comfortZonePercentage = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const readingsToday = safeGlucoseReadings.filter((reading) => new Date(reading.recorded_at) >= today);
+    const readingsToday = filterReadingsForStats(
+      safeGlucoseReadings.filter((reading) => new Date(reading.recorded_at) >= today),
+      dexcomConnected
+    );
+    if (dexcomConnected) {
+      return computeTimeInRangeFromReadings(readingsToday, insulinSettings.targetLow, insulinSettings.targetHigh);
+    }
     return computeTimeInRange(readingsToday, insulinSettings.targetLow, insulinSettings.targetHigh);
-  }, [safeGlucoseReadings, insulinSettings.targetLow, insulinSettings.targetHigh]);
+  }, [safeGlucoseReadings, insulinSettings.targetLow, insulinSettings.targetHigh, dexcomConnected]);
 
   const trend = useMemo(() => {
     if (latestGlucose?.source === "dexcom" && latestGlucose?.trend) {

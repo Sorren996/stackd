@@ -51,3 +51,31 @@ export function computeTimeInRange(readings, targetLow, targetHigh, now = Date.n
 
   return totalMs > 0 ? (inRangeMs / totalMs) * 100 : null;
 }
+
+// Filters readings for TIR and average calculations based on CGM connection.
+// When connected to Dexcom, use only actual sensor readings — no manual logs
+// or carry-forward system readings. When disconnected, include all readings.
+export function filterReadingsForStats(readings, dexcomConnected) {
+  if (!Array.isArray(readings)) return [];
+  if (dexcomConnected) {
+    return readings.filter((r) => r.source === "dexcom");
+  }
+  return readings;
+}
+
+// Simple point-count TIR for dense CGM data where time-weighted
+// interpolation isn't needed — each reading represents a real sensor scan.
+export function computeTimeInRangeFromReadings(readings, targetLow, targetHigh) {
+  if (!Array.isArray(readings) || !readings.length) return null;
+  if (!Number.isFinite(targetLow) || !Number.isFinite(targetHigh) || targetHigh <= targetLow) return null;
+
+  let inRange = 0;
+  let total = 0;
+  for (const r of readings) {
+    const v = Number(r.value);
+    if (!Number.isFinite(v)) continue;
+    total++;
+    if (v >= targetLow && v <= targetHigh) inRange++;
+  }
+  return total > 0 ? (inRange / total) * 100 : null;
+}

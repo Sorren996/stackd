@@ -39,6 +39,14 @@ Deno.serve(async (req) => {
       // Fall back to defaults if settings cannot be read.
     }
 
+    // When connected to a CGM source, time-in-range and averages should
+    // reflect only actual sensor readings — not manual logs or carry-forward.
+    let dexcomConnected = false;
+    try {
+      const connections = await base44.entities.DexcomConnection.filter({ status: "connected" });
+      dexcomConnected = connections.length > 0;
+    } catch { /* fall back to all readings */ }
+
     const [glucose, carbs, insulin] = await Promise.all([
       base44.entities.GlucoseReading.filter(
         { recorded_at: { $gte: rangeStart, $lte: rangeEnd } },
@@ -74,7 +82,11 @@ Deno.serve(async (req) => {
       return dayMap[day];
     };
 
-    glucose.forEach((g: any) => {
+    const glucoseForStats = dexcomConnected
+      ? glucose.filter((g: any) => g.source === "dexcom")
+      : glucose;
+
+    glucoseForStats.forEach((g: any) => {
       const day = dayKey(g.recorded_at);
       if (!day) return;
       const v = Number(g.value);
