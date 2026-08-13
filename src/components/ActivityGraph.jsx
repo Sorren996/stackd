@@ -701,7 +701,24 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       });
     }
 
-    return markers;
+    // Final dedup: merge any markers within 20 minutes of each other,
+    // keeping the one with the larger rise. This catches cases where
+    // client-detected and backend-tracked spikes land close but don't
+    // overlap within the 5-minute merge window above.
+    const sorted = markers.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+    const deduped = [];
+    for (const m of sorted) {
+      const prev = deduped[deduped.length - 1];
+      if (prev && new Date(m.startTime).getTime() - new Date(prev.peakTime || prev.startTime).getTime() < 20 * 60 * 1000) {
+        if ((m.riseAmount || 0) > (prev.riseAmount || 0)) {
+          deduped[deduped.length - 1] = m;
+        }
+      } else {
+        deduped.push(m);
+      }
+    }
+
+    return deduped;
   }, [detectedSpikes, spikeEvents, domainStart, domainEnd, totalMs, chartWidth]);
 
   const getGlucoseY = (value) => {
