@@ -14,6 +14,8 @@ import { detectSpikes, generateAssumedReadings } from "@/lib/spikeDetection";
 import SpikeMarker from "@/components/graph/SpikeMarker";
 import SpikeTagModal from "@/components/graph/SpikeTagModal";
 import GlucoseTicker from "@/components/graph/GlucoseTicker";
+import TimeViewToggle from "@/components/graph/TimeViewToggle";
+import CandlestickView from "@/components/graph/CandlestickView";
 
 const STEP_MS = 3 * 60 * 1000;
 const HALF_HOUR_MS = 30 * 60 * 1000;
@@ -273,6 +275,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const [showFilter, setShowFilter] = useState(false);
   const [filterAnchorRect, setFilterAnchorRect] = useState(null);
   const [filters, setFilters] = useState({ glucose: true, insulin: true, carbs: true });
+  const [viewWindow, setViewWindow] = useState(6);
+  const isCandlestick = viewWindow === 24;
   const [activeMarker, setActiveMarker] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [spikeTagTarget, setSpikeTagTarget] = useState(null);
@@ -426,8 +430,12 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const latestGlucoseReading = sortedGlucoseReadings[sortedGlucoseReadings.length - 1];
   const latestGlucoseTime = latestGlucoseReading?.time ?? Math.round(Date.now() / STEP_MS) * STEP_MS;
   const latestGlucoseBucket = Math.round(latestGlucoseTime / STEP_MS) * STEP_MS;
-  const domainStart = latestGlucoseBucket - HISTORY_DAYS * 24 * 60 * 60 * 1000;
-  const domainEnd = latestGlucoseBucket + FUTURE_HOURS * 60 * 60 * 1000;
+  const domainStart = isCandlestick
+    ? latestGlucoseBucket - 24 * 60 * 60 * 1000
+    : latestGlucoseBucket - HISTORY_DAYS * 24 * 60 * 60 * 1000;
+  const domainEnd = isCandlestick
+    ? latestGlucoseBucket + 60 * 60 * 1000
+    : latestGlucoseBucket + FUTURE_HOURS * 60 * 60 * 1000;
   const filteredGlucoseReadings = useMemo(() =>
   filters.glucose ?
   sortedGlucoseReadings.filter((reading) => reading.time >= domainStart && reading.time <= domainEnd) :
@@ -539,11 +547,11 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   );
 
   const totalMs = domainEnd - domainStart;
-  const visibleMs = VISIBLE_HOURS * 60 * 60 * 1000;
+  const visibleMs = viewWindow * 60 * 60 * 1000;
   const pxPerMin = containerWidth / (visibleMs / 60000);
-  const chartWidth = Math.max(containerWidth, Math.round(totalMs / 60000 * pxPerMin));
+  const chartWidth = isCandlestick ? containerWidth : Math.max(containerWidth, Math.round(totalMs / 60000 * pxPerMin));
   const latestGlucoseX = (latestGlucoseBucket - domainStart) / totalMs * chartWidth;
-  const maxScrollLeft = Math.max(0, Math.min(chartWidth - containerWidth, latestGlucoseX - containerWidth / 2));
+  const maxScrollLeft = isCandlestick ? 0 : Math.max(0, Math.min(chartWidth - containerWidth, latestGlucoseX - containerWidth / 2));
   const plotHeight = CHART_HEIGHT - CHART_MARGIN_TOP - CHART_MARGIN_BOTTOM - X_AXIS_HEIGHT;
 
   const mergedMonitoringIntervals = useMemo(() => {
@@ -907,7 +915,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     <div ref={containerRef} className="relative overflow-visible">
       <div ref={monitoringA11yRef} className="sr-only" aria-live="polite" role="status" />
       {/* Controls row */}
-      <div className="flex py-3 items-center mb-4 justify-start pl-4 gap-2">
+      <div className="flex py-3 items-center mb-4 justify-between pl-4 pr-4 gap-2">
 
         {/* Filter button */}
         <div className="relative justify-start">
@@ -939,8 +947,10 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             </>
           }
         </AnimatePresence>
+        <TimeViewToggle value={viewWindow} onChange={setViewWindow} />
       </div>
       <div className="relative">
+      {!isCandlestick && (
       <button
         type="button"
         onClick={scrollToLatestGlucose}
@@ -948,6 +958,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         aria-label="Scroll to latest glucose">
           <CornerUpRight className="h-4 w-4" />
         </button>
+      )}
       <div
         ref={graphViewportRef}
         className="relative overflow-hidden"
@@ -959,7 +970,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           marginLeft: "-50dvw",
           marginRight: "-50dvw"
         }}>
-      {filters.glucose && glucoseLinePoints.length > 0 &&
+      {!isCandlestick && filters.glucose && glucoseLinePoints.length > 0 &&
       <div
         onClick={(onSelectLog || onDeleteLog) ? handleIndicatorClick : undefined}
         className={`absolute left-1/2 top-0 z-20 -translate-x-1/2 px-3 py-1 text-center ${(onSelectLog || onDeleteLog) ? "cursor-pointer" : "pointer-events-none"}`}
@@ -976,7 +987,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           <div ref={tooltipDateRef} className="mt-0.5 text-[10px] font-medium text-white/30">{format(new Date(glucoseLinePoints[glucoseLinePoints.length - 1].time), "EEEE, MMM d")}</div>
         </div>
       }
-      {filters.glucose && glucoseLinePoints.length > 0 &&
+      {!isCandlestick && filters.glucose && glucoseLinePoints.length > 0 &&
       <div
         ref={centerMarkerRef}
         className="pointer-events-none absolute left-1/2 top-0 z-10 opacity-0"
@@ -989,7 +1000,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         <div className="absolute -inset-[3px] rounded-full border border-white/20" />
       </div>
       }
-      {filters.glucose && filteredGlucoseReadings.length > 0 && (
+      {!isCandlestick && filters.glucose && filteredGlucoseReadings.length > 0 && (
         <div className="pointer-events-none absolute right-4 top-0 z-20" style={{ height: CHART_HEIGHT }}>
           <span
             className="absolute right-0 text-[9px] font-medium leading-none text-white/25"
@@ -1006,9 +1017,23 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         </div>
       )}
       {/* monitoring gradient bands live inside the scrollable chart below */}
+      {isCandlestick && (
+        <CandlestickView
+          glucoseReadings={filteredGlucoseReadings}
+          doses={filteredDoses}
+          spikeEvents={spikeEvents}
+          detectedSpikes={detectedSpikes}
+          targetRange={targetRange}
+          containerWidth={containerWidth}
+          chartHeight={CHART_HEIGHT}
+          marginTop={CHART_MARGIN_TOP}
+          xAxisHeight={X_AXIS_HEIGHT}
+        />
+      )}
       <div
         ref={scrollRef}
         className="overflow-x-auto"
+        style={{ display: isCandlestick ? "none" : undefined, WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}
         onScroll={(event) => {
           const el = event.currentTarget;
           if (el.scrollLeft > maxScrollLeft) {
@@ -1017,8 +1042,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             return;
           }
           scheduleCenterGlucoseUpdate(el.scrollLeft);
-        }}
-        style={{ WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
+        }}>
         <div className="relative" style={{ width: chartWidth, height: CHART_HEIGHT + 36 }}>
           {positionedMonitoringIntervals.map((iv, idx) => (
             <div
@@ -1259,7 +1283,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       <div
         ref={monitoringLabelRef}
         className="pointer-events-none mt-1 flex items-center justify-center gap-1.5"
-        style={{ opacity: 0, transform: "translateY(4px)", transition: "opacity 350ms ease-in-out, transform 350ms ease-in-out", minHeight: 16 }}
+        style={{ opacity: 0, transform: "translateY(4px)", transition: "opacity 350ms ease-in-out, transform 350ms ease-in-out", minHeight: 16, display: isCandlestick ? "none" : undefined }}
         aria-hidden="true"
       >
         <AlertTriangle className="h-3 w-3" style={{ color: "rgba(217,169,56,0.7)" }} />
