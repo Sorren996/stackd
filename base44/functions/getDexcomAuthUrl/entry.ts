@@ -1,6 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 import { secrets } from 'base44:runtime';
-import { DEXCOM_SANDBOX_AUTH_URL, DEXCOM_DEFAULT_SCOPE } from "../../shared/dexcomConfig.ts";
+import { DEXCOM_AUTH_URL, DEXCOM_DEFAULT_SCOPE } from "../../shared/dexcomConfig.ts";
 
 // Builds the Dexcom sandbox authorization URL. The frontend redirects the
 // user here so they can approve Stackd; Dexcom then sends them back to the
@@ -28,7 +28,7 @@ export default async function(req) {
       scope: DEXCOM_DEFAULT_SCOPE
     });
 
-    return Response.json({ authUrl: `${DEXCOM_SANDBOX_AUTH_URL}?${params.toString()}`, state });
+    return Response.json({ authUrl: `${DEXCOM_AUTH_URL}?${params.toString()}`, state });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }

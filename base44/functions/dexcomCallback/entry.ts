@@ -1,6 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 import { secrets } from 'base44:runtime';
-import { DEXCOM_SANDBOX_TOKEN_URL } from "../../shared/dexcomConfig.ts";
+import { DEXCOM_TOKEN_URL } from "../../shared/dexcomConfig.ts";
 
 // Exchanges the authorization code (received at the redirect_uri) for an
 // access + refresh token, then stores the connection against the signed-in
@@ -25,7 +25,7 @@ export default async function(req) {
       return Response.json({ error: 'Dexcom credentials not configured' }, { status: 500 });
     }
 
-    const tokenResponse = await fetch(DEXCOM_SANDBOX_TOKEN_URL, {
+    const tokenResponse = await fetch(DEXCOM_TOKEN_URL, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({

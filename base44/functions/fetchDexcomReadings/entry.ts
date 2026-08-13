@@ -1,6 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 import { secrets } from 'base44:runtime';
-import { DEXCOM_SANDBOX_TOKEN_URL, DEXCOM_SANDBOX_API_BASE } from "../../shared/dexcomConfig.ts";
+import { DEXCOM_TOKEN_URL, DEXCOM_API_BASE } from "../../shared/dexcomConfig.ts";
 
 // Scheduled auto-sync for connected glucose sources.
 // Runs with the service role — there is no user context on a schedule.
@@ -15,7 +15,7 @@ function formatDexcomDate(d) {
 }
 
 async function refreshTokens(conn, clientId, clientSecret) {
-  const res = await fetch(DEXCOM_SANDBOX_TOKEN_URL, {
+  const res = await fetch(DEXCOM_TOKEN_URL, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
@@ -83,7 +83,7 @@ export default async function(req) {
         let rangeEnd = null;
         let rawRange = null;
         try {
-          const drRes = await fetch(`${DEXCOM_SANDBOX_API_BASE}/users/self/dataRange`, {
+          const drRes = await fetch(`${DEXCOM_API_BASE}/users/self/dataRange`, {
             headers: { Authorization: `Bearer ${accessToken}` },
           });
           if (drRes.ok) {
@@ -134,7 +134,7 @@ export default async function(req) {
         }
 
         const egvRes = await fetch(
-          `${DEXCOM_SANDBOX_API_BASE}/users/self/egvs?startDate=${formatDexcomDate(startDate)}&endDate=${formatDexcomDate(endDate)}`,
+          `${DEXCOM_API_BASE}/users/self/egvs?startDate=${formatDexcomDate(startDate)}&endDate=${formatDexcomDate(endDate)}`,
           { headers: { Authorization: `Bearer ${accessToken}` } }
         );
 
