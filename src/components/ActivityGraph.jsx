@@ -397,7 +397,13 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
   const sortedGlucoseReadings = useMemo(() =>
   glucoseReadings.
-  filter((reading) => reading.source !== "system").
+  filter((reading) => {
+    if (reading.source === "system") return false;
+    // When connected to Dexcom, use CGM data exclusively for a smooth,
+    // continuous line — just like Oura's reporting style.
+    if (dexcomConnected && reading.source !== "dexcom") return false;
+    return true;
+  }).
   map((reading) => ({
     ...reading,
     time: getReadingTime(reading),
@@ -405,7 +411,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   })).
   filter((reading) => Number.isFinite(reading.time) && Number.isFinite(reading.value)).
   sort((a, b) => a.time - b.time),
-  [glucoseReadings]
+  [glucoseReadings, dexcomConnected]
   );
 
   const latestGlucoseReading = sortedGlucoseReadings[sortedGlucoseReadings.length - 1];
