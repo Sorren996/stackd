@@ -1033,7 +1033,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           }
           scheduleCenterGlucoseUpdate(el.scrollLeft);
         }}>
-        <div className="relative" style={{ width: chartWidth, height: isCandlestick ? CHART_HEIGHT + 80 : CHART_HEIGHT + 36 }}>
+        <div className="relative" style={{ width: chartWidth, height: isCandlestick ? CHART_HEIGHT + 68 : CHART_HEIGHT + 36 }}>
           {isCandlestick ? (
             <CandlestickView
               glucoseReadings={filteredGlucoseReadings}
@@ -1299,7 +1299,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       </div>
       </div>
 
-      <div className="flex justify-center pt-4">
+      <div className="flex justify-center pt-2">
         <TimeViewToggle value={viewWindow} onChange={setViewWindow} />
       </div>
 
