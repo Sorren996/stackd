@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { getVersionString } from "@/lib/appVersion";
 import { DateScrollField, TimeScrollField, NumberPadField, TextPadField, SelectField } from "@/components/FormInputFields";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
+import { useVisibilityRefresh } from "@/hooks/useVisibilityRefresh";
 import DexcomSyncStatus from "@/components/DexcomSyncStatus";
 
 const FRESH_DATA_MS = 60 * 1000;
@@ -300,6 +301,7 @@ export default function Dashboard() {
   const [showGraph, setShowGraph] = useState(false);
   const [editingLog, setEditingLog] = useState(null);
   const { connected: dexcomConnected } = useDexcomConnection();
+  useVisibilityRefresh();
   const stackingAlertsEnabled = localStorage.getItem("stacking_alerts_enabled") !== "false";
 
   useEffect(() => {
