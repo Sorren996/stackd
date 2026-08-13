@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import InfoPopover from "@/components/graph/InfoPopover";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 import { detectSpikes, generateAssumedReadings } from "@/lib/spikeDetection";
 import SpikeMarker from "@/components/graph/SpikeMarker";
 import SpikeTagModal from "@/components/graph/SpikeTagModal";
@@ -267,6 +268,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const [activeMarker, setActiveMarker] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [spikeTagTarget, setSpikeTagTarget] = useState(null);
+  const { connected: dexcomConnected } = useDexcomConnection();
 
   const openMarker = (type, item, rect) => {
     setConfirmDelete(false);
@@ -916,7 +918,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         className={`absolute left-1/2 top-0 z-20 -translate-x-1/2 px-3 py-1 text-center ${(onSelectLog || onDeleteLog) ? "cursor-pointer" : "pointer-events-none"}`}
       >
           <div className="flex items-center justify-center gap-1.5 text-2xl font-black leading-none text-white">
-            {(onSelectLog || onDeleteLog) && (
+            {(onSelectLog || onDeleteLog) && !dexcomConnected && (
               <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/[0.08] text-white/45">
                 <Info className="h-2.5 w-2.5" />
               </span>
