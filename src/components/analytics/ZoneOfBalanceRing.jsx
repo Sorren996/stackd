@@ -73,7 +73,7 @@ export default function ZoneOfBalanceRing({ inRangePercent, abovePercent, belowP
       />
       <div className="relative z-10 flex flex-col items-center">
         <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.25em] text-white">Time in Your Comfort Zone</p>
-        <p className="mb-5 text-xs text-white/30">Last 30 days · {totalReadings} readings</p>
+        <p className="mb-5 text-xs text-white/30">Last 30 days</p>
 
         <div className="relative">
           <svg width="180" height="180" viewBox="0 0 180 180" style={{ transform: "rotate(-90deg)" }}>
