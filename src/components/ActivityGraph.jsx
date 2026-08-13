@@ -953,7 +953,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             </>
           }
         </AnimatePresence>
-        <TimeViewToggle value={viewWindow} onChange={setViewWindow} />
       </div>
       <div className="relative">
       <button
@@ -1298,6 +1297,10 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         <AlertTriangle className="h-3 w-3" style={{ color: "rgba(217,169,56,0.7)" }} />
         <span className="text-[9px] font-medium" style={{ color: "rgba(217,169,56,0.8)" }}>Delayed glucose response possible. Monitor for extended high's and low's.</span>
       </div>
+      </div>
+
+      <div className="flex justify-center pt-4">
+        <TimeViewToggle value={viewWindow} onChange={setViewWindow} />
       </div>
 
       {activeMarker && (

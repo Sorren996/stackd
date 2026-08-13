@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { ComposedChart, Bar, Area, XAxis, YAxis, ReferenceLine } from "recharts";
 import { format } from "date-fns";
@@ -145,46 +145,22 @@ export default function CandlestickView({
   const candleCount = (domainEnd - domainStart) / HOUR_MS;
   const candleSlotWidth = chartWidth / candleCount;
 
-  // Long-press tooltip
-  const pressTimerRef = useRef(null);
   const [activeTooltip, setActiveTooltip] = useState(null);
 
-  const handlePointerDown = (candle, event) => {
-    if (pressTimerRef.current) clearTimeout(pressTimerRef.current);
-    setActiveTooltip(null);
+  const handleClick = (candle, event) => {
     const rect = event.currentTarget.getBoundingClientRect();
-    pressTimerRef.current = setTimeout(() => {
-      setActiveTooltip({ ...candle, rect });
-      pressTimerRef.current = null;
-    }, 1000);
-  };
-
-  const handlePointerUp = () => {
-    if (pressTimerRef.current) {
-      clearTimeout(pressTimerRef.current);
-      pressTimerRef.current = null;
-    }
-  };
-
-  const handlePointerLeave = () => {
-    if (pressTimerRef.current) {
-      clearTimeout(pressTimerRef.current);
-      pressTimerRef.current = null;
-    }
+    setActiveTooltip((prev) => (prev && prev.time === candle.time ? null : { ...candle, rect }));
   };
 
   useEffect(() => {
     if (!activeTooltip) return;
-    const handler = () => setActiveTooltip(null);
+    const handler = (e) => {
+      if (e.target.closest("[data-candle-touch]")) return;
+      setActiveTooltip(null);
+    };
     document.addEventListener("pointerdown", handler);
     return () => document.removeEventListener("pointerdown", handler);
   }, [activeTooltip]);
-
-  useEffect(() => {
-    return () => {
-      if (pressTimerRef.current) clearTimeout(pressTimerRef.current);
-    };
-  }, []);
 
   if (!chartWidth) return null;
 
@@ -255,12 +231,10 @@ export default function CandlestickView({
         return (
           <div
             key={`touch_${candle.time}`}
-            className="absolute top-0 z-[25]"
-            style={{ left: x, width: candleSlotWidth, height: chartHeight }}
-            onPointerDown={(e) => handlePointerDown(candle, e)}
-            onPointerUp={handlePointerUp}
-            onPointerLeave={handlePointerLeave}
-            onPointerCancel={handlePointerLeave}
+            data-candle-touch
+            className="absolute top-0 z-[25] cursor-pointer select-none"
+            style={{ left: x, width: candleSlotWidth, height: chartHeight, touchAction: "none", WebkitUserSelect: "none", userSelect: "none" }}
+            onClick={(e) => handleClick(candle, e)}
           />
         );
       })}
