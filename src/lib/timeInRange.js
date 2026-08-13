@@ -58,7 +58,7 @@ export function computeTimeInRange(readings, targetLow, targetHigh, now = Date.n
 export function filterReadingsForStats(readings, dexcomConnected) {
   if (!Array.isArray(readings)) return [];
   if (dexcomConnected) {
-    return readings.filter((r) => r.source === "dexcom");
+    return readings.filter((r) => r.source === "dexcom" || r.source === "dexcom_share");
   }
   return readings;
 }

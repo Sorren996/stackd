@@ -401,7 +401,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     if (reading.source === "system") return false;
     // When connected to Dexcom, use CGM data exclusively for a smooth,
     // continuous line — just like Oura's reporting style.
-    if (dexcomConnected && reading.source !== "dexcom") return false;
+    if (dexcomConnected && reading.source !== "dexcom" && reading.source !== "dexcom_share") return false;
     return true;
   }).
   map((reading) => ({

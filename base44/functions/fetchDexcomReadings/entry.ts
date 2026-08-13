@@ -96,6 +96,7 @@ export default async function(req) {
         records_ignored_duplicates: 0,
         records_rejected: 0,
         records_inserted: 0,
+        records_reconciled_with_share: 0,
         oldest_egv_systemTime: null,
         newest_egv_systemTime: null,
         new_sync_cursor: conn.last_fetched_at || null,
@@ -255,12 +256,15 @@ export default async function(req) {
           1000
         );
         const existingDexcomTimes = new Set();
+        const shareReadings = [];
         const manualReadings = [];
         for (const r of existing) {
           const t = new Date(r.recorded_at).getTime();
           if (Number.isNaN(t)) continue;
           if (r.source === "dexcom") {
             existingDexcomTimes.add(t);
+          } else if (r.source === "dexcom_share") {
+            shareReadings.push({ id: r.id, time: t });
           } else if (r.source === "manual") {
             manualReadings.push({ id: r.id, time: t });
           }
@@ -269,6 +273,7 @@ export default async function(req) {
         const PROXIMITY_MS = 5 * 60 * 1000;
         const toCreate = [];
         const manualIdsToDelete = new Set();
+        const shareIdsToReconcile = new Set();
         let newestSystemTime = null;
         let oldestSystemTime = null;
 
@@ -295,6 +300,19 @@ export default async function(req) {
             diag.records_ignored_duplicates++;
             continue;
           }
+
+          // Reconcile with Share readings — if a near-real-time Share reading
+          // already exists for this timestamp, promote it to canonical "dexcom"
+          // source instead of creating a duplicate.
+          const matchingShare = shareReadings.find(
+            (s) => Math.abs(s.time - ts) < 60 * 1000
+          );
+          if (matchingShare) {
+            shareIdsToReconcile.add(matchingShare.id);
+            diag.records_reconciled_with_share++;
+            continue;
+          }
+
           existingDexcomTimes.add(ts);
 
           // Override any manual reading within 5 minutes
@@ -330,6 +348,15 @@ export default async function(req) {
         if (toCreate.length) {
           await sr.entities.GlucoseReading.bulkCreate(toCreate);
           diag.records_inserted = toCreate.length;
+        }
+
+        // Promote reconciled Share readings to canonical "dexcom" source
+        if (shareIdsToReconcile.size) {
+          await Promise.all(
+            [...shareIdsToReconcile].map((id) =>
+              sr.entities.GlucoseReading.update(id, { source: "dexcom" })
+            )
+          );
         }
 
         // Remove manual readings superseded by Dexcom data
