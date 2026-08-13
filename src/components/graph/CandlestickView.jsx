@@ -1,5 +1,6 @@
-import { useMemo } from "react";
-import { ComposedChart, Bar, XAxis, YAxis, ReferenceLine } from "recharts";
+import { useMemo, useRef, useState, useEffect } from "react";
+import { createPortal } from "react-dom";
+import { ComposedChart, Bar, Area, XAxis, YAxis, ReferenceLine } from "recharts";
 import { format } from "date-fns";
 import { ArrowUp } from "lucide-react";
 import { bucketGlucoseForCandles, bucketInsulinForBars, bucketSpikes } from "@/lib/glucoseBucketing";
@@ -16,11 +17,11 @@ function valueToY(value, marginTop, plotHeight) {
 
 /**
  * Custom recharts Bar shape that renders a candlestick: a rounded rect
- * spanning high-to-low with a solid dot at the average. Candles that contain
- * spikes are highlighted in warm terracotta to match the reference design.
+ * spanning high-to-low with a solid dot at the average. Portions above the
+ * user's target high fade to red; portions below target low fade to blue.
  */
 function CandlestickShape(props) {
-  const { x, width, payload, marginTop, plotHeight } = props;
+  const { x, width, payload, marginTop, plotHeight, targetHighY, targetLowY } = props;
 
   if (payload.high == null || payload.low == null) return null;
 
@@ -31,14 +32,26 @@ function CandlestickShape(props) {
   const barWidth = Math.max(4, width * 0.5);
   const barX = x + (width - barWidth) / 2;
   const barHeight = Math.max(2, lowY - highY);
+  const rx = Math.min(barWidth / 2, 4);
 
   const hasSpikes = (payload.spikeCount || 0) > 0;
-  const barColor = hasSpikes ? "rgba(134,102,87,0.55)" : "rgba(54,48,61,0.6)";
+  const neutralColor = hasSpikes ? "rgba(134,102,87,0.55)" : "rgba(54,48,61,0.6)";
   const dotColor = hasSpikes ? "#E9A284" : "#FFFFFF";
+
+  const exceedsHigh = highY < targetHighY;
+  const belowLow = lowY > targetLowY;
+  const redBottom = Math.min(targetHighY, lowY);
+  const blueTop = Math.max(targetLowY, highY);
 
   return (
     <g>
-      <rect x={barX} y={highY} width={barWidth} height={barHeight} rx={Math.min(barWidth / 2, 4)} fill={barColor} />
+      <rect x={barX} y={highY} width={barWidth} height={barHeight} rx={rx} fill={neutralColor} />
+      {exceedsHigh && redBottom > highY && (
+        <rect x={barX} y={highY} width={barWidth} height={redBottom - highY} rx={rx} fill="url(#candle_high_fade)" />
+      )}
+      {belowLow && lowY > blueTop && (
+        <rect x={barX} y={blueTop} width={barWidth} height={lowY - blueTop} rx={rx} fill="url(#candle_low_fade)" />
+      )}
       <circle cx={x + width / 2} cy={avgY} r={3} fill={dotColor} />
     </g>
   );
@@ -60,18 +73,18 @@ export default function CandlestickView({
   spikeEvents = [],
   detectedSpikes = [],
   targetRange,
-  containerWidth,
+  chartWidth,
   chartHeight,
   marginTop,
   xAxisHeight,
+  domainStart,
+  domainEnd,
 }) {
   const targetLow = targetRange.low;
   const targetHigh = targetRange.high;
   const plotHeight = chartHeight - marginTop - xAxisHeight;
-
-  const now = Date.now();
-  const domainStart = Math.floor(now / HOUR_MS) * HOUR_MS - 23 * HOUR_MS;
-  const domainEnd = Math.floor(now / HOUR_MS) * HOUR_MS + HOUR_MS;
+  const targetHighY = valueToY(targetHigh, marginTop, plotHeight);
+  const targetLowY = valueToY(targetLow, marginTop, plotHeight);
 
   const candleData = useMemo(
     () => bucketGlucoseForCandles(glucoseReadings, domainStart, domainEnd),
@@ -110,7 +123,7 @@ export default function CandlestickView({
     () =>
       candleData.map((candle) => {
         const spikes = spikeBundles.find((b) => b.time === candle.time);
-        return { ...candle, spikeCount: spikes?.count || 0 };
+        return { ...candle, bg: GLUCOSE_MAX, spikeCount: spikes?.count || 0 };
       }),
     [candleData, spikeBundles]
   );
@@ -129,28 +142,56 @@ export default function CandlestickView({
   const highPct = ((GLUCOSE_MAX - targetHigh) / rangeTotal * 100).toFixed(1);
   const lowPct = ((GLUCOSE_MAX - targetLow) / rangeTotal * 100).toFixed(1);
 
-  if (!containerWidth) return null;
+  const candleCount = (domainEnd - domainStart) / HOUR_MS;
+  const candleSlotWidth = chartWidth / candleCount;
+
+  // Long-press tooltip
+  const pressTimerRef = useRef(null);
+  const [activeTooltip, setActiveTooltip] = useState(null);
+
+  const handlePointerDown = (candle, event) => {
+    if (pressTimerRef.current) clearTimeout(pressTimerRef.current);
+    setActiveTooltip(null);
+    const rect = event.currentTarget.getBoundingClientRect();
+    pressTimerRef.current = setTimeout(() => {
+      setActiveTooltip({ ...candle, rect });
+      pressTimerRef.current = null;
+    }, 1000);
+  };
+
+  const handlePointerUp = () => {
+    if (pressTimerRef.current) {
+      clearTimeout(pressTimerRef.current);
+      pressTimerRef.current = null;
+    }
+  };
+
+  const handlePointerLeave = () => {
+    if (pressTimerRef.current) {
+      clearTimeout(pressTimerRef.current);
+      pressTimerRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    if (!activeTooltip) return;
+    const handler = () => setActiveTooltip(null);
+    document.addEventListener("pointerdown", handler);
+    return () => document.removeEventListener("pointerdown", handler);
+  }, [activeTooltip]);
+
+  useEffect(() => {
+    return () => {
+      if (pressTimerRef.current) clearTimeout(pressTimerRef.current);
+    };
+  }, []);
+
+  if (!chartWidth) return null;
 
   return (
-    <div className="relative" style={{ width: containerWidth }}>
-      {/* Target range labels */}
-      <div className="pointer-events-none absolute right-0 top-0 z-20" style={{ height: chartHeight }}>
-        <span
-          className="absolute right-0 text-[9px] font-medium leading-none text-white/25"
-          style={{ top: valueToY(targetHigh, marginTop, plotHeight), transform: "translateY(-120%)" }}
-        >
-          {Math.round(targetHigh)}
-        </span>
-        <span
-          className="absolute right-0 text-[9px] font-medium leading-none text-white/25"
-          style={{ top: valueToY(targetLow, marginTop, plotHeight), transform: "translateY(20%)" }}
-        >
-          {Math.round(targetLow)}
-        </span>
-      </div>
-
+    <div className="relative" style={{ width: chartWidth }}>
       <ComposedChart
-        width={containerWidth}
+        width={chartWidth}
         height={chartHeight}
         data={chartData}
         margin={{ top: marginTop, right: 0, left: 0, bottom: 0 }}
@@ -163,6 +204,14 @@ export default function CandlestickView({
             <stop offset={`${lowPct}%`} stopColor="#5ba88a" stopOpacity={0.05} />
             <stop offset={`${lowPct}%`} stopColor="#5ba88a" stopOpacity={0} />
             <stop offset="100%" stopColor="#5ba88a" stopOpacity={0} />
+          </linearGradient>
+          <linearGradient id="candle_high_fade" gradientUnits="userSpaceOnUse" x1="0" y1={marginTop} x2="0" y2={targetHighY}>
+            <stop offset="0%" stopColor="#ef4444" stopOpacity={0.5} />
+            <stop offset="100%" stopColor="#ef4444" stopOpacity={0.08} />
+          </linearGradient>
+          <linearGradient id="candle_low_fade" gradientUnits="userSpaceOnUse" x1="0" y1={targetLowY} x2="0" y2={marginTop + plotHeight}>
+            <stop offset="0%" stopColor="#6b92c4" stopOpacity={0.08} />
+            <stop offset="100%" stopColor="#6b92c4" stopOpacity={0.5} />
           </linearGradient>
         </defs>
 
@@ -179,16 +228,42 @@ export default function CandlestickView({
         />
         <YAxis yAxisId="glucose" domain={[GLUCOSE_MIN, GLUCOSE_MAX]} allowDataOverflow hide />
 
+        <Area
+          yAxisId="glucose"
+          type="monotoneX"
+          dataKey="bg"
+          stroke="none"
+          fill="url(#candle_range_grad)"
+          isAnimationActive={false}
+          dot={false}
+        />
         <ReferenceLine yAxisId="glucose" y={targetHigh} stroke="rgba(255,255,255,0.18)" strokeWidth={1} strokeDasharray="3 4" />
         <ReferenceLine yAxisId="glucose" y={targetLow} stroke="rgba(255,255,255,0.18)" strokeWidth={1} strokeDasharray="3 4" />
 
         <Bar
           yAxisId="glucose"
           dataKey="high"
-          shape={<CandlestickShape marginTop={marginTop} plotHeight={plotHeight} />}
+          shape={<CandlestickShape marginTop={marginTop} plotHeight={plotHeight} targetHighY={targetHighY} targetLowY={targetLowY} />}
           isAnimationActive={false}
         />
       </ComposedChart>
+
+      {/* Long-press touch targets */}
+      {candleData.map((candle) => {
+        if (candle.high == null) return null;
+        const x = ((candle.time - domainStart) / (domainEnd - domainStart)) * chartWidth;
+        return (
+          <div
+            key={`touch_${candle.time}`}
+            className="absolute top-0 z-[25]"
+            style={{ left: x, width: candleSlotWidth, height: chartHeight }}
+            onPointerDown={(e) => handlePointerDown(candle, e)}
+            onPointerUp={handlePointerUp}
+            onPointerLeave={handlePointerLeave}
+            onPointerCancel={handlePointerLeave}
+          />
+        );
+      })}
 
       {/* Spike bundle badges */}
       {spikeBundles
@@ -196,8 +271,7 @@ export default function CandlestickView({
         .map((bucket) => {
           const candle = candleData.find((c) => c.time === bucket.time);
           if (!candle || candle.high == null) return null;
-          const bucketWidth = containerWidth / 24;
-          const x = ((bucket.time - domainStart) / (domainEnd - domainStart)) * containerWidth + bucketWidth / 2;
+          const x = ((bucket.time - domainStart) / (domainEnd - domainStart)) * chartWidth + candleSlotWidth / 2;
           const highY = valueToY(candle.high, marginTop, plotHeight);
           const allHandled = bucket.spikes.every((s) => s.user_dismissed || s.user_tagged_cause);
           const badgeColor = allHandled ? "rgba(91,168,138,0.9)" : "rgba(99,77,65,0.9)";
@@ -206,7 +280,7 @@ export default function CandlestickView({
           return (
             <div
               key={`spike_badge_${bucket.time}`}
-              className="pointer-events-none absolute z-[15]"
+              className="pointer-events-none absolute z-[26]"
               style={{ left: x, top: highY - 22, transform: "translateX(-50%)" }}
             >
               <div
@@ -223,17 +297,18 @@ export default function CandlestickView({
         })}
 
       {/* Insulin effort strip */}
-      <div className="mt-1 flex items-end gap-px" style={{ height: INSULIN_STRIP_HEIGHT }}>
+      <div className="mt-1 flex items-end gap-px" style={{ height: INSULIN_STRIP_HEIGHT, borderTop: "1px solid rgba(255,255,255,0.04)" }}>
         {insulinBuckets.map((bucket) => {
           const heightPct = maxInsulinUnits > 0 ? (bucket.units / maxInsulinUnits) * 100 : 0;
           return (
             <div key={`insulin_${bucket.time}`} className="flex flex-1 items-end justify-center">
               <div
-                className="w-1/2 rounded-t-sm"
+                className="w-3/4 rounded-t-sm"
                 style={{
                   height: `${heightPct}%`,
-                  minHeight: bucket.units > 0 ? "3px" : "0",
-                  background: "rgba(53,168,121,0.35)",
+                  minHeight: bucket.units > 0 ? "4px" : "0",
+                  background: "rgba(53,168,121,0.6)",
+                  boxShadow: bucket.units > 0 ? "0 0 4px rgba(53,168,121,0.25)" : "none",
                 }}
               />
             </div>
@@ -243,6 +318,37 @@ export default function CandlestickView({
       <div className="mt-0.5 text-center text-[9px] font-medium uppercase tracking-wider text-white/20">
         Support per hour
       </div>
+
+      {/* Long-press tooltip */}
+      {activeTooltip && activeTooltip.rect && activeTooltip.high != null && createPortal(
+        <div
+          className="fixed z-[200] pointer-events-none"
+          style={{
+            left: activeTooltip.rect.left + activeTooltip.rect.width / 2,
+            top: activeTooltip.rect.top + valueToY(activeTooltip.high, marginTop, plotHeight) - 8,
+            transform: "translate(-50%, -100%)",
+          }}
+        >
+          <div
+            className="rounded-xl border px-3 py-2"
+            style={{
+              background: "linear-gradient(165deg, rgba(18,28,23,0.97), rgba(10,16,13,0.98))",
+              borderColor: "rgba(255,255,255,0.14)",
+              boxShadow: "0 8px 28px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.1)",
+            }}
+          >
+            <p className="text-[10px] font-medium text-white/40">{format(new Date(activeTooltip.time), "h:mm a")}</p>
+            <p className="mt-0.5 text-sm font-bold text-white">
+              {Math.round(activeTooltip.low)} – {Math.round(activeTooltip.high)}
+              <span className="ml-1 text-xs font-normal text-white/40">mg/dL</span>
+            </p>
+            <p className="mt-0.5 text-xs text-white/60">
+              Avg <span className="font-semibold text-white/80">{Math.round(activeTooltip.avg)}</span> mg/dL
+            </p>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

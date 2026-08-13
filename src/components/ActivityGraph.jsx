@@ -22,6 +22,9 @@ const HALF_HOUR_MS = 30 * 60 * 1000;
 const HISTORY_DAYS = 7;
 const FUTURE_HOURS = 3;
 const VISIBLE_HOURS = 6;
+const HOUR_MS = 60 * 60 * 1000;
+const CANDLESTICK_HISTORY_HOURS = 72;
+const CANDLESTICK_FUTURE_HOURS = 12;
 const CHART_HEIGHT = 260;
 const CHART_MARGIN_TOP = 70;
 const CHART_MARGIN_BOTTOM = 0;
@@ -429,13 +432,16 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
   const latestGlucoseReading = sortedGlucoseReadings[sortedGlucoseReadings.length - 1];
   const latestGlucoseTime = latestGlucoseReading?.time ?? Math.round(Date.now() / STEP_MS) * STEP_MS;
-  const latestGlucoseBucket = Math.round(latestGlucoseTime / STEP_MS) * STEP_MS;
+  const latestGlucoseBucket = isCandlestick
+    ? Math.floor(latestGlucoseTime / HOUR_MS) * HOUR_MS
+    : Math.round(latestGlucoseTime / STEP_MS) * STEP_MS;
+  const futureHours = Math.max(FUTURE_HOURS, Math.ceil(viewWindow / 2));
   const domainStart = isCandlestick
-    ? latestGlucoseBucket - 24 * 60 * 60 * 1000
-    : latestGlucoseBucket - HISTORY_DAYS * 24 * 60 * 60 * 1000;
+    ? latestGlucoseBucket - CANDLESTICK_HISTORY_HOURS * HOUR_MS
+    : latestGlucoseBucket - HISTORY_DAYS * 24 * HOUR_MS;
   const domainEnd = isCandlestick
-    ? latestGlucoseBucket + 60 * 60 * 1000
-    : latestGlucoseBucket + FUTURE_HOURS * 60 * 60 * 1000;
+    ? latestGlucoseBucket + CANDLESTICK_FUTURE_HOURS * HOUR_MS
+    : latestGlucoseBucket + futureHours * HOUR_MS;
   const filteredGlucoseReadings = useMemo(() =>
   filters.glucose ?
   sortedGlucoseReadings.filter((reading) => reading.time >= domainStart && reading.time <= domainEnd) :
@@ -549,9 +555,9 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const totalMs = domainEnd - domainStart;
   const visibleMs = viewWindow * 60 * 60 * 1000;
   const pxPerMin = containerWidth / (visibleMs / 60000);
-  const chartWidth = isCandlestick ? containerWidth : Math.max(containerWidth, Math.round(totalMs / 60000 * pxPerMin));
+  const chartWidth = Math.max(containerWidth, Math.round(totalMs / 60000 * pxPerMin));
   const latestGlucoseX = (latestGlucoseBucket - domainStart) / totalMs * chartWidth;
-  const maxScrollLeft = isCandlestick ? 0 : Math.max(0, Math.min(chartWidth - containerWidth, latestGlucoseX - containerWidth / 2));
+  const maxScrollLeft = Math.max(0, Math.min(chartWidth - containerWidth, latestGlucoseX - containerWidth / 2));
   const plotHeight = CHART_HEIGHT - CHART_MARGIN_TOP - CHART_MARGIN_BOTTOM - X_AXIS_HEIGHT;
 
   const mergedMonitoringIntervals = useMemo(() => {
@@ -950,7 +956,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         <TimeViewToggle value={viewWindow} onChange={setViewWindow} />
       </div>
       <div className="relative">
-      {!isCandlestick && (
       <button
         type="button"
         onClick={scrollToLatestGlucose}
@@ -958,7 +963,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         aria-label="Scroll to latest glucose">
           <CornerUpRight className="h-4 w-4" />
         </button>
-      )}
       <div
         ref={graphViewportRef}
         className="relative overflow-hidden"
@@ -1000,7 +1004,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         <div className="absolute -inset-[3px] rounded-full border border-white/20" />
       </div>
       }
-      {!isCandlestick && filters.glucose && filteredGlucoseReadings.length > 0 && (
+      {filters.glucose && filteredGlucoseReadings.length > 0 && (
         <div className="pointer-events-none absolute right-4 top-0 z-20" style={{ height: CHART_HEIGHT }}>
           <span
             className="absolute right-0 text-[9px] font-medium leading-none text-white/25"
@@ -1017,23 +1021,10 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         </div>
       )}
       {/* monitoring gradient bands live inside the scrollable chart below */}
-      {isCandlestick && (
-        <CandlestickView
-          glucoseReadings={filteredGlucoseReadings}
-          doses={filteredDoses}
-          spikeEvents={spikeEvents}
-          detectedSpikes={detectedSpikes}
-          targetRange={targetRange}
-          containerWidth={containerWidth}
-          chartHeight={CHART_HEIGHT}
-          marginTop={CHART_MARGIN_TOP}
-          xAxisHeight={X_AXIS_HEIGHT}
-        />
-      )}
       <div
         ref={scrollRef}
         className="overflow-x-auto"
-        style={{ display: isCandlestick ? "none" : undefined, WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}
+        style={{ WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}
         onScroll={(event) => {
           const el = event.currentTarget;
           if (el.scrollLeft > maxScrollLeft) {
@@ -1043,7 +1034,23 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           }
           scheduleCenterGlucoseUpdate(el.scrollLeft);
         }}>
-        <div className="relative" style={{ width: chartWidth, height: CHART_HEIGHT + 36 }}>
+        <div className="relative" style={{ width: chartWidth, height: isCandlestick ? CHART_HEIGHT + 80 : CHART_HEIGHT + 36 }}>
+          {isCandlestick ? (
+            <CandlestickView
+              glucoseReadings={filteredGlucoseReadings}
+              doses={filteredDoses}
+              spikeEvents={spikeEvents}
+              detectedSpikes={detectedSpikes}
+              targetRange={targetRange}
+              chartWidth={chartWidth}
+              chartHeight={CHART_HEIGHT}
+              marginTop={CHART_MARGIN_TOP}
+              xAxisHeight={X_AXIS_HEIGHT}
+              domainStart={domainStart}
+              domainEnd={domainEnd}
+            />
+          ) : (
+          <>
           {positionedMonitoringIntervals.map((iv, idx) => (
             <div
               key={`monitoring_band_${idx}`}
@@ -1277,6 +1284,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               onTag={() => setSpikeTagTarget(spike)}
             />
           ))}
+          </>
+          )}
         </div>
       </div>
       </div>
