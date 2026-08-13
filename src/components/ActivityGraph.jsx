@@ -13,6 +13,7 @@ import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 import { detectSpikes, generateAssumedReadings } from "@/lib/spikeDetection";
 import SpikeMarker from "@/components/graph/SpikeMarker";
 import SpikeTagModal from "@/components/graph/SpikeTagModal";
+import GlucoseTicker from "@/components/graph/GlucoseTicker";
 
 const STEP_MS = 3 * 60 * 1000;
 const HALF_HOUR_MS = 30 * 60 * 1000;
@@ -79,6 +80,13 @@ function getDoseKey(dose, index = 0) {
 
 function formatGlucoseDisplay(value) {
   return Math.round(value);
+}
+
+function formatRelativeTime(time) {
+  const diffMin = Math.floor((Date.now() - time) / 60000);
+  if (diffMin < 1) return "just now";
+  if (diffMin < 60) return `${diffMin}m ago`;
+  return format(new Date(time), "h:mm a");
 }
 
 function buildMonotoneSegments(points, getValue) {
@@ -305,10 +313,11 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   };
   const scrollRef = useRef(null);
   const centerMarkerRef = useRef(null);
-  const tooltipValueRef = useRef(null);
+  const tickerRef = useRef(null);
   const tooltipTimeRef = useRef(null);
   const tooltipDateRef = useRef(null);
   const scrollFrameRef = useRef(null);
+  const prevLatestValueRef = useRef(null);
   const pendingScrollLeftRef = useRef(0);
   const containerRef = useRef(null);
   const graphViewportRef = useRef(null);
@@ -350,6 +359,19 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       window.removeEventListener("storage", updateTargetRange);
     };
   }, []);
+
+  // Refresh relative time labels ("just now", "Xm ago") every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const scrollLeft = scrollRef.current?.scrollLeft ?? maxScrollLeft;
+      const centerTime = getCenterTimeForScroll(scrollLeft);
+      const glucose = getGlucoseAt(centerTime);
+      if (glucose && tooltipTimeRef.current) {
+        tooltipTimeRef.current.textContent = formatRelativeTime(glucose.time);
+      }
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [maxScrollLeft, glucoseLinePoints]);
 
   const { data: spikeEvents = [] } = useQuery({
     queryKey: ["spike-events"],
@@ -741,9 +763,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     };
   };
 
-  const drawCenterGlucose = (scrollLeft) => {
+  const drawCenterGlucose = (scrollLeft, animate = false) => {
     const marker = centerMarkerRef.current;
-    const valueEl = tooltipValueRef.current;
     const timeEl = tooltipTimeRef.current;
     const dateEl = tooltipDateRef.current;
 
@@ -764,8 +785,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       marker.style.opacity = String(getHighRangeOpacity(glucose.plotValue));
     }
 
-    if (valueEl) valueEl.textContent = formatGlucoseDisplay(glucose.value);
-    if (timeEl) timeEl.textContent = format(new Date(glucose.time), "h:mm a");
+    if (tickerRef.current) tickerRef.current.setValue(formatGlucoseDisplay(glucose.value), animate);
+    if (timeEl) timeEl.textContent = formatRelativeTime(glucose.time);
     if (dateEl) dateEl.textContent = format(new Date(glucose.time), "EEEE, MMM d");
   };
 
@@ -843,7 +864,10 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   useEffect(() => {
     if (!scrollRef.current) return;
     scrollRef.current.scrollLeft = maxScrollLeft;
-    drawCenterGlucose(maxScrollLeft);
+    const latestValue = glucoseLinePoints.length > 0 ? glucoseLinePoints[glucoseLinePoints.length - 1].value : null;
+    const shouldAnimate = prevLatestValueRef.current !== null && latestValue !== null && latestValue !== prevLatestValueRef.current;
+    prevLatestValueRef.current = latestValue;
+    drawCenterGlucose(maxScrollLeft, shouldAnimate);
     updateMonitoringOverlay(maxScrollLeft);
 
     return () => {
@@ -929,7 +953,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                 <Info className="h-2.5 w-2.5" />
               </span>
             )}
-            <span ref={tooltipValueRef}>{formatGlucoseDisplay(glucoseLinePoints[glucoseLinePoints.length - 1].value)}</span> <span className="text-xs font-medium text-white/35">mg/dL</span>
+            <GlucoseTicker ref={tickerRef} initialValue={formatGlucoseDisplay(glucoseLinePoints[glucoseLinePoints.length - 1].value)} /> <span className="text-xs font-medium text-white/35">mg/dL</span>
           </div>
           <div ref={tooltipTimeRef} className="mt-1 text-xs font-medium text-white/35">{format(new Date(glucoseLinePoints[glucoseLinePoints.length - 1].time), "h:mm a")}</div>
           <div ref={tooltipDateRef} className="mt-0.5 text-[10px] font-medium text-white/30">{format(new Date(glucoseLinePoints[glucoseLinePoints.length - 1].time), "EEEE, MMM d")}</div>

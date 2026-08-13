@@ -345,6 +345,18 @@ export default function Dashboard() {
     writeCachedLatestGlucose(latestGlucoseRows[0]);
   }, [latestGlucoseRows]);
 
+  // When the latest-glucose query picks up a newer reading before the graph
+  // query's next refetch, inject it into the graph cache so the ActivityGraph
+  // displays the freshest value immediately — no stale flicker.
+  useEffect(() => {
+    if (!latestGlucoseRows.length || !glucoseReadings.length) return;
+    const latest = latestGlucoseRows[0];
+    const graphLatest = glucoseReadings[0];
+    if (!latest?.recorded_at || !graphLatest?.recorded_at) return;
+    if (new Date(latest.recorded_at).getTime() <= new Date(graphLatest.recorded_at).getTime()) return;
+    queryClient.setQueryData(["glucose-readings", "graph"], (old = []) => [latest, ...old]);
+  }, [latestGlucoseRows, glucoseReadings, queryClient]);
+
   const { data: glucoseReadings = [] } = useQuery({
     queryKey: ["glucose-readings", "graph"],
     queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", 5000),
