@@ -145,18 +145,18 @@ function TimeAxisTick({ x, y, payload }) {
   const minute = date.getMinutes();
 
   if (minute === 30) {
-    return <circle cx={x} cy={y + 8} r={2} fill="rgba(255,255,255,0.28)" />;
+    return <circle cx={x} cy={y + 6} r={1} fill="rgba(255,255,255,0.12)" />;
   }
 
   if (minute === 0) {
     return (
       <text
         x={x}
-        y={y + 13}
+        y={y + 11}
         textAnchor="middle"
-        fill="rgba(255,255,255,0.28)"
-        fontSize={10}
-        fontWeight={600}>
+        fill="rgba(255,255,255,0.22)"
+        fontSize={9}
+        fontWeight={500}>
         {format(date, "h a")}
       </text>
     );
@@ -620,7 +620,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         }
 
         placed.push({ x: peakX, labelTop, labelHeight });
-        return { dose, x: peakX, units, key, peakY, labelTop };
+        const color = getInsulinProfile(dose.insulin_type)?.color || "#888";
+        return { dose, x: peakX, units, key, color, peakY, labelTop };
       })
       .filter(Boolean);
   }, [filteredDoses, domainStart, domainEnd, totalMs, chartWidth, chartData, plotHeight]);
@@ -929,23 +930,26 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       {filters.glucose && glucoseLinePoints.length > 0 &&
       <div
         ref={centerMarkerRef}
-        className="pointer-events-none absolute left-1/2 top-0 z-10 h-4 w-4 rounded-full bg-white opacity-0"
+        className="pointer-events-none absolute left-1/2 top-0 z-10 opacity-0"
         style={{
-          transform: "translate3d(-50%, 0, 0) translateY(-50%)",
-          boxShadow: "0 0 0 4px rgba(255,255,255,0.22), 0 0 10px rgba(255,255,255,0.38)",
+          width: "9px",
+          height: "9px",
           willChange: "transform, opacity"
-        }} />
+        }}>
+        <div className="absolute inset-0 rounded-full bg-white" style={{ boxShadow: "0 0 5px rgba(255,255,255,0.25)" }} />
+        <div className="absolute -inset-[3px] rounded-full border border-white/20" />
+      </div>
       }
       {filters.glucose && filteredGlucoseReadings.length > 0 && (
         <div className="pointer-events-none absolute right-4 top-0 z-20" style={{ height: CHART_HEIGHT }}>
           <span
-            className="absolute right-0 text-[11px] font-bold leading-none text-amber-400"
+            className="absolute right-0 text-[9px] font-medium leading-none text-white/25"
             style={{ top: getGlucoseY(targetHigh), transform: "translateY(-120%)" }}
           >
             {Math.round(targetHigh)}
           </span>
           <span
-            className="absolute right-0 text-[11px] font-bold leading-none text-amber-400"
+            className="absolute right-0 text-[9px] font-medium leading-none text-white/25"
             style={{ top: getGlucoseY(targetLow), transform: "translateY(20%)" }}
           >
             {Math.round(targetLow)}
@@ -993,18 +997,17 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             <defs>
               {doseKeys.map((k) =>
               <linearGradient key={`insulin_fill_${k.key}`} id={`insulin_fill_${k.key}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={k.color} stopOpacity={1} />
-                  <stop offset="52%" stopColor={k.color} stopOpacity={0.96} />
-                  <stop offset="100%" stopColor={k.color} stopOpacity={0.88} />
+                  <stop offset="0%" stopColor={k.color} stopOpacity={0.9} />
+                  <stop offset="100%" stopColor={k.color} stopOpacity={0.25} />
                 </linearGradient>
               )}
               <linearGradient id="glucose_range_grad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#78350f" stopOpacity={0} />
-                <stop offset={`${highPct}%`} stopColor="#78350f" stopOpacity={0} />
-                <stop offset={`${highPct}%`} stopColor="#78350f" stopOpacity={0.4} />
-                <stop offset={`${lowPct}%`} stopColor="#78350f" stopOpacity={0.4} />
-                <stop offset={`${lowPct}%`} stopColor="#78350f" stopOpacity={0} />
-                <stop offset="100%" stopColor="#78350f" stopOpacity={0} />
+                <stop offset="0%" stopColor="#5ba88a" stopOpacity={0} />
+                <stop offset={`${highPct}%`} stopColor="#5ba88a" stopOpacity={0} />
+                <stop offset={`${highPct}%`} stopColor="#5ba88a" stopOpacity={0.07} />
+                <stop offset={`${lowPct}%`} stopColor="#5ba88a" stopOpacity={0.07} />
+                <stop offset={`${lowPct}%`} stopColor="#5ba88a" stopOpacity={0} />
+                <stop offset="100%" stopColor="#5ba88a" stopOpacity={0} />
               </linearGradient>
               <linearGradient
                 id="glucose_line_grad"
@@ -1055,8 +1058,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
             {filters.glucose && filteredGlucoseReadings.length > 0 && (
               <>
-                <ReferenceLine yAxisId="glucose" y={targetHigh} stroke="#fbbf24" strokeOpacity={0.55} strokeWidth={2.5} />
-                <ReferenceLine yAxisId="glucose" y={targetLow} stroke="#fbbf24" strokeOpacity={0.55} strokeWidth={2.5} />
+                <ReferenceLine yAxisId="glucose" y={targetHigh} stroke="rgba(255,255,255,0.18)" strokeWidth={1} strokeDasharray="3 4" />
+                <ReferenceLine yAxisId="glucose" y={targetLow} stroke="rgba(255,255,255,0.18)" strokeWidth={1} strokeDasharray="3 4" />
               </>
             )}
 
@@ -1067,9 +1070,11 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               type="basis"
               dataKey={k.key}
               name={k.label}
-              stroke="none"
+              stroke={k.color}
+              strokeWidth={1}
+              strokeOpacity={0.4}
               fill={`url(#insulin_fill_${k.key})`}
-              fillOpacity={0.6}
+              fillOpacity={0.22}
               dot={false}
               activeDot={false}
               isAnimationActive={false} />
@@ -1082,9 +1087,11 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               type="basis"
               dataKey={k.key}
               name={k.label}
-              stroke="none"
+              stroke={k.color}
+              strokeWidth={1}
+              strokeOpacity={0.4}
               fill={`url(#insulin_fill_${k.key})`}
-              fillOpacity={0.6}
+              fillOpacity={0.22}
               dot={false}
               activeDot={false}
               isAnimationActive={false} />
@@ -1098,7 +1105,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               dataKey="glucose"
               name="Glucose"
               stroke="url(#glucose_line_grad)"
-              strokeWidth={2.2}
+              strokeWidth={2.3}
               strokeLinecap="round"
               strokeLinejoin="round"
               dot={false}
@@ -1110,7 +1117,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
           </ComposedChart>
 
-          {filters.insulin && positionedDoseMarkers.map(({ dose, x, units, key, labelTop }) => {
+          {filters.insulin && positionedDoseMarkers.map(({ dose, x, units, key, color, labelTop }) => {
             const isEdgeLeft = x < 24;
             const isEdgeRight = x > chartWidth - 24;
             const formattedUnits = units % 1 === 0 ? String(units) : units.toFixed(1);
@@ -1123,17 +1130,23 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                   left: x,
                   transform: isEdgeLeft ? "translateX(0)" : isEdgeRight ? "translateX(-100%)" : "translateX(-50%)"
                 }}>
+                <div
+                  className="absolute left-1/2 w-px -translate-x-1/2"
+                  style={{
+                    top: labelTop + 14,
+                    height: Math.max(0, CHART_MARGIN_TOP + plotHeight - labelTop - 14),
+                    background: `linear-gradient(to bottom, ${color}25, transparent)`
+                  }} />
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); openMarker("insulin", dose, e.currentTarget.getBoundingClientRect()); }}
                   aria-label={`${formattedUnits} units ${String(dose.insulin_type || "Insulin").split(" ")[0]}`}
-                  className="pointer-events-auto relative flex cursor-pointer items-center rounded-full px-1.5 py-0.5 text-[9px] font-semibold leading-none transition hover:brightness-110"
+                  className="pointer-events-auto relative flex cursor-pointer items-center rounded-full px-1.5 py-0.5 text-[9px] font-semibold leading-none backdrop-blur-sm transition hover:brightness-125"
                   style={{
                     top: labelTop,
-                    color: "rgba(91,168,138,0.9)",
-                    background: "linear-gradient(145deg, rgba(14,24,21,0.72), rgba(14,24,21,0.42))",
-                    border: "1px solid rgba(91,168,138,0.16)",
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.22)"
+                    color,
+                    background: "rgba(10,16,14,0.72)",
+                    border: `1px solid ${color}35`
                   }}
                 >
                   <span>{formattedUnits}u</span>
@@ -1159,27 +1172,24 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                 <div
                   className="absolute left-1/2 w-px -translate-x-1/2"
                   style={{
-                    top: pillTop + 18,
-                    height: Math.max(24, CHART_MARGIN_TOP + plotHeight - pillTop - 18),
-                    background: `linear-gradient(to bottom, ${color}cc, ${color}33 62%, transparent)`,
-                    boxShadow: `0 0 12px ${color}26`
+                    top: pillTop + 16,
+                    height: Math.max(20, CHART_MARGIN_TOP + plotHeight - pillTop - 16),
+                    background: `linear-gradient(to bottom, ${color}55, ${color}15 60%, transparent)`
                   }} />
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); openMarker("carbs", entry, e.currentTarget.getBoundingClientRect()); }}
                   aria-label={`Carbs ${Math.round(entry.carbs)}g`}
-                  className="pointer-events-auto relative flex cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold leading-none shadow-lg backdrop-blur-md transition hover:brightness-110"
+                  className="pointer-events-auto relative flex cursor-pointer items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-semibold leading-none backdrop-blur-sm transition hover:brightness-125"
                   style={{
                     top: pillTop,
                     color,
-                    borderColor: `${color}45`,
-                    background: `linear-gradient(145deg, rgba(14,24,21,0.92), rgba(14,24,21,0.62)), ${color}12`,
-                    boxShadow: "0 10px 24px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.08)"
+                    borderColor: `${color}30`,
+                    background: "rgba(10,16,14,0.72)"
                   }}
                 >
-                  <Wheat className="h-3 w-3" />
-                  <span className="text-white/55">Carbs</span>
-                  <span className="text-white/90">{Math.round(entry.carbs)}g</span>
+                  <Wheat className="h-2.5 w-2.5" />
+                  <span>{Math.round(entry.carbs)}g</span>
                 </button>
               </div>
             );
