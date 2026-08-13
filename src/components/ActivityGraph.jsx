@@ -360,19 +360,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     };
   }, []);
 
-  // Refresh relative time labels ("just now", "Xm ago") every 30 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const scrollLeft = scrollRef.current?.scrollLeft ?? maxScrollLeft;
-      const centerTime = getCenterTimeForScroll(scrollLeft);
-      const glucose = getGlucoseAt(centerTime);
-      if (glucose && tooltipTimeRef.current) {
-        tooltipTimeRef.current.textContent = formatRelativeTime(glucose.time);
-      }
-    }, 30000);
-    return () => clearInterval(interval);
-  }, [maxScrollLeft, glucoseLinePoints]);
-
   const { data: spikeEvents = [] } = useQuery({
     queryKey: ["spike-events"],
     queryFn: () => base44.entities.GlucoseEvent.filter({ event_type: "spike" }, "-created_date", 100),
@@ -870,6 +857,19 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       updateMonitoringOverlay(pendingScrollLeftRef.current);
     });
   };
+
+  // Refresh relative time labels ("just now", "Xm ago") every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const scrollLeft = scrollRef.current?.scrollLeft ?? maxScrollLeft;
+      const centerTime = getCenterTimeForScroll(scrollLeft);
+      const glucose = getGlucoseAt(centerTime);
+      if (glucose && tooltipTimeRef.current) {
+        tooltipTimeRef.current.textContent = formatRelativeTime(glucose.time);
+      }
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [maxScrollLeft, glucoseLinePoints]);
 
   const scrollToLatestGlucose = () => {
     if (!scrollRef.current) return;
