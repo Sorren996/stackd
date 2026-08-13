@@ -189,6 +189,7 @@ export default async function(req) {
             value,
             recorded_at: dt.toISOString(),
             source: "dexcom",
+            trend: egv.trend || null,
           });
         }
 

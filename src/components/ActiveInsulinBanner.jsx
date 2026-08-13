@@ -35,7 +35,7 @@ import ComfortZoneCard from "./ComfortZoneCard";
 import CurrentGlucoseCard from "./graph/CurrentGlucoseCard";
 import { getSupportiveGlucoseMessage } from "@/lib/supportiveMessages";
 import { computeTimeInRange } from "@/lib/timeInRange";
-import { computeGlucoseTrend } from "@/lib/glucoseTrend";
+import { computeGlucoseTrend, mapDexcomTrend } from "@/lib/glucoseTrend";
 import { isRescueCarbEntry } from "@/lib/rescueCarbDetection";
 
 // Flip to false to instantly revert to the original dense dashboard layout.
@@ -1051,7 +1051,12 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
     return computeTimeInRange(readingsToday, insulinSettings.targetLow, insulinSettings.targetHigh);
   }, [safeGlucoseReadings, insulinSettings.targetLow, insulinSettings.targetHigh]);
 
-  const trend = useMemo(() => computeGlucoseTrend(safeGlucoseReadings), [safeGlucoseReadings]);
+  const trend = useMemo(() => {
+    if (latestGlucose?.source === "dexcom" && latestGlucose?.trend) {
+      return mapDexcomTrend(latestGlucose.trend) || computeGlucoseTrend(safeGlucoseReadings);
+    }
+    return computeGlucoseTrend(safeGlucoseReadings);
+  }, [latestGlucose, safeGlucoseReadings]);
 
   const glucoseValue = latestGlucose?.value;
   const targetLow = targetRange.low;

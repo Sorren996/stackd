@@ -3,6 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, HeartPulse, Link2, Unlink, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import DexcomSyncStatus from "@/components/DexcomSyncStatus";
 
 export default function DexcomConnect() {
   const queryClient = useQueryClient();
@@ -68,12 +69,16 @@ export default function DexcomConnect() {
             </div>
           ) : isConnected ? (
             <div className="space-y-4">
-              <div className="flex items-center gap-2 rounded-2xl border border-teal-500/20 bg-teal-500/10 px-4 py-3">
-                <Sparkles className="h-4 w-4 text-teal-300" />
-                <p className="text-xs text-teal-200 font-medium">
-                  Connected and flowing. Your glucose rhythm is syncing peacefully.
-                </p>
-              </div>
+              {current?.last_fetched_at ? (
+                <div className="flex items-center gap-2 rounded-2xl border border-teal-500/20 bg-teal-500/10 px-4 py-3">
+                  <Sparkles className="h-4 w-4 text-teal-300" />
+                  <p className="text-xs text-teal-200 font-medium">
+                    Connected and flowing. Your glucose rhythm is syncing peacefully.
+                  </p>
+                </div>
+              ) : (
+                <DexcomSyncStatus />
+              )}
               <button
                 type="button"
                 onClick={handleDisconnect}

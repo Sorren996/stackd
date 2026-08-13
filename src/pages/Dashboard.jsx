@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { getVersionString } from "@/lib/appVersion";
 import { DateScrollField, TimeScrollField, NumberPadField, TextPadField, SelectField } from "@/components/FormInputFields";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
+import DexcomSyncStatus from "@/components/DexcomSyncStatus";
 
 const FRESH_DATA_MS = 60 * 1000;
 const GRAPH_DATA_MS = 5 * 60 * 1000;
@@ -548,6 +549,10 @@ export default function Dashboard() {
         onSave={(payload) => updateLog.mutate(payload)}
         isSaving={updateLog.isPending}
       />
+
+      <div className="mb-4">
+        <DexcomSyncStatus />
+      </div>
 
       {shouldShowEmptyState ? (
         <div className="flex flex-col items-center justify-center px-4 py-20 text-center">

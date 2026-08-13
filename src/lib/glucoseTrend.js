@@ -106,3 +106,27 @@ export function computeGlucoseTrend(readings) {
   if (ratePerMin > RATE_FAST_NEG) return { icon: "down-right", label: "Slowly falling" };
   return { icon: "down", label: "Falling" };
 }
+
+// Maps a native Dexcom trend string to our icon/label format.
+// Dexcom returns camelCase strings like "doubleUp", "flat", "singleDown".
+// We normalize to handle snake_case and underscore variants too, then
+// map to the same five icon keys used by computeGlucoseTrend.
+export function mapDexcomTrend(rawTrend) {
+  if (!rawTrend || typeof rawTrend !== "string") return null;
+
+  const t = rawTrend
+    .replace(/([A-Z])/g, "_$1")
+    .toLowerCase()
+    .replace(/^_/, "")
+    .trim();
+
+  if (t === "double_up" || t === "up_up") return { icon: "up", label: "Rising quickly" };
+  if (t === "single_up" || t === "up") return { icon: "up", label: "Rising" };
+  if (t === "forty_five_up" || t === "down_up") return { icon: "up-right", label: "Slowly rising" };
+  if (t === "flat") return { icon: "right", label: "Stable" };
+  if (t === "forty_five_down" || t === "up_down") return { icon: "down-right", label: "Slowly falling" };
+  if (t === "single_down" || t === "down") return { icon: "down", label: "Falling" };
+  if (t === "double_down" || t === "down_down") return { icon: "down", label: "Falling quickly" };
+
+  return null;
+}
