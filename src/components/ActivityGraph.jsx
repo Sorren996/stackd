@@ -332,6 +332,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const tooltipTimeRef = useRef(null);
   const tooltipDateRef = useRef(null);
   const scrollFrameRef = useRef(null);
+  const pathSamplesRef = useRef(null);
   const prevLatestValueRef = useRef(null);
   const pendingScrollLeftRef = useRef(0);
   const containerRef = useRef(null);
@@ -811,15 +812,38 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     if (path && typeof path.getPointAtLength === "function") {
       const len = path.getTotalLength();
       if (len > 0) {
-        let lo = 0;
-        let hi = len;
-        for (let i = 0; i < 22; i++) {
-          const mid = (lo + hi) / 2;
-          const pt = path.getPointAtLength(mid);
-          if (pt.x < targetX) lo = mid;
-          else hi = mid;
+        // Sample the path once and cache it; recompute only when the rendered
+        // path changes (new data / view). Each scroll frame then does a cheap
+        // array binary search + lerp instead of repeated DOM calls.
+        let cached = pathSamplesRef.current;
+        if (!cached || cached.el !== path || cached.len !== len) {
+          const n = Math.min(300, Math.max(40, Math.ceil(len / 5)));
+          const pts = [];
+          for (let i = 0; i <= n; i++) {
+            const pt = path.getPointAtLength((i / n) * len);
+            pts.push({ x: pt.x, y: pt.y });
+          }
+          cached = { el: path, len, pts };
+          pathSamplesRef.current = cached;
         }
-        markerY = path.getPointAtLength((lo + hi) / 2).y;
+        const arr = cached.pts;
+        if (targetX <= arr[0].x) {
+          markerY = arr[0].y;
+        } else if (targetX >= arr[arr.length - 1].x) {
+          markerY = arr[arr.length - 1].y;
+        } else {
+          let lo = 0;
+          let hi = arr.length - 1;
+          while (hi - lo > 1) {
+            const mid = (lo + hi) >> 1;
+            if (arr[mid].x < targetX) lo = mid;
+            else hi = mid;
+          }
+          const a = arr[lo];
+          const b = arr[hi];
+          const t = (targetX - a.x) / (b.x - a.x || 1);
+          markerY = a.y + (b.y - a.y) * t;
+        }
       }
     }
 
