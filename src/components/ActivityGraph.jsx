@@ -29,6 +29,14 @@ const CHART_HEIGHT = 260;
 const CHART_MARGIN_TOP = 70;
 const CHART_MARGIN_BOTTOM = 0;
 const X_AXIS_HEIGHT = 30;
+const GLUCOSE_CHART_HEIGHT = 188;
+const GLUCOSE_MARGIN_TOP = 62;
+const GLUCOSE_PLOT_HEIGHT = GLUCOSE_CHART_HEIGHT - GLUCOSE_MARGIN_TOP;
+const INSULIN_CHART_HEIGHT = 96;
+const INSULIN_MARGIN_TOP = 20;
+const INSULIN_PLOT_HEIGHT = INSULIN_CHART_HEIGHT - INSULIN_MARGIN_TOP - X_AXIS_HEIGHT;
+const PLANE_GAP = 8;
+const TWO_PLANE_HEIGHT = GLUCOSE_CHART_HEIGHT + PLANE_GAP + INSULIN_CHART_HEIGHT;
 const GLUCOSE_MIN = 40;
 const GLUCOSE_MAX = 250;
 const CARB_PROFILE_COLORS = {
@@ -558,7 +566,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const chartWidth = Math.max(containerWidth, Math.round(totalMs / 60000 * pxPerMin));
   const latestGlucoseX = (latestGlucoseBucket - domainStart) / totalMs * chartWidth;
   const maxScrollLeft = Math.max(0, Math.min(chartWidth - containerWidth, latestGlucoseX - containerWidth / 2));
-  const plotHeight = CHART_HEIGHT - CHART_MARGIN_TOP - CHART_MARGIN_BOTTOM - X_AXIS_HEIGHT;
+  const plotHeight = GLUCOSE_PLOT_HEIGHT;
 
   const mergedMonitoringIntervals = useMemo(() => {
     const MS = HIGH_PROTEIN_FAT_MONITORING_HOURS * 60 * 60 * 1000;
@@ -569,7 +577,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     return mergeMonitoringIntervals(intervals);
   }, [carbEntries]);
 
-  const monitoringBandTop = CHART_MARGIN_TOP;
+  const monitoringBandTop = GLUCOSE_MARGIN_TOP;
   const monitoringBandHeight = plotHeight;
 
   const positionedMonitoringIntervals = useMemo(() => {
@@ -636,9 +644,10 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           peakX = (point.time - domainStart) / totalMs * chartWidth;
         }
       }
-      const peakY = CHART_MARGIN_TOP + plotHeight * (1 - Math.min(peakVal, 75) / 75);
+      const insulinPlotStart = GLUCOSE_CHART_HEIGHT + PLANE_GAP + INSULIN_MARGIN_TOP;
+      const peakY = insulinPlotStart + INSULIN_PLOT_HEIGHT * (1 - Math.min(peakVal, 75) / 75);
 
-      let labelTop = Math.max(2, peakY - 16);
+      let labelTop = Math.max(GLUCOSE_CHART_HEIGHT + PLANE_GAP + 2, peakY - 16);
 
       for (const p of placed) {
         const horizontalOverlap = Math.abs(peakX - p.x) < minHorizontalGap;
@@ -646,7 +655,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         labelTop < p.labelTop + p.labelHeight + minVerticalGap &&
         labelTop + labelHeight + minVerticalGap > p.labelTop;
         if (horizontalOverlap && verticalOverlap) {
-          labelTop = Math.max(2, p.labelTop - labelHeight - minVerticalGap);
+          labelTop = Math.max(GLUCOSE_CHART_HEIGHT + PLANE_GAP + 2, p.labelTop - labelHeight - minVerticalGap);
         }
       }
 
@@ -655,7 +664,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       return { dose, x: peakX, units, key, color, peakY, labelTop };
     }).
     filter(Boolean);
-  }, [filteredDoses, domainStart, domainEnd, totalMs, chartWidth, chartData, plotHeight]);
+  }, [filteredDoses, domainStart, domainEnd, totalMs, chartWidth, chartData]);
 
   const positionedSpikeMarkers = useMemo(() => {
     const detectedStarts = detectedSpikes.map((s) => new Date(s.startTime).getTime());
@@ -724,7 +733,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
   const getGlucoseY = (value) => {
     const clamped = Math.min(Math.max(value, GLUCOSE_MIN), GLUCOSE_MAX);
-    return CHART_MARGIN_TOP + (GLUCOSE_MAX - clamped) / (GLUCOSE_MAX - GLUCOSE_MIN) * plotHeight;
+    return GLUCOSE_MARGIN_TOP + (GLUCOSE_MAX - clamped) / (GLUCOSE_MAX - GLUCOSE_MIN) * plotHeight;
   };
 
   const getHighRangeOpacity = (value) => {
@@ -1003,7 +1012,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       </div>
           }
       {filters.glucose && filteredGlucoseReadings.length > 0 &&
-          <div className="pointer-events-none absolute right-4 top-0 z-20" style={{ height: CHART_HEIGHT }}>
+          <div className="pointer-events-none absolute right-4 top-0 z-20" style={{ height: GLUCOSE_CHART_HEIGHT }}>
           <span
               className="absolute right-0 text-[9px] font-medium leading-none text-white/25"
               style={{ top: getGlucoseY(targetHigh), transform: "translateY(-120%)" }}>
@@ -1032,7 +1041,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               }
               scheduleCenterGlucoseUpdate(el.scrollLeft);
             }}>
-        <div className="relative" style={{ width: chartWidth, height: isCandlestick ? CHART_HEIGHT + 68 : CHART_HEIGHT + 36 }}>
+        <div className="relative" style={{ width: chartWidth, height: isCandlestick ? CHART_HEIGHT + 68 : TWO_PLANE_HEIGHT }}>
           {isCandlestick ?
               <CandlestickView
                 glucoseReadings={filteredGlucoseReadings}
@@ -1067,133 +1076,153 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                   aria-hidden="true" />
 
                 )}
-          <ComposedChart
-                  width={chartWidth}
-                  height={CHART_HEIGHT}
-                  data={chartData}
-                  margin={{ top: CHART_MARGIN_TOP, right: 0, left: -20, bottom: CHART_MARGIN_BOTTOM }}>
-            <defs>
-              {doseKeys.map((k) =>
-                    <linearGradient key={`insulin_fill_${k.key}`} id={`insulin_fill_${k.key}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={k.color} stopOpacity={0.9} />
-                  <stop offset="100%" stopColor={k.color} stopOpacity={0.25} />
+          <div style={{ position: "absolute", top: 0, left: 0 }}>
+            <ComposedChart
+                    width={chartWidth}
+                    height={GLUCOSE_CHART_HEIGHT}
+                    data={chartData}
+                    margin={{ top: GLUCOSE_MARGIN_TOP, right: 0, left: -20, bottom: 0 }}>
+              <defs>
+                <linearGradient id="glucose_range_grad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#5ba88a" stopOpacity={0} />
+                  <stop offset={`${highPct}%`} stopColor="#5ba88a" stopOpacity={0} />
+                  <stop offset={`${highPct}%`} stopColor="#5ba88a" stopOpacity={0.07} />
+                  <stop offset={`${lowPct}%`} stopColor="#5ba88a" stopOpacity={0.07} />
+                  <stop offset={`${lowPct}%`} stopColor="#5ba88a" stopOpacity={0} />
+                  <stop offset="100%" stopColor="#5ba88a" stopOpacity={0} />
                 </linearGradient>
+                <linearGradient
+                        id="glucose_line_grad"
+                        gradientUnits="userSpaceOnUse"
+                        x1="0"
+                        y1={GLUCOSE_MARGIN_TOP}
+                        x2="0"
+                        y2={GLUCOSE_CHART_HEIGHT}>
+                  {lineGradStops.map((stop, index) =>
+                        <stop
+                          key={`glucose_line_stop_${index}`}
+                          offset={`${stop.offset}%`}
+                          stopColor={stop.color}
+                          stopOpacity={stop.opacity} />
                     )}
-              <linearGradient id="glucose_range_grad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#5ba88a" stopOpacity={0} />
-                <stop offset={`${highPct}%`} stopColor="#5ba88a" stopOpacity={0} />
-                <stop offset={`${highPct}%`} stopColor="#5ba88a" stopOpacity={0.07} />
-                <stop offset={`${lowPct}%`} stopColor="#5ba88a" stopOpacity={0.07} />
-                <stop offset={`${lowPct}%`} stopColor="#5ba88a" stopOpacity={0} />
-                <stop offset="100%" stopColor="#5ba88a" stopOpacity={0} />
-              </linearGradient>
-              <linearGradient
-                      id="glucose_line_grad"
-                      gradientUnits="userSpaceOnUse"
-                      x1="0"
-                      y1={CHART_MARGIN_TOP}
-                      x2="0"
-                      y2={CHART_HEIGHT - CHART_MARGIN_BOTTOM - X_AXIS_HEIGHT}>
-                {lineGradStops.map((stop, index) =>
-                      <stop
-                        key={`glucose_line_stop_${index}`}
-                        offset={`${stop.offset}%`}
-                        stopColor={stop.color}
-                        stopOpacity={stop.opacity} />
+                </linearGradient>
+              </defs>
 
+              <XAxis
+                      dataKey="time"
+                      type="number"
+                      domain={[domainStart, domainEnd]}
+                      ticks={timeTicks}
+                      tick={false}
+                      axisLine={false}
+                      tickLine={false}
+                      height={0}
+                      interval={0} />
+
+              <YAxis yAxisId="glucose" domain={[GLUCOSE_MIN, GLUCOSE_MAX]} allowDataOverflow hide />
+
+              {filters.glucose && filteredGlucoseReadings.length > 0 &&
+                    <Area
+                      yAxisId="glucose"
+                      type="monotoneX"
+                      dataKey="bg"
+                      stroke="none"
+                      fill="url(#glucose_range_grad)"
+                      isAnimationActive={false}
+                      dot={false}
+                      activeDot={false}
+                      legendType="none" />
+                }
+
+              {filters.glucose && filteredGlucoseReadings.length > 0 &&
+                    <>
+                  <ReferenceLine yAxisId="glucose" y={targetHigh} stroke="rgba(255,255,255,0.18)" strokeWidth={1} strokeDasharray="3 4" />
+                  <ReferenceLine yAxisId="glucose" y={targetLow} stroke="rgba(255,255,255,0.18)" strokeWidth={1} strokeDasharray="3 4" />
+                </>
+                    }
+
+              {filters.glucose && filteredGlucoseReadings.length > 0 &&
+                    <Line
+                      yAxisId="glucose"
+                      type="monotoneX"
+                      dataKey="glucose"
+                      name="Glucose"
+                      stroke="url(#glucose_line_grad)"
+                      strokeWidth={2.3}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      dot={false}
+                      activeDot={false}
+                      connectNulls={true}
+                      isAnimationActive={false} />
+                }
+            </ComposedChart>
+          </div>
+
+          <div style={{ position: "absolute", top: GLUCOSE_CHART_HEIGHT + PLANE_GAP / 2, left: 0, right: 0, height: 1, background: "rgba(255,255,255,0.04)" }} />
+
+          <div style={{ position: "absolute", top: GLUCOSE_CHART_HEIGHT + PLANE_GAP, left: 0 }}>
+            <ComposedChart
+                    width={chartWidth}
+                    height={INSULIN_CHART_HEIGHT}
+                    data={chartData}
+                    margin={{ top: INSULIN_MARGIN_TOP, right: 0, left: -20, bottom: 0 }}>
+              <defs>
+                {doseKeys.map((k) =>
+                      <linearGradient key={`insulin_fill_${k.key}`} id={`insulin_fill_${k.key}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={k.color} stopOpacity={0.9} />
+                    <stop offset="100%" stopColor={k.color} stopOpacity={0.25} />
+                  </linearGradient>
                       )}
-              </linearGradient>
-            </defs>
+              </defs>
 
-            <XAxis
-                    dataKey="time"
-                    type="number"
-                    domain={[domainStart, domainEnd]}
-                    ticks={timeTicks}
-                    tick={<TimeAxisTick />}
-                    axisLine={false}
-                    tickLine={false}
-                    height={X_AXIS_HEIGHT}
-                    interval={0} />
-            
+              <XAxis
+                      dataKey="time"
+                      type="number"
+                      domain={[domainStart, domainEnd]}
+                      ticks={timeTicks}
+                      tick={<TimeAxisTick />}
+                      axisLine={false}
+                      tickLine={false}
+                      height={X_AXIS_HEIGHT}
+                      interval={0} />
 
-            <YAxis yAxisId="insulin" domain={[0, 75]} hide />
-            <YAxis yAxisId="glucose" domain={[GLUCOSE_MIN, GLUCOSE_MAX]} allowDataOverflow hide />
+              <YAxis yAxisId="insulin" domain={[0, 75]} hide />
 
-            {filters.glucose && filteredGlucoseReadings.length > 0 &&
-                  <Area
-                    yAxisId="glucose"
-                    type="monotoneX"
-                    dataKey="bg"
-                    stroke="none"
-                    fill="url(#glucose_range_grad)"
-                    isAnimationActive={false}
-                    dot={false}
-                    activeDot={false}
-                    legendType="none" />
-
-                  }
-
-            {filters.glucose && filteredGlucoseReadings.length > 0 &&
-                  <>
-                <ReferenceLine yAxisId="glucose" y={targetHigh} stroke="rgba(255,255,255,0.18)" strokeWidth={1} strokeDasharray="3 4" />
-                <ReferenceLine yAxisId="glucose" y={targetLow} stroke="rgba(255,255,255,0.18)" strokeWidth={1} strokeDasharray="3 4" />
-              </>
-                  }
-
-            {doseKeys.filter((k) => k.isBasal).map((k) =>
-                  <Area
-                    key={k.key}
-                    yAxisId="insulin"
-                    type="basis"
-                    dataKey={k.key}
-                    name={k.label}
-                    stroke={k.color}
-                    strokeWidth={1}
-                    strokeOpacity={0.4}
-                    fill={`url(#insulin_fill_${k.key})`}
-                    fillOpacity={0.22}
-                    dot={false}
-                    activeDot={false}
-                    isAnimationActive={false} />
-
-                  )}
-            {doseKeys.filter((k) => !k.isBasal).map((k) =>
-                  <Area
-                    key={k.key}
-                    yAxisId="insulin"
-                    type="basis"
-                    dataKey={k.key}
-                    name={k.label}
-                    stroke={k.color}
-                    strokeWidth={1}
-                    strokeOpacity={0.4}
-                    fill={`url(#insulin_fill_${k.key})`}
-                    fillOpacity={0.22}
-                    dot={false}
-                    activeDot={false}
-                    isAnimationActive={false} />
-
-                  )}
-
-            {filters.glucose && filteredGlucoseReadings.length > 0 &&
-                  <Line
-                    yAxisId="glucose"
-                    type="monotoneX"
-                    dataKey="glucose"
-                    name="Glucose"
-                    stroke="url(#glucose_line_grad)"
-                    strokeWidth={2.3}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    dot={false}
-                    activeDot={false}
-                    connectNulls={true}
-                    isAnimationActive={false} />
-
-                  }
-
-          </ComposedChart>
+              {doseKeys.filter((k) => k.isBasal).map((k) =>
+                    <Area
+                      key={k.key}
+                      yAxisId="insulin"
+                      type="basis"
+                      dataKey={k.key}
+                      name={k.label}
+                      stroke={k.color}
+                      strokeWidth={1}
+                      strokeOpacity={0.4}
+                      fill={`url(#insulin_fill_${k.key})`}
+                      fillOpacity={0.22}
+                      dot={false}
+                      activeDot={false}
+                      isAnimationActive={false} />
+                )}
+              {doseKeys.filter((k) => !k.isBasal).map((k) =>
+                    <Area
+                      key={k.key}
+                      yAxisId="insulin"
+                      type="basis"
+                      dataKey={k.key}
+                      name={k.label}
+                      stroke={k.color}
+                      strokeWidth={1}
+                      strokeOpacity={0.4}
+                      fill={`url(#insulin_fill_${k.key})`}
+                      fillOpacity={0.22}
+                      dot={false}
+                      activeDot={false}
+                      isAnimationActive={false} />
+                )}
+            </ComposedChart>
+          </div>
 
           {filters.insulin && positionedDoseMarkers.map(({ dose, x, units, key, color, labelTop }) => {
                   const isEdgeLeft = x < 24;
@@ -1212,7 +1241,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                         className="absolute left-1/2 w-px -translate-x-1/2"
                         style={{
                           top: labelTop + 14,
-                          height: Math.max(0, CHART_MARGIN_TOP + plotHeight - labelTop - 14),
+                          height: Math.max(0, GLUCOSE_CHART_HEIGHT + PLANE_GAP + INSULIN_MARGIN_TOP + INSULIN_PLOT_HEIGHT - labelTop - 14),
                           background: `linear-gradient(to bottom, ${color}25, transparent)`
                         }} />
                 <button
@@ -1236,7 +1265,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           {filters.carbs && positionedCarbMarkers.map(({ entry, color, x, lane }) => {
                   const isEdgeLeft = x < 58;
                   const isEdgeRight = x > chartWidth - 58;
-                  const pillTop = CHART_MARGIN_TOP + 8 + lane * 26;
+                  const pillTop = GLUCOSE_CHART_HEIGHT + PLANE_GAP + 2 + lane * 20;
 
                   return (
                     <div
@@ -1244,14 +1273,14 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                       className="pointer-events-none absolute top-0 z-[12]"
                       style={{
                         left: x,
-                        height: CHART_HEIGHT - X_AXIS_HEIGHT,
+                        height: TWO_PLANE_HEIGHT,
                         transform: isEdgeLeft ? "translateX(0)" : isEdgeRight ? "translateX(-100%)" : "translateX(-50%)"
                       }}>
                 <div
                         className="absolute left-1/2 w-px -translate-x-1/2"
                         style={{
                           top: pillTop + 16,
-                          height: Math.max(20, CHART_MARGIN_TOP + plotHeight - pillTop - 16),
+                          height: Math.max(20, GLUCOSE_CHART_HEIGHT + PLANE_GAP + INSULIN_MARGIN_TOP + INSULIN_PLOT_HEIGHT - pillTop - 16),
                           background: `linear-gradient(to bottom, ${color}55, ${color}15 60%, transparent)`
                         }} />
                 <button
@@ -1278,7 +1307,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                   key={`spike_${idx}`}
                   x={spike.x}
                   handled={spike.handled}
-                  chartHeight={CHART_HEIGHT}
+                  chartHeight={GLUCOSE_CHART_HEIGHT}
                   onTag={() => setSpikeTagTarget(spike)} />
 
                 )}
