@@ -38,6 +38,16 @@ export default function InsulinDoseRow({ dose }) {
   }, [curve]);
 
   const markerPct = Math.min(100, Math.max(0, progress * 100));
+  const markerY = useMemo(() => {
+    if (curve.length < 2) return 50;
+    const maxActivity = Math.max(...curve.map((p) => p.activity), 0.001);
+    const idx = progress * (curve.length - 1);
+    const lo = Math.floor(idx);
+    const hi = Math.min(lo + 1, curve.length - 1);
+    const frac = idx - lo;
+    const activity = curve[lo].activity + (curve[hi].activity - curve[lo].activity) * frac;
+    return 100 - (activity / maxActivity) * 100 * 0.82 - 8;
+  }, [curve, progress]);
   const formattedUnits = units % 1 === 0 ? String(units) : units.toFixed(1);
   const formattedIob = iob % 1 === 0 ? String(Math.round(iob)) : iob.toFixed(1);
 
@@ -77,7 +87,7 @@ export default function InsulinDoseRow({ dose }) {
         )}
         <div className="pointer-events-none absolute bottom-0 top-0" style={{ left: `${markerPct}%` }}>
           <div className="h-full w-px bg-white/40" />
-          <div className="absolute top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white" style={{ boxShadow: `0 0 5px ${color}` }} />
+          <div className="absolute h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white" style={{ top: `${markerY}%`, boxShadow: `0 0 5px ${color}` }} />
         </div>
       </div>
 
