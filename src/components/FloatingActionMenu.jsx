@@ -65,7 +65,7 @@ export default function FloatingActionMenu() {
       </AnimatePresence>
 
       {/* Bloom buttons + main FAB */}
-      <div className="fixed bottom-24 right-5 z-50 flex flex-col items-end gap-3">
+      <div className="fixed bottom-24 right-5 z-50 flex flex-col items-end gap-2.5">
         <AnimatePresence>
           {expanded && !doseFormOpen &&
             actions.slice()
@@ -103,7 +103,7 @@ export default function FloatingActionMenu() {
                       {action.label}
                     </motion.span>
                     <motion.span
-                      className="flex h-14 w-14 items-center justify-center rounded-full border backdrop-blur-sm"
+                      className="flex h-12 w-12 items-center justify-center rounded-full border backdrop-blur-sm"
                       style={{
                         background:
                           "linear-gradient(145deg, rgba(255,255,255,0.14), rgba(255,255,255,0.04))",
@@ -112,7 +112,7 @@ export default function FloatingActionMenu() {
                       }}
                     >
                       <ActionIcon
-                        className="h-7 w-7"
+                        className="h-6 w-6"
                         style={{ color: `rgba(${action.color},0.95)` }}
                       />
                     </motion.span>
@@ -128,7 +128,7 @@ export default function FloatingActionMenu() {
           whileTap={{ scale: 0.9 }}
           animate={{ rotate: expanded ? 135 : 0 }}
           transition={{ type: "spring", stiffness: 380, damping: 20 }}
-          className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border backdrop-blur-sm"
+          className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border backdrop-blur-sm"
           style={{
             background:
               "linear-gradient(145deg, rgba(255,255,255,0.24), rgba(255,255,255,0.08))",
@@ -146,7 +146,7 @@ export default function FloatingActionMenu() {
                 "radial-gradient(circle at 28% 0%, rgba(255,255,255,0.34), transparent 38%), radial-gradient(circle at 80% 120%, rgba(45,212,191,0.22), transparent 44%)",
             }}
           />
-          <Plus className="relative z-10 h-7 w-7 text-white/85 drop-shadow-sm" />
+          <Plus className="relative z-10 h-6 w-6 text-white/85 drop-shadow-sm" />
         </motion.button>
       </div>
     </>

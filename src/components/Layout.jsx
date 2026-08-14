@@ -207,10 +207,10 @@ export default function Layout() {
               className="relative mx-4 mb-4 grid w-[min(calc(100vw-2rem),28rem)] grid-cols-4 gap-1 overflow-hidden rounded-[2rem] border px-2 py-1.5 backdrop-blur-sm"
               style={{
                 background:
-                  "linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.06))",
-                borderColor: "rgba(255,255,255,0.24)",
+                  "linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.03))",
+                borderColor: "rgba(255,255,255,0.12)",
                 boxShadow:
-                  "0 18px 50px rgba(0,0,0,0.38), inset 0 1px 1px rgba(255,255,255,0.32), inset 0 -1px 1px rgba(255,255,255,0.08)",
+                  "0 14px 40px rgba(0,0,0,0.30), inset 0 1px 1px rgba(255,255,255,0.18), inset 0 -1px 1px rgba(255,255,255,0.04)",
               }}
             >
               <div
@@ -240,10 +240,10 @@ export default function Layout() {
                         className="absolute inset-0 rounded-[1.55rem]"
                         style={{
                           background:
-                            "linear-gradient(145deg, rgba(255,255,255,0.28), rgba(255,255,255,0.09))",
-                          border: "1px solid rgba(255,255,255,0.34)",
+                            "linear-gradient(145deg, rgba(255,255,255,0.16), rgba(255,255,255,0.05))",
+                          border: "1px solid rgba(255,255,255,0.18)",
                           boxShadow:
-                            "0 10px 24px rgba(0,0,0,0.22), inset 0 1px 1px rgba(255,255,255,0.38), inset 0 -1px 1px rgba(255,255,255,0.1)",
+                            "0 8px 20px rgba(0,0,0,0.18), inset 0 1px 1px rgba(255,255,255,0.22), inset 0 -1px 1px rgba(255,255,255,0.06)",
                         }}
                         transition={{
                           type: "spring",

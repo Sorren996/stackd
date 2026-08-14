@@ -921,7 +921,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     <div ref={containerRef} className="relative overflow-visible">
       <div ref={monitoringA11yRef} className="sr-only" aria-live="polite" role="status" />
       {/* Controls row */}
-      <div className="flex py-3 items-center mb-4 justify-between pl-4 pr-4 gap-2">
+      <div className="flex py-2 items-center mb-2 justify-between pl-4 pr-4 gap-2">
 
         {/* Filter button */}
         <div className="relative justify-start">
@@ -999,7 +999,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               height: "9px",
               willChange: "transform, opacity"
             }}>
-        <div className="absolute inset-0 rounded-full bg-white" style={{ boxShadow: "0 0 5px rgba(255,255,255,0.25)" }} />
+        <div className="absolute left-1/2 top-1/2 w-px" style={{ height: 200, background: "linear-gradient(to bottom, rgba(255,255,255,0.12), transparent 85%)", transform: "translateX(-50%)" }} />
+        <div className="absolute inset-0 rounded-full bg-white" style={{ boxShadow: "0 0 6px rgba(255,255,255,0.4), 0 0 14px rgba(255,255,255,0.15)" }} />
         <div className="absolute -inset-[3px] rounded-full border border-white/20" />
       </div>
           }

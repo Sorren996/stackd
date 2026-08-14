@@ -14,10 +14,10 @@ const TREND_ICONS = {
 };
 
 const CARD_STYLE = {
-  background: "linear-gradient(145deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0))",
-  borderColor: "rgba(255,255,255,0.16)",
+  background: "linear-gradient(152deg, rgba(255,255,255,0.04), rgba(255,255,255,0.008))",
+  borderColor: "rgba(255,255,255,0.09)",
   boxShadow:
-    "0 12px 40px rgba(0,0,0,0.10), 0 4px 12px rgba(0,0,0,0.06), inset 0 1px 1px rgba(255,255,255,0.22), inset 0 -1px 1px rgba(255,255,255,0.05)",
+    "0 8px 32px rgba(0,0,0,0.12), inset 0 1px 1px rgba(255,255,255,0.10), inset 0 0 28px rgba(91,168,138,0.025)",
 };
 
 function AmbientOrb({ color, duration = 6 }) {
@@ -77,10 +77,10 @@ export default function CurrentGlucoseCard({
       >
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -inset-6 opacity-60"
+          className="pointer-events-none absolute -inset-6 opacity-50"
           style={{
             background:
-              "radial-gradient(circle at 25% 0%, rgba(255,255,255,0.18), transparent 34%), radial-gradient(circle at 92% 118%, rgba(45,212,191,0.08), transparent 42%)",
+              "radial-gradient(circle at 30% 0%, rgba(91,168,138,0.07), transparent 50%), radial-gradient(circle at 90% 100%, rgba(255,255,255,0.05), transparent 45%)",
           }}
         />
         <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2">

@@ -754,16 +754,16 @@ function MetricCard({ label, value, sub, status, color, tooltipId, openTooltip, 
       whileTap={{ scale: 0.985 }}
       className="metric-card relative col-span-2 overflow-hidden rounded-2xl border p-4 backdrop-blur-sm"
       style={{
-        background: "linear-gradient(145deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0))",
-        borderColor: "rgba(255,255,255,0.16)",
-        boxShadow: "0 12px 40px rgba(0,0,0,0.10), 0 4px 12px rgba(0,0,0,0.06), inset 0 1px 1px rgba(255,255,255,0.22), inset 0 -1px 1px rgba(255,255,255,0.05)",
+        background: "linear-gradient(152deg, rgba(255,255,255,0.04), rgba(255,255,255,0.008))",
+        borderColor: "rgba(255,255,255,0.09)",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.12), inset 0 1px 1px rgba(255,255,255,0.10), inset 0 0 28px rgba(91,168,138,0.025)",
       }}
     >
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -inset-6 opacity-60"
+        className="pointer-events-none absolute -inset-6 opacity-50"
         style={{
-          background: "radial-gradient(circle at 25% 0%, rgba(255,255,255,0.18), transparent 34%), radial-gradient(circle at 92% 118%, rgba(45,212,191,0.08), transparent 42%)",
+          background: "radial-gradient(circle at 30% 0%, rgba(91,168,138,0.07), transparent 50%), radial-gradient(circle at 90% 100%, rgba(255,255,255,0.05), transparent 45%)",
         }}
       />
       <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2">
@@ -807,17 +807,21 @@ const TREND_ICONS = {
   down: ArrowDown,
 };
 
-function SupportiveGlucoseMessage({ insight }) {
+function SupportiveGlucoseMessage({ insight, trend, TrendIcon }) {
   if (!insight?.message) return null;
 
   return (
-    <p
-      aria-live="polite"
-      className="mx-auto mt-3 mb-1 max-w-[90vw] text-center text-[13px] font-medium italic leading-relaxed"
-      style={{ color: "rgba(255,255,255,0.8)" }}
+    <div
+      className="mx-auto mt-2.5 mb-0.5 flex max-w-[92vw] items-center justify-center gap-2 rounded-full border px-3.5 py-1.5"
+      style={{ background: "rgba(255,255,255,0.018)", borderColor: "rgba(255,255,255,0.06)" }}
     >
-      "{insight.message}"
-    </p>
+      {TrendIcon && (
+        <TrendIcon className="h-3.5 w-3.5 shrink-0" style={{ color: trend?.color || "rgba(255,255,255,0.45)" }} />
+      )}
+      <p className="text-[11px] font-medium leading-tight text-white/50">
+        {insight.message}
+      </p>
+    </div>
   );
 }
 
@@ -1117,9 +1121,12 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
           />
         </div>
 
-        <SupportiveGlucoseMessage insight={supportiveGlucoseInsight} />
+        <SupportiveGlucoseMessage insight={supportiveGlucoseInsight} trend={trend} TrendIcon={TrendIcon} />
 
-        <div className={CLEAN_LAYOUT ? "mt-5" : ""}>
+        <div className="mt-3">
+          <div className="mb-1 flex items-center justify-between px-1">
+            <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/40">Your Flow</span>
+          </div>
           {graphSlot}
         </div>
 
@@ -1135,7 +1142,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
           </div>
         )}
 
-        <p className={`text-legible mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-white ${CLEAN_LAYOUT ? "mt-8 opacity-70" : "mt-4"}`}>Your Rhythm</p>
+        <p className={`text-legible mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-white ${CLEAN_LAYOUT ? "mt-6 opacity-70" : "mt-4"}`}>Your Rhythm</p>
         <div className="grid grid-cols-1 gap-3">
           <MetricCard
             label="Meal Balance"
