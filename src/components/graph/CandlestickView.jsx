@@ -48,32 +48,59 @@ function CandlestickShape(props) {
   const { x, width, payload, marginTop, plotHeight, targetHighY, targetLowY, targetLow, targetHigh } = props;
   if (payload.high == null || payload.low == null) return null;
 
-  const highY = valueToY(payload.high, marginTop, plotHeight);
-  const lowY = valueToY(payload.low, marginTop, plotHeight);
+  const rawHigh = payload.high;
+  const rawLow = payload.low;
+  const plotTop = marginTop;
+  const plotBottom = marginTop + plotHeight;
+  const MIN_EDGE_BODY = 8;
+
+  // A candle whose entire range falls outside the viewport would otherwise clamp
+  // to a single edge and collapse to a sliver. Pin a visible body at the edge so
+  // there's always a marker, with a small cap line signalling it extends beyond.
+  const entirelyAbove = rawLow > GLUCOSE_MAX;
+  const entirelyBelow = rawHigh < GLUCOSE_MIN;
+
+  let drawHighY = valueToY(rawHigh, marginTop, plotHeight);
+  let drawLowY = valueToY(rawLow, marginTop, plotHeight);
+  if (entirelyAbove) {
+    drawHighY = plotTop;
+    drawLowY = plotTop + MIN_EDGE_BODY;
+  } else if (entirelyBelow) {
+    drawLowY = plotBottom;
+    drawHighY = plotBottom - MIN_EDGE_BODY;
+  }
+
   const avgY = valueToY(payload.avg, marginTop, plotHeight);
+  const clampedAvgY = Math.min(Math.max(avgY, plotTop), plotBottom);
 
   const barWidth = Math.max(5, Math.min(13, width * 0.4));
   const barX = x + (width - barWidth) / 2;
-  const barHeight = Math.max(2, lowY - highY);
+  const barHeight = Math.max(2, drawLowY - drawHighY);
   const rx = Math.min(barWidth / 2, 3);
 
-  const exceedsHigh = highY < targetHighY;
-  const belowLow = lowY > targetLowY;
-  const redBottom = Math.min(targetHighY, lowY);
-  const blueTop = Math.max(targetLowY, highY);
+  const exceedsHigh = drawHighY < targetHighY;
+  const belowLow = drawLowY > targetLowY;
+  const redBottom = Math.min(targetHighY, drawLowY);
+  const blueTop = Math.max(targetLowY, drawHighY);
   const dotColor = avgDotColor(payload.avg, targetLow, targetHigh);
 
   return (
     <g>
-      <rect x={barX} y={highY} width={barWidth} height={barHeight} rx={rx} fill="rgba(58,54,66,0.5)" />
-      {exceedsHigh && redBottom > highY && (
-        <rect x={barX} y={highY} width={barWidth} height={redBottom - highY} fill="url(#candle_high_fade)" />
+      <rect x={barX} y={drawHighY} width={barWidth} height={barHeight} rx={rx} fill="rgba(58,54,66,0.5)" />
+      {exceedsHigh && redBottom > drawHighY && (
+        <rect x={barX} y={drawHighY} width={barWidth} height={redBottom - drawHighY} fill="url(#candle_high_fade)" />
       )}
-      {belowLow && lowY > blueTop && (
-        <rect x={barX} y={blueTop} width={barWidth} height={lowY - blueTop} fill="url(#candle_low_fade)" />
+      {belowLow && drawLowY > blueTop && (
+        <rect x={barX} y={blueTop} width={barWidth} height={drawLowY - blueTop} fill="url(#candle_low_fade)" />
       )}
-      <circle cx={x + width / 2} cy={avgY} r={3.4} fill={dotColor} />
-      <circle cx={x + width / 2} cy={avgY} r={3.4} fill="none" stroke="rgba(12,19,20,0.7)" strokeWidth={1} />
+      <circle cx={x + width / 2} cy={clampedAvgY} r={3.4} fill={dotColor} />
+      <circle cx={x + width / 2} cy={clampedAvgY} r={3.4} fill="none" stroke="rgba(12,19,20,0.7)" strokeWidth={1} />
+      {entirelyAbove && (
+        <line x1={barX - 1} y1={plotTop} x2={barX + barWidth + 1} y2={plotTop} stroke={PALETTE.high} strokeWidth={1.5} strokeLinecap="round" />
+      )}
+      {entirelyBelow && (
+        <line x1={barX - 1} y1={plotBottom} x2={barX + barWidth + 1} y2={plotBottom} stroke={PALETTE.low} strokeWidth={1.5} strokeLinecap="round" />
+      )}
     </g>
   );
 }
