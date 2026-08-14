@@ -921,7 +921,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     <div ref={containerRef} className="relative overflow-visible">
       <div ref={monitoringA11yRef} className="sr-only" aria-live="polite" role="status" />
       {/* Controls row */}
-      <div className="flex py-2 items-center mb-2 justify-between pl-4 pr-4 gap-2">
+      <div className="flex py-2 items-center mb-2 justify-between px-3 gap-2">
 
         {/* Left: YOUR FLOW label + filter button */}
         <div className="flex items-center gap-2">
@@ -964,21 +964,14 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       <button
           type="button"
           onClick={scrollToLatestGlucose}
-          className="absolute right-0 top-0 z-30 flex backdrop-blur-sm h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-white/55 shadow-lg transition-colors hover:bg-white/[0.1] hover:text-white/85"
+          className="absolute right-2 top-0 z-30 flex backdrop-blur-sm h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-white/55 shadow-lg transition-colors hover:bg-white/[0.1] hover:text-white/85"
           aria-label="Scroll to latest glucose">
           <CornerUpRight className="h-4 w-4" />
         </button>
       <div
           ref={graphViewportRef}
           className="relative overflow-hidden"
-          style={{
-            left: "50%",
-            right: "50%",
-            width: "100dvw",
-            maxWidth: "100dvw",
-            marginLeft: "-50dvw",
-            marginRight: "-50dvw"
-          }}>
+          style={{ width: "100%" }}>
       {!isCandlestick && filters.glucose && glucoseLinePoints.length > 0 &&
           <div
             onClick={onSelectLog || onDeleteLog ? handleIndicatorClick : undefined}
@@ -1005,7 +998,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               height: "9px",
               willChange: "transform, opacity"
             }}>
-        <div className="absolute left-1/2 top-1/2 w-px" style={{ height: 200, background: "linear-gradient(to bottom, rgba(255,255,255,0.12), transparent 85%)", transform: "translateX(-50%)" }} />
         <div className="absolute inset-0 rounded-full bg-white" style={{ boxShadow: "0 0 6px rgba(255,255,255,0.4), 0 0 14px rgba(255,255,255,0.15)" }} />
         <div className="absolute -inset-[3px] rounded-full border border-white/20" />
       </div>
