@@ -105,6 +105,7 @@ function formatGlucoseDisplay(value) {
 }
 
 function formatRelativeTime(time) {
+  if (!Number.isFinite(time)) return "—";
   const diffMin = Math.floor((Date.now() - time) / 60000);
   if (diffMin < 1) return "just now";
   if (diffMin < 60) return `${diffMin}m ago`;
@@ -892,7 +893,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
     if (tickerRef.current) tickerRef.current.setValue(formatGlucoseDisplay(glucose.value), animate);
     if (timeEl) timeEl.textContent = formatRelativeTime(glucose.time);
-    if (dateEl) dateEl.textContent = format(new Date(glucose.time), "EEEE, MMM d");
+    if (dateEl) dateEl.textContent = Number.isFinite(glucose.time) ? format(new Date(glucose.time), "EEEE, MMM d") : "";
   };
 
   const updateMonitoringOverlay = (scrollLeft) => {
