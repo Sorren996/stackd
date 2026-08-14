@@ -19,6 +19,7 @@ const LOCAL_KEYS = [
   "coach_reviews_enabled",
   "coach_insight_notifications_enabled",
   "coach_exclude_journal",
+  "graph_height",
 ];
 
 function getDefaultMealInsulinTypes() {
@@ -121,6 +122,10 @@ function validateSettings(raw) {
 
   if (raw.glucose_units === "mg/dL" || raw.glucose_units === "mmol/L") {
     sanitized.glucose_units = raw.glucose_units;
+  }
+
+  if (raw.graph_height === 300 || raw.graph_height === 400) {
+    sanitized.graph_height = raw.graph_height;
   }
 
   // Pass through username for backend identification (not validated numerically)

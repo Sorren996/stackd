@@ -26,7 +26,7 @@ const HOUR_MS = 60 * 60 * 1000;
 const CANDLESTICK_HISTORY_HOURS = 72;
 const CANDLESTICK_FUTURE_HOURS = 12;
 const CHART_HEIGHT = 260;
-const CANDLESTICK_TOTAL_HEIGHT = 376;
+const CANDLESTICK_TOTAL_HEIGHT = 382;
 const CHART_MARGIN_TOP = 70;
 const CHART_MARGIN_BOTTOM = 0;
 const X_AXIS_HEIGHT = 30;
@@ -57,6 +57,14 @@ function readTargetRange() {
     low: Number.isFinite(low) ? low : 70,
     high: Number.isFinite(high) ? high : 180
   };
+}
+
+// User's preferred normal upper Y-axis display limit (display only — never
+// clamps raw glucose). Defaults to 400 so existing users keep generous headroom.
+function readGraphHeight() {
+  if (typeof window === "undefined") return 400;
+  const v = Number(window.localStorage.getItem("graph_height"));
+  return v === 300 || v === 400 ? v : 400;
 }
 
 function normalizeAbsorptionProfile(value) {
@@ -345,6 +353,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const monitoringBandRefs = useRef([]);
   const [containerWidth, setContainerWidth] = useState(600);
   const [targetRange, setTargetRange] = useState(readTargetRange);
+  const [graphHeight, setGraphHeight] = useState(readGraphHeight);
 
   useEffect(() => {
     const target = graphViewportRef.current || containerRef.current;
@@ -357,14 +366,19 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   }, []);
 
   useEffect(() => {
-    const updateTargetRange = () => setTargetRange(readTargetRange());
+    const updateSettings = () => {
+      setTargetRange(readTargetRange());
+      setGraphHeight(readGraphHeight());
+    };
 
-    window.addEventListener("target-range-updated", updateTargetRange);
-    window.addEventListener("storage", updateTargetRange);
+    window.addEventListener("target-range-updated", updateSettings);
+    window.addEventListener("insulin-settings-updated", updateSettings);
+    window.addEventListener("storage", updateSettings);
 
     return () => {
-      window.removeEventListener("target-range-updated", updateTargetRange);
-      window.removeEventListener("storage", updateTargetRange);
+      window.removeEventListener("target-range-updated", updateSettings);
+      window.removeEventListener("insulin-settings-updated", updateSettings);
+      window.removeEventListener("storage", updateSettings);
     };
   }, []);
 
@@ -379,9 +393,28 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const targetLow = targetRange.low;
   const targetHigh = targetRange.high;
 
-  const rangeTotal = GLUCOSE_MAX - GLUCOSE_MIN;
-  const highPct = ((GLUCOSE_MAX - targetHigh) / rangeTotal * 100).toFixed(1);
-  const lowPct = ((GLUCOSE_MAX - targetLow) / rangeTotal * 100).toFixed(1);
+  // Effective Y-axis bounds: the user's preferred graph height is the normal
+  // ceiling (lower boundary 40). When visible data exceeds those bounds, the
+  // scale temporarily expands with padding so the real reading is always shown.
+  // This is a display scale only — raw glucose values are never clamped.
+  const { effectiveMax, effectiveMin } = useMemo(() => {
+    let visibleMax = -Infinity;
+    let visibleMin = Infinity;
+    for (const r of (glucoseReadings || [])) {
+      const v = Number(getReadingValue(r));
+      if (!Number.isFinite(v)) continue;
+      if (v > visibleMax) visibleMax = v;
+      if (v < visibleMin) visibleMin = v;
+    }
+    const maxBase = Math.max(graphHeight, Number.isFinite(visibleMax) ? visibleMax : graphHeight);
+    const max = visibleMax > graphHeight ? Math.ceil(maxBase / 50) * 50 : graphHeight;
+    const min = Number.isFinite(visibleMin) && visibleMin < 40 ? Math.floor(visibleMin / 10) * 10 : 40;
+    return { effectiveMax: max, effectiveMin: min };
+  }, [glucoseReadings, graphHeight]);
+
+  const rangeTotal = effectiveMax - effectiveMin;
+  const highPct = ((effectiveMax - targetHigh) / rangeTotal * 100).toFixed(1);
+  const lowPct = ((effectiveMax - targetLow) / rangeTotal * 100).toFixed(1);
 
   // Glucose line gradient stops, fully derived from the user's target range so
   // the red / white / amber transitions track custom ranges (not just the 70–180 preset).
@@ -495,8 +528,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
   const glucoseCurveSegments = useMemo(() => ({
     value: buildMonotoneSegments(glucoseLinePoints, (point) => point.value),
-    plotValue: buildMonotoneSegments(glucoseLinePoints, (point) => Math.min(point.value, GLUCOSE_MAX))
-  }), [glucoseLinePoints]);
+    plotValue: buildMonotoneSegments(glucoseLinePoints, (point) => Math.min(point.value, effectiveMax))
+  }), [glucoseLinePoints, effectiveMax]);
 
   const maxBolusUnits = useMemo(
     () => Math.max(...filteredDoses.filter((d) => !isBasalInsulinType(d.insulin_type)).map(getDoseUnits), 1),
@@ -510,7 +543,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     if (!doses.length && !glucoseReadings.length && !carbEntries.length) return [];
     const result = [];
     for (let t = domainStart; t <= domainEnd; t += STEP_MS) {
-      const point = { time: t, bg: GLUCOSE_MAX };
+      const point = { time: t, bg: effectiveMax };
       allCurvesMeta.forEach(({ dose, key, curve }) => {
         const doseUnits = getDoseUnits(dose);
         if (!curve.length || t < curve[0].time || t > curve[curve.length - 1].time) {
@@ -535,12 +568,12 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         }
       });
       if (glucoseMap[t] !== undefined) {
-        point.glucose = Math.min(glucoseMap[t], GLUCOSE_MAX);
+        point.glucose = Math.min(glucoseMap[t], effectiveMax);
       }
       result.push(point);
     }
     return result;
-  }, [doses, glucoseReadings, carbEntries, filters, domainStart, domainEnd, allCurvesMeta, glucoseMap, maxBolusUnits, maxBasalUnits]);
+  }, [doses, glucoseReadings, carbEntries, filters, domainStart, domainEnd, allCurvesMeta, glucoseMap, maxBolusUnits, maxBasalUnits, effectiveMax]);
 
   const doseKeys = useMemo(() =>
   filteredDoses.map((dose, index) => ({
@@ -725,12 +758,12 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   }, [detectedSpikes, spikeEvents, domainStart, domainEnd, totalMs, chartWidth]);
 
   const getGlucoseY = (value) => {
-    const clamped = Math.min(Math.max(value, GLUCOSE_MIN), GLUCOSE_MAX);
-    return GLUCOSE_MARGIN_TOP + (GLUCOSE_MAX - clamped) / (GLUCOSE_MAX - GLUCOSE_MIN) * plotHeight;
+    const clamped = Math.min(Math.max(value, effectiveMin), effectiveMax);
+    return GLUCOSE_MARGIN_TOP + (effectiveMax - clamped) / (effectiveMax - effectiveMin) * plotHeight;
   };
 
   const getHighRangeOpacity = (value) => {
-    const pctFromTop = (GLUCOSE_MAX - Math.min(value, GLUCOSE_MAX)) / (GLUCOSE_MAX - GLUCOSE_MIN);
+    const pctFromTop = (effectiveMax - Math.min(value, effectiveMax)) / (effectiveMax - effectiveMin);
     if (pctFromTop <= 0) return 0;
     if (pctFromTop < 0.1) return pctFromTop / 0.1 * 0.18;
     if (pctFromTop < 0.24) return 0.18 + (pctFromTop - 0.1) / 0.14 * 0.82;
@@ -746,7 +779,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     if (time <= glucoseLinePoints[0].time) {
       return {
         value: glucoseLinePoints[0].value,
-        plotValue: Math.min(glucoseLinePoints[0].value, GLUCOSE_MAX),
+        plotValue: Math.min(glucoseLinePoints[0].value, effectiveMax),
         time,
         sourceTime: glucoseLinePoints[0].time
       };
@@ -756,7 +789,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     if (time >= lastReading.time) {
       return {
         value: lastReading.value,
-        plotValue: Math.min(lastReading.value, GLUCOSE_MAX),
+        plotValue: Math.min(lastReading.value, effectiveMax),
         time,
         sourceTime: lastReading.time
       };
@@ -769,7 +802,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
       const segmentIndex = i - 1;
       const value = interpolateMonotoneSegment(glucoseCurveSegments.value[segmentIndex], time) ?? previous.value;
-      const plotValue = interpolateMonotoneSegment(glucoseCurveSegments.plotValue[segmentIndex], time) ?? Math.min(previous.value, GLUCOSE_MAX);
+      const plotValue = interpolateMonotoneSegment(glucoseCurveSegments.plotValue[segmentIndex], time) ?? Math.min(previous.value, effectiveMax);
       const sourceTime = Math.abs(time - previous.time) <= Math.abs(next.time - time) ? previous.time : next.time;
 
       return { value, plotValue, time, sourceTime };
@@ -1100,7 +1133,9 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                 marginTop={CHART_MARGIN_TOP}
                 xAxisHeight={X_AXIS_HEIGHT}
                 domainStart={domainStart}
-                domainEnd={domainEnd} /> :
+                domainEnd={domainEnd}
+                glucoseMin={effectiveMin}
+                glucoseMax={effectiveMax} /> :
 
 
               <>
@@ -1165,7 +1200,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                       height={0}
                       interval={0} />
 
-              <YAxis yAxisId="glucose" domain={[GLUCOSE_MIN, GLUCOSE_MAX]} allowDataOverflow hide />
+              <YAxis yAxisId="glucose" domain={[effectiveMin, effectiveMax]} allowDataOverflow hide />
 
               {filters.glucose && filteredGlucoseReadings.length > 0 &&
                     <Area

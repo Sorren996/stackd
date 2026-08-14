@@ -13,7 +13,7 @@ const STEP_MS = 15 * 60 * 1000;
 const GLUCOSE_MIN = 40;
 const GLUCOSE_MAX = 250;
 const INSULIN_PLANE_HEIGHT = 82;
-const SPIKE_ROW_HEIGHT = 26;
+const SPIKE_ROW_HEIGHT = 32;
 const LOWER_GAP = 4;
 
 const PALETTE = {
@@ -26,9 +26,9 @@ const PALETTE = {
   spike: "#E9A284",
 };
 
-function valueToY(value, marginTop, plotHeight) {
-  const clamped = Math.min(Math.max(value, GLUCOSE_MIN), GLUCOSE_MAX);
-  return marginTop + (GLUCOSE_MAX - clamped) / (GLUCOSE_MAX - GLUCOSE_MIN) * plotHeight;
+function valueToY(value, marginTop, plotHeight, min, max) {
+  const clamped = Math.min(Math.max(value, min), max);
+  return marginTop + (max - clamped) / (max - min) * plotHeight;
 }
 
 function avgDotColor(avg, targetLow, targetHigh) {
@@ -45,7 +45,7 @@ function avgDotColor(avg, targetLow, targetHigh) {
  * color — the rest stays neutral.
  */
 function CandlestickShape(props) {
-  const { x, width, payload, marginTop, plotHeight, targetHighY, targetLowY, targetLow, targetHigh } = props;
+  const { x, width, payload, marginTop, plotHeight, targetHighY, targetLowY, targetLow, targetHigh, glucoseMin, glucoseMax } = props;
   if (payload.high == null || payload.low == null) return null;
 
   const rawHigh = payload.high;
@@ -57,11 +57,11 @@ function CandlestickShape(props) {
   // A candle whose entire range falls outside the viewport would otherwise clamp
   // to a single edge and collapse to a sliver. Pin a visible body at the edge so
   // there's always a marker, with a small cap line signalling it extends beyond.
-  const entirelyAbove = rawLow > GLUCOSE_MAX;
-  const entirelyBelow = rawHigh < GLUCOSE_MIN;
+  const entirelyAbove = rawLow > glucoseMax;
+  const entirelyBelow = rawHigh < glucoseMin;
 
-  let drawHighY = valueToY(rawHigh, marginTop, plotHeight);
-  let drawLowY = valueToY(rawLow, marginTop, plotHeight);
+  let drawHighY = valueToY(rawHigh, marginTop, plotHeight, glucoseMin, glucoseMax);
+  let drawLowY = valueToY(rawLow, marginTop, plotHeight, glucoseMin, glucoseMax);
   if (entirelyAbove) {
     drawHighY = plotTop;
     drawLowY = plotTop + MIN_EDGE_BODY;
@@ -70,7 +70,7 @@ function CandlestickShape(props) {
     drawHighY = plotBottom - MIN_EDGE_BODY;
   }
 
-  const avgY = valueToY(payload.avg, marginTop, plotHeight);
+  const avgY = valueToY(payload.avg, marginTop, plotHeight, glucoseMin, glucoseMax);
   const clampedAvgY = Math.min(Math.max(avgY, plotTop), plotBottom);
 
   const barWidth = Math.max(5, Math.min(13, width * 0.4));
@@ -132,12 +132,14 @@ export default function CandlestickView({
   xAxisHeight,
   domainStart,
   domainEnd,
+  glucoseMin = 40,
+  glucoseMax = 400,
 }) {
   const targetLow = targetRange.low;
   const targetHigh = targetRange.high;
   const plotHeight = chartHeight - marginTop - xAxisHeight;
-  const targetHighY = valueToY(targetHigh, marginTop, plotHeight);
-  const targetLowY = valueToY(targetLow, marginTop, plotHeight);
+  const targetHighY = valueToY(targetHigh, marginTop, plotHeight, glucoseMin, glucoseMax);
+  const targetLowY = valueToY(targetLow, marginTop, plotHeight, glucoseMin, glucoseMax);
 
   const candleData = useMemo(
     () => bucketGlucoseForCandles(glucoseReadings, domainStart, domainEnd),
@@ -187,8 +189,8 @@ export default function CandlestickView({
   );
 
   const chartData = useMemo(
-    () => candleData.map((candle) => ({ ...candle, bg: GLUCOSE_MAX })),
-    [candleData]
+    () => candleData.map((candle) => ({ ...candle, bg: glucoseMax })),
+    [candleData, glucoseMax]
   );
 
   // Insulin pharmacokinetic activity curves, compressed for the 24h scale.
@@ -262,13 +264,50 @@ export default function CandlestickView({
     timeTicks.push(t);
   }
 
-  const rangeTotal = GLUCOSE_MAX - GLUCOSE_MIN;
-  const highPct = ((GLUCOSE_MAX - targetHigh) / rangeTotal * 100).toFixed(1);
-  const lowPct = ((GLUCOSE_MAX - targetLow) / rangeTotal * 100).toFixed(1);
+  const rangeTotal = glucoseMax - glucoseMin;
+  const highPct = ((glucoseMax - targetHigh) / rangeTotal * 100).toFixed(1);
+  const lowPct = ((glucoseMax - targetLow) / rangeTotal * 100).toFixed(1);
 
   const candleCount = (domainEnd - domainStart) / HOUR_MS;
   const candleSlotWidth = chartWidth / candleCount;
   const totalMs = domainEnd - domainStart;
+
+  // Collision-aware spike rail: place each bundle at its timestamp, stagger into
+  // two compact lanes when neighbors overlap, and only locally bundle when both
+  // lanes are full — so repeated spikes stay readable without giant bundles.
+  const positionedSpikeChips = useMemo(() => {
+    const sorted = [...spikeBundles].sort((a, b) => a.time - b.time);
+    const chips = [];
+    const laneRightEdge = [-Infinity, -Infinity];
+    const GAP = 2;
+    const chipWidth = (count) => 22 + (count > 1 ? 14 + String(count - 1).length * 6 : 0);
+
+    for (const bundle of sorted) {
+      const x = ((bundle.time - domainStart) / totalMs) * chartWidth + candleSlotWidth / 2;
+      const w = chipWidth(bundle.spikes.length);
+      let placed = false;
+      for (let lane = 0; lane < 2; lane++) {
+        if (x - w / 2 >= laneRightEdge[lane] + GAP) {
+          chips.push({ ...bundle, x, lane, w });
+          laneRightEdge[lane] = x + w / 2;
+          placed = true;
+          break;
+        }
+      }
+      if (!placed) {
+        const last = chips[chips.length - 1];
+        if (last) {
+          last.spikes = [...last.spikes, ...bundle.spikes];
+          last.maxRise = Math.max(last.maxRise || 0, bundle.maxRise || 0);
+          last.w = chipWidth(last.spikes.length);
+        } else {
+          chips.push({ ...bundle, x, lane: 0, w });
+          laneRightEdge[0] = x + w / 2;
+        }
+      }
+    }
+    return chips;
+  }, [spikeBundles, domainStart, totalMs, chartWidth, candleSlotWidth]);
 
   const [activeTooltip, setActiveTooltip] = useState(null);
   const [spikeBundle, setSpikeBundle] = useState(null);
@@ -357,7 +396,7 @@ export default function CandlestickView({
           height={xAxisHeight}
           interval={0}
         />
-        <YAxis yAxisId="glucose" domain={[GLUCOSE_MIN, GLUCOSE_MAX]} allowDataOverflow hide />
+        <YAxis yAxisId="glucose" domain={[glucoseMin, glucoseMax]} allowDataOverflow hide />
 
         <Area yAxisId="glucose" type="monotoneX" dataKey="bg" stroke="none" fill="url(#candle_range_grad)" isAnimationActive={false} dot={false} />
         <ReferenceLine yAxisId="glucose" y={targetHigh} stroke="rgba(255,255,255,0.16)" strokeWidth={1} strokeDasharray="3 5" />
@@ -366,7 +405,7 @@ export default function CandlestickView({
         <Bar
           yAxisId="glucose"
           dataKey="high"
-          shape={<CandlestickShape marginTop={marginTop} plotHeight={plotHeight} targetHighY={targetHighY} targetLowY={targetLowY} targetLow={targetLow} targetHigh={targetHigh} />}
+          shape={<CandlestickShape marginTop={marginTop} plotHeight={plotHeight} targetHighY={targetHighY} targetLowY={targetLowY} targetLow={targetLow} targetHigh={targetHigh} glucoseMin={glucoseMin} glucoseMax={glucoseMax} />}
           isAnimationActive={false}
         />
       </ComposedChart>
@@ -414,21 +453,21 @@ export default function CandlestickView({
       </div>
 
       {/* ── SPIKE EVENTS: compact markers beneath the timeline ── */}
-      <div className="absolute left-0 right-0 flex items-center" style={{ top: lowerTop + INSULIN_PLANE_HEIGHT + 2, height: SPIKE_ROW_HEIGHT }}>
-        {spikeBundles.map((bucket) => {
-          const x = ((bucket.time - domainStart) / totalMs) * chartWidth + candleSlotWidth / 2;
-          const allHandled = bucket.spikes.every((s) => s.user_dismissed || s.user_tagged_cause);
+      <div className="absolute left-0 right-0" style={{ top: lowerTop + INSULIN_PLANE_HEIGHT + 2, height: SPIKE_ROW_HEIGHT }}>
+        {positionedSpikeChips.map((chip, i) => {
+          const count = chip.spikes.length;
+          const allHandled = chip.spikes.every((s) => s.user_dismissed || s.user_tagged_cause);
           const chipColor = allHandled ? PALETTE.green : PALETTE.spike;
           return (
             <button
-              key={`spike_${bucket.time}`}
+              key={`spike_${i}`}
               type="button"
-              onClick={(e) => { e.stopPropagation(); setSpikeBundle(bucket); }}
+              onClick={(e) => { e.stopPropagation(); setSpikeBundle(chip); }}
               className="absolute flex items-center gap-0.5 rounded-full px-1.5 py-0.5 backdrop-blur-sm transition hover:brightness-125"
-              style={{ left: x, transform: "translateX(-50%)", background: "rgba(10,16,14,0.7)", border: `1px solid ${chipColor}40` }}
+              style={{ left: chip.x, top: chip.lane === 0 ? 2 : 16, transform: "translateX(-50%)", background: "rgba(10,16,14,0.7)", border: `1px solid ${chipColor}40` }}
             >
               <ArrowUp className="h-2.5 w-2.5" style={{ color: chipColor }} strokeWidth={2.5} />
-              {bucket.count > 1 && <span className="text-[9px] font-bold" style={{ color: chipColor }}>+{bucket.count - 1}</span>}
+              {count > 1 && <span className="text-[9px] font-bold" style={{ color: chipColor }}>+{count - 1}</span>}
             </button>
           );
         })}
@@ -440,7 +479,7 @@ export default function CandlestickView({
           const tipW = 210;
           let left = activeTooltip.rect.left + activeTooltip.rect.width / 2 - tipW / 2;
           left = Math.max(8, Math.min(left, window.innerWidth - tipW - 8));
-          const top = activeTooltip.rect.top + valueToY(activeTooltip.high, marginTop, plotHeight) - 8;
+          const top = activeTooltip.rect.top + valueToY(activeTooltip.high, marginTop, plotHeight, glucoseMin, glucoseMax) - 8;
           const openBelow = top - 110 < 0;
           const hourStart = activeTooltip.time;
           const hourEnd = hourStart + HOUR_MS;

@@ -70,6 +70,15 @@
       "default": "mg/dL",
       "description": "Display units for glucose values."
     },
+    "graph_height": {
+      "type": "number",
+      "enum": [
+        300,
+        400
+      ],
+      "default": 400,
+      "description": "User's preferred normal upper Y-axis display limit for the Your Flow glucose graph (mg/dL). Display-only preference; never clamps, discards, or overwrites raw glucose values. The graph may temporarily expand beyond this when visible data exceeds it."
+    },
     "settings_migrated_from_local": {
       "type": "boolean",
       "default": false,
