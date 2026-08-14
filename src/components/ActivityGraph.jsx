@@ -923,8 +923,10 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       {/* Controls row */}
       <div className="flex py-2 items-center mb-2 justify-between pl-4 pr-4 gap-2">
 
-        {/* Filter button */}
-        <div className="relative justify-start">
+        {/* Left: YOUR FLOW label + filter button */}
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/40">Your Flow</span>
+          <div className="relative justify-start">
           <button
             onClick={(e) => {
               const rect = e.currentTarget.getBoundingClientRect();
@@ -943,6 +945,10 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             }
           </button>
         </div>
+        </div>
+
+        {/* Right: Time view toggle */}
+        <TimeViewToggle value={viewWindow} onChange={setViewWindow} />
 
         {/* Portal-style backdrop + dropdown rendered outside flow */}
         <AnimatePresence>
@@ -1298,10 +1304,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         <AlertTriangle className="h-3 w-3" style={{ color: "rgba(217,169,56,0.7)" }} />
         <span className="text-[9px] font-medium" style={{ color: "rgba(217,169,56,0.8)" }}>Delayed glucose response possible. Monitor for extended high's and low's.</span>
       </div>
-      </div>
-
-      <div className="flex justify-center pt-2 -mt-10">
-        <TimeViewToggle value={viewWindow} onChange={setViewWindow} />
       </div>
 
       {activeMarker &&

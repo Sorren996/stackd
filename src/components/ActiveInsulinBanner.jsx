@@ -812,8 +812,8 @@ function SupportiveGlucoseMessage({ insight, trend, TrendIcon }) {
 
   return (
     <div
-      className="mx-auto mt-2.5 mb-0.5 flex max-w-[92vw] items-center justify-center gap-2 rounded-full border px-3.5 py-1.5"
-      style={{ background: "rgba(255,255,255,0.018)", borderColor: "rgba(255,255,255,0.06)" }}
+      className="mx-auto mt-2.5 mb-0.5 flex max-w-[92vw] items-center justify-center gap-2 rounded-full px-3.5 py-1.5"
+      style={{ background: "rgba(255,255,255,0.015)" }}
     >
       {TrendIcon && (
         <TrendIcon className="h-3.5 w-3.5 shrink-0" style={{ color: trend?.color || "rgba(255,255,255,0.45)" }} />
@@ -821,6 +821,7 @@ function SupportiveGlucoseMessage({ insight, trend, TrendIcon }) {
       <p className="text-[11px] font-medium leading-tight text-white/50">
         {insight.message}
       </p>
+      <div className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: "#61d1b3", boxShadow: "0 0 6px rgba(97,209,179,0.6)" }} />
     </div>
   );
 }
@@ -1124,9 +1125,6 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
         <SupportiveGlucoseMessage insight={supportiveGlucoseInsight} trend={trend} TrendIcon={TrendIcon} />
 
         <div className="mt-3">
-          <div className="mb-1 flex items-center justify-between px-1">
-            <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/40">Your Flow</span>
-          </div>
           {graphSlot}
         </div>
 

@@ -9,19 +9,19 @@ const VIEWS = [
 
 export default function TimeViewToggle({ value, onChange }) {
   return (
-    <div className="flex items-center gap-0.5 rounded-xl border border-white/5 bg-white/[0.03] p-0.5">
+    <div className="flex items-center gap-0.5 rounded-lg border border-white/5 bg-white/[0.03] p-0.5">
       {VIEWS.map((view) => (
         <button
           key={view.value}
           onClick={() => onChange(view.value)}
-          className={`relative px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors ${
+          className={`relative px-2 py-0.5 text-[11px] font-semibold rounded-md transition-colors ${
             value === view.value ? "text-white" : "text-white/40 hover:text-white/70"
           }`}
         >
           {value === view.value && (
             <motion.div
               layoutId="time-view-active"
-              className="absolute inset-0 rounded-lg"
+              className="absolute inset-0 rounded-md"
               style={{ background: "rgba(53,168,121,0.15)" }}
               transition={{ type: "spring", stiffness: 380, damping: 30 }}
             />
