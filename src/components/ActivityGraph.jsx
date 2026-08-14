@@ -736,32 +736,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     return GLUCOSE_MARGIN_TOP + (GLUCOSE_MAX - clamped) / (GLUCOSE_MAX - GLUCOSE_MIN) * plotHeight;
   };
 
-  // Pixel-space monotone segments of the glucose line. recharts interpolates
-  // its monotone curve in pixel space, so tracking the marker in the same
-  // space keeps it pinned exactly on the rendered line between data points.
-  const glucosePixelSegments = useMemo(() => {
-    const pts = glucoseLinePoints.map((point) => ({
-      time: (point.time - domainStart) / totalMs * chartWidth,
-      value: getGlucoseY(Math.min(point.value, GLUCOSE_MAX))
-    }));
-    return buildMonotoneSegments(pts, (point) => point.value);
-  }, [glucoseLinePoints, domainStart, totalMs, chartWidth]);
-
-  const getGlucoseYAtPixelX = (pixelX) => {
-    if (!glucosePixelSegments.length) return null;
-    const first = glucosePixelSegments[0];
-    if (pixelX <= first.x0) return first.y0;
-    const last = glucosePixelSegments[glucosePixelSegments.length - 1];
-    if (pixelX >= last.x1) return last.y1;
-    for (let i = 0; i < glucosePixelSegments.length; i++) {
-      const seg = glucosePixelSegments[i];
-      if (pixelX >= seg.x0 && pixelX <= seg.x1) {
-        return interpolateMonotoneSegment(seg, pixelX);
-      }
-    }
-    return null;
-  };
-
   const getHighRangeOpacity = (value) => {
     const pctFromTop = (GLUCOSE_MAX - Math.min(value, GLUCOSE_MAX)) / (GLUCOSE_MAX - GLUCOSE_MIN);
     if (pctFromTop <= 0) return 0;
@@ -827,17 +801,44 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     }
 
     const centerTime = getCenterTimeForScroll(scrollLeft);
-    const pixelX = (centerTime - domainStart) / totalMs * chartWidth;
-    const markerY = getGlucoseYAtPixelX(pixelX);
     const glucose = getGlucoseAt(centerTime);
-    if (!glucose || !Number.isFinite(glucose.time) || markerY == null || !Number.isFinite(markerY)) {
+    if (!glucose || !Number.isFinite(glucose.time)) {
       if (marker) marker.style.opacity = "0";
       return;
     }
 
+    // Pin the marker to the actual rendered trendline by sampling the SVG
+    // path at the viewport center. This keeps the dot exactly on the line
+    // regardless of recharts' internal plot geometry or interpolation.
+    const targetX = scrollLeft + containerWidth / 2;
+    const root = graphViewportRef.current;
+    const trendNode = root?.querySelector(".stackd-glucose-trend");
+    const path = trendNode?.tagName?.toLowerCase() === "path"
+      ? trendNode
+      : (trendNode?.querySelector("path") || root?.querySelector('path[stroke="url(#glucose_line_grad)"]'));
+    let markerY = null;
+    if (path && typeof path.getPointAtLength === "function") {
+      const len = path.getTotalLength();
+      if (len > 0) {
+        let lo = 0;
+        let hi = len;
+        for (let i = 0; i < 22; i++) {
+          const mid = (lo + hi) / 2;
+          const pt = path.getPointAtLength(mid);
+          if (pt.x < targetX) lo = mid;
+          else hi = mid;
+        }
+        markerY = path.getPointAtLength((lo + hi) / 2).y;
+      }
+    }
+
     if (marker) {
-      marker.style.transform = `translate3d(-50%, ${markerY}px, 0) translateY(-50%)`;
-      marker.style.opacity = String(getHighRangeOpacity(glucose.plotValue));
+      if (markerY != null && Number.isFinite(markerY)) {
+        marker.style.transform = `translate3d(-50%, ${markerY}px, 0) translateY(-50%)`;
+        marker.style.opacity = String(getHighRangeOpacity(glucose.plotValue));
+      } else {
+        marker.style.opacity = "0";
+      }
     }
 
     if (tickerRef.current) tickerRef.current.setValue(formatGlucoseDisplay(glucose.value), animate);
@@ -1175,6 +1176,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                       type="monotoneX"
                       dataKey="glucose"
                       name="Glucose"
+                      className="stackd-glucose-trend"
                       stroke="url(#glucose_line_grad)"
                       strokeWidth={2.3}
                       strokeLinecap="round"
