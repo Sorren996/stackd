@@ -26,6 +26,7 @@ const HOUR_MS = 60 * 60 * 1000;
 const CANDLESTICK_HISTORY_HOURS = 72;
 const CANDLESTICK_FUTURE_HOURS = 12;
 const CHART_HEIGHT = 260;
+const CANDLESTICK_TOTAL_HEIGHT = 376;
 const CHART_MARGIN_TOP = 70;
 const CHART_MARGIN_BOTTOM = 0;
 const X_AXIS_HEIGHT = 30;
@@ -1075,7 +1076,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       <div
             ref={scrollRef}
             className="overflow-x-auto"
-            style={{ WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}
+            style={{ WebkitOverflowScrolling: "touch", scrollbarWidth: "none", overflowY: "hidden" }}
             onScroll={(event) => {
               const el = event.currentTarget;
               if (el.scrollLeft > maxScrollLeft) {
@@ -1085,11 +1086,12 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               }
               scheduleCenterGlucoseUpdate(el.scrollLeft);
             }}>
-        <div className="relative" style={{ width: chartWidth, height: isCandlestick ? CHART_HEIGHT + 68 : TWO_PLANE_HEIGHT }}>
+        <div className="relative" style={{ width: chartWidth, height: isCandlestick ? CANDLESTICK_TOTAL_HEIGHT : TWO_PLANE_HEIGHT }}>
           {isCandlestick ?
               <CandlestickView
                 glucoseReadings={filteredGlucoseReadings}
                 doses={filteredDoses}
+                carbEntries={filteredCarbEntries}
                 spikeEvents={spikeEvents}
                 detectedSpikes={detectedSpikes}
                 targetRange={targetRange}
