@@ -72,7 +72,7 @@ export default function DailyPatternChart({ hourlyAverages, targetLow, targetHig
 
         <div className="mt-2 h-48">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={hourlyAverages} margin={{ top: 6, right: 4, left: -22, bottom: 0 }}>
+            <AreaChart data={hourlyAverages} margin={{ top: 6, right: 4, left: -8, bottom: 0 }}>
               <defs>
                 <linearGradient id="glucoseGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor={LINE_COLOR} stopOpacity={0.22} />
@@ -99,7 +99,7 @@ export default function DailyPatternChart({ hourlyAverages, targetLow, targetHig
                 tick={{ fontSize: 9, fill: "rgba(255,255,255,0.22)" }}
                 axisLine={false}
                 tickLine={false}
-                width={36}
+                width={40}
               />
               <Tooltip content={<ChartTooltip />} />
               <Area
