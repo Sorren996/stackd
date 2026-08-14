@@ -347,20 +347,11 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   useEffect(() => {
     const target = graphViewportRef.current || containerRef.current;
     if (!target) return;
-    const updateWidth = ([e]) => {
-      const visualViewportWidth = window.visualViewport?.width;
-      setContainerWidth(visualViewportWidth || e.contentRect.width);
-    };
-    const updateViewportWidth = () => {
-      if (window.visualViewport?.width) setContainerWidth(window.visualViewport.width);
-    };
-    const ro = new ResizeObserver(updateWidth);
+    const ro = new ResizeObserver(([entry]) => {
+      setContainerWidth(entry.contentRect.width);
+    });
     ro.observe(target);
-    window.visualViewport?.addEventListener("resize", updateViewportWidth);
-    return () => {
-      ro.disconnect();
-      window.visualViewport?.removeEventListener("resize", updateViewportWidth);
-    };
+    return () => ro.disconnect();
   }, []);
 
   useEffect(() => {
