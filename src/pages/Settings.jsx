@@ -23,28 +23,22 @@ export default function Settings() {
 
   const navItems = [
     {
-      to: "/settings/insulin",
-      icon: Activity,
-      title: "Insulin Settings",
-      description: "Manage ISF, meal insulin, corrections, Meal Review, and insulin-related preferences.",
-    },
-    {
       to: "/settings/profile",
       icon: User,
       title: "Profile Settings",
       description: "Manage your name, email address, and password.",
     },
     {
-      to: "/settings/privacy-consent",
-      icon: Shield,
-      title: "Privacy and Consent",
-      description: "Review notices, manage acknowledgments, withdraw consent, or delete your account.",
+      to: "/settings/insulin",
+      icon: Activity,
+      title: "Insulin Settings",
+      description: "Manage ISF, meal insulin, corrections, Meal Review, and insulin-related preferences.",
     },
     {
-      to: "/settings/coach",
-      icon: Leaf,
-      title: "Wellness Coach",
-      description: "Manage AI Coach reviews, insight notifications, journal access, and insight data.",
+      to: "/settings/display",
+      icon: LineChart,
+      title: "Display",
+      description: "Choose your glucose graph height and how Your Flow is scaled.",
     },
     {
       to: "/settings/dexcom",
@@ -53,10 +47,16 @@ export default function Settings() {
       description: "Connect a continuous glucose source so your readings flow in automatically.",
     },
     {
-      to: "/settings/display",
-      icon: LineChart,
-      title: "Display",
-      description: "Choose your glucose graph height and how Your Flow is scaled.",
+      to: "/settings/coach",
+      icon: Leaf,
+      title: "Wellness Coach",
+      description: "Manage AI Coach reviews, insight notifications, journal access, and insight data.",
+    },
+    {
+      to: "/settings/privacy-consent",
+      icon: Shield,
+      title: "Privacy and Consent",
+      description: "Review notices, manage acknowledgments, withdraw consent, or delete your account.",
     },
   ];
 
