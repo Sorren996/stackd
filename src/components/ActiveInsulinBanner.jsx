@@ -30,7 +30,7 @@ import {
 } from "@/lib/carbAbsorption";
 import { AnimatePresence, motion } from "framer-motion";
 import MealBalanceTooltip from "./MealBalanceTooltip";
-import DoseTimeline from "./DoseTimeline";
+import InsulinOnBoardCard from "./insulin/InsulinOnBoardCard";
 import ComfortZoneCard from "./ComfortZoneCard";
 import CurrentGlucoseCard from "./graph/CurrentGlucoseCard";
 import { getSupportiveGlucoseMessage } from "@/lib/supportiveMessages";
@@ -780,74 +780,6 @@ function MetricCard({ label, value, sub, status, color, tooltipId, openTooltip, 
   );
 }
 
-function ActiveInsulinDetailCard({ totalUnits, breakdown }) {
-  const hasBolusIOB = totalUnits > 0.01;
-  const bolusUnits = breakdown
-    .filter((dose) => !isBasalInsulinType(dose.type))
-    .reduce((sum, dose) => sum + dose.iob, 0);
-  const basalUnits = breakdown
-    .filter((dose) => isBasalInsulinType(dose.type))
-    .reduce((sum, dose) => sum + dose.iob, 0);
-
-  return (
-    <motion.div
-      whileTap={{ scale: 0.985 }}
-      className="metric-card relative col-span-2 overflow-hidden rounded-2xl border p-4 backdrop-blur-sm"
-      style={{
-        background: "linear-gradient(145deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0))",
-        borderColor: "rgba(255,255,255,0.16)",
-        boxShadow: "0 12px 40px rgba(0,0,0,0.10), 0 4px 12px rgba(0,0,0,0.06), inset 0 1px 1px rgba(255,255,255,0.22), inset 0 -1px 1px rgba(255,255,255,0.05)",
-      }}
-    >
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -inset-6 opacity-60"
-        style={{
-          background: "radial-gradient(circle at 20% 0%, rgba(255,255,255,0.18), transparent 34%), radial-gradient(circle at 92% 118%, rgba(6,182,212,0.1), transparent 42%)",
-        }}
-      />
-      <div className="relative z-10 flex items-start justify-between gap-4">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-white/35">Insulin on Board</span>
-        <span className="rounded-full border px-3 py-1 text-xs font-semibold" style={{
-          color: hasBolusIOB ? "#5ba3b8" : "rgba(255,255,255,0.42)",
-          borderColor: hasBolusIOB ? "rgba(6,182,212,0.32)" : "rgba(255,255,255,0.1)",
-          background: hasBolusIOB ? "rgba(6,182,212,0.1)" : "rgba(255,255,255,0.04)",
-        }}>
-          {hasBolusIOB ? "Supporting you" : "Settled"}
-        </span>
-      </div>
-
-      <div className="relative z-10 mt-2 flex items-center">
-        <div className="flex flex-1 flex-col">
-          <div className="flex items-end gap-1.5">
-            <span className="text-4xl font-black leading-none text-white">{Math.round(bolusUnits)}</span>
-            <span className="mb-1 text-[10px] font-medium text-white/35">u</span>
-          </div>
-          <span className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-white/40">Bolus active</span>
-        </div>
-        <div className="mx-3 w-px self-stretch bg-white/10" />
-        <div className="flex flex-1 flex-col">
-          <div className="flex items-end gap-1.5">
-            <span className="text-4xl font-black leading-none text-white">{Math.round(basalUnits)}</span>
-            <span className="mb-1 text-[10px] font-medium text-white/35">u</span>
-          </div>
-          <span className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-white/40">Basal active</span>
-        </div>
-      </div>
-
-      <div className="relative z-10 mt-4">
-        {breakdown.length ? (
-          <DoseTimeline doses={breakdown} />
-        ) : (
-          <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 text-xs text-white/35">
-            No bolus insulin on board estimated from current logs.
-          </div>
-        )}
-      </div>
-    </motion.div>
-  );
-}
-
 const TREND_ICONS = {
   up: ArrowUp,
   "up-right": ArrowUpRight,
@@ -958,6 +890,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
             units: Number(dose.units) || 0,
             statusLabel: status.label,
             timingInfo: getDoseTimingInfo(dose, now),
+            time: getDoseTime(dose),
           };
       })
       .filter(Boolean)
@@ -1209,7 +1142,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
               </div>
             ) : undefined}
           />
-          <ActiveInsulinDetailCard totalUnits={activeUnits} breakdown={activeInsulinBreakdown} />
+          <InsulinOnBoardCard totalUnits={activeUnits} breakdown={activeInsulinBreakdown} />
         </div>
       </div>
     </>
