@@ -137,7 +137,7 @@ export default function MealBalanceTooltip({ mealInsight, open, onClose, monitor
   const remainingEstimate = d.estimatedAdditionalUnits || 0;
   const correctionUnitsNeeded = d.correctionUnitsNeeded || 0;
   const glucoseStart = d.correctionGlucoseValue;
-  const glucoseNow = d.latestGlucoseValue;
+  const glucoseNow = d.windowEndGlucoseValue;
   const peakOutcome = d.peakOutcome;
   const hasGlucoseData = glucoseStart !== null && glucoseStart !== undefined;
 
@@ -199,10 +199,13 @@ export default function MealBalanceTooltip({ mealInsight, open, onClose, monitor
               </p>
               <p className="mt-0.5 text-[9px] font-semibold uppercase tracking-wider text-white">Glucose</p>
               <p className="text-[9px]" style={{ color: PALETTE.muted }}>
-                {peakOutcome !== null && peakOutcome !== undefined ? (
-                  <>Peak <span style={{ color: PALETTE.purple }}>{Math.round(peakOutcome)}</span></>
-                ) : "start → now"}
+                {d.mealStillUnderReview ? "start → latest" : "start → end"}
               </p>
+              {peakOutcome !== null && peakOutcome !== undefined && (
+                <p className="text-[9px]" style={{ color: PALETTE.purple }}>
+                  Peak {Math.round(peakOutcome)}
+                </p>
+              )}
             </MetricCard>
           )}
         </div>
@@ -317,7 +320,7 @@ export default function MealBalanceTooltip({ mealInsight, open, onClose, monitor
               .
             </p>
             <p className="mt-1.5 text-[10px] leading-relaxed italic" style={{ color: PALETTE.muted, opacity: 0.6 }}>
-              {glucoseNow === null || glucoseNow === undefined
+              {d.latestGlucoseValue === null || d.latestGlucoseValue === undefined
                 ? "Current glucose data is unavailable. Check your connected glucose source or monitor using your usual method."
                 : glucoseTrend?.label === "Rising" || glucoseTrend?.label === "Slowly rising"
                   ? "Glucose is currently rising. Continue watching the trend and follow your established plan."

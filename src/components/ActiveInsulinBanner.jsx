@@ -328,6 +328,24 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
   const peakOutcome = outcomeReadings.reduce((peak, reading) => (!peak || reading.value > peak.value ? reading : peak), null);
   const lowOutcome = outcomeReadings.reduce((low, reading) => (!low || reading.value < low.value ? reading : low), null);
 
+  // Glucose at the end of the meal review window — frozen once the window
+  // completes. While the window is still active, this is the latest reading
+  // within the window; once it ends, it locks to the last reading at or
+  // before mealWindowEnd so the comparison stays stable over time.
+  const mealWindowEnd = mealTime + outcomeWindowMs;
+  const windowEndCutoff = mealStillUnderReview ? now : mealWindowEnd;
+  const windowEndGlucoseReading = (Array.isArray(glucoseReadings) ? glucoseReadings : [])
+    .map((reading) => ({ time: new Date(reading.recorded_at).getTime(), value: Number(reading.value) }))
+    .filter((reading) =>
+      Number.isFinite(reading.time) &&
+      Number.isFinite(reading.value) &&
+      reading.time >= mealTime &&
+      reading.time <= windowEndCutoff
+    )
+    .sort((a, b) => a.time - b.time)
+    .pop() ?? null;
+  const windowEndGlucoseValue = Number.isFinite(windowEndGlucoseReading?.value) ? windowEndGlucoseReading.value : null;
+
   const correctiveInsulinDoses = peakOutcome
     ? (Array.isArray(doses) ? doses : []).filter((dose) => {
         const doseTime = getDoseTime(dose);
@@ -605,6 +623,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
       doseCount,
       glucoseValue: Number.isFinite(glucoseValue) ? glucoseValue : null,
       latestGlucoseValue: Number.isFinite(latestGlucoseValue) ? latestGlucoseValue : null,
+      windowEndGlucoseValue: Number.isFinite(windowEndGlucoseValue) ? windowEndGlucoseValue : null,
       peakOutcome: peakOutcome?.value ?? null,
       lowOutcome: lowOutcome?.value ?? null,
       outcomeAssessment,
