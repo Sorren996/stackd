@@ -16,12 +16,10 @@ import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import History from './pages/History';
 import Analytics from './pages/Analytics';
-import Coach from './pages/Coach';
 import Settings from './pages/Settings';
 import InsulinSettingsPage from './pages/InsulinSettingsPage';
 import ProfileSettingsPage from './pages/ProfileSettingsPage';
 import PrivacyConsentPage from './pages/PrivacyConsentPage';
-import CoachPreferencesPage from './pages/CoachPreferencesPage';
 import DisplaySettingsPage from './pages/DisplaySettingsPage';
 import DexcomSettingsPage from './pages/DexcomSettingsPage';
 import DexcomCallback from './pages/DexcomCallback';
@@ -137,10 +135,6 @@ const AuthenticatedApp = () => {
           queryKey: ["split-plans"],
           queryFn: () => base44.entities.SplitDosePlan.list("-created_date", 20),
         }),
-        queryClientInstance.prefetchQuery({
-          queryKey: ["unread-coach-insights"],
-          queryFn: () => base44.entities.CoachInsight.filter({ status: "unread" }, "-generated_at", 10),
-        }),
       ]);
 
       // Cache user settings into localStorage so all pages (Dashboard,
@@ -240,12 +234,10 @@ const AuthenticatedApp = () => {
             <Route path="/" element={<Dashboard />} />
             <Route path="/history" element={<History />} />
             <Route path="/analytics" element={<Analytics />} />
-            <Route path="/coach" element={<Coach />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/settings/insulin" element={<InsulinSettingsPage />} />
             <Route path="/settings/profile" element={<ProfileSettingsPage />} />
             <Route path="/settings/privacy-consent" element={<PrivacyConsentPage />} />
-            <Route path="/settings/coach" element={<CoachPreferencesPage />} />
             <Route path="/settings/display" element={<DisplaySettingsPage />} />
             <Route path="/settings/dexcom" element={<DexcomSettingsPage />} />
             <Route path="/auth/callback" element={<DexcomCallback />} />

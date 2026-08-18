@@ -1,25 +1,18 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
-import { Wind, Leaf, Waves, Settings, Sparkles } from "lucide-react";
+import { Wind, Leaf, Waves, Settings } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
 import Dashboard from "../pages/Dashboard";
-import { requestSurfaceInsight } from "@/lib/coachInsightSurface";
-import { selectSurfaceableInsights } from "@/lib/insightGating";
 import HistoryPage from "../pages/History";
-import CoachPage from "../pages/Coach";
 
 const navItems = [
   { path: "/", label: "My Flow", icon: Wind },
   { path: "/history", label: "My Journal", icon: Leaf },
   { path: "/analytics", label: "My Rhythms", icon: Waves },
-  { path: "/coach", label: "Coach", icon: Sparkles },
 ];
 
 const CachedDashboard = memo(Dashboard);
 const CachedHistoryPage = memo(HistoryPage);
-const CachedCoachPage = memo(CoachPage);
 
 export default function Layout() {
   const location = useLocation();
@@ -27,50 +20,19 @@ export default function Layout() {
   const isSettingsOpen = location.pathname.startsWith("/settings");
   const isDashboardRoute = location.pathname === "/";
   const isHistoryRoute = location.pathname === "/history";
-  const isCoachRoute = location.pathname === "/coach";
-  const isKeepAliveRoute = isDashboardRoute || isHistoryRoute || isCoachRoute;
+  const isKeepAliveRoute = isDashboardRoute || isHistoryRoute;
   const [visitedTabs, setVisitedTabs] = useState(() => ({
     dashboard: true,
     history: false,
-    coach: false,
   }));
-  const [coachKeyboardOpen, setCoachKeyboardOpen] = useState(false);
-
-  const { data: settings } = useQuery({
-    queryKey: ["user-settings"],
-    queryFn: () => base44.entities.UserSettings.list("-created_date", 1),
-    staleTime: 60 * 1000,
-  });
-  const notificationsEnabled = settings?.[0]?.coach_insight_notifications_enabled !== false;
-  const { data: unreadInsights = [] } = useQuery({
-    queryKey: ["unread-coach-insights"],
-    queryFn: () => base44.entities.CoachInsight.filter({ status: "unread" }, "-generated_at", 10),
-    staleTime: 60 * 1000,
-    refetchInterval: 2 * 60 * 1000,
-    refetchOnWindowFocus: true,
-    enabled: notificationsEnabled,
-  });
-  // Only glow when a surfaceable insight exists (max 2/day, ≥8h apart).
-  const surfaceableInsights = notificationsEnabled
-    ? selectSurfaceableInsights(unreadInsights || [])
-    : [];
-  const hasUnread = surfaceableInsights.length > 0;
-
-  useEffect(() => {
-    const handler = (e) => setCoachKeyboardOpen(e.detail?.open ?? false);
-    window.addEventListener("coach-keyboard-toggle", handler);
-    return () => window.removeEventListener("coach-keyboard-toggle", handler);
-  }, []);
 
   useEffect(() => {
     if (isDashboardRoute) {
       setVisitedTabs((tabs) => (tabs.dashboard ? tabs : { ...tabs, dashboard: true }));
     } else if (isHistoryRoute) {
       setVisitedTabs((tabs) => (tabs.history ? tabs : { ...tabs, history: true }));
-    } else if (isCoachRoute) {
-      setVisitedTabs((tabs) => (tabs.coach ? tabs : { ...tabs, coach: true }));
     }
-  }, [isDashboardRoute, isHistoryRoute, isCoachRoute]);
+  }, [isDashboardRoute, isHistoryRoute]);
 
   useEffect(() => {
     if (isSettingsOpen) {
@@ -84,11 +46,7 @@ export default function Layout() {
   };
 
   const handleLogoClick = () => {
-    if (hasUnread) {
-      const newest = surfaceableInsights[0];
-      if (newest) requestSurfaceInsight(newest.id);
-    }
-    navigate("/coach");
+    navigate("/");
   };
 
   return (
@@ -104,28 +62,13 @@ export default function Layout() {
           <button
             type="button"
             onClick={handleLogoClick}
-            aria-label={hasUnread ? "AI Wellness Coach. New insight available." : "AI Wellness Coach. No new insights."}
+            aria-label="Stackd home"
             className="relative flex items-center justify-center rounded-full transition-all"
           >
-            {hasUnread && (
-              <motion.span
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-0 rounded-full"
-                style={{
-                  background:
-                    "radial-gradient(circle, rgba(251,191,36,0.6) 0%, rgba(251,191,36,0.22) 42%, transparent 70%)",
-                }}
-                animate={{ scale: [1, 1.45, 1], opacity: [0.5, 0.95, 0.5] }}
-                transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
-              />
-            )}
             <motion.img
               src="https://media.base44.com/images/public/6a1b93f234a8611ee1595134/9cd3c84cf_stackdappiconver3tran.png"
               alt="Stackd Logo"
               className="relative z-10 h-9 w-auto object-contain"
-              animate={hasUnread ? { scale: [1, 1.08, 1] } : { scale: 1 }}
-              transition={hasUnread ? { duration: 1.8, repeat: Infinity, ease: "easeInOut" } : { duration: 0.3 }}
-              style={hasUnread ? { filter: "drop-shadow(0 0 6px rgba(251,191,36,0.85)) drop-shadow(0 0 14px rgba(251,191,36,0.4))" } : undefined}
             />
           </button>
 
@@ -153,7 +96,7 @@ export default function Layout() {
         </div>
       </header>
 
-      <main className={`relative mx-auto w-full max-w-6xl px-4 pt-14 overflow-visible ${isCoachRoute ? "pb-0" : "pb-28"}`}>
+      <main className="relative mx-auto w-full max-w-6xl px-4 pt-14 overflow-visible pb-28">
         <div className="min-w-0 w-full">
           <div hidden={!isDashboardRoute}>
             <CachedDashboard />
@@ -161,11 +104,6 @@ export default function Layout() {
           {visitedTabs.history && (
             <div hidden={!isHistoryRoute}>
               <CachedHistoryPage />
-            </div>
-          )}
-          {visitedTabs.coach && (
-            <div hidden={!isCoachRoute}>
-              <CachedCoachPage />
             </div>
           )}
           {!isKeepAliveRoute && !isSettingsOpen && (
@@ -195,7 +133,7 @@ export default function Layout() {
       </AnimatePresence>
 
       <AnimatePresence>
-        {!coachKeyboardOpen && !isSettingsOpen && (
+        {!isSettingsOpen && (
           <motion.nav
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -204,7 +142,7 @@ export default function Layout() {
             className="fixed inset-x-0 bottom-0 z-30 flex justify-center pb-safe"
           >
             <div
-              className="relative mx-4 mb-4 grid w-[min(calc(100vw-2rem),28rem)] grid-cols-4 gap-1 overflow-hidden rounded-[2rem] border px-2 py-1.5 backdrop-blur-sm"
+              className="relative mx-4 mb-4 grid w-[min(calc(100vw-2rem),24rem)] grid-cols-3 gap-1 overflow-hidden rounded-[2rem] border px-2 py-1.5 backdrop-blur-sm"
               style={{
                 background:
                   "linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.03))",

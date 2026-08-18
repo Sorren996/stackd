@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
-import { Activity, User, Shield, LogOut, Loader2, ChevronRight, Leaf, HeartPulse, LineChart } from "lucide-react";
+import { Activity, User, Shield, LogOut, Loader2, ChevronRight, HeartPulse, LineChart } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Settings() {
@@ -45,12 +45,6 @@ export default function Settings() {
       icon: HeartPulse,
       title: "Glucose Source",
       description: "Connect a continuous glucose source so your readings flow in automatically.",
-    },
-    {
-      to: "/settings/coach",
-      icon: Leaf,
-      title: "Wellness Coach",
-      description: "Manage AI Coach reviews, insight notifications, journal access, and insight data.",
     },
     {
       to: "/settings/privacy-consent",

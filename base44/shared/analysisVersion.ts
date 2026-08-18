@@ -1,6 +1,6 @@
-// Single source of truth for the AI Coach Insight Engine versions and limits.
-// Bump these when analysis logic or prompt wording meaningfully changes so
-// stored events and insights can be re-evaluated and deduplicated correctly.
+// Single source of truth for analysis logic versions and retry limits.
+// Bump these when analysis logic meaningfully changes so stored events can
+// be re-evaluated and deduplicated correctly.
 
 export const ANALYSIS_VERSION = "1.0.0";
 export const PROMPT_VERSION = "1.0.0";

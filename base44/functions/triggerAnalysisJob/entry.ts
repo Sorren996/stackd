@@ -1,4 +1,4 @@
-// AI Coach Insight Engine — job creation.
+// Analysis job creation.
 // Triggered by an entity automation when a GlucoseReading, InsulinDose, or
 // CarbEntry is created. Creates a single incremental AnalysisJob (debounced)
 // so runAnalysisJobs can drain it on its schedule. Uses the service role since
