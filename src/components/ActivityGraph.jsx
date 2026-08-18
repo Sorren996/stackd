@@ -17,6 +17,7 @@ import SpikeTagModal from "@/components/graph/SpikeTagModal";
 import GlucoseTicker from "@/components/graph/GlucoseTicker";
 import TimeViewToggle from "@/components/graph/TimeViewToggle";
 import CandlestickView from "@/components/graph/CandlestickView";
+import ReferenceLabels from "@/components/graph/ReferenceLabels";
 
 const STEP_MS = 3 * 60 * 1000;
 const HALF_HOUR_MS = 30 * 60 * 1000;
@@ -1091,21 +1092,28 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       </div>
           }
       {filters.glucose && filteredGlucoseReadings.length > 0 &&
-          <div className="pointer-events-none absolute right-4 top-0 z-20" style={{ height: GLUCOSE_CHART_HEIGHT }}>
-          <span
-              className="absolute right-0 text-[9px] font-medium leading-none text-white/25"
-              style={{ top: getGlucoseY(targetHigh), transform: "translateY(-120%)" }}>
-              
-            {Math.round(targetHigh)}
-          </span>
-          <span
-              className="absolute right-0 text-[9px] font-medium leading-none text-white/25"
-              style={{ top: getGlucoseY(targetLow), transform: "translateY(20%)" }}>
-              
-            {Math.round(targetLow)}
-          </span>
-        </div>
-          }
+          (() => {
+            const candlePlotH = CHART_HEIGHT - CHART_MARGIN_TOP - X_AXIS_HEIGHT;
+            const refToY = isCandlestick
+              ? (v) => {
+                  const c = Math.min(Math.max(v, effectiveMin), effectiveMax);
+                  return CHART_MARGIN_TOP + (effectiveMax - c) / (effectiveMax - effectiveMin) * candlePlotH;
+                }
+              : getGlucoseY;
+            const refLabels = [
+              { id: "highRef", value: highReference, side: "left", color: GLUCOSE_STATUS_COLORS.high, anchor: "above", secondary: true, text: `High ${highReference}` },
+              { id: "lowRef", value: FIXED_LOW_REFERENCE, side: "left", color: GLUCOSE_STATUS_COLORS.low, anchor: "below", secondary: true, text: `${FIXED_LOW_REFERENCE}` },
+              { id: "tgtHigh", value: targetHigh, side: "right", color: "#ffffff", anchor: "above", secondary: false, text: `${Math.round(targetHigh)}` },
+              { id: "tgtLow", value: targetLow, side: "right", color: "#ffffff", anchor: "below", secondary: false, text: `${Math.round(targetLow)}` },
+            ];
+            return (
+              <ReferenceLabels
+                labels={refLabels}
+                toY={refToY}
+                chartHeight={isCandlestick ? CHART_HEIGHT : GLUCOSE_CHART_HEIGHT}
+              />
+            );
+          })()}
       {/* monitoring gradient bands live inside the scrollable chart below */}
       <div
             ref={scrollRef}
@@ -1228,7 +1236,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                     strokeOpacity={0.45}
                     strokeWidth={1}
                     strokeDasharray="6 5"
-                    label={{ value: `High ${highReference}`, position: "insideTopRight", fill: GLUCOSE_STATUS_COLORS.high, fontSize: 9, opacity: 0.7 }}
                   />
                   <ReferenceLine
                     yAxisId="glucose"
@@ -1237,7 +1244,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                     strokeOpacity={0.4}
                     strokeWidth={1}
                     strokeDasharray="6 5"
-                    label={{ value: `${FIXED_LOW_REFERENCE}`, position: "insideBottomRight", fill: GLUCOSE_STATUS_COLORS.low, fontSize: 9, opacity: 0.65 }}
                   />
                 </>
                     }

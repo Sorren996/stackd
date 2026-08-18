@@ -55,3 +55,33 @@ export function getHighReferenceOptions() {
   }
   return options;
 }
+
+// Resolve vertical positions for reference-line labels so close thresholds
+// never overlap. Each label keeps its true line Y; only the text shifts when
+// a same-side neighbor is too close, with the displacement exposed so a tiny
+// leader can be drawn. Left and right columns are resolved independently.
+export function resolveReferenceLabelPositions(labels, toY, opts = {}) {
+  const minGap = opts.minGap ?? 14;
+  const bySide = { left: [], right: [] };
+  labels.forEach((l) => {
+    const naturalY = toY(l.value);
+    bySide[l.side].push({ ...l, naturalY, labelY: naturalY });
+  });
+
+  for (const side of ["left", "right"]) {
+    const arr = bySide[side].sort((a, b) => a.naturalY - b.naturalY);
+    for (let i = 1; i < arr.length; i++) {
+      const prev = arr[i - 1];
+      const cur = arr[i];
+      if (cur.labelY - prev.labelY < minGap) {
+        cur.labelY = prev.labelY + minGap;
+      }
+    }
+  }
+
+  const result = {};
+  [...bySide.left, ...bySide.right].forEach((l) => {
+    result[l.id] = { y: l.labelY, delta: l.labelY - l.naturalY };
+  });
+  return result;
+}

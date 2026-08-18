@@ -410,7 +410,6 @@ export default function CandlestickView({
           strokeOpacity={0.45}
           strokeWidth={1}
           strokeDasharray="6 5"
-          label={{ value: `High ${highReference}`, position: "insideTopRight", fill: GLUCOSE_STATUS_COLORS.high, fontSize: 9, opacity: 0.7 }}
         />
         <ReferenceLine
           yAxisId="glucose"
@@ -419,7 +418,6 @@ export default function CandlestickView({
           strokeOpacity={0.4}
           strokeWidth={1}
           strokeDasharray="6 5"
-          label={{ value: `${FIXED_LOW_REFERENCE}`, position: "insideBottomRight", fill: GLUCOSE_STATUS_COLORS.low, fontSize: 9, opacity: 0.65 }}
         />
 
         <Bar

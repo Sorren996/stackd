@@ -1143,8 +1143,8 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
                 aria-hidden="true"
                 className="pointer-events-none absolute inset-x-0 top-0 z-[1] rounded-3xl"
                 style={{
-                  height: "55%",
-                  background: `linear-gradient(to bottom, ${glowColor}1f 0%, ${glowColor}0a 35%, transparent 100%)`,
+                  height: "50%",
+                  background: `linear-gradient(to bottom, ${glowColor}28 0%, ${glowColor}1a 14%, ${glowColor}0c 55%, transparent 100%)`,
                 }}
               />
             );
