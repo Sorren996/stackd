@@ -1,0 +1,103 @@
+{
+  "name": "SupportTicket",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "Explicit user ID for the ticket owner, set so service-role processing can reference it."
+    },
+    "ticket_type": {
+      "type": "string",
+      "enum": [
+        "support",
+        "bug",
+        "feedback"
+      ],
+      "description": "Whether the user is requesting help, reporting a problem, or sharing feedback."
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "account",
+        "dexcom",
+        "glucose",
+        "insulin",
+        "journal",
+        "performance",
+        "bug",
+        "feature_request",
+        "other"
+      ],
+      "description": "Area of the application the ticket relates to."
+    },
+    "message": {
+      "type": "string",
+      "description": "The user's message or description of the issue."
+    },
+    "include_diagnostics": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the user consented to including diagnostic metadata with this ticket."
+    },
+    "app_version": {
+      "type": "string",
+      "description": "Application version at the time the ticket was submitted."
+    },
+    "diagnostic_metadata": {
+      "type": "object",
+      "description": "Diagnostic information included with consent, such as connection status and platform details. Never includes passwords or Dexcom credentials."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "open",
+        "in_progress",
+        "resolved",
+        "closed"
+      ],
+      "default": "open",
+      "description": "Current state of the support ticket."
+    },
+    "admin_response": {
+      "type": "string",
+      "description": "Optional response from a support admin."
+    },
+    "resolved_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the ticket was marked resolved or closed."
+    }
+  },
+  "required": [
+    "ticket_type",
+    "category",
+    "message"
+  ],
+  "rls": {
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

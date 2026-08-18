@@ -112,8 +112,8 @@ export default function DexcomConnect() {
       </div>
 
       <p className="px-2 text-xs text-white/30 leading-relaxed">
-        We use a secure, private connection. Your credentials stay with your source —
-        Stackd only receives permission to read your glucose readings.
+        Your Dexcom credentials are encrypted and used only to establish your CGM
+        connection. Stackd administrators and support staff cannot view them.
       </p>
     </div>
   );

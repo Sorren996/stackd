@@ -1,0 +1,67 @@
+{
+  "name": "AuditLog",
+  "type": "object",
+  "properties": {
+    "admin_user_id": {
+      "type": "string",
+      "description": "ID of the admin who performed the action."
+    },
+    "admin_email": {
+      "type": "string",
+      "description": "Email of the admin at time of action."
+    },
+    "action": {
+      "type": "string",
+      "description": "The administrative action performed (e.g. account_disabled, password_reset_initiated, sessions_revoked, support_data_accessed)."
+    },
+    "affected_user_id": {
+      "type": "string",
+      "description": "ID of the user affected by the action, if applicable."
+    },
+    "affected_user_email": {
+      "type": "string",
+      "description": "Email of the affected user, if applicable."
+    },
+    "reason": {
+      "type": "string",
+      "description": "Optional reason or note for the action."
+    },
+    "ip_address": {
+      "type": "string",
+      "description": "Request IP address if available."
+    },
+    "user_agent": {
+      "type": "string",
+      "description": "User agent string if available."
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional structured context for the action. Never includes passwords, tokens, or Dexcom credentials."
+    }
+  },
+  "required": [
+    "action"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

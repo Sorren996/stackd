@@ -16,15 +16,27 @@ export default function PrivacyConsent() {
   const handleDeleteAccount = async () => {
     setIsDeletingAccount(true);
     try {
-      const [doses, readings, carbs] = await Promise.all([
-        base44.entities.InsulinDose.list("-administered_at", 5000),
-        base44.entities.GlucoseReading.list("-recorded_at", 5000),
-        base44.entities.CarbEntry.list("-consumed_at", 5000),
-      ]);
+      // Remove all user-owned data across every entity. Uses deleteMany with
+      // empty filters — RLS scopes each deletion to the authenticated user's
+      // own records only, so no other user's data is affected.
       await Promise.all([
-        ...doses.map((d) => base44.entities.InsulinDose.delete(d.id)),
-        ...readings.map((r) => base44.entities.GlucoseReading.delete(r.id)),
-        ...carbs.map((c) => base44.entities.CarbEntry.delete(c.id)),
+        base44.entities.InsulinDose.deleteMany({}),
+        base44.entities.GlucoseReading.deleteMany({}),
+        base44.entities.CarbEntry.deleteMany({}),
+        base44.entities.JournalEntry.deleteMany({}),
+        base44.entities.UserSettings.deleteMany({}),
+        base44.entities.DexcomConnection.deleteMany({}),
+        base44.entities.SplitDosePlan.deleteMany({}),
+        base44.entities.SplitDosePreset.deleteMany({}),
+        base44.entities.DailySummary.deleteMany({}),
+        base44.entities.GlucoseEvent.deleteMany({}),
+        base44.entities.MealResponseAnalysis.deleteMany({}),
+        base44.entities.MealMatchFeedback.deleteMany({}),
+        base44.entities.UserPatternProfile.deleteMany({}),
+        base44.entities.CoachInsight.deleteMany({}),
+        base44.entities.AnalysisJob.deleteMany({}),
+        base44.entities.UserAcknowledgment.deleteMany({}),
+        base44.entities.SupportTicket.deleteMany({}),
       ]);
       queryClient.clear();
       await logout(true);
