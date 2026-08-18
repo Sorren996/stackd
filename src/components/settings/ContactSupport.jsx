@@ -3,6 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { Loader2, LifeBuoy, Bug, MessageSquare, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { getAppVersion } from "@/lib/appVersion";
+import MySupportRequests from "@/components/settings/MySupportRequests";
 
 const TICKET_TYPES = [
   { key: "support", label: "Get Support", icon: LifeBuoy, desc: "Technical problems or account help." },
@@ -75,6 +76,8 @@ export default function ContactSupport() {
 
   return (
     <div className="space-y-6">
+      <MySupportRequests />
+
       {/* Ticket type selection */}
       <div className="space-y-3">
         <h3 className="text-sm font-bold text-white uppercase tracking-wider px-1">How can we help?</h3>
