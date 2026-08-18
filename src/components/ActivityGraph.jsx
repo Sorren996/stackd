@@ -18,6 +18,7 @@ import GlucoseTicker from "@/components/graph/GlucoseTicker";
 import TimeViewToggle from "@/components/graph/TimeViewToggle";
 import CandlestickView from "@/components/graph/CandlestickView";
 import ReferenceLabels from "@/components/graph/ReferenceLabels";
+import GraphLowerSection from "@/components/graph/GraphLowerSection";
 
 const STEP_MS = 3 * 60 * 1000;
 const HALF_HOUR_MS = 30 * 60 * 1000;
@@ -35,11 +36,11 @@ const X_AXIS_HEIGHT = 30;
 const GLUCOSE_CHART_HEIGHT = 224;
 const GLUCOSE_MARGIN_TOP = 62;
 const GLUCOSE_PLOT_HEIGHT = GLUCOSE_CHART_HEIGHT - GLUCOSE_MARGIN_TOP;
-const INSULIN_CHART_HEIGHT = 120;
-const INSULIN_MARGIN_TOP = 20;
+const CARB_LANE_HEIGHT = 34;
+const INSULIN_CHART_HEIGHT = 112;
+const INSULIN_MARGIN_TOP = 24;
 const INSULIN_PLOT_HEIGHT = INSULIN_CHART_HEIGHT - INSULIN_MARGIN_TOP - X_AXIS_HEIGHT;
-const PLANE_GAP = 8;
-const TWO_PLANE_HEIGHT = GLUCOSE_CHART_HEIGHT + PLANE_GAP + INSULIN_CHART_HEIGHT;
+const TWO_PLANE_HEIGHT = GLUCOSE_CHART_HEIGHT + CARB_LANE_HEIGHT + INSULIN_CHART_HEIGHT;
 const GLUCOSE_MIN = 40;
 const GLUCOSE_MAX = 250;
 const CARB_PROFILE_COLORS = {
@@ -300,6 +301,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const [activeMarker, setActiveMarker] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [spikeTagTarget, setSpikeTagTarget] = useState(null);
+  const [selectedDoseKey, setSelectedDoseKey] = useState(null);
   const { connected: dexcomConnected } = useDexcomConnection();
 
   const openMarker = (type, item, rect) => {
@@ -309,6 +311,11 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const closeMarker = () => {
     setConfirmDelete(false);
     setActiveMarker(null);
+    setSelectedDoseKey(null);
+  };
+  const handleDoseTap = (dose, key, rect) => {
+    setSelectedDoseKey(key);
+    openMarker("insulin", dose, rect);
   };
   const handleEdit = () => {
     if (!activeMarker || !onSelectLog) return;
@@ -546,6 +553,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     const result = [];
     for (let t = domainStart; t <= domainEnd; t += STEP_MS) {
       const point = { time: t, bg: effectiveMax };
+      let totalActivity = 0;
       allCurvesMeta.forEach(({ dose, key, curve }) => {
         const doseUnits = getDoseUnits(dose);
         if (!curve.length || t < curve[0].time || t > curve[curve.length - 1].time) {
@@ -567,8 +575,10 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           point[`${key}_actual`] = activeUnits;
           point[`${key}_activity`] = activity;
           point[`${key}_total`] = doseUnits;
+          totalActivity += point[key] || 0;
         }
       });
+      point.total_activity = Math.min(75, totalActivity);
       if (glucoseMap[t] !== undefined) {
         point.glucose = Math.min(glucoseMap[t], effectiveMax);
       }
@@ -620,8 +630,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
   const positionedCarbMarkers = useMemo(() => {
     const laneLastX = [];
-    const laneCount = 3;
-    const minMarkerGap = 86;
+    const laneCount = 2;
+    const minMarkerGap = 72;
 
     return carbEventMarkers.
     slice().
@@ -644,9 +654,10 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
   const positionedDoseMarkers = useMemo(() => {
     const placed = [];
-    const minHorizontalGap = 30;
-    const labelHeight = 12;
+    const minHorizontalGap = 38;
+    const pillHeight = 16;
     const minVerticalGap = 2;
+    const maxRows = 2;
 
     return filteredDoses.
     slice().
@@ -661,38 +672,23 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       const units = getDoseUnits(dose);
       if (!Number.isFinite(units) || units <= 0) return null;
       const x = (time - domainStart) / totalMs * chartWidth;
-
       const key = getDoseKey(dose, index);
-      let peakVal = 0;
-      let peakX = x;
-      for (const point of chartData) {
-        const v = point[key];
-        if (Number.isFinite(v) && v > peakVal) {
-          peakVal = v;
-          peakX = (point.time - domainStart) / totalMs * chartWidth;
-        }
-      }
-      const insulinPlotStart = GLUCOSE_CHART_HEIGHT + PLANE_GAP + INSULIN_MARGIN_TOP;
-      const peakY = insulinPlotStart + INSULIN_PLOT_HEIGHT * (1 - Math.min(peakVal, 75) / 75);
-
-      let labelTop = Math.max(GLUCOSE_CHART_HEIGHT + PLANE_GAP + 2, peakY - 16);
-
-      for (const p of placed) {
-        const horizontalOverlap = Math.abs(peakX - p.x) < minHorizontalGap;
-        const verticalOverlap =
-        labelTop < p.labelTop + p.labelHeight + minVerticalGap &&
-        labelTop + labelHeight + minVerticalGap > p.labelTop;
-        if (horizontalOverlap && verticalOverlap) {
-          labelTop = Math.max(GLUCOSE_CHART_HEIGHT + PLANE_GAP + 2, p.labelTop - labelHeight - minVerticalGap);
-        }
-      }
-
-      placed.push({ x: peakX, labelTop, labelHeight });
       const color = getInsulinProfile(dose.insulin_type)?.color || "#888";
-      return { dose, x: peakX, units, key, color, peakY, labelTop };
+
+      let row = 0;
+      for (const p of placed) {
+        if (Math.abs(x - p.x) < minHorizontalGap) {
+          row = Math.max(row, p.row + 1);
+        }
+      }
+      row = row % maxRows;
+      const pillTop = row * (pillHeight + minVerticalGap);
+
+      placed.push({ x, row });
+      return { dose, x, units, key, color, pillTop, row };
     }).
     filter(Boolean);
-  }, [filteredDoses, domainStart, domainEnd, totalMs, chartWidth, chartData]);
+  }, [filteredDoses, domainStart, domainEnd, totalMs, chartWidth]);
 
   const positionedSpikeMarkers = useMemo(() => {
     const detectedStarts = detectedSpikes.map((s) => new Date(s.startTime).getTime());
@@ -1267,163 +1263,47 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             </ComposedChart>
           </div>
 
-          <div style={{ position: "absolute", top: GLUCOSE_CHART_HEIGHT + PLANE_GAP / 2, left: 0, right: 0, height: 1, background: "rgba(255,255,255,0.04)" }} />
-
-          <div style={{ position: "absolute", top: GLUCOSE_CHART_HEIGHT + PLANE_GAP, left: 0 }}>
-            <ComposedChart
-                    width={chartWidth}
-                    height={INSULIN_CHART_HEIGHT}
-                    data={chartData}
-                    margin={{ top: INSULIN_MARGIN_TOP, right: 0, left: -20, bottom: 0 }}>
-              <defs>
-                {doseKeys.map((k) =>
-                      <linearGradient key={`insulin_fill_${k.key}`} id={`insulin_fill_${k.key}`} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={k.color} stopOpacity={0.9} />
-                    <stop offset="100%" stopColor={k.color} stopOpacity={0.25} />
-                  </linearGradient>
-                      )}
-              </defs>
-
-              <XAxis
-                      dataKey="time"
-                      type="number"
-                      domain={[domainStart, domainEnd]}
-                      ticks={timeTicks}
-                      tick={<TimeAxisTick />}
-                      axisLine={false}
-                      tickLine={false}
-                      height={X_AXIS_HEIGHT}
-                      interval={0} />
-
-              <YAxis yAxisId="insulin" domain={[0, 75]} hide />
-
-              {doseKeys.filter((k) => k.isBasal).map((k) =>
-                    <Area
-                      key={k.key}
-                      yAxisId="insulin"
-                      type="basis"
-                      dataKey={k.key}
-                      name={k.label}
-                      stroke={k.color}
-                      strokeWidth={1}
-                      strokeOpacity={0.4}
-                      fill={`url(#insulin_fill_${k.key})`}
-                      fillOpacity={0.22}
-                      dot={false}
-                      activeDot={false}
-                      isAnimationActive={false} />
-                )}
-              {doseKeys.filter((k) => !k.isBasal).map((k) =>
-                    <Area
-                      key={k.key}
-                      yAxisId="insulin"
-                      type="basis"
-                      dataKey={k.key}
-                      name={k.label}
-                      stroke={k.color}
-                      strokeWidth={1}
-                      strokeOpacity={0.4}
-                      fill={`url(#insulin_fill_${k.key})`}
-                      fillOpacity={0.22}
-                      dot={false}
-                      activeDot={false}
-                      isAnimationActive={false} />
-                )}
-            </ComposedChart>
-          </div>
-
-          {filters.insulin && positionedDoseMarkers.map(({ dose, x, units, key, color, labelTop }) => {
-                  const isEdgeLeft = x < 24;
-                  const isEdgeRight = x > chartWidth - 24;
-                  const formattedUnits = units % 1 === 0 ? String(units) : units.toFixed(1);
-
-                  return (
-                    <div
-                      key={`dose_label_${key}`}
-                      className="pointer-events-none absolute top-0 z-[5]"
-                      style={{
-                        left: x,
-                        transform: isEdgeLeft ? "translateX(0)" : isEdgeRight ? "translateX(-100%)" : "translateX(-50%)"
-                      }}>
-                <div
-                        className="absolute left-1/2 w-px -translate-x-1/2"
-                        style={{
-                          top: labelTop + 14,
-                          height: Math.max(0, GLUCOSE_CHART_HEIGHT + PLANE_GAP + INSULIN_MARGIN_TOP + INSULIN_PLOT_HEIGHT - labelTop - 14),
-                          background: `linear-gradient(to bottom, ${color}25, transparent)`
-                        }} />
-                <button
-                        type="button"
-                        onClick={(e) => {e.stopPropagation();openMarker("insulin", dose, e.currentTarget.getBoundingClientRect());}}
-                        aria-label={`${formattedUnits} units ${String(dose.insulin_type || "Insulin").split(" ")[0]}`}
-                        className="pointer-events-auto relative flex cursor-pointer items-center rounded-full px-1.5 py-0.5 text-[9px] font-semibold leading-none backdrop-blur-sm transition hover:brightness-125"
-                        style={{
-                          top: labelTop,
-                          color,
-                          background: "rgba(10,16,14,0.72)",
-                          border: `1px solid ${color}35`
-                        }}>
-                        
-                  <span>{formattedUnits}u</span>
-                </button>
-              </div>);
-
-                })}
-
-          {filters.carbs && positionedCarbMarkers.map(({ entry, color, x, lane }) => {
-                  const isEdgeLeft = x < 58;
-                  const isEdgeRight = x > chartWidth - 58;
-                  const pillTop = GLUCOSE_CHART_HEIGHT + PLANE_GAP + 2 + lane * 20;
-
-                  return (
-                    <div
-                      key={`carb_marker_${entry.id}`}
-                      className="pointer-events-none absolute top-0 z-[12]"
-                      style={{
-                        left: x,
-                        height: TWO_PLANE_HEIGHT,
-                        transform: isEdgeLeft ? "translateX(0)" : isEdgeRight ? "translateX(-100%)" : "translateX(-50%)"
-                      }}>
-                <div
-                        className="absolute left-1/2 w-px -translate-x-1/2"
-                        style={{
-                          top: pillTop + 16,
-                          height: Math.max(20, GLUCOSE_CHART_HEIGHT + PLANE_GAP + INSULIN_MARGIN_TOP + INSULIN_PLOT_HEIGHT - pillTop - 16),
-                          background: `linear-gradient(to bottom, ${color}55, ${color}15 60%, transparent)`
-                        }} />
-                <button
-                        type="button"
-                        onClick={(e) => {e.stopPropagation();openMarker("carbs", entry, e.currentTarget.getBoundingClientRect());}}
-                        aria-label={`Carbs ${Math.round(entry.carbs)}g`}
-                        className="pointer-events-auto relative flex cursor-pointer items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-semibold leading-none backdrop-blur-sm transition hover:brightness-125"
-                        style={{
-                          top: pillTop,
-                          color,
-                          borderColor: `${color}30`,
-                          background: "rgba(10,16,14,0.72)"
-                        }}>
-                        
-                  <Wheat className="h-2.5 w-2.5" />
-                  <span>{Math.round(entry.carbs)}g</span>
-                </button>
-              </div>);
-
-                })}
-
-          {positionedSpikeMarkers.map((spike, idx) =>
-                <SpikeMarker
-                  key={`spike_${idx}`}
-                  x={spike.x}
-                  handled={spike.handled}
-                  chartHeight={GLUCOSE_CHART_HEIGHT}
-                  onTag={() => setSpikeTagTarget(spike)} />
-
-                )}
+          <GraphLowerSection
+            chartData={chartData}
+            doseKeys={doseKeys}
+            positionedCarbMarkers={positionedCarbMarkers}
+            positionedDoseMarkers={positionedDoseMarkers}
+            positionedSpikeMarkers={positionedSpikeMarkers}
+            domainStart={domainStart}
+            domainEnd={domainEnd}
+            chartWidth={chartWidth}
+            timeTicks={timeTicks}
+            glucoseChartHeight={GLUCOSE_CHART_HEIGHT}
+            carbLaneHeight={CARB_LANE_HEIGHT}
+            insulinChartHeight={INSULIN_CHART_HEIGHT}
+            insulinMarginTop={INSULIN_MARGIN_TOP}
+            xAxisHeight={X_AXIS_HEIGHT}
+            selectedDoseKey={selectedDoseKey}
+            onDoseTap={handleDoseTap}
+            onCarbTap={(entry, rect) => openMarker("carbs", entry, rect)}
+            onSpikeTag={setSpikeTagTarget}
+            showInsulin={filters.insulin}
+            showCarbs={filters.carbs}
+          />
           </>
               }
         </div>
       </div>
       </div>
+      {filters.insulin && doseKeys.length > 0 && (
+        <div className="flex items-center gap-3 px-3 mt-1.5 overflow-x-auto no-scrollbar">
+          {Array.from(new Map(doseKeys.map((k) => [k.label, k])).values()).map((k) => (
+            <div key={k.label} className="flex items-center gap-1 shrink-0">
+              <span className="h-1.5 w-1.5 rounded-full" style={{ background: k.color }} />
+              <span className="text-[9px] text-white/35">{k.label}</span>
+            </div>
+          ))}
+          <div className="flex items-center gap-1 shrink-0">
+            <span className="h-0.5 w-3 rounded-full" style={{ background: "#7ac8de" }} />
+            <span className="text-[9px] text-white/35">Total</span>
+          </div>
+        </div>
+      )}
       <div
           ref={monitoringLabelRef}
           className="pointer-events-none mt-1 flex items-center justify-center gap-1.5"
