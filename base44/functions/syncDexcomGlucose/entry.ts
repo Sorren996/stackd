@@ -10,7 +10,6 @@
 
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.40";
 import { syncShareForConnection } from "../../shared/dexcomShareSync.ts";
-import { detectSpikesForUser } from "../../shared/spikeDetection.ts";
 import { dayKeyFromTimezone, recomputeDailySummary } from "../../shared/dailySummary.ts";
 
 export default async function (req: Request): Promise<Response> {
@@ -63,17 +62,8 @@ export default async function (req: Request): Promise<Response> {
 
         await sr.entities.DexcomConnection.update(conn.id, statusPatch).catch(() => {});
 
-        // Spike detection + DailySummary for new readings
+        // DailySummary updates for new readings
         if (diag.records_inserted > 0) {
-          try {
-            const { toCreate: spikeRecords } = await detectSpikesForUser(sr, owner, 3);
-            if (spikeRecords.length) {
-              await sr.entities.GlucoseEvent.bulkCreate(spikeRecords);
-            }
-          } catch {
-            // Spike detection failure is non-fatal
-          }
-
           try {
             const settings = await sr.entities.UserSettings.filter({ created_by_id: owner }, "-created_date", 1);
             const s: any = settings[0];

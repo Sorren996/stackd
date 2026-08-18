@@ -1,20 +1,16 @@
 import { useMemo, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { ComposedChart, Bar, Area, XAxis, YAxis, ReferenceLine } from "recharts";
-import { AnimatePresence, motion } from "framer-motion";
 import { format } from "date-fns";
-import { ArrowUp, X } from "lucide-react";
-import { bucketGlucoseForCandles, bucketSpikes } from "@/lib/glucoseBucketing";
+import { bucketGlucoseForCandles } from "@/lib/glucoseBucketing";
 import { generateActivityCurve, getInsulinProfile, isBasalInsulinType } from "@/lib/insulinPharmacology";
 import { GLUCOSE_STATUS_COLORS, FIXED_LOW_REFERENCE } from "@/lib/glucoseStatus";
-import Spike24hTooltip from "@/components/graph/Spike24hTooltip";
 
 const HOUR_MS = 60 * 60 * 1000;
 const STEP_MS = 15 * 60 * 1000;
 const GLUCOSE_MIN = 40;
 const GLUCOSE_MAX = 250;
 const INSULIN_PLANE_HEIGHT = 82;
-const SPIKE_ROW_HEIGHT = 32;
 const LOWER_GAP = 4;
 
 const PALETTE = {
@@ -124,8 +120,6 @@ export default function CandlestickView({
   glucoseReadings,
   doses,
   carbEntries = [],
-  spikeEvents = [],
-  detectedSpikes = [],
   targetRange,
   chartWidth,
   chartHeight,
@@ -146,48 +140,6 @@ export default function CandlestickView({
   const candleData = useMemo(
     () => bucketGlucoseForCandles(glucoseReadings, domainStart, domainEnd),
     [glucoseReadings, domainStart, domainEnd]
-  );
-
-  // Normalize every spike (client-detected or backend-tracked) into one shape
-  // so the lower-plane markers and tooltip can render them uniformly.
-  const allSpikes = useMemo(() => {
-    const merged = detectedSpikes.map((s) => ({
-      startTime: s.startTime,
-      startGlucose: s.startGlucose,
-      peakGlucose: s.peakGlucose,
-      peakTime: s.peakTime,
-      riseAmount: s.riseAmount,
-      durationMinutes: s.durationMinutes,
-      rateOfRise: s.rateOfRise,
-      user_dismissed: s.user_dismissed,
-      user_tagged_cause: s.user_tagged_cause,
-      eventId: s.eventId || null,
-    }));
-    const detectedStarts = detectedSpikes.map((s) => new Date(s.startTime).getTime());
-    for (const e of spikeEvents) {
-      if (!e.start_time) continue;
-      const eventStart = new Date(e.start_time).getTime();
-      if (detectedStarts.some((ds) => Math.abs(ds - eventStart) < 5 * 60 * 1000)) continue;
-      merged.push({
-        startTime: e.start_time,
-        startGlucose: e.starting_glucose,
-        peakGlucose: e.peak_glucose,
-        peakTime: e.peak_time || e.end_time,
-        riseAmount: (e.peak_glucose || 0) - (e.starting_glucose || 0),
-        durationMinutes: e.duration_minutes,
-        rateOfRise: e.rate_of_rise,
-        user_dismissed: e.user_dismissed,
-        user_tagged_cause: e.user_tagged_cause,
-        eventId: e.id,
-      });
-    }
-    return merged;
-  }, [detectedSpikes, spikeEvents]);
-
-  // Hourly bundles: spikes within the same hour are grouped (≈2–3 typically).
-  const spikeBundles = useMemo(
-    () => bucketSpikes(allSpikes, domainStart, domainEnd).filter((b) => b.count > 0),
-    [allSpikes, domainStart, domainEnd]
   );
 
   const chartData = useMemo(
@@ -274,45 +226,7 @@ export default function CandlestickView({
   const candleSlotWidth = chartWidth / candleCount;
   const totalMs = domainEnd - domainStart;
 
-  // Collision-aware spike rail: place each bundle at its timestamp, stagger into
-  // two compact lanes when neighbors overlap, and only locally bundle when both
-  // lanes are full — so repeated spikes stay readable without giant bundles.
-  const positionedSpikeChips = useMemo(() => {
-    const sorted = [...spikeBundles].sort((a, b) => a.time - b.time);
-    const chips = [];
-    const laneRightEdge = [-Infinity, -Infinity];
-    const GAP = 2;
-    const chipWidth = (count) => 22 + (count > 1 ? 14 + String(count - 1).length * 6 : 0);
-
-    for (const bundle of sorted) {
-      const x = ((bundle.time - domainStart) / totalMs) * chartWidth + candleSlotWidth / 2;
-      const w = chipWidth(bundle.spikes.length);
-      let placed = false;
-      for (let lane = 0; lane < 2; lane++) {
-        if (x - w / 2 >= laneRightEdge[lane] + GAP) {
-          chips.push({ ...bundle, x, lane, w });
-          laneRightEdge[lane] = x + w / 2;
-          placed = true;
-          break;
-        }
-      }
-      if (!placed) {
-        const last = chips[chips.length - 1];
-        if (last) {
-          last.spikes = [...last.spikes, ...bundle.spikes];
-          last.maxRise = Math.max(last.maxRise || 0, bundle.maxRise || 0);
-          last.w = chipWidth(last.spikes.length);
-        } else {
-          chips.push({ ...bundle, x, lane: 0, w });
-          laneRightEdge[0] = x + w / 2;
-        }
-      }
-    }
-    return chips;
-  }, [spikeBundles, domainStart, totalMs, chartWidth, candleSlotWidth]);
-
   const [activeTooltip, setActiveTooltip] = useState(null);
-  const [spikeBundle, setSpikeBundle] = useState(null);
 
   const buildCandleTooltip = (candle, rect) => {
     const start = candle.time;
@@ -470,27 +384,6 @@ export default function CandlestickView({
         </ComposedChart>
       </div>
 
-      {/* ── SPIKE EVENTS: compact markers beneath the timeline ── */}
-      <div className="absolute left-0 right-0" style={{ top: lowerTop + INSULIN_PLANE_HEIGHT + 2, height: SPIKE_ROW_HEIGHT }}>
-        {positionedSpikeChips.map((chip, i) => {
-          const count = chip.spikes.length;
-          const allHandled = chip.spikes.every((s) => s.user_dismissed || s.user_tagged_cause);
-          const chipColor = allHandled ? PALETTE.green : PALETTE.spike;
-          return (
-            <button
-              key={`spike_${i}`}
-              type="button"
-              onClick={(e) => { e.stopPropagation(); setSpikeBundle(chip); }}
-              className="absolute flex items-center gap-0.5 rounded-full px-1.5 py-0.5 backdrop-blur-sm transition hover:brightness-125"
-              style={{ left: chip.x, top: chip.lane === 0 ? 2 : 16, transform: "translateX(-50%)", background: "rgba(10,16,14,0.7)", border: `1px solid ${chipColor}40` }}
-            >
-              <ArrowUp className="h-2.5 w-2.5" style={{ color: chipColor }} strokeWidth={2.5} />
-              {count > 1 && <span className="text-[9px] font-bold" style={{ color: chipColor }}>+{count - 1}</span>}
-            </button>
-          );
-        })}
-      </div>
-
       {/* ── Candlestick tooltip ── */}
       {activeTooltip && activeTooltip.rect && activeTooltip.high != null && createPortal(
         (() => {
@@ -537,12 +430,6 @@ export default function CandlestickView({
         document.body
       )}
 
-      {/* ── Spike tooltip modal ── */}
-      <AnimatePresence>
-        {spikeBundle && (
-          <Spike24hTooltip bundle={spikeBundle} doses={doses} carbEntries={carbEntries} onClose={() => setSpikeBundle(null)} />
-        )}
-      </AnimatePresence>
     </div>
   );
 }

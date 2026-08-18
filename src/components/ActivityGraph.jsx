@@ -11,9 +11,6 @@ import InfoPopover from "@/components/graph/InfoPopover";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
-import { detectSpikes, generateAssumedReadings } from "@/lib/spikeDetection";
-import SpikeMarker from "@/components/graph/SpikeMarker";
-import SpikeTagModal from "@/components/graph/SpikeTagModal";
 import GlucoseTicker from "@/components/graph/GlucoseTicker";
 import TimeViewToggle from "@/components/graph/TimeViewToggle";
 import CandlestickView from "@/components/graph/CandlestickView";
@@ -300,7 +297,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const isCandlestick = viewWindow === 24;
   const [activeMarker, setActiveMarker] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [spikeTagTarget, setSpikeTagTarget] = useState(null);
   const [selectedDoseKey, setSelectedDoseKey] = useState(null);
   const { connected: dexcomConnected } = useDexcomConnection();
 
@@ -390,12 +386,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       window.removeEventListener("storage", updateSettings);
     };
   }, []);
-
-  const { data: spikeEvents = [] } = useQuery({
-    queryKey: ["spike-events"],
-    queryFn: () => base44.entities.GlucoseEvent.filter({ event_type: "spike" }, "-created_date", 100),
-    staleTime: 60 * 1000
-  });
 
   const toggleFilter = (key) => setFilters((f) => ({ ...f, [key]: !f[key] }));
 
@@ -531,9 +521,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   sort((a, b) => a.time - b.time),
   [glucoseMap]
   );
-
-  const assumedReadings = useMemo(() => generateAssumedReadings(filteredGlucoseReadings), [filteredGlucoseReadings]);
-  const detectedSpikes = useMemo(() => detectSpikes(assumedReadings), [assumedReadings]);
 
   const glucoseCurveSegments = useMemo(() => ({
     value: buildMonotoneSegments(glucoseLinePoints, (point) => point.value),
@@ -734,71 +721,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     }).
     filter(Boolean);
   }, [filteredDoses, allCurvesMeta, maxBolusUnits, maxBasalUnits, domainStart, domainEnd, totalMs, chartWidth]);
-
-  const positionedSpikeMarkers = useMemo(() => {
-    const detectedStarts = detectedSpikes.map((s) => new Date(s.startTime).getTime());
-
-    const markers = detectedSpikes.
-    map((spike) => {
-      const spikeStart = new Date(spike.startTime).getTime();
-      if (spikeStart < domainStart || spikeStart > domainEnd) return null;
-      const x = (spikeStart - domainStart) / totalMs * chartWidth;
-      const existingEvent = spikeEvents.find((e) => {
-        if (!e.start_time) return false;
-        const eventStart = new Date(e.start_time).getTime();
-        return Math.abs(eventStart - spikeStart) < 5 * 60 * 1000;
-      });
-      const dismissed = existingEvent?.user_dismissed === true;
-      const taggedCause = existingEvent?.user_tagged_cause || null;
-      return { ...spike, x, taggedCause, dismissed, handled: taggedCause !== null || dismissed, eventId: existingEvent?.id || null };
-    }).
-    filter(Boolean);
-
-    // Also surface backend-tracked spikes the client-side detection may have missed
-    for (const e of spikeEvents) {
-      if (!e.start_time) continue;
-      const eventStart = new Date(e.start_time).getTime();
-      if (eventStart < domainStart || eventStart > domainEnd) continue;
-      const alreadyDetected = detectedStarts.some((ds) => Math.abs(ds - eventStart) < 5 * 60 * 1000);
-      if (alreadyDetected) continue;
-      const x = (eventStart - domainStart) / totalMs * chartWidth;
-      const dismissed = e.user_dismissed === true;
-      const taggedCause = e.user_tagged_cause || null;
-      markers.push({
-        startTime: e.start_time,
-        peakTime: e.peak_time || e.end_time,
-        startGlucose: e.starting_glucose,
-        peakGlucose: e.peak_glucose,
-        riseAmount: (e.peak_glucose || 0) - (e.starting_glucose || 0),
-        durationMinutes: e.duration_minutes,
-        rateOfRise: e.rate_of_rise,
-        x,
-        taggedCause,
-        dismissed,
-        handled: taggedCause !== null || dismissed,
-        eventId: e.id
-      });
-    }
-
-    // Final dedup: merge any markers within 20 minutes of each other,
-    // keeping the one with the larger rise. This catches cases where
-    // client-detected and backend-tracked spikes land close but don't
-    // overlap within the 5-minute merge window above.
-    const sorted = markers.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
-    const deduped = [];
-    for (const m of sorted) {
-      const prev = deduped[deduped.length - 1];
-      if (prev && new Date(m.startTime).getTime() - new Date(prev.peakTime || prev.startTime).getTime() < 20 * 60 * 1000) {
-        if ((m.riseAmount || 0) > (prev.riseAmount || 0)) {
-          deduped[deduped.length - 1] = m;
-        }
-      } else {
-        deduped.push(m);
-      }
-    }
-
-    return deduped;
-  }, [detectedSpikes, spikeEvents, domainStart, domainEnd, totalMs, chartWidth]);
 
   const getGlucoseY = (value) => {
     const clamped = Math.min(Math.max(value, effectiveMin), effectiveMax);
@@ -1175,8 +1097,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                 glucoseReadings={filteredGlucoseReadings}
                 doses={filteredDoses}
                 carbEntries={filteredCarbEntries}
-                spikeEvents={spikeEvents}
-                detectedSpikes={detectedSpikes}
                 targetRange={targetRange}
                 chartWidth={chartWidth}
                 chartHeight={CHART_HEIGHT}
@@ -1313,7 +1233,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             doseKeys={doseKeys}
             positionedCarbMarkers={positionedCarbMarkers}
             positionedDoseMarkers={positionedDoseMarkers}
-            positionedSpikeMarkers={positionedSpikeMarkers}
             domainStart={domainStart}
             domainEnd={domainEnd}
             chartWidth={chartWidth}
@@ -1326,7 +1245,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             selectedDoseKey={selectedDoseKey}
             onDoseTap={handleDoseTap}
             onCarbTap={(entry, rect) => openMarker("carbs", entry, rect)}
-            onSpikeTag={setSpikeTagTarget}
             showInsulin={filters.insulin}
             showCarbs={filters.carbs}
           />
@@ -1425,11 +1343,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         </InfoPopover>
       }
 
-      <AnimatePresence>
-        {spikeTagTarget &&
-        <SpikeTagModal spike={spikeTagTarget} onClose={() => setSpikeTagTarget(null)} />
-        }
-      </AnimatePresence>
     </div>);
 
 }

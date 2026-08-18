@@ -1,7 +1,6 @@
 import { ComposedChart, Area, XAxis, YAxis } from "recharts";
 import { format } from "date-fns";
-import { Wheat, ArrowUp } from "lucide-react";
-import { motion } from "framer-motion";
+import { Wheat } from "lucide-react";
 
 function TimeAxisTick({ x, y, payload }) {
   const date = new Date(payload.value);
@@ -31,7 +30,6 @@ export default function GraphLowerSection({
   doseKeys,
   positionedCarbMarkers,
   positionedDoseMarkers,
-  positionedSpikeMarkers,
   domainStart,
   domainEnd,
   chartWidth,
@@ -44,7 +42,6 @@ export default function GraphLowerSection({
   selectedDoseKey,
   onDoseTap,
   onCarbTap,
-  onSpikeTag,
   showInsulin,
   showCarbs,
 }) {
@@ -225,29 +222,6 @@ export default function GraphLowerSection({
         );
       })}
 
-      {/* Spike markers — small, subtle, at bottom edge of glucose chart */}
-      {positionedSpikeMarkers.map((spike, idx) => {
-        const color = spike.handled ? "rgba(91,168,138,0.5)" : "rgba(251,191,36,0.5)";
-        return (
-          <div
-            key={`spike_${idx}`}
-            className="pointer-events-none absolute z-[15]"
-            style={{ left: spike.x, top: glucoseChartHeight - 1, transform: "translateX(-50%)" }}
-          >
-            <motion.button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); onSpikeTag(spike); }}
-              whileTap={{ scale: 0.85 }}
-              aria-label={spike.handled ? "Spike reviewed" : "Reflect on this glucose rise"}
-              className="pointer-events-auto flex h-3 w-3 items-center justify-center"
-              animate={spike.handled ? { scale: 1 } : { scale: [1, 1.15, 1] }}
-              transition={spike.handled ? { duration: 0.2 } : { duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
-            >
-              <ArrowUp className="h-2.5 w-2.5" style={{ color }} strokeWidth={2.5} />
-            </motion.button>
-          </div>
-        );
-      })}
     </>
   );
 }
