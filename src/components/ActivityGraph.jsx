@@ -553,7 +553,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     const result = [];
     for (let t = domainStart; t <= domainEnd; t += STEP_MS) {
       const point = { time: t, bg: effectiveMax };
-      let totalActivity = 0;
       allCurvesMeta.forEach(({ dose, key, curve }) => {
         const doseUnits = getDoseUnits(dose);
         if (!curve.length || t < curve[0].time || t > curve[curve.length - 1].time) {
@@ -575,10 +574,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           point[`${key}_actual`] = activeUnits;
           point[`${key}_activity`] = activity;
           point[`${key}_total`] = doseUnits;
-          totalActivity += point[key] || 0;
         }
       });
-      point.total_activity = Math.min(75, totalActivity);
       if (glucoseMap[t] !== undefined) {
         point.glucose = Math.min(glucoseMap[t], effectiveMax);
       }
@@ -659,6 +656,18 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     const minVerticalGap = 2;
     const maxRows = 2;
 
+    // Map each dose key to the peak activity time of its PK curve so the pill
+    // sits above the most recognizable point of its corresponding curve.
+    const peakTimeByKey = {};
+    allCurvesMeta.forEach(({ key, curve }) => {
+      if (!curve.length) return;
+      let peak = curve[0];
+      for (const p of curve) {
+        if (p.activity > peak.activity) peak = p;
+      }
+      peakTimeByKey[key] = peak.time;
+    });
+
     return filteredDoses.
     slice().
     sort((a, b) => {
@@ -667,12 +676,12 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       return aTime - bTime;
     }).
     map((dose, index) => {
-      const time = new Date(dose.administered_at || dose.created_at || dose.created_date).getTime();
-      if (!Number.isFinite(time) || time < domainStart || time > domainEnd) return null;
+      const key = getDoseKey(dose, index);
+      const peakTime = peakTimeByKey[key];
+      if (!Number.isFinite(peakTime) || peakTime < domainStart || peakTime > domainEnd) return null;
       const units = getDoseUnits(dose);
       if (!Number.isFinite(units) || units <= 0) return null;
-      const x = (time - domainStart) / totalMs * chartWidth;
-      const key = getDoseKey(dose, index);
+      const x = (peakTime - domainStart) / totalMs * chartWidth;
       const color = getInsulinProfile(dose.insulin_type)?.color || "#888";
 
       let row = 0;
@@ -688,7 +697,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       return { dose, x, units, key, color, pillTop, row };
     }).
     filter(Boolean);
-  }, [filteredDoses, domainStart, domainEnd, totalMs, chartWidth]);
+  }, [filteredDoses, allCurvesMeta, domainStart, domainEnd, totalMs, chartWidth]);
 
   const positionedSpikeMarkers = useMemo(() => {
     const detectedStarts = detectedSpikes.map((s) => new Date(s.startTime).getTime());
@@ -1298,10 +1307,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               <span className="text-[9px] text-white/35">{k.label}</span>
             </div>
           ))}
-          <div className="flex items-center gap-1 shrink-0">
-            <span className="w-3 border-t border-dashed" style={{ borderColor: "#7ac8de", opacity: 0.6 }} />
-            <span className="text-[9px] text-white/35">Total</span>
-          </div>
         </div>
       )}
       <div

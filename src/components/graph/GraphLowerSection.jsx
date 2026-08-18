@@ -1,9 +1,7 @@
-import { ComposedChart, Area, Line, XAxis, YAxis } from "recharts";
+import { ComposedChart, Area, XAxis, YAxis } from "recharts";
 import { format } from "date-fns";
 import { Wheat, ArrowUp } from "lucide-react";
 import { motion } from "framer-motion";
-
-const TOTAL_CURVE_COLOR = "#7ac8de";
 
 function TimeAxisTick({ x, y, payload }) {
   const date = new Date(payload.value);
@@ -122,24 +120,6 @@ export default function GraphLowerSection({
           {hasCurves && doseKeys.filter((k) => k.isBasal).map(renderDoseArea)}
           {/* Individual bolus curves */}
           {hasCurves && doseKeys.filter((k) => !k.isBasal).map(renderDoseArea)}
-
-          {/* Combined Total Active Insulin — thin secondary reference line */}
-          {hasCurves && (
-            <Line
-              yAxisId="insulin"
-              type="basis"
-              dataKey="total_activity"
-              name="Total Active"
-              stroke={TOTAL_CURVE_COLOR}
-              strokeWidth={1}
-              strokeOpacity={0.4}
-              strokeDasharray="4 4"
-              dot={false}
-              activeDot={false}
-              isAnimationActive={false}
-              connectNulls={true}
-            />
-          )}
         </ComposedChart>
       </div>
 
