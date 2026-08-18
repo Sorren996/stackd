@@ -65,9 +65,9 @@ export default function GraphLowerSection({
         name={k.label}
         stroke={k.color}
         strokeWidth={isSelected ? 1.5 : 1}
-        strokeOpacity={isDimmed ? 0.1 : isSelected ? 0.65 : 0.32}
+        strokeOpacity={isDimmed ? 0.1 : isSelected ? 0.65 : 0.4}
         fill={`url(#insulin_fill_${k.key})`}
-        fillOpacity={isDimmed ? 0.03 : isSelected ? 0.28 : 0.14}
+        fillOpacity={isDimmed ? 0.03 : isSelected ? 0.28 : 0.22}
         dot={false}
         activeDot={false}
         isAnimationActive={false}
@@ -99,14 +99,10 @@ export default function GraphLowerSection({
           <defs>
             {doseKeys.map((k) => (
               <linearGradient key={`insulin_fill_${k.key}`} id={`insulin_fill_${k.key}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={k.color} stopOpacity={0.7} />
-                <stop offset="100%" stopColor={k.color} stopOpacity={0.12} />
+                <stop offset="0%" stopColor={k.color} stopOpacity={0.9} />
+                <stop offset="100%" stopColor={k.color} stopOpacity={0.25} />
               </linearGradient>
             ))}
-            <linearGradient id="total_insulin_fill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={TOTAL_CURVE_COLOR} stopOpacity={0.16} />
-              <stop offset="100%" stopColor={TOTAL_CURVE_COLOR} stopOpacity={0} />
-            </linearGradient>
           </defs>
 
           <XAxis
@@ -127,7 +123,7 @@ export default function GraphLowerSection({
           {/* Individual bolus curves */}
           {hasCurves && doseKeys.filter((k) => !k.isBasal).map(renderDoseArea)}
 
-          {/* Combined Total Active Insulin curve — brighter cyan, on top */}
+          {/* Combined Total Active Insulin — thin secondary reference line */}
           {hasCurves && (
             <Line
               yAxisId="insulin"
@@ -135,10 +131,9 @@ export default function GraphLowerSection({
               dataKey="total_activity"
               name="Total Active"
               stroke={TOTAL_CURVE_COLOR}
-              strokeWidth={selectedDoseKey ? 1.2 : 2}
-              strokeOpacity={selectedDoseKey ? 0.4 : 0.85}
-              fill="url(#total_insulin_fill)"
-              fillOpacity={0.12}
+              strokeWidth={1}
+              strokeOpacity={0.4}
+              strokeDasharray="4 4"
               dot={false}
               activeDot={false}
               isAnimationActive={false}

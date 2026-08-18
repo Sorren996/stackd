@@ -1299,7 +1299,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             </div>
           ))}
           <div className="flex items-center gap-1 shrink-0">
-            <span className="h-0.5 w-3 rounded-full" style={{ background: "#7ac8de" }} />
+            <span className="w-3 border-t border-dashed" style={{ borderColor: "#7ac8de", opacity: 0.6 }} />
             <span className="text-[9px] text-white/35">Total</span>
           </div>
         </div>
