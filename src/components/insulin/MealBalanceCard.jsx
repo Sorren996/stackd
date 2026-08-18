@@ -102,7 +102,7 @@ export default function MealBalanceCard({ mealInsight, highProteinFatStatus, onO
   return (
     <motion.div
       whileTap={{ scale: 0.985 }}
-      className="metric-card relative w-full overflow-hidden rounded-2xl border p-4 backdrop-blur-sm"
+      className="metric-card relative col-span-2 w-full overflow-hidden rounded-2xl border p-4 backdrop-blur-sm"
       style={{
         background: "linear-gradient(152deg, rgba(255,255,255,0.04), rgba(255,255,255,0.008))",
         borderColor: "rgba(255,255,255,0.09)",
