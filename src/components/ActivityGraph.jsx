@@ -344,7 +344,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const tooltipTimeRef = useRef(null);
   const tooltipDateRef = useRef(null);
   const scrollFrameRef = useRef(null);
-  const pathSamplesRef = useRef(null);
   const prevLatestValueRef = useRef(null);
   const pendingScrollLeftRef = useRef(0);
   const containerRef = useRef(null);
@@ -802,63 +801,14 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       return;
     }
 
-    // Pin the marker to the actual rendered trendline by sampling the SVG
-    // path at the viewport center. This keeps the dot exactly on the line
-    // regardless of recharts' internal plot geometry or interpolation.
-    //
-    // Coordinate conversion: the scrollable div is chartWidth wide, but the
-    // chart has margin.left = -20 so the plot area is (chartWidth + 20) wide.
-    // A scroll position scrollX maps to path coordinate:
-    //   pathX = -20 + scrollX * (chartWidth + 20) / chartWidth
-    const scrollX = scrollLeft + containerWidth / 2;
-    const CHART_MARGIN_LEFT = -20;
-    const targetX = CHART_MARGIN_LEFT + scrollX * (chartWidth - CHART_MARGIN_LEFT) / chartWidth;
-    const root = graphViewportRef.current;
-    const trendNode = root?.querySelector(".stackd-glucose-trend");
-    const path = trendNode?.tagName?.toLowerCase() === "path"
-      ? trendNode
-      : (trendNode?.querySelector("path") || root?.querySelector('path[stroke="url(#glucose_line_grad)"]'));
-    let markerY = null;
-    if (path && typeof path.getPointAtLength === "function") {
-      const len = path.getTotalLength();
-      if (len > 0) {
-        // Sample the path once and cache it; recompute only when the rendered
-        // path changes (new data / view). Each scroll frame then does a cheap
-        // array binary search + lerp instead of repeated DOM calls.
-        let cached = pathSamplesRef.current;
-        if (!cached || cached.el !== path || cached.len !== len) {
-          const n = Math.min(300, Math.max(40, Math.ceil(len / 5)));
-          const pts = [];
-          for (let i = 0; i <= n; i++) {
-            const pt = path.getPointAtLength((i / n) * len);
-            pts.push({ x: pt.x, y: pt.y });
-          }
-          cached = { el: path, len, pts };
-          pathSamplesRef.current = cached;
-        }
-        const arr = cached.pts;
-        if (targetX <= arr[0].x) {
-          markerY = arr[0].y;
-        } else if (targetX >= arr[arr.length - 1].x) {
-          markerY = arr[arr.length - 1].y;
-        } else {
-          let lo = 0;
-          let hi = arr.length - 1;
-          while (hi - lo > 1) {
-            const mid = (lo + hi) >> 1;
-            if (arr[mid].x < targetX) lo = mid;
-            else hi = mid;
-          }
-          const a = arr[lo];
-          const b = arr[hi];
-          const t = (targetX - a.x) / (b.x - a.x || 1);
-          markerY = a.y + (b.y - a.y) * t;
-        }
-      }
-    }
+    // Compute the marker Y directly from the glucose value using the same
+    // coordinate mapping as the chart's YAxis. This is more reliable than
+    // sampling the SVG path, which can drift due to recharts' internal
+    // transforms and margin offsets.
+    const markerY = getGlucoseY(glucose.plotValue);
 
     if (marker) {
-      if (markerY != null && Number.isFinite(markerY)) {
+      if (Number.isFinite(markerY)) {
         marker.style.transform = `translate3d(-50%, ${markerY}px, 0) translateY(-50%)`;
         marker.style.opacity = String(getHighRangeOpacity(glucose.plotValue));
       } else {
