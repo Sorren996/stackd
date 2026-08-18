@@ -298,7 +298,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const [activeMarker, setActiveMarker] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [selectedDoseKey, setSelectedDoseKey] = useState(null);
-  const [centerOutOfRange, setCenterOutOfRange] = useState(false);
   const { connected: dexcomConnected } = useDexcomConnection();
 
   const openMarker = (type, item, rect) => {
@@ -346,7 +345,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const tooltipDateRef = useRef(null);
   const scrollFrameRef = useRef(null);
   const prevLatestValueRef = useRef(null);
-  const prevOutOfRangeRef = useRef(false);
   const pendingScrollLeftRef = useRef(0);
   const containerRef = useRef(null);
   const graphViewportRef = useRef(null);
@@ -421,15 +419,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   // Stops are clamped to monotonically increasing offsets to avoid invalid gradients
   // when the target band is narrow or sits near the chart edges.
   const lineGradStops = useMemo(() => {
-    // When the marker is over an in-range reading, the line stays normal white.
-    // The colored glow only appears when scrolling over out-of-range readings.
-    if (!centerOutOfRange) {
-      return [
-        { offset: 0, color: "#ffffff", opacity: 0.6 },
-        { offset: 100, color: "#ffffff", opacity: 0.6 },
-      ];
-    }
-
     const hi = Number(highPct);
     const lo = Number(lowPct);
     const highRefPct = Number(((effectiveMax - highReference) / rangeTotal * 100).toFixed(1));
@@ -452,7 +441,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       prev = offset;
       return { ...stop, offset };
     });
-  }, [highPct, lowPct, effectiveMax, rangeTotal, highReference, centerOutOfRange]);
+  }, [highPct, lowPct, effectiveMax, rangeTotal, highReference]);
 
   // Only include doses/carbs if their filter is on
   const filteredDoses = filters.insulin ? doses : [];
@@ -810,14 +799,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     if (!glucose || !Number.isFinite(glucose.time)) {
       if (marker) marker.style.opacity = "0";
       return;
-    }
-
-    // Track whether the marker is currently over an out-of-range reading so
-    // the line gradient can toggle between colored glow and normal white.
-    const outOfRange = glucose.value > targetHigh || glucose.value < targetLow;
-    if (outOfRange !== prevOutOfRangeRef.current) {
-      prevOutOfRangeRef.current = outOfRange;
-      setCenterOutOfRange(outOfRange);
     }
 
     // Compute the marker Y directly from the glucose value using the same
