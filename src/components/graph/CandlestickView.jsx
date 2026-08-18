@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { ArrowUp, X } from "lucide-react";
 import { bucketGlucoseForCandles, bucketSpikes } from "@/lib/glucoseBucketing";
 import { generateActivityCurve, getInsulinProfile, isBasalInsulinType } from "@/lib/insulinPharmacology";
+import { GLUCOSE_STATUS_COLORS, FIXED_LOW_REFERENCE } from "@/lib/glucoseStatus";
 import Spike24hTooltip from "@/components/graph/Spike24hTooltip";
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -134,6 +135,7 @@ export default function CandlestickView({
   domainEnd,
   glucoseMin = 40,
   glucoseMax = 400,
+  highReference = 250,
 }) {
   const targetLow = targetRange.low;
   const targetHigh = targetRange.high;
@@ -380,8 +382,8 @@ export default function CandlestickView({
             <stop offset="100%" stopColor="#d4a056" stopOpacity={0.06} />
           </linearGradient>
           <linearGradient id="candle_low_fade" gradientUnits="userSpaceOnUse" x1="0" y1={targetLowY} x2="0" y2={marginTop + plotHeight}>
-            <stop offset="0%" stopColor="#6b92c4" stopOpacity={0.06} />
-            <stop offset="100%" stopColor="#6b92c4" stopOpacity={0.55} />
+            <stop offset="0%" stopColor={GLUCOSE_STATUS_COLORS.low} stopOpacity={0.06} />
+            <stop offset="100%" stopColor={GLUCOSE_STATUS_COLORS.low} stopOpacity={0.55} />
           </linearGradient>
         </defs>
 
@@ -401,6 +403,24 @@ export default function CandlestickView({
         <Area yAxisId="glucose" type="monotoneX" dataKey="bg" stroke="none" fill="url(#candle_range_grad)" isAnimationActive={false} dot={false} />
         <ReferenceLine yAxisId="glucose" y={targetHigh} stroke="rgba(255,255,255,0.16)" strokeWidth={1} strokeDasharray="3 5" />
         <ReferenceLine yAxisId="glucose" y={targetLow} stroke="rgba(255,255,255,0.16)" strokeWidth={1} strokeDasharray="3 5" />
+        <ReferenceLine
+          yAxisId="glucose"
+          y={highReference}
+          stroke={GLUCOSE_STATUS_COLORS.high}
+          strokeOpacity={0.45}
+          strokeWidth={1}
+          strokeDasharray="6 5"
+          label={{ value: `High ${highReference}`, position: "insideTopRight", fill: GLUCOSE_STATUS_COLORS.high, fontSize: 9, opacity: 0.7 }}
+        />
+        <ReferenceLine
+          yAxisId="glucose"
+          y={FIXED_LOW_REFERENCE}
+          stroke={GLUCOSE_STATUS_COLORS.low}
+          strokeOpacity={0.4}
+          strokeWidth={1}
+          strokeDasharray="6 5"
+          label={{ value: `${FIXED_LOW_REFERENCE}`, position: "insideBottomRight", fill: GLUCOSE_STATUS_COLORS.low, fontSize: 9, opacity: 0.65 }}
+        />
 
         <Bar
           yAxisId="glucose"

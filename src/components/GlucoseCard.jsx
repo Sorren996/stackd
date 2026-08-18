@@ -7,14 +7,26 @@ import {
   AlertDialogTitle, AlertDialogTrigger
 } from "@/components/ui/alert-dialog";
 import { motion } from "framer-motion";
+import { getGlucoseColor, getGlucoseStatusLabel } from "@/lib/glucoseStatus";
+
+function readTargetRange() {
+  if (typeof window === "undefined") return { low: 70, high: 180 };
+  const low = Number(window.localStorage.getItem("target_range_low") || 70);
+  const high = Number(window.localStorage.getItem("target_range_high") || 180);
+  return {
+    low: Number.isFinite(low) ? low : 70,
+    high: Number.isFinite(high) ? high : 180,
+  };
+}
 
 export default function GlucoseCard({ reading, onDelete, locked = false }) {
   const value = reading.value;
-  const color = value < 70 ? "#6b92c4" : value > 180 ? "#d4a056" : "#5ba88a";
-  const statusLabel = value < 70 ? "Below comfort zone" : value > 180 ? "Above comfort zone" : "In comfort zone";
+  const { low, high } = readTargetRange();
+  const color = getGlucoseColor(value, low, high);
+  const statusLabel = getGlucoseStatusLabel(value, low, high);
   const timeAgo = formatDistanceToNow(new Date(reading.recorded_at), { addSuffix: true });
 
-  const eventLabel = value < 70 ? "Glucose below comfort zone" : value > 180 ? "Glucose above comfort zone" : "Glucose check-in";
+  const eventLabel = value < low ? "Glucose below comfort zone" : value > high ? "Glucose above comfort zone" : "Glucose check-in";
 
   return (
     <motion.div

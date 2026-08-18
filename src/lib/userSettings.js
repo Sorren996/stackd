@@ -20,6 +20,7 @@ const LOCAL_KEYS = [
   "coach_insight_notifications_enabled",
   "coach_exclude_journal",
   "graph_height",
+  "high_glucose_reference",
 ];
 
 function getDefaultMealInsulinTypes() {
@@ -126,6 +127,13 @@ function validateSettings(raw) {
 
   if (raw.graph_height === 300 || raw.graph_height === 400) {
     sanitized.graph_height = raw.graph_height;
+  }
+
+  if (Number.isFinite(raw.high_glucose_reference)) {
+    const v = Math.round(raw.high_glucose_reference);
+    if (v >= 140 && v <= 400) {
+      sanitized.high_glucose_reference = Math.round(v / 10) * 10;
+    }
   }
 
   // Pass through username for backend identification (not validated numerically)

@@ -5,6 +5,7 @@ import { PROFILE_COLORS } from "@/lib/carbAbsorption";
 import { format } from "date-fns";
 import { AlertTriangle, CornerUpRight, SlidersHorizontal, Check, Wheat, Pencil, Trash2, Info } from "lucide-react";
 import { HIGH_PROTEIN_FAT_MONITORING_HOURS, mergeMonitoringIntervals } from "@/lib/mealMonitoring";
+import { GLUCOSE_STATUS_COLORS, readHighReference, FIXED_LOW_REFERENCE } from "@/lib/glucoseStatus";
 import { motion, AnimatePresence } from "framer-motion";
 import InfoPopover from "@/components/graph/InfoPopover";
 import { useQuery } from "@tanstack/react-query";
@@ -104,11 +105,8 @@ function formatGlucoseDisplay(value) {
   return Math.round(value);
 }
 
-function formatRelativeTime(time) {
+function formatReadingTime(time) {
   if (!Number.isFinite(time)) return "—";
-  const diffMin = Math.floor((Date.now() - time) / 60000);
-  if (diffMin < 1) return "just now";
-  if (diffMin < 60) return `${diffMin}m ago`;
   return format(new Date(time), "h:mm a");
 }
 
@@ -355,6 +353,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const [containerWidth, setContainerWidth] = useState(600);
   const [targetRange, setTargetRange] = useState(readTargetRange);
   const [graphHeight, setGraphHeight] = useState(readGraphHeight);
+  const [highReference, setHighReference] = useState(readHighReference);
 
   useEffect(() => {
     const target = graphViewportRef.current || containerRef.current;
@@ -370,6 +369,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     const updateSettings = () => {
       setTargetRange(readTargetRange());
       setGraphHeight(readGraphHeight());
+      setHighReference(readHighReference());
     };
 
     window.addEventListener("target-range-updated", updateSettings);
@@ -426,13 +426,13 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     const lo = Number(lowPct);
     const fadeIn = Math.min(Math.max(4, hi * 0.4), Math.max(4, hi - 3));
     const raw = [
-    { offset: 0, color: "#ef4444", opacity: 0 },
-    { offset: fadeIn, color: "#ef4444", opacity: 0.18 },
-    { offset: Math.max(0, hi - 3), color: "#ef4444", opacity: 0.72 },
+    { offset: 0, color: GLUCOSE_STATUS_COLORS.high, opacity: 0 },
+    { offset: fadeIn, color: GLUCOSE_STATUS_COLORS.high, opacity: 0.18 },
+    { offset: Math.max(0, hi - 3), color: GLUCOSE_STATUS_COLORS.high, opacity: 0.72 },
     { offset: Math.min(100, hi + 3), color: "#ffffff", opacity: 0.72 },
     { offset: Math.max(0, lo - 3), color: "#ffffff", opacity: 0.72 },
-    { offset: Math.min(100, lo + 3), color: "#6b92c4", opacity: 0.72 },
-    { offset: 100, color: "#6b92c4", opacity: 0.72 }];
+    { offset: Math.min(100, lo + 3), color: GLUCOSE_STATUS_COLORS.low, opacity: 0.72 },
+    { offset: 100, color: GLUCOSE_STATUS_COLORS.low, opacity: 0.72 }];
 
     let prev = 0;
     return raw.map((stop) => {
@@ -892,7 +892,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     }
 
     if (tickerRef.current) tickerRef.current.setValue(formatGlucoseDisplay(glucose.value), animate);
-    if (timeEl) timeEl.textContent = formatRelativeTime(glucose.time);
+    if (timeEl) timeEl.textContent = formatReadingTime(glucose.time);
     if (dateEl) dateEl.textContent = Number.isFinite(glucose.time) ? format(new Date(glucose.time), "EEEE, MMM d") : "";
   };
 
@@ -967,7 +967,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       const centerTime = getCenterTimeForScroll(scrollLeft);
       const glucose = getGlucoseAt(centerTime);
       if (glucose && tooltipTimeRef.current) {
-        tooltipTimeRef.current.textContent = formatRelativeTime(glucose.time);
+        tooltipTimeRef.current.textContent = formatReadingTime(glucose.time);
       }
     }, 30000);
     return () => clearInterval(interval);
@@ -1136,7 +1136,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                 domainStart={domainStart}
                 domainEnd={domainEnd}
                 glucoseMin={effectiveMin}
-                glucoseMax={effectiveMax} /> :
+                glucoseMax={effectiveMax}
+                highReference={highReference} /> :
 
 
               <>
@@ -1220,6 +1221,24 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                     <>
                   <ReferenceLine yAxisId="glucose" y={targetHigh} stroke="rgba(255,255,255,0.18)" strokeWidth={1} strokeDasharray="3 4" />
                   <ReferenceLine yAxisId="glucose" y={targetLow} stroke="rgba(255,255,255,0.18)" strokeWidth={1} strokeDasharray="3 4" />
+                  <ReferenceLine
+                    yAxisId="glucose"
+                    y={highReference}
+                    stroke={GLUCOSE_STATUS_COLORS.high}
+                    strokeOpacity={0.45}
+                    strokeWidth={1}
+                    strokeDasharray="6 5"
+                    label={{ value: `High ${highReference}`, position: "insideTopRight", fill: GLUCOSE_STATUS_COLORS.high, fontSize: 9, opacity: 0.7 }}
+                  />
+                  <ReferenceLine
+                    yAxisId="glucose"
+                    y={FIXED_LOW_REFERENCE}
+                    stroke={GLUCOSE_STATUS_COLORS.low}
+                    strokeOpacity={0.4}
+                    strokeWidth={1}
+                    strokeDasharray="6 5"
+                    label={{ value: `${FIXED_LOW_REFERENCE}`, position: "insideBottomRight", fill: GLUCOSE_STATUS_COLORS.low, fontSize: 9, opacity: 0.65 }}
+                  />
                 </>
                     }
 

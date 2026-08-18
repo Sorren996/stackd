@@ -39,6 +39,7 @@ import { computeTimeInRange, filterReadingsForStats, computeTimeInRangeFromReadi
 import { computeGlucoseTrend, mapDexcomTrend } from "@/lib/glucoseTrend";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 import { isRescueCarbEntry } from "@/lib/rescueCarbDetection";
+import { GLUCOSE_STATUS_COLORS, classifyGlucose } from "@/lib/glucoseStatus";
 
 // Flip to false to instantly revert to the original dense dashboard layout.
 const CLEAN_LAYOUT = true;
@@ -443,7 +444,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
   } else if (correctionGlucoseLow) {
     value = "Review";
     status = "Glucose is below range - take care first";
-    color = "#6b92c4";
+    color = GLUCOSE_STATUS_COLORS.low;
   } else if (ratio < 0.75) {
     value = `${estimatedAdditionalUnits.toFixed(1)}u`;
     status = "Below your historical rhythm";
@@ -515,20 +516,20 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
         outcomeAssessment = {
           label: "Worth a closer look",
           message: "It looks like you've provided a bit more support than this moment needed. Please enjoy a gentle carb source and stay close to the trend while your body settles back.",
-          color: "#6b92c4",
+          color: GLUCOSE_STATUS_COLORS.low,
         };
         value = "Take care";
         status = "Glucose dipped below range";
-        color = "#6b92c4";
+        color = GLUCOSE_STATUS_COLORS.low;
       } else {
         outcomeAssessment = {
           label: "Below range",
           message: "Glucose has dipped below your comfortable range. Consider a gentle carb source and follow your established plan.",
-          color: "#6b92c4",
+          color: GLUCOSE_STATUS_COLORS.low,
         };
         value = "Take care";
         status = "Below comfort zone";
-        color = "#6b92c4";
+        color = GLUCOSE_STATUS_COLORS.low;
       }
     } else if (latestIsAfterMeal && latestHigh) {
       // Currently above range
@@ -1032,12 +1033,12 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
   const targetLow = targetRange.low;
   const targetHigh = targetRange.high;
   const glucoseColor = !glucoseValue
-    ? "#5ba88a"
+    ? GLUCOSE_STATUS_COLORS.inRange
     : glucoseValue < targetLow
-      ? "#6b92c4"
+      ? GLUCOSE_STATUS_COLORS.low
       : glucoseValue > targetHigh
-        ? "#d4a056"
-        : "#5ba88a";
+        ? GLUCOSE_STATUS_COLORS.high
+        : GLUCOSE_STATUS_COLORS.inRange;
 
   const inRange = glucoseValue == null ? null : glucoseValue >= targetLow && glucoseValue <= targetHigh;
   const rangeCardLabel =
@@ -1050,12 +1051,12 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
           : "In comfort zone";
   const rangeSparkColor =
     glucoseValue == null
-      ? "#5ba88a88"
+      ? `${GLUCOSE_STATUS_COLORS.inRange}88`
       : glucoseValue < targetLow
-        ? "#6b92c488"
+        ? `${GLUCOSE_STATUS_COLORS.low}88`
         : glucoseValue > targetHigh
-          ? "#d4a05688"
-          : "#5ba88a88";
+          ? `${GLUCOSE_STATUS_COLORS.high}88`
+          : `${GLUCOSE_STATUS_COLORS.inRange}88`;
   const glucoseReadingAgeMinutes = latestGlucose?.recorded_at
     ? Math.floor((Date.now() - new Date(latestGlucose.recorded_at).getTime()) / MINUTE_MS)
     : null;
@@ -1117,7 +1118,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
             rangeCardLabel={rangeCardLabel}
             readingAgeLabel={
               latestGlucose?.recorded_at
-                ? formatRelativeAge(new Date(latestGlucose.recorded_at).getTime())
+                ? formatClockTime(new Date(latestGlucose.recorded_at).getTime())
                 : null
             }
             onEdit={onEditGlucose}
@@ -1127,12 +1128,27 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
         <SupportiveGlucoseMessage insight={supportiveGlucoseInsight} trend={trend} TrendIcon={TrendIcon} />
 
         <div
-          className="mt-3 overflow-hidden rounded-3xl border border-white/[0.07] pb-1"
+          className="relative mt-3 overflow-hidden rounded-3xl border border-white/[0.07] pb-1"
           style={{
             background: "linear-gradient(165deg, rgba(255,255,255,0.035), rgba(255,255,255,0.006))",
             boxShadow: "0 6px 28px rgba(0,0,0,0.10), inset 0 1px 1px rgba(255,255,255,0.06)",
           }}
         >
+          {(() => {
+            const status = classifyGlucose(glucoseValue, targetLow, targetHigh);
+            if (status !== "high" && status !== "low") return null;
+            const glowColor = status === "high" ? GLUCOSE_STATUS_COLORS.high : GLUCOSE_STATUS_COLORS.low;
+            return (
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-x-0 top-0 z-[1] rounded-3xl"
+                style={{
+                  height: "55%",
+                  background: `linear-gradient(to bottom, ${glowColor}1f 0%, ${glowColor}0a 35%, transparent 100%)`,
+                }}
+              />
+            );
+          })()}
           {graphSlot}
         </div>
 

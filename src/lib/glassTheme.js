@@ -1,7 +1,7 @@
 // Muted, nature-derived wellness palette — soft enough to sit over bright backgrounds
 export const WELLNESS_COLORS = {
   inRange: "#5ba88a",   // muted sage green
-  below: "#6b92c4",     // muted sky blue
+  below: "#e07a6b",     // warm red (glucose below range)
   above: "#d4a056",     // muted warm gold
   high: "#c97060",      // muted terracotta
   insulin: "#5ba3b8",   // muted teal

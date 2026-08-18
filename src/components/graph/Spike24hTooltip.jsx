@@ -10,7 +10,7 @@ const PALETTE = {
   green: "#58a97c",
   spike: "#E9A284",
   high: "#d4a056",
-  low: "#6b92c4",
+  low: "#e07a6b",
 };
 
 const WINDOW_MS = 30 * 60 * 1000;
