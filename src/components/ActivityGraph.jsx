@@ -422,15 +422,19 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const lineGradStops = useMemo(() => {
     const hi = Number(highPct);
     const lo = Number(lowPct);
+    const highRefPct = Number(((effectiveMax - highReference) / rangeTotal * 100).toFixed(1));
+    const lowRefPct = Number(((effectiveMax - FIXED_LOW_REFERENCE) / rangeTotal * 100).toFixed(1));
     const fadeIn = Math.min(Math.max(4, hi * 0.4), Math.max(4, hi - 3));
     const raw = [
     { offset: 0, color: GLUCOSE_STATUS_COLORS.high, opacity: 0 },
     { offset: fadeIn, color: GLUCOSE_STATUS_COLORS.high, opacity: 0.18 },
-    { offset: Math.max(0, hi - 3), color: GLUCOSE_STATUS_COLORS.high, opacity: 0.72 },
-    { offset: Math.min(100, hi + 3), color: "#ffffff", opacity: 0.72 },
-    { offset: Math.max(0, lo - 3), color: "#ffffff", opacity: 0.72 },
-    { offset: Math.min(100, lo + 3), color: GLUCOSE_STATUS_COLORS.low, opacity: 0.72 },
-    { offset: 100, color: GLUCOSE_STATUS_COLORS.low, opacity: 0.72 }];
+    { offset: highRefPct, color: GLUCOSE_STATUS_COLORS.high, opacity: 0.9 },
+    { offset: Math.max(0, hi - 3), color: GLUCOSE_STATUS_COLORS.high, opacity: 0.6 },
+    { offset: Math.min(100, hi + 3), color: "#ffffff", opacity: 0.6 },
+    { offset: Math.max(0, lo - 3), color: "#ffffff", opacity: 0.6 },
+    { offset: Math.min(100, lo + 3), color: GLUCOSE_STATUS_COLORS.low, opacity: 0.6 },
+    { offset: lowRefPct, color: GLUCOSE_STATUS_COLORS.low, opacity: 0.9 },
+    { offset: 100, color: GLUCOSE_STATUS_COLORS.low, opacity: 0.9 }];
 
     let prev = 0;
     return raw.map((stop) => {
@@ -438,7 +442,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       prev = offset;
       return { ...stop, offset };
     });
-  }, [highPct, lowPct]);
+  }, [highPct, lowPct, effectiveMax, rangeTotal, highReference]);
 
   // Only include doses/carbs if their filter is on
   const filteredDoses = filters.insulin ? doses : [];
@@ -801,7 +805,14 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     // Pin the marker to the actual rendered trendline by sampling the SVG
     // path at the viewport center. This keeps the dot exactly on the line
     // regardless of recharts' internal plot geometry or interpolation.
-    const targetX = scrollLeft + containerWidth / 2;
+    //
+    // Coordinate conversion: the scrollable div is chartWidth wide, but the
+    // chart has margin.left = -20 so the plot area is (chartWidth + 20) wide.
+    // A scroll position scrollX maps to path coordinate:
+    //   pathX = -20 + scrollX * (chartWidth + 20) / chartWidth
+    const scrollX = scrollLeft + containerWidth / 2;
+    const CHART_MARGIN_LEFT = -20;
+    const targetX = CHART_MARGIN_LEFT + scrollX * (chartWidth - CHART_MARGIN_LEFT) / chartWidth;
     const root = graphViewportRef.current;
     const trendNode = root?.querySelector(".stackd-glucose-trend");
     const path = trendNode?.tagName?.toLowerCase() === "path"
