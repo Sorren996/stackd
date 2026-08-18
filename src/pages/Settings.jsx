@@ -2,11 +2,11 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
-import { Activity, User, Shield, LogOut, Loader2, ChevronRight, HeartPulse, LineChart, LifeBuoy } from "lucide-react";
+import { Activity, User, Shield, LogOut, Loader2, ChevronRight, HeartPulse, LineChart, LifeBuoy, Inbox } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Settings() {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const queryClient = useQueryClient();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
@@ -28,6 +28,16 @@ export default function Settings() {
       title: "Profile Settings",
       description: "Manage your name, email address, and password.",
     },
+    ...(user?.role === "admin"
+      ? [
+          {
+            to: "/settings/support-inbox",
+            icon: Inbox,
+            title: "Support Inbox",
+            description: "Review and respond to help requests, bug reports, and feedback from your community.",
+          },
+        ]
+      : []),
     {
       to: "/settings/insulin",
       icon: Activity,
