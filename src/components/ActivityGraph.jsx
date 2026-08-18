@@ -651,10 +651,10 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
   const positionedDoseMarkers = useMemo(() => {
     const placed = [];
-    const minHorizontalGap = 38;
     const pillHeight = 16;
-    const minVerticalGap = 2;
-    const maxRows = 2;
+    const pillGap = 3;
+    const stackGap = 2;
+    const minHorizontalGap = 44;
 
     // Map each dose key to the peak activity time of its PK curve so the pill
     // sits above the most recognizable point of its corresponding curve.
@@ -690,17 +690,28 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       const x = (peakTime - domainStart) / totalMs * chartWidth;
       const color = getInsulinProfile(dose.insulin_type)?.color || "#888";
 
-      let row = 0;
-      for (const p of placed) {
-        if (Math.abs(x - p.x) < minHorizontalGap) {
-          row = Math.max(row, p.row + 1);
-        }
-      }
-      row = row % maxRows;
-      const pillTop = row * (pillHeight + minVerticalGap);
+      // Default: pill sits just above the curve peak.
+      let pillTop = peakY - pillHeight - pillGap;
 
-      placed.push({ x, row });
-      return { dose, x, units, key, color, pillTop, row, peakY };
+      // Nudge upward only when colliding with an already-placed pill.
+      for (let iter = 0; iter < 6; iter++) {
+        let collision = false;
+        for (const p of placed) {
+          if (Math.abs(x - p.x) >= minHorizontalGap) continue;
+          const pTop = p.pillTop;
+          const pBottom = p.pillTop + pillHeight;
+          if (pillTop < pBottom + stackGap && pillTop + pillHeight > pTop - stackGap) {
+            pillTop = pTop - pillHeight - stackGap;
+            collision = true;
+          }
+        }
+        if (!collision) break;
+      }
+
+      pillTop = Math.max(pillTop, 0);
+
+      placed.push({ x, pillTop });
+      return { dose, x, units, key, color, pillTop, peakY };
     }).
     filter(Boolean);
   }, [filteredDoses, allCurvesMeta, maxBolusUnits, maxBasalUnits, domainStart, domainEnd, totalMs, chartWidth]);
