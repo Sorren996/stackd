@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Activity, BookOpen, Calculator, Check, ChevronDown, Clock, Info, Leaf, Shield, Sprout, X } from "lucide-react";
+import { Activity, BookOpen, Calculator, Check, CheckCircle2, ChevronDown, Clock, Info, Leaf, Shield, Sprout, X } from "lucide-react";
 
 const PALETTE = {
   green: "#58a97c",
@@ -126,7 +126,7 @@ function EstimateRow({ label, sublabel, value, icon: Icon, iconColor, valueColor
   );
 }
 
-export default function MealBalanceTooltip({ mealInsight, open, onClose, monitoringStatus, glucoseTrend }) {
+export default function MealBalanceTooltip({ mealInsight, open, onClose, monitoringStatus, glucoseTrend, onResolve }) {
   if (!open || !mealInsight?.details) return null;
 
   const d = mealInsight.details;
@@ -329,6 +329,23 @@ export default function MealBalanceTooltip({ mealInsight, open, onClose, monitor
                     : "Glucose is currently stable. Delayed changes may still occur during this monitoring period."}
             </p>
           </div>
+        )}
+
+        {/* Mark as resolved */}
+        {d.mealStillUnderReview && onResolve && (
+          <button
+            type="button"
+            onClick={onResolve}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border py-3 text-[12px] font-semibold transition"
+            style={{
+              borderColor: `${PALETTE.green}40`,
+              background: `${PALETTE.green}12`,
+              color: PALETTE.green,
+            }}
+          >
+            <CheckCircle2 className="h-4 w-4" strokeWidth={2.5} />
+            Mark as Resolved
+          </button>
         )}
       </div>
     </TooltipPopover>

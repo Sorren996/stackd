@@ -942,7 +942,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
     [safeCarbEntries, nowMinute]
   );
 
-  const mealInsight = useMemo(
+  const mealInsightRaw = useMemo(
     () =>
       computeMealAlignmentInsight(
         safeDoses,
@@ -960,6 +960,34 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
       nowMinute,
     ]
   );
+
+  const [resolvedMealIds, setResolvedMealIds] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("resolved_meal_ids") || "[]");
+    } catch {
+      return [];
+    }
+  });
+
+  const currentMealId = mealInsightRaw?.details?.meal?.id;
+  const isMealResolved = Boolean(currentMealId && resolvedMealIds.includes(currentMealId));
+
+  // When the user marks a meal as resolved, override the review flag so both
+  // the card and tooltip present the completed state immediately.
+  const mealInsight =
+    isMealResolved && mealInsightRaw?.details
+      ? { ...mealInsightRaw, details: { ...mealInsightRaw.details, mealStillUnderReview: false } }
+      : mealInsightRaw;
+
+  const handleResolveMeal = () => {
+    if (!currentMealId) return;
+    const updated = [...resolvedMealIds, currentMealId];
+    setResolvedMealIds(updated);
+    try {
+      localStorage.setItem("resolved_meal_ids", JSON.stringify(updated));
+    } catch {}
+    setOpenTooltip(null);
+  };
 
   const netActiveCarbs = worstPoint?.net ?? 0;
   const netPeakTime = worstPoint?.time ?? null;
@@ -1105,6 +1133,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
         onClose={() => setOpenTooltip(null)}
         monitoringStatus={highProteinFatStatus}
         glucoseTrend={trend}
+        onResolve={handleResolveMeal}
       />
 
       <div className="relative -mx-4 px-4 pb-6 pt-2">
