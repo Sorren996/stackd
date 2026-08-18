@@ -1176,14 +1176,19 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
             // Use the scroll marker's status when available; fall back to the
             // latest reading when the graph hasn't reported yet.
             const status = centerGlucoseStatus ?? classifyGlucose(glucoseValue, targetLow, targetHigh);
-            if (status !== "high" && status !== "low") return null;
-            const glowColor = status === "high" ? GLUCOSE_STATUS_COLORS.high : GLUCOSE_STATUS_COLORS.low;
+            const isActive = status === "high" || status === "low";
+            const glowColor = status === "high"
+              ? GLUCOSE_STATUS_COLORS.high
+              : status === "low"
+                ? GLUCOSE_STATUS_COLORS.low
+                : GLUCOSE_STATUS_COLORS.inRange;
             return (
               <div
                 aria-hidden="true"
-                className="pointer-events-none absolute inset-x-0 top-0 z-[1] rounded-3xl"
+                className="pointer-events-none absolute inset-x-0 top-0 z-[1] rounded-3xl transition-opacity duration-700 ease-out"
                 style={{
                   height: "50%",
+                  opacity: isActive ? 1 : 0,
                   background: `linear-gradient(to bottom, ${glowColor}28 0%, ${glowColor}1a 14%, ${glowColor}0c 55%, transparent 100%)`,
                 }}
               />
