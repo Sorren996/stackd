@@ -5,8 +5,8 @@ import {
   HIGH_REFERENCE_MIN,
   HIGH_REFERENCE_MAX,
   HIGH_REFERENCE_STEP,
-  getHighReferenceOptions,
 } from "@/lib/glucoseStatus";
+import HighGlucosePicker from "@/components/settings/HighGlucosePicker";
 
 const HEIGHT_OPTIONS = [
   { value: 300, label: "300 mg/dL", desc: "A closer view of your in-range rhythm." },
@@ -42,8 +42,6 @@ export default function DisplaySettings() {
       </div>
     );
   }
-
-  const highOptions = getHighReferenceOptions();
 
   return (
     <div className="space-y-6">
@@ -86,25 +84,8 @@ export default function DisplaySettings() {
             <span className="text-xs text-white/45">Secondary reference shown on Your Flow</span>
             <span className="text-2xl font-black text-amber-300">{currentHigh}<span className="ml-1 text-xs font-medium text-white/40">mg/dL</span></span>
           </div>
-          <div className="mt-4 flex flex-wrap gap-1.5">
-            {highOptions.map((v) => {
-              const selected = v === currentHigh;
-              return (
-                <button
-                  key={v}
-                  type="button"
-                  onClick={() => handleSelectHigh(v)}
-                  disabled={isSaving}
-                  className={`h-9 min-w-[3rem] rounded-xl border px-2 text-xs font-semibold transition active:scale-95 ${
-                    selected
-                      ? "border-amber-400/50 bg-amber-400/15 text-amber-200"
-                      : "border-white/8 bg-white/[0.03] text-white/45 hover:text-white/75"
-                  }`}
-                >
-                  {v}
-                </button>
-              );
-            })}
+          <div className="mt-4">
+            <HighGlucosePicker value={currentHigh} onChange={handleSelectHigh} />
           </div>
           <p className="mt-3 text-[11px] text-white/35 leading-relaxed">
             Choose from {HIGH_REFERENCE_MIN}–{HIGH_REFERENCE_MAX} mg/dL in steps of {HIGH_REFERENCE_STEP}. This is a visual reference only — it never changes when glucose is considered high. Your target range stays separate.

@@ -27,12 +27,12 @@ const VISIBLE_HOURS = 6;
 const HOUR_MS = 60 * 60 * 1000;
 const CANDLESTICK_HISTORY_HOURS = 72;
 const CANDLESTICK_FUTURE_HOURS = 12;
-const CHART_HEIGHT = 260;
-const CANDLESTICK_TOTAL_HEIGHT = 382;
+const CHART_HEIGHT = 305;
+const CANDLESTICK_TOTAL_HEIGHT = 425;
 const CHART_MARGIN_TOP = 70;
 const CHART_MARGIN_BOTTOM = 0;
 const X_AXIS_HEIGHT = 30;
-const GLUCOSE_CHART_HEIGHT = 188;
+const GLUCOSE_CHART_HEIGHT = 224;
 const GLUCOSE_MARGIN_TOP = 62;
 const GLUCOSE_PLOT_HEIGHT = GLUCOSE_CHART_HEIGHT - GLUCOSE_MARGIN_TOP;
 const INSULIN_CHART_HEIGHT = 120;
@@ -1101,8 +1101,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                 }
               : getGlucoseY;
             const refLabels = [
-              { id: "highRef", value: highReference, side: "left", color: GLUCOSE_STATUS_COLORS.high, anchor: "above", secondary: true, text: `High ${highReference}` },
-              { id: "lowRef", value: FIXED_LOW_REFERENCE, side: "left", color: GLUCOSE_STATUS_COLORS.low, anchor: "below", secondary: true, text: `${FIXED_LOW_REFERENCE}` },
+              { id: "highRef", value: highReference, side: "right", color: GLUCOSE_STATUS_COLORS.high, anchor: "above", secondary: true, text: `High ${highReference}` },
+              { id: "lowRef", value: FIXED_LOW_REFERENCE, side: "right", color: GLUCOSE_STATUS_COLORS.low, anchor: "below", secondary: true, text: `${FIXED_LOW_REFERENCE}` },
               { id: "tgtHigh", value: targetHigh, side: "right", color: "#ffffff", anchor: "above", secondary: false, text: `${Math.round(targetHigh)}` },
               { id: "tgtLow", value: targetLow, side: "right", color: "#ffffff", anchor: "below", secondary: false, text: `${Math.round(targetLow)}` },
             ];
