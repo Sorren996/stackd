@@ -595,6 +595,25 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   [filteredDoses]
   );
 
+  // Only insulin types whose curves have activity overlapping the visible
+  // graph window — drives the legend so it reflects what's actually shown.
+  const activeDoseKeys = useMemo(() => {
+    const active = new Map();
+    allCurvesMeta.forEach(({ dose, curve }) => {
+      if (!curve.length) return;
+      const curveStart = curve[0].time;
+      const curveEnd = curve[curve.length - 1].time;
+      if (curveStart > domainEnd || curveEnd < domainStart) return;
+      const label = String(dose.insulin_type || "Insulin").split(" ")[0];
+      if (active.has(label)) return;
+      active.set(label, {
+        label,
+        color: getInsulinProfile(dose.insulin_type)?.color || "#888",
+      });
+    });
+    return Array.from(active.values());
+  }, [allCurvesMeta, domainStart, domainEnd]);
+
   const totalMs = domainEnd - domainStart;
   const visibleMs = viewWindow * 60 * 60 * 1000;
   const pxPerMin = containerWidth / (visibleMs / 60000);
@@ -1316,9 +1335,9 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         </div>
       </div>
       </div>
-      {filters.insulin && doseKeys.length > 0 && (
+      {filters.insulin && activeDoseKeys.length > 0 && (
         <div className="flex items-center gap-3 px-3 mt-1.5 overflow-x-auto no-scrollbar">
-          {Array.from(new Map(doseKeys.map((k) => [k.label, k])).values()).map((k) => (
+          {activeDoseKeys.map((k) => (
             <div key={k.label} className="flex items-center gap-1 shrink-0">
               <span className="h-1.5 w-1.5 rounded-full" style={{ background: k.color }} />
               <span className="text-[9px] text-white/35">{k.label}</span>

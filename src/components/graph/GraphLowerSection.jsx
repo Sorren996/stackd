@@ -220,7 +220,6 @@ export default function GraphLowerSection({
               }}
             >
               <span>{formattedUnits}u</span>
-              <span className="text-[8px] opacity-60">{shortLabel}</span>
             </button>
           </div>
         );
