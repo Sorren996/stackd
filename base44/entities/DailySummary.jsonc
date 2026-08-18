@@ -1,0 +1,114 @@
+{
+  "name": "DailySummary",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "User this daily summary belongs to. Set for service-created records so the owning user can read them."
+    },
+    "date": {
+      "type": "string",
+      "description": "Calendar date in YYYY-MM-DD format, in the user's local timezone"
+    },
+    "average_glucose": {
+      "type": "number",
+      "description": "Average glucose for the day in mg/dL"
+    },
+    "time_in_range_percent": {
+      "type": "number",
+      "description": "Percentage of readings within the user's target range"
+    },
+    "time_high_percent": {
+      "type": "number",
+      "description": "Percentage of readings above the user's target range"
+    },
+    "time_low_percent": {
+      "type": "number",
+      "description": "Percentage of readings below the user's target range"
+    },
+    "minimum_glucose": {
+      "type": "number",
+      "description": "Lowest glucose reading for the day in mg/dL"
+    },
+    "maximum_glucose": {
+      "type": "number",
+      "description": "Highest glucose reading for the day in mg/dL"
+    },
+    "glucose_standard_deviation": {
+      "type": "number",
+      "description": "Standard deviation of glucose readings for the day"
+    },
+    "glucose_coefficient_of_variation": {
+      "type": "number",
+      "description": "Coefficient of variation of glucose readings for the day (percent)"
+    },
+    "reading_count": {
+      "type": "number",
+      "description": "Number of valid glucose readings used for this summary"
+    },
+    "total_carbs": {
+      "type": "number",
+      "description": "Total carbohydrates in grams logged for the day"
+    },
+    "carb_count": {
+      "type": "number",
+      "description": "Number of carb entries logged for the day"
+    },
+    "total_insulin": {
+      "type": "number",
+      "description": "Total insulin units logged for the day"
+    },
+    "insulin_count": {
+      "type": "number",
+      "description": "Number of insulin doses logged for the day"
+    },
+    "target_range_low": {
+      "type": "number",
+      "description": "User's target range lower bound used for this summary"
+    },
+    "target_range_high": {
+      "type": "number",
+      "description": "User's target range upper bound used for this summary"
+    },
+    "glucose_sum": {
+      "type": "number",
+      "description": "Sum of glucose values, used for computing multi-day averages"
+    },
+    "glucose_in_range": {
+      "type": "number",
+      "description": "Count of readings within the user's target range"
+    },
+    "glucose_above_range": {
+      "type": "number",
+      "description": "Count of readings above the user's target range"
+    },
+    "glucose_below_range": {
+      "type": "number",
+      "description": "Count of readings below the user's target range"
+    }
+  },
+  "required": [
+    "date"
+  ],
+  "rls": {
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.user_id": "{{user.id}}"
+        }
+      ]
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

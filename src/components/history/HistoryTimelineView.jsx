@@ -40,13 +40,6 @@ const GROUPS = [
   { key: "carbs", label: "Carbs", Icon: Wheat, color: "#f59e0b" },
 ];
 
-const FILTERS = [
-  { key: "all", label: "All" },
-  { key: "glucose", label: "Glucose" },
-  { key: "insulin", label: "Insulin" },
-  { key: "carbs", label: "Carbs" },
-];
-
 function renderCard(item, groupKey, locked, onEdit, onDeleteDose, onDeleteGlucose, onDeleteCarb) {
   const handleEdit = () => onEdit({ type: groupKey, item });
 
@@ -82,8 +75,23 @@ function renderCard(item, groupKey, locked, onEdit, onDeleteDose, onDeleteGlucos
   );
 }
 
-export default function HistoryTimelineView({ logs, loading, onEdit, onDeleteDose, onDeleteGlucose, onDeleteCarb }) {
+export default function HistoryTimelineView({ logs, loading, dexcomConnected, onEdit, onDeleteDose, onDeleteGlucose, onDeleteCarb }) {
   const [filter, setFilter] = useState("all");
+
+  // When CGM is connected, automated readings are background telemetry —
+  // the Glucose filter is hidden and only intentional moments are shown.
+  const filters = dexcomConnected
+    ? [
+        { key: "all", label: "All" },
+        { key: "insulin", label: "Insulin" },
+        { key: "carbs", label: "Carbs" },
+      ]
+    : [
+        { key: "all", label: "All" },
+        { key: "glucose", label: "Glucose" },
+        { key: "insulin", label: "Insulin" },
+        { key: "carbs", label: "Carbs" },
+      ];
 
   const grouped = useMemo(() => {
     const map = { glucose: [], insulin: [], carbs: [] };
@@ -117,7 +125,7 @@ export default function HistoryTimelineView({ logs, loading, onEdit, onDeleteDos
   return (
     <div className="space-y-5">
       <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
-        {FILTERS.map((f) => {
+        {filters.map((f) => {
           const active = filter === f.key;
           return (
             <button

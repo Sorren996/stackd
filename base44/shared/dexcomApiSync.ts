@@ -274,6 +274,7 @@ export async function syncApiForConnection(
     if (toCreate.length) {
       await sr.entities.GlucoseReading.bulkCreate(toCreate);
       diag.records_inserted = toCreate.length;
+      diag.inserted_timestamps = toCreate.map((r) => r.recorded_at);
     }
 
     if (shareIdsToReconcile.size) {

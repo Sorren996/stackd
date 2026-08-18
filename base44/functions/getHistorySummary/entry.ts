@@ -117,16 +117,44 @@ Deno.serve(async (req) => {
       d.insulin.count++;
     });
 
-    const days = Object.values(dayMap).map((d: any) => ({
-      date: d.date,
-      glucose: {
-        sum: Math.round(d.glucose.sum * 10) / 10,
-        count: d.glucose.count,
-        inRange: d.glucose.inRange,
-      },
-      carbs: { total: Math.round(d.carbs.total), count: d.carbs.count },
-      insulin: { total: Math.round(d.insulin.total * 10) / 10, count: d.insulin.count },
-    })).sort((a, b) => b.date.localeCompare(a.date));
+    // Prefer pre-computed DailySummary records for glucose stats when available.
+    // This avoids recalculating glucose aggregates for days already summarized by
+    // the incremental sync pipeline. Days without a summary fall back to the
+    // on-the-fly computation above. Carbs and insulin are always computed from
+    // raw logs so they stay current with user edits.
+    const summaryMap: Record<string, any> = {};
+    try {
+      const summaries = await base44.entities.DailySummary.filter(
+        { date: { $gte: rangeStart.slice(0, 10), $lte: rangeEnd.slice(0, 10) } },
+        "-date", 100
+      );
+      for (const ds of summaries) {
+        if (ds.date) summaryMap[ds.date] = ds;
+      }
+    } catch {
+      // DailySummary read failure is non-fatal — fall back to on-the-fly
+    }
+
+    const days = Object.values(dayMap).map((d: any) => {
+      const ds = summaryMap[d.date];
+      const useSummary = ds && Number.isFinite(ds.reading_count) && ds.reading_count > 0;
+      return {
+        date: d.date,
+        glucose: useSummary
+          ? {
+              sum: ds.glucose_sum || 0,
+              count: ds.reading_count,
+              inRange: ds.glucose_in_range || 0,
+            }
+          : {
+              sum: Math.round(d.glucose.sum * 10) / 10,
+              count: d.glucose.count,
+              inRange: d.glucose.inRange,
+            },
+        carbs: { total: Math.round(d.carbs.total), count: d.carbs.count },
+        insulin: { total: Math.round(d.insulin.total * 10) / 10, count: d.insulin.count },
+      };
+    }).sort((a, b) => b.date.localeCompare(a.date));
 
     return Response.json({ rangeStart, rangeEnd, targetLow, targetHigh, days });
   } catch (error) {

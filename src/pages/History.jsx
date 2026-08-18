@@ -14,6 +14,7 @@ import HistoryMonthView from "@/components/history/HistoryMonthView";
 import HistoryWeekView from "@/components/history/HistoryWeekView";
 import HistoryDayView from "@/components/history/HistoryDayView";
 import HistoryTimelineView from "@/components/history/HistoryTimelineView";
+import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 
 function readTargetRange() {
   if (typeof window === "undefined") return { low: 70, high: 180 };
@@ -273,6 +274,7 @@ function EditLogSheet({ log, onClose, onSave, isSaving }) {
 
 export default function History() {
   const queryClient = useQueryClient();
+  const { connected: dexcomConnected } = useDexcomConnection();
   const [level, setLevel] = useState("month"); // month | week | day | timeline
   const [selectedMonth, setSelectedMonth] = useState(null);
   const [selectedWeek, setSelectedWeek] = useState(null);
@@ -328,7 +330,11 @@ export default function History() {
         base44.entities.InsulinDose.filter({ administered_at: { $gte: start, $lte: end } }, "-administered_at", 500),
       ]);
       const merged = [
-        ...glucose.filter((g) => g.source !== "system").map((i) => ({ ...i, feedType: "glucose", timestamp: new Date(i.recorded_at).getTime() })),
+        ...glucose.filter((g) => {
+          if (g.source === "system") return false;
+          if (dexcomConnected && (g.source === "dexcom" || g.source === "dexcom_share")) return false;
+          return true;
+        }).map((i) => ({ ...i, feedType: "glucose", timestamp: new Date(i.recorded_at).getTime() })),
         ...carbs.map((i) => ({ ...normalizeCarbEntry(i), feedType: "carbs", timestamp: new Date(i.consumed_at).getTime() })),
         ...insulin.map((i) => ({ ...i, feedType: "insulin", timestamp: new Date(i.administered_at).getTime() })),
       ].sort((a, b) => b.timestamp - a.timestamp);
@@ -527,6 +533,7 @@ export default function History() {
             <HistoryTimelineView
               logs={dayLogs}
               loading={loadingDayLogs}
+              dexcomConnected={dexcomConnected}
               onEdit={(payload) => setEditingLog(payload)}
               onDeleteDose={(id) => deleteDose.mutate(id)}
               onDeleteGlucose={(id) => deleteGlucose.mutate(id)}

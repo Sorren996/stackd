@@ -16,6 +16,7 @@ import { secrets } from "base44:runtime";
 import { syncShareForConnection } from "../../shared/dexcomShareSync.ts";
 import { syncApiForConnection } from "../../shared/dexcomApiSync.ts";
 import { detectSpikesForUser } from "../../shared/spikeDetection.ts";
+import { dayKeyFromTimezone, recomputeDailySummary } from "../../shared/dailySummary.ts";
 
 export default async function (req: Request): Promise<Response> {
   try {
@@ -75,6 +76,35 @@ export default async function (req: Request): Promise<Response> {
             }
           } catch {
             // Spike detection failure is non-fatal — sync already succeeded
+          }
+
+          // Incremental DailySummary update — only for days that received new
+          // readings. Uses the actual reading timestamps so delayed readings
+          // update the correct calendar day, not the ingestion day.
+          try {
+            const settings = await sr.entities.UserSettings.filter({ created_by_id: owner }, "-created_date", 1);
+            const s: any = settings[0];
+            const timezone = s?.timezone || "UTC";
+            const targetLow = Number.isFinite(s?.target_range_low) ? s.target_range_low : 70;
+            const targetHigh = Number.isFinite(s?.target_range_high) ? s.target_range_high : 180;
+
+            const insertedTs: string[] = [];
+            const lastShare = shareResults[shareResults.length - 1];
+            const lastApi = apiResults[apiResults.length - 1];
+            if (lastShare?.inserted_timestamps) insertedTs.push(...lastShare.inserted_timestamps);
+            if (lastApi?.inserted_timestamps) insertedTs.push(...lastApi.inserted_timestamps);
+
+            const affectedDates = new Set<string>();
+            for (const ts of insertedTs) {
+              const dk = dayKeyFromTimezone(ts, timezone);
+              if (dk) affectedDates.add(dk);
+            }
+
+            for (const dateStr of affectedDates) {
+              await recomputeDailySummary(sr, owner, dateStr, timezone, targetLow, targetHigh, true);
+            }
+          } catch {
+            // DailySummary failure is non-fatal — sync already succeeded
           }
         }
       }

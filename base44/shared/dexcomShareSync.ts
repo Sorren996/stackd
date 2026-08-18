@@ -225,6 +225,7 @@ export async function syncShareForConnection(
     if (toCreate.length) {
       await sr.entities.GlucoseReading.bulkCreate(toCreate);
       diag.records_inserted = toCreate.length;
+      diag.inserted_timestamps = toCreate.map((r) => r.recorded_at);
     }
 
     if (manualIdsToDelete.size) {
