@@ -345,6 +345,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const tooltipDateRef = useRef(null);
   const scrollFrameRef = useRef(null);
   const prevLatestValueRef = useRef(null);
+  const prevGlowStatusRef = useRef(null);
   const pendingScrollLeftRef = useRef(0);
   const containerRef = useRef(null);
   const graphViewportRef = useRef(null);
@@ -816,6 +817,18 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       }
     }
 
+    // Notify the card glow of the center marker's glucose status. Only
+    // dispatches when the status (high / low / in-range) changes, so this
+    // does NOT fire on every scroll frame — just on transitions.
+    const glowStatus =
+      glucose.value > targetHigh ? "high"
+      : glucose.value < targetLow ? "low"
+      : "in_range";
+    if (glowStatus !== prevGlowStatusRef.current) {
+      prevGlowStatusRef.current = glowStatus;
+      window.dispatchEvent(new CustomEvent("stackd-center-glucose-status", { detail: { status: glowStatus } }));
+    }
+
     if (tickerRef.current) tickerRef.current.setValue(formatGlucoseDisplay(glucose.value), animate);
     if (timeEl) timeEl.textContent = formatReadingTime(glucose.time);
     if (dateEl) dateEl.textContent = Number.isFinite(glucose.time) ? format(new Date(glucose.time), "EEEE, MMM d") : "";
@@ -884,6 +897,14 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       updateMonitoringOverlay(pendingScrollLeftRef.current);
     });
   };
+
+  // Reset the card glow when the graph unmounts so it falls back to the
+  // latest reading instead of staying stuck on a stale scroll position.
+  useEffect(() => {
+    return () => {
+      window.dispatchEvent(new CustomEvent("stackd-center-glucose-status", { detail: { status: null } }));
+    };
+  }, []);
 
   // Refresh relative time labels ("just now", "Xm ago") every 30 seconds
   useEffect(() => {

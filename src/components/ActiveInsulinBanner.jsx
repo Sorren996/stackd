@@ -833,6 +833,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
   const [openTooltip, setOpenTooltip] = useState(null);
   const [insulinSettings, setInsulinSettings] = useState(readInsulinSettings);
   const [targetRange, setTargetRange] = useState(readTargetRange);
+  const [centerGlucoseStatus, setCenterGlucoseStatus] = useState(null);
   const [nowMinute, setNowMinute] = useState(() =>
     Math.floor(Date.now() / MINUTE_MS)
   );
@@ -890,6 +891,14 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
       window.scrollTo(0, scrollY);
     };
   }, [openTooltip]);
+
+  // Listen for the graph marker's glucose status so the card glow reflects
+  // what the user is scrolling over, not just the latest reading.
+  useEffect(() => {
+    const handler = (e) => setCenterGlucoseStatus(e.detail?.status ?? null);
+    window.addEventListener("stackd-center-glucose-status", handler);
+    return () => window.removeEventListener("stackd-center-glucose-status", handler);
+  }, []);
 
   const mealCoverageDoses = useMemo(
     () => safeDoses.filter((dose) => isMealCoverageInsulin(dose, insulinSettings)),
@@ -1164,7 +1173,9 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
           }}
         >
           {(() => {
-            const status = classifyGlucose(glucoseValue, targetLow, targetHigh);
+            // Use the scroll marker's status when available; fall back to the
+            // latest reading when the graph hasn't reported yet.
+            const status = centerGlucoseStatus ?? classifyGlucose(glucoseValue, targetLow, targetHigh);
             if (status !== "high" && status !== "low") return null;
             const glowColor = status === "high" ? GLUCOSE_STATUS_COLORS.high : GLUCOSE_STATUS_COLORS.low;
             return (
