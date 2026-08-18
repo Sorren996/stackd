@@ -1,12 +1,14 @@
-// AI-powered classification of carb and insulin logs.
+// Deterministic-first classification of carb and insulin logs.
 // Triggered by entity automations when a CarbEntry or InsulinDose is created.
-// Uses InvokeLLM to classify the log as meal / snack / rescue_carbs (for food)
-// or meal / correction / rescue_insulin (for insulin), based on the food name,
-// carb amount, timing, nearby glucose trend, and surrounding logs.
+// Tries deterministic classification based on structured context first (carb
+// amount, glucose level, timing, nearby logs) and only calls InvokeLLM when
+// the case is genuinely ambiguous. This dramatically reduces integration-credit
+// consumption while preserving the exact same classification categories.
 // Writes the classification back onto the record so the Meal Balance card can
 // use it instead of relying solely on time-based heuristics.
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
+import { classifyCarbDeterministic, classifyInsulinDeterministic } from '../../shared/logClassification.ts';
 
 const MINUTE_MS = 60 * 1000;
 
@@ -87,6 +89,35 @@ export default async function(req: Request): Promise<Response> {
 
     const classes = isCarb ? VALID_CARB_CLASSES : VALID_INSULIN_CLASSES;
 
+    // ── Deterministic-first classification ──────────────────────────
+    // Try to classify without AI using structured context. Only fall back
+    // to InvokeLLM when the case is genuinely ambiguous.
+    const detContext = {
+      logTime,
+      carbs: isCarb ? Number(data.carbs) || 0 : undefined,
+      insulinType: isInsulin ? data.insulin_type : undefined,
+      units: isInsulin ? Number(data.units) || 0 : undefined,
+      isHighProteinFat: isCarb ? data.is_high_protein_fat_meal : undefined,
+      foodName: isCarb ? data.food_name : undefined,
+      glucoseReadings: glucoseReadings.map((r: any) => ({ value: r.value, recorded_at: r.recorded_at })),
+      nearbyCarbs: userCarbs.filter((c: any) => c.id !== entityId).slice(0, 8).map((c: any) => ({ id: c.id, food_name: c.food_name, carbs: c.carbs, consumed_at: c.consumed_at })),
+      nearbyDoses: userDoses.filter((d: any) => d.id !== entityId).slice(0, 8).map((d: any) => ({ id: d.id, insulin_type: d.insulin_type, units: d.units, administered_at: d.administered_at })),
+    };
+
+    const deterministic = isCarb
+      ? classifyCarbDeterministic(detContext)
+      : classifyInsulinDeterministic(detContext);
+
+    if (deterministic) {
+      if (isCarb) {
+        await sr.entities.CarbEntry.update(entityId, { classification: deterministic.classification, classification_reasoning: deterministic.reasoning });
+      } else {
+        await sr.entities.InsulinDose.update(entityId, { classification: deterministic.classification, classification_reasoning: deterministic.reasoning });
+      }
+      return Response.json({ ok: true, entityName, entityId, classification: deterministic.classification, source: 'deterministic' });
+    }
+
+    // ── AI fallback for ambiguous cases ────────────────────────────
     const prompt = `You are a warm, uplifting wellness companion for a glucose monitoring app. Your role is to classify a user's log entry so the app can understand their nourishment and support rhythm in a supportive, non-judgmental way.
 
 Classify this ${isCarb ? 'food entry' : 'insulin dose'} into exactly one of these categories:

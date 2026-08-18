@@ -17,6 +17,7 @@ import {
 } from '../../shared/glucoseEventDetection.ts';
 import { AnalysisSettings } from '../../shared/mealResponseAnalysis.ts';
 import { ANALYSIS_VERSION, MAX_JOB_ATTEMPTS, RETRY_BASE_SECONDS } from '../../shared/analysisVersion.ts';
+import { interpretEventsForUser } from '../../shared/glucoseEventInterpretation.ts';
 
 const MINUTE_MS = 60 * 1000;
 const HOUR_MS = 60 * MINUTE_MS;
@@ -183,6 +184,19 @@ export default async function(req: Request): Promise<Response> {
         }
 
         eventsCreated += created;
+
+        // Interpret newly created (and any still-uninterpreted) events for
+        // this user immediately, eliminating the need for the separate
+        // interpretGlucoseEvents scan. Only invokes AI when there are
+        // actually uninterpreted events and the insight gate allows it.
+        if (created > 0) {
+          try {
+            await interpretEventsForUser(sr, userId, now);
+          } catch {
+            // Interpretation failure is non-fatal — events are still stored
+          }
+        }
+
         await sr.entities.AnalysisJob.update(job.id, {
           status: created > 0 ? 'completed' : 'completed_no_insight',
           completed_at: nowISO,

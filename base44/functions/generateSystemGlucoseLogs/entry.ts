@@ -1,10 +1,14 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
+import { detectSpikesForUser } from '../../shared/spikeDetection.ts';
 
 // Triggered when a user logs a new glucose reading (manual or CGM). Fills the
 // gap between the previous real reading and the new one with "system"
 // carry-forward readings at 5-minute intervals, giving the AI Coach a
 // continuous timeline during gaps. System readings are filtered out of the
 // ActivityGraph display so the graph only shows real readings.
+//
+// Also runs incremental spike detection for this user after filling gaps,
+// replacing the scheduled scanForSpikes full-scan automation.
 
 const STEP_MS = 5 * 60 * 1000;
 
@@ -93,8 +97,22 @@ export default async function(req) {
       await sr.entities.GlucoseReading.bulkCreate(toCreate);
     }
 
+    // Incremental spike detection for this user — replaces the scheduled
+    // scanForSpikes full-scan. Only processes this user's recent window.
+    let spikesCreated = 0;
+    try {
+      const { toCreate: spikeRecords } = await detectSpikesForUser(sr, owner, 3);
+      if (spikeRecords.length) {
+        await sr.entities.GlucoseEvent.bulkCreate(spikeRecords);
+        spikesCreated = spikeRecords.length;
+      }
+    } catch {
+      // Spike detection failure is non-fatal — gap filling already succeeded
+    }
+
     return Response.json({
       generated: toCreate.length,
+      spikesCreated,
       owner,
       from: prevReading.recorded_at,
       to: current.recorded_at,
