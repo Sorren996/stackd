@@ -1,6 +1,9 @@
-import { motion } from "framer-motion";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Info } from "lucide-react";
 import { isBasalInsulinType } from "@/lib/insulinPharmacology";
 import InsulinDoseRow from "./InsulinDoseRow";
+import InfoPopover from "@/components/graph/InfoPopover";
 
 /**
  * Redesigned Insulin on Board container. Preserves the existing bolus/basal
@@ -13,6 +16,7 @@ export default function InsulinOnBoardCard({ totalUnits, breakdown }) {
   const basalDoses = breakdown.filter((d) => isBasalInsulinType(d.type));
   const bolusUnits = bolusDoses.reduce((sum, d) => sum + d.iob, 0);
   const basalUnits = basalDoses.reduce((sum, d) => sum + d.iob, 0);
+  const [estimateRect, setEstimateRect] = useState(null);
 
   return (
     <motion.div
@@ -25,7 +29,17 @@ export default function InsulinOnBoardCard({ totalUnits, breakdown }) {
       }}
     >
       <div className="relative z-10 flex items-center justify-between">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-white/40">Insulin on Board</span>
+        <div className="flex flex-col gap-0.5">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-white/40">Insulin on Board</span>
+          <button
+            type="button"
+            onClick={(e) => setEstimateRect(e.currentTarget.getBoundingClientRect())}
+            className="flex items-center gap-1 self-start text-white/30 transition-colors hover:text-white/50"
+          >
+            <span className="text-[9px] font-medium">Estimated activity</span>
+            <Info className="h-3 w-3" />
+          </button>
+        </div>
         <span className="rounded-full border px-2.5 py-0.5 text-[10px] font-semibold" style={{
           color: hasBolusIOB ? "#5ba3b8" : "rgba(255,255,255,0.42)",
           borderColor: hasBolusIOB ? "rgba(6,182,212,0.32)" : "rgba(255,255,255,0.1)",
@@ -34,6 +48,17 @@ export default function InsulinOnBoardCard({ totalUnits, breakdown }) {
           {hasBolusIOB ? "Supporting you" : "Settled"}
         </span>
       </div>
+
+      <AnimatePresence>
+        {estimateRect && (
+          <InfoPopover anchorRect={estimateRect} onClose={() => setEstimateRect(null)}>
+            <p className="text-[11px] font-semibold text-white/85">Estimated insulin activity</p>
+            <p className="mt-1 text-[10px] leading-relaxed text-white/55">
+              Active insulin and remaining time are estimates based on the insulin profile and time since the dose. Actual insulin action can vary between people and between doses.
+            </p>
+          </InfoPopover>
+        )}
+      </AnimatePresence>
 
       <div className="relative z-10 mt-3 flex items-center">
         <div className="flex flex-1 flex-col">
