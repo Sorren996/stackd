@@ -2,41 +2,31 @@
   "name": "DexcomConnection",
   "type": "object",
   "properties": {
-    "access_token": {
+    "share_username": {
       "type": "string",
-      "description": "OAuth access token for the user's Dexcom sandbox account"
+      "description": "The user's Dexcom Share (publisher) account username or email. Used to authenticate with the Dexcom Share service for near-real-time glucose readings."
     },
-    "refresh_token": {
+    "share_password": {
       "type": "string",
-      "description": "OAuth refresh token used to obtain new access tokens"
-    },
-    "token_type": {
-      "type": "string",
-      "default": "bearer",
-      "description": "Token type returned by Dexcom"
-    },
-    "expires_in": {
-      "type": "number",
-      "description": "Access token lifetime in seconds, as returned by Dexcom"
-    },
-    "expires_at": {
-      "type": "string",
-      "format": "date-time",
-      "description": "When the access token expires"
-    },
-    "scope": {
-      "type": "string",
-      "description": "OAuth scopes granted"
+      "description": "The user's Dexcom Share (publisher) account password. Stored securely via row-level security so only the owning user and the background sync service can access it."
     },
     "connected_at": {
       "type": "string",
       "format": "date-time",
-      "description": "When the user connected their Dexcom account"
+      "description": "When the user connected their Dexcom Share account"
     },
     "last_fetched_at": {
       "type": "string",
       "format": "date-time",
       "description": "When the auto-sync last pulled readings for this connection"
+    },
+    "last_sync_status": {
+      "type": "string",
+      "description": "Result of the most recent sync attempt (synced, no_new_records, error, session_expired, etc.)"
+    },
+    "last_sync_error": {
+      "type": "string",
+      "description": "Error message from the most recent failed sync, if any. Cleared on successful sync."
     },
     "status": {
       "type": "string",
@@ -46,11 +36,10 @@
         "error"
       ],
       "default": "connected",
-      "description": "Current state of the Dexcom connection"
+      "description": "Current state of the Dexcom Share connection"
     }
   },
   "required": [
-    "access_token",
     "status"
   ],
   "rls": {

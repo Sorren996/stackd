@@ -53,7 +53,7 @@ export default function DexcomSyncStatus() {
 
   const { data: latestDexcom = [] } = useQuery({
     queryKey: ["latest-dexcom-glucose"],
-    queryFn: () => base44.entities.GlucoseReading.filter({ source: "dexcom" }, "-recorded_at", 1),
+    queryFn: () => base44.entities.GlucoseReading.filter({ source: { $in: ["dexcom", "dexcom_share"] } }, "-recorded_at", 1),
     enabled: connected,
     staleTime: 60 * 1000,
   });

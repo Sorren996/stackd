@@ -1,12 +1,15 @@
 import { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, HeartPulse, Link2, Unlink, Sparkles } from "lucide-react";
+import { Loader2, HeartPulse, Unlink, Sparkles, Lock, Eye, EyeOff, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import DexcomSyncStatus from "@/components/DexcomSyncStatus";
 
 export default function DexcomConnect() {
   const queryClient = useQueryClient();
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
 
@@ -18,26 +21,34 @@ export default function DexcomConnect() {
 
   const current = connection?.[0];
   const isConnected = current?.status === "connected";
+  const hasError = current?.status === "error";
 
   const { data: latestDexcom = [] } = useQuery({
     queryKey: ["latest-dexcom-glucose"],
-    queryFn: () => base44.entities.GlucoseReading.filter({ source: "dexcom" }, "-recorded_at", 1),
+    queryFn: () => base44.entities.GlucoseReading.filter({ source: { $in: ["dexcom", "dexcom_share"] } }, "-recorded_at", 1),
     enabled: isConnected,
     staleTime: 60 * 1000,
   });
   const hasDexcomData = latestDexcom.length > 0;
 
   const handleConnect = async () => {
+    if (!username.trim() || !password) {
+      toast.error("Please enter your Dexcom username and password.");
+      return;
+    }
     setConnecting(true);
     try {
-      const res = await base44.functions.invoke("getDexcomAuthUrl", {});
-      // Open in a fresh top-level tab so the OAuth callback loads at the
-      // browser's top level — published apps block embedding in frames,
-      // which is what causes a "refused to connect" after the redirect.
-      window.open(res.data.authUrl, "_blank");
-      setConnecting(false);
-    } catch {
-      toast.error("We couldn't start the connection. Please try again.");
+      await base44.functions.invoke("connectDexcomShare", {
+        username: username.trim(),
+        password: password,
+      });
+      queryClient.invalidateQueries(["dexcom-connection"]);
+      toast.success("Connected — your glucose readings will begin flowing in gently.");
+      setUsername("");
+      setPassword("");
+    } catch (err) {
+      const msg = err?.response?.data?.error || err?.message || "We couldn't connect. Please check your credentials.";
+      toast.error(msg);
       setConnecting(false);
     }
   };
@@ -47,7 +58,7 @@ export default function DexcomConnect() {
     try {
       await base44.entities.DexcomConnection.deleteMany({});
       queryClient.invalidateQueries(["dexcom-connection"]);
-      toast.success("Glucose source disconnected. Your readings stay yours.");
+      toast.success("Glucose source disconnected. Your Dexcom credentials have been removed.");
     } catch {
       toast.error("Something didn't go as expected. Please try again.");
       setDisconnecting(false);
@@ -64,8 +75,7 @@ export default function DexcomConnect() {
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-white">Glucose Source</p>
             <p className="text-xs text-white/40 mt-0.5 leading-relaxed">
-              Connect a continuous glucose source so your readings flow into Stackd
-              gently and automatically — no manual logging required.
+              Connect your Dexcom account so your readings flow into Stackd gently and automatically — no manual logging required.
             </p>
           </div>
         </div>
@@ -98,23 +108,72 @@ export default function DexcomConnect() {
               </button>
             </div>
           ) : (
-            <button
-              type="button"
-              onClick={handleConnect}
-              disabled={connecting}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-[hsl(var(--chart-1))] text-white font-medium text-sm hover:opacity-90 transition-all disabled:opacity-40"
-            >
-              {connecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
-              {connecting ? "Opening secure connection..." : "Connect your glucose source"}
-            </button>
+            <div className="space-y-3">
+              {hasError && (
+                <div className="flex items-start gap-2 rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-3">
+                  <AlertCircle className="h-4 w-4 text-rose-300 shrink-0 mt-0.5" />
+                  <p className="text-xs text-rose-200 font-medium leading-relaxed">
+                    Your last sync couldn't reach Dexcom. Please re-enter your credentials to reconnect.
+                  </p>
+                </div>
+              )}
+
+              <div>
+                <label className="text-xs font-medium text-white/50 mb-1.5 block">Dexcom username or email</label>
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Your Dexcom account email"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  className="w-full rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-teal-500/40"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-white/50 mb-1.5 block">Dexcom password</label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Your Dexcom account password"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    className="w-full rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 pr-11 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-teal-500/40"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleConnect}
+                disabled={connecting || !username.trim() || !password}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-[hsl(var(--chart-1))] text-white font-medium text-sm hover:opacity-90 transition-all disabled:opacity-40"
+              >
+                {connecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <HeartPulse className="h-4 w-4" />}
+                {connecting ? "Connecting..." : "Connect your glucose source"}
+              </button>
+            </div>
           )}
         </div>
       </div>
 
-      <p className="px-2 text-xs text-white/30 leading-relaxed">
-        Your Dexcom credentials are encrypted and used only to establish your CGM
-        connection. Stackd administrators and support staff cannot view them.
-      </p>
+      <div className="flex items-start gap-2 px-2">
+        <Lock className="h-3.5 w-3.5 text-white/25 shrink-0 mt-0.5" />
+        <p className="text-xs text-white/30 leading-relaxed">
+          Your Dexcom username and password are stored privately and used only to read your glucose readings.
+          They are never visible to other users, admins, or support staff. Disconnecting permanently deletes them.
+        </p>
+      </div>
     </div>
   );
 }

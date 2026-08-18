@@ -24,7 +24,6 @@ import DisplaySettingsPage from './pages/DisplaySettingsPage';
 import DexcomSettingsPage from './pages/DexcomSettingsPage';
 import ContactSupportPage from './pages/ContactSupportPage';
 import SupportInbox from './pages/SupportInbox';
-import DexcomCallback from './pages/DexcomCallback';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { Navigate } from 'react-router-dom';
 import SplashScreen from "@/components/SplashScreen";
@@ -244,7 +243,6 @@ const AuthenticatedApp = () => {
             <Route path="/settings/dexcom" element={<DexcomSettingsPage />} />
             <Route path="/settings/contact-support" element={<ContactSupportPage />} />
             <Route path="/settings/support-inbox" element={<SupportInbox />} />
-            <Route path="/auth/callback" element={<DexcomCallback />} />
             <Route path="/split-plan/:planId" element={<SplitPlanReview />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

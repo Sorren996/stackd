@@ -54,7 +54,7 @@ async function sharePost(endpoint: string, body: any): Promise<any> {
   return await res.json();
 }
 
-async function getShareSessionId(username: string, password: string): Promise<string> {
+export async function getShareSessionId(username: string, password: string): Promise<string> {
   const applicationId = DEXCOM_SHARE_APPLICATION_ID_US;
   const accountId = await sharePost(DEXCOM_SHARE_AUTHENTICATE_ENDPOINT, {
     accountName: username,
