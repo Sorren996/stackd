@@ -658,14 +658,20 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
     // Map each dose key to the peak activity time of its PK curve so the pill
     // sits above the most recognizable point of its corresponding curve.
-    const peakTimeByKey = {};
-    allCurvesMeta.forEach(({ key, curve }) => {
+    const peakInfoByKey = {};
+    allCurvesMeta.forEach(({ dose, key, curve }) => {
       if (!curve.length) return;
       let peak = curve[0];
       for (const p of curve) {
         if (p.activity > peak.activity) peak = p;
       }
-      peakTimeByKey[key] = peak.time;
+      const doseUnits = getDoseUnits(dose);
+      const isBasal = isBasalInsulinType(dose.insulin_type);
+      const refMax = isBasal ? maxBasalUnits : maxBolusUnits;
+      const visualMax = isBasal ? 30 : 70;
+      const peakValue = peak.activity * (doseUnits / refMax) * visualMax;
+      const peakY = INSULIN_MARGIN_TOP + (75 - peakValue) / 75 * INSULIN_PLOT_HEIGHT;
+      peakInfoByKey[key] = { peakTime: peak.time, peakY };
     });
 
     return filteredDoses.
@@ -677,7 +683,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     }).
     map((dose, index) => {
       const key = getDoseKey(dose, index);
-      const peakTime = peakTimeByKey[key];
+      const { peakTime, peakY } = peakInfoByKey[key] || {};
       if (!Number.isFinite(peakTime) || peakTime < domainStart || peakTime > domainEnd) return null;
       const units = getDoseUnits(dose);
       if (!Number.isFinite(units) || units <= 0) return null;
@@ -694,10 +700,10 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       const pillTop = row * (pillHeight + minVerticalGap);
 
       placed.push({ x, row });
-      return { dose, x, units, key, color, pillTop, row };
+      return { dose, x, units, key, color, pillTop, row, peakY };
     }).
     filter(Boolean);
-  }, [filteredDoses, allCurvesMeta, domainStart, domainEnd, totalMs, chartWidth]);
+  }, [filteredDoses, allCurvesMeta, maxBolusUnits, maxBasalUnits, domainStart, domainEnd, totalMs, chartWidth]);
 
   const positionedSpikeMarkers = useMemo(() => {
     const detectedStarts = detectedSpikes.map((s) => new Date(s.startTime).getTime());

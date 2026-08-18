@@ -160,7 +160,7 @@ export default function GraphLowerSection({
       })}
 
       {/* Insulin dose pills — anchored to dose time, at top of insulin lane */}
-      {showInsulin && positionedDoseMarkers.map(({ dose, x, units, key, color, pillTop }) => {
+      {showInsulin && positionedDoseMarkers.map(({ dose, x, units, key, color, pillTop, peakY }) => {
         const isEdgeLeft = x < 36;
         const isEdgeRight = x > chartWidth - 36;
         const formattedUnits = units % 1 === 0 ? String(units) : units.toFixed(1);
@@ -175,15 +175,37 @@ export default function GraphLowerSection({
               transform: isEdgeLeft ? "translateX(0)" : isEdgeRight ? "translateX(-100%)" : "translateX(-50%)"
             }}
           >
-            {/* Dotted connector from pill down to curve area */}
-            <div
-              className="absolute left-1/2 -translate-x-1/2"
-              style={{
-                top: insulinLaneTop + pillTop + 16,
-                height: Math.max(2, insulinMarginTop - pillTop - 16 + 4),
-                borderLeft: `1px dotted ${color}50`,
-              }}
-            />
+            {/* Connector from pill to exact curve peak + peak marker dot */}
+            {Number.isFinite(peakY) && (() => {
+              const pillBottom = pillTop + 16;
+              const connectorTop = Math.min(pillBottom, peakY);
+              const connectorHeight = Math.abs(peakY - pillBottom);
+              return (
+                <>
+                  {connectorHeight > 2 && (
+                    <div
+                      className="absolute left-1/2 -translate-x-1/2"
+                      style={{
+                        top: insulinLaneTop + connectorTop,
+                        height: connectorHeight,
+                        borderLeft: `1px dotted ${color}60`,
+                      }}
+                    />
+                  )}
+                  <div
+                    className="absolute left-1/2 -translate-x-1/2 rounded-full"
+                    style={{
+                      top: insulinLaneTop + peakY - 2,
+                      width: 4,
+                      height: 4,
+                      background: color,
+                      opacity: 0.7,
+                      boxShadow: `0 0 4px ${color}80`,
+                    }}
+                  />
+                </>
+              );
+            })()}
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); onDoseTap(dose, key, e.currentTarget.getBoundingClientRect()); }}
