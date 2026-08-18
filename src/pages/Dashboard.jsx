@@ -397,6 +397,32 @@ export default function Dashboard() {
     placeholderData: () => queryClient.getQueryData(["insulin-doses", "graph"]) ?? doses,
   });
 
+  // On-demand Dexcom Share sync — when the user is actively viewing the
+  // Dashboard, trigger an immediate Share fetch every 2 minutes instead of
+  // waiting up to 5 minutes for the scheduled pass. The function rate-limits
+  // itself (2 min per connection) so this stays light on the Dexcom API.
+  const { data: pollResult } = useQuery({
+    queryKey: ["dexcom-poll-now"],
+    queryFn: async () => {
+      const res = await base44.functions.invoke("pollDexcomNow", {});
+      return res.data;
+    },
+    enabled: dexcomConnected,
+    refetchInterval: dexcomConnected ? 120_000 : false,
+    refetchOnWindowFocus: true,
+    staleTime: 0,
+    gcTime: 30 * 1000,
+  });
+
+  // When the on-demand poll inserts new readings, invalidate the glucose
+  // queries so the graph and latest-glucose card refresh immediately.
+  useEffect(() => {
+    if (pollResult?.records_inserted > 0) {
+      queryClient.invalidateQueries({ queryKey: ["latest-glucose"] });
+      queryClient.invalidateQueries({ queryKey: ["glucose-readings", "graph"] });
+    }
+  }, [pollResult, queryClient]);
+
   const { data: splitPlans = [] } = useQuery({
     queryKey: ["split-plans"],
     queryFn: () => base44.entities.SplitDosePlan.list("-created_date", 20),

@@ -34,6 +34,16 @@ export default async function (req: Request): Promise<Response> {
         continue;
       }
 
+      // Skip if an on-demand poll just synced this user (within 2 min).
+      // Prevents redundant Share API calls when the user is actively viewing.
+      if (conn.last_fetched_at) {
+        const lastFetched = new Date(conn.last_fetched_at).getTime();
+        if (Number.isFinite(lastFetched) && now.getTime() - lastFetched < 2 * 60 * 1000) {
+          results.push({ owner, status: "skipped_recent_sync" });
+          continue;
+        }
+      }
+
       try {
         const diag = await syncShareForConnection(sr, conn, conn.share_username, conn.share_password, now);
         results.push(diag);
