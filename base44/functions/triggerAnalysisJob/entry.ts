@@ -27,7 +27,26 @@ export default async function(req: Request): Promise<Response> {
       entityName === 'InsulinDose' ? 'insulin' :
       entityName === 'CarbEntry' ? 'carb' : 'unknown';
 
+    if (triggerType === 'unknown' || !event.entity_id) {
+      return Response.json({ ok: false, reason: 'unsupported entity' });
+    }
+
     const sr = base44.asServiceRole;
+
+    // Verify the triggering record exists and belongs to the claimed user
+    // before creating an analysis job. Blocks unauthenticated callers from
+    // flooding the job queue for arbitrary user accounts.
+    let triggerRecord: any;
+    try {
+      if (triggerType === 'glucose') triggerRecord = await sr.entities.GlucoseReading.get(event.entity_id);
+      else if (triggerType === 'insulin') triggerRecord = await sr.entities.InsulinDose.get(event.entity_id);
+      else if (triggerType === 'carb') triggerRecord = await sr.entities.CarbEntry.get(event.entity_id);
+    } catch {
+      return Response.json({ ok: false, reason: 'ownership mismatch' }, { status: 403 });
+    }
+    if (!triggerRecord || triggerRecord.created_by_id !== userId) {
+      return Response.json({ ok: false, reason: 'ownership mismatch' }, { status: 403 });
+    }
 
     // Debounce: if an incremental job for this user is already pending or
     // processing and scheduled within the debounce window, skip creating a

@@ -36,7 +36,22 @@ export default async function(req: Request): Promise<Response> {
     const isInsulin = entityName === 'InsulinDose';
     if (!isCarb && !isInsulin) return Response.json({ ok: false, reason: 'unsupported entity' });
 
-    const logTimeStr = isCarb ? data.consumed_at : data.administered_at;
+    // Verify the target record exists and belongs to the claimed user before
+    // any service-role writes or LLM calls. Blocks unauthenticated callers
+    // from tampering with other users' logs or exhausting LLM credits.
+    let record: any;
+    try {
+      record = isCarb
+        ? await sr.entities.CarbEntry.get(entityId)
+        : await sr.entities.InsulinDose.get(entityId);
+    } catch {
+      return Response.json({ ok: false, reason: 'ownership mismatch' }, { status: 403 });
+    }
+    if (!record || record.created_by_id !== userId) {
+      return Response.json({ ok: false, reason: 'ownership mismatch' }, { status: 403 });
+    }
+
+    const logTimeStr = isCarb ? record.consumed_at : record.administered_at;
     const logTime = new Date(logTimeStr).getTime();
     if (!Number.isFinite(logTime)) return Response.json({ ok: false, reason: 'invalid time' });
 

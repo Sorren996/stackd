@@ -19,14 +19,20 @@ export default async function(req) {
 
     // Entity event payload: { event: { type, entity_name, entity_id }, data }
     const body = await req.json().catch(() => ({}));
-    let current = body?.data;
     const entityId = body?.event?.entity_id;
 
-    // If the payload was too large, fetch the reading by ID.
-    if (!current && entityId) {
-      current = await sr.entities.GlucoseReading.get(entityId);
+    // Always fetch the reading from the database by entity ID — never trust
+    // the request body's data directly. This blocks unauthenticated callers
+    // from injecting fake interpolated readings for arbitrary users.
+    if (!entityId) {
+      return Response.json({ skipped: true, reason: 'no_entity_id' });
     }
-
+    let current;
+    try {
+      current = await sr.entities.GlucoseReading.get(entityId);
+    } catch {
+      return Response.json({ skipped: true, reason: 'no_reading_data' }, { status: 403 });
+    }
     if (!current) {
       return Response.json({ skipped: true, reason: 'no_reading_data' });
     }
