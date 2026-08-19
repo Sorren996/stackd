@@ -365,9 +365,35 @@ function interpolateCurveValue(curve, atTime, key) {
   return Number.isFinite(value) ? Math.max(0, value) : 0;
 }
 
+export function getSteadyBasalIOB(dose, atTime = Date.now()) {
+  const profile = getInsulinProfile(dose?.insulin_type);
+  const units = getDoseUnits(dose);
+  const start = getDoseTime(dose);
+  if (!profile || !units || !Number.isFinite(start) || !Number.isFinite(atTime)) return 0;
+  if (atTime < start) return 0;
+
+  const timing = getProfileTiming(profile, units);
+  const elapsedMin = (atTime - start) / MINUTE_MS;
+  // Basal (Long-Acting & Ultra-Long-Acting) insulin holds steady across its
+  // duration rather than decaying hour-by-hour like bolus. The full dose is
+  // considered on board from the moment it's administered until the window
+  // closes, then 0 after.
+  if (elapsedMin >= timing.duration) return 0;
+  return units;
+}
+
 export function getDoseIOB(dose, atTime = Date.now()) {
   const start = getDoseTime(dose);
   if (!Number.isFinite(start) || !Number.isFinite(atTime) || atTime < start) return 0;
+
+  // Basal insulin doesn't dissipate the way bolus does — it stays steady
+  // across its duration. Use the steady full-dose model instead of the
+  // decaying PK curve so the card shows "on board and steady", not a
+  // counting-down number.
+  if (isBasalInsulinType(dose?.insulin_type)) {
+    return getSteadyBasalIOB(dose, atTime);
+  }
+
   return interpolateCurveValue(generateActivityCurve(dose), atTime, "activeUnits");
 }
 
