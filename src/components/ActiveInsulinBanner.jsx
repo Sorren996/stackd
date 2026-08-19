@@ -39,7 +39,7 @@ import { computeTimeInRange, filterReadingsForStats, computeTimeInRangeFromReadi
 import { computeGlucoseTrend, mapDexcomTrend } from "@/lib/glucoseTrend";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 import { isRescueCarbEntry } from "@/lib/rescueCarbDetection";
-import { GLUCOSE_STATUS_COLORS, classifyGlucose } from "@/lib/glucoseStatus";
+import { GLUCOSE_STATUS_COLORS, classifyGlucose, readHighReference, FIXED_LOW_REFERENCE } from "@/lib/glucoseStatus";
 
 // Flip to false to instantly revert to the original dense dashboard layout.
 const CLEAN_LAYOUT = true;
@@ -895,7 +895,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
   // Listen for the graph marker's glucose status so the card glow reflects
   // what the user is scrolling over, not just the latest reading.
   useEffect(() => {
-    const handler = (e) => setCenterGlucoseStatus(e.detail?.status ?? null);
+    const handler = (e) => setCenterGlucoseStatus(e.detail ?? null);
     window.addEventListener("stackd-center-glucose-status", handler);
     return () => window.removeEventListener("stackd-center-glucose-status", handler);
   }, []);
@@ -1175,21 +1175,29 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
           {(() => {
             // Use the scroll marker's status when available; fall back to the
             // latest reading when the graph hasn't reported yet.
-            const status = centerGlucoseStatus ?? classifyGlucose(glucoseValue, targetLow, targetHigh);
+            const status = centerGlucoseStatus?.status ?? classifyGlucose(glucoseValue, targetLow, targetHigh);
             const isActive = status === "high" || status === "low";
             const glowColor = status === "high"
               ? GLUCOSE_STATUS_COLORS.high
               : status === "low"
                 ? GLUCOSE_STATUS_COLORS.low
                 : GLUCOSE_STATUS_COLORS.inRange;
+            // 100% glow over target range, 150% when over the high/low reference line.
+            const overReference = centerGlucoseStatus?.overReference
+              ?? (glucoseValue != null && (glucoseValue > readHighReference() || glucoseValue < FIXED_LOW_REFERENCE));
+            const gradient = overReference
+              ? `linear-gradient(to bottom, ${glowColor}99 0%, ${glowColor}66 14%, ${glowColor}33 55%, transparent 100%)`
+              : `linear-gradient(to bottom, ${glowColor}66 0%, ${glowColor}44 14%, ${glowColor}22 55%, transparent 100%)`;
             return (
               <div
                 aria-hidden="true"
-                className="pointer-events-none absolute inset-x-0 top-0 z-[1] rounded-3xl transition-opacity duration-700 ease-out"
+                className="pointer-events-none absolute inset-x-0 top-0 z-[1] rounded-3xl"
                 style={{
                   height: "50%",
                   opacity: isActive ? 1 : 0,
-                  background: `linear-gradient(to bottom, ${glowColor}28 0%, ${glowColor}1a 14%, ${glowColor}0c 55%, transparent 100%)`,
+                  background: gradient,
+                  boxShadow: overReference ? `inset 0 30px 80px -30px ${glowColor}aa` : "none",
+                  transition: "opacity 700ms ease-out, background 700ms ease-out, box-shadow 700ms ease-out",
                 }}
               />
             );

@@ -346,6 +346,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const scrollFrameRef = useRef(null);
   const prevLatestValueRef = useRef(null);
   const prevGlowStatusRef = useRef(null);
+  const prevOverReferenceRef = useRef(false);
   const pendingScrollLeftRef = useRef(0);
   const containerRef = useRef(null);
   const graphViewportRef = useRef(null);
@@ -824,9 +825,11 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       glucose.value > targetHigh ? "high"
       : glucose.value < targetLow ? "low"
       : "in_range";
-    if (glowStatus !== prevGlowStatusRef.current) {
+    const overReference = glucose.value > highReference || glucose.value < FIXED_LOW_REFERENCE;
+    if (glowStatus !== prevGlowStatusRef.current || overReference !== prevOverReferenceRef.current) {
       prevGlowStatusRef.current = glowStatus;
-      window.dispatchEvent(new CustomEvent("stackd-center-glucose-status", { detail: { status: glowStatus } }));
+      prevOverReferenceRef.current = overReference;
+      window.dispatchEvent(new CustomEvent("stackd-center-glucose-status", { detail: { status: glowStatus, overReference } }));
     }
 
     if (tickerRef.current) tickerRef.current.setValue(formatGlucoseDisplay(glucose.value), animate);
@@ -902,7 +905,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   // latest reading instead of staying stuck on a stale scroll position.
   useEffect(() => {
     return () => {
-      window.dispatchEvent(new CustomEvent("stackd-center-glucose-status", { detail: { status: null } }));
+      window.dispatchEvent(new CustomEvent("stackd-center-glucose-status", { detail: { status: null, overReference: false } }));
     };
   }, []);
 
