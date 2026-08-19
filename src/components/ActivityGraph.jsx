@@ -11,6 +11,8 @@ import InfoPopover from "@/components/graph/InfoPopover";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
+import { useGlucoseStaleness } from "@/hooks/useGlucoseStaleness";
+import { getLatestDexcomReading, formatReadingAge } from "@/lib/glucoseStaleness";
 import GlucoseTicker from "@/components/graph/GlucoseTicker";
 import TimeViewToggle from "@/components/graph/TimeViewToggle";
 import CandlestickView from "@/components/graph/CandlestickView";
@@ -469,6 +471,11 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   );
 
   const latestGlucoseReading = sortedGlucoseReadings[sortedGlucoseReadings.length - 1];
+  const latestDexcomReading = useMemo(
+    () => getLatestDexcomReading(sortedGlucoseReadings),
+    [sortedGlucoseReadings]
+  );
+  const isGlucoseStale = useGlucoseStaleness(latestDexcomReading, dexcomConnected);
   const latestGlucoseTime = latestGlucoseReading?.time ?? Math.round(Date.now() / STEP_MS) * STEP_MS;
   const latestGlucoseBucket = isCandlestick ?
   Math.floor(latestGlucoseTime / HOUR_MS) * HOUR_MS :
@@ -803,6 +810,18 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       return;
     }
 
+    // Stale-reading contingency: when the CGM stream has gone quiet and the
+    // viewport is centered in the gap past the last real reading, hide the
+    // marker, show "--" in the ticker, and surface the last reading's age.
+    const lastReadingTime = glucoseLinePoints.length ? glucoseLinePoints[glucoseLinePoints.length - 1].time : null;
+    if (isGlucoseStale && lastReadingTime != null && centerTime >= lastReadingTime) {
+      if (marker) marker.style.opacity = "0";
+      if (tickerRef.current) tickerRef.current.setValue("--", false);
+      if (timeEl) timeEl.textContent = formatReadingAge(latestDexcomReading?.recorded_at) || "";
+      if (dateEl) dateEl.textContent = "";
+      return;
+    }
+
     // Compute the marker Y directly from the glucose value using the same
     // coordinate mapping as the chart's YAxis. This is more reliable than
     // sampling the SVG path, which can drift due to recharts' internal
@@ -914,13 +933,18 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     const interval = setInterval(() => {
       const scrollLeft = scrollRef.current?.scrollLeft ?? maxScrollLeft;
       const centerTime = getCenterTimeForScroll(scrollLeft);
+      const lastReadingTime = glucoseLinePoints.length ? glucoseLinePoints[glucoseLinePoints.length - 1].time : null;
+      if (isGlucoseStale && lastReadingTime != null && centerTime >= lastReadingTime) {
+        if (tooltipTimeRef.current) tooltipTimeRef.current.textContent = formatReadingAge(latestDexcomReading?.recorded_at) || "";
+        return;
+      }
       const glucose = getGlucoseAt(centerTime);
       if (glucose && tooltipTimeRef.current) {
         tooltipTimeRef.current.textContent = formatReadingTime(glucose.time);
       }
     }, 30000);
     return () => clearInterval(interval);
-  }, [maxScrollLeft, glucoseLinePoints]);
+  }, [maxScrollLeft, glucoseLinePoints, isGlucoseStale, latestDexcomReading]);
 
   const scrollToLatestGlucose = () => {
     if (!scrollRef.current) return;
@@ -941,7 +965,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     return () => {
       if (scrollFrameRef.current) cancelAnimationFrame(scrollFrameRef.current);
     };
-  }, [maxScrollLeft, latestGlucoseBucket, filters.glucose, glucoseLinePoints.length, positionedMonitoringIntervals]);
+  }, [maxScrollLeft, latestGlucoseBucket, filters.glucose, glucoseLinePoints.length, positionedMonitoringIntervals, isGlucoseStale]);
 
   if (!doses.length && !glucoseReadings.length && !carbEntries.length) return null;
 

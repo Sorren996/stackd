@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { format } from "date-fns";
 import InfoPopover from "./InfoPopover";
 import GlucoseTicker from "./GlucoseTicker";
+import { formatReadingAge } from "@/lib/glucoseStaleness";
 
 const TREND_ICONS = {
   up: ArrowUp,
@@ -20,10 +21,13 @@ const CARD_STYLE = {
     "0 8px 32px rgba(0,0,0,0.12), inset 0 1px 1px rgba(255,255,255,0.10), inset 0 0 28px rgba(91,168,138,0.025)",
 };
 
-function AmbientOrb({ color, duration = 6 }) {
+const STALE_COLOR = "rgba(255,255,255,0.3)";
+const STALE_LABEL = "Waiting for a fresh reading";
+
+function AmbientOrb({ color, duration = 6, dimmed = false }) {
   return (
     <motion.div
-      animate={{ scale: [1, 1.18, 1], opacity: [0.45, 0.7, 0.45] }}
+      animate={{ scale: [1, 1.18, 1], opacity: dimmed ? [0.18, 0.28, 0.18] : [0.45, 0.7, 0.45] }}
       transition={{ duration, repeat: Infinity, ease: "easeInOut" }}
       className="h-14 w-14 rounded-full"
       style={{
@@ -42,17 +46,22 @@ export default function CurrentGlucoseCard({
   rangeCardLabel,
   readingAgeLabel,
   onEdit,
+  isStale = false,
 }) {
   const [open, setOpen] = useState(false);
   const [anchor, setAnchor] = useState(null);
   const tickerRef = useRef(null);
   const TrendIcon = TREND_ICONS[trend?.icon] || ArrowRight;
 
+  const displayColor = isStale ? STALE_COLOR : glucoseColor;
+  const displayLabel = isStale ? STALE_LABEL : rangeCardLabel;
+  const staleAge = isStale ? formatReadingAge(latestGlucose?.recorded_at) : null;
+
   useEffect(() => {
-    if (tickerRef.current && glucoseValue != null) {
+    if (tickerRef.current && glucoseValue != null && !isStale) {
       tickerRef.current.setValue(String(glucoseValue), true);
     }
-  }, [glucoseValue]);
+  }, [glucoseValue, isStale]);
 
   const openPopover = (e) => {
     setAnchor(e.currentTarget.getBoundingClientRect());
@@ -84,7 +93,7 @@ export default function CurrentGlucoseCard({
           }}
         />
         <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2">
-          <AmbientOrb color={glucoseColor} />
+          <AmbientOrb color={displayColor} dimmed={isStale} />
         </div>
         <div className="relative z-10 mb-1 flex items-start justify-between gap-2">
           <span className="text-[10px] font-semibold uppercase tracking-wider text-white/35">
@@ -94,7 +103,9 @@ export default function CurrentGlucoseCard({
         </div>
 
         <div className="relative z-10 mt-1 flex items-end gap-1.5">
-          {glucoseValue != null ? (
+          {isStale ? (
+            <span className="text-4xl font-black leading-none text-white/45">--</span>
+          ) : glucoseValue != null ? (
             <GlucoseTicker
               ref={tickerRef}
               initialValue={String(glucoseValue)}
@@ -104,13 +115,23 @@ export default function CurrentGlucoseCard({
             <span className="text-4xl font-black leading-none text-white">--</span>
           )}
           <span className="mb-1 text-[11px] font-medium text-white/40">mg/dL</span>
-          {latestGlucose && <TrendIcon className="mb-1 h-4 w-4" style={{ color: glucoseColor }} />}
+          {latestGlucose && !isStale && (
+            <TrendIcon className="mb-1 h-4 w-4" style={{ color: displayColor }} />
+          )}
         </div>
 
         <div className="relative z-10 mt-1">
-          {readingAgeLabel && <p className="text-[11px] text-white/35">{readingAgeLabel}</p>}
-          <span className="mt-1.5 block text-xs font-semibold" style={{ color: glucoseColor }}>
-            {rangeCardLabel}
+          {readingAgeLabel && !isStale && (
+            <p className="text-[11px] text-white/35">{readingAgeLabel}</p>
+          )}
+          {isStale && staleAge && (
+            <p className="text-[11px] text-white/35">Last reading {staleAge}</p>
+          )}
+          <span
+            className="mt-1.5 block text-xs font-semibold"
+            style={{ color: displayColor }}
+          >
+            {displayLabel}
           </span>
         </div>
       </motion.div>
@@ -122,19 +143,32 @@ export default function CurrentGlucoseCard({
               <span className="text-[10px] font-semibold uppercase tracking-wider text-white/40">
                 Current Glucose
               </span>
-              {latestGlucose && <TrendIcon className="h-3.5 w-3.5" style={{ color: glucoseColor }} />}
+              {latestGlucose && !isStale && (
+                <TrendIcon className="h-3.5 w-3.5" style={{ color: displayColor }} />
+              )}
             </div>
             <div className="flex items-baseline gap-1.5">
-              <span className="text-3xl font-black leading-none text-white">{glucoseValue ?? "--"}</span>
+              <span className="text-3xl font-black leading-none text-white">
+                {isStale ? "--" : glucoseValue ?? "--"}
+              </span>
               <span className="text-xs font-medium text-white/40">mg/dL</span>
             </div>
-            <p className="text-xs font-semibold" style={{ color: glucoseColor }}>{rangeCardLabel}</p>
+            <p className="text-xs font-semibold" style={{ color: displayColor }}>
+              {displayLabel}
+            </p>
             {latestGlucose?.recorded_at && (
               <p className="text-[11px] text-white/40">
                 {format(new Date(latestGlucose.recorded_at), "h:mm a · MMM d")}
+                {isStale && staleAge ? ` · ${staleAge}` : ""}
               </p>
             )}
-            {onEdit && latestGlucose && latestGlucose.source !== "dexcom" && (
+            {isStale && (
+              <p className="text-[11px] leading-relaxed text-white/50">
+                Your glucose source hasn't sent a fresh reading in a little while.
+                We'll pick back up the moment it does.
+              </p>
+            )}
+            {onEdit && latestGlucose && !isStale && latestGlucose.source !== "dexcom" && (
               <button
                 type="button"
                 onClick={() => {

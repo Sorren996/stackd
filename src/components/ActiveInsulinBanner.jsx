@@ -38,6 +38,9 @@ import { getSupportiveGlucoseMessage } from "@/lib/supportiveMessages";
 import { computeTimeInRange, filterReadingsForStats, computeTimeInRangeFromReadings } from "@/lib/timeInRange";
 import { computeGlucoseTrend, mapDexcomTrend } from "@/lib/glucoseTrend";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
+import { useGlucoseStaleness } from "@/hooks/useGlucoseStaleness";
+import { getLatestDexcomReading } from "@/lib/glucoseStaleness";
+import StaleReadingBanner from "@/components/StaleReadingBanner";
 import { isRescueCarbEntry } from "@/lib/rescueCarbDetection";
 import { GLUCOSE_STATUS_COLORS, classifyGlucose, readHighReference, FIXED_LOW_REFERENCE } from "@/lib/glucoseStatus";
 
@@ -842,6 +845,12 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
   const safeGlucoseReadings = Array.isArray(glucoseReadings) ? glucoseReadings : [];
   const safeCarbEntries = Array.isArray(carbEntries) ? carbEntries : [];
 
+  const latestDexcomReading = useMemo(
+    () => getLatestDexcomReading(safeGlucoseReadings),
+    [safeGlucoseReadings]
+  );
+  const isGlucoseStale = useGlucoseStaleness(latestDexcomReading, dexcomConnected);
+
   useEffect(() => {
     const refreshSettings = () => {
       setInsulinSettings(readInsulinSettings());
@@ -1160,10 +1169,15 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
                 : null
             }
             onEdit={onEditGlucose}
+            isStale={isGlucoseStale}
           />
         </div>
 
-        <SupportiveGlucoseMessage insight={supportiveGlucoseInsight} trend={trend} TrendIcon={TrendIcon} />
+        {isGlucoseStale ? (
+          <StaleReadingBanner visible={isGlucoseStale} />
+        ) : (
+          <SupportiveGlucoseMessage insight={supportiveGlucoseInsight} trend={trend} TrendIcon={TrendIcon} />
+        )}
 
         <div
           className="relative mt-3 overflow-hidden rounded-3xl border border-white/[0.07] pb-1"
@@ -1175,16 +1189,16 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
           {(() => {
             // Use the scroll marker's status when available; fall back to the
             // latest reading when the graph hasn't reported yet.
-            const status = centerGlucoseStatus?.status ?? classifyGlucose(glucoseValue, targetLow, targetHigh);
-            const isActive = status === "high" || status === "low";
+            const status = isGlucoseStale ? null : (centerGlucoseStatus?.status ?? classifyGlucose(glucoseValue, targetLow, targetHigh));
+            const isActive = !isGlucoseStale && (status === "high" || status === "low");
             const glowColor = status === "high"
               ? GLUCOSE_STATUS_COLORS.high
               : status === "low"
                 ? GLUCOSE_STATUS_COLORS.low
                 : GLUCOSE_STATUS_COLORS.inRange;
             // 100% glow over target range, 150% when over the high/low reference line.
-            const overReference = centerGlucoseStatus?.overReference
-              ?? (glucoseValue != null && (glucoseValue > readHighReference() || glucoseValue < FIXED_LOW_REFERENCE));
+            const overReference = isGlucoseStale ? false : (centerGlucoseStatus?.overReference
+              ?? (glucoseValue != null && (glucoseValue > readHighReference() || glucoseValue < FIXED_LOW_REFERENCE)));
             const gradient = overReference
               ? `linear-gradient(to bottom, ${glowColor}99 0%, ${glowColor}66 14%, ${glowColor}33 55%, transparent 100%)`
               : `linear-gradient(to bottom, ${glowColor}66 0%, ${glowColor}44 14%, ${glowColor}22 55%, transparent 100%)`;

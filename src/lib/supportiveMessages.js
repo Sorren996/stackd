@@ -167,12 +167,6 @@ const CONTEXT_MESSAGES = {
     "Your next reading will show us where you are. No rush.",
     "Nothing logged yet. We'll start fresh with your next check.",
   ],
-  stale: [
-    "This reading's a bit old. A fresh one will show us where you are now.",
-    "Some time has passed since this one. Let's check in again.",
-    "Things may have shifted since this reading. A new one will help us see.",
-    "This moment's passed. Let's get a fresh look at where you are.",
-  ],
   lowActiveCarbs: [
     "Nourishment is on its way. Give it a little time — you're being looked after.",
     "The food's settling in. Stay close — you'll feel it soon.",
@@ -243,7 +237,6 @@ export function getSupportiveGlucoseMessage({
   const normalizedTrend = normalizeSupportTrend(trend);
   const hasActiveInsulin = Number(activeInsulin) >= MEANINGFUL_ACTIVE_INSULIN_UNITS;
   const hasActiveCarbs = Number(activeCarbs) >= MEANINGFUL_ACTIVE_CARBS_GRAMS;
-  const isStale = Number.isFinite(readingAgeMinutes) && readingAgeMinutes >= STALE_GLUCOSE_MINUTES;
   const isRising = normalizedTrend === "rising" || normalizedTrend === "slowly_rising";
   const isFalling = normalizedTrend === "falling" || normalizedTrend === "slowly_falling";
 
@@ -254,8 +247,6 @@ export function getSupportiveGlucoseMessage({
 
   if (!glucose || !Number.isFinite(value)) {
     contextKey = "missing";
-  } else if (isStale) {
-    contextKey = "stale";
   } else if (value <= 54) {
     contextKey = hasActiveCarbs ? "lowActiveCarbs" : "lowUrgent";
   } else if (value < targetLow) {
