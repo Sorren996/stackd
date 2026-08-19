@@ -18,6 +18,7 @@ import { DateScrollField, TimeScrollField, NumberPadField, TextPadField, SelectF
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 import { useVisibilityRefresh } from "@/hooks/useVisibilityRefresh";
 import DexcomSyncStatus from "@/components/DexcomSyncStatus";
+import ConnectGlucoseSourcePrompt from "@/components/ConnectGlucoseSourcePrompt";
 
 const FRESH_DATA_MS = 60 * 1000;
 const GRAPH_DATA_MS = 5 * 60 * 1000;
@@ -300,7 +301,7 @@ export default function Dashboard() {
   const [showAllDoses, setShowAllDoses] = useState(false);
   const [showGraph, setShowGraph] = useState(false);
   const [editingLog, setEditingLog] = useState(null);
-  const { connected: dexcomConnected } = useDexcomConnection();
+  const { connected: dexcomConnected, isLoading: dexcomLoading, connection: dexcomConnection } = useDexcomConnection();
   useVisibilityRefresh();
   const stackingAlertsEnabled = localStorage.getItem("stacking_alerts_enabled") !== "false";
 
@@ -598,8 +599,11 @@ export default function Dashboard() {
         isSaving={updateLog.isPending}
       />
 
-      <div className="mb-4">
+      <div className="mb-4 space-y-3">
         <DexcomSyncStatus />
+        {!dexcomConnected && !dexcomLoading && (
+          <ConnectGlucoseSourcePrompt connection={dexcomConnection} />
+        )}
       </div>
 
       {shouldShowEmptyState ? (
