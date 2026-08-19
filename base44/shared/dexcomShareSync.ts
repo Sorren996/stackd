@@ -245,7 +245,17 @@ export async function syncShareForConnection(
     return diag;
   } catch (error: any) {
     diag.status = "error";
-    diag.auth_status = error.shareCode === "AccountPasswordInvalid" ? "failed_invalid_credentials" : "failed";
+    // Only Share API errors (those carrying a shareCode from Dexcom) are
+    // credential/auth failures. Plain errors — database timeouts, network
+    // blips, platform hiccups — are transient and must NOT disconnect the
+    // account, so the next sync can simply try again.
+    if (error.shareCode === "AccountPasswordInvalid") {
+      diag.auth_status = "failed_invalid_credentials";
+    } else if (error.shareCode) {
+      diag.auth_status = "failed";
+    } else {
+      diag.auth_status = "transient_error";
+    }
     diag.error = error.shareCode || error.message;
     return diag;
   }
