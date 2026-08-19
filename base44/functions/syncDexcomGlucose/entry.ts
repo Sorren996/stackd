@@ -57,7 +57,12 @@ export default async function (req: Request): Promise<Response> {
           statusPatch.status = "error";
         } else if (diag.status !== "error") {
           statusPatch.status = "connected";
-          statusPatch.last_fetched_at = now.toISOString();
+          // Only stamp last_fetched_at when new records were actually inserted.
+          // A no-data run shouldn't block the next on-demand pull, since
+          // Dexcom may publish fresh data moments after a "no new data" sync.
+          if (diag.records_inserted > 0) {
+            statusPatch.last_fetched_at = now.toISOString();
+          }
         }
 
         await sr.entities.DexcomConnection.update(conn.id, statusPatch).catch(() => {});

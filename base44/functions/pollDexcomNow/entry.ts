@@ -13,7 +13,8 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.42";
 import { syncShareForConnection } from "../../shared/dexcomShareSync.ts";
 
-const MIN_SYNC_GAP_MS = 2 * 60 * 1000; // Don't hit Share more than once per 2 min
+const MIN_SYNC_GAP_MS = 75 * 1000; // Don't hit Share more than once per 75s
+const STALE_READING_MS = 4 * 60 * 1000; // Pull anyway if newest reading is older than 4 min
 
 export default async function (req: Request): Promise<Response> {
   try {
@@ -31,11 +32,21 @@ export default async function (req: Request): Promise<Response> {
       return Response.json({ status: "no_credentials" });
     }
 
-    // Rate limit — skip if we synced very recently (scheduled or on-demand)
+    // Rate limit — skip if we synced very recently (scheduled or on-demand).
+    // But if the newest stored reading is older than STALE_READING_MS, Dexcom
+    // has almost certainly published fresh data since, so pull anyway.
     if (conn.last_fetched_at) {
       const lastFetched = new Date(conn.last_fetched_at).getTime();
       if (Number.isFinite(lastFetched) && Date.now() - lastFetched < MIN_SYNC_GAP_MS) {
-        return Response.json({ status: "too_soon" });
+        const latest = await base44.entities.GlucoseReading.list("-recorded_at", 1);
+        const newestRecordedAt = latest?.[0]?.recorded_at
+          ? new Date(latest[0].recorded_at).getTime()
+          : null;
+        const newestIsStale = !Number.isFinite(newestRecordedAt)
+          || Date.now() - newestRecordedAt > STALE_READING_MS;
+        if (!newestIsStale) {
+          return Response.json({ status: "too_soon" });
+        }
       }
     }
 
