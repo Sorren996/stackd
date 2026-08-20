@@ -4,6 +4,7 @@ import { Wind, Leaf, Waves, Settings } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Dashboard from "../pages/Dashboard";
 import HistoryPage from "../pages/History";
+import { useRealtimeLogSync } from "@/hooks/useRealtimeLogSync";
 
 const navItems = [
   { path: "/", label: "My Flow", icon: Wind },
@@ -25,6 +26,10 @@ export default function Layout() {
     dashboard: true,
     history: false,
   }));
+
+  // Keeps every page's cached log data fresh the instant a record changes —
+  // including Dexcom syncs that land while the user is on Journal/Rhythms.
+  useRealtimeLogSync();
 
   useEffect(() => {
     if (isDashboardRoute) {

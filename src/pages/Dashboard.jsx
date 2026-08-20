@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import ActivityGraph from "../components/ActivityGraph";
 import ActiveInsulinBanner from "../components/ActiveInsulinBanner";
@@ -297,6 +298,8 @@ function EditableLog({ children, onEdit }) {
 
 export default function Dashboard() {
   const queryClient = useQueryClient();
+  const location = useLocation();
+  const isDashboardActive = location.pathname === "/";
   const [, setTick] = useState(0);
   const [showAllDoses, setShowAllDoses] = useState(false);
   const [showGraph, setShowGraph] = useState(false);
@@ -623,7 +626,7 @@ export default function Dashboard() {
               glucoseReadings={heroGlucoseReadings}
               carbEntries={recentCarbs}
               graphSlot={
-                showGraph ? (
+                showGraph && isDashboardActive ? (
                   <ActivityGraph
                     doses={graphDoses}
                     glucoseReadings={graphGlucose}
