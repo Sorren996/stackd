@@ -1,7 +1,7 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { Wind, Leaf, Waves, Settings, RefreshCw } from "lucide-react";
+import { Wind, Leaf, Waves, Settings, RefreshCw, Check, AlertTriangle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Dashboard from "../pages/Dashboard";
 import HistoryPage from "../pages/History";
@@ -34,6 +34,7 @@ export default function Layout() {
 
   const queryClient = useQueryClient();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshAlert, setRefreshAlert] = useState(null);
 
   // Re-pulls the latest information from the database for every cached query,
   // without kicking off the external Dexcom Share poll.
@@ -44,10 +45,19 @@ export default function Layout() {
       await queryClient.refetchQueries({
         predicate: (query) => query.queryKey[0] !== "dexcom-poll-now",
       });
+      setRefreshAlert({ type: "success" });
+    } catch {
+      setRefreshAlert({ type: "error" });
     } finally {
       setIsRefreshing(false);
     }
   };
+
+  useEffect(() => {
+    if (!refreshAlert) return;
+    const id = setTimeout(() => setRefreshAlert(null), 2500);
+    return () => clearTimeout(id);
+  }, [refreshAlert]);
 
   useEffect(() => {
     if (isDashboardRoute) {
@@ -141,6 +151,44 @@ export default function Layout() {
           </div>
         </div>
       </header>
+
+      <AnimatePresence>
+        {refreshAlert && (
+          <motion.div
+            key="refresh-alert"
+            initial={{ opacity: 0, y: -10, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.96 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="fixed left-1/2 top-16 z-[60] flex -translate-x-1/2 items-center gap-2 rounded-full border px-4 py-2 backdrop-blur-md"
+            style={
+              refreshAlert.type === "success"
+                ? {
+                    background: "linear-gradient(145deg, rgba(91,168,138,0.24), rgba(91,168,138,0.10))",
+                    borderColor: "rgba(91,168,138,0.42)",
+                    boxShadow: "0 8px 24px rgba(0,0,0,0.18), 0 0 18px rgba(91,168,138,0.18)",
+                  }
+                : {
+                    background: "linear-gradient(145deg, rgba(217,169,56,0.24), rgba(217,169,56,0.10))",
+                    borderColor: "rgba(217,169,56,0.42)",
+                    boxShadow: "0 8px 24px rgba(0,0,0,0.18), 0 0 18px rgba(217,169,56,0.18)",
+                  }
+            }
+          >
+            {refreshAlert.type === "success" ? (
+              <Check className="h-3.5 w-3.5 shrink-0" style={{ color: "rgba(120,200,170,0.95)" }} />
+            ) : (
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0" style={{ color: "rgba(230,190,110,0.95)" }} />
+            )}
+            <span
+              className="whitespace-nowrap text-xs font-semibold"
+              style={{ color: refreshAlert.type === "success" ? "rgba(190,232,212,0.96)" : "rgba(244,214,150,0.96)" }}
+            >
+              {refreshAlert.type === "success" ? "Refreshed with the latest" : "Refresh unsuccessful — please try again"}
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <main className="relative mx-auto w-full max-w-6xl px-4 pt-14 overflow-visible pb-28">
         <div className="min-w-0 w-full">
