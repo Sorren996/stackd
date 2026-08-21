@@ -1,4 +1,5 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { Wind, Leaf, Waves, Settings, RefreshCw, Check, AlertTriangle } from "lucide-react";
@@ -41,12 +42,25 @@ export default function Layout() {
   const handleRefresh = async () => {
     if (isRefreshing) return;
     setIsRefreshing(true);
+    let timeoutId;
     try {
-      await queryClient.refetchQueries({
+      const refreshPromise = queryClient.refetchQueries({
         predicate: (query) => query.queryKey[0] !== "dexcom-poll-now",
       });
-      setRefreshAlert({ type: "success" });
+      // Guard against a hung connection — if the refetch can't establish a
+      // connection, time out and surface the unsuccessful alert instead of
+      // spinning forever.
+      const timeoutPromise = new Promise((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error("refresh-timeout")), 8000);
+      });
+      await Promise.race([refreshPromise, timeoutPromise]);
+      clearTimeout(timeoutId);
+      const failed = queryClient.getQueryCache().getAll().some(
+        (q) => q.queryKey[0] !== "dexcom-poll-now" && q.state.status === "error"
+      );
+      setRefreshAlert({ type: failed ? "error" : "success" });
     } catch {
+      clearTimeout(timeoutId);
       setRefreshAlert({ type: "error" });
     } finally {
       setIsRefreshing(false);
@@ -153,7 +167,7 @@ export default function Layout() {
       </header>
 
       <AnimatePresence>
-        {refreshAlert && (
+        {refreshAlert && createPortal(
           <motion.div
             key="refresh-alert"
             initial={{ opacity: 0, y: -10, scale: 0.96 }}
@@ -186,7 +200,8 @@ export default function Layout() {
             >
               {refreshAlert.type === "success" ? "Refreshed with the latest" : "Refresh unsuccessful — please try again"}
             </span>
-          </motion.div>
+          </motion.div>,
+          document.body
         )}
       </AnimatePresence>
 
