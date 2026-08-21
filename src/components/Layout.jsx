@@ -1,6 +1,7 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
-import { Wind, Leaf, Waves, Settings } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Wind, Leaf, Waves, Settings, RefreshCw } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Dashboard from "../pages/Dashboard";
 import HistoryPage from "../pages/History";
@@ -30,6 +31,23 @@ export default function Layout() {
   // Keeps every page's cached log data fresh the instant a record changes —
   // including Dexcom syncs that land while the user is on Journal/Rhythms.
   useRealtimeLogSync();
+
+  const queryClient = useQueryClient();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Re-pulls the latest information from the database for every cached query,
+  // without kicking off the external Dexcom Share poll.
+  const handleRefresh = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      await queryClient.refetchQueries({
+        predicate: (query) => query.queryKey[0] !== "dexcom-poll-now",
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   useEffect(() => {
     if (isDashboardRoute) {
@@ -78,6 +96,29 @@ export default function Layout() {
           </button>
 
           <div className="flex items-center justify-self-end gap-2">
+            <button
+              type="button"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              aria-label="Refresh information"
+              className="flex h-9 w-9 items-center justify-center rounded-full backdrop-blur-sm border transition-all"
+              style={{
+                background: "rgba(255,255,255,0.05)",
+                borderColor: "rgba(255,255,255,0.05)",
+              }}
+            >
+              <motion.span
+                animate={isRefreshing ? { rotate: 360 } : { rotate: 0 }}
+                transition={
+                  isRefreshing
+                    ? { duration: 0.8, repeat: Infinity, ease: "linear" }
+                    : { duration: 0.2 }
+                }
+                className="flex"
+              >
+                <RefreshCw className="h-4 w-4 text-white/55" />
+              </motion.span>
+            </button>
             <button
               type="button"
               onClick={toggleSettings}
