@@ -64,7 +64,14 @@ export default function Layout() {
       });
       await Promise.race([refreshPromise, timeoutPromise]);
       clearTimeout(timeoutId);
-      setRefreshAlert({ type: sawError ? "error" : "success" });
+      // Use three independent signals so an offline refresh can never report a
+      // false success: error events during the refresh, the browser's own
+      // connectivity flag, and any query left in an error state afterward.
+      const offline = typeof navigator !== "undefined" && navigator.onLine === false;
+      const hasErrorQuery = queryClient.getQueryCache().getAll().some(
+        (q) => q.queryKey[0] !== "dexcom-poll-now" && q.state.status === "error"
+      );
+      setRefreshAlert({ type: sawError || offline || hasErrorQuery ? "error" : "success" });
     } catch {
       clearTimeout(timeoutId);
       setRefreshAlert({ type: "error" });
