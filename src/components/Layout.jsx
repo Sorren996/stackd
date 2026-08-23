@@ -1,5 +1,4 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { Wind, Leaf, Waves, Settings, RefreshCw, Check, AlertTriangle } from "lucide-react";
@@ -51,7 +50,7 @@ export default function Layout() {
       // connection, time out and surface the unsuccessful alert instead of
       // spinning forever.
       const timeoutPromise = new Promise((_, reject) => {
-        timeoutId = setTimeout(() => reject(new Error("refresh-timeout")), 8000);
+        timeoutId = setTimeout(() => reject(new Error("refresh-timeout")), 3000);
       });
       await Promise.race([refreshPromise, timeoutPromise]);
       clearTimeout(timeoutId);
@@ -167,7 +166,7 @@ export default function Layout() {
       </header>
 
       <AnimatePresence>
-        {refreshAlert && createPortal(
+        {refreshAlert && (
           <motion.div
             key="refresh-alert"
             initial={{ opacity: 0, x: "-50%", y: -10, scale: 0.96 }}
@@ -200,8 +199,7 @@ export default function Layout() {
             >
               {refreshAlert.type === "success" ? "Refreshed with the latest" : "Refresh unsuccessful — please try again"}
             </span>
-          </motion.div>,
-          document.body
+          </motion.div>
         )}
       </AnimatePresence>
 
