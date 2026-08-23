@@ -42,6 +42,16 @@ export default function Layout() {
     if (isRefreshing) return;
     setIsRefreshing(true);
     let timeoutId;
+    let sawError = false;
+    // Watch the query cache for any failed refetch during this refresh so a
+    // second tap (while still offline) is still reported as unsuccessful —
+    // inspecting final query status alone is racy because a refetch clears
+    // the previous error state to "pending" before it fails again.
+    const unsubscribe = queryClient.getQueryCache().subscribe((event) => {
+      if (event.type !== "updated" || event.action?.type !== "error") return;
+      if (event.query?.queryKey[0] === "dexcom-poll-now") return;
+      sawError = true;
+    });
     try {
       const refreshPromise = queryClient.refetchQueries({
         predicate: (query) => query.queryKey[0] !== "dexcom-poll-now",
@@ -54,14 +64,12 @@ export default function Layout() {
       });
       await Promise.race([refreshPromise, timeoutPromise]);
       clearTimeout(timeoutId);
-      const failed = queryClient.getQueryCache().getAll().some(
-        (q) => q.queryKey[0] !== "dexcom-poll-now" && q.state.status === "error"
-      );
-      setRefreshAlert({ type: failed ? "error" : "success" });
+      setRefreshAlert({ type: sawError ? "error" : "success" });
     } catch {
       clearTimeout(timeoutId);
       setRefreshAlert({ type: "error" });
     } finally {
+      unsubscribe();
       setIsRefreshing(false);
     }
   };
