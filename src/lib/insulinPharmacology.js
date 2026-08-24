@@ -121,13 +121,29 @@ const INSULIN_TYPE_ALIASES = {
 };
 
 const DURATION_MULTIPLIER_POINTS = [
-  { units: 0, multiplier: 0.75 },
-  { units: 5, multiplier: 0.75 },
-  { units: 15, multiplier: 1.0 },
+  { units: 0, multiplier: 0.8 },
+  { units: 5, multiplier: 0.85 },
+  { units: 15, multiplier: 1.05 },
   { units: 30, multiplier: 1.2 },
   { units: 50, multiplier: 1.4 },
   { units: 75, multiplier: 1.6 },
+  { units: 100, multiplier: 1.75 },
 ];
+
+const TAIL_MULTIPLIER_POINTS = [
+  { units: 0, multiplier: 0.2 },
+  { units: 5, multiplier: 0.22 },
+  { units: 15, multiplier: 0.26 },
+  { units: 30, multiplier: 0.3 },
+  { units: 50, multiplier: 0.35 },
+  { units: 75, multiplier: 0.42 },
+  { units: 100, multiplier: 0.48 },
+];
+
+// Low residual activity sustained into the extended tail, expressed as a
+// fraction of peak activity. Keeps the curve from dropping to zero the moment
+// the main window closes — insulin keeps working gently while glucose eases.
+const RESIDUAL_FLOOR = 0.16;
 
 const PEAK_MULTIPLIER_POINTS = [
   { units: 0, multiplier: 0.9 },
@@ -211,6 +227,10 @@ export function getDosePeakMultiplier(units) {
   return interpolateControlPoints(units, PEAK_MULTIPLIER_POINTS);
 }
 
+export function getDoseTailMultiplier(units) {
+  return interpolateControlPoints(units, TAIL_MULTIPLIER_POINTS);
+}
+
 function getDoseUnits(dose) {
   const direct = Number(dose?.units);
   if (Number.isFinite(direct) && direct > 0) return direct;
@@ -237,49 +257,68 @@ function getProfileTiming(profile, units) {
   const hasPeak = Number.isFinite(profile?.peakMin) && Number.isFinite(profile?.peakMax);
   const peakBase = hasPeak ? midpoint(profile.peakMin, profile.peakMax, (onset + duration) / 2) : null;
   const peak = hasPeak ? clamp(peakBase * getDosePeakMultiplier(units), onset + 1, duration - 1) : null;
+  // Extended residual tail that lingers past the main activity window. Grows
+  // with dose size — larger doses keep lowering glucose well after the peak,
+  // so the curve and on-board estimate stay active longer for them.
+  const tailDuration = Math.round(duration * getDoseTailMultiplier(units));
 
-  return { onset, peak, duration, hasPeak };
+  return { onset, peak, duration, hasPeak, tailDuration };
 }
 
 export function getRelativeActivityAtMinute(minute, timing) {
   const t = Math.max(0, Number(minute) || 0);
   const onset = Math.max(0, Number(timing?.onset) || 0);
   const duration = Math.max(onset + 1, Number(timing?.duration) || onset + 1);
+  const tailDuration = Math.max(0, Number(timing?.tailDuration) || 0);
+  const totalSpan = duration + tailDuration;
   const hasPeak = Boolean(timing?.hasPeak && Number.isFinite(timing?.peak));
 
-  if (t <= 0 || t >= duration) return 0;
+  if (t <= 0 || t >= totalSpan) return 0;
 
   if (!hasPeak) {
     const rampEnd = Math.min(duration * 0.18, Math.max(onset, 1));
     const taperStart = duration * 0.78;
+    const floor = 0.14;
 
-    if (t <= rampEnd) {
-      const ratio = clamp(t / Math.max(1, rampEnd), 0, 1);
-      return 0.72 * (1 - Math.cos(Math.PI * ratio)) / 2;
+    if (t < duration) {
+      if (t <= rampEnd) {
+        const ratio = clamp(t / Math.max(1, rampEnd), 0, 1);
+        return 0.72 * (1 - Math.cos(Math.PI * ratio)) / 2;
+      }
+
+      if (t >= taperStart) {
+        const ratio = clamp((t - taperStart) / Math.max(1, duration - taperStart), 0, 1);
+        return floor + (0.72 - floor) * (1 + Math.cos(Math.PI * ratio)) / 2;
+      }
+
+      return 0.72;
     }
 
-    if (t >= taperStart) {
-      const ratio = clamp((t - taperStart) / Math.max(1, duration - taperStart), 0, 1);
-      return 0.72 * (1 + Math.cos(Math.PI * ratio)) / 2;
-    }
-
-    return 0.72;
+    // Extended residual tail — low lingering activity beyond the main window
+    const tailRatio = clamp((t - duration) / Math.max(1, tailDuration), 0, 1);
+    return floor * (1 + Math.cos(Math.PI * tailRatio)) / 2;
   }
 
   const peak = clamp(Number(timing.peak), onset + 1, duration - 1);
 
-  if (t < onset) {
-    const ratio = clamp(t / Math.max(1, onset), 0, 1);
-    return 0.08 * (1 - Math.cos(Math.PI * ratio)) / 2;
+  if (t < duration) {
+    if (t < onset) {
+      const ratio = clamp(t / Math.max(1, onset), 0, 1);
+      return 0.08 * (1 - Math.cos(Math.PI * ratio)) / 2;
+    }
+
+    if (t <= peak) {
+      const ratio = clamp((t - onset) / Math.max(1, peak - onset), 0, 1);
+      return 0.08 + 0.92 * (1 - Math.cos(Math.PI * ratio)) / 2;
+    }
+
+    const ratio = clamp((t - peak) / Math.max(1, duration - peak), 0, 1);
+    return RESIDUAL_FLOOR + (1 - RESIDUAL_FLOOR) * (1 + Math.cos(Math.PI * ratio)) / 2;
   }
 
-  if (t <= peak) {
-    const ratio = clamp((t - onset) / Math.max(1, peak - onset), 0, 1);
-    return 0.08 + 0.92 * (1 - Math.cos(Math.PI * ratio)) / 2;
-  }
-
-  const ratio = clamp((t - peak) / Math.max(1, duration - peak), 0, 1);
-  return (1 + Math.cos(Math.PI * ratio)) / 2;
+  // Extended residual tail
+  const tailRatio = clamp((t - duration) / Math.max(1, tailDuration), 0, 1);
+  return RESIDUAL_FLOOR * (1 + Math.cos(Math.PI * tailRatio)) / 2;
 }
 
 export function generateActivityCurve(dose, intervalMinutes = 5) {
@@ -291,9 +330,10 @@ export function generateActivityCurve(dose, intervalMinutes = 5) {
   if (!profile || !units || !Number.isFinite(start)) return [];
 
   const timing = getProfileTiming(profile, units);
+  const totalSpan = timing.duration + timing.tailDuration;
   const points = [];
 
-  for (let minute = 0; minute < timing.duration; minute += step) {
+  for (let minute = 0; minute < totalSpan; minute += step) {
     points.push({
       time: start + minute * MINUTE_MS,
       minute,
@@ -301,10 +341,10 @@ export function generateActivityCurve(dose, intervalMinutes = 5) {
     });
   }
 
-  if (!points.length || points[points.length - 1].minute !== timing.duration) {
+  if (!points.length || points[points.length - 1].minute !== totalSpan) {
     points.push({
-      time: start + timing.duration * MINUTE_MS,
-      minute: timing.duration,
+      time: start + totalSpan * MINUTE_MS,
+      minute: totalSpan,
       activity: 0,
     });
   }
@@ -373,12 +413,13 @@ export function getSteadyBasalIOB(dose, atTime = Date.now()) {
   if (atTime < start) return 0;
 
   const timing = getProfileTiming(profile, units);
+  const totalSpan = timing.duration + timing.tailDuration;
   const elapsedMin = (atTime - start) / MINUTE_MS;
   // Basal (Long-Acting & Ultra-Long-Acting) insulin holds steady across its
-  // duration rather than decaying hour-by-hour like bolus. The full dose is
-  // considered on board from the moment it's administered until the window
-  // closes, then 0 after.
-  if (elapsedMin >= timing.duration) return 0;
+  // effective window — including the extended residual tail — rather than
+  // decaying hour-by-hour like bolus. The full dose is considered on board
+  // from the moment it's administered until the window closes, then 0 after.
+  if (elapsedMin >= totalSpan) return 0;
   return units;
 }
 
@@ -459,25 +500,27 @@ export function getDoseStatus(dose, atTime = Date.now()) {
 
   const elapsed = (atTime - start) / MINUTE_MS;
   const timing = getProfileTiming(profile, units);
+  const totalSpan = timing.duration + timing.tailDuration;
   const activity = getRelativeActivityAtMinute(elapsed, timing);
   const iob = getDoseIOB(dose, atTime);
 
-  if (elapsed >= timing.duration || iob <= 0.01) {
+  if (elapsed >= totalSpan || iob <= 0.01) {
     return { phase: "expired", label: "No longer active", activity: 0, iob: 0 };
   }
 
   if (!timing.hasPeak) {
     if (elapsed < timing.onset) return { phase: "waiting", label: "Absorbing gently", activity, iob };
-    if (elapsed > timing.duration * 0.78) return { phase: "low_activity", label: "Gently winding down", activity, iob };
-    return { phase: "steady", label: "Active in the background", activity, iob };
+    if (elapsed < timing.duration * 0.78) return { phase: "steady", label: "Active in the background", activity, iob };
+    if (elapsed < timing.duration) return { phase: "declining", label: "Gently winding down", activity, iob };
+    return { phase: "low_activity", label: "Lingering gently", activity, iob };
   }
 
   if (elapsed < timing.onset) return { phase: "waiting", label: "Absorbing - not yet active", activity, iob };
   if (elapsed < timing.peak * 0.85) return { phase: "rising", label: "Rising toward peak", activity, iob };
   if (elapsed < timing.peak) return { phase: "near_peak", label: "Near peak activity", activity, iob };
   if (Math.abs(elapsed - timing.peak) <= 15) return { phase: "peak", label: "Peak activity", activity, iob };
-  if (elapsed > timing.duration * 0.85) return { phase: "low_activity", label: "Low residual activity", activity, iob };
-  return { phase: "declining", label: "Activity declining", activity, iob };
+  if (elapsed < timing.duration) return { phase: "declining", label: "Activity declining", activity, iob };
+  return { phase: "low_activity", label: "Lingering gently", activity, iob };
 }
 
 export function getDoseTimingInfo(dose, atTime = Date.now()) {
@@ -490,15 +533,16 @@ export function getDoseTimingInfo(dose, atTime = Date.now()) {
   }
 
   const timing = getProfileTiming(profile, units);
+  const totalDurationMin = timing.duration + timing.tailDuration;
   const elapsedMin = atTime >= start ? (atTime - start) / MINUTE_MS : 0;
-  const remainingMin = Math.max(0, timing.duration - elapsedMin);
-  const progress = timing.duration > 0 ? Math.min(1, elapsedMin / timing.duration) : 0;
+  const remainingMin = Math.max(0, totalDurationMin - elapsedMin);
+  const progress = totalDurationMin > 0 ? Math.min(1, elapsedMin / totalDurationMin) : 0;
 
   return {
-    totalDurationMin: timing.duration,
+    totalDurationMin,
     elapsedMin,
     remainingMin,
     progress,
-    isExpired: elapsedMin >= timing.duration,
+    isExpired: elapsedMin >= totalDurationMin,
   };
 }
