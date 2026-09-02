@@ -433,8 +433,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     { offset: fadeIn, color: GLUCOSE_STATUS_COLORS.high, opacity: 0.18 },
     { offset: highRefPct, color: GLUCOSE_STATUS_COLORS.high, opacity: 0.9 },
     { offset: Math.max(0, hi - 3), color: GLUCOSE_STATUS_COLORS.high, opacity: 0.6 },
-    { offset: Math.min(100, hi + 3), color: "#2dd4bf", opacity: 0.9 },
-    { offset: Math.max(0, lo - 3), color: "#2dd4bf", opacity: 0.9 },
+    { offset: Math.min(100, hi + 3), color: "#ffffff", opacity: 0.6 },
+    { offset: Math.max(0, lo - 3), color: "#ffffff", opacity: 0.6 },
     { offset: Math.min(100, lo + 3), color: GLUCOSE_STATUS_COLORS.low, opacity: 0.6 },
     { offset: lowRefPct, color: GLUCOSE_STATUS_COLORS.low, opacity: 0.9 },
     { offset: 100, color: GLUCOSE_STATUS_COLORS.low, opacity: 0.9 }];
