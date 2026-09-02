@@ -1035,8 +1035,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           style={{ width: "100%" }}>
       {!isCandlestick && filters.glucose && glucoseLinePoints.length > 0 &&
           <div
-            onClick={onSelectLog || onDeleteLog ? handleIndicatorClick : undefined}
-            className={`absolute left-1/2 top-0 z-20 -translate-x-1/2 px-3 py-1 text-center ${onSelectLog || onDeleteLog ? "cursor-pointer" : "pointer-events-none"}`}>
+            className="absolute left-1/2 top-0 z-20 -translate-x-1/2 px-3 py-1 text-center pointer-events-none">
             
           <div className="flex items-center justify-center gap-1.5 text-2xl font-black leading-none text-white">
             {(onSelectLog || onDeleteLog) && !dexcomConnected &&
