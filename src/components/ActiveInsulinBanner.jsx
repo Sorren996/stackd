@@ -1199,19 +1199,24 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
             // 100% glow over target range, 150% when over the high/low reference line.
             const overReference = isGlucoseStale ? false : (centerGlucoseStatus?.overReference
               ?? (glucoseValue != null && (glucoseValue > readHighReference() || glucoseValue < FIXED_LOW_REFERENCE)));
-            const gradient = overReference
-              ? `linear-gradient(to bottom, ${glowColor}99 0%, ${glowColor}66 14%, ${glowColor}33 55%, transparent 100%)`
-              : `linear-gradient(to bottom, ${glowColor}66 0%, ${glowColor}44 14%, ${glowColor}22 55%, transparent 100%)`;
+            // The color lives in a solid background-color (which the browser
+            // can interpolate) and the soft top-to-bottom fade is shaped by a
+            // static mask, so transitions between teal / amber / red cross-fade
+            // instead of snapping.
+            const maskFade = "linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.7) 14%, rgba(0,0,0,0.35) 55%, transparent 100%)";
+            const glowOpacity = isActive ? (overReference ? 0.6 : 0.4) : 0;
             return (
               <div
                 aria-hidden="true"
                 className="pointer-events-none absolute inset-x-0 top-0 z-[1] rounded-3xl"
                 style={{
                   height: "50%",
-                  opacity: isActive ? 1 : 0,
-                  background: gradient,
+                  opacity: glowOpacity,
+                  backgroundColor: glowColor,
+                  maskImage: maskFade,
+                  WebkitMaskImage: maskFade,
                   boxShadow: overReference ? `inset 0 30px 80px -30px ${glowColor}aa` : "none",
-                  transition: "opacity 700ms ease-out, background 700ms ease-out, box-shadow 700ms ease-out",
+                  transition: "opacity 700ms ease-out, background-color 700ms ease-out, box-shadow 700ms ease-out",
                 }}
               />
             );
