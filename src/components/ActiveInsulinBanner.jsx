@@ -1125,15 +1125,16 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
   const stackingAlertsEnabled =
     typeof window !== "undefined" && window.localStorage.getItem("stacking_alerts_enabled") !== "false";
 
+  // Counts rapid/short-acting doses that still hold meaningful insulin on
+  // board. Uses the same 0.5u IOB threshold as the IOB card's breakdown so the
+  // alert never reports more active doses than the card actually shows — a
+  // dose lingering in its tail with < 0.5u no longer counts as "stacking".
   const activeRapidCount = useMemo(() => {
-    return safeDoses
-      .map((dose) => ({ dose, status: getDoseStatus(dose) }))
-      .filter((item) => item.status.phase !== "expired")
-      .filter(
-        (item) =>
-          ["rising", "near_peak", "peak", "declining", "low_activity"].includes(item.status.phase) &&
-          ["Rapid-Acting", "Short-Acting"].includes(getInsulinCategory(item.dose.insulin_type))
-      ).length;
+    const now = Date.now();
+    return safeDoses.filter((dose) => {
+      if (!["Rapid-Acting", "Short-Acting"].includes(getInsulinCategory(dose.insulin_type))) return false;
+      return getDoseIOB(dose, now) >= 0.5;
+    }).length;
   }, [safeDoses, nowMinute]);
 
   const glucoseStatus = (value) => {
