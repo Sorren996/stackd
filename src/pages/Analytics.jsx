@@ -9,7 +9,6 @@ import { filterReadingsForStats } from "@/lib/timeInRange";
 import ZoneOfBalanceRing from "@/components/analytics/ZoneOfBalanceRing";
 import DailyPatternChart from "@/components/analytics/DailyPatternChart";
 import MomentsOfCare from "@/components/analytics/MomentsOfCare";
-import RangeSelector from "@/components/analytics/RangeSelector";
 
 const ANALYTICS_RANGE_KEY = "analytics_range_days";
 const DEFAULT_RANGE_DAYS = 30;
@@ -160,7 +159,7 @@ export default function Analytics() {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
-        className="space-y-3 px-1"
+        className="px-1"
       >
         <div>
           <h1 className="text-2xl font-bold text-white">Your Rhythms</h1>
@@ -168,7 +167,6 @@ export default function Analytics() {
             Gentle insights from your last {rangeDays} days
           </p>
         </div>
-        <RangeSelector value={rangeDays} onChange={handleRangeChange} />
       </motion.div>
 
       <motion.div
@@ -184,6 +182,8 @@ export default function Analytics() {
           averageGlucose={stats.averageGlucose}
           targetLow={targetRange.low}
           targetHigh={targetRange.high}
+          rangeDays={rangeDays}
+          onRangeChange={handleRangeChange}
         />
       </motion.div>
 
