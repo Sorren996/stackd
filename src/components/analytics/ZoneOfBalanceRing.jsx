@@ -1,7 +1,6 @@
 import { motion } from "framer-motion";
 import { Check, TrendingUp, Activity } from "lucide-react";
 import { WELLNESS_COLORS } from "@/lib/glassTheme";
-import RangeSelector from "./RangeSelector";
 
 const COLORS = {
   inRange: WELLNESS_COLORS.inRange,
@@ -97,13 +96,6 @@ export default function ZoneOfBalanceRing({ inRangePercent, abovePercent, belowP
           <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-white">Time in Your Comfort Zone</p>
           <p className="mt-0.5 text-[11px] text-white/30">Last {rangeDays} days</p>
         </div>
-
-        {/* range selector */}
-        {onRangeChange && (
-          <div className="mt-3 flex justify-center">
-            <RangeSelector value={rangeDays} onChange={onRangeChange} />
-          </div>
-        )}
 
         {/* donut hero */}
         <div className="relative mt-3">
