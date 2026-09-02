@@ -253,14 +253,22 @@ function getDoseTime(dose) {
 function getProfileTiming(profile, units) {
   const onset = Math.max(0, midpoint(profile?.onsetMin, profile?.onsetMax, 0));
   const durationBase = Math.max(onset + 1, midpoint(profile?.durationMin, profile?.durationMax, 240));
-  const duration = Math.max(onset + 1, durationBase * getDoseDurationMultiplier(units));
+  const isBasal = profile?.category === "Long-Acting" || profile?.category === "Ultra-Long-Acting";
+  // Basal insulin (Lantus, Tresiba, Toujeo, Basaglar) is formulated to release
+  // at a steady, dose-independent rate — its duration stays close to the
+  // labeled window no matter the dose. Applying the bolus dose-scaling
+  // multipliers here made large basal doses model as 36h+, which is
+  // pharmacologically wrong. Keep basal duration fixed and give it only a
+  // small fixed residual tail so it "may last a little longer but not by much."
+  const duration = isBasal
+    ? durationBase
+    : Math.max(onset + 1, durationBase * getDoseDurationMultiplier(units));
   const hasPeak = Number.isFinite(profile?.peakMin) && Number.isFinite(profile?.peakMax);
   const peakBase = hasPeak ? midpoint(profile.peakMin, profile.peakMax, (onset + duration) / 2) : null;
   const peak = hasPeak ? clamp(peakBase * getDosePeakMultiplier(units), onset + 1, duration - 1) : null;
-  // Extended residual tail that lingers past the main activity window. Grows
-  // with dose size — larger doses keep lowering glucose well after the peak,
-  // so the curve and on-board estimate stay active longer for them.
-  const tailDuration = Math.round(duration * getDoseTailMultiplier(units));
+  const tailDuration = isBasal
+    ? Math.round(durationBase * 0.05)
+    : Math.round(duration * getDoseTailMultiplier(units));
 
   return { onset, peak, duration, hasPeak, tailDuration };
 }
