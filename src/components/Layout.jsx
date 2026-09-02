@@ -1,31 +1,35 @@
-import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { Wind, Leaf, Waves, Settings, RefreshCw, Check, AlertTriangle } from "lucide-react";
+import { Wind, Leaf, Waves, CircleUser, RefreshCw, Check, AlertTriangle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Dashboard from "../pages/Dashboard";
 import HistoryPage from "../pages/History";
+import SettingsPage from "../pages/Settings";
 import { useRealtimeLogSync } from "@/hooks/useRealtimeLogSync";
 
 const navItems = [
   { path: "/", label: "My Flow", icon: Wind },
   { path: "/history", label: "My Journal", icon: Leaf },
   { path: "/analytics", label: "My Rhythms", icon: Waves },
+  { path: "/settings", label: "Profile", icon: CircleUser },
 ];
 
 const CachedDashboard = memo(Dashboard);
 const CachedHistoryPage = memo(HistoryPage);
+const CachedSettingsPage = memo(SettingsPage);
 
 export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const isSettingsOpen = location.pathname.startsWith("/settings");
+  const isSettingsRoute = location.pathname === "/settings";
   const isDashboardRoute = location.pathname === "/";
   const isHistoryRoute = location.pathname === "/history";
-  const isKeepAliveRoute = isDashboardRoute || isHistoryRoute;
+  const isKeepAliveRoute = isDashboardRoute || isHistoryRoute || isSettingsRoute;
   const [visitedTabs, setVisitedTabs] = useState(() => ({
     dashboard: true,
     history: false,
+    settings: false,
   }));
 
   // Keeps every page's cached log data fresh the instant a record changes —
@@ -92,19 +96,10 @@ export default function Layout() {
       setVisitedTabs((tabs) => (tabs.dashboard ? tabs : { ...tabs, dashboard: true }));
     } else if (isHistoryRoute) {
       setVisitedTabs((tabs) => (tabs.history ? tabs : { ...tabs, history: true }));
+    } else if (isSettingsRoute) {
+      setVisitedTabs((tabs) => (tabs.settings ? tabs : { ...tabs, settings: true }));
     }
-  }, [isDashboardRoute, isHistoryRoute]);
-
-  useEffect(() => {
-    if (isSettingsOpen) {
-      const overlay = document.getElementById("settings-overlay");
-      if (overlay) overlay.scrollTo({ top: 0, behavior: "auto" });
-    }
-  }, [location.pathname]);
-
-  const toggleSettings = () => {
-    navigate(isSettingsOpen ? "/" : "/settings");
-  };
+  }, [isDashboardRoute, isHistoryRoute, isSettingsRoute]);
 
   const handleLogoClick = () => {
     navigate("/");
@@ -155,25 +150,6 @@ export default function Layout() {
                 className="flex"
               >
                 <RefreshCw className="h-4 w-4 text-white/55" />
-              </motion.span>
-            </button>
-            <button
-              type="button"
-              onClick={toggleSettings}
-              aria-label="Open settings"
-              className="flex h-9 w-9 items-center justify-center rounded-full backdrop-blur-sm border transition-all"
-              style={{
-                background: isSettingsOpen ? "rgba(20,184,166,0.1)" : "rgba(255,255,255,0.05)",
-                borderColor: isSettingsOpen ? "rgba(20,184,166,0.35)" : "rgba(255,255,255,0.05)",
-                boxShadow: isSettingsOpen ? "0 0 18px rgba(20,184,166,0.35)" : "none",
-              }}
-            >
-              <motion.span
-                animate={{ rotate: isSettingsOpen ? 180 : 0 }}
-                transition={{ type: "spring", stiffness: 260, damping: 18 }}
-                className="flex"
-              >
-                <Settings className={`h-4 w-4 ${isSettingsOpen ? "text-teal-400" : "text-white/55"}`} />
               </motion.span>
             </button>
           </div>
@@ -228,124 +204,105 @@ export default function Layout() {
               <CachedHistoryPage />
             </div>
           )}
-          {!isKeepAliveRoute && !isSettingsOpen && (
-            <Outlet />
+          {visitedTabs.settings && (
+            <div hidden={!isSettingsRoute}>
+              <CachedSettingsPage />
+            </div>
           )}
+          {!isKeepAliveRoute && <Outlet />}
         </div>
       </main>
 
-      <AnimatePresence>
-        {isSettingsOpen && (
-          <motion.div
-            key="settings-overlay" id="settings-overlay"
-            initial={{ y: "-100%", opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: "-100%", opacity: 0 }}
-            transition={{ type: "spring", stiffness: 220, damping: 28 }}
-            className="fixed inset-0 z-40 overflow-y-auto pb-28 pt-16"
+      <motion.nav
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.2 }}
+        className="fixed inset-x-0 bottom-0 z-30 flex justify-center pb-safe"
+      >
+        <div
+          className="relative mx-4 mb-4 grid w-[min(calc(100vw-2rem),26rem)] grid-cols-4 gap-1 overflow-hidden rounded-[2rem] border px-2 py-1.5 backdrop-blur-sm"
+          style={{
+            background:
+              "linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.03))",
+            borderColor: "rgba(255,255,255,0.12)",
+            boxShadow:
+              "0 14px 40px rgba(0,0,0,0.30), inset 0 1px 1px rgba(255,255,255,0.18), inset 0 -1px 1px rgba(255,255,255,0.04)",
+          }}
+        >
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -inset-8 opacity-70"
             style={{
-              background: "transparent",
+              background:
+                "radial-gradient(circle at 25% 0%, rgba(255,255,255,0.26), transparent 34%), radial-gradient(circle at 85% 130%, rgba(45,212,191,0.16), transparent 42%)",
             }}
-          >
-            <div className="px-4">
-              <Outlet />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          />
 
-      <AnimatePresence>
-        {!isSettingsOpen && (
-          <motion.nav
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 30 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-x-0 bottom-0 z-30 flex justify-center pb-safe"
-          >
-            <div
-              className="relative mx-4 mb-4 grid w-[min(calc(100vw-2rem),24rem)] grid-cols-3 gap-1 overflow-hidden rounded-[2rem] border px-2 py-1.5 backdrop-blur-sm"
-              style={{
-                background:
-                  "linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.03))",
-                borderColor: "rgba(255,255,255,0.12)",
-                boxShadow:
-                  "0 14px 40px rgba(0,0,0,0.30), inset 0 1px 1px rgba(255,255,255,0.18), inset 0 -1px 1px rgba(255,255,255,0.04)",
-              }}
-            >
-              <div
-                aria-hidden="true"
-                className="pointer-events-none absolute -inset-8 opacity-70"
-                style={{
-                  background:
-                    "radial-gradient(circle at 25% 0%, rgba(255,255,255,0.26), transparent 34%), radial-gradient(circle at 85% 130%, rgba(45,212,191,0.16), transparent 42%)",
-                }}
-              />
+          {navItems.map((item) => {
+            const isActive =
+              item.path === "/settings"
+                ? location.pathname.startsWith("/settings")
+                : location.pathname === item.path;
+            const Icon = item.icon;
 
-              {navItems.map((item) => {
-                const isActive = location.pathname === item.path && !isSettingsOpen;
-                const Icon = item.icon;
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-[1.55rem] px-1.5 py-2 text-center transition-colors ${
+                  isActive ? "text-white" : "text-white/45 hover:text-white/75"
+                }`}
+              >
+                {isActive && (
+                  <motion.div
+                    layoutId="active-nav-tab"
+                    className="absolute inset-0 rounded-[1.55rem]"
+                    style={{
+                      background:
+                        "linear-gradient(145deg, rgba(255,255,255,0.16), rgba(255,255,255,0.05))",
+                      border: "1px solid rgba(255,255,255,0.18)",
+                      boxShadow:
+                        "0 8px 20px rgba(0,0,0,0.18), inset 0 1px 1px rgba(255,255,255,0.22), inset 0 -1px 1px rgba(255,255,255,0.06)",
+                    }}
+                    transition={{
+                      type: "spring",
+                      stiffness: 460,
+                      damping: 34,
+                      mass: 0.8,
+                    }}
+                  />
+                )}
 
-                return (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    className={`relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-[1.55rem] px-2 py-2 text-center transition-colors ${
-                      isActive ? "text-white" : "text-white/45 hover:text-white/75"
-                    }`}
-                  >
-                    {isActive && (
-                      <motion.div
-                        layoutId="active-nav-tab"
-                        className="absolute inset-0 rounded-[1.55rem]"
-                        style={{
-                          background:
-                            "linear-gradient(145deg, rgba(255,255,255,0.16), rgba(255,255,255,0.05))",
-                          border: "1px solid rgba(255,255,255,0.18)",
-                          boxShadow:
-                            "0 8px 20px rgba(0,0,0,0.18), inset 0 1px 1px rgba(255,255,255,0.22), inset 0 -1px 1px rgba(255,255,255,0.06)",
-                        }}
-                        transition={{
-                          type: "spring",
-                          stiffness: 460,
-                          damping: 34,
-                          mass: 0.8,
-                        }}
-                      />
-                    )}
+                <motion.span
+                  className="relative z-10 flex items-center justify-center"
+                  animate={{
+                    y: isActive ? -1 : 0,
+                    scale: isActive ? 1.07 : 1,
+                  }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 420,
+                    damping: 28,
+                  }}
+                >
+                  <Icon className="h-5 w-5" />
+                </motion.span>
 
-                    <motion.span
-                      className="relative z-10 flex items-center justify-center"
-                      animate={{
-                        y: isActive ? -1 : 0,
-                        scale: isActive ? 1.07 : 1,
-                      }}
-                      transition={{
-                        type: "spring",
-                        stiffness: 420,
-                        damping: 28,
-                      }}
-                    >
-                      <Icon className="h-5 w-5" />
-                    </motion.span>
-
-                    <motion.span
-                      className="relative z-10 whitespace-nowrap text-[10px] font-semibold leading-none"
-                      animate={{
-                        opacity: isActive ? 1 : 0.64,
-                        y: isActive ? 0 : 1,
-                      }}
-                      transition={{ duration: 0.16 }}
-                    >
-                      {item.label}
-                    </motion.span>
-                  </Link>
-                );
-              })}
-            </div>
-          </motion.nav>
-        )}
-      </AnimatePresence>
+                <motion.span
+                  className="relative z-10 whitespace-nowrap text-[10px] font-semibold leading-none"
+                  animate={{
+                    opacity: isActive ? 1 : 0.64,
+                    y: isActive ? 0 : 1,
+                  }}
+                  transition={{ duration: 0.16 }}
+                >
+                  {item.label}
+                </motion.span>
+              </Link>
+            );
+          })}
+        </div>
+      </motion.nav>
     </div>
   );
 }
