@@ -160,7 +160,7 @@ export default function Analytics() {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
-        className="flex items-end justify-between gap-3 px-1"
+        className="space-y-3 px-1"
       >
         <div>
           <h1 className="text-2xl font-bold text-white">Your Rhythms</h1>
