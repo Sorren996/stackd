@@ -9,6 +9,19 @@ import { filterReadingsForStats } from "@/lib/timeInRange";
 import ZoneOfBalanceRing from "@/components/analytics/ZoneOfBalanceRing";
 import DailyPatternChart from "@/components/analytics/DailyPatternChart";
 import MomentsOfCare from "@/components/analytics/MomentsOfCare";
+import RangeSelector from "@/components/analytics/RangeSelector";
+
+const ANALYTICS_RANGE_KEY = "analytics_range_days";
+const DEFAULT_RANGE_DAYS = 30;
+// Dexcom Share emits a reading every 5 minutes (288/day). 90 days needs ~26k
+// readings; fetch a little extra so the full window is covered.
+const ANALYTICS_FETCH_LIMIT = 30000;
+
+function readStoredRange() {
+  if (typeof window === "undefined") return DEFAULT_RANGE_DAYS;
+  const stored = Number(window.localStorage.getItem(ANALYTICS_RANGE_KEY));
+  return [7, 14, 30, 60, 90].includes(stored) ? stored : DEFAULT_RANGE_DAYS;
+}
 
 function readTargetRange() {
   if (typeof window === "undefined") return { low: 70, high: 180 };
@@ -33,13 +46,24 @@ const HOUR_LABELS = [
 ];
 
 export default function Analytics() {
+  const [rangeDays, setRangeDays] = useState(readStoredRange);
   const { data: readings = [], isLoading } = useQuery({
-    queryKey: ["glucose-readings", "graph"],
-    queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", 5000),
+    queryKey: ["glucose-readings", "analytics"],
+    queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", ANALYTICS_FETCH_LIMIT),
+    staleTime: 5 * 60 * 1000,
   });
 
   const [targetRange, setTargetRange] = useState(readTargetRange);
   const { connected: dexcomConnected } = useDexcomConnection();
+
+  const handleRangeChange = (days) => {
+    setRangeDays(days);
+    try {
+      window.localStorage.setItem(ANALYTICS_RANGE_KEY, String(days));
+    } catch {
+      // Storage failure is non-fatal — the in-memory state still drives the view.
+    }
+  };
 
   useEffect(() => {
     const refresh = () => setTargetRange(readTargetRange());
@@ -52,7 +76,7 @@ export default function Analytics() {
   }, []);
 
   const stats = useMemo(() => {
-    const cutoff = subDays(new Date(), 30);
+    const cutoff = subDays(new Date(), rangeDays);
     const recent = filterReadingsForStats(
       readings.filter((r) => new Date(r.recorded_at) >= cutoff && Number.isFinite(r.value)),
       dexcomConnected
@@ -108,7 +132,7 @@ export default function Analytics() {
       hourlyAverages,
       segments,
     };
-  }, [readings, targetRange, dexcomConnected]);
+  }, [readings, targetRange, dexcomConnected, rangeDays]);
 
   if (isLoading) {
     return (
@@ -136,10 +160,15 @@ export default function Analytics() {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
-        className="px-1"
+        className="flex items-end justify-between gap-3 px-1"
       >
-        <h1 className="text-2xl font-bold text-white">Your Rhythms</h1>
-        <p className="mt-1 text-sm text-white/35">Gentle insights from your glucose journey</p>
+        <div>
+          <h1 className="text-2xl font-bold text-white">Your Rhythms</h1>
+          <p className="mt-1 text-sm text-white/35">
+            Gentle insights from your last {rangeDays} days
+          </p>
+        </div>
+        <RangeSelector value={rangeDays} onChange={handleRangeChange} />
       </motion.div>
 
       <motion.div
