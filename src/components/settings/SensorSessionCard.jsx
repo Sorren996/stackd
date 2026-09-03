@@ -124,13 +124,7 @@ export default function SensorSessionCard() {
                 </p>
                 <p className="mt-0.5 truncate text-[11px] text-white/40">
                   {modelMeta?.label}
-                  {startedAt ? ` · ${format(new Date(startedAt), "MMM d")}` : ""}
                 </p>
-                {endMs && (
-                  <p className="mt-0.5 truncate text-[10px] text-white/30">
-                    Expires {format(new Date(endMs), "MMM d · h:mm a")}
-                  </p>
-                )}
               </>
             ) : (
               <>
@@ -146,6 +140,23 @@ export default function SensorSessionCard() {
             <ChevronDown className="h-4 w-4 shrink-0 text-white/30" />
           </motion.span>
         </button>
+
+        {hasSession && (
+          <div className="flex items-center justify-between gap-3 border-t border-white/[0.05] px-3.5 py-2.5">
+            <div className="min-w-0">
+              <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-white/30">Started</p>
+              <p className="mt-0.5 truncate text-[11px] text-white/55">
+                {startedAt ? format(new Date(startedAt), "MMM d · h:mm a") : "—"}
+              </p>
+            </div>
+            <div className="min-w-0 text-right">
+              <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-white/30">Expires</p>
+              <p className="mt-0.5 truncate text-[11px] text-white/55">
+                {endMs ? format(new Date(endMs), "MMM d · h:mm a") : "—"}
+              </p>
+            </div>
+          </div>
+        )}
 
         <AnimatePresence initial={false}>
           {expanded && (
