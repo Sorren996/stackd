@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { Target, Info } from "lucide-react";
+import { Target, Info, Leaf, Bell, Syringe } from "lucide-react";
 import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
 import { AnimatePresence, motion } from "framer-motion";
 import { useUserSettings } from "@/hooks/useUserSettings";
@@ -33,6 +33,29 @@ const INSULIN_PLAN_HELP = {
     body: "Choose every insulin type you personally use. Only these appear when logging a dose, so add your basal insulins here even if they aren't used for meal coverage.",
   },
 };
+
+const CANOPY_GLASS = {
+  background: "linear-gradient(155deg, rgba(22,48,50,0.55), rgba(11,26,28,0.62))",
+  border: "1px solid rgba(95,180,144,0.18)",
+  boxShadow:
+    "0 14px 40px rgba(0,0,0,0.28), inset 0 1px 1px rgba(161,209,185,0.08), inset 0 -1px 1px rgba(0,0,0,0.18)",
+  backdropFilter: "blur(8px)",
+  WebkitBackdropFilter: "blur(8px)",
+};
+
+function SectionLabel({ icon: Icon, children }) {
+  return (
+    <div className="flex items-center gap-2 px-1">
+      <span
+        className="flex h-5 w-5 items-center justify-center rounded-full"
+        style={{ background: "rgba(95,180,144,0.12)", border: "1px solid rgba(95,180,144,0.28)" }}
+      >
+        <Icon className="h-3 w-3 text-[#a1d1b9]" />
+      </span>
+      <h3 className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/40">{children}</h3>
+    </div>
+  );
+}
 
 function getDefaultMealInsulinTypes() {
   return Object.entries(INSULIN_PROFILES)
@@ -72,8 +95,8 @@ function SettingHelpButton({ id, openHelp, setOpenHelp }) {
       }}
       className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition ${
         openHelp === id
-          ? "border-teal-400/40 bg-teal-500/10 text-teal-300"
-          : "border-white/10 bg-white/5 text-white/35 hover:text-teal-300"
+          ? "border-[#5fb490]/45 bg-[#5fb490]/12 text-[#a1d1b9]"
+          : "border-white/10 bg-white/5 text-white/35 hover:text-[#a1d1b9]"
       }`}
       aria-label={`${help.title} help`}
     >
@@ -213,9 +236,16 @@ function NumberPadField({ label, value, onChange, placeholder = "--", decimal = 
   };
 
   return (
-    <div ref={fieldRef} className={`rounded-xl border border-white/10 bg-white/5 px-3 py-2 ${className}`}>
+    <div
+      ref={fieldRef}
+      className={`rounded-2xl px-3 py-2 ${className}`}
+      style={{
+        background: "linear-gradient(145deg, rgba(22,48,50,0.5), rgba(11,26,28,0.5))",
+        border: "1px solid rgba(95,180,144,0.16)",
+      }}
+    >
       <button type="button" onClick={() => setOpen((value) => !value)} className="flex min-h-10 w-full flex-col items-start justify-center gap-0.5 text-left">
-        <span className="max-w-full truncate text-base font-bold leading-tight text-white">{textValue || placeholder}</span>
+        <span className={`max-w-full truncate text-base font-bold leading-tight ${textValue ? "text-[#a1d1b9]" : "text-white/25"}`}>{textValue || placeholder}</span>
       </button>
       <CustomInputTray open={open} onClose={() => setOpen(false)} title={label} anchorRef={fieldRef}>
         <div className="grid grid-cols-3 gap-2.5">
@@ -443,19 +473,19 @@ export default function InsulinSettings() {
     <>
       <SettingsHelpOverlay openHelp={openHelp} onClose={() => setOpenHelp(null)} />
 
-      <div className="space-y-6">
+      <div className="space-y-5">
         {/* Target Range Preference */}
-        <div className="space-y-3">
-          <h3 className="text-sm font-bold text-white uppercase tracking-wider px-1">Target Range Preference</h3>
-          <div className="glass-card border rounded-3xl p-4 flex gap-4 items-stretch">
+        <section className="space-y-2.5">
+          <SectionLabel icon={Target}>Target Range Preference</SectionLabel>
+          <div className="rounded-3xl p-4 flex gap-4 items-stretch" style={CANOPY_GLASS}>
             <button
               onClick={handleSetRecommended}
               className={`shrink-0 w-28 py-3 px-2 rounded-2xl border text-center transition-all flex flex-col items-center justify-center ${
-              isRecommended ?
-              "bg-teal-500/10 border-teal-500/40 text-white" :
-              "bg-white/[0.01] border-white/5 text-white/40 hover:bg-white/[0.03]"}`
-              }>
-              
+                isRecommended
+                  ? "bg-[#5fb490]/12 border-[#5fb490]/45 text-white"
+                  : "bg-white/[0.01] border-white/10 text-white/40 hover:bg-white/[0.03]"
+              }`}
+            >
               <div className="text-[10px] font-bold uppercase tracking-wider opacity-60">Recommended</div>
               <div className="text-base font-extrabold mt-1">70–180</div>
               <div className="text-[9px] text-white/30 mt-0.5">mg/dL</div>
@@ -464,7 +494,7 @@ export default function InsulinSettings() {
             <div className="flex-1 flex flex-col justify-center space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-[10px] text-white/40 uppercase tracking-wider">Custom Range</span>
-                <span className="text-sm font-bold text-teal-400">{targetLow}–{targetHigh} mg/dL</span>
+                <span className="text-sm font-bold text-[#a1d1b9]">{targetLow}–{targetHigh} mg/dL</span>
               </div>
               <Slider
                 min={70}
@@ -473,51 +503,46 @@ export default function InsulinSettings() {
                 value={[targetLow, targetHigh]}
                 onValueChange={handleSliderChange}
                 className="cursor-pointer" />
-              
               <div className="flex justify-between text-[10px] text-white/20">
                 <span>70</span>
                 <span>250</span>
               </div>
             </div>
           </div>
-        </div>
+        </section>
 
         {/* Alerts & Preferences */}
-        <div className="space-y-3">
-          <h3 className="text-sm font-bold text-white uppercase tracking-wider px-1">Alerts & Preferences</h3>
-          <div className="glass-card border rounded-3xl p-4 space-y-5">
+        <section className="space-y-2.5">
+          <SectionLabel icon={Bell}>Alerts & Preferences</SectionLabel>
+          <div className="rounded-3xl p-4" style={CANOPY_GLASS}>
             <div className="flex items-center justify-between gap-4">
               <div className="space-y-0.5">
                 <Label className="text-sm font-semibold text-white/90 flex items-center gap-2">
-                  <Target className="w-4 h-4 text-teal-400" />
+                  <Target className="w-4 h-4 text-[#5fb490]" />
                   Insulin Stacking Warnings
                 </Label>
-                <p className="text-sm text-white/40">Alert when multiple rapid doses overlap</p>
+                <p className="text-xs text-white/40">Alert when multiple rapid doses overlap</p>
               </div>
               <Switch checked={stackingAlerts} onCheckedChange={handleStackingToggle} />
             </div>
           </div>
-        </div>
+        </section>
 
         {/* Insulin Plan */}
-        <div className="space-y-3">
-          <h3 className="text-sm font-bold text-white uppercase tracking-wider px-1">
-            Insulin Plan
-          </h3>
-
-          <div className="glass-card border rounded-3xl p-4 space-y-5">
-            <p className="text-xs text-white/40">
-              Enter only insulin settings prescribed or confirmed by your licensed healthcare professional. This app does not provide medical advice, verify dosing accuracy, or replace clinical judgment. Incorrect values may result in serious hypoglycemia or hyperglycemia. Do not start, stop, or adjust insulin based solely on information provided by this app.
-            </p>
-
-            <div className="space-y-2">
-              <Label htmlFor="insulin-sensitivity" className="text-sm font-semibold text-white/90">
-                Insulin sensitivity
-              </Label>
-              <p className="text-xs text-white/40">
-                How much 1 unit of insulin typically lowers your glucose.
+        <section className="space-y-2.5">
+          <SectionLabel icon={Syringe}>Insulin Plan</SectionLabel>
+          <div className="rounded-3xl p-4 space-y-5" style={CANOPY_GLASS}>
+            <div className="rounded-2xl border-l-2 border-[#5fb490]/45 bg-[#5fb490]/[0.05] px-3 py-2.5">
+              <p className="text-[11px] leading-relaxed text-white/45">
+                Enter only insulin settings prescribed or confirmed by your licensed healthcare professional. This app does not provide medical advice, verify dosing accuracy, or replace clinical judgment. Incorrect values may result in serious hypoglycemia or hyperglycemia. Do not start, stop, or adjust insulin based solely on information provided by this app.
               </p>
-              <div className="flex items-center gap-3">
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="insulin-sensitivity" className="text-xs font-semibold text-white/80">
+                  Insulin sensitivity
+                </Label>
                 <NumberPadField
                   label="ISF"
                   value={insulinSensitivity}
@@ -527,20 +552,18 @@ export default function InsulinSettings() {
                   )}
                   decimal={false}
                   maxLength={3}
-                  className="w-24"
+                  className="w-full"
                 />
-                <span className="text-xs text-white/40">mg/dL per unit</span>
+                <p className="text-[10px] text-white/35">mg/dL per unit</p>
+                <p className="text-[10px] leading-tight text-white/30">
+                  How much 1 unit typically lowers your glucose.
+                </p>
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="correction-target" className="text-sm font-semibold text-white/90">
-                Correction target
-              </Label>
-              <p className="text-xs text-white/40">
-                Glucose baseline used when estimating correction insulin.
-              </p>
-              <div className="flex items-center gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="correction-target" className="text-xs font-semibold text-white/80">
+                  Correction target
+                </Label>
                 <NumberPadField
                   label="Target"
                   value={correctionTargetGlucose}
@@ -550,19 +573,19 @@ export default function InsulinSettings() {
                   )}
                   decimal={false}
                   maxLength={3}
-                  className="w-24"
+                  className="w-full"
                 />
-                <span className="text-xs text-white/40">mg/dL</span>
+                <p className="text-[10px] text-white/35">mg/dL</p>
+                <p className="text-[10px] leading-tight text-white/30">
+                  Glucose baseline used when estimating correction insulin.
+                </p>
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="meal-insulin" className="text-sm font-semibold text-white/90">
+            <div className="space-y-1.5">
+              <Label htmlFor="meal-insulin" className="text-xs font-semibold text-white/80">
                 Meal insulin
               </Label>
-              <p className="text-xs text-white/40">
-                Insulin units used to cover 5 grams of carbohydrates.
-              </p>
               <div className="flex items-center gap-3">
                 <NumberPadField
                   label="Units"
@@ -572,13 +595,16 @@ export default function InsulinSettings() {
                     setUnitsPer5g
                   )}
                   maxLength={5}
-                  className="w-24"
+                  className="w-28"
                 />
-                <span className="text-xs text-white/40">units per 5 g</span>
+                <span className="text-[10px] text-white/35">units per 5 g</span>
               </div>
+              <p className="text-[10px] leading-tight text-white/30">
+                Insulin units used to cover 5 grams of carbohydrates.
+              </p>
             </div>
 
-            <div className="space-y-3 border-t border-white/10 pt-4">
+            <div className="space-y-3 border-t border-[#5fb490]/12 pt-4">
               <div className="flex min-h-6 items-center justify-between gap-2">
                 <Label className="text-sm font-semibold text-white/90">
                   My insulin library
@@ -591,7 +617,7 @@ export default function InsulinSettings() {
               <InsulinTypeSelector selectedTypes={insulinLibrary} onToggle={toggleInsulinLibrary} />
             </div>
 
-            <div className="space-y-3 border-t border-white/10 pt-4">
+            <div className="space-y-3 border-t border-[#5fb490]/12 pt-4">
               <div className="flex min-h-6 items-center justify-between gap-2">
                 <Label className="text-sm font-semibold text-white/90">
                   Meal/correction insulin types
@@ -604,15 +630,16 @@ export default function InsulinSettings() {
               <InsulinTypeSelector selectedTypes={mealInsulinTypes} onToggle={toggleMealInsulinType} />
             </div>
 
-            <div className="grid grid-cols-2 gap-3 border-t border-white/10 pt-4">
-              <div className="space-y-2">
-                <div className="flex min-h-6 items-center justify-between gap-2">
-                  <Label htmlFor="meal-outcome-window" className="text-sm font-semibold text-white/90">
-                    Meal review
-                  </Label>
-                  <SettingHelpButton id="review" openHelp={openHelp} setOpenHelp={setOpenHelp} />
-                </div>
-                <div className="flex items-center gap-2">
+            <div className="space-y-3 border-t border-[#5fb490]/12 pt-4">
+              <Label className="text-sm font-semibold text-white/90">Timing</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <div className="flex min-h-6 items-center justify-between gap-2">
+                    <Label htmlFor="meal-outcome-window" className="text-xs font-semibold text-white/80">
+                      Meal review
+                    </Label>
+                    <SettingHelpButton id="review" openHelp={openHelp} setOpenHelp={setOpenHelp} />
+                  </div>
                   <NumberPadField
                     label="Minutes"
                     value={outcomeWindowMinutes}
@@ -622,20 +649,18 @@ export default function InsulinSettings() {
                     )}
                     decimal={false}
                     maxLength={3}
-                    className="w-20"
+                    className="w-full"
                   />
-                  <span className="text-xs text-white/40">min</span>
+                  <p className="text-[10px] text-white/35">min</p>
                 </div>
-              </div>
 
-              <div className="space-y-2">
-                <div className="flex min-h-6 items-center justify-between gap-2">
-                  <Label htmlFor="pre-meal-window" className="text-sm font-semibold text-white/90">
-                    Pre-meal insulin
-                  </Label>
-                  <SettingHelpButton id="pre" openHelp={openHelp} setOpenHelp={setOpenHelp} />
-                </div>
-                <div className="flex items-center gap-2">
+                <div className="space-y-1.5">
+                  <div className="flex min-h-6 items-center justify-between gap-2">
+                    <Label htmlFor="pre-meal-window" className="text-xs font-semibold text-white/80">
+                      Pre-meal insulin
+                    </Label>
+                    <SettingHelpButton id="pre" openHelp={openHelp} setOpenHelp={setOpenHelp} />
+                  </div>
                   <NumberPadField
                     label="Minutes"
                     value={preMealWindowMinutes}
@@ -645,20 +670,18 @@ export default function InsulinSettings() {
                     )}
                     decimal={false}
                     maxLength={3}
-                    className="w-20"
+                    className="w-full"
                   />
-                  <span className="text-xs text-white/40">min</span>
+                  <p className="text-[10px] text-white/35">min</p>
                 </div>
-              </div>
 
-              <div className="space-y-2">
-                <div className="flex min-h-6 items-center justify-between gap-2">
-                  <Label htmlFor="post-meal-window" className="text-sm font-semibold text-white/90">
-                    Post-meal insulin
-                  </Label>
-                  <SettingHelpButton id="post" openHelp={openHelp} setOpenHelp={setOpenHelp} />
-                </div>
-                <div className="flex items-center gap-2">
+                <div className="space-y-1.5">
+                  <div className="flex min-h-6 items-center justify-between gap-2">
+                    <Label htmlFor="post-meal-window" className="text-xs font-semibold text-white/80">
+                      Post-meal insulin
+                    </Label>
+                    <SettingHelpButton id="post" openHelp={openHelp} setOpenHelp={setOpenHelp} />
+                  </div>
                   <NumberPadField
                     label="Minutes"
                     value={postMealWindowMinutes}
@@ -668,14 +691,14 @@ export default function InsulinSettings() {
                     )}
                     decimal={false}
                     maxLength={3}
-                    className="w-20"
+                    className="w-full"
                   />
-                  <span className="text-xs text-white/40">min</span>
+                  <p className="text-[10px] text-white/35">min</p>
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        </section>
 
       </div>
     </>

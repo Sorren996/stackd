@@ -1,4 +1,5 @@
 import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
+import { Leaf, Check } from "lucide-react";
 
 export default function InsulinTypeSelector({ selectedTypes, onToggle }) {
   return (
@@ -10,20 +11,26 @@ export default function InsulinTypeSelector({ selectedTypes, onToggle }) {
             key={name}
             type="button"
             onClick={() => onToggle(name)}
-            className={`flex items-center justify-between rounded-2xl border px-3 py-2 text-left transition ${
+            className={`flex items-center justify-between rounded-2xl border px-3 py-2.5 text-left transition ${
               selected
-                ? "border-teal-500/40 bg-teal-500/10 text-white"
-                : "border-white/10 bg-white/[0.03] text-white/45"
+                ? "border-[#5fb490]/40 bg-[#5fb490]/10 text-white"
+                : "border-white/10 bg-white/[0.02] text-white/45 hover:bg-white/[0.04]"
             }`}
           >
-            <span>
-              <span className="block text-sm font-semibold">{name}</span>
-              <span className="text-[10px] uppercase tracking-wider opacity-50">{profile.category}</span>
+            <span className="flex items-center gap-2.5">
+              <span
+                className={`flex h-4 w-4 items-center justify-center rounded-md border ${
+                  selected ? "border-[#5fb490] bg-[#5fb490]" : "border-white/20 bg-transparent"
+                }`}
+              >
+                {selected && <Check className="h-3 w-3 text-[#0b1b1e]" />}
+              </span>
+              <span>
+                <span className="block text-sm font-semibold">{name}</span>
+                <span className="text-[10px] uppercase tracking-wider opacity-50">{profile.category}</span>
+              </span>
             </span>
-            <span
-              className="h-3 w-3 rounded-full"
-              style={{ backgroundColor: selected ? "#2dd4bf" : "rgba(255,255,255,0.12)" }}
-            />
+            <Leaf className={`h-4 w-4 ${selected ? "text-[#5fb490]" : "text-white/15"}`} />
           </button>
         );
       })}
