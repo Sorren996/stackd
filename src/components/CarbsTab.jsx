@@ -747,7 +747,7 @@ Do not give insulin dosing advice.
                       </div>
                     ))}
 
-                    {selectedFoods.length > 1 && (
+                    {selectedFoods.length > 1 && !isPending && (
                       <div className="flex items-center justify-between rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-2.5">
                         <span className="text-sm text-white/60">Total Carbs</span>
                         <span className="text-lg font-bold text-amber-400">{Math.round(totalCarbs * 10) / 10}g</span>
