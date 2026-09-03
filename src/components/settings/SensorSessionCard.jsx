@@ -136,9 +136,16 @@ export default function SensorSessionCard() {
             )}
           </div>
 
-          <motion.span animate={{ rotate: expanded ? 180 : 0 }} transition={{ duration: 0.2 }} className="flex items-start pt-1">
-            <ChevronDown className="h-4 w-4 shrink-0 text-white/30" />
-          </motion.span>
+          <span className="flex items-start pt-1">
+            <motion.span
+              animate={{ rotate: expanded ? 180 : 0 }}
+              transition={{ duration: 0.2 }}
+              className="flex"
+              style={{ transformOrigin: "50% 50%" }}
+            >
+              <ChevronDown className="h-4 w-4 shrink-0 text-white/30" />
+            </motion.span>
+          </span>
         </button>
 
         {hasSession && (
