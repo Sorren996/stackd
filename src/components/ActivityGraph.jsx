@@ -366,7 +366,12 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     const target = graphViewportRef.current || containerRef.current;
     if (!target) return;
     const ro = new ResizeObserver(([entry]) => {
-      setContainerWidth(entry.contentRect.width);
+      const w = entry.contentRect.width;
+      // Ignore zero-width readings (the dashboard is hidden via `hidden` while
+      // the user is on another tab). Collapsing to 0 would blank the chart and
+      // force a full recompute when they return — keep the last valid width so
+      // the graph stays warm and reappears instantly.
+      if (w > 0) setContainerWidth(w);
     });
     ro.observe(target);
     return () => ro.disconnect();
