@@ -627,7 +627,11 @@ export default function InsulinSettings() {
               <p className="text-xs text-white/40">
                 The subset of your library used for meal coverage and corrections.
               </p>
-              <InsulinTypeSelector selectedTypes={mealInsulinTypes} onToggle={toggleMealInsulinType} />
+              <InsulinTypeSelector
+                selectedTypes={mealInsulinTypes}
+                onToggle={toggleMealInsulinType}
+                categories={["Rapid-Acting", "Intermediate-Acting"]}
+              />
             </div>
 
             <div className="space-y-3 border-t border-[#5fb490]/12 pt-4">

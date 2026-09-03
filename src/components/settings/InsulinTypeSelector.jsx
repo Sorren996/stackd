@@ -1,10 +1,13 @@
 import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
 import { Leaf, Check } from "lucide-react";
 
-export default function InsulinTypeSelector({ selectedTypes, onToggle }) {
+export default function InsulinTypeSelector({ selectedTypes, onToggle, categories }) {
+  const entries = Object.entries(INSULIN_PROFILES).filter(
+    ([, profile]) => !categories || categories.includes(profile.category)
+  );
   return (
     <div className="grid grid-cols-1 gap-2">
-      {Object.entries(INSULIN_PROFILES).map(([name, profile]) => {
+      {entries.map(([name, profile]) => {
         const selected = selectedTypes.includes(name);
         return (
           <button
