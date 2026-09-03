@@ -2,7 +2,7 @@ import React, { createContext, useState, useContext, useEffect, useRef } from 'r
 import { base44 } from '@/api/base44Client';
 import { appParams } from '@/lib/app-params';
 import { createAxiosClient } from '@base44/sdk/dist/utils/axios-client';
-import { clearLocalSettingsCache } from '@/lib/userSettings';
+import { clearLocalSettingsCache, ensureLocalCacheOwnedBy } from '@/lib/userSettings';
 
 const AuthContext = createContext();
 
@@ -137,6 +137,9 @@ export const AuthProvider = ({ children }) => {
     try {
       setIsLoadingAuth(true);
       const currentUser = await base44.auth.me();
+      // On a shared device, wipe the previous account's cached settings and
+      // latest glucose before this session starts so no data crosses accounts.
+      ensureLocalCacheOwnedBy(currentUser.id);
       setUser(currentUser);
       setIsAuthenticated(true);
       setIsLoadingAuth(false);

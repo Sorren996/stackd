@@ -25,6 +25,11 @@ const LOCAL_KEYS = [
   "sensor_session_started_at",
 ];
 
+// Identifies which account currently owns the local settings cache.
+// On a shared device this lets us detect account switches and wipe the
+// previous person's cached settings before the new person's session starts.
+const CACHE_OWNER_KEY = "stackd_local_cache_owner";
+
 function getDefaultMealInsulinTypes() {
   return Object.entries(INSULIN_PROFILES)
     .filter(([, profile]) => ["Rapid-Acting", "Short-Acting"].includes(profile.category))
@@ -162,6 +167,7 @@ function validateSettings(raw) {
  */
 export function cacheSettingsLocally(userId, settings) {
   if (!userId) return;
+  localStorage.setItem(CACHE_OWNER_KEY, userId);
   for (const key of LOCAL_KEYS) {
     if (settings[key] === undefined || settings[key] === null) continue;
     const val = settings[key];
@@ -184,6 +190,23 @@ export function clearLocalSettingsCache() {
     localStorage.removeItem(key);
   }
   localStorage.removeItem("latest_glucose_cache");
+  localStorage.removeItem(CACHE_OWNER_KEY);
+}
+
+/**
+ * Ensure the device-side cache belongs to the signed-in user.
+ * On a shared device, if another account's cache is still present (the
+ * previous person signed in without logging out), wipe it first so one
+ * person's settings and latest glucose never surface for — or get
+ * migrated into — a different account.
+ */
+export function ensureLocalCacheOwnedBy(userId) {
+  if (!userId) return;
+  const owner = localStorage.getItem(CACHE_OWNER_KEY);
+  if (owner && owner !== userId) {
+    clearLocalSettingsCache();
+  }
+  localStorage.setItem(CACHE_OWNER_KEY, userId);
 }
 
 /**
