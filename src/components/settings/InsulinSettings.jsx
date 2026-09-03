@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { Target, Info, Loader2, Check } from "lucide-react";
+import { Target, Info } from "lucide-react";
 import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
 import { AnimatePresence, motion } from "framer-motion";
 import { useUserSettings } from "@/hooks/useUserSettings";
@@ -239,7 +239,7 @@ function NumberPadField({ label, value, onChange, placeholder = "--", decimal = 
 }
 
 export default function InsulinSettings() {
-  const { settings: serverSettings, isSaving, saveError, saveSuccess, save: saveSettings } = useUserSettings();
+  const { settings: serverSettings, save: saveSettings } = useUserSettings();
   const [openHelp, setOpenHelp] = useState(null);
 
   const [stackingAlerts, setStackingAlerts] = useState(() => {
@@ -336,24 +336,39 @@ export default function InsulinSettings() {
     window.dispatchEvent(new Event("insulin-settings-updated"));
   }, [serverSettings]);
 
-  const handleSaveSettings = () => {
-    saveSettings({
-      insulin_sensitivity_mgdl_per_unit: insulinSensitivity === "" ? undefined : Number(insulinSensitivity),
-      correction_target_glucose: correctionTargetGlucose === "" ? undefined : Number(correctionTargetGlucose),
-      meal_insulin_units_per_5g: unitsPer5g === "" ? undefined : Number(unitsPer5g),
-      meal_insulin_types: mealInsulinTypes,
-      insulin_library: insulinLibrary,
-      meal_prebolus_window_minutes: preMealWindowMinutes === "" ? undefined : Number(preMealWindowMinutes),
-      meal_postbolus_window_minutes: postMealWindowMinutes === "" ? undefined : Number(postMealWindowMinutes),
-      meal_outcome_window_minutes: outcomeWindowMinutes === "" ? undefined : Number(outcomeWindowMinutes),
-      target_range_low: targetLow,
-      target_range_high: targetHigh,
-      stacking_alerts_enabled: stackingAlerts,
-    });
-  };
+  const dirtyRef = useRef(false);
+  const valuesRef = useRef(null);
+  const saveRef = useRef(saveSettings);
+  saveRef.current = saveSettings;
+
+  const buildPayload = () => ({
+    insulin_sensitivity_mgdl_per_unit: insulinSensitivity === "" ? undefined : Number(insulinSensitivity),
+    correction_target_glucose: correctionTargetGlucose === "" ? undefined : Number(correctionTargetGlucose),
+    meal_insulin_units_per_5g: unitsPer5g === "" ? undefined : Number(unitsPer5g),
+    meal_insulin_types: mealInsulinTypes,
+    insulin_library: insulinLibrary,
+    meal_prebolus_window_minutes: preMealWindowMinutes === "" ? undefined : Number(preMealWindowMinutes),
+    meal_postbolus_window_minutes: postMealWindowMinutes === "" ? undefined : Number(postMealWindowMinutes),
+    meal_outcome_window_minutes: outcomeWindowMinutes === "" ? undefined : Number(outcomeWindowMinutes),
+    target_range_low: targetLow,
+    target_range_high: targetHigh,
+    stacking_alerts_enabled: stackingAlerts,
+  });
+
+  valuesRef.current = buildPayload();
+
+  // Persist any changes to the user's account the moment they leave this page.
+  useEffect(() => {
+    return () => {
+      if (dirtyRef.current && valuesRef.current) {
+        saveRef.current(valuesRef.current);
+      }
+    };
+  }, []);
 
   const handleInsulinSettingValueChange = (key, setValue) => (value) => {
     setValue(value);
+    dirtyRef.current = true;
 
     if (value === "") {
       localStorage.removeItem(key);
@@ -370,6 +385,7 @@ export default function InsulinSettings() {
   };
 
   const toggleMealInsulinType = (name) => {
+    dirtyRef.current = true;
     setMealInsulinTypes((current) => {
       const next = current.includes(name)
         ? current.filter((item) => item !== name)
@@ -383,6 +399,7 @@ export default function InsulinSettings() {
   };
 
   const toggleInsulinLibrary = (name) => {
+    dirtyRef.current = true;
     setInsulinLibrary((current) => {
       const next = current.includes(name)
         ? current.filter((item) => item !== name)
@@ -399,10 +416,12 @@ export default function InsulinSettings() {
 
   const handleStackingToggle = (checked) => {
     setStackingAlerts(checked);
+    dirtyRef.current = true;
     localStorage.setItem("stacking_alerts_enabled", checked ? "true" : "false");
   };
 
   const handleSetRecommended = () => {
+    dirtyRef.current = true;
     setTargetLow(70);
     setTargetHigh(180);
     localStorage.setItem("target_range_low", "70");
@@ -412,6 +431,7 @@ export default function InsulinSettings() {
   };
 
   const handleSliderChange = ([low, high]) => {
+    dirtyRef.current = true;
     setTargetLow(low);
     setTargetHigh(high);
     localStorage.setItem("target_range_low", low.toString());
@@ -657,27 +677,6 @@ export default function InsulinSettings() {
           </div>
         </div>
 
-        {/* Save Settings to Account */}
-        <div className="space-y-2">
-          <button
-            onClick={handleSaveSettings}
-            disabled={isSaving}
-            className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl font-semibold text-white transition-all disabled:opacity-50"
-            style={{
-              background: "linear-gradient(145deg, rgba(91,168,138,0.85), rgba(91,163,184,0.72))",
-              boxShadow: "0 8px 28px rgba(91,163,184,0.22), inset 0 1px 1px rgba(255,255,255,0.2)",
-            }}
-          >
-            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : saveSuccess ? <Check className="w-4 h-4" /> : null}
-            {isSaving ? "Saving..." : saveSuccess ? "Saved!" : "Save to My Account"}
-          </button>
-          {saveError && (
-            <p className="text-xs text-center text-red-400/80 px-4">{saveError}</p>
-          )}
-          <p className="text-[10px] text-center text-white/30 px-4">
-            Your settings are saved securely to your account and follow you across devices.
-          </p>
-        </div>
       </div>
     </>
   );
