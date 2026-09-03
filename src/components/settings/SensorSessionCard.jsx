@@ -7,13 +7,23 @@ import {
   SENSOR_MODELS,
   SENSOR_MODEL_IDS,
   formatRemaining,
+  getSensorSessionEndMs,
   isSessionExpired,
 } from "@/lib/sensorSession";
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const COLOR_FRESH = "#5ba88a";
+const COLOR_NEAR = "#d9a938";
 
 function toLocalDatetimeInputValue(ms) {
   const d = new Date(ms);
   const pad = (n) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function sessionColor(remainingMs) {
+  if (remainingMs === null || remainingMs <= 0) return COLOR_NEAR;
+  return remainingMs < DAY_MS ? COLOR_NEAR : COLOR_FRESH;
 }
 
 export default function SensorSessionCard() {
@@ -22,7 +32,6 @@ export default function SensorSessionCard() {
   const [draftModel, setDraftModel] = useState("G7");
   const [draftStartedAt, setDraftStartedAt] = useState(() => toLocalDatetimeInputValue(Date.now()));
 
-  // Prefill the form with the current session (or "now") whenever it opens.
   useEffect(() => {
     if (expanded) {
       setDraftModel(modelId || "G7");
@@ -33,6 +42,12 @@ export default function SensorSessionCard() {
   const hasSession = Boolean(modelId && startedAt && remainingMs !== null);
   const remaining = hasSession ? formatRemaining(remainingMs) : null;
   const expired = hasSession && isSessionExpired(remainingMs);
+
+  const totalMs = modelMeta ? modelMeta.durationDays * DAY_MS : 0;
+  const endMs = hasSession ? getSensorSessionEndMs(modelId, startedAt) : null;
+  const elapsedMs = hasSession ? totalMs - remainingMs : 0;
+  const progressPct = hasSession && totalMs > 0 ? Math.min(100, Math.max(0, (elapsedMs / totalMs) * 100)) : 0;
+  const color = sessionColor(remainingMs);
 
   const handleSave = () => {
     const ms = new Date(draftStartedAt).getTime();
@@ -55,7 +70,7 @@ export default function SensorSessionCard() {
           onClick={() => setExpanded((v) => !v)}
           className="flex w-full items-center gap-3 px-3.5 py-3 text-left transition hover:bg-white/[0.03] active:scale-[0.995]"
         >
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-black/40">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center">
             <img
               src={modelMeta?.image || SENSOR_MODELS.G7.image}
               alt={modelMeta?.label || "Dexcom sensor"}
@@ -68,10 +83,7 @@ export default function SensorSessionCard() {
                 <p className={`text-base font-bold leading-tight ${expired ? "text-amber-200" : "text-white"}`}>
                   {remaining?.text}
                 </p>
-                <p className="mt-0.5 truncate text-[11px] text-white/40">
-                  {modelMeta?.label}
-                  {startedAt ? ` · started ${format(new Date(startedAt), "MMM d")}` : ""}
-                </p>
+                <p className="mt-0.5 truncate text-[11px] text-white/40">{modelMeta?.label}</p>
               </>
             ) : (
               <>
@@ -86,6 +98,47 @@ export default function SensorSessionCard() {
             <ChevronDown className="h-4 w-4 shrink-0 text-white/30" />
           </motion.span>
         </button>
+
+        {hasSession && (
+          <div className="px-3.5 pb-3.5">
+            <div className="relative h-2">
+              <div className="absolute inset-0 rounded-full" style={{ background: "rgba(255,255,255,0.06)" }} />
+              <div
+                className="absolute inset-y-0 left-0 rounded-full"
+                style={{
+                  width: `${progressPct}%`,
+                  background: `linear-gradient(90deg, ${color}30, ${color}90)`,
+                  boxShadow: `0 0 8px ${color}80`,
+                }}
+              />
+              <div
+                className="pointer-events-none absolute inset-y-0"
+                style={{ left: `${progressPct}%` }}
+              >
+                <div className="h-full w-px -translate-x-1/2" style={{ background: `${color}80` }} />
+                <div
+                  className="absolute top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white"
+                  style={{ boxShadow: `0 0 5px ${color}, 0 0 11px ${color}90` }}
+                />
+              </div>
+            </div>
+
+            <div className="mt-2 flex items-center justify-between">
+              <div className="min-w-0">
+                <p className="text-[9px] font-semibold uppercase tracking-wider text-white/30">Started</p>
+                <p className="mt-0.5 truncate text-[11px] font-medium text-white/55">
+                  {format(new Date(startedAt), "MMM d · h:mm a")}
+                </p>
+              </div>
+              <div className="min-w-0 text-right">
+                <p className="text-[9px] font-semibold uppercase tracking-wider text-white/30">Expires</p>
+                <p className="mt-0.5 truncate text-[11px] font-medium text-white/55">
+                  {endMs ? format(new Date(endMs), "MMM d · h:mm a") : "—"}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         <AnimatePresence initial={false}>
           {expanded && (
@@ -117,7 +170,7 @@ export default function SensorSessionCard() {
                               : "border-white/[0.07] bg-white/[0.02] hover:bg-white/[0.05]"
                           }`}
                         >
-                          <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/10 bg-black/40">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center">
                             <img src={m.image} alt={m.label} className="h-full w-full object-contain" />
                           </div>
                           <span className={`flex-1 text-left text-sm font-medium ${selected ? "text-white" : "text-white/70"}`}>
