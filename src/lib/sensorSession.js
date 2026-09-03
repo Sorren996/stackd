@@ -9,7 +9,7 @@ export const SENSOR_MODELS = {
     id: "G6",
     label: "Dexcom G6",
     durationDays: 10,
-    image: "https://media.base44.com/images/public/6a1b93f234a8611ee1595134/a18787f58_DG6.png",
+    image: "https://media.base44.com/images/public/6a1b93f234a8611ee1595134/337f55d82_DG6.png",
   },
   G7: {
     id: "G7",
