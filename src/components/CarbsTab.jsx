@@ -783,18 +783,13 @@ Do not give insulin dosing advice.
             type="button"
             onClick={isCustomMode ? () => gateThenSubmit(handleSubmitCustom) : isEstimateMode ? () => gateThenSubmit(handleSubmitEstimate) : () => gateThenSubmit(handleSubmitManual)}
             disabled={isPending || isEstimatingMeal || isCheckingMemory || !canSubmitCarbs}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-base font-semibold text-white transition-all disabled:opacity-40"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-base font-semibold text-white disabled:opacity-40"
             style={{ background: "linear-gradient(145deg, rgba(217,119,6,0.9), rgba(180,83,9,0.85))", boxShadow: "0 8px 24px rgba(217,119,6,0.25), inset 0 1px 1px rgba(255,255,255,0.2)" }}
           >
-            {isPending ? (
+            {isPending || isCheckingMemory ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Logging...
-              </>
-            ) : isCheckingMemory ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Checking past meals...
               </>
             ) : isCustomMode ? (
               <>
