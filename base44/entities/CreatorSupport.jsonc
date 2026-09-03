@@ -1,0 +1,71 @@
+{
+  "name": "CreatorSupport",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "Explicit user ID of the supporter, for identification in the backend."
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Email of the supporter at the time of the contribution."
+    },
+    "session_id": {
+      "type": "string",
+      "description": "Stripe Checkout session ID this contribution came from. Used to keep recording idempotent \u2014 a session is only ever counted once."
+    },
+    "support_type": {
+      "type": "string",
+      "enum": [
+        "one_time",
+        "monthly"
+      ],
+      "description": "Whether this was a one-time gift or an ongoing monthly patronage."
+    },
+    "amount_cents": {
+      "type": "number",
+      "description": "Contribution amount in the currency's smallest unit (e.g. cents)."
+    },
+    "currency": {
+      "type": "string",
+      "default": "usd",
+      "description": "Currency of the contribution."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "completed",
+        "active",
+        "canceled"
+      ],
+      "description": "Whether a one-time gift completed, or a monthly patronage is active or canceled."
+    },
+    "stripe_customer_id": {
+      "type": "string",
+      "description": "Stripe customer ID created during checkout, used to open the secure billing portal."
+    },
+    "stripe_subscription_id": {
+      "type": "string",
+      "description": "Stripe subscription ID for monthly patronage, used for management."
+    }
+  },
+  "required": [
+    "session_id",
+    "support_type",
+    "status"
+  ],
+  "rls": {
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

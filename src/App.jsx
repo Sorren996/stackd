@@ -21,6 +21,7 @@ import InsulinSettingsPage from './pages/InsulinSettingsPage';
 import ProfileSettingsPage from './pages/ProfileSettingsPage';
 import PrivacyConsentPage from './pages/PrivacyConsentPage';
 import DisplaySettingsPage from './pages/DisplaySettingsPage';
+import SupportCreatorPage from './pages/SupportCreatorPage';
 import DexcomSettingsPage from './pages/DexcomSettingsPage';
 import ContactSupportPage from './pages/ContactSupportPage';
 import SupportInbox from './pages/SupportInbox';
@@ -252,6 +253,7 @@ const AuthenticatedApp = () => {
             <Route path="/settings/profile" element={<ProfileSettingsPage />} />
             <Route path="/settings/privacy-consent" element={<PrivacyConsentPage />} />
             <Route path="/settings/display" element={<DisplaySettingsPage />} />
+            <Route path="/settings/support-creator" element={<SupportCreatorPage />} />
             <Route path="/settings/dexcom" element={<DexcomSettingsPage />} />
             <Route path="/settings/contact-support" element={<ContactSupportPage />} />
             <Route path="/settings/support-inbox" element={<SupportInbox />} />
