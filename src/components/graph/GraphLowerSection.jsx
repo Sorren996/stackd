@@ -51,6 +51,7 @@ export default function GraphLowerSection({
   const renderDoseArea = (k) => {
     const isSelected = selectedDoseKey === k.key;
     const isDimmed = selectedDoseKey && !isSelected;
+    const isExpired = k.isActive === false;
     return (
       <Area
         key={k.key}
@@ -59,10 +60,10 @@ export default function GraphLowerSection({
         dataKey={k.key}
         name={k.label}
         stroke={k.color}
-        strokeWidth={isSelected ? 1.5 : 1}
-        strokeOpacity={isDimmed ? 0.1 : isSelected ? 0.65 : 0.4}
+        strokeWidth={isSelected ? 1.5 : isExpired ? 0.8 : 1}
+        strokeOpacity={isDimmed ? 0.1 : isSelected ? 0.65 : isExpired ? 0.16 : 0.4}
         fill={`url(#insulin_fill_${k.key})`}
-        fillOpacity={isDimmed ? 0.03 : isSelected ? 0.28 : 0.22}
+        fillOpacity={isDimmed ? 0.03 : isSelected ? 0.28 : isExpired ? 0.07 : 0.22}
         dot={false}
         activeDot={false}
         isAnimationActive={false}
@@ -94,8 +95,8 @@ export default function GraphLowerSection({
           <defs>
             {doseKeys.map((k) => (
               <linearGradient key={`insulin_fill_${k.key}`} id={`insulin_fill_${k.key}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={k.color} stopOpacity={0.9} />
-                <stop offset="100%" stopColor={k.color} stopOpacity={0.25} />
+                <stop offset="0%" stopColor={k.color} stopOpacity={k.isActive === false ? 0.4 : 0.9} />
+                <stop offset="100%" stopColor={k.color} stopOpacity={k.isActive === false ? 0.1 : 0.25} />
               </linearGradient>
             ))}
           </defs>
@@ -157,19 +158,21 @@ export default function GraphLowerSection({
       })}
 
       {/* Insulin dose pills — anchored to dose time, at top of insulin lane */}
-      {showInsulin && positionedDoseMarkers.map(({ dose, x, units, key, color, pillTop, peakY }) => {
+      {showInsulin && positionedDoseMarkers.map(({ dose, x, units, key, color, pillTop, peakY, isActive }) => {
         const isEdgeLeft = x < 36;
         const isEdgeRight = x > chartWidth - 36;
         const formattedUnits = units % 1 === 0 ? String(units) : units.toFixed(1);
         const shortLabel = String(dose.insulin_type || "Insulin").split(" ")[0];
         const isSelected = selectedDoseKey === key;
+        const isExpired = isActive === false && !isSelected;
         return (
           <div
             key={`dose_label_${key}`}
             className="pointer-events-none absolute top-0 z-[6]"
             style={{
               left: x,
-              transform: isEdgeLeft ? "translateX(0)" : isEdgeRight ? "translateX(-100%)" : "translateX(-50%)"
+              transform: isEdgeLeft ? "translateX(0)" : isEdgeRight ? "translateX(-100%)" : "translateX(-50%)",
+              opacity: isExpired ? 0.45 : 1
             }}
           >
             {/* Connector from pill to exact curve peak + peak marker dot */}

@@ -594,7 +594,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     label: String(dose.insulin_type || "Insulin").split(" ")[0],
     units: getDoseUnits(dose),
     color: getInsulinProfile(dose.insulin_type)?.color || "#888",
-    isBasal: isBasalInsulinType(dose.insulin_type)
+    isBasal: isBasalInsulinType(dose.insulin_type),
+    isActive: getDoseIOB(dose, Date.now()) >= 0.5
   })),
   [filteredDoses]
   );
@@ -741,7 +742,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       pillTop = Math.max(pillTop, 0);
 
       placed.push({ x, pillTop });
-      return { dose, x, units, key, color, pillTop, peakY };
+      const isActive = getDoseIOB(dose, Date.now()) >= 0.5;
+      return { dose, x, units, key, color, pillTop, peakY, isActive };
     }).
     filter(Boolean);
   }, [filteredDoses, allCurvesMeta, maxBolusUnits, maxBasalUnits, domainStart, domainEnd, totalMs, chartWidth]);
