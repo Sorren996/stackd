@@ -158,7 +158,19 @@ const AuthenticatedApp = () => {
         // Settings cache failure is non-fatal — don't block the app.
       }
 
-      if (!cancelled) setDataReady(true);
+      if (!cancelled) {
+        setDataReady(true);
+
+        // Prefetch the Rhythms (analytics) glucose window in the background so
+        // the page opens with its data already warm — no loading spinner on
+        // entry. Fired after the Dashboard data so the main page loads first.
+        queryClientInstance
+          .prefetchQuery({
+            queryKey: ["glucose-readings", "analytics"],
+            queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", 30000),
+          })
+          .catch(() => {});
+      }
     };
     prefetchData();
     return () => { cancelled = true; };
