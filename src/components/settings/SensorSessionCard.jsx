@@ -119,7 +119,7 @@ export default function SensorSessionCard() {
                     />
                   </div>
                 </div>
-                <p className={`text-base font-bold leading-tight ${expired ? "text-amber-200" : "text-white"}`}>
+                <p className={`text-sm font-medium leading-tight ${expired ? "text-amber-300/80" : "text-white/65"}`}>
                   {remaining?.text}
                 </p>
                 <p className="mt-0.5 truncate text-[11px] text-white/40">
