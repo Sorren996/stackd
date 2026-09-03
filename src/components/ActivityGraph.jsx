@@ -618,6 +618,21 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     return Array.from(active.values());
   }, [allCurvesMeta, domainStart, domainEnd]);
 
+  // Summed units of every dose whose activity curve overlaps the visible
+  // window — gives a quick read of total support on board, especially for
+  // long-lasting insulins whose curve lingers without a clear dose marker.
+  const totalActiveUnits = useMemo(() => {
+    let total = 0;
+    allCurvesMeta.forEach(({ dose, curve }) => {
+      if (!curve.length) return;
+      const curveStart = curve[0].time;
+      const curveEnd = curve[curve.length - 1].time;
+      if (curveStart > domainEnd || curveEnd < domainStart) return;
+      total += getDoseUnits(dose);
+    });
+    return total;
+  }, [allCurvesMeta, domainStart, domainEnd]);
+
   const totalMs = domainEnd - domainStart;
   const visibleMs = viewWindow * 60 * 60 * 1000;
   const pxPerMin = containerWidth / (visibleMs / 60000);
@@ -1274,6 +1289,12 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               <span className="text-[9px] text-white/35">{k.label}</span>
             </div>
           ))}
+          <div className="flex items-center gap-1.5 shrink-0 border-l border-white/10 pl-3 ml-0.5">
+            <span className="text-[9px] font-semibold uppercase tracking-wide text-white/40">Total</span>
+            <span className="text-[10px] font-bold text-white/75">
+              {totalActiveUnits % 1 === 0 ? totalActiveUnits : totalActiveUnits.toFixed(1)}u
+            </span>
+          </div>
         </div>
       )}
       <div
