@@ -616,7 +616,7 @@ export default function DoseForm({ open, onOpenChange, mode = "insulin" }) {
                       </div>
                     </div>
                     <div className="shrink-0 px-5 pb-[max(env(safe-area-inset-bottom),1.5rem)] pt-2">
-                      {Object.entries(insulinTotals).length > 0 && (
+                      {Object.entries(insulinTotals).length > 0 && loggingTab !== "insulin" && !createDoses.isPending && (
                         <div className="mb-2 px-1">
                           {Object.entries(insulinTotals).map(([type, units]) => (
                             <p key={type} className="text-xs text-white/35">
