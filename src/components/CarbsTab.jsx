@@ -799,7 +799,7 @@ Do not give insulin dosing advice.
             ) : isCustomMode ? (
               <>
                 <Check className="h-4 w-4" />
-                {canSubmitCustom ? `Log ${customCarbs}g carbs` : "Enter food and carbs"}
+                {canSubmitCustom ? "Log carbs" : "Enter food and carbs"}
               </>
             ) : isEstimateMode ? (
               <>
@@ -807,7 +807,7 @@ Do not give insulin dosing advice.
                 Log meal estimate
               </>
             ) : canSubmitManual ? (
-              `Log ${Math.round(totalCarbs * 10) / 10}g across ${selectedFoods.length} food${selectedFoods.length > 1 ? "s" : ""}`
+              "Log meal"
             ) : (
               "Select a food to log"
             )}
