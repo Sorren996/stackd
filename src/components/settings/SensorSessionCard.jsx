@@ -70,7 +70,7 @@ export default function SensorSessionCard() {
           onClick={() => setExpanded((v) => !v)}
           className="flex w-full items-center gap-3 px-3.5 py-3 text-left transition hover:bg-white/[0.03] active:scale-[0.995]"
         >
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center">
+          <div className="flex h-24 w-24 shrink-0 items-center justify-center">
             <img
               src={modelMeta?.image || SENSOR_MODELS.G7.image}
               alt={modelMeta?.label || "Dexcom sensor"}
