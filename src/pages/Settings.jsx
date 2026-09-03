@@ -5,6 +5,7 @@ import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 import { Activity, User, Shield, LogOut, Loader2, HeartPulse, LineChart, LifeBuoy, Inbox } from "lucide-react";
 import { toast } from "sonner";
 import { SettingsGroup, SettingsRow } from "@/components/settings/SettingsList";
+import SensorSessionCard from "@/components/settings/SensorSessionCard";
 
 function readGraphHeight() {
   const v = Number(window.localStorage.getItem("graph_height"));
@@ -34,6 +35,8 @@ export default function Settings() {
   return (
     <div className="mx-auto max-w-md space-y-5 pb-4 pt-2">
       <h1 className="px-3 text-lg font-bold text-white">Settings</h1>
+
+      <SensorSessionCard />
 
       <SettingsGroup label="Account">
         <SettingsRow

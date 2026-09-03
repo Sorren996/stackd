@@ -21,6 +21,8 @@ const LOCAL_KEYS = [
   "coach_exclude_journal",
   "graph_height",
   "high_glucose_reference",
+  "cgm_model",
+  "sensor_session_started_at",
 ];
 
 function getDefaultMealInsulinTypes() {
@@ -134,6 +136,15 @@ function validateSettings(raw) {
     if (v >= 140 && v <= 400) {
       sanitized.high_glucose_reference = Math.round(v / 10) * 10;
     }
+  }
+
+  if (raw.cgm_model === "G6" || raw.cgm_model === "G7" || raw.cgm_model === "G7_15") {
+    sanitized.cgm_model = raw.cgm_model;
+  }
+
+  if (typeof raw.sensor_session_started_at === "string" && raw.sensor_session_started_at) {
+    const t = new Date(raw.sensor_session_started_at).getTime();
+    if (Number.isFinite(t)) sanitized.sensor_session_started_at = raw.sensor_session_started_at;
   }
 
   // Pass through username for backend identification (not validated numerically)

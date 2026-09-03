@@ -84,6 +84,20 @@
       "default": 250,
       "description": "Configurable secondary High glucose reference line shown on the Your Flow graph (mg/dL). Independent of the target range. Selectable from 140\u2013400 in steps of 10. Defaults to 250."
     },
+    "cgm_model": {
+      "type": "string",
+      "enum": [
+        "G6",
+        "G7",
+        "G7_15"
+      ],
+      "description": "Which Dexcom CGM model the user is wearing. Determines the sensor session duration used for the countdown (G6 = 10 days, G7 = 10 days, G7_15 = 15 days)."
+    },
+    "sensor_session_started_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the user started their current CGM sensor session, entered manually. Used with cgm_model to count down the remaining wear time."
+    },
     "settings_migrated_from_local": {
       "type": "boolean",
       "default": false,

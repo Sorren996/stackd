@@ -7,6 +7,8 @@ import Dashboard from "../pages/Dashboard";
 import HistoryPage from "../pages/History";
 import SettingsPage from "../pages/Settings";
 import { useRealtimeLogSync } from "@/hooks/useRealtimeLogSync";
+import SensorSessionBanner from "@/components/SensorSessionBanner";
+import { useSensorSession } from "@/hooks/useSensorSession";
 
 const navItems = [
   { path: "/", label: "My Flow", icon: Wind },
@@ -35,6 +37,8 @@ export default function Layout() {
   // Keeps every page's cached log data fresh the instant a record changes —
   // including Dexcom syncs that land while the user is on Journal/Rhythms.
   useRealtimeLogSync();
+
+  const { showBanner: showSessionBanner } = useSensorSession();
 
   const queryClient = useQueryClient();
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -156,6 +160,8 @@ export default function Layout() {
         </div>
       </header>
 
+      <SensorSessionBanner visible={showSessionBanner} />
+
       <AnimatePresence>
         {refreshAlert && (
           <motion.div
@@ -194,7 +200,10 @@ export default function Layout() {
         )}
       </AnimatePresence>
 
-      <main className="relative mx-auto w-full max-w-6xl px-4 pt-14 overflow-visible pb-28">
+      <main
+        className="relative mx-auto w-full max-w-6xl px-4 overflow-visible pb-28"
+        style={{ paddingTop: showSessionBanner ? "5.75rem" : "3.5rem" }}
+      >
         <div className="min-w-0 w-full">
           <div hidden={!isDashboardRoute}>
             <CachedDashboard />
