@@ -1,13 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
-import { useUserSettings } from "@/hooks/useUserSettings";
+import { useQuery } from "@tanstack/react-query";
+import { loadUserSettings } from "@/lib/userSettings";
 import { getRemainingMs, shouldShowSessionBanner, getSensorModel } from "@/lib/sensorSession";
 
 /**
- * Derives the current CGM sensor session state from server-side user settings.
- * Ticks every 30s so the countdown and banner stay current without a reload.
+ * Read-only sensor session state derived from the shared user-settings query
+ * cache (populated by the app prefetch). Deliberately avoids `useAuth` so the
+ * always-mounted Layout / banner can never tear the auth context during a
+ * hot-reload of the settings module.
  */
 export function useSensorSession() {
-  const { settings, save, isSaving } = useUserSettings();
+  const { data: settings } = useQuery({
+    queryKey: ["user-settings"],
+    queryFn: () => loadUserSettings(),
+    staleTime: 30 * 1000,
+  });
+
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -28,5 +36,5 @@ export function useSensorSession() {
 
   const showBanner = shouldShowSessionBanner(remainingMs);
 
-  return { settings, modelId, startedAt, modelMeta, remainingMs, showBanner, save, isSaving };
+  return { settings, modelId, startedAt, modelMeta, remainingMs, showBanner };
 }

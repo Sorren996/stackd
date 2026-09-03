@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, Check, Loader2, X } from "lucide-react";
 import { format } from "date-fns";
 import { useSensorSession } from "@/hooks/useSensorSession";
+import { useUserSettings } from "@/hooks/useUserSettings";
 import {
   SENSOR_MODELS,
   SENSOR_MODEL_IDS,
@@ -27,7 +28,8 @@ function sessionColor(remainingMs) {
 }
 
 export default function SensorSessionCard() {
-  const { modelId, startedAt, modelMeta, remainingMs, save, isSaving } = useSensorSession();
+  const { modelId, startedAt, modelMeta, remainingMs } = useSensorSession();
+  const { save, isSaving } = useUserSettings();
   const [expanded, setExpanded] = useState(false);
   const [draftModel, setDraftModel] = useState("G7");
   const [draftStartedAt, setDraftStartedAt] = useState(() => toLocalDatetimeInputValue(Date.now()));
