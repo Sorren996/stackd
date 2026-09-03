@@ -601,37 +601,29 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
   // Only insulin types whose curves have activity overlapping the visible
   // graph window — drives the legend so it reflects what's actually shown.
+  // Per-insulin-type totals, counting only doses that are still active (IOB
+  // >= 0.5u) — the same threshold the IOB card uses — so the legend stays
+  // accurate to what's genuinely on board, including lingering long-lasting
+  // insulins. Displayed as "Xu Type" next to each color dot.
   const activeDoseKeys = useMemo(() => {
-    const active = new Map();
+    const now = Date.now();
+    const byType = new Map();
     allCurvesMeta.forEach(({ dose, curve }) => {
       if (!curve.length) return;
-      const curveStart = curve[0].time;
-      const curveEnd = curve[curve.length - 1].time;
-      if (curveStart > domainEnd || curveEnd < domainStart) return;
+      const iob = getDoseIOB(dose, now);
+      if (iob < 0.5) return;
       const label = String(dose.insulin_type || "Insulin").split(" ")[0];
-      if (active.has(label)) return;
-      active.set(label, {
-        label,
-        color: getInsulinProfile(dose.insulin_type)?.color || "#888",
-      });
+      const color = getInsulinProfile(dose.insulin_type)?.color || "#888";
+      const units = getDoseUnits(dose);
+      const existing = byType.get(label);
+      if (existing) {
+        existing.units += units;
+      } else {
+        byType.set(label, { label, color, units });
+      }
     });
-    return Array.from(active.values());
-  }, [allCurvesMeta, domainStart, domainEnd]);
-
-  // Summed units of every dose whose activity curve overlaps the visible
-  // window — gives a quick read of total support on board, especially for
-  // long-lasting insulins whose curve lingers without a clear dose marker.
-  const totalActiveUnits = useMemo(() => {
-    let total = 0;
-    allCurvesMeta.forEach(({ dose, curve }) => {
-      if (!curve.length) return;
-      const curveStart = curve[0].time;
-      const curveEnd = curve[curve.length - 1].time;
-      if (curveStart > domainEnd || curveEnd < domainStart) return;
-      total += getDoseUnits(dose);
-    });
-    return total;
-  }, [allCurvesMeta, domainStart, domainEnd]);
+    return Array.from(byType.values());
+  }, [allCurvesMeta]);
 
   const totalMs = domainEnd - domainStart;
   const visibleMs = viewWindow * 60 * 60 * 1000;
@@ -1286,15 +1278,12 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           {activeDoseKeys.map((k) => (
             <div key={k.label} className="flex items-center gap-1 shrink-0">
               <span className="h-1.5 w-1.5 rounded-full" style={{ background: k.color }} />
+              <span className="text-[9px] font-semibold text-white/55">
+                {k.units % 1 === 0 ? k.units : k.units.toFixed(1)}u
+              </span>
               <span className="text-[9px] text-white/35">{k.label}</span>
             </div>
           ))}
-          <div className="flex items-center gap-1.5 shrink-0 border-l border-white/10 pl-3 ml-0.5">
-            <span className="text-[9px] font-semibold uppercase tracking-wide text-white/40">Total</span>
-            <span className="text-[10px] font-bold text-white/75">
-              {totalActiveUnits % 1 === 0 ? totalActiveUnits : totalActiveUnits.toFixed(1)}u
-            </span>
-          </div>
         </div>
       )}
       <div
