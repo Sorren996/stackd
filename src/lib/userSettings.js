@@ -138,11 +138,13 @@ function validateSettings(raw) {
     }
   }
 
-  if (raw.cgm_model === "G6" || raw.cgm_model === "G7" || raw.cgm_model === "G7_15") {
+  if (raw.cgm_model === null || raw.cgm_model === "G6" || raw.cgm_model === "G7" || raw.cgm_model === "G7_15") {
     sanitized.cgm_model = raw.cgm_model;
   }
 
-  if (typeof raw.sensor_session_started_at === "string" && raw.sensor_session_started_at) {
+  if (raw.sensor_session_started_at === null) {
+    sanitized.sensor_session_started_at = null;
+  } else if (typeof raw.sensor_session_started_at === "string" && raw.sensor_session_started_at) {
     const t = new Date(raw.sensor_session_started_at).getTime();
     if (Number.isFinite(t)) sanitized.sensor_session_started_at = raw.sensor_session_started_at;
   }
