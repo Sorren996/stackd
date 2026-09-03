@@ -1,23 +1,26 @@
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Clock } from "lucide-react";
+import { useSensorSession } from "@/hooks/useSensorSession";
 
 /**
- * Slim persistent banner shown directly under the header on every page when
- * the current CGM sensor session has less than 24 hours of wear time left.
- * Tapping it opens Settings so the user can log a new session start.
+ * Slim banner shown at the top of the Dashboard when the current CGM sensor
+ * session has less than 24 hours of wear time left. It is sticky to the top
+ * of the page (just under the header) so it stays planted while the page
+ * scrolls. Tapping it opens Settings to log a new session start.
  */
-export default function SensorSessionBanner({ visible }) {
+export default function SensorSessionBanner() {
+  const { showBanner } = useSensorSession();
   return (
     <AnimatePresence>
-      {visible && (
+      {showBanner && (
         <motion.div
           key="sensor-session-banner"
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
           transition={{ duration: 0.25, ease: "easeOut" }}
-          className="fixed inset-x-0 top-14 z-40 flex justify-center px-4"
+          className="sticky top-14 z-40 flex justify-center px-4"
         >
           <Link
             to="/settings"

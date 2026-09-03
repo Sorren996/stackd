@@ -20,6 +20,7 @@ import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 import { useVisibilityRefresh } from "@/hooks/useVisibilityRefresh";
 import DexcomSyncStatus from "@/components/DexcomSyncStatus";
 import ConnectGlucoseSourcePrompt from "@/components/ConnectGlucoseSourcePrompt";
+import SensorSessionBanner from "@/components/SensorSessionBanner";
 
 const FRESH_DATA_MS = 60 * 1000;
 const GRAPH_DATA_MS = 5 * 60 * 1000;
@@ -601,6 +602,8 @@ export default function Dashboard() {
         onSave={(payload) => updateLog.mutate(payload)}
         isSaving={updateLog.isPending}
       />
+
+      <SensorSessionBanner />
 
       <div className="mb-4 space-y-3">
         <DexcomSyncStatus />
