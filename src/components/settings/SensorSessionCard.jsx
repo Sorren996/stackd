@@ -118,7 +118,7 @@ export default function SensorSessionCard() {
                 </div>
                 {remaining?.grace && (
                   <p className="mt-1.5 text-[10px] leading-relaxed text-amber-200/70">
-                    Grace period — your sensor may still share readings for a little while. A good time to have your next one ready.
+                    Grace period — sensor may still read. Have your next one ready.
                   </p>
                 )}
               </>

@@ -16,7 +16,7 @@ export default function SensorSessionBanner() {
   const fullyExpired = isFullyExpired(remainingMs);
 
   const message = grace
-    ? "Grace period — your sensor may still share readings for a little while. A good time to have your next one ready."
+    ? "Grace period — sensor may still read. Have your next one ready."
     : fullyExpired
       ? "Session ended — time to start your next sensor."
       : "Your sensor session is wrapping up soon — a good time to have your next one ready.";
