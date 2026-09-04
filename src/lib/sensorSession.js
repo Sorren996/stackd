@@ -47,19 +47,45 @@ export function isSessionExpiringSoon(remainingMs) {
   return remainingMs !== null && remainingMs < DAY_MS && remainingMs > 0;
 }
 
+// Dexcom sensors keep sharing readings for a short grace window after the
+// official wear time ends. The countdown enters this grace phase once
+// remainingMs reaches zero, and the session is only treated as fully
+// complete once the grace window elapses.
+export const GRACE_PERIOD_MS = 12 * 60 * 60 * 1000;
+
+export function isInGracePeriod(remainingMs) {
+  return remainingMs !== null && remainingMs <= 0 && remainingMs > -GRACE_PERIOD_MS;
+}
+
+export function isFullyExpired(remainingMs) {
+  return remainingMs !== null && remainingMs <= -GRACE_PERIOD_MS;
+}
+
 export function isSessionExpired(remainingMs) {
   return remainingMs !== null && remainingMs <= 0;
 }
 
-// The banner shows for the final 24h and stays through expiry until a new
-// session is started.
+// The banner shows for the final 24h and stays through the grace window
+// until a new session is started.
 export function shouldShowSessionBanner(remainingMs) {
   return remainingMs !== null && remainingMs < DAY_MS;
 }
 
 export function formatRemaining(remainingMs) {
   if (remainingMs === null) return null;
-  if (remainingMs <= 0) return { expired: true, text: "Session complete" };
+
+  if (remainingMs <= -GRACE_PERIOD_MS) {
+    return { expired: true, grace: false, text: "Session complete" };
+  }
+
+  if (remainingMs <= 0) {
+    const graceLeftMs = GRACE_PERIOD_MS + remainingMs;
+    const totalMinutes = Math.max(0, Math.floor(graceLeftMs / (60 * 1000)));
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    const text = hours > 0 ? `${hours}h ${minutes}m of grace left` : `${minutes}m of grace left`;
+    return { expired: false, grace: true, text };
+  }
 
   const totalMinutes = Math.floor(remainingMs / (60 * 1000));
   const days = Math.floor(totalMinutes / (24 * 60));
@@ -67,10 +93,10 @@ export function formatRemaining(remainingMs) {
   const minutes = totalMinutes % 60;
 
   if (days > 0) {
-    return { expired: false, days, hours, minutes, text: `${days}d ${hours}h left` };
+    return { expired: false, grace: false, days, hours, minutes, text: `${days}d ${hours}h left` };
   }
   if (hours > 0) {
-    return { expired: false, days: 0, hours, minutes, text: `${hours}h ${minutes}m left` };
+    return { expired: false, grace: false, days: 0, hours, minutes, text: `${hours}h ${minutes}m left` };
   }
-  return { expired: false, days: 0, hours: 0, minutes, text: `${minutes}m left` };
+  return { expired: false, grace: false, days: 0, hours: 0, minutes, text: `${minutes}m left` };
 }

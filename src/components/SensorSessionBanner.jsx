@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Clock } from "lucide-react";
 import { useSensorSession } from "@/hooks/useSensorSession";
+import { isInGracePeriod, isFullyExpired } from "@/lib/sensorSession";
 
 /**
  * Slim banner shown at the top of the Dashboard when the current CGM sensor
@@ -10,7 +11,16 @@ import { useSensorSession } from "@/hooks/useSensorSession";
  * scrolls. Tapping it opens Settings to log a new session start.
  */
 export default function SensorSessionBanner() {
-  const { showBanner } = useSensorSession();
+  const { showBanner, remainingMs } = useSensorSession();
+  const grace = isInGracePeriod(remainingMs);
+  const fullyExpired = isFullyExpired(remainingMs);
+
+  const message = grace
+    ? "Grace period — your sensor may still share readings for a little while. A good time to have your next one ready."
+    : fullyExpired
+      ? "Session ended — time to start your next sensor."
+      : "Your sensor session is wrapping up soon — a good time to have your next one ready.";
+
   return (
     <AnimatePresence>
       {showBanner && (
@@ -33,7 +43,7 @@ export default function SensorSessionBanner() {
           >
             <Clock className="h-4 w-4 shrink-0" style={{ color: "rgba(230,190,110,0.95)" }} />
             <span className="text-xs font-medium leading-tight" style={{ color: "rgba(244,214,150,0.95)" }}>
-              Your sensor session is wrapping up soon — a good time to have your next one ready.
+              {message}
             </span>
           </Link>
         </motion.div>
