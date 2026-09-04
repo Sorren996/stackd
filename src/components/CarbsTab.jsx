@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef, forwardRef, useImperativeHandle } from "react";
 import { FOOD_DATABASE } from "@/lib/carbAbsorption";
 import { base44 } from "@/api/base44Client";
 import { InvokeLLM, UploadFile } from "@/api/integrations";
@@ -59,7 +59,7 @@ function readImageAsDataUrl(file) {
   });
 }
 
-export default function CarbsTab({ open, onSubmit, isPending, onDirtyChange }) {
+function CarbsTab({ open, onSubmit, isPending, onDirtyChange, embedded, externalDate, externalTime }, ref) {
   const [mode, setMode] = useState("estimate");
   const [mealText, setMealText] = useState("");
   const [mealPhoto, setMealPhoto] = useState(null);
@@ -82,6 +82,8 @@ export default function CarbsTab({ open, onSubmit, isPending, onDirtyChange }) {
 
   const nowTimeString = new Date().toTimeString().slice(0, 5);
   const todayDateValue = getTodayDateValue();
+  const submitDate = externalDate !== undefined ? externalDate : carbDate;
+  const submitTime = externalTime !== undefined ? externalTime : carbTime;
 
   useEffect(() => {
     onDirtyChange?.(
@@ -203,6 +205,17 @@ export default function CarbsTab({ open, onSubmit, isPending, onDirtyChange }) {
     else if (isCustomMode) gateThenSubmit(() => handleSubmitCustom(planData));
     else gateThenSubmit(() => handleSubmitManual(planData));
   };
+
+  const submitCarbsRef = useRef(() => {});
+  submitCarbsRef.current = () => {
+    if (isCustomMode) gateThenSubmit(() => handleSubmitCustom());
+    else if (isEstimateMode) gateThenSubmit(() => handleSubmitEstimate());
+    else gateThenSubmit(() => handleSubmitManual());
+  };
+
+  useImperativeHandle(ref, () => ({
+    submit: () => submitCarbsRef.current(),
+  }), []);
 
   const updateEstimatedMeal = (patch) => {
     setEstimatedMeal((meal) => (meal ? { ...meal, ...patch } : meal));
@@ -333,7 +346,7 @@ Do not give insulin dosing advice.
     }
 
     const absorptionProfile = estimatedMeal.absorptionProfile || "medium";
-    const consumedAt = buildConsumedAt(carbDate, carbTime);
+    const consumedAt = buildConsumedAt(submitDate, submitTime);
     if (!consumedAt) {
       toast.error("Choose a time that is not in the future.");
       return;
@@ -360,7 +373,7 @@ Do not give insulin dosing advice.
     const carbs = Number(customCarbs);
     if (!customFoodName.trim() || !Number.isFinite(carbs) || carbs <= 0) return;
 
-    const consumedAt = buildConsumedAt(carbDate, carbTime);
+    const consumedAt = buildConsumedAt(submitDate, submitTime);
     if (!consumedAt) {
       toast.error("Choose a time that is not in the future.");
       return;
@@ -406,7 +419,7 @@ Do not give insulin dosing advice.
 
   const handleSubmitManual = (splitPlan = null) => {
     if (!canSubmitManual) return;
-    const consumedAt = buildConsumedAt(carbDate, carbTime);
+    const consumedAt = buildConsumedAt(submitDate, submitTime);
     if (!consumedAt) {
       toast.error("Choose a time that is not in the future.");
       return;
@@ -474,7 +487,7 @@ Do not give insulin dosing advice.
         }
       `}</style>
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div className={embedded ? "flex flex-col" : "flex min-h-0 flex-1 flex-col overflow-hidden"}>
         {CUSTOM_MODE_ENABLED && (
           <div className="px-5 pb-2 pt-4">
             <div className="flex rounded-2xl border border-white/10 bg-white/[0.04] p-1" style={{ boxShadow: "inset 0 1px 1px rgba(255,255,255,0.06)" }}>
@@ -499,7 +512,7 @@ Do not give insulin dosing advice.
           </div>
         )}
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-6 pt-2">
+        <div className={embedded ? "px-5 pb-6 pt-2" : "min-h-0 flex-1 overflow-y-auto px-5 pb-6 pt-2"}>
           {isCustomMode ? (
             <div className="space-y-5">
               <div className="relative overflow-hidden rounded-2xl border border-white/12 p-4" style={{ background: "linear-gradient(145deg, rgba(255,255,255,0.035), rgba(255,255,255,0.008))", boxShadow: "0 8px 24px rgba(0,0,0,0.15), inset 0 1px 1px rgba(255,255,255,0.07)" }}>
@@ -759,11 +772,13 @@ Do not give insulin dosing advice.
             </div>
           )}
 
-          <div className="mt-5">
-            <p className="mb-3 text-sm font-bold uppercase tracking-widest text-white/40">Time Consumed</p>
-            <DateScrollField label="Date" value={carbDate} onChange={setCarbDate} max={todayDateValue} />
-            <TimeScrollField label="Consumed at" value={carbTime} onChange={setCarbTime} max={carbDate === todayDateValue ? nowTimeString : undefined} />
-          </div>
+          {!embedded && (
+            <div className="mt-5">
+              <p className="mb-3 text-sm font-bold uppercase tracking-widest text-white/40">Time Consumed</p>
+              <DateScrollField label="Date" value={carbDate} onChange={setCarbDate} max={todayDateValue} />
+              <TimeScrollField label="Consumed at" value={carbTime} onChange={setCarbTime} max={carbDate === todayDateValue ? nowTimeString : undefined} />
+            </div>
+          )}
 
           <div className="mt-4">
             <HighProteinFatCheckbox checked={isHighProteinFat} onChange={setIsHighProteinFat} />
@@ -778,36 +793,38 @@ Do not give insulin dosing advice.
           )}
         </div>
 
-        <div className={`shrink-0 px-5 pb-6 pt-2 ${isEstimateMode && isEstimatingMeal ? "hidden" : ""}`}>
-          <button
-            type="button"
-            onClick={isCustomMode ? () => gateThenSubmit(handleSubmitCustom) : isEstimateMode ? () => gateThenSubmit(handleSubmitEstimate) : () => gateThenSubmit(handleSubmitManual)}
-            disabled={isPending || isEstimatingMeal || isCheckingMemory || !canSubmitCarbs}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-base font-semibold text-white disabled:opacity-40"
-            style={{ background: "linear-gradient(145deg, rgba(217,119,6,0.9), rgba(180,83,9,0.85))", boxShadow: "0 8px 24px rgba(217,119,6,0.25), inset 0 1px 1px rgba(255,255,255,0.2)" }}
-          >
-            {isPending || isCheckingMemory ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Logging...
-              </>
-            ) : isCustomMode ? (
-              <>
-                <Check className="h-4 w-4" />
-                {canSubmitCustom ? "Log carbs" : "Enter food and carbs"}
-              </>
-            ) : isEstimateMode ? (
-              <>
-                <Check className="h-4 w-4" />
-                Log meal estimate
-              </>
-            ) : canSubmitManual ? (
-              "Log meal"
-            ) : (
-              "Select a food to log"
-            )}
-          </button>
-        </div>
+        {!embedded && (
+          <div className={`shrink-0 px-5 pb-6 pt-2 ${isEstimateMode && isEstimatingMeal ? "hidden" : ""}`}>
+            <button
+              type="button"
+              onClick={isCustomMode ? () => gateThenSubmit(handleSubmitCustom) : isEstimateMode ? () => gateThenSubmit(handleSubmitEstimate) : () => gateThenSubmit(handleSubmitManual)}
+              disabled={isPending || isEstimatingMeal || isCheckingMemory || !canSubmitCarbs}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-base font-semibold text-white disabled:opacity-40"
+              style={{ background: "linear-gradient(145deg, rgba(217,119,6,0.9), rgba(180,83,9,0.85))", boxShadow: "0 8px 24px rgba(217,119,6,0.25), inset 0 1px 1px rgba(255,255,255,0.2)" }}
+            >
+              {isPending || isCheckingMemory ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Logging...
+                </>
+              ) : isCustomMode ? (
+                <>
+                  <Check className="h-4 w-4" />
+                  {canSubmitCustom ? "Log carbs" : "Enter food and carbs"}
+                </>
+              ) : isEstimateMode ? (
+                <>
+                  <Check className="h-4 w-4" />
+                  Log meal estimate
+                </>
+              ) : canSubmitManual ? (
+                "Log meal"
+              ) : (
+                "Select a food to log"
+              )}
+            </button>
+          </div>
+        )}
       </div>
 
       <MealMemoryModal
@@ -820,3 +837,5 @@ Do not give insulin dosing advice.
     </>
   );
 }
+
+export default forwardRef(CarbsTab);

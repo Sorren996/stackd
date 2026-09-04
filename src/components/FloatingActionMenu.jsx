@@ -1,13 +1,15 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Syringe, Droplets, Wheat } from "lucide-react";
+import { Plus, Syringe, Droplets, Wheat, Utensils } from "lucide-react";
 import DoseForm from "@/components/DoseForm";
+import CombinedLogSheet from "@/components/CombinedLogSheet";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 
 const ACTIONS = [
   { id: "insulin", label: "Support", Icon: Syringe, color: "91,163,184" },
   { id: "glucose", label: "Glucose", Icon: Droplets, color: "91,168,138" },
   { id: "carbs", label: "Nourishment", Icon: Wheat, color: "212,160,86" },
+  { id: "both", label: "Meal + Support", Icon: Utensils, color: "45,212,191" },
 ];
 
 export default function FloatingActionMenu() {
@@ -16,6 +18,7 @@ export default function FloatingActionMenu() {
   const [selectedMode, setSelectedMode] = useState(null);
   const [doseFormOpen, setDoseFormOpen] = useState(false);
   const [doseFormPreloaded, setDoseFormPreloaded] = useState(false);
+  const [combinedSheetOpen, setCombinedSheetOpen] = useState(false);
 
   // When a glucose source is connected, readings flow in automatically —
   // step aside so manual glucose logging doesn't compete with the sensor.
@@ -38,6 +41,11 @@ export default function FloatingActionMenu() {
   }, []);
 
   const handleSelect = (mode) => {
+    if (mode === "both") {
+      setExpanded(false);
+      setCombinedSheetOpen(true);
+      return;
+    }
     setSelectedMode(mode);
     setExpanded(false);
     setDoseFormPreloaded(true);
@@ -48,6 +56,10 @@ export default function FloatingActionMenu() {
     <>
       {(doseFormPreloaded || doseFormOpen) && (
         <DoseForm open={doseFormOpen} onOpenChange={setDoseFormOpen} mode={selectedMode} />
+      )}
+
+      {combinedSheetOpen && (
+        <CombinedLogSheet open={combinedSheetOpen} onOpenChange={setCombinedSheetOpen} />
       )}
 
       {/* Backdrop when bloom menu is open */}
