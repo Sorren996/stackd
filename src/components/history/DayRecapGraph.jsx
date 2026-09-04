@@ -231,7 +231,7 @@ export default function DayRecapGraph({ glucose, carbs, insulin, targetLow, targ
     >
       <div className="relative">
       <ResponsiveContainer width="100%" height={200}>
-        <ComposedChart data={data} margin={{ top: 10, right: 10, left: 8, bottom: 4 }}>
+        <ComposedChart data={data} margin={{ top: 10, right: 34, left: 8, bottom: 4 }}>
           <defs>
             <linearGradient id="dayGlucoseGrad" x1="0" y1={0} x2="0" y2={1}>
               {lineStops.map((s, i) => (
