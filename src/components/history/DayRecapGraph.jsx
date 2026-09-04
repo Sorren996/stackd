@@ -290,10 +290,10 @@ export default function DayRecapGraph({ glucose, carbs, insulin, targetLow, targ
             connectNulls
           />
           {carbScatter.length > 0 && (
-            <Scatter data={carbScatter} shape={<EventDot onSelect={handleSelect} />} isAnimationActive={false} />
+            <Scatter data={carbScatter} dataKey="y" shape={<EventDot onSelect={handleSelect} />} isAnimationActive={false} />
           )}
           {insulinScatter.length > 0 && (
-            <Scatter data={insulinScatter} shape={<EventDot onSelect={handleSelect} />} isAnimationActive={false} />
+            <Scatter data={insulinScatter} dataKey="y" shape={<EventDot onSelect={handleSelect} />} isAnimationActive={false} />
           )}
           {manualDots.map((d, i) => (
             <ReferenceDot
