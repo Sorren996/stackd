@@ -13,7 +13,7 @@ import {
 import { format } from "date-fns";
 import { GLUCOSE_STATUS_COLORS } from "@/lib/glucoseStatus";
 import { getInsulinProfile } from "@/lib/insulinPharmacology";
-import { minutesOfDay, getGlucoseAt } from "@/lib/dayRecapMetrics";
+import { minutesOfDay, getGlucoseAt, findReadingNear } from "@/lib/dayRecapMetrics";
 
 const HOUR = 60;
 const DAY_MIN = 24 * 60;
@@ -71,43 +71,71 @@ function EventPopover({ event, onClose }) {
         style={{ left: event.cx, top: event.cy - 10 }}
       >
         <div
-          className="pointer-events-auto w-max max-w-[220px] rounded-xl border px-3 py-2.5 shadow-xl"
+          className="pointer-events-auto w-max max-w-[280px] rounded-xl border px-3.5 py-3 shadow-xl"
           style={{
             background: "linear-gradient(165deg, rgba(20,30,26,0.97), rgba(12,18,15,0.97))",
             borderColor: "rgba(255,255,255,0.16)",
             backdropFilter: "blur(12px)",
           }}
         >
-          <div className="mb-1 flex items-center gap-1.5">
+          <div className="mb-1.5 flex items-center gap-1.5">
             <span
               className="inline-block h-2 w-2 rounded-full"
               style={{ background: payload.dotColor || (isCarb ? "#f59e0b" : "#5ba3b8") }}
             />
             <span className="text-[11px] font-bold text-white">
-              {isCarb ? "Nourishment" : "Support"}
+              {isCarb ? (payload.name || "Nourishment") : (payload.type || "Support")}
             </span>
             <span className="ml-auto text-[9px] font-medium text-white/40">{time}</span>
           </div>
           {isCarb ? (
-            <div className="space-y-0.5">
-              <p className="text-xs font-semibold text-white/90">{payload.name || "Food"}</p>
+            <div className="space-y-1">
               <p className="text-[11px] text-white/55">
                 {Math.round(payload.carbs)}g carbs
                 {payload.profile ? ` · ${payload.profile}` : ""}
               </p>
               {payload.highPF && (
-                <p className="text-[10px] font-medium text-amber-300/70">Higher protein / fat</p>
+                <p className="text-[10px] font-medium text-purple-300/70">Higher protein / fat</p>
               )}
-              {payload.notes && <p className="text-[10px] text-white/45">{payload.notes}</p>}
+              {payload.glucoseAt != null && (
+                <p className="text-[10px] text-white/45">{Math.round(payload.glucoseAt)} mg/dL at meal</p>
+              )}
+              {payload.glucoseAt60 != null && (
+                <p className="text-[10px] text-white/45">60 min later → {Math.round(payload.glucoseAt60)} mg/dL</p>
+              )}
+              {payload.glucoseAt120 != null && (
+                <p className="text-[10px] text-white/45">120 min later → {Math.round(payload.glucoseAt120)} mg/dL</p>
+              )}
+              {payload.rise != null && (
+                <p
+                  className="text-[10px] font-medium"
+                  style={{ color: payload.rise > 30 ? "#d4a056" : payload.rise < 0 ? "#5ba88a" : "rgba(255,255,255,0.6)" }}
+                >
+                  Glucose {payload.rise > 0 ? "rose" : "changed"} {payload.rise > 0 ? "+" : ""}
+                  {Math.round(payload.rise)} mg/dL over the following hour
+                </p>
+              )}
+              {payload.notes && <p className="text-[10px] text-white/35">{payload.notes}</p>}
             </div>
           ) : (
-            <div className="space-y-0.5">
-              <p className="text-xs font-semibold text-white/90">{payload.type || "Insulin"}</p>
+            <div className="space-y-1">
               <p className="text-[11px] text-white/55">{Math.round(payload.units * 10) / 10} units</p>
               {payload.glucoseAt != null && (
-                <p className="text-[10px] text-white/45">Glucose ~{Math.round(payload.glucoseAt)} mg/dL</p>
+                <p className="text-[10px] text-white/45">{Math.round(payload.glucoseAt)} mg/dL at dose</p>
               )}
-              {payload.notes && <p className="text-[10px] text-white/45">{payload.notes}</p>}
+              {payload.glucoseAt60 != null && (
+                <p className="text-[10px] text-white/45">60 min later → {Math.round(payload.glucoseAt60)} mg/dL</p>
+              )}
+              {payload.change != null && (
+                <p
+                  className="text-[10px] font-medium"
+                  style={{ color: payload.change < -10 ? "#5ba88a" : payload.change > 10 ? "#d4a056" : "rgba(255,255,255,0.6)" }}
+                >
+                  Glucose {payload.change > 0 ? "rose" : "eased"} {payload.change > 0 ? "+" : ""}
+                  {Math.round(payload.change)} mg/dL over the following hour
+                </p>
+              )}
+              {payload.notes && <p className="text-[10px] text-white/35">{payload.notes}</p>}
             </div>
           )}
         </div>
@@ -179,6 +207,8 @@ export default function DayRecapGraph({ glucose, carbs, insulin, targetLow, targ
       if (x == null) return null;
       const glucoseAt = getGlucoseAt(readings, t);
       if (glucoseAt == null) return null;
+      const at60 = findReadingNear(readings, t + 60 * 60 * 1000, -10, 15);
+      const at120 = findReadingNear(readings, t + 120 * 60 * 1000, -10, 15);
       return {
         x,
         y: glucoseAt,
@@ -190,6 +220,10 @@ export default function DayRecapGraph({ glucose, carbs, insulin, targetLow, targ
         notes: c.notes,
         time: c.consumed_at,
         dotColor: "#f59e0b",
+        glucoseAt,
+        glucoseAt60: at60?.value ?? null,
+        glucoseAt120: at120?.value ?? null,
+        rise: at60 ? at60.value - glucoseAt : null,
       };
     })
     .filter(Boolean);
@@ -201,6 +235,7 @@ export default function DayRecapGraph({ glucose, carbs, insulin, targetLow, targ
       if (x == null) return null;
       const glucoseAt = getGlucoseAt(readings, t);
       if (glucoseAt == null) return null;
+      const at60 = findReadingNear(readings, t + 60 * 60 * 1000, -10, 15);
       return {
         x,
         y: glucoseAt,
@@ -210,6 +245,8 @@ export default function DayRecapGraph({ glucose, carbs, insulin, targetLow, targ
         notes: d.notes,
         time: d.administered_at,
         glucoseAt,
+        glucoseAt60: at60?.value ?? null,
+        change: at60 ? at60.value - glucoseAt : null,
         dotColor: getInsulinProfile(d.insulin_type)?.color || "#5ba3b8",
       };
     })

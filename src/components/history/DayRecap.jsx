@@ -1,10 +1,26 @@
 import { useMemo } from "react";
 import DaySummary from "./DaySummary";
 import DayRecapGraph from "./DayRecapGraph";
-import DayInsights from "./DayInsights";
+import EnhancedDayInsights from "./EnhancedDayInsights";
+import DayMealOutcomes from "./DayMealOutcomes";
+import DayInsulinActivity from "./DayInsulinActivity";
+import DayRecovery from "./DayRecovery";
+import DayComparison from "./DayComparison";
+import DayTimeline from "./DayTimeline";
 import { computeDayGlucoseMetrics, isManualGlucose } from "@/lib/dayRecapMetrics";
+import {
+  computeMealOutcomes,
+  computeInsulinActivity,
+  computeRecovery,
+  computeComparison,
+  buildDayTimeline,
+  computeEnhancedInsights,
+} from "@/lib/dayRecapAnalytics";
+
+const HOUR_MS = 60 * 60 * 1000;
 
 export default function DayRecap({
+  allDays,
   daySummary,
   glucose,
   carbs,
@@ -24,9 +40,41 @@ export default function DayRecap({
     [glucose]
   );
 
-  // CGM data exists only when the user is connected AND the day summary
-  // recorded sensor readings. Otherwise any glucose is manual.
   const hasCGM = dexcomConnected && (daySummary?.glucose?.count || 0) > 0;
+
+  const mealOutcomes = useMemo(
+    () => computeMealOutcomes(carbs, insulin, glucose),
+    [carbs, insulin, glucose]
+  );
+
+  const dayDate = daySummary?.date;
+  const dayStart = dayDate ? new Date(dayDate + "T00:00:00").getTime() : Date.now() - 24 * HOUR_MS;
+  const dayEnd = dayStart + 24 * HOUR_MS;
+
+  const insulinActivity = useMemo(
+    () => computeInsulinActivity(insulin, dayStart, dayEnd),
+    [insulin, dayStart, dayEnd]
+  );
+
+  const recovery = useMemo(
+    () => computeRecovery(glucose),
+    [glucose]
+  );
+
+  const comparison = useMemo(
+    () => computeComparison(daySummary, allDays, dayDate),
+    [daySummary, allDays, dayDate]
+  );
+
+  const timeline = useMemo(
+    () => buildDayTimeline(glucose, carbs, insulin, metrics, recovery, targetLow, targetHigh),
+    [glucose, carbs, insulin, metrics, recovery, targetLow, targetHigh]
+  );
+
+  const insights = useMemo(
+    () => computeEnhancedInsights(metrics, carbs, insulin, glucose, targetLow, targetHigh),
+    [metrics, carbs, insulin, glucose, targetLow, targetHigh]
+  );
 
   const carbTotal = (carbs || []).reduce((s, c) => s + (Number(c.carbs) || 0), 0);
   const insulinTotal = (insulin || []).reduce((s, d) => s + (Number(d.units) || 0), 0);
@@ -43,7 +91,7 @@ export default function DayRecap({
 
   return (
     <div className="space-y-5">
-      {/* Day context line — nourishment & support totals */}
+      {/* Day context line */}
       {(carbTotal > 0 || insulinTotal > 0) && (
         <p className="px-1 text-xs font-medium text-white/45">
           {carbTotal > 0 && <>{Math.round(carbTotal)}g nourishment</>}
@@ -62,7 +110,7 @@ export default function DayRecap({
         targetHigh={targetHigh}
       />
 
-      {/* Glucose graph — the hero */}
+      {/* Glucose graph — the centerpiece */}
       {metrics.hasData && (
         <DayRecapGraph
           glucose={glucose}
@@ -73,10 +121,25 @@ export default function DayRecap({
         />
       )}
 
-      {/* Insights */}
-      <DayInsights metrics={metrics} carbs={carbs} />
+      {/* What stood out */}
+      {insights.length > 0 && <EnhancedDayInsights insights={insights} />}
 
-      {/* Completely empty day */}
+      {/* Meal outcomes */}
+      {mealOutcomes.length > 0 && <DayMealOutcomes meals={mealOutcomes} />}
+
+      {/* Insulin activity */}
+      {insulinActivity && <DayInsulinActivity activity={insulinActivity} />}
+
+      {/* Recovery */}
+      {recovery && <DayRecovery recovery={recovery} />}
+
+      {/* Compared with usual */}
+      {comparison && <DayComparison comparison={comparison} />}
+
+      {/* Day timeline */}
+      {timeline.length > 0 && <DayTimeline events={timeline} />}
+
+      {/* Empty state */}
       {!hasAnyActivity && (
         <div
           className="rounded-2xl border px-4 py-8 text-center"

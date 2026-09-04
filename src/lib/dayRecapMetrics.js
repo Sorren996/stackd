@@ -60,6 +60,25 @@ export function getGlucoseAt(readings, timeMs) {
   return nearest.value;
 }
 
+// Find the reading closest to the midpoint of [windowStart, windowEnd],
+// but only if a reading falls within that window.
+export function findReadingNear(readings, targetTimeMs, beforeMin = -15, afterMin = 15) {
+  if (!readings?.length) return null;
+  const windowStart = targetTimeMs + beforeMin * 60 * 1000;
+  const windowEnd = targetTimeMs + afterMin * 60 * 1000;
+  let nearest = null;
+  let bestDist = Infinity;
+  for (const r of readings) {
+    if (r.time < windowStart || r.time > windowEnd) continue;
+    const dist = Math.abs(r.time - targetTimeMs);
+    if (dist < bestDist) {
+      bestDist = dist;
+      nearest = r;
+    }
+  }
+  return nearest;
+}
+
 // Derives a full set of day-level glucose observations from raw readings.
 // All calculations are client-side over existing data — no backend changes.
 export function computeDayGlucoseMetrics(glucose, targetLow, targetHigh) {

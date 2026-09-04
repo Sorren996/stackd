@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
-import { ChevronLeft, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
@@ -413,8 +413,8 @@ export default function History() {
     setLevel("days");
   };
 
-  const handleSelectDay = (date) => {
-    setDirection(1);
+  const handleSelectDay = (date, dir = 1) => {
+    setDirection(dir);
     setSelectedDay(date);
     setLevel("recap");
   };
@@ -476,14 +476,46 @@ export default function History() {
           </button>
         )}
         <div className="min-w-0">
-          <h2 className="text-lg font-semibold text-white">{headerTitle}</h2>
+          <h2 className="text-lg font-semibold text-white truncate">{headerTitle}</h2>
           <p className="text-xs text-white/40">{headerSub}</p>
         </div>
+        {level === "recap" && selectedDay && allDays.length > 1 && (
+          <div className="ml-auto flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => {
+                const sorted = [...allDays].sort((a, b) => a.date.localeCompare(b.date));
+                const idx = sorted.findIndex((d) => d.date === selectedDay);
+                if (idx > 0) handleSelectDay(sorted[idx - 1].date, -1);
+              }}
+              disabled={!allDays.some((d) => d.date < selectedDay)}
+              aria-label="Previous day"
+              className="flex h-9 w-9 items-center justify-center rounded-full border text-white/70 transition hover:text-white disabled:opacity-30"
+              style={{ background: "linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))", borderColor: "rgba(255,255,255,0.14)" }}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const sorted = [...allDays].sort((a, b) => a.date.localeCompare(b.date));
+                const idx = sorted.findIndex((d) => d.date === selectedDay);
+                if (idx < sorted.length - 1) handleSelectDay(sorted[idx + 1].date, 1);
+              }}
+              disabled={!allDays.some((d) => d.date > selectedDay)}
+              aria-label="Next day"
+              className="flex h-9 w-9 items-center justify-center rounded-full border text-white/70 transition hover:text-white disabled:opacity-30"
+              style={{ background: "linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))", borderColor: "rgba(255,255,255,0.14)" }}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        )}
       </div>
 
       <AnimatePresence mode="wait" custom={direction}>
         <motion.div
-          key={level}
+          key={level === "recap" ? "recap-" + selectedDay : level}
           custom={direction}
           initial={{ opacity: 0, x: direction > 0 ? 28 : -28 }}
           animate={{ opacity: 1, x: 0 }}
@@ -500,6 +532,7 @@ export default function History() {
 
           {level === "recap" && selectedDay && (
             <DayRecap
+              allDays={allDays}
               daySummary={selectedDaySummary}
               glucose={recapData.glucose || []}
               carbs={recapData.carbs || []}
