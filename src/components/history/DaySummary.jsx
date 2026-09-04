@@ -73,7 +73,7 @@ export default function DaySummary({ metrics, daySummary, manualCount, hasCGM, t
           <p className="text-[10px] font-medium text-white/40">mg/dL average</p>
         </div>
         <div className="text-right">
-          <span className="text-3xl font-black text-teal-300/90">{tir}%</span>
+          <span className="text-4xl font-black text-teal-300/90">{tir}%</span>
           <p className="text-[10px] font-medium text-white/40">in your comfort zone</p>
         </div>
       </div>
