@@ -68,9 +68,9 @@ export default function DaySummary({ metrics, daySummary, manualCount, hasCGM, t
   return (
     <div className="space-y-3">
       <div className="flex items-end justify-between gap-3">
-        <div className="flex items-baseline gap-2">
+        <div>
           <span className="text-4xl font-black text-white">{avg}</span>
-          <span className="text-xs font-medium text-white/40">mg/dL</span>
+          <p className="text-[10px] font-medium text-white/40">mg/dL average</p>
         </div>
         <div className="text-right">
           <span className="text-3xl font-black text-teal-300/90">{tir}%</span>
