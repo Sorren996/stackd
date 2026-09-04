@@ -232,7 +232,80 @@ export default function DayRecapGraph({ glucose, carbs, insulin, targetLow, targ
       <div className="relative">
       <ResponsiveContainer width="100%" height={200}>
         <ComposedChart data={data} margin={{ top: 10, right: 10, left: 8, bottom: 4 }}>
-...
+          <defs>
+            <linearGradient id="dayGlucoseGrad" x1="0" y1={0} x2="0" y2={1}>
+              {lineStops.map((s, i) => (
+                <stop key={i} offset={`${s.offset}%`} stopColor={s.color} stopOpacity={s.opacity} />
+              ))}
+            </linearGradient>
+          </defs>
+          <XAxis
+            dataKey="x"
+            type="number"
+            domain={[0, DAY_MIN]}
+            ticks={ticks}
+            tick={{ fontSize: 9, fill: "rgba(255,255,255,0.35)" }}
+            tickFormatter={(v) => {
+              const h = Math.floor(v / 60);
+              const ampm = h >= 12 ? "p" : "a";
+              const hr = h % 12 === 0 ? 12 : h % 12;
+              return `${hr}${ampm}`;
+            }}
+            axisLine={{ stroke: "rgba(255,255,255,0.08)" }}
+            tickLine={false}
+          />
+          <YAxis domain={[yMin, yMax]} hide />
+          <ReferenceArea y1={targetLow} y2={targetHigh} fill="#5ba88a" fillOpacity={0.06} />
+          <ReferenceLine
+            y={targetHigh}
+            stroke="rgba(255,255,255,0.18)"
+            strokeDasharray="3 4"
+            label={{
+              value: `${Math.round(targetHigh)}`,
+              position: "right",
+              fill: "rgba(255,255,255,0.5)",
+              fontSize: 9,
+              offset: 6,
+            }}
+          />
+          <ReferenceLine
+            y={targetLow}
+            stroke="rgba(255,255,255,0.18)"
+            strokeDasharray="3 4"
+            label={{
+              value: `${Math.round(targetLow)}`,
+              position: "right",
+              fill: "rgba(255,255,255,0.5)",
+              fontSize: 9,
+              offset: 6,
+            }}
+          />
+          <Line
+            type="monotone"
+            dataKey="value"
+            stroke="url(#dayGlucoseGrad)"
+            strokeWidth={2.2}
+            dot={false}
+            isAnimationActive={false}
+            connectNulls
+          />
+          {carbScatter.length > 0 && (
+            <Scatter data={carbScatter} shape={<EventDot onSelect={handleSelect} />} isAnimationActive={false} />
+          )}
+          {insulinScatter.length > 0 && (
+            <Scatter data={insulinScatter} shape={<EventDot onSelect={handleSelect} />} isAnimationActive={false} />
+          )}
+          {manualDots.map((d, i) => (
+            <ReferenceDot
+              key={`man_${i}`}
+              x={d.x}
+              y={d.y}
+              r={3.5}
+              fill={GLUCOSE_STATUS_COLORS.inRange}
+              stroke="#ffffff"
+              strokeWidth={1.2}
+            />
+          ))}
         </ComposedChart>
       </ResponsiveContainer>
       <EventPopover event={selected} onClose={() => setSelected(null)} />
