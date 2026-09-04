@@ -11,6 +11,7 @@ import {
   getSensorSessionEndMs,
   isSessionExpired,
 } from "@/lib/sensorSession";
+import SensorDayTrail from "@/components/settings/SensorDayTrail";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const COLOR_FRESH = "#5ba88a";
@@ -102,28 +103,22 @@ export default function SensorSessionCard() {
           <div className="flex min-w-0 flex-1 flex-col justify-center">
             {hasSession ? (
               <>
-                <div className="relative mb-2 h-1.5 w-full rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
-                  <div
-                    className="absolute inset-y-0 left-0 rounded-full"
-                    style={{
-                      width: `${progressPct}%`,
-                      background: `linear-gradient(90deg, ${color}30, ${color}90)`,
-                      boxShadow: `0 0 6px ${color}80`,
-                    }}
-                  />
-                  <div className="pointer-events-none absolute inset-y-0" style={{ left: `${progressPct}%` }}>
-                    <div className="h-full w-px -translate-x-1/2" style={{ background: `${color}80` }} />
-                    <div
-                      className="absolute top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white"
-                      style={{ boxShadow: `0 0 4px ${color}, 0 0 8px ${color}90` }}
-                    />
-                  </div>
-                </div>
-                <p className={`text-sm font-medium leading-tight ${expired ? "text-amber-300/80" : "text-white/65"}`}>
+                <p className={`text-base font-bold leading-tight ${expired ? "text-amber-300/80" : "text-white/85"}`}>
                   {remaining?.text}
                 </p>
                 <p className="mt-0.5 truncate text-[11px] text-white/40">
                   {modelMeta?.label}
+                </p>
+                <div className="mt-2.5">
+                  <SensorDayTrail
+                    totalDays={modelMeta?.durationDays}
+                    elapsedMs={elapsedMs}
+                    remainingMs={remainingMs}
+                    expired={expired}
+                  />
+                </div>
+                <p className="mt-1.5 text-center text-[10px] font-medium text-white/40">
+                  Day {expired ? (modelMeta?.durationDays ?? 1) : Math.min(Math.floor(elapsedMs / DAY_MS) + 1, modelMeta?.durationDays ?? 1)} of {modelMeta?.durationDays ?? 1}
                 </p>
               </>
             ) : (
