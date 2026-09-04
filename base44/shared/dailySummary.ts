@@ -165,12 +165,11 @@ export async function recomputeDailySummary(
     ),
   ]);
 
-  // Match the existing getHistorySummary source filter: when CGM is connected,
-  // only canonical "dexcom" readings contribute to stats (Share readings are
-  // reconciled to "dexcom" by the API sync). When not connected, all readings
-  // are used.
+  // Match the getHistorySummary source filter: when CGM is connected, both
+  // canonical "dexcom" and near-real-time "dexcom_share" readings contribute
+  // to stats. When not connected, all readings are used.
   const glucoseForStats = dexcomConnected
-    ? glucose.filter((g) => g.source === "dexcom")
+    ? glucose.filter((g) => g.source === "dexcom" || g.source === "dexcom_share")
     : glucose;
 
   const metrics = computeDailyMetrics(

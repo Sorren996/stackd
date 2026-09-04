@@ -83,7 +83,7 @@ Deno.serve(async (req) => {
     };
 
     const glucoseForStats = dexcomConnected
-      ? glucose.filter((g: any) => g.source === "dexcom")
+      ? glucose.filter((g: any) => g.source === "dexcom" || g.source === "dexcom_share")
       : glucose;
 
     glucoseForStats.forEach((g: any) => {
