@@ -112,14 +112,10 @@ export default function SensorSessionCard() {
                 <div className="mt-2.5">
                   <SensorDayTrail
                     totalDays={modelMeta?.durationDays}
-                    elapsedMs={elapsedMs}
-                    remainingMs={remainingMs}
+                    remainingDays={remaining?.days ?? 0}
                     expired={expired}
                   />
                 </div>
-                <p className="mt-1.5 text-center text-[10px] font-medium text-white/40">
-                  Day {expired ? (modelMeta?.durationDays ?? 1) : Math.min(Math.floor(elapsedMs / DAY_MS) + 1, modelMeta?.durationDays ?? 1)} of {modelMeta?.durationDays ?? 1}
-                </p>
               </>
             ) : (
               <>
