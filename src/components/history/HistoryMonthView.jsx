@@ -1,7 +1,7 @@
 import { CalendarDays, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { GLASS_SURFACE } from "@/lib/glassTheme";
-import { monthStats, trendSummary } from "@/lib/historyAggregations";
+import { monthStats } from "@/lib/historyAggregations";
 import HistoryStat from "./HistoryStat";
 
 export default function HistoryMonthView({ months, onSelectMonth }) {
@@ -21,6 +21,17 @@ export default function HistoryMonthView({ months, onSelectMonth }) {
     <div className="space-y-3">
       {months.map((month) => {
         const stats = monthStats(month);
+        const glucoseDays = month.days.filter((d) => d.glucose.count > 0).length;
+        const trackedDays = month.days.filter(
+          (d) => d.glucose.count > 0 || d.carbs.count > 0 || d.insulin.count > 0
+        ).length;
+
+        const subline = stats.glucoseCount
+          ? `${glucoseDays} day${glucoseDays === 1 ? "" : "s"} · ${stats.inRangePct}% in range`
+          : trackedDays
+            ? `${trackedDays} day${trackedDays === 1 ? "" : "s"} tracked`
+            : "No moments yet";
+
         return (
           <motion.button
             key={month.key}
@@ -31,11 +42,13 @@ export default function HistoryMonthView({ months, onSelectMonth }) {
             style={GLASS_SURFACE}
           >
             <div className="min-w-0 flex-1">
-              <span className="text-base font-bold text-white">{month.label} {month.year}</span>
-              <p className="mt-0.5 text-[11px] italic text-white/45">{trendSummary(month)}</p>
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-base font-bold text-white">{month.label} {month.year}</span>
+                <span className="shrink-0 text-[11px] font-medium text-white/45">{subline}</span>
+              </div>
               <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
                 <HistoryStat label="Avg glucose" value={stats.glucoseAvg ?? "—"} unit="mg/dL" />
-                <HistoryStat label="Readings" value={stats.glucoseCount} />
+                <HistoryStat label="Time in range" value={stats.inRangePct ?? "—"} unit="%" />
                 <HistoryStat label="Nourishment" value={stats.carbTotal} unit="g" />
                 <HistoryStat label="Support" value={stats.insulinTotal} unit="u" />
               </div>

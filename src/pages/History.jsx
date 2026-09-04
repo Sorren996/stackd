@@ -9,11 +9,10 @@ import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
 import { DateScrollField, TimeScrollField, NumberPadField, TextPadField, SelectField } from "@/components/FormInputFields";
 import HighProteinFatCheckbox from "@/components/HighProteinFatCheckbox";
 import { cancelSplitPlansForMeal, cleanupSplitPlansForDose } from "@/lib/splitDoseUtils";
-import { groupDaysByMonth, groupDaysByWeek, monthStats, weekStats, trendSummary } from "@/lib/historyAggregations";
+import { groupDaysByMonth, monthStats } from "@/lib/historyAggregations";
 import HistoryMonthView from "@/components/history/HistoryMonthView";
-import HistoryWeekView from "@/components/history/HistoryWeekView";
-import HistoryDayView from "@/components/history/HistoryDayView";
-import HistoryTimelineView from "@/components/history/HistoryTimelineView";
+import HistoryMonthDays from "@/components/history/HistoryMonthDays";
+import DayRecap from "@/components/history/DayRecap";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 
 function readTargetRange() {
@@ -25,21 +24,6 @@ function readTargetRange() {
   return {
     low: Number.isFinite(low) ? low : 70,
     high: Number.isFinite(high) ? high : 180,
-  };
-}
-
-function normalizeCarbEntry(entry) {
-  const consumedAt = entry.consumed_at || entry.recorded_at || entry.created_date || entry.created_at;
-  const carbs = Number(entry.carbs ?? entry.carbs_grams ?? entry.total_carbs ?? entry.totalCarbs ?? 0);
-  const name = entry.food_name || entry.name || "Estimated meal";
-
-  return {
-    ...entry,
-    id: entry.id || entry._id || `${consumedAt}-${name}-${carbs}`,
-    name,
-    food_name: name,
-    carbs: Number.isFinite(carbs) ? carbs : 0,
-    consumed_at: consumedAt,
   };
 }
 
@@ -275,9 +259,8 @@ function EditLogSheet({ log, onClose, onSave, isSaving }) {
 export default function History() {
   const queryClient = useQueryClient();
   const { connected: dexcomConnected } = useDexcomConnection();
-  const [level, setLevel] = useState("month"); // month | week | day | timeline
+  const [level, setLevel] = useState("month"); // month | days | recap
   const [selectedMonth, setSelectedMonth] = useState(null);
-  const [selectedWeek, setSelectedWeek] = useState(null);
   const [selectedDay, setSelectedDay] = useState(null);
   const [editingLog, setEditingLog] = useState(null);
   const [targetRange, setTargetRange] = useState(readTargetRange);
@@ -312,40 +295,37 @@ export default function History() {
 
   const months = useMemo(() => groupDaysByMonth(allDays), [allDays]);
   const currentMonth = useMemo(() => months.find((m) => m.key === selectedMonth) || null, [months, selectedMonth]);
-  const weeks = useMemo(() => (currentMonth ? groupDaysByWeek(currentMonth.days) : []), [currentMonth]);
-  const currentWeek = useMemo(() => weeks.find((w) => w.key === selectedWeek) || null, [weeks, selectedWeek]);
-  const weekDays = useMemo(
-    () => (currentWeek ? [...currentWeek.days].sort((a, b) => b.date.localeCompare(a.date)) : []),
-    [currentWeek]
+  const monthDays = useMemo(
+    () => (currentMonth ? [...currentMonth.days].sort((a, b) => b.date.localeCompare(a.date)) : []),
+    [currentMonth]
+  );
+  const selectedDaySummary = useMemo(
+    () => allDays.find((d) => d.date === selectedDay) || null,
+    [allDays, selectedDay]
   );
 
-  const { data: dayLogs = [], isLoading: loadingDayLogs } = useQuery({
-    queryKey: ["history-day-logs", selectedDay],
+  const { data: recapData = {}, isLoading: loadingRecap } = useQuery({
+    queryKey: ["history-day-recap", selectedDay],
     queryFn: async () => {
       const start = new Date(`${selectedDay}T00:00:00`).toISOString();
       const end = new Date(`${selectedDay}T23:59:59`).toISOString();
       const [glucose, carbs, insulin] = await Promise.all([
-        base44.entities.GlucoseReading.filter({ recorded_at: { $gte: start, $lte: end } }, "-recorded_at", 500),
+        base44.entities.GlucoseReading.filter({ recorded_at: { $gte: start, $lte: end } }, "-recorded_at", 1000),
         base44.entities.CarbEntry.filter({ consumed_at: { $gte: start, $lte: end } }, "-consumed_at", 500),
         base44.entities.InsulinDose.filter({ administered_at: { $gte: start, $lte: end } }, "-administered_at", 500),
       ]);
-      const merged = [
-        ...glucose.filter((g) => {
-          if (g.source === "system") return false;
-          if (dexcomConnected && (g.source === "dexcom" || g.source === "dexcom_share")) return false;
-          return true;
-        }).map((i) => ({ ...i, feedType: "glucose", timestamp: new Date(i.recorded_at).getTime() })),
-        ...carbs.map((i) => ({ ...normalizeCarbEntry(i), feedType: "carbs", timestamp: new Date(i.consumed_at).getTime() })),
-        ...insulin.map((i) => ({ ...i, feedType: "insulin", timestamp: new Date(i.administered_at).getTime() })),
-      ].sort((a, b) => b.timestamp - a.timestamp);
-      return merged;
+      return {
+        glucose: glucose.filter((g) => g.source !== "system"),
+        carbs,
+        insulin,
+      };
     },
-    enabled: level === "timeline" && !!selectedDay,
+    enabled: level === "recap" && !!selectedDay,
   });
 
   const invalidateHistory = () => {
     queryClient.invalidateQueries({ queryKey: ["history-summary"] });
-    queryClient.invalidateQueries({ queryKey: ["history-day-logs"] });
+    queryClient.invalidateQueries({ queryKey: ["history-day-recap"] });
   };
 
   const deleteDose = useMutation({
@@ -430,30 +410,21 @@ export default function History() {
   const handleSelectMonth = (key) => {
     setDirection(1);
     setSelectedMonth(key);
-    setLevel("week");
-  };
-
-  const handleSelectWeek = (key) => {
-    setDirection(1);
-    setSelectedWeek(key);
-    setLevel("day");
+    setLevel("days");
   };
 
   const handleSelectDay = (date) => {
     setDirection(1);
     setSelectedDay(date);
-    setLevel("timeline");
+    setLevel("recap");
   };
 
   const goBack = () => {
     setDirection(-1);
-    if (level === "timeline") {
-      setLevel("day");
+    if (level === "recap") {
+      setLevel("days");
       setSelectedDay(null);
-    } else if (level === "day") {
-      setLevel("week");
-      setSelectedWeek(null);
-    } else if (level === "week") {
+    } else if (level === "days") {
       setLevel("month");
       setSelectedMonth(null);
     }
@@ -461,16 +432,18 @@ export default function History() {
 
   let headerTitle = "Your 90-Day Journey";
   let headerSub = "Reflecting on the last three months";
-  if (level === "week" && currentMonth) {
+  if (level === "days" && currentMonth) {
     headerTitle = `${currentMonth.label} ${currentMonth.year}`;
-    headerSub = trendSummary(currentMonth);
-  } else if (level === "day" && currentWeek) {
-    headerTitle = `Week of ${format(currentWeek.weekStart, "MMM d")}`;
-    const ws = weekStats(currentWeek);
-    headerSub = ws.glucoseAvg ? `${ws.glucoseAvg} mg/dL weekly average` : "No glucose moments this week";
-  } else if (level === "timeline" && selectedDay) {
+    const s = monthStats(currentMonth);
+    const tracked = currentMonth.days.filter((d) => d.glucose.count > 0).length;
+    headerSub = s.glucoseCount
+      ? `${tracked} day${tracked === 1 ? "" : "s"} tracked · ${s.inRangePct}% in range`
+      : tracked
+        ? `${tracked} day${tracked === 1 ? "" : "s"} tracked`
+        : "No moments yet";
+  } else if (level === "recap" && selectedDay) {
     headerTitle = format(parseISO(selectedDay), "EEEE, MMMM d");
-    headerSub = `${dayLogs.length} ${dayLogs.length === 1 ? "moment" : "moments"}`;
+    headerSub = "Your day at a glance";
   }
 
   if (loadingSummary) {
@@ -521,19 +494,20 @@ export default function History() {
             <HistoryMonthView months={months} onSelectMonth={handleSelectMonth} />
           )}
 
-          {level === "week" && currentMonth && (
-            <HistoryWeekView weeks={weeks} onSelectWeek={handleSelectWeek} />
+          {level === "days" && currentMonth && (
+            <HistoryMonthDays days={monthDays} onSelectDay={handleSelectDay} />
           )}
 
-          {level === "day" && currentWeek && (
-            <HistoryDayView days={weekDays} onSelectDay={handleSelectDay} />
-          )}
-
-          {level === "timeline" && selectedDay && (
-            <HistoryTimelineView
-              logs={dayLogs}
-              loading={loadingDayLogs}
+          {level === "recap" && selectedDay && (
+            <DayRecap
+              daySummary={selectedDaySummary}
+              glucose={recapData.glucose || []}
+              carbs={recapData.carbs || []}
+              insulin={recapData.insulin || []}
+              loading={loadingRecap}
               dexcomConnected={dexcomConnected}
+              targetLow={targetLow}
+              targetHigh={targetHigh}
               onEdit={(payload) => setEditingLog(payload)}
               onDeleteDose={(id) => deleteDose.mutate(id)}
               onDeleteGlucose={(id) => deleteGlucose.mutate(id)}
