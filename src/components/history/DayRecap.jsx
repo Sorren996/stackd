@@ -1,11 +1,8 @@
-import { useMemo, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown } from "lucide-react";
+import { useMemo } from "react";
 import DaySummary from "./DaySummary";
 import DayRecapGraph from "./DayRecapGraph";
 import DayInsights from "./DayInsights";
-import HistoryTimelineView from "./HistoryTimelineView";
-import { computeDayGlucoseMetrics, isManualGlucose, buildTimelineLogs } from "@/lib/dayRecapMetrics";
+import { computeDayGlucoseMetrics, isManualGlucose } from "@/lib/dayRecapMetrics";
 
 export default function DayRecap({
   daySummary,
@@ -16,13 +13,7 @@ export default function DayRecap({
   dexcomConnected,
   targetLow,
   targetHigh,
-  onEdit,
-  onDeleteDose,
-  onDeleteGlucose,
-  onDeleteCarb,
 }) {
-  const [timelineOpen, setTimelineOpen] = useState(false);
-
   const metrics = useMemo(
     () => computeDayGlucoseMetrics(glucose, targetLow, targetHigh),
     [glucose, targetLow, targetHigh]
@@ -37,11 +28,6 @@ export default function DayRecap({
   // recorded sensor readings. Otherwise any glucose is manual.
   const hasCGM = dexcomConnected && (daySummary?.glucose?.count || 0) > 0;
 
-  const timelineLogs = useMemo(
-    () => buildTimelineLogs(glucose, carbs, insulin, dexcomConnected),
-    [glucose, carbs, insulin, dexcomConnected]
-  );
-
   const carbTotal = (carbs || []).reduce((s, c) => s + (Number(c.carbs) || 0), 0);
   const insulinTotal = (insulin || []).reduce((s, d) => s + (Number(d.units) || 0), 0);
 
@@ -53,8 +39,7 @@ export default function DayRecap({
     );
   }
 
-  const hasAnyActivity = metrics.hasData || timelineLogs.length > 0;
-  const showTimeline = timelineLogs.length > 0;
+  const hasAnyActivity = metrics.hasData || carbTotal > 0 || insulinTotal > 0;
 
   return (
     <div className="space-y-5">
@@ -90,67 +75,6 @@ export default function DayRecap({
 
       {/* Insights */}
       <DayInsights metrics={metrics} carbs={carbs} />
-
-      {/* Collapsible Day Timeline — preserves all existing edit/delete */}
-      {showTimeline && (
-        <div
-          className="overflow-hidden rounded-2xl border"
-          style={{
-            background: "linear-gradient(145deg, rgba(255,255,255,0.03), rgba(255,255,255,0.008))",
-            borderColor: "rgba(255,255,255,0.10)",
-          }}
-        >
-          <button
-            type="button"
-            onClick={() => setTimelineOpen((v) => !v)}
-            className="flex w-full items-center justify-between px-4 py-3.5 text-left transition hover:bg-white/[0.03]"
-          >
-            <span className="text-sm font-bold text-white">Day Timeline</span>
-            <span className="flex items-center gap-2">
-              <span className="text-[11px] text-white/40">
-                {timelineLogs.length} {timelineLogs.length === 1 ? "moment" : "moments"}
-              </span>
-              <motion.span
-                animate={{ rotate: timelineOpen ? 180 : 0 }}
-                transition={{ duration: 0.2 }}
-                style={{ transformOrigin: "50% 50%" }}
-              >
-                <ChevronDown className="h-4 w-4 text-white/45" />
-              </motion.span>
-            </span>
-          </button>
-          <AnimatePresence initial={false}>
-            {timelineOpen && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.25, ease: "easeInOut" }}
-                className="overflow-hidden"
-              >
-                <div className="px-3 pb-3 pt-1">
-                  <HistoryTimelineView
-                    logs={timelineLogs}
-                    loading={false}
-                    dexcomConnected={dexcomConnected}
-                    onEdit={onEdit}
-                    onDeleteDose={onDeleteDose}
-                    onDeleteGlucose={onDeleteGlucose}
-                    onDeleteCarb={onDeleteCarb}
-                  />
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      )}
-
-      {/* CGM-only day with no manual moments */}
-      {!showTimeline && hasAnyActivity && (
-        <p className="px-1 text-[11px] text-white/35">
-          Automated readings only — no manual moments to review.
-        </p>
-      )}
 
       {/* Completely empty day */}
       {!hasAnyActivity && (
