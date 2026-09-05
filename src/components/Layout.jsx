@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Dashboard from "../pages/Dashboard";
 import HistoryPage from "../pages/History";
 import SettingsPage from "../pages/Settings";
+import AnalyticsPage from "../pages/Analytics";
 import { useRealtimeLogSync } from "@/hooks/useRealtimeLogSync";
 
 const navItems = [
@@ -18,6 +19,7 @@ const navItems = [
 const CachedDashboard = memo(Dashboard);
 const CachedHistoryPage = memo(HistoryPage);
 const CachedSettingsPage = memo(SettingsPage);
+const CachedAnalyticsPage = memo(AnalyticsPage);
 
 export default function Layout() {
   const location = useLocation();
@@ -25,11 +27,13 @@ export default function Layout() {
   const isSettingsRoute = location.pathname === "/settings";
   const isDashboardRoute = location.pathname === "/";
   const isHistoryRoute = location.pathname === "/history";
-  const isKeepAliveRoute = isDashboardRoute || isHistoryRoute || isSettingsRoute;
+  const isAnalyticsRoute = location.pathname === "/analytics";
+  const isKeepAliveRoute = isDashboardRoute || isHistoryRoute || isAnalyticsRoute || isSettingsRoute;
   const [visitedTabs, setVisitedTabs] = useState(() => ({
     dashboard: true,
-    history: false,
-    settings: false,
+    history: true,
+    analytics: true,
+    settings: true,
   }));
 
   // Keeps every page's cached log data fresh the instant a record changes —
@@ -96,10 +100,12 @@ export default function Layout() {
       setVisitedTabs((tabs) => (tabs.dashboard ? tabs : { ...tabs, dashboard: true }));
     } else if (isHistoryRoute) {
       setVisitedTabs((tabs) => (tabs.history ? tabs : { ...tabs, history: true }));
+    } else if (isAnalyticsRoute) {
+      setVisitedTabs((tabs) => (tabs.analytics ? tabs : { ...tabs, analytics: true }));
     } else if (isSettingsRoute) {
       setVisitedTabs((tabs) => (tabs.settings ? tabs : { ...tabs, settings: true }));
     }
-  }, [isDashboardRoute, isHistoryRoute, isSettingsRoute]);
+  }, [isDashboardRoute, isHistoryRoute, isAnalyticsRoute, isSettingsRoute]);
 
   const handleLogoClick = () => {
     navigate("/");
@@ -205,6 +211,11 @@ export default function Layout() {
           {visitedTabs.history && (
             <div hidden={!isHistoryRoute}>
               <CachedHistoryPage />
+            </div>
+          )}
+          {visitedTabs.analytics && (
+            <div hidden={!isAnalyticsRoute}>
+              <CachedAnalyticsPage />
             </div>
           )}
           {visitedTabs.settings && (

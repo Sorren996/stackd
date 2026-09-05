@@ -137,6 +137,14 @@ const AuthenticatedApp = () => {
           queryKey: ["split-plans"],
           queryFn: () => base44.entities.SplitDosePlan.list("-created_date", 20),
         }),
+        queryClientInstance.prefetchQuery({
+          queryKey: ["glucose-readings", "analytics"],
+          queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", 30000),
+        }),
+        queryClientInstance.prefetchQuery({
+          queryKey: ["dexcom-connection"],
+          queryFn: () => base44.entities.DexcomConnection.list("-created_date", 1),
+        }),
       ]);
 
       // Cache user settings into localStorage so all pages (Dashboard,
@@ -161,16 +169,6 @@ const AuthenticatedApp = () => {
 
       if (!cancelled) {
         setDataReady(true);
-
-        // Prefetch the Rhythms (analytics) glucose window in the background so
-        // the page opens with its data already warm — no loading spinner on
-        // entry. Fired after the Dashboard data so the main page loads first.
-        queryClientInstance
-          .prefetchQuery({
-            queryKey: ["glucose-readings", "analytics"],
-            queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", 30000),
-          })
-          .catch(() => {});
       }
     };
     prefetchData();
