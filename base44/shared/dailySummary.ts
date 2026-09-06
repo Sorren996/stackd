@@ -165,12 +165,9 @@ export async function recomputeDailySummary(
     ),
   ]);
 
-  // Match the getHistorySummary source filter: when CGM is connected, both
-  // canonical "dexcom" and near-real-time "dexcom_share" readings contribute
-  // to stats. When not connected, all readings are used.
-  const glucoseForStats = dexcomConnected
-    ? glucose.filter((g) => g.source === "dexcom" || g.source === "dexcom_share")
-    : glucose;
+  // Include every real reading (manual + CGM); only carry-forward "system"
+  // entries are excluded so they don't skew averages.
+  const glucoseForStats = glucose.filter((g) => g.source !== "system");
 
   const metrics = computeDailyMetrics(
     glucoseForStats, carbs, insulin, dateStr, timezone, targetLow, targetHigh

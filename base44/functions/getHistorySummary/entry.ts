@@ -82,9 +82,9 @@ Deno.serve(async (req) => {
       return dayMap[day];
     };
 
-    const glucoseForStats = dexcomConnected
-      ? glucose.filter((g: any) => g.source === "dexcom" || g.source === "dexcom_share")
-      : glucose;
+    // Include every real reading (manual + CGM); only carry-forward
+    // "system" entries are excluded so they don't skew averages.
+    const glucoseForStats = glucose.filter((g: any) => g.source !== "system");
 
     glucoseForStats.forEach((g: any) => {
       const day = dayKey(g.recorded_at);
@@ -137,7 +137,10 @@ Deno.serve(async (req) => {
 
     const days = Object.values(dayMap).map((d: any) => {
       const ds = summaryMap[d.date];
-      const useSummary = ds && Number.isFinite(ds.reading_count) && ds.reading_count > 0;
+      // Prefer the on-the-fly computation (which now includes manual readings)
+      // and only fall back to a pre-computed summary when raw readings weren't
+      // available for this day.
+      const useSummary = !d.glucose.count && ds && Number.isFinite(ds.reading_count) && ds.reading_count > 0;
       return {
         date: d.date,
         glucose: useSummary
