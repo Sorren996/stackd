@@ -1,6 +1,6 @@
 import { format, parseISO, startOfWeek } from "date-fns";
 
-// Groups pre-aggregated daily stats into months covering the 90-day window.
+// Groups pre-aggregated daily stats into months covering the 9-month window.
 export function groupDaysByMonth(days) {
   const map = {};
   (days || []).forEach((d) => {

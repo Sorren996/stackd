@@ -430,8 +430,8 @@ export default function History() {
     }
   };
 
-  let headerTitle = "Your 90-Day Journey";
-  let headerSub = "Reflecting on the last three months";
+  let headerTitle = "Your Journey";
+  let headerSub = "Reflecting on your last 9 months";
   if (level === "days" && currentMonth) {
     headerTitle = `${currentMonth.label} ${currentMonth.year}`;
     const s = monthStats(currentMonth);

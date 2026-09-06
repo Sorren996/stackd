@@ -35,6 +35,7 @@ import SplitPlanReview from "@/pages/SplitPlanReview";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { ACKNOWLEDGMENT_VERSIONS, CHECKBOX_KEYS } from "@/lib/acknowledgmentConfig";
 import { loadUserSettings, migrateLocalSettingsIfNeeded, cacheSettingsLocally } from "@/lib/userSettings";
+import { fetchAllGlucoseReadings } from "@/lib/fetchAllGlucose";
 
 const AuthenticatedApp = () => {
   const { user, isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, isAuthenticated, handleSessionExpired } = useAuth();
@@ -139,14 +140,7 @@ const AuthenticatedApp = () => {
         }),
         queryClientInstance.prefetchQuery({
           queryKey: ["glucose-readings", "analytics"],
-          queryFn: async () => {
-            const [recent, manual] = await Promise.all([
-              base44.entities.GlucoseReading.list("-recorded_at", 5000),
-              base44.entities.GlucoseReading.filter({ source: "manual" }, "-recorded_at", 5000),
-            ]);
-            const seenIds = new Set(recent.map((g) => g.id));
-            return [...recent, ...manual.filter((g) => !seenIds.has(g.id))];
-          },
+          queryFn: () => fetchAllGlucoseReadings(270),
         }),
         queryClientInstance.prefetchQuery({
           queryKey: ["dexcom-connection"],

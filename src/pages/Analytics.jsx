@@ -10,6 +10,7 @@ import ZoneOfBalanceRing from "@/components/analytics/ZoneOfBalanceRing";
 import DailyPatternChart from "@/components/analytics/DailyPatternChart";
 import MomentsOfCare from "@/components/analytics/MomentsOfCare";
 import RangeSelector from "@/components/analytics/RangeSelector";
+import { fetchAllGlucoseReadings } from "@/lib/fetchAllGlucose";
 
 const ANALYTICS_RANGE_KEY = "analytics_range_days";
 const DEFAULT_RANGE_DAYS = 30;
@@ -20,7 +21,7 @@ const ANALYTICS_FETCH_LIMIT = 30000;
 function readStoredRange() {
   if (typeof window === "undefined") return DEFAULT_RANGE_DAYS;
   const stored = Number(window.localStorage.getItem(ANALYTICS_RANGE_KEY));
-  return [7, 14, 30, 60, 90].includes(stored) ? stored : DEFAULT_RANGE_DAYS;
+  return [7, 14, 30, 60, 90, 270].includes(stored) ? stored : DEFAULT_RANGE_DAYS;
 }
 
 function readTargetRange() {
@@ -49,17 +50,7 @@ export default function Analytics() {
   const [rangeDays, setRangeDays] = useState(readStoredRange);
   const { data: readings = [], isLoading } = useQuery({
     queryKey: ["glucose-readings", "analytics"],
-    queryFn: async () => {
-      // Dexcom generates ~288 readings/day, so a single 5000-row query
-      // only covers ~17 days and pushes older manual readings out. Fetch
-      // manual readings separately and merge them.
-      const [recent, manual] = await Promise.all([
-        base44.entities.GlucoseReading.list("-recorded_at", 5000),
-        base44.entities.GlucoseReading.filter({ source: "manual" }, "-recorded_at", 5000),
-      ]);
-      const seenIds = new Set(recent.map((g) => g.id));
-      return [...recent, ...manual.filter((g) => !seenIds.has(g.id))];
-    },
+    queryFn: () => fetchAllGlucoseReadings(270),
     staleTime: 5 * 60 * 1000,
   });
 

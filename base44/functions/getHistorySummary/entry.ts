@@ -1,9 +1,9 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
 
 // Returns compact, pre-aggregated daily statistics for the authenticated user's
-// last 90 days of glucose, carb, and insulin logs. This keeps the History page
-// fast: it receives ~90 small aggregate objects instead of every raw log, and
-// derives weekly/monthly rollups client-side without re-fetching.
+// last 9 months (270 days) of glucose, carb, and insulin logs. This keeps the
+// History page fast: it receives ~270 small aggregate objects instead of every
+// raw log, and derives weekly/monthly rollups client-side without re-fetching.
 //
 // User isolation is enforced by RLS (created_by_id) — these user-scoped queries
 // can only ever return the caller's own records.
@@ -23,7 +23,7 @@ Deno.serve(async (req) => {
     const dayMs = 24 * 60 * 60 * 1000;
     const now = new Date();
     const rangeEnd = now.toISOString();
-    const rangeStart = new Date(now.getTime() - 90 * dayMs).toISOString();
+    const rangeStart = new Date(now.getTime() - 270 * dayMs).toISOString();
 
     // Target range from the user's settings (defaults if unavailable).
     let targetLow = 70;
@@ -47,14 +47,30 @@ Deno.serve(async (req) => {
       dexcomConnected = connections.length > 0;
     } catch { /* fall back to all readings */ }
 
-    // Dexcom generates ~288 readings/day, so a single 5000-row query only
-    // covers ~17 days and pushes older manual readings out. Fetch manual
-    // readings in a separate query (they're sparse — well within the limit)
-    // and merge them with the recent CGM fetch.
-    const [glucoseRecent, manualGlucose, carbs, insulin] = await Promise.all([
-      base44.entities.GlucoseReading.filter(
-        { recorded_at: { $gte: rangeStart, $lte: rangeEnd } },
-        '-recorded_at', 5000
+    // Dexcom generates ~288 readings/day, and database queries are capped at
+    // 5000 rows. A single fetch only covers ~17 days — older months get cut
+    // off entirely. Paginate through 14-day parallel chunks so the full 9-month
+    // window is captured. Manual readings are sparse and fit in one query.
+    const chunkDays = 14;
+    const glucoseChunks: { start: string; end: string }[] = [];
+    {
+      let cursor = new Date(rangeStart);
+      const end = new Date(rangeEnd);
+      while (cursor < end) {
+        const chunkEnd = new Date(Math.min(cursor.getTime() + chunkDays * dayMs, end.getTime()));
+        glucoseChunks.push({ start: cursor.toISOString(), end: chunkEnd.toISOString() });
+        cursor = chunkEnd;
+      }
+    }
+
+    const [chunkResults, manualGlucose, carbs, insulin] = await Promise.all([
+      Promise.all(
+        glucoseChunks.map((c) =>
+          base44.entities.GlucoseReading.filter(
+            { recorded_at: { $gte: c.start, $lte: c.end } },
+            '-recorded_at', 5000
+          )
+        )
       ),
       base44.entities.GlucoseReading.filter(
         { source: "manual", recorded_at: { $gte: rangeStart, $lte: rangeEnd } },
@@ -70,8 +86,7 @@ Deno.serve(async (req) => {
       ),
     ]);
 
-    // Merge, deduplicating by ID in case a manual reading was already in the
-    // recent fetch (it can happen near the 5000-row boundary).
+    const glucoseRecent = chunkResults.flat();
     const seenIds = new Set(glucoseRecent.map((g: any) => g.id));
     const glucose = [...glucoseRecent, ...manualGlucose.filter((g: any) => !seenIds.has(g.id))];
 
@@ -139,7 +154,7 @@ Deno.serve(async (req) => {
     try {
       const summaries = await base44.entities.DailySummary.filter(
         { date: { $gte: rangeStart.slice(0, 10), $lte: rangeEnd.slice(0, 10) } },
-        "-date", 100
+        "-date", 300
       );
       for (const ds of summaries) {
         if (ds.date) summaryMap[ds.date] = ds;
