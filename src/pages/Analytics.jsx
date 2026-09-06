@@ -134,6 +134,19 @@ export default function Analytics() {
     };
   }, [readings, targetRange, dexcomConnected, rangeDays]);
 
+  // A1C is always derived from the full 90-day window — independent of the
+  // selected range — using the ADAG formula: (avg glucose + 46.7) / 28.7.
+  const estimatedA1c = useMemo(() => {
+    const cutoff = subDays(new Date(), 90);
+    const recent = filterReadingsForStats(
+      readings.filter((r) => new Date(r.recorded_at) >= cutoff && Number.isFinite(r.value)),
+      dexcomConnected
+    );
+    if (!recent.length) return null;
+    const avg = recent.reduce((s, r) => s + r.value, 0) / recent.length;
+    return (avg + 46.7) / 28.7;
+  }, [readings, dexcomConnected]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
@@ -184,6 +197,7 @@ export default function Analytics() {
           belowPercent={stats.belowPercent}
           totalReadings={stats.total}
           averageGlucose={stats.averageGlucose}
+          estimatedA1c={estimatedA1c}
           targetLow={targetRange.low}
           targetHigh={targetRange.high}
           rangeDays={rangeDays}

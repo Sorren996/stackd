@@ -60,7 +60,7 @@ function MetricRow({ label, value }) {
   );
 }
 
-export default function ZoneOfBalanceRing({ inRangePercent, abovePercent, belowPercent, totalReadings, averageGlucose, targetLow, targetHigh, rangeDays, onRangeChange }) {
+export default function ZoneOfBalanceRing({ inRangePercent, abovePercent, belowPercent, totalReadings, averageGlucose, estimatedA1c, targetLow, targetHigh, rangeDays, onRangeChange }) {
   const radius = 68;
   const circumference = 2 * Math.PI * radius;
 
@@ -162,6 +162,9 @@ export default function ZoneOfBalanceRing({ inRangePercent, abovePercent, belowP
         <div className="w-full space-y-2">
           {Number.isFinite(averageGlucose) && (
             <MetricRow label="Average glucose" value={`${Math.round(averageGlucose)} mg/dL`} />
+          )}
+          {Number.isFinite(estimatedA1c) && (
+            <MetricRow label="Est. A1C (90-day)" value={`${estimatedA1c.toFixed(1)}%`} />
           )}
           <MetricRow label="Target range" value={`${targetLow}–${targetHigh} mg/dL`} />
         </div>
