@@ -47,9 +47,17 @@ Deno.serve(async (req) => {
       dexcomConnected = connections.length > 0;
     } catch { /* fall back to all readings */ }
 
-    const [glucose, carbs, insulin] = await Promise.all([
+    // Dexcom generates ~288 readings/day, so a single 5000-row query only
+    // covers ~17 days and pushes older manual readings out. Fetch manual
+    // readings in a separate query (they're sparse — well within the limit)
+    // and merge them with the recent CGM fetch.
+    const [glucoseRecent, manualGlucose, carbs, insulin] = await Promise.all([
       base44.entities.GlucoseReading.filter(
         { recorded_at: { $gte: rangeStart, $lte: rangeEnd } },
+        '-recorded_at', 5000
+      ),
+      base44.entities.GlucoseReading.filter(
+        { source: "manual", recorded_at: { $gte: rangeStart, $lte: rangeEnd } },
         '-recorded_at', 5000
       ),
       base44.entities.CarbEntry.filter(
@@ -61,6 +69,11 @@ Deno.serve(async (req) => {
         '-administered_at', 5000
       ),
     ]);
+
+    // Merge, deduplicating by ID in case a manual reading was already in the
+    // recent fetch (it can happen near the 5000-row boundary).
+    const seenIds = new Set(glucoseRecent.map((g: any) => g.id));
+    const glucose = [...glucoseRecent, ...manualGlucose.filter((g: any) => !seenIds.has(g.id))];
 
     const dayMap: Record<string, any> = {};
     const dayKey = (ts: string) => {

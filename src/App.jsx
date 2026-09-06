@@ -139,7 +139,14 @@ const AuthenticatedApp = () => {
         }),
         queryClientInstance.prefetchQuery({
           queryKey: ["glucose-readings", "analytics"],
-          queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", 30000),
+          queryFn: async () => {
+            const [recent, manual] = await Promise.all([
+              base44.entities.GlucoseReading.list("-recorded_at", 5000),
+              base44.entities.GlucoseReading.filter({ source: "manual" }, "-recorded_at", 5000),
+            ]);
+            const seenIds = new Set(recent.map((g) => g.id));
+            return [...recent, ...manual.filter((g) => !seenIds.has(g.id))];
+          },
         }),
         queryClientInstance.prefetchQuery({
           queryKey: ["dexcom-connection"],

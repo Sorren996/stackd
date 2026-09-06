@@ -49,7 +49,17 @@ export default function Analytics() {
   const [rangeDays, setRangeDays] = useState(readStoredRange);
   const { data: readings = [], isLoading } = useQuery({
     queryKey: ["glucose-readings", "analytics"],
-    queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", ANALYTICS_FETCH_LIMIT),
+    queryFn: async () => {
+      // Dexcom generates ~288 readings/day, so a single 5000-row query
+      // only covers ~17 days and pushes older manual readings out. Fetch
+      // manual readings separately and merge them.
+      const [recent, manual] = await Promise.all([
+        base44.entities.GlucoseReading.list("-recorded_at", 5000),
+        base44.entities.GlucoseReading.filter({ source: "manual" }, "-recorded_at", 5000),
+      ]);
+      const seenIds = new Set(recent.map((g) => g.id));
+      return [...recent, ...manual.filter((g) => !seenIds.has(g.id))];
+    },
     staleTime: 5 * 60 * 1000,
   });
 
