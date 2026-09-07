@@ -184,8 +184,10 @@ export default function MealOutcomeModal({ meal, glucose, insulin, targetLow, ta
                     <defs>
                       <linearGradient id="modalGlucoseGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="#d4a056" stopOpacity={0.95} />
-                        <stop offset={`${((yMax - targetHigh) / (yMax - yMin)) * 100}%`} stopColor="#5ba88a" stopOpacity={0.9} />
-                        <stop offset={`${((yMax - targetLow) / (yMax - yMin)) * 100}%`} stopColor="#5ba88a" stopOpacity={0.9} />
+                        <stop offset={`${((yMax - targetHigh) / (yMax - yMin)) * 100}%`} stopColor="#d4a056" stopOpacity={0.95} />
+                        <stop offset={`${((yMax - targetHigh) / (yMax - yMin)) * 100}%`} stopColor="#ffffff" stopOpacity={0.9} />
+                        <stop offset={`${((yMax - targetLow) / (yMax - yMin)) * 100}%`} stopColor="#ffffff" stopOpacity={0.9} />
+                        <stop offset={`${((yMax - targetLow) / (yMax - yMin)) * 100}%`} stopColor={GLUCOSE_STATUS_COLORS.low} stopOpacity={0.9} />
                         <stop offset="100%" stopColor={GLUCOSE_STATUS_COLORS.low} stopOpacity={0.9} />
                       </linearGradient>
                       <linearGradient id="modalIobGrad" x1="0" y1="0" x2="0" y2="1">
