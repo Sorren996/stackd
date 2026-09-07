@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { AlertTriangle, Check, Clock, Info, Loader2, Sprout } from "lucide-react";
 import { formatMonitoringEndTime } from "@/lib/mealMonitoring";
 
@@ -59,8 +60,18 @@ function StateIcon({ state, color }) {
 }
 
 export default function MealBalanceCard({ mealInsight, highProteinFatStatus, onOpenTooltip }) {
+  const navigate = useNavigate();
   const d = mealInsight?.details;
   const hasMeal = Boolean(d);
+  const needsSetup = mealInsight?.value === "Setup needed";
+
+  const handleCardClick = () => {
+    if (needsSetup) {
+      navigate("/settings/insulin");
+      return;
+    }
+    onOpenTooltip?.();
+  };
 
   let state = "none";
   if (hasMeal) {
@@ -102,13 +113,13 @@ export default function MealBalanceCard({ mealInsight, highProteinFatStatus, onO
   return (
     <motion.div
       whileTap={{ scale: 0.985 }}
-      onClick={onOpenTooltip}
+      onClick={handleCardClick}
       role="button"
       tabIndex={0}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          onOpenTooltip?.();
+          handleCardClick();
         }
       }}
       className="metric-card relative col-span-2 w-full cursor-pointer overflow-hidden rounded-2xl border p-4 backdrop-blur-sm"
@@ -140,13 +151,7 @@ export default function MealBalanceCard({ mealInsight, highProteinFatStatus, onO
       {/* header */}
       <div className="relative z-10 mb-2 flex items-start justify-between">
         <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/35">Meal Balance</span>
-        <button
-          onClick={onOpenTooltip}
-          className="text-white/25 transition-colors hover:text-white/55"
-          aria-label="Meal Balance details"
-        >
-          <Info className="h-3.5 w-3.5" />
-        </button>
+        <Info className="h-3.5 w-3.5 text-white/25" aria-hidden="true" />
       </div>
 
       {/* content */}
