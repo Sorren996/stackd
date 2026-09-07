@@ -244,7 +244,8 @@ export default function MealOutcomeModal({ meal, glucose, insulin, targetLow, ta
                       yAxisId="glucose"
                       type="monotone"
                       dataKey="glucose"
-                      stroke="url(#modalGlucoseGrad)"
+                      stroke="#ffffff"
+                      strokeOpacity={0.9}
                       strokeWidth={2.2}
                       dot={false}
                       isAnimationActive={false}
