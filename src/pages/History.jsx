@@ -417,6 +417,7 @@ export default function History() {
     setDirection(dir);
     setSelectedDay(date);
     setLevel("recap");
+    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "instant" }));
   };
 
   const goBack = () => {

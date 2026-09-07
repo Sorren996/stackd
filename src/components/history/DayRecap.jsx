@@ -125,7 +125,15 @@ export default function DayRecap({
       {insights.length > 0 && <EnhancedDayInsights insights={insights} />}
 
       {/* Meal outcomes */}
-      {mealOutcomes.length > 0 && <DayMealOutcomes meals={mealOutcomes} />}
+      {mealOutcomes.length > 0 && (
+        <DayMealOutcomes
+          meals={mealOutcomes}
+          glucose={glucose}
+          insulin={insulin}
+          targetLow={targetLow}
+          targetHigh={targetHigh}
+        />
+      )}
 
       {/* Insulin activity */}
       {insulinActivity && <DayInsulinActivity activity={insulinActivity} />}
