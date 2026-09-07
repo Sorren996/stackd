@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { Activity } from "lucide-react";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 import { filterReadingsForStats } from "@/lib/timeInRange";
+import { WELLNESS_COLORS } from "@/lib/glassTheme";
 import ZoneOfBalanceRing from "@/components/analytics/ZoneOfBalanceRing";
 import DailyPatternChart from "@/components/analytics/DailyPatternChart";
 import MomentsOfCare from "@/components/analytics/MomentsOfCare";
@@ -14,6 +15,23 @@ import { fetchAllGlucoseReadings } from "@/lib/fetchAllGlucose";
 
 const ANALYTICS_RANGE_KEY = "analytics_range_days";
 const DEFAULT_RANGE_DAYS = 30;
+
+const PERIOD_SHORT = { 7: "7d", 14: "14d", 30: "30d", 60: "60d", 90: "90d", 270: "9mo" };
+const PERIOD_LONG = { 7: "7 days", 14: "14 days", 30: "30 days", 60: "60 days", 90: "90 days", 270: "9 months" };
+
+function formatComparison(delta, unit, lowerIsBetter, periodShort) {
+  if (delta === null || !Number.isFinite(delta)) return null;
+  const threshold = unit === "%" ? 0.05 : 0.5;
+  if (Math.abs(delta) < threshold) {
+    return { text: "— No change", color: "rgba(255,255,255,0.25)" };
+  }
+  const isImprovement = lowerIsBetter ? delta < 0 : delta > 0;
+  const color = isImprovement ? WELLNESS_COLORS.inRange : WELLNESS_COLORS.above;
+  const arrow = delta < 0 ? "↓" : "↑";
+  const absVal = Math.abs(delta);
+  const formatted = unit === "%" ? absVal.toFixed(1) : Math.round(absVal);
+  return { text: `${arrow} ${formatted}${unit} vs prev ${periodShort}`, color };
+}
 // Dexcom Share emits a reading every 5 minutes (288/day). 90 days needs ~26k
 // readings; fetch a little extra so the full window is covered.
 const ANALYTICS_FETCH_LIMIT = 30000;
@@ -135,18 +153,46 @@ export default function Analytics() {
     };
   }, [readings, targetRange, dexcomConnected, rangeDays]);
 
-  // A1C is always derived from the full 90-day window — independent of the
-  // selected range — using the ADAG formula: (avg glucose + 46.7) / 28.7.
-  const estimatedA1c = useMemo(() => {
-    const cutoff = subDays(new Date(), 90);
-    const recent = filterReadingsForStats(
-      readings.filter((r) => new Date(r.recorded_at) >= cutoff && Number.isFinite(r.value)),
+  // GMI (Glucose Management Indicator) is calculated from the current selected
+  // range using the standard formula: GMI = 3.31 + 0.02392 × mean glucose (mg/dL).
+  const gmi = useMemo(() => {
+    if (!stats || !Number.isFinite(stats.averageGlucose)) return null;
+    return 3.31 + 0.02392 * stats.averageGlucose;
+  }, [stats]);
+
+  // Previous-period metrics for period-over-period comparison.
+  const prevStats = useMemo(() => {
+    const now = new Date();
+    const currentStart = subDays(now, rangeDays);
+    const prevStart = subDays(now, rangeDays * 2);
+    const prevReadings = filterReadingsForStats(
+      readings.filter((r) => {
+        const d = new Date(r.recorded_at);
+        return d >= prevStart && d < currentStart && Number.isFinite(r.value);
+      }),
       dexcomConnected
     );
-    if (!recent.length) return null;
-    const avg = recent.reduce((s, r) => s + r.value, 0) / recent.length;
-    return (avg + 46.7) / 28.7;
-  }, [readings, dexcomConnected]);
+    if (!prevReadings.length) return null;
+    const { low, high } = targetRange;
+    const total = prevReadings.length;
+    const avg = prevReadings.reduce((s, r) => s + r.value, 0) / total;
+    const inRange = prevReadings.filter((r) => r.value >= low && r.value <= high).length;
+    return {
+      averageGlucose: avg,
+      gmi: 3.31 + 0.02392 * avg,
+      inRangePercent: (inRange / total) * 100,
+    };
+  }, [readings, targetRange, dexcomConnected, rangeDays]);
+
+  const comparisons = useMemo(() => {
+    if (!stats || !prevStats) return null;
+    const periodShort = PERIOD_SHORT[rangeDays] || `${rangeDays}d`;
+    return {
+      averageGlucose: formatComparison(stats.averageGlucose - prevStats.averageGlucose, " mg/dL", true, periodShort),
+      gmi: gmi !== null ? formatComparison(gmi - prevStats.gmi, "%", true, periodShort) : null,
+      inRangePercent: formatComparison(stats.inRangePercent - prevStats.inRangePercent, "%", false, periodShort),
+    };
+  }, [stats, prevStats, gmi, rangeDays]);
 
   if (isLoading) {
     return (
@@ -179,7 +225,7 @@ export default function Analytics() {
         <div>
           <h1 className="text-2xl font-bold text-white">Your Rhythms</h1>
           <p className="mt-1 text-sm text-white/35">
-            Gentle insights from your last {rangeDays} days
+            Gentle insights from your last {PERIOD_LONG[rangeDays] || `${rangeDays} days`}
           </p>
         </div>
         <div className="flex justify-center">
@@ -198,10 +244,11 @@ export default function Analytics() {
           belowPercent={stats.belowPercent}
           totalReadings={stats.total}
           averageGlucose={stats.averageGlucose}
-          estimatedA1c={estimatedA1c}
+          gmi={gmi}
           targetLow={targetRange.low}
           targetHigh={targetRange.high}
           rangeDays={rangeDays}
+          comparisons={comparisons}
         />
       </motion.div>
 

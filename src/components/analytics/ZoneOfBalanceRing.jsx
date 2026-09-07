@@ -8,6 +8,8 @@ const COLORS = {
   below: WELLNESS_COLORS.below,
 };
 
+const PERIOD_LONG = { 7: "7 days", 14: "14 days", 30: "30 days", 60: "60 days", 90: "90 days", 270: "9 months" };
+
 const CARD_SURFACE = {
   background: "linear-gradient(152deg, rgba(255,255,255,0.035), rgba(255,255,255,0.006))",
   borderColor: "rgba(255,255,255,0.08)",
@@ -15,13 +17,13 @@ const CARD_SURFACE = {
   backdropFilter: "blur(4px)",
 };
 
-function getInsight(inRangePercent) {
+function getInsight(inRangePercent, periodLong) {
   const pct = Math.round(inRangePercent);
   if (inRangePercent >= 70) {
     return {
       icon: Check,
       title: "Strong consistency",
-      message: `${pct}% of readings stayed within your comfort zone over the last 30 days.`,
+      message: `${pct}% of readings stayed within your comfort zone over the last ${periodLong}.`,
       color: COLORS.inRange,
     };
   }
@@ -29,14 +31,14 @@ function getInsight(inRangePercent) {
     return {
       icon: TrendingUp,
       title: "Building consistency",
-      message: `Your readings spent more time in range than outside it — ${pct}% over the last 30 days.`,
+      message: `Your readings spent more time in range than outside it — ${pct}% over the last ${periodLong}.`,
       color: COLORS.above,
     };
   }
   return {
     icon: Activity,
     title: "More variability recently",
-    message: `A larger share of readings fell outside your comfort zone. ${pct}% stayed in range over the last 30 days.`,
+    message: `A larger share of readings fell outside your comfort zone. ${pct}% stayed in range over the last ${periodLong}.`,
     color: COLORS.below,
   };
 }
@@ -51,16 +53,26 @@ function LegendItem({ color, label, value }) {
   );
 }
 
-function MetricRow({ label, value }) {
+function MetricRow({ label, value, subtitle, comparison }) {
   return (
-    <div className="flex items-center justify-between gap-3">
-      <span className="text-[11px] text-white/40">{label}</span>
-      <span className="text-[13px] font-semibold text-white/90">{value}</span>
+    <div className="flex items-start justify-between gap-3">
+      <span className="text-[11px] text-white/40 pt-0.5">{label}</span>
+      <div className="flex flex-col items-end gap-0.5">
+        <span className="text-[13px] font-semibold text-white/90">{value}</span>
+        {subtitle && (
+          <span className="text-[9px] text-white/25">{subtitle}</span>
+        )}
+        {comparison && (
+          <span className="text-[9px] font-medium" style={{ color: comparison.color }}>
+            {comparison.text}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
 
-export default function ZoneOfBalanceRing({ inRangePercent, abovePercent, belowPercent, totalReadings, averageGlucose, estimatedA1c, targetLow, targetHigh, rangeDays, onRangeChange }) {
+export default function ZoneOfBalanceRing({ inRangePercent, abovePercent, belowPercent, totalReadings, averageGlucose, gmi, targetLow, targetHigh, rangeDays, onRangeChange, comparisons }) {
   const radius = 68;
   const circumference = 2 * Math.PI * radius;
 
@@ -71,7 +83,8 @@ export default function ZoneOfBalanceRing({ inRangePercent, abovePercent, belowP
   const inRangeOffset = -belowArc;
   const aboveOffset = -(belowArc + inRangeArc);
 
-  const insight = getInsight(inRangePercent);
+  const periodLong = PERIOD_LONG[rangeDays] || `${rangeDays} days`;
+  const insight = getInsight(inRangePercent, periodLong);
   const InsightIcon = insight.icon;
 
   return (
@@ -94,7 +107,7 @@ export default function ZoneOfBalanceRing({ inRangePercent, abovePercent, belowP
         {/* header group */}
         <div className="flex flex-col items-center">
           <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-white">Time in Your Comfort Zone</p>
-          <p className="mt-0.5 text-[11px] text-white/30">Last {rangeDays} days</p>
+          <p className="mt-0.5 text-[11px] text-white/30">Last {periodLong}</p>
         </div>
 
         {/* donut hero */}
@@ -145,6 +158,11 @@ export default function ZoneOfBalanceRing({ inRangePercent, abovePercent, belowP
               {Math.round(inRangePercent)}%
             </motion.span>
             <span className="mt-0.5 text-[9px] uppercase tracking-[0.16em] text-white/40">In comfort zone</span>
+            {comparisons?.inRangePercent && (
+              <span className="mt-0.5 text-[9px] font-medium" style={{ color: comparisons.inRangePercent.color }}>
+                {comparisons.inRangePercent.text}
+              </span>
+            )}
           </div>
         </div>
 
@@ -161,10 +179,10 @@ export default function ZoneOfBalanceRing({ inRangePercent, abovePercent, belowP
         {/* secondary metrics */}
         <div className="w-full space-y-2">
           {Number.isFinite(averageGlucose) && (
-            <MetricRow label="Average glucose" value={`${Math.round(averageGlucose)} mg/dL`} />
+            <MetricRow label="Average glucose" value={`${Math.round(averageGlucose)} mg/dL`} comparison={comparisons?.averageGlucose} />
           )}
-          {Number.isFinite(estimatedA1c) && (
-            <MetricRow label="Est. A1C (90-day)" value={`${estimatedA1c.toFixed(1)}%`} />
+          {Number.isFinite(gmi) && (
+            <MetricRow label="GMI" value={`${gmi.toFixed(1)}%`} subtitle={`Based on your last ${periodLong}`} comparison={comparisons?.gmi} />
           )}
           <MetricRow label="Target range" value={`${targetLow}–${targetHigh} mg/dL`} />
         </div>
