@@ -94,6 +94,16 @@ const AuthenticatedApp = () => {
         })
         .catch(() => {});
 
+      // Heavy multi-chunk analytics fetch — fire in the background so it
+      // doesn't delay the splash screen. The Analytics page also uses the
+      // already-prefetched graph readings for instant render.
+      queryClientInstance
+        .prefetchQuery({
+          queryKey: ["glucose-readings", "analytics"],
+          queryFn: () => fetchAllGlucoseReadings(270),
+        })
+        .catch(() => {});
+
       await Promise.all([
         queryClientInstance.prefetchQuery({
           queryKey: ["user-settings"],
@@ -137,10 +147,6 @@ const AuthenticatedApp = () => {
         queryClientInstance.prefetchQuery({
           queryKey: ["split-plans"],
           queryFn: () => base44.entities.SplitDosePlan.list("-created_date", 20),
-        }),
-        queryClientInstance.prefetchQuery({
-          queryKey: ["glucose-readings", "analytics"],
-          queryFn: () => fetchAllGlucoseReadings(270),
         }),
         queryClientInstance.prefetchQuery({
           queryKey: ["dexcom-connection"],

@@ -66,11 +66,23 @@ const HOUR_LABELS = [
 
 export default function Analytics() {
   const [rangeDays, setRangeDays] = useState(readStoredRange);
-  const { data: readings = [], isLoading } = useQuery({
+  const { data: graphReadings = [], isLoading: graphLoading } = useQuery({
+    queryKey: ["glucose-readings", "graph"],
+    queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", 5000),
+    staleTime: 5 * 60 * 1000,
+  });
+  const { data: extendedReadings = [], isLoading: extendedLoading } = useQuery({
     queryKey: ["glucose-readings", "analytics"],
     queryFn: () => fetchAllGlucoseReadings(270),
     staleTime: 5 * 60 * 1000,
   });
+  const readings = useMemo(() => {
+    if (!graphReadings.length) return extendedReadings;
+    if (!extendedReadings.length) return graphReadings;
+    const seen = new Set(graphReadings.map((r) => r.id));
+    return [...graphReadings, ...extendedReadings.filter((r) => !seen.has(r.id))];
+  }, [graphReadings, extendedReadings]);
+  const isLoading = graphLoading && extendedLoading;
 
   const [targetRange, setTargetRange] = useState(readTargetRange);
   const { connected: dexcomConnected } = useDexcomConnection();
