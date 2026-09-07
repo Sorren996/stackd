@@ -11,21 +11,31 @@ const RANGES = [
 
 export default function RangeSelector({ value, onChange }) {
   return (
-    <div className="flex items-center gap-0.5 rounded-lg border border-white/5 bg-white/[0.03] p-0.5">
+    <div
+      className="flex items-center gap-0.5 rounded-full p-1"
+      style={{
+        background: "rgba(255,255,255,0.035)",
+        backdropFilter: "blur(10px)",
+        border: "1px solid rgba(255,255,255,0.05)",
+      }}
+    >
       {RANGES.map((range) => (
         <button
           key={range.value}
           onClick={() => onChange(range.value)}
-          className={`relative px-2.5 py-0.5 text-[11px] font-semibold rounded-md transition-colors ${
-            value === range.value ? "text-white" : "text-white/40 hover:text-white/70"
+          className={`relative px-3 py-1 text-[11px] font-semibold rounded-full transition-colors ${
+            value === range.value ? "text-white" : "text-white/35 hover:text-white/60"
           }`}
         >
           {value === range.value && (
             <motion.div
               layoutId="analytics-range-active"
-              className="absolute inset-0 rounded-md"
-              style={{ background: "rgba(53,168,121,0.15)" }}
-              transition={{ type: "spring", stiffness: 380, damping: 30 }}
+              className="absolute inset-0 rounded-full"
+              style={{
+                background: "rgba(91,168,138,0.16)",
+                boxShadow: "inset 0 1px 2px rgba(91,168,138,0.10), 0 1px 3px rgba(91,168,138,0.06)",
+              }}
+              transition={{ type: "spring", stiffness: 420, damping: 34 }}
             />
           )}
           <span className="relative z-10">{range.label}</span>
