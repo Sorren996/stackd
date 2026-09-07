@@ -183,13 +183,13 @@ export default function MealOutcomeModal({ meal, glucose, insulin, targetLow, ta
                   <ComposedChart data={data} margin={{ top: 8, right: 14, left: 2, bottom: 4 }}>
                     <defs>
                       <linearGradient id="modalGlucoseGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#d4a056" stopOpacity={0.9} />
-                        <stop offset={`${((yMax - targetHigh) / (yMax - yMin)) * 100}%`} stopColor="#ffffff" stopOpacity={0.8} />
-                        <stop offset={`${((yMax - targetLow) / (yMax - yMin)) * 100}%`} stopColor="#ffffff" stopOpacity={0.8} />
-                        <stop offset="100%" stopColor={GLUCOSE_STATUS_COLORS.low} stopOpacity={0.8} />
+                        <stop offset="0%" stopColor="#d4a056" stopOpacity={0.95} />
+                        <stop offset={`${((yMax - targetHigh) / (yMax - yMin)) * 100}%`} stopColor="#5ba88a" stopOpacity={0.9} />
+                        <stop offset={`${((yMax - targetLow) / (yMax - yMin)) * 100}%`} stopColor="#5ba88a" stopOpacity={0.9} />
+                        <stop offset="100%" stopColor={GLUCOSE_STATUS_COLORS.low} stopOpacity={0.9} />
                       </linearGradient>
                       <linearGradient id="modalIobGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#5ba3b8" stopOpacity={0.25} />
+                        <stop offset="0%" stopColor="#5ba3b8" stopOpacity={0.32} />
                         <stop offset="100%" stopColor="#5ba3b8" stopOpacity={0} />
                       </linearGradient>
                     </defs>
@@ -233,7 +233,8 @@ export default function MealOutcomeModal({ meal, glucose, insulin, targetLow, ta
                       yAxisId="iob"
                       type="monotone"
                       dataKey="iob"
-                      stroke="none"
+                      stroke="#5ba3b8"
+                      strokeWidth={1.6}
                       fill="url(#modalIobGrad)"
                       isAnimationActive={false}
                     />
