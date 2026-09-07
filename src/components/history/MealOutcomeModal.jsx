@@ -13,7 +13,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { getInsulinProfile, generateActivityCurve, isBasalInsulinType } from "@/lib/insulinPharmacology";
-import { GLUCOSE_STATUS_COLORS } from "@/lib/glucoseStatus";
+import { GLUCOSE_STATUS_COLORS, readHighReference, FIXED_LOW_REFERENCE } from "@/lib/glucoseStatus";
 
 const MIN_MS = 60 * 1000;
 const HOUR_MS = 60 * MIN_MS;
@@ -103,16 +103,22 @@ export default function MealOutcomeModal({ meal, glucose, insulin, targetLow, ta
     [meal, glucose, insulin]
   );
 
+  const highRef = useMemo(() => readHighReference(), []);
+  const glucoseTicks = useMemo(
+    () => [FIXED_LOW_REFERENCE, targetLow, targetHigh, highRef],
+    [targetLow, targetHigh, highRef]
+  );
+
   const { yMin, yMax, maxIOB } = useMemo(() => {
-    if (!data.length) return { yMin: 40, yMax: 250, maxIOB: 1 };
+    if (!data.length) return { yMin: FIXED_LOW_REFERENCE, yMax: highRef, maxIOB: 1 };
     const vals = data.map((d) => d.glucose).filter((v) => v != null);
     const iobs = data.map((d) => d.iob);
     return {
-      yMin: Math.max(40, Math.min(...vals, targetLow) - 20),
-      yMax: Math.min(400, Math.max(...vals, targetHigh) + 20),
+      yMin: FIXED_LOW_REFERENCE,
+      yMax: Math.min(400, Math.max(highRef, ...(vals.length ? vals : [highRef]))),
       maxIOB: Math.max(1, ...iobs),
     };
-  }, [data, targetLow, targetHigh]);
+  }, [data, targetLow, targetHigh, highRef]);
 
   const riseColor =
     meal?.rise > 60 ? "#d4a056" : meal?.rise < 0 ? "#5ba88a" : "rgba(255,255,255,0.85)";
@@ -201,8 +207,10 @@ export default function MealOutcomeModal({ meal, glucose, insulin, targetLow, ta
                     <YAxis
                       yAxisId="glucose"
                       domain={[yMin, yMax]}
+                      ticks={glucoseTicks}
                       tick={{ fontSize: 9, fill: "rgba(255,255,255,0.45)" }}
                       tickFormatter={(v) => Math.round(v)}
+                      allowDecimals={false}
                       axisLine={false}
                       tickLine={false}
                       width={40}
