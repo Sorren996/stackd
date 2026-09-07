@@ -174,7 +174,7 @@ export default function MealOutcomeModal({ meal, glucose, insulin, targetLow, ta
                 <p className="mb-1 px-1 text-[11px] font-semibold text-white/65">Glucose Response</p>
                 <p className="mb-2 px-1 text-[9px] text-white/30">Your glucose journey from 30 min before to 3 hours after this meal</p>
                 <ResponsiveContainer width="100%" height={200}>
-                  <ComposedChart data={data} margin={{ top: 8, right: 6, left: -12, bottom: 4 }}>
+                  <ComposedChart data={data} margin={{ top: 8, right: 14, left: 2, bottom: 4 }}>
                     <defs>
                       <linearGradient id="modalGlucoseGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="#d4a056" stopOpacity={0.9} />
@@ -204,7 +204,7 @@ export default function MealOutcomeModal({ meal, glucose, insulin, targetLow, ta
                       tick={{ fontSize: 9, fill: "rgba(255,255,255,0.25)" }}
                       axisLine={false}
                       tickLine={false}
-                      width={32}
+                      width={36}
                     />
                     <YAxis
                       yAxisId="iob"
@@ -213,7 +213,7 @@ export default function MealOutcomeModal({ meal, glucose, insulin, targetLow, ta
                       tick={{ fontSize: 9, fill: "rgba(91,163,184,0.4)" }}
                       axisLine={false}
                       tickLine={false}
-                      width={28}
+                      width={32}
                     />
                     <ReferenceArea yAxisId="glucose" y1={targetLow} y2={targetHigh} fill="#5ba88a" fillOpacity={0.06} />
                     <ReferenceLine yAxisId="glucose" y={targetHigh} stroke="rgba(255,255,255,0.12)" strokeDasharray="3 4" />
