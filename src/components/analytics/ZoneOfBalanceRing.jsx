@@ -17,7 +17,7 @@ function BreakdownItem({ value, label, color }) {
 }
 
 export default function ZoneOfBalanceRing({ inRangePercent, abovePercent, belowPercent, totalReadings, comparisons, rangeDays }) {
-  const radius = 58;
+  const radius = 77;
   const circumference = 2 * Math.PI * radius;
 
   const belowArc = (belowPercent / 100) * circumference;
@@ -31,13 +31,13 @@ export default function ZoneOfBalanceRing({ inRangePercent, abovePercent, belowP
     <div className="relative z-10 flex flex-col items-center">
       {/* Donut + percentage */}
       <div className="relative mt-3">
-        <svg width="148" height="148" viewBox="0 0 148 148" style={{ transform: "rotate(-90deg)" }}>
-          <circle cx="74" cy="74" r={radius} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="12" />
+        <svg width="196" height="196" viewBox="0 0 196 196" style={{ transform: "rotate(-90deg)" }}>
+          <circle cx="98" cy="98" r={radius} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="16" />
           {belowPercent > 0 && (
             <motion.circle
-              cx="74" cy="74" r={radius} fill="none"
+              cx="98" cy="98" r={radius} fill="none"
               stroke={COLORS.below}
-              strokeWidth="12"
+              strokeWidth="16"
               strokeDasharray={`${belowArc} ${circumference - belowArc}`}
               initial={{ strokeDashoffset: circumference }}
               animate={{ strokeDashoffset: 0 }}
@@ -46,9 +46,9 @@ export default function ZoneOfBalanceRing({ inRangePercent, abovePercent, belowP
           )}
           {inRangePercent > 0 && (
             <motion.circle
-              cx="74" cy="74" r={radius} fill="none"
+              cx="98" cy="98" r={radius} fill="none"
               stroke={COLORS.inRange}
-              strokeWidth="12"
+              strokeWidth="16"
               strokeDasharray={`${inRangeArc} ${circumference - inRangeArc}`}
               initial={{ strokeDashoffset: circumference }}
               animate={{ strokeDashoffset: inRangeOffset }}
@@ -58,9 +58,9 @@ export default function ZoneOfBalanceRing({ inRangePercent, abovePercent, belowP
           )}
           {abovePercent > 0 && (
             <motion.circle
-              cx="74" cy="74" r={radius} fill="none"
+              cx="98" cy="98" r={radius} fill="none"
               stroke={COLORS.above}
-              strokeWidth="12"
+              strokeWidth="16"
               strokeDasharray={`${aboveArc} ${circumference - aboveArc}`}
               initial={{ strokeDashoffset: circumference }}
               animate={{ strokeDashoffset: aboveOffset }}

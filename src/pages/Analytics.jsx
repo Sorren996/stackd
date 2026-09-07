@@ -41,7 +41,7 @@ const ANALYTICS_FETCH_LIMIT = 30000;
 function readStoredRange() {
   if (typeof window === "undefined") return DEFAULT_RANGE_DAYS;
   const stored = Number(window.localStorage.getItem(ANALYTICS_RANGE_KEY));
-  return [7, 14, 30, 60, 90, 270].includes(stored) ? stored : DEFAULT_RANGE_DAYS;
+  return [7, 14, 30, 60, 90].includes(stored) ? stored : DEFAULT_RANGE_DAYS;
 }
 
 function readTargetRange() {
