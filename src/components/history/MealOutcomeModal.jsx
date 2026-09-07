@@ -201,19 +201,23 @@ export default function MealOutcomeModal({ meal, glucose, insulin, targetLow, ta
                     <YAxis
                       yAxisId="glucose"
                       domain={[yMin, yMax]}
-                      tick={{ fontSize: 9, fill: "rgba(255,255,255,0.25)" }}
+                      tick={{ fontSize: 9, fill: "rgba(255,255,255,0.45)" }}
+                      tickFormatter={(v) => Math.round(v)}
                       axisLine={false}
                       tickLine={false}
-                      width={36}
+                      width={40}
+                      label={{ value: "mg/dL", angle: -90, position: "insideLeft", style: { fontSize: 9, fill: "rgba(255,255,255,0.35)" }, offset: 14 }}
                     />
                     <YAxis
                       yAxisId="iob"
                       orientation="right"
                       domain={[0, maxIOB * 1.3]}
-                      tick={{ fontSize: 9, fill: "rgba(91,163,184,0.4)" }}
+                      tick={{ fontSize: 9, fill: "rgba(91,163,184,0.6)" }}
+                      tickFormatter={(v) => (v % 1 === 0 ? String(v) : v.toFixed(1))}
                       axisLine={false}
                       tickLine={false}
-                      width={32}
+                      width={36}
+                      label={{ value: "units", angle: 90, position: "insideRight", style: { fontSize: 9, fill: "rgba(91,163,184,0.5)" }, offset: 14 }}
                     />
                     <ReferenceArea yAxisId="glucose" y1={targetLow} y2={targetHigh} fill="#5ba88a" fillOpacity={0.06} />
                     <ReferenceLine yAxisId="glucose" y={targetHigh} stroke="rgba(255,255,255,0.12)" strokeDasharray="3 4" />
@@ -250,7 +254,7 @@ export default function MealOutcomeModal({ meal, glucose, insulin, targetLow, ta
                   </span>
                   <span className="flex items-center gap-1.5">
                     <span className="inline-block h-2 w-2 rounded-full" style={{ background: "#5ba88a" }} />
-                    <span className="text-[9px] text-white/40">Comfort zone ({targetLow}\u2013{targetHigh})</span>
+                    <span className="text-[9px] text-white/40">Comfort zone ({targetLow}–{targetHigh})</span>
                   </span>
                   <span className="flex items-center gap-1.5">
                     <span className="inline-block h-2 w-2 rounded-full" style={{ background: "#f59e0b" }} />
