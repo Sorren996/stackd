@@ -127,7 +127,66 @@ function EstimateRow({ label, sublabel, value, icon: Icon, iconColor, valueColor
 }
 
 export default function MealBalanceTooltip({ mealInsight, open, onClose, monitoringStatus, glucoseTrend, onResolve }) {
-  if (!open || !mealInsight?.details) return null;
+  if (!open || !mealInsight) return null;
+
+  // New users (no insulin plan yet, or no meal logged) have no `details`.
+  // Instead of returning null — which made the info icon appear to do nothing —
+  // show a gentle onboarding state so the modal always opens.
+  if (!mealInsight.details) {
+    const needsSetup = mealInsight.value === "Setup needed";
+    return (
+      <TooltipPopover
+        title="Meal Balance"
+        description="A quick look at your meal and glucose response."
+        onClose={onClose}
+      >
+        <div className="space-y-4">
+          <div
+            className="flex items-start gap-2.5 rounded-xl border p-3"
+            style={{ borderColor: `${mealInsight.color}30`, background: `${mealInsight.color}0a` }}
+          >
+            <span
+              className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full"
+              style={{ background: `${mealInsight.color}1a`, color: mealInsight.color }}
+            >
+              <Sprout className="h-3.5 w-3.5" strokeWidth={2.5} />
+            </span>
+            <div className="min-w-0">
+              <p className="text-[13px] font-bold" style={{ color: mealInsight.color }}>
+                {mealInsight.value}
+              </p>
+              <p className="mt-0.5 text-[11px] leading-relaxed" style={{ color: PALETTE.muted }}>{mealInsight.status}</p>
+            </div>
+          </div>
+
+          <p className="text-[11px] leading-relaxed" style={{ color: PALETTE.muted }}>
+            {needsSetup
+              ? "Once you add your insulin-to-carb ratio and sensitivity in Settings, your meal balance estimates will appear here."
+              : "Log a meal to open a review window. Meal Balance gently compares your nourishment and support so you can see how your rhythm is lining up."}
+          </p>
+
+          <div className="border-t border-white/[0.06]">
+            <ExpandableRow icon={BookOpen} label="About Meal Balance">
+              <div className="space-y-2 text-[11px] leading-relaxed" style={{ color: PALETTE.muted }}>
+                <p>
+                  <span className="font-semibold text-white/55">Nourishment</span> — your carbs are compared to your saved meal ratio to estimate the support your meal typically calls for.
+                </p>
+                <p>
+                  <span className="font-semibold text-white/55">Glucose adjustment</span> — if a reading near your meal is above your range, a little extra support is previewed based on your sensitivity.
+                </p>
+                <p>
+                  <span className="font-semibold text-white/55">Support logged</span> — the insulin you already logged is compared to that preview so you can see how things line up.
+                </p>
+                <p className="pt-1 text-[10px]" style={{ color: PALETTE.muted, opacity: 0.6 }}>
+                  Meal Balance is reflective and descriptive. It does not recommend dosing or replace your established treatment plan.
+                </p>
+              </div>
+            </ExpandableRow>
+          </div>
+        </div>
+      </TooltipPopover>
+    );
+  }
 
   const d = mealInsight.details;
   const carbs = Math.round(d.meal?.carbs || 0);
