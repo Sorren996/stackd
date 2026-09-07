@@ -320,7 +320,8 @@ export default function DayRecapGraph({ glucose, carbs, insulin, targetLow, targ
           <Line
             type="monotone"
             dataKey="value"
-            stroke="url(#dayGlucoseGrad)"
+            stroke="#ffffff"
+            strokeOpacity={0.9}
             strokeWidth={2.2}
             dot={false}
             isAnimationActive={false}
