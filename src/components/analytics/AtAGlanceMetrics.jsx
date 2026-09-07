@@ -1,3 +1,5 @@
+import NotEnoughData from "@/components/analytics/NotEnoughData";
+
 const DIVIDER_STYLE = {
   background: "linear-gradient(to right, transparent, rgba(255,255,255,0.05), transparent)",
 };
@@ -22,7 +24,10 @@ function MetricItem({ label, value, unit, comparison, isQuiet }) {
   );
 }
 
-export default function AtAGlanceMetrics({ averageGlucose, gmi, targetLow, targetHigh, comparisons, rangeDays }) {
+export default function AtAGlanceMetrics({ averageGlucose, gmi, targetLow, targetHigh, comparisons, rangeDays, hasEnough = true }) {
+  if (!hasEnough) {
+    return <NotEnoughData compact />;
+  }
   return (
     <div>
       <MetricItem

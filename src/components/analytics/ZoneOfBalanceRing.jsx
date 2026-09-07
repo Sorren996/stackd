@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { WELLNESS_COLORS } from "@/lib/glassTheme";
+import NotEnoughData from "@/components/analytics/NotEnoughData";
 
 const COLORS = {
   inRange: WELLNESS_COLORS.inRange,
@@ -16,7 +17,15 @@ function BreakdownItem({ value, label, color }) {
   );
 }
 
-export default function ZoneOfBalanceRing({ inRangePercent, abovePercent, belowPercent, totalReadings, comparisons, rangeDays }) {
+export default function ZoneOfBalanceRing({ inRangePercent, abovePercent, belowPercent, totalReadings, comparisons, rangeDays, hasEnough = true }) {
+  if (!hasEnough) {
+    return (
+      <div className="relative z-10 flex flex-col items-center">
+        <NotEnoughData />
+      </div>
+    );
+  }
+
   const radius = 77;
   const circumference = 2 * Math.PI * radius;
 

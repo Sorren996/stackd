@@ -1,5 +1,6 @@
 import { Check, TrendingUp, Activity } from "lucide-react";
 import { WELLNESS_COLORS } from "@/lib/glassTheme";
+import NotEnoughData from "@/components/analytics/NotEnoughData";
 
 const PERIOD_LONG = { 7: "7 days", 14: "14 days", 30: "30 days", 60: "60 days", 90: "90 days", 270: "9 months" };
 
@@ -29,7 +30,10 @@ function getInsight(inRangePercent, periodLong) {
   };
 }
 
-export default function RhythmInsight({ inRangePercent, rangeDays }) {
+export default function RhythmInsight({ inRangePercent, rangeDays, hasEnough = true }) {
+  if (!hasEnough) {
+    return <NotEnoughData compact />;
+  }
   const periodLong = PERIOD_LONG[rangeDays] || `${rangeDays} days`;
   const insight = getInsight(inRangePercent, periodLong);
   const InsightIcon = insight.icon;

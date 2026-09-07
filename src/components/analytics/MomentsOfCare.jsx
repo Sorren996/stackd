@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Heart, ArrowUp, ArrowDown } from "lucide-react";
 import { WELLNESS_COLORS } from "@/lib/glassTheme";
+import NotEnoughData from "@/components/analytics/NotEnoughData";
 
 const MIN_READINGS = 3;
 const ELEVATED_THRESHOLD = 20;
@@ -91,7 +92,18 @@ function InsightCard({ insight }) {
   );
 }
 
-export default function MomentsOfCare({ segments }) {
+export default function MomentsOfCare({ segments, hasEnough = true }) {
+  if (!hasEnough) {
+    return (
+      <div>
+        <p className="mb-3 px-1 text-[10px] font-bold uppercase tracking-[0.20em] text-white">Moments of Care</p>
+        <div className="glass-card relative overflow-hidden rounded-3xl border p-5">
+          <NotEnoughData />
+        </div>
+      </div>
+    );
+  }
+
   const valid = segments.filter((s) => s.count >= MIN_READINGS);
 
   if (!valid.length) {

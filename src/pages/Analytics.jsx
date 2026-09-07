@@ -12,6 +12,7 @@ import DailyPatternChart from "@/components/analytics/DailyPatternChart";
 import MomentsOfCare from "@/components/analytics/MomentsOfCare";
 import RangeSelector from "@/components/analytics/RangeSelector";
 import { fetchAllGlucoseReadings } from "@/lib/fetchAllGlucose";
+import { evaluateSufficiency } from "@/lib/dataSufficiency";
 import AtAGlanceMetrics from "@/components/analytics/AtAGlanceMetrics";
 import RhythmInsight from "@/components/analytics/RhythmInsight";
 
@@ -164,6 +165,7 @@ export default function Analytics() {
       averageGlucose,
       hourlyAverages,
       segments,
+      sufficiency: evaluateSufficiency(recent, rangeDays),
     };
   }, [readings, targetRange, dexcomConnected, rangeDays]);
 
@@ -195,18 +197,30 @@ export default function Analytics() {
       averageGlucose: avg,
       gmi: 3.31 + 0.02392 * avg,
       inRangePercent: (inRange / total) * 100,
+      sufficiency: evaluateSufficiency(prevReadings, rangeDays),
     };
   }, [readings, targetRange, dexcomConnected, rangeDays]);
 
+  const currentSufficiency = stats?.sufficiency ?? { hasEnough: false, daysCovered: 0, totalReadings: 0 };
+  const previousSufficiency = prevStats?.sufficiency ?? { hasEnough: false, daysCovered: 0, totalReadings: 0 };
+
   const comparisons = useMemo(() => {
-    if (!stats || !prevStats) return null;
+    if (!stats) return null;
     const periodShort = PERIOD_SHORT[rangeDays] || `${rangeDays}d`;
+    if (!prevStats || !previousSufficiency.hasEnough) {
+      const placeholder = { text: "Not enough data yet", color: "rgba(255,255,255,0.3)" };
+      return {
+        averageGlucose: placeholder,
+        gmi: gmi !== null ? placeholder : null,
+        inRangePercent: placeholder,
+      };
+    }
     return {
       averageGlucose: formatComparison(stats.averageGlucose - prevStats.averageGlucose, " mg/dL", true, periodShort),
       gmi: gmi !== null ? formatComparison(gmi - prevStats.gmi, "%", true, periodShort) : null,
       inRangePercent: formatComparison(stats.inRangePercent - prevStats.inRangePercent, "%", false, periodShort),
     };
-  }, [stats, prevStats, gmi, rangeDays]);
+  }, [stats, prevStats, previousSufficiency, gmi, rangeDays]);
 
   if (isLoading) {
     return (
@@ -284,6 +298,7 @@ export default function Analytics() {
               totalReadings={stats.total}
               comparisons={comparisons}
               rangeDays={rangeDays}
+              hasEnough={currentSufficiency.hasEnough}
             />
 
             {/* Divider */}
@@ -297,6 +312,7 @@ export default function Analytics() {
               targetHigh={targetRange.high}
               comparisons={comparisons}
               rangeDays={rangeDays}
+              hasEnough={currentSufficiency.hasEnough}
             />
 
             {/* Divider */}
@@ -306,6 +322,7 @@ export default function Analytics() {
             <RhythmInsight
               inRangePercent={stats.inRangePercent}
               rangeDays={rangeDays}
+              hasEnough={currentSufficiency.hasEnough}
             />
           </div>
         </div>
@@ -321,6 +338,7 @@ export default function Analytics() {
           hourlyAverages={stats.hourlyAverages}
           targetLow={targetRange.low}
           targetHigh={targetRange.high}
+          hasEnough={currentSufficiency.hasEnough}
         />
       </motion.div>
 
@@ -330,7 +348,7 @@ export default function Analytics() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.15 }}
       >
-        <MomentsOfCare segments={stats.segments} />
+        <MomentsOfCare segments={stats.segments} hasEnough={currentSufficiency.hasEnough} />
       </motion.div>
     </div>
   );

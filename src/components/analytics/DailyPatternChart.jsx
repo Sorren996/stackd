@@ -1,5 +1,6 @@
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis, Tooltip, ReferenceArea } from "recharts";
 import { ArrowUp } from "lucide-react";
+import NotEnoughData from "@/components/analytics/NotEnoughData";
 
 const LINE_COLOR = "#5ba3b8";
 
@@ -31,7 +32,20 @@ function ChartTooltip({ active, payload }) {
   );
 }
 
-export default function DailyPatternChart({ hourlyAverages, targetLow, targetHigh }) {
+export default function DailyPatternChart({ hourlyAverages, targetLow, targetHigh, hasEnough = true }) {
+  if (!hasEnough) {
+    return (
+      <div className="glass-card relative overflow-hidden rounded-3xl border p-5">
+        <div className="relative z-10">
+          <div className="flex flex-col">
+            <p className="text-[10px] font-bold uppercase tracking-[0.20em] text-white">Daily Rhythm</p>
+            <p className="mt-0.5 text-[11px] text-white/30">Average glucose throughout the day</p>
+          </div>
+          <NotEnoughData />
+        </div>
+      </div>
+    );
+  }
   const dataWithValues = hourlyAverages.filter((d) => d.avg !== null);
   const values = dataWithValues.map((d) => d.avg);
   const minVal = values.length ? Math.min(...values, targetLow) : targetLow;
