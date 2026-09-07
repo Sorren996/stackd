@@ -1,0 +1,44 @@
+{
+  "name": "Meal Memory Analysis Pipeline",
+  "description": "Computes 4-hour retrospective meal-response analyses for meals that are ready, and re-runs stale ones when new glucose or insulin data arrives.",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "interval",
+      "cron_expression": null,
+      "one_time_date": null,
+      "timezone": "UTC",
+      "interval_value": 15,
+      "interval_unit": "minutes",
+      "interval_anchor": "2026-08-04T01:39:48.722000",
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "meal_memory_analysis_pipeline",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "processMealAnalyses",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  },
+  "x-base44-migrated-from-automation": {
+    "legacy_payload_function": "processMealAnalyses"
+  }
+}

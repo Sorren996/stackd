@@ -1,0 +1,37 @@
+{
+  "name": "Fill Glucose Gaps on New Reading",
+  "description": "When a user logs a new glucose reading, fills the gap between the previous reading and the new one with system carry-forward readings for the AI Coach timeline.",
+  "trigger": {
+    "condition": "${ (.trigger.data.source != \"system\") }",
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "create"
+      ],
+      "entity_name": "GlucoseReading"
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "fill_glucose_gaps_on_new_reading",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "generateSystemGlucoseLogs",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  },
+  "x-base44-migrated-from-automation": {
+    "legacy_payload_function": "generateSystemGlucoseLogs"
+  }
+}
