@@ -121,7 +121,7 @@ export default function MealOutcomeModal({ meal, glucose, insulin, targetLow, ta
     <AnimatePresence>
       {meal && (
         <div
-          className="fixed inset-0 z-[90] flex items-end justify-center sm:items-center"
+          className="fixed inset-0 z-[90] flex items-center justify-center px-4"
           onClick={onClose}
         >
           <motion.div
@@ -171,6 +171,8 @@ export default function MealOutcomeModal({ meal, glucose, insulin, targetLow, ta
             {/* Chart */}
             {data.length > 0 ? (
               <div className="rounded-2xl border p-3" style={{ background: "rgba(255,255,255,0.02)", borderColor: "rgba(255,255,255,0.08)" }}>
+                <p className="mb-1 px-1 text-[11px] font-semibold text-white/65">Glucose Response</p>
+                <p className="mb-2 px-1 text-[9px] text-white/30">Your glucose journey from 30 min before to 3 hours after this meal</p>
                 <ResponsiveContainer width="100%" height={200}>
                   <ComposedChart data={data} margin={{ top: 8, right: 6, left: -12, bottom: 4 }}>
                     <defs>
@@ -237,18 +239,22 @@ export default function MealOutcomeModal({ meal, glucose, insulin, targetLow, ta
                     />
                   </ComposedChart>
                 </ResponsiveContainer>
-                <div className="mt-1.5 flex items-center gap-3 px-1">
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 px-1">
                   <span className="flex items-center gap-1.5">
                     <span className="inline-block h-2 w-2 rounded-full" style={{ background: "#ffffff" }} />
-                    <span className="text-[9px] text-white/35">Glucose</span>
+                    <span className="text-[9px] text-white/40">Glucose (mg/dL)</span>
                   </span>
                   <span className="flex items-center gap-1.5">
                     <span className="inline-block h-2 w-2 rounded-full" style={{ background: "#5ba3b8" }} />
-                    <span className="text-[9px] text-white/35">Support active</span>
+                    <span className="text-[9px] text-white/40">Insulin active</span>
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="inline-block h-2 w-2 rounded-full" style={{ background: "#5ba88a" }} />
+                    <span className="text-[9px] text-white/40">Comfort zone ({targetLow}\u2013{targetHigh})</span>
                   </span>
                   <span className="flex items-center gap-1.5">
                     <span className="inline-block h-2 w-2 rounded-full" style={{ background: "#f59e0b" }} />
-                    <span className="text-[9px] text-white/35">Meal</span>
+                    <span className="text-[9px] text-white/40">Meal time</span>
                   </span>
                 </div>
               </div>
@@ -261,17 +267,17 @@ export default function MealOutcomeModal({ meal, glucose, insulin, targetLow, ta
             {/* Summary stats */}
             <div className="mt-4 grid grid-cols-3 gap-2">
               <div className="rounded-xl border px-3 py-2.5 text-center" style={{ background: "rgba(255,255,255,0.02)", borderColor: "rgba(255,255,255,0.08)" }}>
-                <p className="text-[9px] uppercase tracking-wider text-white/30">Started</p>
+                <p className="text-[9px] uppercase tracking-wider text-white/30">Before meal</p>
                 <p className="mt-0.5 text-sm font-bold text-white/80">{Math.round(meal.startingGlucose)}</p>
                 <p className="text-[8px] text-white/25">mg/dL</p>
               </div>
               <div className="rounded-xl border px-3 py-2.5 text-center" style={{ background: "rgba(255,255,255,0.02)", borderColor: "rgba(255,255,255,0.08)" }}>
-                <p className="text-[9px] uppercase tracking-wider text-white/30">Peaked</p>
+                <p className="text-[9px] uppercase tracking-wider text-white/30">Peak</p>
                 <p className="mt-0.5 text-sm font-bold" style={{ color: riseColor }}>{Math.round(meal.peakGlucose)}</p>
                 <p className="text-[8px] text-white/25">mg/dL</p>
               </div>
               <div className="rounded-xl border px-3 py-2.5 text-center" style={{ background: "rgba(255,255,255,0.02)", borderColor: "rgba(255,255,255,0.08)" }}>
-                <p className="text-[9px] uppercase tracking-wider text-white/30">Change</p>
+                <p className="text-[9px] uppercase tracking-wider text-white/30">Rise</p>
                 <p className="mt-0.5 text-sm font-bold" style={{ color: riseColor }}>
                   {meal.rise > 0 ? "+" : ""}{Math.round(meal.rise)}
                 </p>
@@ -281,21 +287,24 @@ export default function MealOutcomeModal({ meal, glucose, insulin, targetLow, ta
 
             {/* Insulin details */}
             {doses.length > 0 && (
-              <div className="mt-3 space-y-1.5">
-                {doses.map((d, i) => {
-                  const profile = getInsulinProfile(d.insulin_type);
-                  return (
-                    <div key={i} className="flex items-center justify-between text-[11px]">
-                      <span className="flex items-center gap-1.5">
-                        <span className="inline-block h-2 w-2 rounded-full" style={{ background: profile?.color || "#5ba3b8" }} />
-                        <span className="text-white/55">{d.insulin_type}</span>
-                      </span>
-                      <span className="text-white/35">
-                        {format(new Date(d.administered_at), "h:mm a")} · {Number(d.units).toFixed(1)}u
-                      </span>
-                    </div>
-                  );
-                })}
+              <div className="mt-3">
+                <p className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-wider text-white/30">Support logged near this meal</p>
+                <div className="space-y-1.5">
+                  {doses.map((d, i) => {
+                    const profile = getInsulinProfile(d.insulin_type);
+                    return (
+                      <div key={i} className="flex items-center justify-between text-[11px]">
+                        <span className="flex items-center gap-1.5">
+                          <span className="inline-block h-2 w-2 rounded-full" style={{ background: profile?.color || "#5ba3b8" }} />
+                          <span className="text-white/55">{d.insulin_type}</span>
+                        </span>
+                        <span className="text-white/35">
+                          {format(new Date(d.administered_at), "h:mm a")} · {Number(d.units).toFixed(1)}u
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </motion.div>
