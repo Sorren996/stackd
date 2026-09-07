@@ -41,7 +41,7 @@ const ANALYTICS_FETCH_LIMIT = 30000;
 function readStoredRange() {
   if (typeof window === "undefined") return DEFAULT_RANGE_DAYS;
   const stored = Number(window.localStorage.getItem(ANALYTICS_RANGE_KEY));
-  return [7, 14, 30, 60, 90, 270].includes(stored) ? stored : DEFAULT_RANGE_DAYS;
+  return [7, 14, 30, 60, 90].includes(stored) ? stored : DEFAULT_RANGE_DAYS;
 }
 
 function readTargetRange() {
@@ -229,17 +229,17 @@ export default function Analytics() {
   }
 
   return (
-    <div className="space-y-8 pb-8">
+    <div className="space-y-5 pb-8">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
-        className="space-y-4 px-1"
+        className="space-y-3 px-1"
       >
         <div>
-          <h1 className="text-[28px] font-bold tracking-tight text-white">My Rhythms</h1>
-          <p className="mt-0.5 text-[13px] text-white/30">
+          <h1 className="text-2xl font-bold tracking-tight text-white">My Rhythms</h1>
+          <p className="mt-1 text-sm text-white/35">
             Gentle insights from your last {PERIOD_LONG[rangeDays] || `${rangeDays} days`}
           </p>
         </div>
@@ -248,59 +248,74 @@ export default function Analytics() {
         </div>
       </motion.div>
 
-      {/* Hero: Comfort Zone */}
+      {/* Primary Stackd Card: Hero + Metrics + Insight */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.05 }}
-        className="px-1"
       >
-        <ZoneOfBalanceRing
-          inRangePercent={stats.inRangePercent}
-          abovePercent={stats.abovePercent}
-          belowPercent={stats.belowPercent}
-          totalReadings={stats.total}
-          comparisons={comparisons}
-          rangeDays={rangeDays}
-        />
-      </motion.div>
+        <div className="glass-card relative overflow-hidden rounded-3xl border p-5">
+          {/* Ambient glow */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 top-10 flex justify-center"
+          >
+            <div
+              className="h-48 w-48 rounded-full"
+              style={{
+                background: "radial-gradient(circle, rgba(91,168,138,0.06) 0%, transparent 65%)",
+                filter: "blur(8px)",
+              }}
+            />
+          </div>
 
-      {/* At a glance metrics */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.1 }}
-        className="px-4"
-      >
-        <AtAGlanceMetrics
-          averageGlucose={stats.averageGlucose}
-          gmi={gmi}
-          targetLow={targetRange.low}
-          targetHigh={targetRange.high}
-          comparisons={comparisons}
-          rangeDays={rangeDays}
-        />
-      </motion.div>
+          <div className="relative z-10">
+            {/* Eyebrow */}
+            <div className="flex flex-col items-center">
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white">Time in Your Comfort Zone</p>
+              <p className="mt-0.5 text-[11px] text-white/30">Last {PERIOD_LONG[rangeDays] || `${rangeDays} days`}</p>
+            </div>
 
-      {/* Stackd insight */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.12 }}
-        className="px-4"
-      >
-        <RhythmInsight
-          inRangePercent={stats.inRangePercent}
-          rangeDays={rangeDays}
-        />
+            {/* Donut + Breakdown */}
+            <ZoneOfBalanceRing
+              inRangePercent={stats.inRangePercent}
+              abovePercent={stats.abovePercent}
+              belowPercent={stats.belowPercent}
+              totalReadings={stats.total}
+              comparisons={comparisons}
+              rangeDays={rangeDays}
+            />
+
+            {/* Divider */}
+            <div className="my-4 h-px w-full" style={{ background: "linear-gradient(to right, transparent, rgba(255,255,255,0.06), transparent)" }} />
+
+            {/* Metrics */}
+            <AtAGlanceMetrics
+              averageGlucose={stats.averageGlucose}
+              gmi={gmi}
+              targetLow={targetRange.low}
+              targetHigh={targetRange.high}
+              comparisons={comparisons}
+              rangeDays={rangeDays}
+            />
+
+            {/* Divider */}
+            <div className="my-4 h-px w-full" style={{ background: "linear-gradient(to right, transparent, rgba(255,255,255,0.06), transparent)" }} />
+
+            {/* Insight */}
+            <RhythmInsight
+              inRangePercent={stats.inRangePercent}
+              rangeDays={rangeDays}
+            />
+          </div>
+        </div>
       </motion.div>
 
       {/* Daily rhythm chart */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.15 }}
-        className="px-1"
+        transition={{ duration: 0.4, delay: 0.1 }}
       >
         <DailyPatternChart
           hourlyAverages={stats.hourlyAverages}
@@ -313,8 +328,7 @@ export default function Analytics() {
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.2 }}
-        className="px-1"
+        transition={{ duration: 0.4, delay: 0.15 }}
       >
         <MomentsOfCare segments={stats.segments} />
       </motion.div>

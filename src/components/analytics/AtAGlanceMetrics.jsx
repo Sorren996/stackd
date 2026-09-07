@@ -5,15 +5,15 @@ const DIVIDER_STYLE = {
 function MetricItem({ label, value, unit, comparison }) {
   if (value === null || value === undefined) return null;
   return (
-    <div className="flex items-baseline justify-between py-4">
-      <span className="text-[11px] uppercase tracking-[0.12em] text-white/30">{label}</span>
+    <div className="flex items-baseline justify-between py-2.5">
+      <span className="text-[11px] text-white/35">{label}</span>
       <div className="flex flex-col items-end gap-0.5">
-        <span className="text-xl font-bold tracking-tight text-white">
+        <span className="text-[15px] font-bold tracking-tight text-white">
           {value}
-          {unit && <span className="ml-1 text-xs font-medium text-white/35">{unit}</span>}
+          {unit && <span className="ml-1 text-[11px] font-medium text-white/35">{unit}</span>}
         </span>
         {comparison && (
-          <span className="text-[10px] font-medium" style={{ color: comparison.color }}>
+          <span className="text-[9px] font-medium" style={{ color: comparison.color }}>
             {comparison.text}
           </span>
         )}

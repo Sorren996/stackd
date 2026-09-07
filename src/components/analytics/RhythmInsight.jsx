@@ -35,24 +35,16 @@ export default function RhythmInsight({ inRangePercent, rangeDays }) {
   const InsightIcon = insight.icon;
 
   return (
-    <div
-      className="rounded-2xl px-4 py-4"
-      style={{
-        background: `${insight.color}08`,
-        border: `1px solid ${insight.color}12`,
-      }}
-    >
-      <div className="flex items-start gap-3">
-        <span
-          className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full"
-          style={{ background: `${insight.color}14`, color: insight.color }}
-        >
-          <InsightIcon className="h-3.5 w-3.5" strokeWidth={2.5} />
-        </span>
-        <div className="min-w-0">
-          <p className="text-sm font-bold" style={{ color: insight.color }}>{insight.title}</p>
-          <p className="mt-1 text-[12px] leading-relaxed text-white/45">{insight.message}</p>
-        </div>
+    <div className="flex items-start gap-2.5">
+      <span
+        className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
+        style={{ background: `${insight.color}1a`, color: insight.color }}
+      >
+        <InsightIcon className="h-3 w-3" strokeWidth={2.5} />
+      </span>
+      <div className="min-w-0">
+        <p className="text-[12px] font-bold" style={{ color: insight.color }}>{insight.title}</p>
+        <p className="mt-0.5 text-[11px] leading-relaxed text-white/45">{insight.message}</p>
       </div>
     </div>
   );

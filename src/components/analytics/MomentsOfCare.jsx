@@ -61,27 +61,29 @@ function InsightCard({ insight }) {
   const suggestion = getSuggestion(type, segment.label);
 
   return (
-    <div
-      className="rounded-2xl px-4 py-4"
-      style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.05)" }}
-    >
-      <div className="flex items-start gap-3">
-        <div className="shrink-0 rounded-lg p-1.5" style={{ background: `${color}14` }}>
-          <Icon className="h-3.5 w-3.5" strokeWidth={2.5} style={{ color }} />
+    <div className="glass-card relative overflow-hidden rounded-2xl border p-4">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -inset-6 opacity-40"
+        style={{ background: `radial-gradient(circle at 0% 0%, ${color}14, transparent 60%)` }}
+      />
+      <div className="relative z-10 flex items-start gap-3">
+        <div className="shrink-0 rounded-xl p-2" style={{ background: `${color}18` }}>
+          <Icon className="h-4 w-4" strokeWidth={2.5} style={{ color }} />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color }}>{title}</p>
-          <p className="mt-0.5 text-[13px] font-semibold text-white/85">{segment.label} · {period}</p>
-          <p className="mt-2 text-[12px] leading-snug text-white/55">{OBSERVATIONS[type]}</p>
-          <p className="mt-2 text-[11px] text-white/30">
-            <span className="font-semibold text-white/65">{segment.count}</span> readings
+          <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: `${color}` }}>{title}</p>
+          <p className="mt-0.5 text-[13px] font-semibold text-white/90">{segment.label} · {period}</p>
+          <p className="mt-2 text-[13px] leading-snug text-white/60">{OBSERVATIONS[type]}</p>
+          <p className="mt-2 text-[11px] text-white/35">
+            <span className="font-semibold text-white/70">{segment.count}</span> readings
             {" · "}
-            {segment.avg !== null && (<><span className="font-semibold text-white/65">{segment.avg}</span> mg/dL avg</>)}
+            {segment.avg !== null && (<><span className="font-semibold text-white/70">{segment.avg}</span> mg/dL avg</>)}
             {" · "}
-            <span className="font-semibold text-white/65">{Math.round(segment.inRangePct)}%</span> in range
+            <span className="font-semibold text-white/70">{Math.round(segment.inRangePct)}%</span> in range
           </p>
-          <p className="mt-2 text-[11px] leading-relaxed text-white/35">
-            <span className="font-medium text-white/50">Worth noticing:</span> {suggestion}
+          <p className="mt-2 text-[11px] leading-relaxed text-white/40">
+            <span className="font-medium text-white/55">Worth noticing:</span> {suggestion}
           </p>
         </div>
       </div>
@@ -94,11 +96,13 @@ export default function MomentsOfCare({ segments }) {
 
   if (!valid.length) {
     return (
-      <div className="rounded-2xl px-4 py-6 text-center" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
-        <p className="text-[11px] uppercase tracking-[0.12em] text-white/30">Moments of care</p>
-        <p className="mt-3 text-sm leading-relaxed text-white/40">
-          Keep logging readings throughout your day to reveal your body's gentle patterns.
-        </p>
+      <div className="glass-card relative overflow-hidden rounded-3xl border p-6">
+        <div className="text-center">
+          <p className="text-[10px] font-bold uppercase tracking-[0.20em] text-white">Moments of Care</p>
+          <p className="mt-3 text-sm leading-relaxed text-white/45">
+            Keep logging readings throughout your day to reveal your body's gentle patterns.
+          </p>
+        </div>
       </div>
     );
   }
@@ -124,7 +128,7 @@ export default function MomentsOfCare({ segments }) {
 
   return (
     <div>
-      <p className="mb-3 px-1 text-[11px] uppercase tracking-[0.12em] text-white/30">Moments of care</p>
+      <p className="mb-3 px-1 text-[10px] font-bold uppercase tracking-[0.20em] text-white">Moments of Care</p>
       <div className="space-y-3">
         {insights.map((insight, i) => (
           <motion.div
