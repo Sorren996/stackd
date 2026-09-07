@@ -28,10 +28,10 @@ export async function fetchAllGlucoseReadings(rangeDays = 270) {
         base44.entities.GlucoseReading.filter(
           { recorded_at: { $gte: c.start, $lte: c.end } },
           "-recorded_at", 5000
-        ).catch(() => [])
+        ).catch((e) => { console.warn('[fetchAllGlucoseReadings] chunk failed:', c.start, e?.message); return []; })
       )
     ),
-    base44.entities.GlucoseReading.filter({ source: "manual" }, "-recorded_at", 5000).catch(() => []),
+    base44.entities.GlucoseReading.filter({ source: "manual" }, "-recorded_at", 5000).catch((e) => { console.warn('[fetchAllGlucoseReadings] manual fetch failed:', e?.message); return []; }),
   ]);
 
   const all = chunkResults.flat();

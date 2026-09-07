@@ -32,7 +32,7 @@ function formatComparison(delta, unit, lowerIsBetter, periodShort) {
   const arrow = delta < 0 ? "↓" : "↑";
   const absVal = Math.abs(delta);
   const formatted = unit === "%" ? absVal.toFixed(1) : Math.round(absVal);
-  return { text: `${arrow} ${formatted}${unit} vs prev ${periodShort}`, color };
+  return { text: `${arrow} ${formatted}${unit} · prev ${periodShort}`, color };
 }
 // Dexcom Share emits a reading every 5 minutes (288/day). 90 days needs ~26k
 // readings; fetch a little extra so the full window is covered.
@@ -41,7 +41,7 @@ const ANALYTICS_FETCH_LIMIT = 30000;
 function readStoredRange() {
   if (typeof window === "undefined") return DEFAULT_RANGE_DAYS;
   const stored = Number(window.localStorage.getItem(ANALYTICS_RANGE_KEY));
-  return [7, 14, 30, 60, 90].includes(stored) ? stored : DEFAULT_RANGE_DAYS;
+  return [7, 14, 30, 60, 90, 270].includes(stored) ? stored : DEFAULT_RANGE_DAYS;
 }
 
 function readTargetRange() {
@@ -84,7 +84,7 @@ export default function Analytics() {
     const seen = new Set(graphReadings.map((r) => r.id));
     return [...graphReadings, ...extendedReadings.filter((r) => !seen.has(r.id))];
   }, [graphReadings, extendedReadings]);
-  const isLoading = graphLoading && extendedLoading;
+  const isLoading = graphLoading || extendedLoading;
 
   const [targetRange, setTargetRange] = useState(readTargetRange);
   const { connected: dexcomConnected } = useDexcomConnection();
@@ -229,7 +229,7 @@ export default function Analytics() {
   }
 
   return (
-    <div className="space-y-5 pb-8">
+    <div className="space-y-4 pb-24">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
@@ -287,7 +287,7 @@ export default function Analytics() {
             />
 
             {/* Divider */}
-            <div className="my-4 h-px w-full" style={{ background: "linear-gradient(to right, transparent, rgba(255,255,255,0.06), transparent)" }} />
+            <div className="my-3 h-px w-full" style={{ background: "linear-gradient(to right, transparent, rgba(255,255,255,0.05), transparent)" }} />
 
             {/* Metrics */}
             <AtAGlanceMetrics
@@ -300,7 +300,7 @@ export default function Analytics() {
             />
 
             {/* Divider */}
-            <div className="my-4 h-px w-full" style={{ background: "linear-gradient(to right, transparent, rgba(255,255,255,0.06), transparent)" }} />
+            <div className="my-3 h-px w-full" style={{ background: "linear-gradient(to right, transparent, rgba(255,255,255,0.05), transparent)" }} />
 
             {/* Insight */}
             <RhythmInsight

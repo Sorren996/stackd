@@ -1,16 +1,16 @@
 const DIVIDER_STYLE = {
-  background: "linear-gradient(to right, transparent, rgba(255,255,255,0.06), transparent)",
+  background: "linear-gradient(to right, transparent, rgba(255,255,255,0.05), transparent)",
 };
 
-function MetricItem({ label, value, unit, comparison }) {
+function MetricItem({ label, value, unit, comparison, isQuiet }) {
   if (value === null || value === undefined) return null;
   return (
-    <div className="flex items-baseline justify-between py-2.5">
-      <span className="text-[11px] text-white/35">{label}</span>
-      <div className="flex flex-col items-end gap-0.5">
-        <span className="text-[15px] font-bold tracking-tight text-white">
+    <div className="flex items-baseline justify-between py-2">
+      <span className={`text-[11px] ${isQuiet ? "text-white/25" : "text-white/35"}`}>{label}</span>
+      <div className="flex flex-col items-end gap-0">
+        <span className={`font-bold tracking-tight text-white ${isQuiet ? "text-[13px]" : "text-[14px]"}`}>
           {value}
-          {unit && <span className="ml-1 text-[11px] font-medium text-white/35">{unit}</span>}
+          {unit && <span className="ml-1 text-[10px] font-medium text-white/35">{unit}</span>}
         </span>
         {comparison && (
           <span className="text-[9px] font-medium" style={{ color: comparison.color }}>
@@ -43,6 +43,7 @@ export default function AtAGlanceMetrics({ averageGlucose, gmi, targetLow, targe
         label="Target range"
         value={`${targetLow}\u2013${targetHigh}`}
         unit="mg/dL"
+        isQuiet
       />
     </div>
   );

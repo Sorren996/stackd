@@ -9,7 +9,7 @@ function getInsight(inRangePercent, periodLong) {
     return {
       icon: Check,
       title: "Strong consistency",
-      message: `Your glucose stayed within your comfort zone for most of the last ${periodLong}. ${pct}% of readings were in range.`,
+      message: `${pct}% of readings stayed within your comfort zone over the last ${periodLong}.`,
       color: WELLNESS_COLORS.inRange,
     };
   }
@@ -17,14 +17,14 @@ function getInsight(inRangePercent, periodLong) {
     return {
       icon: TrendingUp,
       title: "Building consistency",
-      message: `Your readings spent more time in range than outside it — ${pct}% over the last ${periodLong}.`,
+      message: `More time in range than out — ${pct}% over the last ${periodLong}.`,
       color: WELLNESS_COLORS.above,
     };
   }
   return {
     icon: Activity,
     title: "More variability recently",
-    message: `A larger share of readings fell outside your comfort zone. ${pct}% stayed in range over the last ${periodLong}.`,
+    message: `${pct}% stayed in range over the last ${periodLong}.`,
     color: WELLNESS_COLORS.below,
   };
 }
@@ -35,16 +35,16 @@ export default function RhythmInsight({ inRangePercent, rangeDays }) {
   const InsightIcon = insight.icon;
 
   return (
-    <div className="flex items-start gap-2.5">
+    <div className="flex items-start gap-2">
       <span
-        className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
+        className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full"
         style={{ background: `${insight.color}1a`, color: insight.color }}
       >
-        <InsightIcon className="h-3 w-3" strokeWidth={2.5} />
+        <InsightIcon className="h-2.5 w-2.5" strokeWidth={2.5} />
       </span>
       <div className="min-w-0">
-        <p className="text-[12px] font-bold" style={{ color: insight.color }}>{insight.title}</p>
-        <p className="mt-0.5 text-[11px] leading-relaxed text-white/45">{insight.message}</p>
+        <p className="text-[11px] font-bold" style={{ color: insight.color }}>{insight.title}</p>
+        <p className="mt-0.5 text-[10px] leading-relaxed text-white/40">{insight.message}</p>
       </div>
     </div>
   );

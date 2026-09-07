@@ -9,15 +9,15 @@ const COLORS = {
 
 function BreakdownItem({ value, label, color }) {
   return (
-    <div className="flex flex-col items-center gap-1">
-      <span className="text-base font-bold tracking-tight" style={{ color: `${color}cc` }}>{value}%</span>
-      <span className="text-[9px] uppercase tracking-[0.12em] text-white/30">{label}</span>
+    <div className="flex flex-col items-center gap-0.5">
+      <span className="text-sm font-bold tracking-tight" style={{ color: `${color}cc` }}>{value}%</span>
+      <span className="text-[8px] uppercase tracking-[0.10em] text-white/25">{label}</span>
     </div>
   );
 }
 
 export default function ZoneOfBalanceRing({ inRangePercent, abovePercent, belowPercent, totalReadings, comparisons, rangeDays }) {
-  const radius = 68;
+  const radius = 58;
   const circumference = 2 * Math.PI * radius;
 
   const belowArc = (belowPercent / 100) * circumference;
@@ -30,14 +30,14 @@ export default function ZoneOfBalanceRing({ inRangePercent, abovePercent, belowP
   return (
     <div className="relative z-10 flex flex-col items-center">
       {/* Donut + percentage */}
-      <div className="relative mt-4">
-        <svg width="172" height="172" viewBox="0 0 172 172" style={{ transform: "rotate(-90deg)" }}>
-          <circle cx="86" cy="86" r={radius} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="14" />
+      <div className="relative mt-3">
+        <svg width="148" height="148" viewBox="0 0 148 148" style={{ transform: "rotate(-90deg)" }}>
+          <circle cx="74" cy="74" r={radius} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="12" />
           {belowPercent > 0 && (
             <motion.circle
-              cx="86" cy="86" r={radius} fill="none"
+              cx="74" cy="74" r={radius} fill="none"
               stroke={COLORS.below}
-              strokeWidth="14"
+              strokeWidth="12"
               strokeDasharray={`${belowArc} ${circumference - belowArc}`}
               initial={{ strokeDashoffset: circumference }}
               animate={{ strokeDashoffset: 0 }}
@@ -46,21 +46,21 @@ export default function ZoneOfBalanceRing({ inRangePercent, abovePercent, belowP
           )}
           {inRangePercent > 0 && (
             <motion.circle
-              cx="86" cy="86" r={radius} fill="none"
+              cx="74" cy="74" r={radius} fill="none"
               stroke={COLORS.inRange}
-              strokeWidth="14"
+              strokeWidth="12"
               strokeDasharray={`${inRangeArc} ${circumference - inRangeArc}`}
               initial={{ strokeDashoffset: circumference }}
               animate={{ strokeDashoffset: inRangeOffset }}
               transition={{ duration: 1, delay: 0.15, ease: "easeOut" }}
-              style={{ filter: "drop-shadow(0 0 4px rgba(91,168,138,0.15))" }}
+              style={{ filter: "drop-shadow(0 0 3px rgba(91,168,138,0.12))" }}
             />
           )}
           {abovePercent > 0 && (
             <motion.circle
-              cx="86" cy="86" r={radius} fill="none"
+              cx="74" cy="74" r={radius} fill="none"
               stroke={COLORS.above}
-              strokeWidth="14"
+              strokeWidth="12"
               strokeDasharray={`${aboveArc} ${circumference - aboveArc}`}
               initial={{ strokeDashoffset: circumference }}
               animate={{ strokeDashoffset: aboveOffset }}
@@ -73,14 +73,14 @@ export default function ZoneOfBalanceRing({ inRangePercent, abovePercent, belowP
             initial={{ opacity: 0, scale: 0.85 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5, delay: 0.5 }}
-            className="text-[2.75rem] font-black leading-none tracking-tight text-white"
+            className="text-[2.5rem] font-black leading-none tracking-tight text-white"
           >
             {Math.round(inRangePercent)}%
           </motion.span>
-          <span className="mt-1.5 text-[10px] text-white/35">In comfort zone</span>
+          <span className="mt-1 text-[10px] text-white/35">In comfort zone</span>
           {comparisons?.inRangePercent && (
             <span
-              className="mt-1 text-[9px] font-medium"
+              className="mt-0.5 text-[9px] font-medium"
               style={{ color: comparisons.inRangePercent.color }}
             >
               {comparisons.inRangePercent.text}
@@ -90,7 +90,7 @@ export default function ZoneOfBalanceRing({ inRangePercent, abovePercent, belowP
       </div>
 
       {/* Three-part breakdown */}
-      <div className="mt-5 flex w-full items-center justify-center gap-8">
+      <div className="mt-4 flex w-full items-center justify-center gap-6">
         <BreakdownItem value={Math.round(belowPercent)} label="Below" color={COLORS.below} />
         <BreakdownItem value={Math.round(inRangePercent)} label="In range" color={COLORS.inRange} />
         <BreakdownItem value={Math.round(abovePercent)} label="Above" color={COLORS.above} />
