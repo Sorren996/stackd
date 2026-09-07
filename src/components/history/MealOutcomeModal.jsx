@@ -177,13 +177,7 @@ export default function MealOutcomeModal({ meal, glucose, insulin, targetLow, ta
             {/* Chart */}
             {data.length > 0 ? (
               <div className="rounded-2xl border p-3" style={{ background: "rgba(255,255,255,0.02)", borderColor: "rgba(255,255,255,0.08)" }}>
-                <div className="mb-1 flex items-center justify-between px-1">
-                  <p className="text-[11px] font-semibold text-white/65">Glucose Response</p>
-                  <div className="flex items-center gap-3">
-                    <span className="text-[8px] font-medium text-white/35">mg/dL</span>
-                    <span className="text-[8px] font-medium" style={{ color: "rgba(91,163,184,0.5)" }}>units</span>
-                  </div>
-                </div>
+                <p className="mb-1 px-1 text-[11px] font-semibold text-white/65">Glucose Response</p>
                 <p className="mb-2 px-1 text-[9px] text-white/30">Your glucose journey from 30 min before to 3 hours after this meal</p>
                 <ResponsiveContainer width="100%" height={200}>
                   <ComposedChart data={data} margin={{ top: 8, right: 14, left: 2, bottom: 4 }}>
