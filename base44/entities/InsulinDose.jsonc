@@ -5,6 +5,33 @@
     "insulin_type": {
       "type": "string",
       "enum": [
+        "NovoLog",
+        "Humalog",
+        "Admelog",
+        "Apidra",
+        "Fiasp",
+        "Lyumjev",
+        "Afrezza",
+        "Regular (Humulin R/Novolin R)",
+        "Humulin R U-500",
+        "NPH",
+        "Humulin N",
+        "Novolin N",
+        "Lantus",
+        "Basaglar",
+        "Semglee",
+        "Rezvoglar",
+        "Toujeo",
+        "Levemir",
+        "Tresiba",
+        "Degludec U-200",
+        "Awiqli (Icodec)",
+        "NovoLog Mix 70/30",
+        "Humalog Mix 75/25",
+        "Humalog Mix 50/50",
+        "Humulin 70/30",
+        "Novolin 70/30",
+        "Ryzodeg 70/30",
         "Novolog (Aspart)",
         "Humalog (Lispro)",
         "Apidra (Glulisine)",
@@ -13,7 +40,8 @@
         "Lantus (Glargine)",
         "Levemir (Detemir)",
         "Tresiba (Degludec)"
-      ]
+      ],
+      "description": "The specific insulin product logged. New entries use the product-specific keys from the Stackd insulin activity engine; legacy parenthetical labels are retained so existing doses remain valid on edit."
     },
     "units": {
       "type": "number"
