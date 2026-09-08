@@ -59,7 +59,7 @@ function readImageAsDataUrl(file) {
   });
 }
 
-function CarbsTab({ open, onSubmit, isPending, onDirtyChange, embedded, externalDate, externalTime }, ref) {
+function CarbsTab({ open, onSubmit, isPending, onDirtyChange, embedded, externalDate, externalTime, onCarbsTotal }, ref) {
   const [mode, setMode] = useState("estimate");
   const [mealText, setMealText] = useState("");
   const [mealPhoto, setMealPhoto] = useState(null);
@@ -160,6 +160,14 @@ function CarbsTab({ open, onSubmit, isPending, onDirtyChange, embedded, external
         ? selectedFoods[0].food.name
         : selectedFoods.map((f) => f.food.name).join(" ");
   const gateCarbs = isEstimateMode ? Number(estimatedMeal?.carbs) : isCustomMode ? Number(customCarbs) : totalCarbs;
+
+  // Surface the live carb total + meal name to the parent sheet so it can show
+  // a dynamic "Expected meal insulin" estimate alongside the insulin input.
+  const onCarbsTotalRef = useRef(onCarbsTotal);
+  onCarbsTotalRef.current = onCarbsTotal;
+  useEffect(() => {
+    onCarbsTotalRef.current?.({ carbs: Number(gateCarbs) || 0, mealName: String(gateMealName || "") });
+  }, [gateCarbs, gateMealName]);
 
   const gateThenSubmit = async (realSubmit) => {
     const name = String(gateMealName || "").trim();

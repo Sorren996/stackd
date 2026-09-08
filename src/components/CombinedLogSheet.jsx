@@ -30,6 +30,15 @@ function readInsulinLibrary() {
   return getDefaultInsulinLibrary();
 }
 
+function readMealPlan() {
+  const per5g = Number(localStorage.getItem("meal_insulin_units_per_5g"));
+  return {
+    isComplete: per5g > 0,
+    mealInsulinUnitsPer5g: per5g,
+    gramsPerUnit: per5g > 0 ? 5 / per5g : null,
+  };
+}
+
 function getTodayDateValue() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
@@ -73,6 +82,8 @@ export default function CombinedLogSheet({ open, onOpenChange }) {
   const [isSaving, setIsSaving] = useState(false);
   const [showDiscardPrompt, setShowDiscardPrompt] = useState(false);
   const [insulinLibrary, setInsulinLibrary] = useState(readInsulinLibrary);
+  const [mealPlan, setMealPlan] = useState(readMealPlan);
+  const [liveCarbs, setLiveCarbs] = useState(0);
 
   const carbsRef = useRef(null);
   const insulinSavedRef = useRef(false);
@@ -89,10 +100,14 @@ export default function CombinedLogSheet({ open, onOpenChange }) {
     setSharedTime(new Date().toTimeString().slice(0, 5));
     setSharedDate(getTodayDateValue());
     insulinSavedRef.current = false;
+    setLiveCarbs(0);
   }, [open]);
 
   useEffect(() => {
-    const refresh = () => setInsulinLibrary(readInsulinLibrary());
+    const refresh = () => {
+      setInsulinLibrary(readInsulinLibrary());
+      setMealPlan(readMealPlan());
+    };
     window.addEventListener("insulin-settings-updated", refresh);
     window.addEventListener("storage", refresh);
     return () => {
@@ -136,6 +151,11 @@ export default function CombinedLogSheet({ open, onOpenChange }) {
   const hasInsulin = totalUnits > 0;
   const canLogBoth = hasInsulin || carbDirty;
 
+  const expectedMealInsulin =
+    mealPlan.isComplete && liveCarbs > 0 && mealPlan.gramsPerUnit
+      ? liveCarbs / mealPlan.gramsPerUnit
+      : null;
+
   const requestClose = () => {
     setRenderSheet(false);
     onOpenChange?.(false);
@@ -148,6 +168,7 @@ export default function CombinedLogSheet({ open, onOpenChange }) {
     setSharedDate(getTodayDateValue());
     setCarbDirty(false);
     insulinSavedRef.current = false;
+    setLiveCarbs(0);
   };
 
   const attemptClose = () => {
@@ -306,6 +327,7 @@ export default function CombinedLogSheet({ open, onOpenChange }) {
                   embedded
                   externalDate={sharedDate}
                   externalTime={sharedTime}
+                  onCarbsTotal={({ carbs }) => setLiveCarbs(carbs)}
                 />
               </Suspense>
 
@@ -362,6 +384,49 @@ export default function CombinedLogSheet({ open, onOpenChange }) {
                   Add another dose
                 </button>
               </div>
+
+              {/* Expected meal insulin — a reflective estimate based on the
+                  live carb total and the user's saved ratio. Shown as a
+                  reference, never a dosing instruction. */}
+              {liveCarbs > 0 && (
+                <div className="px-5 pb-2">
+                  {expectedMealInsulin !== null ? (
+                    <div
+                      className="rounded-xl border p-3"
+                      style={{ borderColor: "rgba(91,168,138,0.28)", background: "rgba(91,168,138,0.06)" }}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#A8E6CF" }}>
+                            Expected meal insulin
+                          </p>
+                          <p className="mt-0.5 text-[10px] leading-relaxed text-white/45">
+                            Based on {Math.round(liveCarbs)}g · your saved ratio · 1u per {mealPlan.gramsPerUnit.toFixed(1)}g
+                          </p>
+                        </div>
+                        <span className="shrink-0 text-lg font-bold text-white">
+                          {expectedMealInsulin.toFixed(1)}u
+                        </span>
+                      </div>
+                      <p className="mt-2 text-[10px] leading-relaxed text-white/35">
+                        An estimate based on your saved settings and previous meal patterns — not a dosing instruction. Use it as a reference and follow your individual plan and how your body responds.
+                      </p>
+                    </div>
+                  ) : (
+                    <div
+                      className="rounded-xl border p-3"
+                      style={{ borderColor: "rgba(212,160,86,0.28)", background: "rgba(212,160,86,0.06)" }}
+                    >
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-amber-200/80">
+                        Add your meal ratio
+                      </p>
+                      <p className="mt-1 text-[10px] leading-relaxed text-white/45">
+                        Set your insulin-to-carb ratio in Settings to see an expected meal insulin estimate here.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Shared Date / Time / Notes */}
               <div className="space-y-2 px-5 pt-3 pb-4">
