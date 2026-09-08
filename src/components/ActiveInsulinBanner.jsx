@@ -630,6 +630,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
       latestGlucoseValue: Number.isFinite(latestGlucoseValue) ? latestGlucoseValue : null,
       windowEndGlucoseValue: Number.isFinite(windowEndGlucoseValue) ? windowEndGlucoseValue : null,
       peakOutcome: peakOutcome?.value ?? null,
+      peakOutcomeTime: peakOutcome?.time ?? null,
       lowOutcome: lowOutcome?.value ?? null,
       outcomeAssessment,
       hasCorrectiveInsulin,

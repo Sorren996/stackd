@@ -40,6 +40,25 @@ export default function FloatingActionMenu() {
     return () => window.clearTimeout(id);
   }, []);
 
+  // Allow other parts of the app (e.g. the Meal Balance modal) to open a
+  // logging form directly via a window event.
+  useEffect(() => {
+    const handler = (e) => {
+      const mode = e?.detail?.mode;
+      if (!mode) return;
+      setExpanded(false);
+      if (mode === "both") {
+        setCombinedSheetOpen(true);
+      } else {
+        setSelectedMode(mode);
+        setDoseFormPreloaded(true);
+        setDoseFormOpen(true);
+      }
+    };
+    window.addEventListener("stackd-open-log", handler);
+    return () => window.removeEventListener("stackd-open-log", handler);
+  }, []);
+
   const handleSelect = (mode) => {
     if (mode === "both") {
       setExpanded(false);

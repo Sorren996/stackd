@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Activity, BookOpen, Calculator, Check, CheckCircle2, ChevronDown, Clock, Info, Leaf, Shield, Sprout, X } from "lucide-react";
+import { Activity, BookOpen, Calculator, Check, CheckCircle2, ChevronDown, Clock, Droplet, Info, Leaf, Plus, Shield, Sprout, X } from "lucide-react";
+import MealUsualResponse from "@/components/insulin/MealUsualResponse";
 
 const PALETTE = {
   green: "#58a97c",
@@ -10,6 +11,23 @@ const PALETTE = {
   cardBg: "#151d1e",
   surface: "#0c1314",
 };
+
+const TREND_ARROW = {
+  up: "↑",
+  "up-right": "↗",
+  right: "→",
+  "down-right": "↘",
+  down: "↓",
+};
+
+function formatElapsed(ms) {
+  const totalMin = Math.max(0, Math.round(ms / 60000));
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  if (h && m) return `${h}h ${m}m`;
+  if (h) return `${h}h`;
+  return `${m}m`;
+}
 
 function TooltipPopover({ title, description, onClose, children }) {
   return (
@@ -130,8 +148,7 @@ export default function MealBalanceTooltip({ mealInsight, open, onClose, monitor
   if (!open || !mealInsight) return null;
 
   // New users (no insulin plan yet, or no meal logged) have no `details`.
-  // Instead of returning null — which made the info icon appear to do nothing —
-  // show a gentle onboarding state so the modal always opens.
+  // Show a gentle onboarding state so the modal always opens.
   if (!mealInsight.details) {
     const needsSetup = mealInsight.value === "Setup needed";
     return (
@@ -196,14 +213,29 @@ export default function MealBalanceTooltip({ mealInsight, open, onClose, monitor
   const remainingEstimate = d.estimatedAdditionalUnits || 0;
   const correctionUnitsNeeded = d.correctionUnitsNeeded || 0;
   const glucoseStart = d.correctionGlucoseValue;
-  const glucoseNow = d.windowEndGlucoseValue;
+  const glucoseNow = Number.isFinite(d.latestGlucoseValue) ? d.latestGlucoseValue : d.windowEndGlucoseValue;
   const peakOutcome = d.peakOutcome;
-  const hasGlucoseData = glucoseStart !== null && glucoseStart !== undefined;
+  const peakOutcomeTime = d.peakOutcomeTime;
+  const mealTime = d.meal?.time;
+  const activeInsulin = d.bolusIOB || 0;
 
   const fmtUnits = (v) => (v % 1 === 0 ? String(v) : v.toFixed(1));
   const ratioText = d.gramsPerUnit ? `1u per ${d.gramsPerUnit.toFixed(1)}g` : null;
   const isAccountedFor = remainingEstimate <= 0.01;
   const hasGlucoseAdjustment = correctionUnitsNeeded > 0.01;
+
+  const hasCurrentGlucose = Number.isFinite(glucoseNow);
+  const glucoseChange = hasCurrentGlucose && Number.isFinite(glucoseStart) ? glucoseNow - glucoseStart : null;
+  const elapsedMs = Number.isFinite(mealTime) ? Date.now() - mealTime : null;
+  const trendArrow = glucoseTrend?.icon ? TREND_ARROW[glucoseTrend.icon] : null;
+  const peakAfterMs = Number.isFinite(peakOutcomeTime) && Number.isFinite(mealTime) ? peakOutcomeTime - mealTime : null;
+
+  const openLogger = (mode) => {
+    onClose?.();
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("stackd-open-log", { detail: { mode } }));
+    }
+  };
 
   return (
     <TooltipPopover
@@ -212,14 +244,14 @@ export default function MealBalanceTooltip({ mealInsight, open, onClose, monitor
       onClose={onClose}
     >
       <div className="space-y-4">
-        {/* Window status */}
+        {/* Status */}
         <div
           className="flex items-start gap-2.5 rounded-xl border p-3"
-          style={{ borderColor: `${PALETTE.green}30`, background: `${PALETTE.green}0a` }}
+          style={{ borderColor: `${mealInsight.color}30`, background: `${mealInsight.color}0a` }}
         >
           <span
             className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full"
-            style={{ background: `${PALETTE.green}1a`, color: PALETTE.green }}
+            style={{ background: `${mealInsight.color}1a`, color: mealInsight.color }}
           >
             <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
           </span>
@@ -231,55 +263,86 @@ export default function MealBalanceTooltip({ mealInsight, open, onClose, monitor
           </div>
         </div>
 
-        {/* Three key summary metrics */}
+        {/* Current glucose hero */}
+        {hasCurrentGlucose && (
+          <div
+            className="rounded-xl border p-3.5"
+            style={{ borderColor: "rgba(139,115,247,0.22)", background: "rgba(139,115,247,0.06)" }}
+          >
+            <div className="flex items-end justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: PALETTE.purple }}>
+                  Current glucose
+                </p>
+                <p className="mt-1 flex items-baseline gap-1.5">
+                  <span className="text-3xl font-black leading-none text-white">{Math.round(glucoseNow)}</span>
+                  {trendArrow && (
+                    <span className="text-xl font-bold" style={{ color: glucoseTrend?.color || PALETTE.purple }}>
+                      {trendArrow}
+                    </span>
+                  )}
+                </p>
+              </div>
+              <div className="shrink-0 text-right">
+                {glucoseChange !== null && (
+                  <p className="text-[12px] font-bold" style={{ color: glucoseChange > 0 ? PALETTE.green : "#5ba88a" }}>
+                    {glucoseChange > 0 ? "+" : ""}{Math.round(glucoseChange)}{" "}
+                    <span className="text-[10px] font-medium" style={{ color: PALETTE.muted }}>mg/dL</span>
+                  </p>
+                )}
+                {elapsedMs !== null && (
+                  <p className="text-[10px]" style={{ color: PALETTE.muted }}>{formatElapsed(elapsedMs)} since meal</p>
+                )}
+              </div>
+            </div>
+            <p className="mt-1 text-[10px]" style={{ color: PALETTE.muted, opacity: 0.7 }}>
+              {glucoseChange !== null ? "since you began this meal" : "latest reading"}
+            </p>
+          </div>
+        )}
+
+        {/* Meal summary */}
         <div className="grid grid-cols-3 gap-1.5">
           <MetricCard icon={Leaf} iconColor={PALETTE.green}>
             <p className="text-base font-bold text-white whitespace-nowrap">{carbs}g</p>
-            <p className="mt-0.5 text-[9px] font-semibold uppercase tracking-wider text-white">Nourishment</p>
-            <p className="text-[9px]" style={{ color: PALETTE.muted }}>carbs</p>
+            <p className="mt-0.5 text-[9px] font-semibold uppercase tracking-wider text-white">Carbs</p>
           </MetricCard>
 
           <MetricCard icon={Shield} iconColor={PALETTE.blue}>
             <p className="text-base font-bold text-white whitespace-nowrap">{fmtUnits(loggedUnits)}u</p>
-            <p className="mt-0.5 text-[9px] font-semibold uppercase tracking-wider text-white">Support logged</p>
-            <p className="text-[9px]" style={{ color: PALETTE.muted }}>insulin</p>
+            <p className="mt-0.5 text-[9px] font-semibold uppercase tracking-wider text-white">Logged</p>
           </MetricCard>
 
-          {hasGlucoseData && (
-            <MetricCard icon={Activity} iconColor={PALETTE.purple}>
-              <p className="text-sm font-bold text-white whitespace-nowrap">
-                {Math.round(glucoseStart)}
-                {glucoseNow !== null && glucoseNow !== undefined && (
-                  <>
-                    <span className="mx-0.5" style={{ color: PALETTE.green }}>→</span>
-                    <span className="text-white">{Math.round(glucoseNow)}</span>
-                  </>
-                )}
-              </p>
-              <p className="mt-0.5 text-[9px] font-semibold uppercase tracking-wider text-white">Glucose</p>
-              <p className="text-[9px]" style={{ color: PALETTE.muted }}>
-                {d.mealStillUnderReview ? "start → latest" : "start → end"}
-              </p>
-              {peakOutcome !== null && peakOutcome !== undefined && (
-                <p className="text-[9px]" style={{ color: PALETTE.purple }}>
-                  Peak {Math.round(peakOutcome)}
-                </p>
-              )}
-            </MetricCard>
-          )}
+          <MetricCard icon={Activity} iconColor={PALETTE.purple}>
+            <p className="text-base font-bold text-white whitespace-nowrap">
+              {Number.isFinite(peakOutcome) ? Math.round(peakOutcome) : "—"}
+            </p>
+            <p className="mt-0.5 text-[9px] font-semibold uppercase tracking-wider text-white">Peak</p>
+            {peakAfterMs !== null && (
+              <p className="text-[9px]" style={{ color: PALETTE.purple }}>{formatElapsed(peakAfterMs)} after</p>
+            )}
+          </MetricCard>
         </div>
 
-        {/* Estimate Details */}
+        {/* Estimate details */}
         <div>
           <p className="mb-1 text-[9px] font-bold uppercase tracking-[0.14em]" style={{ color: PALETTE.muted }}>Estimate Details</p>
           <div className="divide-y divide-white/[0.06]">
             <EstimateRow
               label="Meal estimate"
-              sublabel={ratioText ? `Based on ${carbs}g and your saved meal ratio · ${ratioText}` : `Based on ${carbs}g and your saved meal ratio`}
+              sublabel={ratioText ? `Based on ${carbs}g · your saved ratio · ${ratioText}` : `Based on ${carbs}g and your saved meal ratio`}
               value={`${fmtUnits(expectedMealUnits)}u`}
               icon={Calculator}
               iconColor={PALETTE.green}
               valueColor={PALETTE.green}
+            />
+            <EstimateRow
+              label="Active insulin"
+              sublabel="Estimated insulin still working"
+              value={`${fmtUnits(activeInsulin)}u`}
+              icon={Droplet}
+              iconColor={PALETTE.blue}
+              valueColor={PALETTE.blue}
             />
             <EstimateRow
               label="Insulin logged"
@@ -298,6 +361,36 @@ export default function MealBalanceTooltip({ mealInsight, open, onClose, monitor
               valueColor={isAccountedFor ? PALETTE.green : mealInsight.color}
             />
           </div>
+        </div>
+
+        {/* Your usual response (historical — hidden when not enough data) */}
+        <MealUsualResponse
+          carbs={carbs}
+          mealName={d.meal?.food_name || d.meal?.name}
+          currentPeak={Number.isFinite(peakOutcome) ? peakOutcome : null}
+        />
+
+        {/* Quick actions */}
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => openLogger("insulin")}
+            className="flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-[12px] font-semibold text-white transition"
+            style={{
+              background: "linear-gradient(135deg, #2DD4BF, #059669)",
+              boxShadow: "0 6px 18px rgba(45,212,191,0.22), inset 0 1px 1px rgba(255,255,255,0.2)",
+            }}
+          >
+            <Plus className="h-3.5 w-3.5" strokeWidth={2.5} /> Log Insulin
+          </button>
+          <button
+            type="button"
+            onClick={() => openLogger("carbs")}
+            className="flex items-center justify-center gap-1.5 rounded-xl border py-2.5 text-[12px] font-semibold text-white/80 transition hover:text-white"
+            style={{ borderColor: "rgba(255,255,255,0.14)", background: "rgba(255,255,255,0.04)" }}
+          >
+            <Plus className="h-3.5 w-3.5" strokeWidth={2.5} /> Log Carbs
+          </button>
         </div>
 
         {/* Why this estimate? */}
