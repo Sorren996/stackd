@@ -111,6 +111,32 @@ function formatReadingTime(time) {
   return format(new Date(time), "h:mm a");
 }
 
+// Walk the actual rendered glucose <path> and return the point whose SVG x
+// matches targetX. The glucose line is monotone in x (time only moves
+// forward), so a binary search over path length converges reliably. Falls
+// back to the path endpoints when targetX lies outside the drawn range.
+function sampleGlucosePathAtX(pathEl, targetX) {
+  const totalLength = pathEl.getTotalLength();
+  if (!totalLength || !Number.isFinite(totalLength)) return null;
+
+  const first = pathEl.getPointAtLength(0);
+  const last = pathEl.getPointAtLength(totalLength);
+
+  if (targetX <= first.x) return { x: first.x, y: first.y };
+  if (targetX >= last.x) return { x: last.x, y: last.y };
+
+  let lo = 0;
+  let hi = totalLength;
+  for (let i = 0; i < 26; i += 1) {
+    const mid = (lo + hi) / 2;
+    const point = pathEl.getPointAtLength(mid);
+    if (point.x < targetX) lo = mid;
+    else hi = mid;
+  }
+  const point = pathEl.getPointAtLength((lo + hi) / 2);
+  return { x: point.x, y: point.y };
+}
+
 function buildMonotoneSegments(points, getValue) {
   if (!Array.isArray(points) || points.length < 2) return [];
 
@@ -845,16 +871,34 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       return;
     }
 
-    // Compute the marker Y directly from the glucose value using the same
-    // coordinate mapping as the chart's YAxis. This is more reliable than
-    // sampling the SVG path, which can drift due to recharts' internal
-    // transforms and margin offsets.
-    const markerY = getGlucoseY(glucose.plotValue);
+    // Sample the ACTUAL rendered glucose <path> at the viewport's center X.
+    // The line is drawn by recharts as a monotone curve with connectNulls,
+    // so sampling the real SVG path is the only way to guarantee the marker
+    // sits exactly on the line — deriving Y from a value lookup diverges
+    // from the curve everywhere between data points (which is what caused the
+    // marker to float off peaks at older points in the history).
+    const targetSvgX = scrollLeft + containerWidth / 2;
+    const pathEl = scrollRef.current?.querySelector("path.stackd-glucose-trend");
+    let markerY = null;
+    let markerValue = glucose.value;
+
+    if (pathEl) {
+      const sample = sampleGlucosePathAtX(pathEl, targetSvgX);
+      if (sample) {
+        markerY = sample.y;
+        markerValue = effectiveMax - (sample.y - GLUCOSE_MARGIN_TOP) / plotHeight * (effectiveMax - effectiveMin);
+        markerValue = Math.min(Math.max(markerValue, effectiveMin), effectiveMax);
+      }
+    }
+
+    if (markerY == null || !Number.isFinite(markerY)) {
+      markerY = getGlucoseY(glucose.plotValue);
+    }
 
     if (marker) {
       if (Number.isFinite(markerY)) {
         marker.style.transform = `translate3d(-50%, ${markerY}px, 0) translateY(-50%)`;
-        marker.style.opacity = String(getHighRangeOpacity(glucose.plotValue));
+        marker.style.opacity = String(getHighRangeOpacity(markerValue));
       } else {
         marker.style.opacity = "0";
       }
@@ -864,17 +908,17 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     // dispatches when the status (high / low / in-range) changes, so this
     // does NOT fire on every scroll frame — just on transitions.
     const glowStatus =
-      glucose.value > targetHigh ? "high"
-      : glucose.value < targetLow ? "low"
+      markerValue > targetHigh ? "high"
+      : markerValue < targetLow ? "low"
       : "in_range";
-    const overReference = glucose.value > highReference || glucose.value < FIXED_LOW_REFERENCE;
+    const overReference = markerValue > highReference || markerValue < FIXED_LOW_REFERENCE;
     if (glowStatus !== prevGlowStatusRef.current || overReference !== prevOverReferenceRef.current) {
       prevGlowStatusRef.current = glowStatus;
       prevOverReferenceRef.current = overReference;
       window.dispatchEvent(new CustomEvent("stackd-center-glucose-status", { detail: { status: glowStatus, overReference } }));
     }
 
-    if (tickerRef.current) tickerRef.current.setValue(formatGlucoseDisplay(glucose.value), animate);
+    if (tickerRef.current) tickerRef.current.setValue(formatGlucoseDisplay(markerValue), animate);
     if (timeEl) timeEl.textContent = formatReadingTime(glucose.time);
     if (dateEl) dateEl.textContent = Number.isFinite(glucose.time) ? format(new Date(glucose.time), "EEEE, MMM d") : "";
   };
