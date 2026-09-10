@@ -539,11 +539,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   [glucoseMap]
   );
 
-  const glucoseCurveSegments = useMemo(() => ({
-    value: buildMonotoneSegments(glucoseLinePoints, (point) => point.value),
-    plotValue: buildMonotoneSegments(glucoseLinePoints, (point) => Math.min(point.value, effectiveMax))
-  }), [glucoseLinePoints, effectiveMax]);
-
   const maxBolusUnits = useMemo(
     () => Math.max(...filteredDoses.filter((d) => !isBasalInsulinType(d.insulin_type)).map(getDoseUnits), 1),
     [filteredDoses]
@@ -767,43 +762,57 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const getGlucoseAt = (time) => {
     if (!glucoseLinePoints.length) return null;
 
-    if (time <= glucoseLinePoints[0].time) {
+    const first = glucoseLinePoints[0];
+    const last = glucoseLinePoints[glucoseLinePoints.length - 1];
+
+    if (time <= first.time) {
       return {
-        value: glucoseLinePoints[0].value,
-        plotValue: Math.min(glucoseLinePoints[0].value, effectiveMax),
+        value: first.value,
+        plotValue: Math.min(first.value, effectiveMax),
         time,
-        sourceTime: glucoseLinePoints[0].time
+        sourceTime: first.time
+      };
+    }
+    if (time >= last.time) {
+      return {
+        value: last.value,
+        plotValue: Math.min(last.value, effectiveMax),
+        time,
+        sourceTime: last.time
       };
     }
 
-    const lastReading = glucoseLinePoints[glucoseLinePoints.length - 1];
-    if (time >= lastReading.time) {
-      return {
-        value: lastReading.value,
-        plotValue: Math.min(lastReading.value, effectiveMax),
-        time,
-        sourceTime: lastReading.time
-      };
+    // Snap to the nearest rendered data bucket. The chart's glucose line
+    // passes exactly through each populated bucket, so this keeps the marker
+    // glued to the line regardless of how recharts' monotone curve bends
+    // between points — which previously caused the marker to float off the
+    // line, especially across longer histories.
+    const bucket = Math.round(time / STEP_MS) * STEP_MS;
+    const bucketValue = glucoseMap[bucket];
+    if (bucketValue !== undefined && Number.isFinite(bucketValue)) {
+      return { value: bucketValue, plotValue: Math.min(bucketValue, effectiveMax), time, sourceTime: bucket };
     }
 
+    // Gap between readings: the chart bridges with a straight line
+    // (connectNulls), so linearly interpolate between the two bracketing
+    // readings — this matches the rendered line in gaps.
     for (let i = 1; i < glucoseLinePoints.length; i++) {
       const previous = glucoseLinePoints[i - 1];
       const next = glucoseLinePoints[i];
       if (time > next.time) continue;
 
-      const segmentIndex = i - 1;
-      const value = interpolateMonotoneSegment(glucoseCurveSegments.value[segmentIndex], time) ?? previous.value;
-      const plotValue = interpolateMonotoneSegment(glucoseCurveSegments.plotValue[segmentIndex], time) ?? Math.min(previous.value, effectiveMax);
-      const sourceTime = Math.abs(time - previous.time) <= Math.abs(next.time - time) ? previous.time : next.time;
-
-      return { value, plotValue, time, sourceTime };
+      const span = next.time - previous.time || 1;
+      const ratio = Math.max(0, Math.min(1, (time - previous.time) / span));
+      const value = previous.value + (next.value - previous.value) * ratio;
+      const sourceTime = ratio < 0.5 ? previous.time : next.time;
+      return { value, plotValue: Math.min(value, effectiveMax), time, sourceTime };
     }
 
     return {
-      value: lastReading.value,
-      plotValue: Math.min(lastReading.value, GLUCOSE_MAX),
+      value: last.value,
+      plotValue: Math.min(last.value, effectiveMax),
       time,
-      sourceTime: lastReading.time
+      sourceTime: last.time
     };
   };
 
