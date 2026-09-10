@@ -1,4 +1,4 @@
-import { memo, useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { Wind, Leaf, Waves, CircleUser, RefreshCw, Check, AlertTriangle } from "lucide-react";
@@ -106,6 +106,47 @@ export default function Layout() {
       setVisitedTabs((tabs) => (tabs.settings ? tabs : { ...tabs, settings: true }));
     }
   }, [isDashboardRoute, isHistoryRoute, isAnalyticsRoute, isSettingsRoute]);
+
+  // Active tab index — derived purely from the route so the indicator is
+  // independent of page content, scroll position, or mount state.
+  const activeIndex = (() => {
+    if (location.pathname.startsWith("/settings")) return 3;
+    const idx = navItems.findIndex((it) => it.path === location.pathname);
+    return idx === -1 ? 0 : idx;
+  })();
+
+  const tabRefs = useRef([]);
+  const navContainerRef = useRef(null);
+  // Indicator box measured in the nav container's own coordinate space.
+  const [indicator, setIndicator] = useState({ left: 0, width: 0, top: 0, height: 0, ready: false });
+
+  // Measure the active tab's offset within the nav container. offsetLeft /
+  // offsetTop are relative to the nav's padding box (its positioned ancestor),
+  // NEVER the viewport — so scrolling the page cannot affect the indicator's
+  // coordinates. Because all tabs share the same width/height, only `left`
+  // changes between tabs, so the indicator moves strictly horizontally.
+  const measureIndicator = useCallback(() => {
+    const el = tabRefs.current[activeIndex];
+    if (!el) return;
+    const first = tabRefs.current[0] || el;
+    setIndicator({
+      left: el.offsetLeft,
+      width: el.offsetWidth,
+      top: first.offsetTop,
+      height: first.offsetHeight,
+      ready: true,
+    });
+  }, [activeIndex]);
+
+  useLayoutEffect(() => {
+    measureIndicator();
+  }, [measureIndicator]);
+
+  useEffect(() => {
+    const onResize = () => measureIndicator();
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [measureIndicator]);
 
   const handleLogoClick = () => {
     navigate("/");
@@ -252,41 +293,42 @@ export default function Layout() {
             }}
           />
 
-          {navItems.map((item) => {
-            const isActive =
-              item.path === "/settings"
-                ? location.pathname.startsWith("/settings")
-                : location.pathname === item.path;
+          {/* Single persistent indicator. It is positioned entirely within
+              the nav container via offsetLeft (scroll-independent) and only
+              its horizontal position animates — page scroll, content mount,
+              or route transitions cannot move it vertically. */}
+          {indicator.ready && (
+            <motion.div
+              aria-hidden="true"
+              initial={false}
+              animate={{ left: indicator.left, width: indicator.width }}
+              transition={{ type: "spring", stiffness: 460, damping: 34, mass: 0.8 }}
+              className="pointer-events-none absolute rounded-[1.55rem]"
+              style={{
+                top: indicator.top,
+                height: indicator.height,
+                background:
+                  "linear-gradient(145deg, rgba(255,255,255,0.16), rgba(255,255,255,0.05))",
+                border: "1px solid rgba(255,255,255,0.18)",
+                boxShadow:
+                  "0 8px 20px rgba(0,0,0,0.18), inset 0 1px 1px rgba(255,255,255,0.22), inset 0 -1px 1px rgba(255,255,255,0.06)",
+              }}
+            />
+          )}
+
+          {navItems.map((item, index) => {
+            const isActive = index === activeIndex;
             const Icon = item.icon;
 
             return (
               <Link
                 key={item.path}
+                ref={(el) => (tabRefs.current[index] = el)}
                 to={item.path}
                 className={`relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-[1.55rem] px-1.5 py-2 text-center transition-colors ${
                   isActive ? "text-white" : "text-white/45 hover:text-white/75"
                 }`}
               >
-                {isActive && (
-                  <motion.div
-                    layoutId="active-nav-tab"
-                    className="absolute inset-0 rounded-[1.55rem]"
-                    style={{
-                      background:
-                        "linear-gradient(145deg, rgba(255,255,255,0.16), rgba(255,255,255,0.05))",
-                      border: "1px solid rgba(255,255,255,0.18)",
-                      boxShadow:
-                        "0 8px 20px rgba(0,0,0,0.18), inset 0 1px 1px rgba(255,255,255,0.22), inset 0 -1px 1px rgba(255,255,255,0.06)",
-                    }}
-                    transition={{
-                      type: "spring",
-                      stiffness: 460,
-                      damping: 34,
-                      mass: 0.8,
-                    }}
-                  />
-                )}
-
                 <motion.span
                   className="relative z-10 flex items-center justify-center"
                   animate={{
