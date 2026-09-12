@@ -122,12 +122,7 @@ export default function MealBalanceCard({ mealInsight, highProteinFatStatus, onO
           handleCardClick();
         }
       }}
-      className="metric-card relative col-span-2 w-full cursor-pointer overflow-hidden rounded-2xl border p-4 backdrop-blur-sm"
-      style={{
-        background: "linear-gradient(152deg, rgba(255,255,255,0.04), rgba(255,255,255,0.008))",
-        borderColor: "rgba(255,255,255,0.09)",
-        boxShadow: "0 8px 32px rgba(0,0,0,0.12), inset 0 1px 1px rgba(255,255,255,0.10)",
-      }}
+      className="metric-card stackd-card relative col-span-2 w-full cursor-pointer overflow-hidden rounded-2xl p-4"
     >
       {/* ambient glow (right side) */}
       <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2">

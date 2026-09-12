@@ -54,7 +54,7 @@ export default function InsulinDoseRow({ dose }) {
   const formattedIob = String(Math.round(iob));
 
   return (
-    <div className="rounded-lg bg-white/[0.025] px-3 py-2">
+    <div className="px-0.5 py-2.5">
       <div className="flex items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-1.5">
           <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />

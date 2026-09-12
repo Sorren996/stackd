@@ -61,8 +61,7 @@ export default function CurrentGlucoseCard({
 
   return (
     <motion.div
-      className="metric-card relative flex min-h-[112px] flex-col justify-between overflow-hidden rounded-2xl border p-4 backdrop-blur-sm"
-      style={CARD_STYLE}
+      className="metric-card stackd-card relative flex min-h-[112px] flex-col justify-between overflow-hidden rounded-2xl p-4"
     >
       <div
         aria-hidden="true"

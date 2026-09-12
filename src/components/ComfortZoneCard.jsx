@@ -29,12 +29,7 @@ export default function ComfortZoneCard({ percentage }) {
   return (
     <motion.div
       whileTap={{ scale: 0.97 }}
-      className="metric-card relative flex min-h-[112px] flex-col justify-between overflow-hidden rounded-2xl border p-4 backdrop-blur-sm"
-      style={{
-        background: "linear-gradient(152deg, rgba(255,255,255,0.04), rgba(255,255,255,0.008))",
-        borderColor: "rgba(255,255,255,0.09)",
-        boxShadow: "0 8px 32px rgba(0,0,0,0.12), inset 0 1px 1px rgba(255,255,255,0.10), inset 0 0 28px rgba(91,168,138,0.025)",
-      }}
+      className="metric-card stackd-card relative flex min-h-[112px] flex-col justify-between overflow-hidden rounded-2xl p-4"
     >
       <div
         aria-hidden="true"

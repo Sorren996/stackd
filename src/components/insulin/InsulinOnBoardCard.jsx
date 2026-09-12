@@ -21,12 +21,7 @@ export default function InsulinOnBoardCard({ totalUnits, breakdown }) {
   return (
     <motion.div
       whileTap={{ scale: 0.985 }}
-      className="metric-card relative col-span-2 overflow-hidden rounded-2xl border p-4 backdrop-blur-sm"
-      style={{
-        background: "linear-gradient(145deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0))",
-        borderColor: "rgba(255,255,255,0.16)",
-        boxShadow: "0 12px 40px rgba(0,0,0,0.10), 0 4px 12px rgba(0,0,0,0.06), inset 0 1px 1px rgba(255,255,255,0.22), inset 0 -1px 1px rgba(255,255,255,0.05)",
-      }}
+      className="metric-card stackd-card relative col-span-2 overflow-hidden rounded-2xl p-4"
     >
       <div className="relative z-10 flex items-center justify-between">
         <div className="flex flex-col gap-0.5">
@@ -83,7 +78,7 @@ export default function InsulinOnBoardCard({ totalUnits, breakdown }) {
           {bolusDoses.length > 0 && (
             <div>
               <span className="text-[9px] font-bold uppercase tracking-[0.14em] text-white/35">Rapid Insulin</span>
-              <div className="mt-1.5 space-y-1.5">
+              <div className="mt-1.5 divide-y divide-white/[0.06]">
                 {bolusDoses.map((dose) => (
                   <InsulinDoseRow key={dose.id} dose={dose} />
                 ))}
@@ -94,7 +89,7 @@ export default function InsulinOnBoardCard({ totalUnits, breakdown }) {
             <div>
               {bolusDoses.length > 0 && <div className="mb-2.5 h-px bg-white/10" />}
               <span className="text-[9px] font-bold uppercase tracking-[0.14em] text-white/35">Basal / Background</span>
-              <div className="mt-1.5 space-y-1.5">
+              <div className="mt-1.5 divide-y divide-white/[0.06]">
                 {basalDoses.map((dose) => (
                   <InsulinDoseRow key={dose.id} dose={dose} />
                 ))}
