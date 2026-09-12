@@ -8,8 +8,8 @@ const PALETTE = {
   blue: "#5f8cf5",
   purple: "#8b73f7",
   muted: "#8a9496",
-  cardBg: "#151d1e",
-  surface: "#0c1314",
+  cardBg: "linear-gradient(150deg, rgba(255,255,255,0.045), rgba(255,255,255,0.012))",
+  surface: "linear-gradient(165deg, rgba(18,28,23,0.80), rgba(10,16,13,0.84))",
 };
 
 const TREND_ARROW = {
@@ -49,8 +49,10 @@ function TooltipPopover({ title, description, onClose, children }) {
           className="relative flex max-h-[min(84dvh,640px)] w-full max-w-[340px] flex-col overflow-hidden rounded-2xl border shadow-2xl"
           style={{
             background: PALETTE.surface,
-            borderColor: "rgba(255,255,255,0.08)",
-            boxShadow: "0 18px 50px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.06)",
+            borderColor: "rgba(255,255,255,0.12)",
+            boxShadow: "0 18px 50px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.10)",
+            backdropFilter: "blur(18px)",
+            WebkitBackdropFilter: "blur(18px)",
           }}
         >
           <div className="relative z-10 flex min-h-0 flex-col">
