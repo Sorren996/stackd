@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Activity, BookOpen, Calculator, Check, CheckCircle2, ChevronDown, Clock, Droplet, Info, Leaf, Plus, Shield, Sprout, X } from "lucide-react";
+import { BookOpen, Calculator, Check, CheckCircle2, ChevronDown, Clock, Droplet, Info, Plus, Shield, Sprout, X } from "lucide-react";
 import MealUsualResponse from "@/components/insulin/MealUsualResponse";
 
 const PALETTE = {
   green: "#58a97c",
   blue: "#5f8cf5",
   purple: "#8b73f7",
+  amber: "#d4a056",
   muted: "#8a9496",
   cardBg: "linear-gradient(150deg, rgba(255,255,255,0.045), rgba(255,255,255,0.012))",
   surface: "linear-gradient(165deg, rgba(18,28,23,0.80), rgba(10,16,13,0.84))",
@@ -29,6 +30,14 @@ function formatElapsed(ms) {
   return `${m}m`;
 }
 
+function SectionLabel({ children }) {
+  return <p className="stackd-section-label">{children}</p>;
+}
+
+function Divider() {
+  return <div className="h-px w-full" style={{ background: "rgba(255,255,255,0.06)" }} />;
+}
+
 function TooltipPopover({ title, description, onClose, children }) {
   return (
     <AnimatePresence>
@@ -38,7 +47,7 @@ function TooltipPopover({ title, description, onClose, children }) {
         exit={{ opacity: 0 }}
         className="fixed inset-0 z-[300] flex items-center justify-center p-4"
         onClick={onClose}
-        style={{ background: "rgba(8,14,12,0.72)", backdropFilter: "blur(6px)" }}
+        style={{ background: "rgba(5,10,12,0.6)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)" }}
       >
         <motion.div
           initial={{ opacity: 0, scale: 0.94, y: -10 }}
@@ -57,7 +66,7 @@ function TooltipPopover({ title, description, onClose, children }) {
         >
           <div className="relative z-10 flex min-h-0 flex-col">
             {/* Header */}
-            <div className="flex shrink-0 items-start justify-between gap-3 px-4 pb-2 pt-4">
+            <div className="flex shrink-0 items-start justify-between gap-3 px-4 pb-3 pt-4">
               <div className="flex items-start gap-2">
                 <Sprout className="mt-0.5 h-4 w-4 shrink-0" style={{ color: PALETTE.green }} strokeWidth={2} />
                 <div>
@@ -83,18 +92,6 @@ function TooltipPopover({ title, description, onClose, children }) {
   );
 }
 
-function MetricCard({ icon: Icon, iconColor, children }) {
-  return (
-    <div
-      className="flex flex-col items-center rounded-xl border px-1.5 py-2 text-center"
-      style={{ background: PALETTE.cardBg, borderColor: "rgba(255,255,255,0.06)" }}
-    >
-      {Icon && <Icon className="mb-1 h-3.5 w-3.5" style={{ color: iconColor }} strokeWidth={2} />}
-      {children}
-    </div>
-  );
-}
-
 function ExpandableRow({ icon: Icon, label, labelColor, defaultOpen = false, children }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
@@ -102,7 +99,7 @@ function ExpandableRow({ icon: Icon, label, labelColor, defaultOpen = false, chi
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center gap-2 rounded-lg px-1 py-2 text-left transition hover:bg-white/[0.03]"
+        className="flex w-full items-center gap-2 rounded-lg px-1 py-2.5 text-left transition hover:bg-white/[0.03]"
       >
         {Icon && <Icon className="h-3.5 w-3.5 shrink-0" style={{ color: PALETTE.muted }} strokeWidth={2} />}
         <span className="flex-1 text-[11px] font-semibold" style={{ color: labelColor || "rgba(255,255,255,0.55)" }}>{label}</span>
@@ -127,7 +124,7 @@ function ExpandableRow({ icon: Icon, label, labelColor, defaultOpen = false, chi
 
 function EstimateRow({ label, sublabel, value, icon: Icon, iconColor, valueColor }) {
   return (
-    <div className="flex items-start justify-between gap-3 py-2">
+    <div className="flex items-start justify-between gap-3 py-2.5">
       <div className="flex min-w-0 items-start gap-2">
         {Icon && (
           <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center" style={{ color: iconColor }}>
@@ -142,6 +139,16 @@ function EstimateRow({ label, sublabel, value, icon: Icon, iconColor, valueColor
       <span className="shrink-0 text-[13px] font-bold" style={{ color: valueColor || "rgba(255,255,255,0.9)" }}>
         {value}
       </span>
+    </div>
+  );
+}
+
+function SummaryCell({ label, value, sub }) {
+  return (
+    <div className="flex flex-col items-center px-1 text-center">
+      <p className="text-lg font-bold text-white whitespace-nowrap">{value}</p>
+      <p className="mt-0.5 text-[9px] font-semibold uppercase tracking-wider text-white/40">{label}</p>
+      {sub && <p className="mt-0.5 text-[9px]" style={{ color: PALETTE.muted }}>{sub}</p>}
     </div>
   );
 }
@@ -239,97 +246,92 @@ export default function MealBalanceTooltip({ mealInsight, open, onClose, monitor
     }
   };
 
+  // Contextual glucose-change color: a rise leans amber, a fall leans teal/mint.
+  const changeColor = glucoseChange === null ? PALETTE.muted
+    : glucoseChange > 0 ? PALETTE.amber
+    : glucoseChange < 0 ? PALETTE.green
+    : PALETTE.muted;
+
   return (
     <TooltipPopover
       title="Meal Balance"
       description="A quick look at your meal and glucose response."
       onClose={onClose}
     >
-      <div className="space-y-4">
-        {/* Status */}
-        <div
-          className="flex items-start gap-2.5 rounded-xl border p-3"
-          style={{ borderColor: `${mealInsight.color}30`, background: `${mealInsight.color}0a` }}
-        >
-          <span
-            className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full"
-            style={{ background: `${mealInsight.color}1a`, color: mealInsight.color }}
-          >
-            <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
-          </span>
-          <div className="min-w-0">
-            <p className="text-[13px] font-bold" style={{ color: mealInsight.color }}>
-              {mealInsight.value}
-            </p>
-            <p className="mt-0.5 text-[11px] leading-relaxed" style={{ color: PALETTE.muted }}>{mealInsight.status}</p>
-          </div>
-        </div>
-
-        {/* Current glucose hero */}
-        {hasCurrentGlucose && (
-          <div
-            className="rounded-xl border p-3.5"
-            style={{ borderColor: "rgba(139,115,247,0.22)", background: "rgba(139,115,247,0.06)" }}
-          >
-            <div className="flex items-end justify-between gap-2">
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: PALETTE.purple }}>
-                  Current glucose
-                </p>
-                <p className="mt-1 flex items-baseline gap-1.5">
-                  <span className="text-3xl font-black leading-none text-white">{Math.round(glucoseNow)}</span>
-                  {trendArrow && (
-                    <span className="text-xl font-bold" style={{ color: glucoseTrend?.color || PALETTE.purple }}>
-                      {trendArrow}
-                    </span>
-                  )}
-                </p>
-              </div>
-              <div className="shrink-0 text-right">
-                {glucoseChange !== null && (
-                  <p className="text-[12px] font-bold" style={{ color: glucoseChange > 0 ? PALETTE.green : "#5ba88a" }}>
-                    {glucoseChange > 0 ? "+" : ""}{Math.round(glucoseChange)}{" "}
-                    <span className="text-[10px] font-medium" style={{ color: PALETTE.muted }}>mg/dL</span>
-                  </p>
-                )}
-                {elapsedMs !== null && (
-                  <p className="text-[10px]" style={{ color: PALETTE.muted }}>{formatElapsed(elapsedMs)} since meal</p>
-                )}
-              </div>
+      <div className="flex flex-col">
+        {/* PRIMARY MEAL STATUS */}
+        <section className="px-1 pt-1 pb-4">
+          <div className="flex items-start gap-2.5">
+            <span
+              className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full"
+              style={{ background: `${mealInsight.color}1a`, color: mealInsight.color }}
+            >
+              <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
+            </span>
+            <div className="min-w-0">
+              <p className="text-[15px] font-bold leading-tight text-white">{mealInsight.value}</p>
+              <p className="mt-1 text-[12px] leading-relaxed" style={{ color: PALETTE.muted }}>{mealInsight.status}</p>
             </div>
-            <p className="mt-1 text-[10px]" style={{ color: PALETTE.muted, opacity: 0.7 }}>
-              {glucoseChange !== null ? "since you began this meal" : "latest reading"}
-            </p>
           </div>
+        </section>
+
+        {/* CURRENT GLUCOSE — neutral glass, restrained accent */}
+        {hasCurrentGlucose && (
+          <>
+            <Divider />
+            <section className="px-1 py-4">
+              <SectionLabel>Current Glucose</SectionLabel>
+              <div className="mt-2 flex items-end justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="flex items-baseline gap-1.5">
+                    <span className="text-3xl font-black leading-none text-white">{Math.round(glucoseNow)}</span>
+                    <span className="text-[11px] font-medium text-white/40">mg/dL</span>
+                    {trendArrow && (
+                      <span className="ml-0.5 text-lg font-bold" style={{ color: glucoseTrend?.color || PALETTE.muted }}>
+                        {trendArrow}
+                      </span>
+                    )}
+                  </p>
+                </div>
+                <div className="shrink-0 text-right">
+                  {glucoseChange !== null && (
+                    <p className="text-[13px] font-bold" style={{ color: changeColor }}>
+                      {glucoseChange > 0 ? "+" : ""}{Math.round(glucoseChange)}
+                      <span className="ml-0.5 text-[10px] font-medium" style={{ color: PALETTE.muted }}>mg/dL</span>
+                    </p>
+                  )}
+                  {elapsedMs !== null && (
+                    <p className="mt-0.5 text-[10px]" style={{ color: PALETTE.muted }}>{formatElapsed(elapsedMs)} since meal</p>
+                  )}
+                </div>
+              </div>
+              <p className="mt-1.5 text-[10px]" style={{ color: PALETTE.muted, opacity: 0.7 }}>
+                {glucoseChange !== null ? "since you began this meal" : "latest reading"}
+              </p>
+            </section>
+          </>
         )}
 
-        {/* Meal summary */}
-        <div className="grid grid-cols-3 gap-1.5">
-          <MetricCard icon={Leaf} iconColor={PALETTE.green}>
-            <p className="text-base font-bold text-white whitespace-nowrap">{carbs}g</p>
-            <p className="mt-0.5 text-[9px] font-semibold uppercase tracking-wider text-white">Carbs</p>
-          </MetricCard>
+        {/* MEAL SUMMARY */}
+        <Divider />
+        <section className="px-1 py-4">
+          <SectionLabel>Meal Summary</SectionLabel>
+          <div className="mt-2.5 grid grid-cols-3 divide-x divide-white/[0.06]">
+            <SummaryCell label="Carbs" value={`${carbs}g`} />
+            <SummaryCell label="Logged" value={`${fmtUnits(loggedUnits)}u`} />
+            <SummaryCell
+              label="Peak"
+              value={Number.isFinite(peakOutcome) ? Math.round(peakOutcome) : "—"}
+              sub={peakAfterMs !== null ? `${formatElapsed(peakAfterMs)} after` : null}
+            />
+          </div>
+        </section>
 
-          <MetricCard icon={Shield} iconColor={PALETTE.blue}>
-            <p className="text-base font-bold text-white whitespace-nowrap">{fmtUnits(loggedUnits)}u</p>
-            <p className="mt-0.5 text-[9px] font-semibold uppercase tracking-wider text-white">Logged</p>
-          </MetricCard>
-
-          <MetricCard icon={Activity} iconColor={PALETTE.purple}>
-            <p className="text-base font-bold text-white whitespace-nowrap">
-              {Number.isFinite(peakOutcome) ? Math.round(peakOutcome) : "—"}
-            </p>
-            <p className="mt-0.5 text-[9px] font-semibold uppercase tracking-wider text-white">Peak</p>
-            {peakAfterMs !== null && (
-              <p className="text-[9px]" style={{ color: PALETTE.purple }}>{formatElapsed(peakAfterMs)} after</p>
-            )}
-          </MetricCard>
-        </div>
-
-        {/* Estimate details */}
-        <div>
-          <p className="mb-1 text-[9px] font-bold uppercase tracking-[0.14em]" style={{ color: PALETTE.muted }}>Estimate Details</p>
-          <div className="divide-y divide-white/[0.06]">
+        {/* MEAL DETAILS */}
+        <Divider />
+        <section className="px-1 py-4">
+          <SectionLabel>Meal Details</SectionLabel>
+          <div className="mt-1 divide-y divide-white/[0.06]">
             <EstimateRow
               label="Meal estimate"
               sublabel={ratioText ? `Based on ${carbs}g · your saved ratio · ${ratioText}` : `Based on ${carbs}g and your saved meal ratio`}
@@ -363,103 +365,105 @@ export default function MealBalanceTooltip({ mealInsight, open, onClose, monitor
               valueColor={isAccountedFor ? PALETTE.green : mealInsight.color}
             />
           </div>
-        </div>
+        </section>
 
-        {/* Your usual response (historical — hidden when not enough data) */}
-        <MealUsualResponse
-          carbs={carbs}
-          mealName={d.meal?.food_name || d.meal?.name}
-          currentPeak={Number.isFinite(peakOutcome) ? peakOutcome : null}
-        />
+        {/* YOUR USUAL RESPONSE */}
+        <Divider />
+        <section className="px-1 py-4">
+          <MealUsualResponse
+            carbs={carbs}
+            mealName={d.meal?.food_name || d.meal?.name}
+            currentPeak={Number.isFinite(peakOutcome) ? peakOutcome : null}
+          />
+        </section>
 
-        {/* Quick actions */}
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => openLogger("insulin")}
-            className="flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-[12px] font-semibold text-white transition"
-            style={{
-              background: "linear-gradient(135deg, #2DD4BF, #059669)",
-              boxShadow: "0 6px 18px rgba(45,212,191,0.22), inset 0 1px 1px rgba(255,255,255,0.2)",
-            }}
-          >
-            <Plus className="h-3.5 w-3.5" strokeWidth={2.5} /> Log Insulin
-          </button>
-          <button
-            type="button"
-            onClick={() => openLogger("carbs")}
-            className="flex items-center justify-center gap-1.5 rounded-xl border py-2.5 text-[12px] font-semibold text-white/80 transition hover:text-white"
-            style={{ borderColor: "rgba(255,255,255,0.14)", background: "rgba(255,255,255,0.04)" }}
-          >
-            <Plus className="h-3.5 w-3.5" strokeWidth={2.5} /> Log Carbs
-          </button>
-        </div>
-
-        {/* Why this estimate? */}
-        <ExpandableRow icon={Info} label="Why this estimate?" labelColor="#7ba997">
-          <div className="rounded-lg border border-white/[0.06] p-3" style={{ background: PALETTE.cardBg }}>
-            <div className="space-y-2 text-[11px] leading-relaxed">
-              <div className="flex items-baseline justify-between gap-2">
-                <span style={{ color: PALETTE.muted }}>{carbs}g carbs</span>
-                <span className="text-[10px]" style={{ color: PALETTE.muted }}>÷ your saved meal ratio{ratioText ? ` (${ratioText})` : ""}</span>
-              </div>
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="font-semibold text-white/65">Meal estimate</span>
-                <span className="font-bold text-white/80">{fmtUnits(expectedMealUnits)}u</span>
-              </div>
-              {hasGlucoseAdjustment && (
-                <div className="flex items-baseline justify-between gap-2 border-t border-white/[0.06] pt-2">
-                  <span style={{ color: PALETTE.muted }}>Glucose adjustment</span>
-                  <span className="font-bold text-white/65">+{fmtUnits(correctionUnitsNeeded)}u</span>
-                </div>
-              )}
-              <div className="flex items-baseline justify-between gap-2 border-t border-white/[0.06] pt-2">
-                <span style={{ color: PALETTE.muted }}>Total estimate</span>
-                <span className="font-bold text-white/65">{fmtUnits(grossDoseEstimate)}u</span>
-              </div>
-              <div className="flex items-baseline justify-between gap-2 border-t border-white/[0.06] pt-2">
-                <span style={{ color: PALETTE.muted }}>Insulin already logged</span>
-                <span className="font-bold text-white/65">−{fmtUnits(loggedUnits)}u</span>
-              </div>
-              <div className="flex items-baseline justify-between gap-2 border-t border-white/[0.06] pt-2">
-                <span className="font-bold uppercase tracking-wider text-white/55" style={{ fontSize: "10px" }}>
-                  {isAccountedFor ? "Remaining" : "Remaining estimate"}
-                </span>
-                <span className="text-[14px] font-bold" style={{ color: isAccountedFor ? PALETTE.green : mealInsight.color }}>
-                  {fmtUnits(remainingEstimate)}u
-                </span>
-              </div>
-            </div>
-            <p className="mt-3 text-[10px] leading-relaxed" style={{ color: PALETTE.muted, opacity: 0.7 }}>
-              A reflective estimate based on your saved settings. Follow your established treatment plan.
-            </p>
+        {/* PRIMARY ACTIONS */}
+        <Divider />
+        <section className="px-1 py-4">
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => openLogger("insulin")}
+              className="flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-[12px] font-semibold text-white transition hover:brightness-110 stackd-btn-primary"
+            >
+              <Plus className="h-3.5 w-3.5" strokeWidth={2.5} /> Log Insulin
+            </button>
+            <button
+              type="button"
+              onClick={() => openLogger("carbs")}
+              className="flex items-center justify-center gap-1.5 rounded-xl border border-white/12 bg-white/[0.04] py-2.5 text-[12px] font-semibold text-white/80 backdrop-blur-sm transition hover:bg-white/[0.08] hover:text-white"
+            >
+              <Plus className="h-3.5 w-3.5" strokeWidth={2.5} /> Log Carbs
+            </button>
           </div>
-        </ExpandableRow>
+        </section>
 
-        {/* About Meal Balance */}
-        <div className="border-t border-white/[0.06]">
-          <ExpandableRow icon={BookOpen} label="About Meal Balance">
-            <div className="space-y-2 text-[11px] leading-relaxed" style={{ color: PALETTE.muted }}>
-              <p>
-                <span className="font-semibold text-white/55">Nourishment</span> — your carbs are compared to your saved meal ratio to estimate the support your meal typically calls for.
-              </p>
-              <p>
-                <span className="font-semibold text-white/55">Glucose adjustment</span> — if a reading near your meal is above your range, a little extra support is previewed based on your sensitivity.
-              </p>
-              <p>
-                <span className="font-semibold text-white/55">Support logged</span> — the insulin you already logged is compared to that preview so you can see how things line up.
-              </p>
-              <p className="pt-1 text-[10px]" style={{ color: PALETTE.muted, opacity: 0.6 }}>
-                Meal Balance is reflective and descriptive. It does not recommend dosing or replace your established treatment plan.
+        {/* Progressive disclosure — tertiary text actions */}
+        <div className="px-1">
+          <ExpandableRow icon={Info} label="Why this estimate?" labelColor="#7ba997">
+            <div className="rounded-lg border border-white/[0.06] p-3" style={{ background: PALETTE.cardBg }}>
+              <div className="space-y-2 text-[11px] leading-relaxed">
+                <div className="flex items-baseline justify-between gap-2">
+                  <span style={{ color: PALETTE.muted }}>{carbs}g carbs</span>
+                  <span className="text-[10px]" style={{ color: PALETTE.muted }}>÷ your saved meal ratio{ratioText ? ` (${ratioText})` : ""}</span>
+                </div>
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="font-semibold text-white/65">Meal estimate</span>
+                  <span className="font-bold text-white/80">{fmtUnits(expectedMealUnits)}u</span>
+                </div>
+                {hasGlucoseAdjustment && (
+                  <div className="flex items-baseline justify-between gap-2 border-t border-white/[0.06] pt-2">
+                    <span style={{ color: PALETTE.muted }}>Glucose adjustment</span>
+                    <span className="font-bold text-white/65">+{fmtUnits(correctionUnitsNeeded)}u</span>
+                  </div>
+                )}
+                <div className="flex items-baseline justify-between gap-2 border-t border-white/[0.06] pt-2">
+                  <span style={{ color: PALETTE.muted }}>Total estimate</span>
+                  <span className="font-bold text-white/65">{fmtUnits(grossDoseEstimate)}u</span>
+                </div>
+                <div className="flex items-baseline justify-between gap-2 border-t border-white/[0.06] pt-2">
+                  <span style={{ color: PALETTE.muted }}>Insulin already logged</span>
+                  <span className="font-bold text-white/65">−{fmtUnits(loggedUnits)}u</span>
+                </div>
+                <div className="flex items-baseline justify-between gap-2 border-t border-white/[0.06] pt-2">
+                  <span className="font-bold uppercase tracking-wider text-white/55" style={{ fontSize: "10px" }}>
+                    {isAccountedFor ? "Remaining" : "Remaining estimate"}
+                  </span>
+                  <span className="text-[14px] font-bold" style={{ color: isAccountedFor ? PALETTE.green : mealInsight.color }}>
+                    {fmtUnits(remainingEstimate)}u
+                  </span>
+                </div>
+              </div>
+              <p className="mt-3 text-[10px] leading-relaxed" style={{ color: PALETTE.muted, opacity: 0.7 }}>
+                A reflective estimate based on your saved settings. Follow your established treatment plan.
               </p>
             </div>
           </ExpandableRow>
+
+          <div className="border-t border-white/[0.06]">
+            <ExpandableRow icon={BookOpen} label="About Meal Balance">
+              <div className="space-y-2 text-[11px] leading-relaxed" style={{ color: PALETTE.muted }}>
+                <p>
+                  <span className="font-semibold text-white/55">Nourishment</span> — your carbs are compared to your saved meal ratio to estimate the support your meal typically calls for.
+                </p>
+                <p>
+                  <span className="font-semibold text-white/55">Glucose adjustment</span> — if a reading near your meal is above your range, a little extra support is previewed based on your sensitivity.
+                </p>
+                <p>
+                  <span className="font-semibold text-white/55">Support logged</span> — the insulin you already logged is compared to that preview so you can see how things line up.
+                </p>
+                <p className="pt-1 text-[10px]" style={{ color: PALETTE.muted, opacity: 0.6 }}>
+                  Meal Balance is reflective and descriptive. It does not recommend dosing or replace your established treatment plan.
+                </p>
+              </div>
+            </ExpandableRow>
+          </div>
         </div>
 
         {/* High protein/fat monitoring notice */}
         {monitoringStatus?.isActive && (
           <div
-            className="rounded-xl border p-3"
+            className="mt-4 rounded-xl border p-3"
             style={{ borderColor: "rgba(217,169,56,0.2)", background: "rgba(217,169,56,0.05)" }}
           >
             <div className="flex items-center gap-2">
@@ -485,12 +489,12 @@ export default function MealBalanceTooltip({ mealInsight, open, onClose, monitor
           </div>
         )}
 
-        {/* Mark as resolved */}
+        {/* Mark as Resolved — state transition, not an oversized CTA */}
         {d.mealStillUnderReview && onResolve && (
           <button
             type="button"
             onClick={onResolve}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border py-3 text-[12px] font-semibold transition"
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border py-2.5 text-[12px] font-semibold transition hover:brightness-110"
             style={{
               borderColor: `${PALETTE.green}40`,
               background: `${PALETTE.green}12`,

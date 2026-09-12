@@ -83,24 +83,21 @@ export default function MealUsualResponse({ carbs, mealName, currentPeak }) {
     currentPeak != null && Number.isFinite(currentPeak) ? currentPeak - data.avgPeak : null;
 
   return (
-    <div
-      className="rounded-xl border p-3"
-      style={{ borderColor: "rgba(91,168,138,0.22)", background: "rgba(91,168,138,0.05)" }}
-    >
+    <div className="space-y-2.5">
       <div className="flex items-center gap-2">
         <History className="h-3.5 w-3.5" style={{ color: PALETTE.green }} strokeWidth={2} />
-        <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: PALETTE.green }}>
-          Your usual response
+        <p className="stackd-section-label" style={{ color: PALETTE.green }}>
+          Your Usual Response
         </p>
         <span className="ml-auto text-[10px]" style={{ color: PALETTE.muted }}>
           {data.count} similar meals
         </span>
       </div>
 
-      <div className="mt-2 flex items-baseline justify-between gap-2">
+      <div className="flex items-baseline justify-between gap-2">
         <div>
           <p className="text-[10px]" style={{ color: PALETTE.muted }}>
-            Avg peak
+            Average peak
           </p>
           <p className="text-base font-bold text-white">
             {Math.round(data.avgPeak)} <span className="text-[10px] font-medium" style={{ color: PALETTE.muted }}>mg/dL</span>
@@ -109,7 +106,7 @@ export default function MealUsualResponse({ carbs, mealName, currentPeak }) {
         {data.avgTime != null && (
           <div className="text-right">
             <p className="text-[10px]" style={{ color: PALETTE.muted }}>
-              Avg time to peak
+              Average time to peak
             </p>
             <p className="text-base font-bold text-white">
               {formatElapsed(data.avgTime * 60000)}{" "}
@@ -120,7 +117,7 @@ export default function MealUsualResponse({ carbs, mealName, currentPeak }) {
       </div>
 
       {delta !== null && (
-        <p className="mt-2 text-[10px] leading-relaxed" style={{ color: PALETTE.muted }}>
+        <p className="text-[10px] leading-relaxed" style={{ color: PALETTE.muted }}>
           This meal peaked at {Math.round(currentPeak)} mg/dL · {delta > 0 ? "+" : ""}
           {Math.round(delta)} vs your average
         </p>
