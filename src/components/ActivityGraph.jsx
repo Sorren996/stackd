@@ -375,6 +375,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const prevLatestValueRef = useRef(null);
   const prevGlowStatusRef = useRef(null);
   const prevOverReferenceRef = useRef(false);
+  const lastSelectedKeyRef = useRef(null);
   const pendingScrollLeftRef = useRef(0);
   const containerRef = useRef(null);
   const graphViewportRef = useRef(null);
@@ -842,6 +843,30 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     };
   };
 
+  // Returns the single REAL Dexcom data point nearest the given time. The
+  // large glucose number is always this reading's exact value — never an
+  // interpolated value computed between readings or from the marker's pixel
+  // position on the line. Readings are sorted by time, so a binary search
+  // finds the nearest point cheaply (runs inside the scroll rAF loop).
+  const getSelectedReading = (time) => {
+    if (!filteredGlucoseReadings.length) return null;
+    const first = filteredGlucoseReadings[0];
+    const last = filteredGlucoseReadings[filteredGlucoseReadings.length - 1];
+    if (time <= first.time) return first;
+    if (time >= last.time) return last;
+
+    let lo = 0;
+    let hi = filteredGlucoseReadings.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (filteredGlucoseReadings[mid].time < time) lo = mid + 1;
+      else hi = mid;
+    }
+    const a = filteredGlucoseReadings[lo - 1];
+    const b = filteredGlucoseReadings[lo];
+    return Math.abs(a.time - time) <= Math.abs(b.time - time) ? a : b;
+  };
+
   const drawCenterGlucose = (scrollLeft, animate = false) => {
     const marker = centerMarkerRef.current;
     const timeEl = tooltipTimeRef.current;
@@ -853,8 +878,12 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     }
 
     const centerTime = getCenterTimeForScroll(scrollLeft);
-    const glucose = getGlucoseAt(centerTime);
-    if (!glucose || !Number.isFinite(glucose.time)) {
+
+    // The selected data point is always a REAL Dexcom reading — the one
+    // nearest the viewport center. Its exact value drives the large number;
+    // the marker can keep tracking the smooth line for visual continuity.
+    const selected = getSelectedReading(centerTime);
+    if (!selected || !Number.isFinite(selected.time)) {
       if (marker) marker.style.opacity = "0";
       return;
     }
@@ -871,56 +900,65 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       return;
     }
 
-    // Sample the ACTUAL rendered glucose <path> at the viewport's center X.
-    // The line is drawn by recharts as a monotone curve with connectNulls,
-    // so sampling the real SVG path is the only way to guarantee the marker
-    // sits exactly on the line — deriving Y from a value lookup diverges
-    // from the curve everywhere between data points (which is what caused the
-    // marker to float off peaks at older points in the history).
+    // The displayed value is the selected reading's REAL glucose value —
+    // clamped only for display scale, never interpolated.
+    const selectedValue = Math.min(Math.max(selected.value, effectiveMin), effectiveMax);
+
+    // Animate ONLY when the selected data point changes from one real
+    // reading to another — not on every scroll frame. This keeps the number
+    // perfectly static between readings and fires the existing rolling
+    // animation precisely when the active reading changes (scrub or live).
+    const selectedKey = selected.id ?? selected.time;
+    const shouldAnimate = lastSelectedKeyRef.current !== null && lastSelectedKeyRef.current !== selectedKey;
+    lastSelectedKeyRef.current = selectedKey;
+
+    // Marker Y still samples the ACTUAL rendered glucose <path> so the dot
+    // stays glued to the smooth line (visual only). The NUMBER above is
+    // always the real reading — it is never derived from this pixel Y.
     const targetSvgX = scrollLeft + containerWidth / 2;
     const pathEl = scrollRef.current?.querySelector("path.stackd-glucose-trend");
     let markerY = null;
-    let markerValue = glucose.value;
 
     if (pathEl) {
       const sample = sampleGlucosePathAtX(pathEl, targetSvgX);
       if (sample) {
         markerY = sample.y;
-        markerValue = effectiveMax - (sample.y - GLUCOSE_MARGIN_TOP) / plotHeight * (effectiveMax - effectiveMin);
-        markerValue = Math.min(Math.max(markerValue, effectiveMin), effectiveMax);
       }
     }
 
     if (markerY == null || !Number.isFinite(markerY)) {
-      markerY = getGlucoseY(glucose.plotValue);
+      markerY = getGlucoseY(selectedValue);
     }
 
     if (marker) {
       if (Number.isFinite(markerY)) {
         marker.style.transform = `translate3d(-50%, ${markerY}px, 0) translateY(-50%)`;
-        marker.style.opacity = String(getHighRangeOpacity(markerValue));
+        marker.style.opacity = String(getHighRangeOpacity(selectedValue));
       } else {
         marker.style.opacity = "0";
       }
     }
 
-    // Notify the card glow of the center marker's glucose status. Only
+    // Notify the card glow of the selected reading's glucose status. Only
     // dispatches when the status (high / low / in-range) changes, so this
     // does NOT fire on every scroll frame — just on transitions.
     const glowStatus =
-      markerValue > targetHigh ? "high"
-      : markerValue < targetLow ? "low"
+      selectedValue > targetHigh ? "high"
+      : selectedValue < targetLow ? "low"
       : "in_range";
-    const overReference = markerValue > highReference || markerValue < FIXED_LOW_REFERENCE;
+    const overReference = selectedValue > highReference || selectedValue < FIXED_LOW_REFERENCE;
     if (glowStatus !== prevGlowStatusRef.current || overReference !== prevOverReferenceRef.current) {
       prevGlowStatusRef.current = glowStatus;
       prevOverReferenceRef.current = overReference;
       window.dispatchEvent(new CustomEvent("stackd-center-glucose-status", { detail: { status: glowStatus, overReference } }));
     }
 
-    if (tickerRef.current) tickerRef.current.setValue(formatGlucoseDisplay(markerValue), animate);
-    if (timeEl) timeEl.textContent = formatReadingTime(glucose.time);
-    if (dateEl) dateEl.textContent = Number.isFinite(glucose.time) ? format(new Date(glucose.time), "EEEE, MMM d") : "";
+    // The ticker rolls only when the selected reading changes; between
+    // readings setValue receives the same string and no-ops, so the number
+    // stays perfectly static until the next real Dexcom data point.
+    if (tickerRef.current) tickerRef.current.setValue(formatGlucoseDisplay(selectedValue), shouldAnimate);
+    if (timeEl) timeEl.textContent = formatReadingTime(selected.time);
+    if (dateEl) dateEl.textContent = Number.isFinite(selected.time) ? format(new Date(selected.time), "EEEE, MMM d") : "";
   };
 
   const updateMonitoringOverlay = (scrollLeft) => {
@@ -1005,9 +1043,9 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         if (tooltipTimeRef.current) tooltipTimeRef.current.textContent = formatReadingAge(latestDexcomReading?.recorded_at) || "";
         return;
       }
-      const glucose = getGlucoseAt(centerTime);
-      if (glucose && tooltipTimeRef.current) {
-        tooltipTimeRef.current.textContent = formatReadingTime(glucose.time);
+      const selected = getSelectedReading(centerTime);
+      if (selected && tooltipTimeRef.current) {
+        tooltipTimeRef.current.textContent = formatReadingTime(selected.time);
       }
     }, 30000);
     return () => clearInterval(interval);
