@@ -45,7 +45,7 @@ function TooltipPopover({ title, description, onClose, children }) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[300] flex items-center justify-center p-4"
+        className="stackd-modal-backdrop fixed inset-0 z-[300] flex items-center justify-center p-4"
         onClick={onClose}
         style={{ background: "rgba(5,10,12,0.6)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)" }}
       >
@@ -55,7 +55,7 @@ function TooltipPopover({ title, description, onClose, children }) {
           exit={{ opacity: 0, scale: 0.95, y: -6 }}
           transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
           onClick={(event) => event.stopPropagation()}
-          className="relative flex max-h-[min(84dvh,640px)] w-full max-w-[340px] flex-col overflow-hidden rounded-2xl border shadow-2xl"
+          className="stackd-glass relative flex max-h-[min(84dvh,640px)] w-full max-w-[340px] flex-col overflow-hidden rounded-2xl border shadow-2xl"
           style={{
             background: PALETTE.surface,
             borderColor: "rgba(255,255,255,0.12)",

@@ -491,7 +491,7 @@ export default function CombinedLogSheet({ open, onOpenChange }) {
                   exit={{ scale: 0.92, opacity: 0 }}
                   transition={{ type: "spring", stiffness: 380, damping: 28 }}
                   onClick={(e) => e.stopPropagation()}
-                  className="w-full max-w-sm rounded-3xl border p-6 text-center"
+                  className="stackd-glass w-full max-w-sm rounded-3xl border p-6 text-center"
                   style={{
                     background: "linear-gradient(165deg, hsl(162,12%,11%), hsl(162,10%,7%))",
                     borderColor: "rgba(255,255,255,0.14)",

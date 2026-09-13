@@ -150,7 +150,7 @@ export default function DayRecap({
       {/* Empty state */}
       {!hasAnyActivity && (
         <div
-          className="rounded-2xl border px-4 py-8 text-center"
+          className="stackd-card rounded-2xl border px-4 py-8 text-center"
           style={{
             background: "linear-gradient(145deg, rgba(255,255,255,0.03), rgba(255,255,255,0.008))",
             borderColor: "rgba(255,255,255,0.10)",

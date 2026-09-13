@@ -122,7 +122,7 @@ export default function FloatingActionMenu() {
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: 8 }}
                       transition={{ delay: delay + 0.04 }}
-                      className="rounded-full border px-3 py-1.5 text-sm font-semibold backdrop-blur-sm"
+                      className="stackd-fab-pill rounded-full border px-3 py-1.5 text-sm font-semibold backdrop-blur-sm"
                       style={{
                         color: `rgba(${action.color},1)`,
                         background:
@@ -134,7 +134,7 @@ export default function FloatingActionMenu() {
                       {action.label}
                     </motion.span>
                     <motion.span
-                      className="flex h-12 w-12 items-center justify-center rounded-full border backdrop-blur-sm"
+                      className="stackd-fab-icon flex h-12 w-12 items-center justify-center rounded-full border backdrop-blur-sm"
                       style={{
                         background:
                           "linear-gradient(145deg, rgba(255,255,255,0.14), rgba(255,255,255,0.04))",
@@ -159,7 +159,7 @@ export default function FloatingActionMenu() {
           whileTap={{ scale: 0.9 }}
           animate={{ rotate: expanded ? 135 : 0 }}
           transition={{ type: "spring", stiffness: 380, damping: 20 }}
-          className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border backdrop-blur-sm"
+          className="stackd-fab flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border backdrop-blur-sm"
           style={{
             background:
               "linear-gradient(145deg, rgba(255,255,255,0.24), rgba(255,255,255,0.08))",

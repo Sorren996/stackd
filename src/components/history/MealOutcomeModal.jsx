@@ -14,6 +14,8 @@ import {
 } from "recharts";
 import { getInsulinProfile, generateActivityCurve, isBasalInsulinType } from "@/lib/insulinPharmacology";
 import { GLUCOSE_STATUS_COLORS, readHighReference, FIXED_LOW_REFERENCE } from "@/lib/glucoseStatus";
+import { useIsLightTheme } from "@/lib/theme";
+import { getGraphTheme } from "@/lib/graphTheme";
 
 const MIN_MS = 60 * 1000;
 const HOUR_MS = 60 * MIN_MS;
@@ -103,6 +105,7 @@ export default function MealOutcomeModal({ meal, glucose, insulin, targetLow, ta
     [meal, glucose, insulin]
   );
 
+  const gTheme = getGraphTheme(useIsLightTheme());
   const highRef = useMemo(() => readHighReference(), []);
   const glucoseTicks = useMemo(
     () => [FIXED_LOW_REFERENCE, targetLow, targetHigh, highRef],
@@ -143,7 +146,7 @@ export default function MealOutcomeModal({ meal, glucose, insulin, targetLow, ta
             exit={{ opacity: 0, y: 30, scale: 0.97 }}
             transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
             onClick={(e) => e.stopPropagation()}
-            className="relative z-10 max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-3xl border p-5"
+            className="stackd-glass relative z-10 max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-3xl border p-5"
             style={{
               background: "linear-gradient(165deg, rgba(18,28,23,0.97), rgba(10,16,13,0.97))",
               borderColor: "rgba(255,255,255,0.16)",
@@ -185,8 +188,8 @@ export default function MealOutcomeModal({ meal, glucose, insulin, targetLow, ta
                       <linearGradient id="modalGlucoseGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="#d4a056" stopOpacity={0.95} />
                         <stop offset={`${((yMax - targetHigh) / (yMax - yMin)) * 100}%`} stopColor="#d4a056" stopOpacity={0.95} />
-                        <stop offset={`${((yMax - targetHigh) / (yMax - yMin)) * 100}%`} stopColor="#ffffff" stopOpacity={0.9} />
-                        <stop offset={`${((yMax - targetLow) / (yMax - yMin)) * 100}%`} stopColor="#ffffff" stopOpacity={0.9} />
+                        <stop offset={`${((yMax - targetHigh) / (yMax - yMin)) * 100}%`} stopColor={gTheme.inRangeColor} stopOpacity={0.9} />
+                        <stop offset={`${((yMax - targetLow) / (yMax - yMin)) * 100}%`} stopColor={gTheme.inRangeColor} stopOpacity={0.9} />
                         <stop offset={`${((yMax - targetLow) / (yMax - yMin)) * 100}%`} stopColor={GLUCOSE_STATUS_COLORS.low} stopOpacity={0.9} />
                         <stop offset="100%" stopColor={GLUCOSE_STATUS_COLORS.low} stopOpacity={0.9} />
                       </linearGradient>
@@ -200,9 +203,9 @@ export default function MealOutcomeModal({ meal, glucose, insulin, targetLow, ta
                       type="number"
                       domain={[-30, 180]}
                       ticks={[-30, 0, 60, 120, 180]}
-                      tick={{ fontSize: 9, fill: "rgba(255,255,255,0.35)" }}
+                      tick={{ fontSize: 9, fill: gTheme.tickFill }}
                       tickFormatter={xTickFormatter}
-                      axisLine={{ stroke: "rgba(255,255,255,0.08)" }}
+                      axisLine={{ stroke: gTheme.dividerColor }}
                       tickLine={false}
                       dy={4}
                     />
@@ -210,7 +213,7 @@ export default function MealOutcomeModal({ meal, glucose, insulin, targetLow, ta
                       yAxisId="glucose"
                       domain={[yMin, yMax]}
                       ticks={glucoseTicks}
-                      tick={{ fontSize: 9, fill: "rgba(255,255,255,0.45)" }}
+                      tick={{ fontSize: 9, fill: gTheme.tickFill }}
                       tickFormatter={(v) => Math.round(v)}
                       allowDecimals={false}
                       axisLine={false}
@@ -228,8 +231,8 @@ export default function MealOutcomeModal({ meal, glucose, insulin, targetLow, ta
                       width={36}
                     />
                     <ReferenceArea yAxisId="glucose" y1={targetLow} y2={targetHigh} fill="#5ba88a" fillOpacity={0.06} />
-                    <ReferenceLine yAxisId="glucose" y={targetHigh} stroke="rgba(255,255,255,0.12)" strokeDasharray="3 4" />
-                    <ReferenceLine yAxisId="glucose" y={targetLow} stroke="rgba(255,255,255,0.12)" strokeDasharray="3 4" />
+                    <ReferenceLine yAxisId="glucose" y={targetHigh} stroke={gTheme.refLineStroke} strokeDasharray="3 4" />
+                    <ReferenceLine yAxisId="glucose" y={targetLow} stroke={gTheme.refLineStroke} strokeDasharray="3 4" />
                     <ReferenceLine x={0} yAxisId="glucose" stroke="#f59e0b" strokeDasharray="2 3" strokeWidth={1} />
                     <Area
                       yAxisId="iob"
@@ -244,7 +247,7 @@ export default function MealOutcomeModal({ meal, glucose, insulin, targetLow, ta
                       yAxisId="glucose"
                       type="monotone"
                       dataKey="glucose"
-                      stroke="#ffffff"
+                      stroke={gTheme.inRangeColor}
                       strokeOpacity={0.9}
                       strokeWidth={2.2}
                       dot={false}
@@ -255,7 +258,7 @@ export default function MealOutcomeModal({ meal, glucose, insulin, targetLow, ta
                 </ResponsiveContainer>
                 <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 px-1">
                   <span className="flex items-center gap-1.5">
-                    <span className="inline-block h-2 w-2 rounded-full" style={{ background: "#ffffff" }} />
+                    <span className="inline-block h-2 w-2 rounded-full" style={{ background: gTheme.inRangeColor }} />
                     <span className="text-[9px] text-white/40">Glucose (mg/dL)</span>
                   </span>
                   <span className="flex items-center gap-1.5">

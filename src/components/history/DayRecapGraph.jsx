@@ -13,6 +13,8 @@ import {
 import { format } from "date-fns";
 import { GLUCOSE_STATUS_COLORS } from "@/lib/glucoseStatus";
 import { getInsulinProfile } from "@/lib/insulinPharmacology";
+import { useIsLightTheme } from "@/lib/theme";
+import { getGraphTheme } from "@/lib/graphTheme";
 import { minutesOfDay, getGlucoseAt, findReadingNear } from "@/lib/dayRecapMetrics";
 
 const HOUR = 60;
@@ -71,7 +73,7 @@ function EventPopover({ event, onClose }) {
         style={{ left: event.cx, top: event.cy - 10 }}
       >
         <div
-          className="pointer-events-auto w-max max-w-[280px] rounded-xl border px-3.5 py-3 shadow-xl"
+          className="stackd-glass pointer-events-auto w-max max-w-[280px] rounded-xl border px-3.5 py-3 shadow-xl"
           style={{
             background: "linear-gradient(165deg, rgba(20,30,26,0.97), rgba(12,18,15,0.97))",
             borderColor: "rgba(255,255,255,0.16)",
@@ -146,6 +148,7 @@ function EventPopover({ event, onClose }) {
 
 export default function DayRecapGraph({ glucose, carbs, insulin, targetLow, targetHigh }) {
   const [selected, setSelected] = useState(null);
+  const gTheme = getGraphTheme(useIsLightTheme());
 
   const readings = useMemo(
     () =>
@@ -163,7 +166,7 @@ export default function DayRecapGraph({ glucose, carbs, insulin, targetLow, targ
   if (readings.length < 2) {
     return (
       <div
-        className="flex h-[180px] items-center justify-center rounded-2xl border"
+        className="stackd-card flex h-[180px] items-center justify-center rounded-2xl border"
         style={{
           background: "linear-gradient(145deg, rgba(255,255,255,0.03), rgba(255,255,255,0.008))",
           borderColor: "rgba(255,255,255,0.10)",
@@ -190,8 +193,8 @@ export default function DayRecapGraph({ glucose, carbs, insulin, targetLow, targ
   const lineStops = [
     { offset: 0, color: GLUCOSE_STATUS_COLORS.high, opacity: 0.9 },
     { offset: Math.max(0, hiPct - 3), color: GLUCOSE_STATUS_COLORS.high, opacity: 0.7 },
-    { offset: Math.min(100, hiPct + 3), color: "#ffffff", opacity: 0.7 },
-    { offset: Math.max(0, loPct - 3), color: "#ffffff", opacity: 0.7 },
+    { offset: Math.min(100, hiPct + 3), color: gTheme.inRangeColor, opacity: 0.7 },
+    { offset: Math.max(0, loPct - 3), color: gTheme.inRangeColor, opacity: 0.7 },
     { offset: Math.min(100, loPct + 3), color: GLUCOSE_STATUS_COLORS.low, opacity: 0.7 },
     { offset: 100, color: GLUCOSE_STATUS_COLORS.low, opacity: 0.9 },
   ].map((s) => {
@@ -260,7 +263,7 @@ export default function DayRecapGraph({ glucose, carbs, insulin, targetLow, targ
 
   return (
     <div
-      className="relative rounded-2xl border p-3"
+      className="stackd-card relative rounded-2xl border p-3"
       style={{
         background: "linear-gradient(145deg, rgba(255,255,255,0.03), rgba(255,255,255,0.008))",
         borderColor: "rgba(255,255,255,0.10)",
@@ -281,38 +284,38 @@ export default function DayRecapGraph({ glucose, carbs, insulin, targetLow, targ
             type="number"
             domain={[0, DAY_MIN]}
             ticks={ticks}
-            tick={{ fontSize: 9, fill: "rgba(255,255,255,0.35)" }}
+            tick={{ fontSize: 9, fill: gTheme.tickFill }}
             tickFormatter={(v) => {
               const h = Math.floor(v / 60);
               const ampm = h >= 12 ? "p" : "a";
               const hr = h % 12 === 0 ? 12 : h % 12;
               return `${hr}${ampm}`;
             }}
-            axisLine={{ stroke: "rgba(255,255,255,0.08)" }}
+            axisLine={{ stroke: gTheme.dividerColor }}
             tickLine={false}
           />
           <YAxis domain={[yMin, yMax]} hide />
           <ReferenceArea y1={targetLow} y2={targetHigh} fill="#5ba88a" fillOpacity={0.06} />
           <ReferenceLine
             y={targetHigh}
-            stroke="rgba(255,255,255,0.18)"
+            stroke={gTheme.refLineStroke}
             strokeDasharray="3 4"
             label={{
               value: `${Math.round(targetHigh)}`,
               position: "right",
-              fill: "rgba(255,255,255,0.5)",
+              fill: gTheme.tickFill,
               fontSize: 9,
               offset: 6,
             }}
           />
           <ReferenceLine
             y={targetLow}
-            stroke="rgba(255,255,255,0.18)"
+            stroke={gTheme.refLineStroke}
             strokeDasharray="3 4"
             label={{
               value: `${Math.round(targetLow)}`,
               position: "right",
-              fill: "rgba(255,255,255,0.5)",
+              fill: gTheme.tickFill,
               fontSize: 9,
               offset: 6,
             }}
@@ -320,7 +323,7 @@ export default function DayRecapGraph({ glucose, carbs, insulin, targetLow, targ
           <Line
             type="monotone"
             dataKey="value"
-            stroke="#ffffff"
+            stroke={gTheme.inRangeColor}
             strokeOpacity={0.9}
             strokeWidth={2.2}
             dot={false}
