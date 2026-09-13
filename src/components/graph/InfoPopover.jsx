@@ -52,7 +52,7 @@ export default function InfoPopover({ anchorRect, onClose, children }) {
         initial={{ opacity: 0, y: 6, scale: 0.96 }}
         animate={{ opacity: pos.ready ? 1 : 0, y: pos.ready ? 0 : 6, scale: pos.ready ? 1 : 0.96 }}
         transition={{ duration: 0.14 }}
-        className="fixed z-[300] w-[224px] rounded-2xl border p-3 text-left"
+        className="stackd-popover fixed z-[300] w-[224px] rounded-2xl border p-3 text-left"
         style={{
           left: pos.left,
           top: pos.top,

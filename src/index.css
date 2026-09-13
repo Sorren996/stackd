@@ -194,3 +194,153 @@
     color: rgba(255,255,255,0.40);
   }
 }
+
+/* ============================================================
+   STACKD LIGHT MODE
+   Every rule below is scoped to [data-theme="light"], so the
+   default Dark Mode keeps its exact existing appearance.
+   The Activity Graph canvas (.stackd-graph-canvas) is excluded
+   from the white-channel remaps so it stays a calm dark
+   instrument panel in either theme.
+   ============================================================ */
+
+[data-theme="light"] {
+  color-scheme: light;
+}
+
+[data-theme="light"] body {
+  background:
+    radial-gradient(circle at 15% 0%, rgba(91,168,138,0.10), transparent 40%),
+    radial-gradient(circle at 90% 8%, rgba(120,160,190,0.08), transparent 42%),
+    radial-gradient(circle at 50% 100%, rgba(150,140,200,0.045), transparent 45%),
+    linear-gradient(to bottom, #eaf1ee 0%, #e2ebe6 100%);
+  background-attachment: fixed;
+  color: #1f2a26;
+}
+
+[data-theme="light"] input,
+[data-theme="light"] textarea,
+[data-theme="light"] select,
+[data-theme="light"] input::placeholder,
+[data-theme="light"] textarea::placeholder {
+  color-scheme: light;
+}
+
+/* Semantic token overrides — shadcn primitives (Dialog, Sheet, Select, etc.) */
+[data-theme="light"] {
+  --background: 150 18% 94%;
+  --foreground: 158 18% 16%;
+  --card: 0 0% 100%;
+  --card-foreground: 158 18% 16%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 158 18% 16%;
+  --primary: 162 42% 32%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 150 12% 90%;
+  --secondary-foreground: 158 16% 24%;
+  --muted: 150 12% 92%;
+  --muted-foreground: 155 8% 40%;
+  --accent: 162 36% 38%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 62% 48%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 155 12% 82%;
+  --input: 155 12% 84%;
+  --ring: 162 42% 38%;
+}
+
+/* ---- Glass surfaces ---- */
+[data-theme="light"] .stackd-card,
+[data-theme="light"] .glass-card {
+  background: linear-gradient(150deg, rgba(255,255,255,0.78), rgba(255,255,255,0.52));
+  border-color: rgba(20,45,38,0.10) !important;
+  box-shadow: 0 12px 36px rgba(20,50,45,0.10), 0 4px 12px rgba(20,50,45,0.06), inset 0 1px 1px rgba(255,255,255,0.9), inset 0 -1px 1px rgba(255,255,255,0.4) !important;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+[data-theme="light"] .stackd-glass {
+  background: linear-gradient(165deg, rgba(255,255,255,0.90), rgba(244,250,247,0.86));
+  border-color: rgba(20,45,38,0.12) !important;
+  box-shadow: 0 18px 50px rgba(20,50,45,0.16), inset 0 1px 1px rgba(255,255,255,0.9) !important;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+[data-theme="light"] .stackd-modal-backdrop {
+  background: rgba(120,140,135,0.30) !important;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+[data-theme="light"] .stackd-input {
+  background: rgba(255,255,255,0.6) !important;
+  border-color: rgba(20,45,38,0.14) !important;
+  box-shadow: inset 0 1px 2px rgba(20,50,45,0.06) !important;
+}
+
+[data-theme="light"] .stackd-btn-primary {
+  background: linear-gradient(145deg, rgba(46,140,116,0.96), rgba(38,120,100,0.96));
+  border-color: rgba(54,168,138,0.40);
+  box-shadow: 0 8px 22px rgba(46,140,116,0.24), inset 0 1px 1px rgba(255,255,255,0.30);
+  color: #ffffff;
+}
+
+[data-theme="light"] .stackd-section-label {
+  color: rgba(31,42,38,0.50);
+}
+
+/* ---- Graph canvas: Stackd's calm dark instrument panel (preserved) ---- */
+[data-theme="light"] .stackd-graph-canvas {
+  background: linear-gradient(165deg, rgba(22,34,30,0.94), rgba(12,20,17,0.96)) !important;
+  border-color: rgba(0,0,0,0.25) !important;
+  box-shadow: 0 12px 38px rgba(20,50,45,0.22), inset 0 1px 1px rgba(255,255,255,0.06) !important;
+}
+
+/* ---- Portaled popover (InfoPopover) ---- */
+[data-theme="light"] .stackd-popover {
+  background: linear-gradient(165deg, rgba(255,255,255,0.93), rgba(244,250,247,0.88)) !important;
+  border-color: rgba(20,45,38,0.12) !important;
+  box-shadow: 0 18px 50px rgba(20,50,45,0.20), inset 0 1px 1px rgba(255,255,255,0.9) !important;
+}
+
+/* ---- Top controls (refresh + theme toggle) ---- */
+[data-theme="light"] .stackd-top-control {
+  background: rgba(255,255,255,0.62) !important;
+  border-color: rgba(20,45,38,0.12) !important;
+}
+
+/* ---- Bottom navigation ---- */
+[data-theme="light"] .stackd-bottom-nav {
+  background: linear-gradient(135deg, rgba(255,255,255,0.74), rgba(255,255,255,0.50)) !important;
+  border-color: rgba(20,45,38,0.12) !important;
+  box-shadow: 0 14px 40px rgba(20,50,45,0.14), inset 0 1px 1px rgba(255,255,255,0.9), inset 0 -1px 1px rgba(255,255,255,0.4) !important;
+}
+
+/* ---- White-channel utility remaps (graph canvas excluded) ---- */
+[data-theme="light"] :is(.text-white, .text-white\/90, .text-white\/85):not(.stackd-graph-canvas, .stackd-graph-canvas *) { color: #1f2a26; }
+[data-theme="light"] :is(.text-white\/80, .text-white\/75, .text-white\/70, .text-white\/65):not(.stackd-graph-canvas, .stackd-graph-canvas *) { color: #3a4a43; }
+[data-theme="light"] :is(.text-white\/60, .text-white\/55, .text-white\/50):not(.stackd-graph-canvas, .stackd-graph-canvas *) { color: #58665f; }
+[data-theme="light"] :is(.text-white\/45, .text-white\/40, .text-white\/35):not(.stackd-graph-canvas, .stackd-graph-canvas *) { color: #6e7c75; }
+[data-theme="light"] :is(.text-white\/30, .text-white\/25, .text-white\/20):not(.stackd-graph-canvas, .stackd-graph-canvas *) { color: #8a9890; }
+[data-theme="light"] :is(.text-white\/15, .text-white\/12, .text-white\/10, .text-white\/5):not(.stackd-graph-canvas, .stackd-graph-canvas *) { color: #a7b3ac; }
+
+[data-theme="light"] :is(.bg-white\/5, .bg-white\/\[0\.025\], .bg-white\/\[0\.03\], .bg-white\/\[0\.04\]):not(.stackd-graph-canvas, .stackd-graph-canvas *) { background-color: rgba(31,42,38,0.04); }
+[data-theme="light"] :is(.bg-white\/10, .bg-white\/8, .bg-white\/\[0\.06\], .bg-white\/\[0\.08\]):not(.stackd-graph-canvas, .stackd-graph-canvas *) { background-color: rgba(31,42,38,0.06); }
+[data-theme="light"] :is(.bg-white\/\[0\.10\], .bg-white\/12, .bg-white\/15):not(.stackd-graph-canvas, .stackd-graph-canvas *) { background-color: rgba(31,42,38,0.08); }
+[data-theme="light"] :is(.bg-white\/20, .bg-white\/25):not(.stackd-graph-canvas, .stackd-graph-canvas *) { background-color: rgba(31,42,38,0.10); }
+[data-theme="light"] .bg-white:not(.stackd-graph-canvas, .stackd-graph-canvas *) { background-color: rgba(255,255,255,0.72); }
+
+[data-theme="light"] :is(.border-white\/5, .border-white\/10, .border-white\/\[0\.06\], .border-white\/\[0\.07\]):not(.stackd-graph-canvas, .stackd-graph-canvas *) { border-color: rgba(31,42,38,0.12); }
+[data-theme="light"] :is(.border-white\/12, .border-white\/15, .border-white\/20, .border-white\/\[0\.12\]):not(.stackd-graph-canvas, .stackd-graph-canvas *) { border-color: rgba(31,42,38,0.16); }
+[data-theme="light"] .border-white\/30:not(.stackd-graph-canvas, .stackd-graph-canvas *) { border-color: rgba(31,42,38,0.22); }
+
+/* ---- Recharts (Analytics rhythm charts; canvas excluded) ---- */
+[data-theme="light"] .recharts-text:not(.stackd-graph-canvas, .stackd-graph-canvas *) { fill: rgba(31,42,38,0.55); }
+[data-theme="light"] .recharts-cartesian-axis-line:not(.stackd-graph-canvas, .stackd-graph-canvas *),
+[data-theme="light"] .recharts-cartesian-axis-tick-line:not(.stackd-graph-canvas, .stackd-graph-canvas *) { stroke: rgba(31,42,38,0.18); }
+[data-theme="light"] .recharts-default-tooltip {
+  background: rgba(255,255,255,0.92) !important;
+  border-color: rgba(31,42,38,0.12) !important;
+  color: #1f2a26;
+}

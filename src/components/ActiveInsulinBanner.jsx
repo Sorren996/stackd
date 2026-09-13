@@ -1182,7 +1182,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
         )}
 
         <div
-          className="relative mt-3 overflow-hidden rounded-3xl border border-white/[0.07] pb-1"
+          className="stackd-graph-canvas relative mt-3 overflow-hidden rounded-3xl border border-white/[0.07] pb-1"
           style={{
             background: "linear-gradient(165deg, rgba(255,255,255,0.035), rgba(255,255,255,0.006))",
             boxShadow: "0 6px 28px rgba(0,0,0,0.10), inset 0 1px 1px rgba(255,255,255,0.06)",

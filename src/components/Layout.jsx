@@ -7,6 +7,7 @@ import Dashboard from "../pages/Dashboard";
 import HistoryPage from "../pages/History";
 import SettingsPage from "../pages/Settings";
 import AnalyticsPage from "../pages/Analytics";
+import ThemeToggle from "./ThemeToggle";
 import { useRealtimeLogSync } from "@/hooks/useRealtimeLogSync";
 
 const navItems = [
@@ -176,12 +177,13 @@ export default function Layout() {
           </button>
 
           <div className="flex items-center justify-self-end gap-2">
+            <ThemeToggle />
             <button
               type="button"
               onClick={handleRefresh}
               disabled={isRefreshing}
               aria-label="Refresh information"
-              className="flex h-9 w-9 items-center justify-center rounded-full backdrop-blur-sm border transition-all"
+              className="stackd-top-control flex h-9 w-9 items-center justify-center rounded-full backdrop-blur-sm border transition-all"
               style={{
                 background: "rgba(255,255,255,0.05)",
                 borderColor: "rgba(255,255,255,0.05)",
@@ -275,7 +277,7 @@ export default function Layout() {
         className="fixed inset-x-0 bottom-0 z-30 flex justify-center pb-safe"
       >
         <div
-          className="relative mx-4 mb-4 grid w-[min(calc(100vw-2rem),26rem)] grid-cols-4 gap-1 overflow-hidden rounded-[2rem] border px-2 py-1.5 backdrop-blur-sm"
+          className="stackd-bottom-nav relative mx-4 mb-4 grid w-[min(calc(100vw-2rem),26rem)] grid-cols-4 gap-1 overflow-hidden rounded-[2rem] border px-2 py-1.5 backdrop-blur-sm"
           style={{
             background:
               "linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.03))",
