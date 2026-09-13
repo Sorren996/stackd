@@ -5,12 +5,12 @@
 export function getGraphTheme(isLight) {
   return isLight
     ? {
-        inRangeColor: "#2c2c2e",
+        inRangeColor: "#3a3a3c",
         refLineStroke: "rgba(60,60,67,0.22)",
         tickFill: "rgba(60,60,67,0.50)",
         tickDotFill: "rgba(60,60,67,0.16)",
         dividerColor: "rgba(60,60,67,0.06)",
-        markerColor: "#2c2c2e",
+        markerColor: "#3a3a3c",
         pillBg: "rgba(255,255,255,0.78)",
         labelOpacityPrimary: 0.45,
         labelOpacitySecondary: 0.7,
