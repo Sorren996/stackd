@@ -199,9 +199,8 @@
    STACKD LIGHT MODE
    Every rule below is scoped to [data-theme="light"], so the
    default Dark Mode keeps its exact existing appearance.
-   The Activity Graph canvas (.stackd-graph-canvas) is excluded
-   from the white-channel remaps so it stays a calm dark
-   instrument panel in either theme.
+   The Activity Graph receives a purpose-built light canvas via
+   .stackd-graph-canvas and the per-theme palette in graphTheme.js.
    ============================================================ */
 
 [data-theme="light"] {
@@ -290,11 +289,11 @@
   color: rgba(31,42,38,0.50);
 }
 
-/* ---- Graph canvas: Stackd's calm dark instrument panel (preserved) ---- */
+/* ---- Graph canvas: light instrument surface ---- */
 [data-theme="light"] .stackd-graph-canvas {
-  background: linear-gradient(165deg, rgba(22,34,30,0.94), rgba(12,20,17,0.96)) !important;
-  border-color: rgba(0,0,0,0.25) !important;
-  box-shadow: 0 12px 38px rgba(20,50,45,0.22), inset 0 1px 1px rgba(255,255,255,0.06) !important;
+  background: linear-gradient(165deg, rgba(255,255,255,0.82), rgba(241,247,244,0.74)) !important;
+  border-color: rgba(20,45,38,0.10) !important;
+  box-shadow: 0 12px 38px rgba(20,50,45,0.14), inset 0 1px 1px rgba(255,255,255,0.9) !important;
 }
 
 /* ---- Portaled popover (InfoPopover) ---- */
@@ -310,6 +309,12 @@
   border-color: rgba(20,45,38,0.12) !important;
 }
 
+[data-theme="light"] .stackd-filter-dropdown {
+  background: linear-gradient(165deg, rgba(255,255,255,0.93), rgba(244,250,247,0.88)) !important;
+  border-color: rgba(20,45,38,0.12) !important;
+  box-shadow: 0 18px 50px rgba(20,50,45,0.20) !important;
+}
+
 /* ---- Bottom navigation ---- */
 [data-theme="light"] .stackd-bottom-nav {
   background: linear-gradient(135deg, rgba(255,255,255,0.74), rgba(255,255,255,0.50)) !important;
@@ -317,28 +322,28 @@
   box-shadow: 0 14px 40px rgba(20,50,45,0.14), inset 0 1px 1px rgba(255,255,255,0.9), inset 0 -1px 1px rgba(255,255,255,0.4) !important;
 }
 
-/* ---- White-channel utility remaps (graph canvas excluded) ---- */
-[data-theme="light"] :is(.text-white, .text-white\/90, .text-white\/85):not(.stackd-graph-canvas, .stackd-graph-canvas *) { color: #1f2a26; }
-[data-theme="light"] :is(.text-white\/80, .text-white\/75, .text-white\/70, .text-white\/65):not(.stackd-graph-canvas, .stackd-graph-canvas *) { color: #3a4a43; }
-[data-theme="light"] :is(.text-white\/60, .text-white\/55, .text-white\/50):not(.stackd-graph-canvas, .stackd-graph-canvas *) { color: #58665f; }
-[data-theme="light"] :is(.text-white\/45, .text-white\/40, .text-white\/35):not(.stackd-graph-canvas, .stackd-graph-canvas *) { color: #6e7c75; }
-[data-theme="light"] :is(.text-white\/30, .text-white\/25, .text-white\/20):not(.stackd-graph-canvas, .stackd-graph-canvas *) { color: #8a9890; }
-[data-theme="light"] :is(.text-white\/15, .text-white\/12, .text-white\/10, .text-white\/5):not(.stackd-graph-canvas, .stackd-graph-canvas *) { color: #a7b3ac; }
+/* ---- White-channel utility remaps ---- */
+[data-theme="light"] :is(.text-white, .text-white\/90, .text-white\/85){ color: #1f2a26; }
+[data-theme="light"] :is(.text-white\/80, .text-white\/75, .text-white\/70, .text-white\/65){ color: #3a4a43; }
+[data-theme="light"] :is(.text-white\/60, .text-white\/55, .text-white\/50){ color: #58665f; }
+[data-theme="light"] :is(.text-white\/45, .text-white\/40, .text-white\/35){ color: #6e7c75; }
+[data-theme="light"] :is(.text-white\/30, .text-white\/25, .text-white\/20){ color: #8a9890; }
+[data-theme="light"] :is(.text-white\/15, .text-white\/12, .text-white\/10, .text-white\/5){ color: #a7b3ac; }
 
-[data-theme="light"] :is(.bg-white\/5, .bg-white\/\[0\.025\], .bg-white\/\[0\.03\], .bg-white\/\[0\.04\]):not(.stackd-graph-canvas, .stackd-graph-canvas *) { background-color: rgba(31,42,38,0.04); }
-[data-theme="light"] :is(.bg-white\/10, .bg-white\/8, .bg-white\/\[0\.06\], .bg-white\/\[0\.08\]):not(.stackd-graph-canvas, .stackd-graph-canvas *) { background-color: rgba(31,42,38,0.06); }
-[data-theme="light"] :is(.bg-white\/\[0\.10\], .bg-white\/12, .bg-white\/15):not(.stackd-graph-canvas, .stackd-graph-canvas *) { background-color: rgba(31,42,38,0.08); }
-[data-theme="light"] :is(.bg-white\/20, .bg-white\/25):not(.stackd-graph-canvas, .stackd-graph-canvas *) { background-color: rgba(31,42,38,0.10); }
-[data-theme="light"] .bg-white:not(.stackd-graph-canvas, .stackd-graph-canvas *) { background-color: rgba(255,255,255,0.72); }
+[data-theme="light"] :is(.bg-white\/5, .bg-white\/\[0\.025\], .bg-white\/\[0\.03\], .bg-white\/\[0\.04\]){ background-color: rgba(31,42,38,0.04); }
+[data-theme="light"] :is(.bg-white\/10, .bg-white\/8, .bg-white\/\[0\.06\], .bg-white\/\[0\.08\]){ background-color: rgba(31,42,38,0.06); }
+[data-theme="light"] :is(.bg-white\/\[0\.10\], .bg-white\/12, .bg-white\/15){ background-color: rgba(31,42,38,0.08); }
+[data-theme="light"] :is(.bg-white\/20, .bg-white\/25){ background-color: rgba(31,42,38,0.10); }
+[data-theme="light"] .bg-white{ background-color: rgba(255,255,255,0.72); }
 
-[data-theme="light"] :is(.border-white\/5, .border-white\/10, .border-white\/\[0\.06\], .border-white\/\[0\.07\]):not(.stackd-graph-canvas, .stackd-graph-canvas *) { border-color: rgba(31,42,38,0.12); }
-[data-theme="light"] :is(.border-white\/12, .border-white\/15, .border-white\/20, .border-white\/\[0\.12\]):not(.stackd-graph-canvas, .stackd-graph-canvas *) { border-color: rgba(31,42,38,0.16); }
-[data-theme="light"] .border-white\/30:not(.stackd-graph-canvas, .stackd-graph-canvas *) { border-color: rgba(31,42,38,0.22); }
+[data-theme="light"] :is(.border-white\/5, .border-white\/10, .border-white\/\[0\.06\], .border-white\/\[0\.07\]){ border-color: rgba(31,42,38,0.12); }
+[data-theme="light"] :is(.border-white\/12, .border-white\/15, .border-white\/20, .border-white\/\[0\.12\]){ border-color: rgba(31,42,38,0.16); }
+[data-theme="light"] .border-white\/30{ border-color: rgba(31,42,38,0.22); }
 
-/* ---- Recharts (Analytics rhythm charts; canvas excluded) ---- */
-[data-theme="light"] .recharts-text:not(.stackd-graph-canvas, .stackd-graph-canvas *) { fill: rgba(31,42,38,0.55); }
-[data-theme="light"] .recharts-cartesian-axis-line:not(.stackd-graph-canvas, .stackd-graph-canvas *),
-[data-theme="light"] .recharts-cartesian-axis-tick-line:not(.stackd-graph-canvas, .stackd-graph-canvas *) { stroke: rgba(31,42,38,0.18); }
+/* ---- Recharts (Analytics rhythm charts) ---- */
+[data-theme="light"] .recharts-text{ fill: rgba(31,42,38,0.55); }
+[data-theme="light"] .recharts-cartesian-axis-line,
+[data-theme="light"] .recharts-cartesian-axis-tick-line{ stroke: rgba(31,42,38,0.18); }
 [data-theme="light"] .recharts-default-tooltip {
   background: rgba(255,255,255,0.92) !important;
   border-color: rgba(31,42,38,0.12) !important;

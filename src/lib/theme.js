@@ -28,6 +28,7 @@ export function useTheme() {
     } catch {
       // Storage failure is non-fatal — the in-memory value still drives the UI.
     }
+    window.dispatchEvent(new Event("stackd-theme-change"));
   }, [theme]);
 
   const setTheme = useCallback((next) => {
@@ -39,4 +40,20 @@ export function useTheme() {
   }, []);
 
   return { theme, setTheme, toggle, isLight: theme === "light" };
+}
+
+// Reactive flag for components that must re-render when the theme changes
+// (e.g. the Activity Graph, which picks its palette per theme).
+export function useIsLightTheme() {
+  const [isLight, setIsLight] = useState(
+    () => typeof document !== "undefined" && document.documentElement.dataset.theme === "light"
+  );
+  useEffect(() => {
+    const update = () =>
+      setIsLight(document.documentElement.dataset.theme === "light");
+    update();
+    window.addEventListener("stackd-theme-change", update);
+    return () => window.removeEventListener("stackd-theme-change", update);
+  }, []);
+  return isLight;
 }

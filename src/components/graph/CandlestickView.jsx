@@ -5,6 +5,8 @@ import { format } from "date-fns";
 import { bucketGlucoseForCandles } from "@/lib/glucoseBucketing";
 import { generateActivityCurve, getInsulinProfile, isBasalInsulinType } from "@/lib/insulinPharmacology";
 import { GLUCOSE_STATUS_COLORS, FIXED_LOW_REFERENCE } from "@/lib/glucoseStatus";
+import { useIsLightTheme } from "@/lib/theme";
+import { getGraphTheme } from "@/lib/graphTheme";
 
 const HOUR_MS = 60 * 60 * 1000;
 const STEP_MS = 15 * 60 * 1000;
@@ -28,11 +30,11 @@ function valueToY(value, marginTop, plotHeight, min, max) {
   return marginTop + (max - clamped) / (max - min) * plotHeight;
 }
 
-function avgDotColor(avg, targetLow, targetHigh) {
-  if (avg == null) return "#ffffff";
+function avgDotColor(avg, targetLow, targetHigh, inRangeColor = "#ffffff") {
+  if (avg == null) return inRangeColor;
   if (avg > targetHigh) return PALETTE.high;
   if (avg < targetLow) return PALETTE.low;
-  return "#ffffff";
+  return inRangeColor;
 }
 
 /**
@@ -42,7 +44,7 @@ function avgDotColor(avg, targetLow, targetHigh) {
  * color — the rest stays neutral.
  */
 function CandlestickShape(props) {
-  const { x, width, payload, marginTop, plotHeight, targetHighY, targetLowY, targetLow, targetHigh, glucoseMin, glucoseMax } = props;
+  const { x, width, payload, marginTop, plotHeight, targetHighY, targetLowY, targetLow, targetHigh, glucoseMin, glucoseMax, inRangeColor } = props;
   if (payload.high == null || payload.low == null) return null;
 
   const rawHigh = payload.high;
@@ -79,7 +81,7 @@ function CandlestickShape(props) {
   const belowLow = drawLowY > targetLowY;
   const redBottom = Math.min(targetHighY, drawLowY);
   const blueTop = Math.max(targetLowY, drawHighY);
-  const dotColor = avgDotColor(payload.avg, targetLow, targetHigh);
+  const dotColor = avgDotColor(payload.avg, targetLow, targetHigh, inRangeColor);
 
   return (
     <g>
@@ -102,11 +104,11 @@ function CandlestickShape(props) {
   );
 }
 
-function TimeAxisTick({ x, y, payload }) {
+function TimeAxisTick({ x, y, payload, fill }) {
   const date = new Date(payload.value);
   if (date.getHours() % 6 !== 0) return null;
   return (
-    <text x={x} y={y + 11} textAnchor="middle" fill="rgba(255,255,255,0.32)" fontSize={9} fontWeight={600} letterSpacing={0.4}>
+    <text x={x} y={y + 11} textAnchor="middle" fill={fill} fontSize={9} fontWeight={600} letterSpacing={0.4}>
       {format(date, "h a")}
     </text>
   );
@@ -136,6 +138,7 @@ export default function CandlestickView({
   const plotHeight = chartHeight - marginTop - xAxisHeight;
   const targetHighY = valueToY(targetHigh, marginTop, plotHeight, glucoseMin, glucoseMax);
   const targetLowY = valueToY(targetLow, marginTop, plotHeight, glucoseMin, glucoseMax);
+  const gTheme = getGraphTheme(useIsLightTheme());
 
   const candleData = useMemo(
     () => bucketGlucoseForCandles(glucoseReadings, domainStart, domainEnd),
@@ -306,7 +309,7 @@ export default function CandlestickView({
           type="number"
           domain={[domainStart, domainEnd]}
           ticks={timeTicks}
-          tick={<TimeAxisTick />}
+          tick={<TimeAxisTick fill={gTheme.tickFill} />}
           axisLine={false}
           tickLine={false}
           height={xAxisHeight}
@@ -315,8 +318,8 @@ export default function CandlestickView({
         <YAxis yAxisId="glucose" domain={[glucoseMin, glucoseMax]} allowDataOverflow hide />
 
         <Area yAxisId="glucose" type="monotoneX" dataKey="bg" stroke="none" fill="url(#candle_range_grad)" isAnimationActive={false} dot={false} />
-        <ReferenceLine yAxisId="glucose" y={targetHigh} stroke="rgba(255,255,255,0.16)" strokeWidth={1} strokeDasharray="3 5" />
-        <ReferenceLine yAxisId="glucose" y={targetLow} stroke="rgba(255,255,255,0.16)" strokeWidth={1} strokeDasharray="3 5" />
+        <ReferenceLine yAxisId="glucose" y={targetHigh} stroke={gTheme.refLineStroke} strokeWidth={1} strokeDasharray="3 5" />
+        <ReferenceLine yAxisId="glucose" y={targetLow} stroke={gTheme.refLineStroke} strokeWidth={1} strokeDasharray="3 5" />
         <ReferenceLine
           yAxisId="glucose"
           y={highReference}
@@ -337,7 +340,7 @@ export default function CandlestickView({
         <Bar
           yAxisId="glucose"
           dataKey="high"
-          shape={<CandlestickShape marginTop={marginTop} plotHeight={plotHeight} targetHighY={targetHighY} targetLowY={targetLowY} targetLow={targetLow} targetHigh={targetHigh} glucoseMin={glucoseMin} glucoseMax={glucoseMax} />}
+          shape={<CandlestickShape marginTop={marginTop} plotHeight={plotHeight} targetHighY={targetHighY} targetLowY={targetLowY} targetLow={targetLow} targetHigh={targetHigh} glucoseMin={glucoseMin} glucoseMax={glucoseMax} inRangeColor={gTheme.inRangeColor} />}
           isAnimationActive={false}
         />
       </ComposedChart>
@@ -398,7 +401,7 @@ export default function CandlestickView({
           const carbGrams = activeTooltip.hourCarbs.reduce((s, c) => s + (Number(c.carbs) || 0), 0);
           return (
             <div className="fixed z-[200]" style={{ left, top: openBelow ? activeTooltip.rect.bottom + 8 : top, transform: openBelow ? "none" : "translateY(-100%)" }}>
-              <div className="rounded-2xl border p-3" style={{ width: tipW, background: "linear-gradient(165deg, rgba(18,28,23,0.98), rgba(10,16,13,0.99))", borderColor: "rgba(255,255,255,0.12)", boxShadow: "0 18px 50px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.08)", backdropFilter: "blur(12px)" }}>
+              <div className="stackd-popover rounded-2xl border p-3" style={{ width: tipW, background: "linear-gradient(165deg, rgba(18,28,23,0.98), rgba(10,16,13,0.99))", borderColor: "rgba(255,255,255,0.12)", boxShadow: "0 18px 50px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.08)", backdropFilter: "blur(12px)" }}>
               <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/45">Hourly glucose</p>
               <p className="mt-0.5 text-[11px] font-medium text-white/55">{format(hourStart, "h a")} – {format(hourEnd, "h a")}</p>
               <div className="mt-2 flex items-end justify-between">
@@ -408,7 +411,7 @@ export default function CandlestickView({
                 </div>
                 <div className="text-right">
                   <p className="text-[10px] text-white/40">Average</p>
-                  <p className="text-base font-bold" style={{ color: avgDotColor(activeTooltip.avg, targetLow, targetHigh) }}>{Math.round(activeTooltip.avg)}</p>
+                  <p className="text-base font-bold" style={{ color: avgDotColor(activeTooltip.avg, targetLow, targetHigh, gTheme.inRangeColor) }}>{Math.round(activeTooltip.avg)}</p>
                 </div>
               </div>
               {activeTooltip.tir != null && (

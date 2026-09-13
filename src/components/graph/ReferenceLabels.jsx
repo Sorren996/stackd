@@ -1,5 +1,7 @@
 import { Fragment } from "react";
 import { resolveReferenceLabelPositions } from "@/lib/glucoseStatus";
+import { useIsLightTheme } from "@/lib/theme";
+import { getGraphTheme } from "@/lib/graphTheme";
 
 // Fixed (non-scrolling) overlay that places the four glucose reference-line
 // labels with per-side collision protection.
@@ -10,6 +12,7 @@ import { resolveReferenceLabelPositions } from "@/lib/glucoseStatus";
 // When two same-side labels are too close, the lower label shifts down and a
 // thin leader connects it back to its true line — the line itself never moves.
 export default function ReferenceLabels({ labels, toY, chartHeight, minGap = 14 }) {
+  const gTheme = getGraphTheme(useIsLightTheme());
   const positions = resolveReferenceLabelPositions(labels, toY, { minGap });
 
   return (
@@ -42,7 +45,7 @@ export default function ReferenceLabels({ labels, toY, chartHeight, minGap = 14 
                 top: pos.y,
                 transform: l.anchor === "above" ? "translateY(-120%)" : "translateY(20%)",
                 color: l.color,
-                opacity: l.secondary ? 0.6 : 0.25,
+                opacity: l.secondary ? gTheme.labelOpacitySecondary : gTheme.labelOpacityPrimary,
               }}
             >
               {l.text}

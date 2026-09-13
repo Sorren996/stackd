@@ -1,16 +1,18 @@
 import { ComposedChart, Area, XAxis, YAxis } from "recharts";
 import { format } from "date-fns";
 import { Wheat } from "lucide-react";
+import { useIsLightTheme } from "@/lib/theme";
+import { getGraphTheme } from "@/lib/graphTheme";
 
-function TimeAxisTick({ x, y, payload }) {
+function TimeAxisTick({ x, y, payload, fill, dotFill }) {
   const date = new Date(payload.value);
   const minute = date.getMinutes();
   if (minute === 30) {
-    return <circle cx={x} cy={y + 6} r={1} fill="rgba(255,255,255,0.12)" />;
+    return <circle cx={x} cy={y + 6} r={1} fill={dotFill} />;
   }
   if (minute === 0) {
     return (
-      <text x={x} y={y + 11} textAnchor="middle" fill="rgba(255,255,255,0.22)" fontSize={9} fontWeight={500}>
+      <text x={x} y={y + 11} textAnchor="middle" fill={fill} fontSize={9} fontWeight={500}>
         {format(date, "h a")}
       </text>
     );
@@ -47,6 +49,7 @@ export default function GraphLowerSection({
 }) {
   const insulinLaneTop = glucoseChartHeight + carbLaneHeight;
   const hasCurves = showInsulin && doseKeys.length > 0;
+  const gTheme = getGraphTheme(useIsLightTheme());
 
   const renderDoseArea = (k) => {
     const isSelected = selectedDoseKey === k.key;
@@ -76,12 +79,12 @@ export default function GraphLowerSection({
       {/* Divider between glucose and carb lane */}
       <div
         className="pointer-events-none absolute left-0 right-0 z-[1]"
-        style={{ top: glucoseChartHeight - 1, height: 1, background: "rgba(255,255,255,0.04)" }}
+        style={{ top: glucoseChartHeight - 1, height: 1, background: gTheme.dividerColor }}
       />
       {/* Divider between carb and insulin lane */}
       <div
         className="pointer-events-none absolute left-0 right-0 z-[1]"
-        style={{ top: insulinLaneTop - 1, height: 1, background: "rgba(255,255,255,0.04)" }}
+        style={{ top: insulinLaneTop - 1, height: 1, background: gTheme.dividerColor }}
       />
 
       {/* Insulin Activity ComposedChart */}
@@ -106,7 +109,7 @@ export default function GraphLowerSection({
             type="number"
             domain={[domainStart, domainEnd]}
             ticks={timeTicks}
-            tick={<TimeAxisTick />}
+            tick={<TimeAxisTick fill={gTheme.tickFill} dotFill={gTheme.tickDotFill} />}
             axisLine={false}
             tickLine={false}
             height={xAxisHeight}
@@ -148,7 +151,7 @@ export default function GraphLowerSection({
               onClick={(e) => { e.stopPropagation(); onCarbTap(entry, e.currentTarget.getBoundingClientRect()); }}
               aria-label={`Carbs ${Math.round(entry.carbs)}g`}
               className="pointer-events-auto relative flex cursor-pointer items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-semibold leading-none backdrop-blur-sm transition hover:brightness-125"
-              style={{ top: pillTop, color, borderColor: `${color}30`, background: "rgba(10,16,14,0.72)" }}
+              style={{ top: pillTop, color, borderColor: `${color}30`, background: gTheme.pillBg }}
             >
               <Wheat className="h-2.5 w-2.5" />
               <span>{Math.round(entry.carbs)}g</span>
@@ -214,7 +217,7 @@ export default function GraphLowerSection({
               style={{
                 top: insulinLaneTop + pillTop,
                 color,
-                background: isSelected ? `${color}22` : "rgba(10,16,14,0.72)",
+                background: isSelected ? `${color}22` : gTheme.pillBg,
                 border: `1px solid ${isSelected ? color : `${color}35`}`,
                 boxShadow: isSelected ? `0 0 8px ${color}40` : "none",
               }}

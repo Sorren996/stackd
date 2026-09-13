@@ -11,6 +11,8 @@ import InfoPopover from "@/components/graph/InfoPopover";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
+import { useIsLightTheme } from "@/lib/theme";
+import { getGraphTheme } from "@/lib/graphTheme";
 import { useGlucoseStaleness } from "@/hooks/useGlucoseStaleness";
 import { getLatestDexcomReading, formatReadingAge } from "@/lib/glucoseStaleness";
 import GlucoseTicker from "@/components/graph/GlucoseTicker";
@@ -292,7 +294,7 @@ function FilterDropdown({ filters, onChange, anchorRect }) {
       initial={{ opacity: 0, y: initY, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1, transition: { type: "spring", stiffness: 380, damping: 28 } }}
       exit={{ opacity: 0, y: initY * 0.7, scale: 0.96, transition: { duration: 0.13 } }}
-      className="fixed z-[200] rounded-2xl border border-white/10 shadow-2xl py-1.5"
+      className="stackd-filter-dropdown fixed z-[200] rounded-2xl border border-white/10 shadow-2xl py-1.5"
       style={{ background: "hsl(162,10%,10%)", width: DROPDOWN_W, left, top }}>
       
       {items.map((item) =>
@@ -327,6 +329,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [selectedDoseKey, setSelectedDoseKey] = useState(null);
   const { connected: dexcomConnected } = useDexcomConnection();
+  const gTheme = getGraphTheme(useIsLightTheme());
 
   const openMarker = (type, item, rect) => {
     setConfirmDelete(false);
@@ -465,8 +468,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     { offset: fadeIn, color: GLUCOSE_STATUS_COLORS.high, opacity: 0.18 },
     { offset: highRefPct, color: GLUCOSE_STATUS_COLORS.high, opacity: 0.9 },
     { offset: Math.max(0, hi - 3), color: GLUCOSE_STATUS_COLORS.high, opacity: 0.6 },
-    { offset: Math.min(100, hi + 3), color: "#ffffff", opacity: 0.6 },
-    { offset: Math.max(0, lo - 3), color: "#ffffff", opacity: 0.6 },
+    { offset: Math.min(100, hi + 3), color: gTheme.inRangeColor, opacity: 0.6 },
+    { offset: Math.max(0, lo - 3), color: gTheme.inRangeColor, opacity: 0.6 },
     { offset: Math.min(100, lo + 3), color: GLUCOSE_STATUS_COLORS.low, opacity: 0.6 },
     { offset: lowRefPct, color: GLUCOSE_STATUS_COLORS.low, opacity: 0.9 },
     { offset: 100, color: GLUCOSE_STATUS_COLORS.low, opacity: 0.9 }];
@@ -1163,7 +1166,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               height: "9px",
               willChange: "transform, opacity"
             }}>
-        <div className="absolute inset-0 rounded-full bg-white" style={{ boxShadow: "0 0 6px rgba(255,255,255,0.4), 0 0 14px rgba(255,255,255,0.15)" }} />
+        <div className="absolute inset-0 rounded-full" style={{ background: gTheme.markerColor, boxShadow: `0 0 6px ${gTheme.markerColor}66, 0 0 14px ${gTheme.markerColor}26` }} />
         <div className="absolute -inset-[3px] rounded-full border border-white/20" />
       </div>
           }
@@ -1179,8 +1182,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             const refLabels = [
               { id: "highRef", value: highReference, side: "right", color: GLUCOSE_STATUS_COLORS.high, anchor: "above", secondary: true, text: `High ${highReference}` },
               { id: "lowRef", value: FIXED_LOW_REFERENCE, side: "right", color: GLUCOSE_STATUS_COLORS.low, anchor: "below", secondary: true, text: `${FIXED_LOW_REFERENCE}` },
-              { id: "tgtHigh", value: targetHigh, side: "right", color: "#ffffff", anchor: "above", secondary: false, text: `${Math.round(targetHigh)}` },
-              { id: "tgtLow", value: targetLow, side: "right", color: "#ffffff", anchor: "below", secondary: false, text: `${Math.round(targetLow)}` },
+              { id: "tgtHigh", value: targetHigh, side: "right", color: gTheme.inRangeColor, anchor: "above", secondary: false, text: `${Math.round(targetHigh)}` },
+              { id: "tgtLow", value: targetLow, side: "right", color: gTheme.inRangeColor, anchor: "below", secondary: false, text: `${Math.round(targetLow)}` },
             ];
             return (
               <ReferenceLabels
@@ -1301,8 +1304,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
               {filters.glucose && filteredGlucoseReadings.length > 0 &&
                     <>
-                  <ReferenceLine yAxisId="glucose" y={targetHigh} stroke="rgba(255,255,255,0.18)" strokeWidth={1} strokeDasharray="3 4" />
-                  <ReferenceLine yAxisId="glucose" y={targetLow} stroke="rgba(255,255,255,0.18)" strokeWidth={1} strokeDasharray="3 4" />
+                  <ReferenceLine yAxisId="glucose" y={targetHigh} stroke={gTheme.refLineStroke} strokeWidth={1} strokeDasharray="3 4" />
+                  <ReferenceLine yAxisId="glucose" y={targetLow} stroke={gTheme.refLineStroke} strokeWidth={1} strokeDasharray="3 4" />
                   <ReferenceLine
                     yAxisId="glucose"
                     y={highReference}
