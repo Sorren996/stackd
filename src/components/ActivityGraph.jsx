@@ -13,7 +13,7 @@ import { base44 } from "@/api/base44Client";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 import { useGlucoseStaleness } from "@/hooks/useGlucoseStaleness";
 import { getLatestDexcomReading, formatReadingAge } from "@/lib/glucoseStaleness";
-
+import GlucoseTicker from "@/components/graph/GlucoseTicker";
 import TimeViewToggle from "@/components/graph/TimeViewToggle";
 import CandlestickView from "@/components/graph/CandlestickView";
 import ReferenceLabels from "@/components/graph/ReferenceLabels";
@@ -135,31 +135,6 @@ function sampleGlucosePathAtX(pathEl, targetX) {
   }
   const point = pathEl.getPointAtLength((lo + hi) / 2);
   return { x: point.x, y: point.y };
-}
-
-// Binary-searches the rendered glucose path for the path-length whose SVG x
-// matches targetX. Returns that length so the marker can be advanced along the
-// actual rendered curve via getPointAtLength(length), keeping it physically
-// attached to the visible line at all times.
-function getPathLengthAtX(pathEl, targetX) {
-  const totalLength = pathEl.getTotalLength();
-  if (!totalLength || !Number.isFinite(totalLength)) return 0;
-
-  const first = pathEl.getPointAtLength(0);
-  const last = pathEl.getPointAtLength(totalLength);
-
-  if (targetX <= first.x) return 0;
-  if (targetX >= last.x) return totalLength;
-
-  let lo = 0;
-  let hi = totalLength;
-  for (let i = 0; i < 26; i += 1) {
-    const mid = (lo + hi) / 2;
-    const p = pathEl.getPointAtLength(mid);
-    if (p.x < targetX) lo = mid;
-    else hi = mid;
-  }
-  return (lo + hi) / 2;
 }
 
 function buildMonotoneSegments(points, getValue) {
@@ -402,21 +377,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const prevOverReferenceRef = useRef(false);
   const lastSelectedKeyRef = useRef(null);
   const pendingScrollLeftRef = useRef(0);
-  const prevPointsLenRef = useRef(0);
-  const prevMaxScrollLeftRef = useRef(null);
-  const isFirstPositioningRef = useRef(true);
-  const programmaticScrollRef = useRef(false);
-  const glucosePathRef = useRef(null);
-  // Single source of truth for the marker's frame-based PATH animation. The
-  // marker travels along the RENDERED glucose path by path-length (never an
-  // independently calculated Y). The displayed glucose number and timestamp
-  // are data-driven (real Dexcom readings) and are NOT interpolated by the
-  // animation.
-  const animRef = useRef({ fromLength: 0, toLength: 0, startWall: 0, duration: 1, lastLatestTime: null, lastDisplayedTime: null, lastMarkerSvgX: null });
-  const liveRef = useRef(null);
-  const overlayRef = useRef(null);
-  const markerLabelRef = useRef(null);
-  const markerNumberRef = useRef(null);
   const containerRef = useRef(null);
   const graphViewportRef = useRef(null);
   const monitoringGradientRef = useRef(null);
@@ -956,29 +916,22 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     // stays glued to the smooth line (visual only). The NUMBER above is
     // always the real reading — it is never derived from this pixel Y.
     const targetSvgX = scrollLeft + containerWidth / 2;
-    // Recharts applies the Line className to its wrapping <g> (not the <path>
-    // itself), so look the path up several ways. This is the crux of the
-    // marker-on-line requirement: the marker Y is ALWAYS sampled from the
-    // actual rendered glucose path, never from a separately interpolated value.
-    const pathEl =
-      scrollRef.current?.querySelector("path.stackd-glucose-trend") ||
-      scrollRef.current?.querySelector("g.stackd-glucose-trend path") ||
-      scrollRef.current?.querySelector('path[stroke="url(#glucose_line_grad)"]');
+    const pathEl = scrollRef.current?.querySelector("path.stackd-glucose-trend");
     let markerY = null;
 
     if (pathEl) {
       const sample = sampleGlucosePathAtX(pathEl, targetSvgX);
-      if (sample && Number.isFinite(sample.y)) {
+      if (sample) {
         markerY = sample.y;
       }
     }
 
-    // Never fall back to a linear glucose-to-pixel mapping: that diverges from
-    // the rendered monotone curve and makes the marker stutter between the
-    // discrete readings (and visibly drift off the line). If the path is not
-    // available yet, hide the marker until it can sit exactly on the curve.
+    if (markerY == null || !Number.isFinite(markerY)) {
+      markerY = getGlucoseY(selectedValue);
+    }
+
     if (marker) {
-      if (markerY != null && Number.isFinite(markerY)) {
+      if (Number.isFinite(markerY)) {
         marker.style.transform = `translate3d(-50%, ${markerY}px, 0) translateY(-50%)`;
         marker.style.opacity = String(getHighRangeOpacity(selectedValue));
       } else {
@@ -1080,214 +1033,44 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     };
   }, []);
 
-
+  // Refresh relative time labels ("just now", "Xm ago") every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const scrollLeft = scrollRef.current?.scrollLeft ?? maxScrollLeft;
+      const centerTime = getCenterTimeForScroll(scrollLeft);
+      const lastReadingTime = glucoseLinePoints.length ? glucoseLinePoints[glucoseLinePoints.length - 1].time : null;
+      if (isGlucoseStale && lastReadingTime != null && centerTime >= lastReadingTime) {
+        if (tooltipTimeRef.current) tooltipTimeRef.current.textContent = formatReadingAge(latestDexcomReading?.recorded_at) || "";
+        return;
+      }
+      const selected = getSelectedReading(centerTime);
+      if (selected && tooltipTimeRef.current) {
+        tooltipTimeRef.current.textContent = formatReadingTime(selected.time);
+      }
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [maxScrollLeft, glucoseLinePoints, isGlucoseStale, latestDexcomReading]);
 
   const scrollToLatestGlucose = () => {
     if (!scrollRef.current) return;
-    programmaticScrollRef.current = true;
+
     scrollRef.current.scrollTo({ left: maxScrollLeft, behavior: "smooth" });
-    setTimeout(() => { programmaticScrollRef.current = false; }, 600);
+    scheduleCenterGlucoseUpdate(maxScrollLeft);
   };
 
-  // Keep the viewport pinned to the latest reading. When a new reading lands
-  // (or the layout resizes) and the user was already following live, glide
-  // smoothly to the new latest so the marker travels along the curve instead
-  // of snapping. The continuous rAF loop reads the live scroll position.
   useEffect(() => {
     if (!scrollRef.current) return;
-    const wasAtLatest =
-      scrollRef.current.scrollLeft >= (prevMaxScrollLeftRef.current ?? maxScrollLeft) - 12;
-    prevMaxScrollLeftRef.current = maxScrollLeft;
+    scrollRef.current.scrollLeft = maxScrollLeft;
+    const latestValue = glucoseLinePoints.length > 0 ? glucoseLinePoints[glucoseLinePoints.length - 1].value : null;
+    const shouldAnimate = prevLatestValueRef.current !== null && latestValue !== null && latestValue !== prevLatestValueRef.current;
+    prevLatestValueRef.current = latestValue;
+    drawCenterGlucose(maxScrollLeft, shouldAnimate);
+    updateMonitoringOverlay(maxScrollLeft);
 
-    if (isFirstPositioningRef.current) {
-      scrollRef.current.scrollLeft = maxScrollLeft;
-      isFirstPositioningRef.current = false;
-    } else if (wasAtLatest) {
-      programmaticScrollRef.current = true;
-      scrollRef.current.scrollTo({ left: maxScrollLeft, behavior: "smooth" });
-      const t = setTimeout(() => { programmaticScrollRef.current = false; }, 600);
-      return () => clearTimeout(t);
-    }
-  }, [maxScrollLeft]);
-
-  // Live-animation data + overlay fn, refreshed every render so the rAF loop
-  // (created once on mount) always reads current values without re-rendering.
-  liveRef.current = {
-    filtersGlucose: filters.glucose,
-    points: glucoseLinePoints,
-    domainStart,
-    totalMs,
-    chartWidth,
-    containerWidth,
-    maxScrollLeft,
-    effMin: effectiveMin,
-    effMax: effectiveMax,
-    isStale: isGlucoseStale,
-    latestDexcomReading,
-    targetLow,
-    targetHigh,
-    highReference,
-  };
-  overlayRef.current = updateMonitoringOverlay;
-
-  // ── Continuous live marker animation ──────────────────────────────────
-  // A single requestAnimationFrame loop drives the marker at 60fps. The
-  // marker is a physical cursor traveling along the rendered glucose curve:
-  // in live mode it advances from the previous reading toward the latest
-  // reading at real-time speed (reaching it just as the next reading
-  // arrives), so a new reading never causes a snap. While the user scrubs
-  // history it follows the scroll center instead. Both the marker dot and
-  // the glucose number are derived from the SAME path sample, so they can
-  // never drift apart. All writes go through refs — no React state per frame.
-  useEffect(() => {
-    let raf;
-    const loop = () => {
-      raf = requestAnimationFrame(loop);
-      const marker = centerMarkerRef.current;
-      if (!marker) return;
-      if (!containerRef.current || containerRef.current.offsetParent === null) return;
-      const L = liveRef.current;
-      const labelEl = markerLabelRef.current;
-      const numberEl = markerNumberRef.current;
-      if (!L || !L.filtersGlucose || !L.points.length) {
-        marker.style.opacity = "0";
-        if (labelEl) labelEl.style.opacity = "0";
-        return;
-      }
-
-      const now = Date.now();
-      const scrollLeft = scrollRef.current?.scrollLeft ?? L.maxScrollLeft;
-      const atLatest = scrollLeft >= L.maxScrollLeft - 6;
-      // Release the live-mode lock the moment a programmatic glide reaches the
-      // latest so the marker never flips to scrub mode mid-glide.
-      if (programmaticScrollRef.current && atLatest) programmaticScrollRef.current = false;
-      const isLive = programmaticScrollRef.current || atLatest;
-      const pts = L.points;
-      const latestPt = pts[pts.length - 1];
-      const prevPt = pts.length >= 2 ? pts[pts.length - 2] : latestPt;
-      const interval = Math.max(latestPt.time - prevPt.time, 60000);
-
-      // Resolve the rendered glucose path (cached; re-queried if detached).
-      let pathEl = glucosePathRef.current;
-      if (!pathEl || !scrollRef.current?.contains(pathEl)) {
-        pathEl =
-          scrollRef.current?.querySelector("path.stackd-glucose-trend") ||
-          scrollRef.current?.querySelector("g.stackd-glucose-trend path") ||
-          scrollRef.current?.querySelector('path[stroke="url(#glucose_line_grad)"]');
-        glucosePathRef.current = pathEl;
-        // Path was replaced (rerender/resize): force a rebase so the marker
-        // re-syncs to the new path geometry from its current X position.
-        animRef.current.lastLatestTime = null;
-      }
-      if (!pathEl) {
-        marker.style.opacity = "0";
-        if (labelEl) labelEl.style.opacity = "0";
-        return;
-      }
-
-      // Stale-reading contingency (live mode only): hide the marker and show
-      // the last real reading's age. The value is never interpolated.
-      if (L.isStale && isLive) {
-        marker.style.opacity = "0";
-        if (labelEl) labelEl.style.opacity = "0";
-        if (numberEl) numberEl.textContent = "--";
-        if (tooltipTimeRef.current) tooltipTimeRef.current.textContent = formatReadingAge(L.latestDexcomReading?.recorded_at) || "";
-        if (tooltipDateRef.current) tooltipDateRef.current.textContent = "";
-        return;
-      }
-
-      const anim = animRef.current;
-
-      // Determine the ACTIVE Dexcom reading that drives the displayed value and
-      // timestamp (data-driven, never interpolated). Live mode: the latest
-      // reading. Scrub mode: the real reading nearest the viewport center.
-      let activeReading;
-      let scrubSvgX = 0;
-      if (isLive) {
-        activeReading = latestPt;
-      } else {
-        const scrubTime = L.domainStart + (scrollLeft + L.containerWidth / 2) / L.chartWidth * L.totalMs;
-        scrubSvgX = (scrubTime - L.domainStart) / L.totalMs * L.chartWidth;
-        activeReading = latestPt;
-        let bestDelta = Infinity;
-        for (let i = 0; i < pts.length; i++) {
-          const d = Math.abs(pts[i].time - scrubTime);
-          if (d < bestDelta) { bestDelta = d; activeReading = pts[i]; }
-        }
-      }
-
-      // Write the displayed value/timestamp ONLY when the active reading
-      // changes, never per animation frame, never interpolated.
-      if (anim.lastDisplayedTime !== activeReading.time) {
-        anim.lastDisplayedTime = activeReading.time;
-        if (numberEl) numberEl.textContent = String(Math.round(activeReading.value));
-        if (tooltipTimeRef.current) tooltipTimeRef.current.textContent = formatReadingTime(activeReading.time);
-        if (tooltipDateRef.current) tooltipDateRef.current.textContent = Number.isFinite(activeReading.time) ? format(new Date(activeReading.time), "EEEE, MMM d") : "";
-        const glowStatus = activeReading.value > L.targetHigh ? "high" : activeReading.value < L.targetLow ? "low" : "in_range";
-        const overReference = activeReading.value > L.highReference || activeReading.value < FIXED_LOW_REFERENCE;
-        if (glowStatus !== prevGlowStatusRef.current || overReference !== prevOverReferenceRef.current) {
-          prevGlowStatusRef.current = glowStatus;
-          prevOverReferenceRef.current = overReference;
-          window.dispatchEvent(new CustomEvent("stackd-center-glucose-status", { detail: { status: glowStatus, overReference } }));
-        }
-      }
-
-      // A new reading (or a path rerender) landed: rebase the path-length
-      // animation from the marker's EXACT current X on the (possibly new)
-      // rendered path toward the latest reading's point. Never snaps back to a
-      // previous reading; seamlessly continues from the current position.
-      if (anim.lastLatestTime !== latestPt.time) {
-        const latestSvgX = (latestPt.time - L.domainStart) / L.totalMs * L.chartWidth;
-        anim.toLength = getPathLengthAtX(pathEl, latestSvgX);
-        anim.fromLength = anim.lastMarkerSvgX != null
-          ? getPathLengthAtX(pathEl, anim.lastMarkerSvgX)
-          : getPathLengthAtX(pathEl, (prevPt.time - L.domainStart) / L.totalMs * L.chartWidth);
-        anim.startWall = latestPt.time;
-        anim.duration = interval;
-        anim.lastLatestTime = latestPt.time;
-      }
-
-      // Interpolate the marker's path-length position ONLY. The displayed
-      // value/timestamp above are already settled and are not touched here.
-      let currentLength;
-      if (isLive) {
-        const progress = anim.duration > 0 ? Math.min(Math.max((now - anim.startWall) / anim.duration, 0), 1) : 1;
-        currentLength = anim.fromLength + (anim.toLength - anim.fromLength) * progress;
-      } else {
-        currentLength = getPathLengthAtX(pathEl, scrubSvgX);
-      }
-
-      // The marker is a dot physically traveling along the rendered glucose
-      // path — its X AND Y come from the same getPointAtLength call, so it can
-      // never drift off the visible line.
-      const point = pathEl.getPointAtLength(currentLength);
-      if (!point || !Number.isFinite(point.y)) {
-        marker.style.opacity = "0";
-        if (labelEl) labelEl.style.opacity = "0";
-        return;
-      }
-      anim.lastMarkerSvgX = point.x;
-
-      const viewportX = point.x - scrollLeft;
-      // Opacity is a visual fade tied to the marker's physical height on the
-      // chart (not a glucose value) and may vary per frame with the position.
-      const glucoseAtY = L.effMax - (point.y - GLUCOSE_MARGIN_TOP) / GLUCOSE_PLOT_HEIGHT * (L.effMax - L.effMin);
-      const pctFromTop = (L.effMax - Math.min(glucoseAtY, L.effMax)) / (L.effMax - L.effMin);
-      const opacity = pctFromTop <= 0 ? 0 : pctFromTop < 0.1 ? pctFromTop / 0.1 * 0.18 : pctFromTop < 0.24 ? 0.18 + (pctFromTop - 0.1) / 0.14 * 0.82 : 1;
-
-      marker.style.transform = `translate3d(${viewportX}px, ${point.y}px, 0) translate(-50%, -50%)`;
-      marker.style.opacity = String(opacity);
-      if (labelEl) {
-        labelEl.style.transform = `translate3d(${viewportX}px, 0, 0) translateX(-50%)`;
-        labelEl.style.opacity = "1";
-      }
-
-      // Keep the monitoring band overlay in sync with the visible center.
-      overlayRef.current?.(scrollLeft);
+    return () => {
+      if (scrollFrameRef.current) cancelAnimationFrame(scrollFrameRef.current);
     };
-    raf = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(raf);
-  }, []);
+  }, [maxScrollLeft, latestGlucoseBucket, filters.glucose, glucoseLinePoints.length, positionedMonitoringIntervals, isGlucoseStale]);
 
   if (!doses.length && !glucoseReadings.length && !carbEntries.length) return null;
 
@@ -1357,9 +1140,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           style={{ width: "100%" }}>
       {!isCandlestick && filters.glucose && glucoseLinePoints.length > 0 &&
           <div
-            ref={markerLabelRef}
-            className="pointer-events-none absolute top-0 left-0 z-20 px-3 py-1 text-center"
-            style={{ willChange: "transform", transform: "translate3d(-50%, 0, 0)", opacity: 0 }}>
+            className="absolute left-1/2 top-0 z-20 -translate-x-1/2 px-3 py-1 text-center pointer-events-none">
             
           <div className="flex items-center justify-center gap-1.5 text-2xl font-black leading-none text-white">
             {(onSelectLog || onDeleteLog) && !dexcomConnected &&
@@ -1367,7 +1148,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                 <Info className="h-2.5 w-2.5" />
               </span>
               }
-            <span ref={markerNumberRef}>{formatGlucoseDisplay(glucoseLinePoints[glucoseLinePoints.length - 1].value)}</span> <span className="text-xs font-medium text-white/35">mg/dL</span>
+            <GlucoseTicker ref={tickerRef} initialValue={formatGlucoseDisplay(glucoseLinePoints[glucoseLinePoints.length - 1].value)} /> <span className="text-xs font-medium text-white/35">mg/dL</span>
           </div>
           <div ref={tooltipTimeRef} className="mt-1 text-xs font-medium text-white/35">{format(new Date(glucoseLinePoints[glucoseLinePoints.length - 1].time), "h:mm a")}</div>
           <div ref={tooltipDateRef} className="mt-0.5 text-[10px] font-medium text-white/30">{format(new Date(glucoseLinePoints[glucoseLinePoints.length - 1].time), "EEEE, MMM d")}</div>
@@ -1376,7 +1157,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       {!isCandlestick && filters.glucose && glucoseLinePoints.length > 0 &&
           <div
             ref={centerMarkerRef}
-            className="pointer-events-none absolute top-0 left-0 z-10 opacity-0"
+            className="pointer-events-none absolute left-1/2 top-0 z-10 opacity-0"
             style={{
               width: "9px",
               height: "9px",
@@ -1418,7 +1199,10 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               const el = event.currentTarget;
               if (el.scrollLeft > maxScrollLeft) {
                 el.scrollLeft = maxScrollLeft;
+                scheduleCenterGlucoseUpdate(maxScrollLeft);
+                return;
               }
+              scheduleCenterGlucoseUpdate(el.scrollLeft);
             }}>
         <div className="relative" style={{ width: chartWidth, height: isCandlestick ? CANDLESTICK_TOTAL_HEIGHT : TWO_PLANE_HEIGHT }}>
           {isCandlestick ?
