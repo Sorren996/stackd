@@ -382,6 +382,12 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const isFirstPositioningRef = useRef(true);
   const programmaticScrollRef = useRef(false);
   const glucosePathRef = useRef(null);
+  // Single source of truth for the marker's frame-based interpolation. The
+  // marker's "time" parameter is interpolated from fromTime → toTime, and
+  // BOTH the marker dot position and the displayed glucose number are derived
+  // from sampling the rendered glucose path at that interpolated time — so
+  // they always share one progress value and can never drift apart.
+  const animRef = useRef({ fromTime: null, toTime: null, startWall: 0, duration: 1, markerTime: null, lastLatestTime: null });
   const liveRef = useRef(null);
   const overlayRef = useRef(null);
   const markerLabelRef = useRef(null);
@@ -1127,18 +1133,39 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       const now = Date.now();
       const scrollLeft = scrollRef.current?.scrollLeft ?? L.maxScrollLeft;
       const atLatest = scrollLeft >= L.maxScrollLeft - 6;
+      // Once a programmatic glide to the latest has nearly arrived, release the
+      // live-mode lock inside the loop so the marker never flips to scrub mode
+      // mid-glide (which previously caused a visible stutter). The 600ms
+      // timeout in scrollToLatestGlucose / the scroll effect remains a fallback.
+      if (programmaticScrollRef.current && atLatest) programmaticScrollRef.current = false;
       const isLive = programmaticScrollRef.current || atLatest;
       const pts = L.points;
+      const latestPt = pts[pts.length - 1];
+      const prevPt = pts.length >= 2 ? pts[pts.length - 2] : latestPt;
+      const interval = Math.max(latestPt.time - prevPt.time, 60000);
+
+      const anim = animRef.current;
+      // A new reading landed: rebase the interpolation from the marker's EXACT
+      // current position on the curve toward the new reading. This never snaps
+      // the marker back to the previous Dexcom point — it continues from
+      // wherever it currently is, so an early-arriving reading rebases
+      // seamlessly instead of jumping forward.
+      if (anim.lastLatestTime !== latestPt.time) {
+        anim.fromTime = anim.markerTime != null ? anim.markerTime : prevPt.time;
+        anim.toTime = latestPt.time;
+        anim.startWall = latestPt.time;
+        anim.duration = interval;
+        anim.lastLatestTime = latestPt.time;
+      }
 
       let markerTime;
-      if (isLive && pts.length >= 2) {
-        const latest = pts[pts.length - 1];
-        const prev = pts[pts.length - 2];
-        const interval = Math.max(latest.time - prev.time, 1);
-        markerTime = prev.time + Math.min(Math.max(now - latest.time, 0), interval);
+      if (isLive) {
+        const progress = anim.duration > 0 ? Math.min(Math.max((now - anim.startWall) / anim.duration, 0), 1) : 1;
+        markerTime = anim.fromTime + (anim.toTime - anim.fromTime) * progress;
       } else {
         markerTime = L.domainStart + (scrollLeft + L.containerWidth / 2) / L.chartWidth * L.totalMs;
       }
+      anim.markerTime = markerTime;
 
       // Stale-reading contingency: hide the marker past the last real reading.
       const lastReadingTime = pts[pts.length - 1].time;
@@ -1190,9 +1217,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       }
       if (numberEl) numberEl.textContent = String(Math.round(glucose));
 
-      const latestPt = pts[pts.length - 1];
-      if (tooltipTimeRef.current) tooltipTimeRef.current.textContent = formatReadingTime(latestPt.time);
-      if (tooltipDateRef.current) tooltipDateRef.current.textContent = Number.isFinite(latestPt.time) ? format(new Date(latestPt.time), "EEEE, MMM d") : "";
+      if (tooltipTimeRef.current) tooltipTimeRef.current.textContent = formatReadingTime(markerTime);
+      if (tooltipDateRef.current) tooltipDateRef.current.textContent = Number.isFinite(markerTime) ? format(new Date(markerTime), "EEEE, MMM d") : "";
 
       // Glow status — dispatched only on transition, not every frame.
       const glowStatus = glucose > L.targetHigh ? "high" : glucose < L.targetLow ? "low" : "in_range";
