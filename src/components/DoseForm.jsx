@@ -556,7 +556,7 @@ export default function DoseForm({ open, onOpenChange, mode = "insulin" }) {
                 exit={{ scale: 0.92, opacity: 0 }}
                 transition={{ type: "spring", stiffness: 380, damping: 28 }}
                 onClick={(e) => e.stopPropagation()}
-                className="w-full max-w-sm rounded-3xl border p-6 text-center"
+                className="stackd-glass w-full max-w-sm rounded-3xl border p-6 text-center"
                 style={{ background: "linear-gradient(165deg, hsl(162,12%,11%), hsl(162,10%,7%))", borderColor: "rgba(255,255,255,0.14)", boxShadow: "0 24px 60px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.08)" }}
               >
                 <h3 className="text-lg font-semibold text-white">Discard this entry?</h3>

@@ -14,7 +14,7 @@ export function NumberPadField({ label, value, onChange, unit, placeholder = "--
   };
 
   return (
-    <div className={`rounded-xl border p-3 ${large ? "px-6 py-6" : ""}`} style={GLASS_SURFACE}>
+    <div className={`stackd-input rounded-xl border p-3 ${large ? "px-6 py-6" : ""}`} style={GLASS_SURFACE}>
       <div className="flex items-center justify-between gap-3">
         <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-white/55">{label}</span>
         <div className="flex min-w-0 items-baseline gap-1">
@@ -44,7 +44,7 @@ export function TextPadField({ label, value, onChange, placeholder, multiline = 
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           rows={3}
-          className="w-full resize-none rounded-2xl border px-4 py-3.5 text-sm text-white placeholder:text-white/50 focus:outline-none"
+          className="stackd-input w-full resize-none rounded-2xl border px-4 py-3.5 text-sm text-white placeholder:text-white/50 focus:outline-none"
           style={GLASS_SURFACE}
         />
       ) : (
@@ -53,7 +53,7 @@ export function TextPadField({ label, value, onChange, placeholder, multiline = 
           value={value || ""}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="w-full rounded-2xl border px-4 py-3.5 text-left text-sm text-white placeholder:text-white/50 focus:outline-none"
+          className="stackd-input w-full rounded-2xl border px-4 py-3.5 text-left text-sm text-white placeholder:text-white/50 focus:outline-none"
           style={GLASS_SURFACE}
         />
       )}
@@ -63,7 +63,7 @@ export function TextPadField({ label, value, onChange, placeholder, multiline = 
 
 export function DateScrollField({ label, value, onChange, max }) {
   return (
-    <div className="rounded-2xl border p-3" style={GLASS_SURFACE}>
+    <div className="stackd-input rounded-2xl border p-3" style={GLASS_SURFACE}>
       <div className="flex items-center justify-between">
         <span className="text-sm text-white/60">{label}</span>
         <input
@@ -71,7 +71,7 @@ export function DateScrollField({ label, value, onChange, max }) {
           value={value || ""}
           max={max}
           onChange={(e) => onChange(e.target.value)}
-          className="bg-transparent text-sm font-semibold text-white focus:outline-none [color-scheme:dark]"
+          className="bg-transparent text-sm font-semibold text-white focus:outline-none"
         />
       </div>
     </div>
@@ -80,7 +80,7 @@ export function DateScrollField({ label, value, onChange, max }) {
 
 export function TimeScrollField({ label, value, onChange, max }) {
   return (
-    <div className="rounded-2xl border p-3" style={GLASS_SURFACE}>
+    <div className="stackd-input rounded-2xl border p-3" style={GLASS_SURFACE}>
       <div className="flex items-center justify-between">
         <span className="text-sm text-white/60">{label}</span>
         <input
@@ -88,7 +88,7 @@ export function TimeScrollField({ label, value, onChange, max }) {
           value={value || ""}
           max={max}
           onChange={(e) => onChange(e.target.value)}
-          className="bg-transparent text-sm font-semibold text-white focus:outline-none [color-scheme:dark]"
+          className="bg-transparent text-sm font-semibold text-white focus:outline-none"
         />
       </div>
     </div>
@@ -97,17 +97,17 @@ export function TimeScrollField({ label, value, onChange, max }) {
 
 export function SelectField({ label, value, onChange, options, placeholder = "Select" }) {
   return (
-    <div className="rounded-xl border p-3" style={GLASS_SURFACE}>
+    <div className="stackd-input rounded-xl border p-3" style={GLASS_SURFACE}>
       <div className="flex items-center justify-between gap-3">
         <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-white/55">{label}</span>
         <select
           value={value || ""}
           onChange={(e) => onChange(e.target.value)}
-          className="min-w-0 flex-1 bg-transparent text-right text-sm font-semibold text-white focus:outline-none [color-scheme:dark]"
+          className="min-w-0 flex-1 bg-transparent text-right text-sm font-semibold text-white focus:outline-none"
         >
           {!value && <option value="">{placeholder}</option>}
           {options.map((option) => (
-            <option key={option.value} value={option.value} className="bg-[hsl(162,10%,9%)] text-white">
+            <option key={option.value} value={option.value} className="bg-popover text-foreground">
               {option.label}
             </option>
           ))}

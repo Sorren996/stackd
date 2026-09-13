@@ -35,7 +35,7 @@ export default function SplitPlanConfirm({
         exit={{ y: "100%", opacity: 0 }}
         transition={{ type: "spring", stiffness: 380, damping: 32 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-t-3xl border p-5 sm:rounded-3xl"
+        className="stackd-glass w-full max-w-md rounded-t-3xl border p-5 sm:rounded-3xl"
         style={GLASS}
       >
         <div className="mb-4 flex items-center justify-between">

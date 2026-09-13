@@ -96,7 +96,7 @@ export default function Sheet({ open, onClose, children, accentColor }) {
             dragConstraints={{ top: 0, bottom: 0 }}
             dragElastic={{ top: 0, bottom: 0.5 }}
             onDragEnd={handleDragEnd}
-            className="relative flex h-[90dvh] max-h-[92dvh] flex-col overflow-hidden rounded-t-[28px] border-t"
+            className="stackd-sheet-surface relative flex h-[90dvh] max-h-[92dvh] flex-col overflow-hidden rounded-t-[28px] border-t"
             // Change from solid gradient to semi-transparent surface with blur
 style={{
   background: "rgba(20, 25, 23, 0.11)", // Semi-transparent deep charcoal

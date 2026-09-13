@@ -5,6 +5,7 @@ import { base44 } from "@/api/base44Client";
 import { format } from "date-fns";
 import { buildMealMemorySummary, buildAggregateSummary } from "@/lib/mealMemorySummary";
 import { submitMatchFeedback, confoundingLabels, OUTCOME_LABELS } from "@/lib/mealMemory";
+import { useIsLightTheme } from "@/lib/theme";
 
 const TREND_ICON = { rising: TrendingUp, falling: TrendingDown, steady: Minus, unknown: Minus };
 
@@ -14,6 +15,7 @@ function formatUnits(units) {
 }
 
 function ResponseSparkline({ analysis }) {
+  const isLight = useIsLightTheme();
   const [points, setPoints] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -65,7 +67,7 @@ function ResponseSparkline({ analysis }) {
   return (
     <svg viewBox={`0 0 ${width} ${height}`} className="h-16 w-full" preserveAspectRatio="none">
       <rect x="0" y={highY} width={width} height={Math.max(0, lowY - highY)} fill="rgba(217,169,56,0.08)" />
-      <path d={path} fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d={path} fill="none" stroke={isLight ? "rgba(31,42,38,0.75)" : "rgba(255,255,255,0.7)"} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -127,7 +129,7 @@ export default function MealMemoryModal({ open, match, currentMeal, onContinue, 
           exit={{ y: 20, scale: 0.98, opacity: 0 }}
           transition={{ type: "spring", stiffness: 320, damping: 30 }}
           onClick={(e) => e.stopPropagation()}
-          className="meal-memory-modal w-full max-w-md max-h-[calc(100dvh-3rem)] overflow-y-auto rounded-3xl border p-5"
+          className="stackd-glass meal-memory-modal w-full max-w-md max-h-[calc(100dvh-3rem)] overflow-y-auto rounded-3xl border p-5"
           style={{
             background: "linear-gradient(165deg, rgba(18,28,23,0.96), rgba(10,16,13,0.97))",
             borderColor: "rgba(255,255,255,0.14)",

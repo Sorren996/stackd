@@ -72,7 +72,7 @@ export default function HighProteinFatInfoModal({ open, onClose }) {
           exit={{ opacity: 0, scale: 0.96, y: 8 }}
           transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
           onClick={(e) => e.stopPropagation()}
-          className="relative z-10 flex max-h-[85dvh] w-full max-w-sm flex-col overflow-hidden rounded-3xl border shadow-2xl"
+          className="stackd-glass relative z-10 flex max-h-[85dvh] w-full max-w-sm flex-col overflow-hidden rounded-3xl border shadow-2xl"
           style={{
             background: "linear-gradient(165deg, rgba(18,28,23,0.97), rgba(10,16,13,0.98))",
             borderColor: "rgba(255,255,255,0.14)",
