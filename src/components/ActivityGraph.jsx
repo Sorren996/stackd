@@ -377,6 +377,9 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const prevOverReferenceRef = useRef(false);
   const lastSelectedKeyRef = useRef(null);
   const pendingScrollLeftRef = useRef(0);
+  const prevPointsLenRef = useRef(0);
+  const prevMaxScrollLeftRef = useRef(null);
+  const isFirstPositioningRef = useRef(true);
   const containerRef = useRef(null);
   const graphViewportRef = useRef(null);
   const monitoringGradientRef = useRef(null);
@@ -916,22 +919,29 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     // stays glued to the smooth line (visual only). The NUMBER above is
     // always the real reading — it is never derived from this pixel Y.
     const targetSvgX = scrollLeft + containerWidth / 2;
-    const pathEl = scrollRef.current?.querySelector("path.stackd-glucose-trend");
+    // Recharts applies the Line className to its wrapping <g> (not the <path>
+    // itself), so look the path up several ways. This is the crux of the
+    // marker-on-line requirement: the marker Y is ALWAYS sampled from the
+    // actual rendered glucose path, never from a separately interpolated value.
+    const pathEl =
+      scrollRef.current?.querySelector("path.stackd-glucose-trend") ||
+      scrollRef.current?.querySelector("g.stackd-glucose-trend path") ||
+      scrollRef.current?.querySelector('path[stroke="url(#glucose_line_grad)"]');
     let markerY = null;
 
     if (pathEl) {
       const sample = sampleGlucosePathAtX(pathEl, targetSvgX);
-      if (sample) {
+      if (sample && Number.isFinite(sample.y)) {
         markerY = sample.y;
       }
     }
 
-    if (markerY == null || !Number.isFinite(markerY)) {
-      markerY = getGlucoseY(selectedValue);
-    }
-
+    // Never fall back to a linear glucose-to-pixel mapping: that diverges from
+    // the rendered monotone curve and makes the marker stutter between the
+    // discrete readings (and visibly drift off the line). If the path is not
+    // available yet, hide the marker until it can sit exactly on the curve.
     if (marker) {
-      if (Number.isFinite(markerY)) {
+      if (markerY != null && Number.isFinite(markerY)) {
         marker.style.transform = `translate3d(-50%, ${markerY}px, 0) translateY(-50%)`;
         marker.style.opacity = String(getHighRangeOpacity(selectedValue));
       } else {
@@ -1060,12 +1070,37 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
   useEffect(() => {
     if (!scrollRef.current) return;
-    scrollRef.current.scrollLeft = maxScrollLeft;
+
+    // Distinguish a live advance (a new Dexcom reading landed) from a
+    // re-render caused by settings / filter / responsive changes. On a live
+    // advance we glide the viewport to the new latest so the marker travels
+    // ALONG the rendered curve (the scroll events drive the rAF sampler)
+    // instead of snapping between data points. If the user is scrubbing
+    // history, we leave their scroll position untouched.
+    const newLen = glucoseLinePoints.length;
+    const isLiveAdvance =
+      !isFirstPositioningRef.current && newLen > prevPointsLenRef.current;
+    prevPointsLenRef.current = newLen;
+
+    const wasAtLatest =
+      scrollRef.current.scrollLeft >= (prevMaxScrollLeftRef.current ?? maxScrollLeft) - 12;
+    prevMaxScrollLeftRef.current = maxScrollLeft;
+
+    if (isFirstPositioningRef.current) {
+      scrollRef.current.scrollLeft = maxScrollLeft;
+    } else if (isLiveAdvance && wasAtLatest) {
+      scrollRef.current.scrollTo({ left: maxScrollLeft, behavior: "smooth" });
+    } else if (wasAtLatest) {
+      scrollRef.current.scrollLeft = maxScrollLeft;
+    }
+    isFirstPositioningRef.current = false;
+
+    const scrollLeft = scrollRef.current.scrollLeft;
     const latestValue = glucoseLinePoints.length > 0 ? glucoseLinePoints[glucoseLinePoints.length - 1].value : null;
     const shouldAnimate = prevLatestValueRef.current !== null && latestValue !== null && latestValue !== prevLatestValueRef.current;
     prevLatestValueRef.current = latestValue;
-    drawCenterGlucose(maxScrollLeft, shouldAnimate);
-    updateMonitoringOverlay(maxScrollLeft);
+    drawCenterGlucose(scrollLeft, shouldAnimate);
+    updateMonitoringOverlay(scrollLeft);
 
     return () => {
       if (scrollFrameRef.current) cancelAnimationFrame(scrollFrameRef.current);
