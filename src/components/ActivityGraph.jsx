@@ -13,7 +13,7 @@ import { base44 } from "@/api/base44Client";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 import { useGlucoseStaleness } from "@/hooks/useGlucoseStaleness";
 import { getLatestDexcomReading, formatReadingAge } from "@/lib/glucoseStaleness";
-import GlucoseTicker from "@/components/graph/GlucoseTicker";
+
 import TimeViewToggle from "@/components/graph/TimeViewToggle";
 import CandlestickView from "@/components/graph/CandlestickView";
 import ReferenceLabels from "@/components/graph/ReferenceLabels";
@@ -380,6 +380,12 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const prevPointsLenRef = useRef(0);
   const prevMaxScrollLeftRef = useRef(null);
   const isFirstPositioningRef = useRef(true);
+  const programmaticScrollRef = useRef(false);
+  const glucosePathRef = useRef(null);
+  const liveRef = useRef(null);
+  const overlayRef = useRef(null);
+  const markerLabelRef = useRef(null);
+  const markerNumberRef = useRef(null);
   const containerRef = useRef(null);
   const graphViewportRef = useRef(null);
   const monitoringGradientRef = useRef(null);
@@ -1043,69 +1049,166 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     };
   }, []);
 
-  // Refresh relative time labels ("just now", "Xm ago") every 30 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const scrollLeft = scrollRef.current?.scrollLeft ?? maxScrollLeft;
-      const centerTime = getCenterTimeForScroll(scrollLeft);
-      const lastReadingTime = glucoseLinePoints.length ? glucoseLinePoints[glucoseLinePoints.length - 1].time : null;
-      if (isGlucoseStale && lastReadingTime != null && centerTime >= lastReadingTime) {
-        if (tooltipTimeRef.current) tooltipTimeRef.current.textContent = formatReadingAge(latestDexcomReading?.recorded_at) || "";
-        return;
-      }
-      const selected = getSelectedReading(centerTime);
-      if (selected && tooltipTimeRef.current) {
-        tooltipTimeRef.current.textContent = formatReadingTime(selected.time);
-      }
-    }, 30000);
-    return () => clearInterval(interval);
-  }, [maxScrollLeft, glucoseLinePoints, isGlucoseStale, latestDexcomReading]);
+
 
   const scrollToLatestGlucose = () => {
     if (!scrollRef.current) return;
-
+    programmaticScrollRef.current = true;
     scrollRef.current.scrollTo({ left: maxScrollLeft, behavior: "smooth" });
-    scheduleCenterGlucoseUpdate(maxScrollLeft);
+    setTimeout(() => { programmaticScrollRef.current = false; }, 600);
   };
 
+  // Keep the viewport pinned to the latest reading. When a new reading lands
+  // (or the layout resizes) and the user was already following live, glide
+  // smoothly to the new latest so the marker travels along the curve instead
+  // of snapping. The continuous rAF loop reads the live scroll position.
   useEffect(() => {
     if (!scrollRef.current) return;
-
-    // Distinguish a live advance (a new Dexcom reading landed) from a
-    // re-render caused by settings / filter / responsive changes. On a live
-    // advance we glide the viewport to the new latest so the marker travels
-    // ALONG the rendered curve (the scroll events drive the rAF sampler)
-    // instead of snapping between data points. If the user is scrubbing
-    // history, we leave their scroll position untouched.
-    const newLen = glucoseLinePoints.length;
-    const isLiveAdvance =
-      !isFirstPositioningRef.current && newLen > prevPointsLenRef.current;
-    prevPointsLenRef.current = newLen;
-
     const wasAtLatest =
       scrollRef.current.scrollLeft >= (prevMaxScrollLeftRef.current ?? maxScrollLeft) - 12;
     prevMaxScrollLeftRef.current = maxScrollLeft;
 
     if (isFirstPositioningRef.current) {
       scrollRef.current.scrollLeft = maxScrollLeft;
-    } else if (isLiveAdvance && wasAtLatest) {
-      scrollRef.current.scrollTo({ left: maxScrollLeft, behavior: "smooth" });
+      isFirstPositioningRef.current = false;
     } else if (wasAtLatest) {
-      scrollRef.current.scrollLeft = maxScrollLeft;
+      programmaticScrollRef.current = true;
+      scrollRef.current.scrollTo({ left: maxScrollLeft, behavior: "smooth" });
+      const t = setTimeout(() => { programmaticScrollRef.current = false; }, 600);
+      return () => clearTimeout(t);
     }
-    isFirstPositioningRef.current = false;
+  }, [maxScrollLeft]);
 
-    const scrollLeft = scrollRef.current.scrollLeft;
-    const latestValue = glucoseLinePoints.length > 0 ? glucoseLinePoints[glucoseLinePoints.length - 1].value : null;
-    const shouldAnimate = prevLatestValueRef.current !== null && latestValue !== null && latestValue !== prevLatestValueRef.current;
-    prevLatestValueRef.current = latestValue;
-    drawCenterGlucose(scrollLeft, shouldAnimate);
-    updateMonitoringOverlay(scrollLeft);
+  // Live-animation data + overlay fn, refreshed every render so the rAF loop
+  // (created once on mount) always reads current values without re-rendering.
+  liveRef.current = {
+    filtersGlucose: filters.glucose,
+    points: glucoseLinePoints,
+    domainStart,
+    totalMs,
+    chartWidth,
+    containerWidth,
+    maxScrollLeft,
+    effMin: effectiveMin,
+    effMax: effectiveMax,
+    isStale: isGlucoseStale,
+    latestDexcomReading,
+    targetLow,
+    targetHigh,
+    highReference,
+  };
+  overlayRef.current = updateMonitoringOverlay;
 
-    return () => {
-      if (scrollFrameRef.current) cancelAnimationFrame(scrollFrameRef.current);
+  // ── Continuous live marker animation ──────────────────────────────────
+  // A single requestAnimationFrame loop drives the marker at 60fps. The
+  // marker is a physical cursor traveling along the rendered glucose curve:
+  // in live mode it advances from the previous reading toward the latest
+  // reading at real-time speed (reaching it just as the next reading
+  // arrives), so a new reading never causes a snap. While the user scrubs
+  // history it follows the scroll center instead. Both the marker dot and
+  // the glucose number are derived from the SAME path sample, so they can
+  // never drift apart. All writes go through refs — no React state per frame.
+  useEffect(() => {
+    let raf;
+    const loop = () => {
+      raf = requestAnimationFrame(loop);
+      const marker = centerMarkerRef.current;
+      if (!marker) return;
+      if (!containerRef.current || containerRef.current.offsetParent === null) return;
+      const L = liveRef.current;
+      const labelEl = markerLabelRef.current;
+      const numberEl = markerNumberRef.current;
+      if (!L || !L.filtersGlucose || !L.points.length) {
+        marker.style.opacity = "0";
+        if (labelEl) labelEl.style.opacity = "0";
+        return;
+      }
+
+      const now = Date.now();
+      const scrollLeft = scrollRef.current?.scrollLeft ?? L.maxScrollLeft;
+      const atLatest = scrollLeft >= L.maxScrollLeft - 6;
+      const isLive = programmaticScrollRef.current || atLatest;
+      const pts = L.points;
+
+      let markerTime;
+      if (isLive && pts.length >= 2) {
+        const latest = pts[pts.length - 1];
+        const prev = pts[pts.length - 2];
+        const interval = Math.max(latest.time - prev.time, 1);
+        markerTime = prev.time + Math.min(Math.max(now - latest.time, 0), interval);
+      } else {
+        markerTime = L.domainStart + (scrollLeft + L.containerWidth / 2) / L.chartWidth * L.totalMs;
+      }
+
+      // Stale-reading contingency: hide the marker past the last real reading.
+      const lastReadingTime = pts[pts.length - 1].time;
+      if (L.isStale && markerTime >= lastReadingTime) {
+        marker.style.opacity = "0";
+        if (labelEl) labelEl.style.opacity = "0";
+        if (numberEl) numberEl.textContent = "--";
+        if (tooltipTimeRef.current) tooltipTimeRef.current.textContent = formatReadingAge(L.latestDexcomReading?.recorded_at) || "";
+        if (tooltipDateRef.current) tooltipDateRef.current.textContent = "";
+        return;
+      }
+
+      // Resolve the rendered glucose path (cached; re-queried if detached).
+      let pathEl = glucosePathRef.current;
+      if (!pathEl || !scrollRef.current?.contains(pathEl)) {
+        pathEl =
+          scrollRef.current?.querySelector("path.stackd-glucose-trend") ||
+          scrollRef.current?.querySelector("g.stackd-glucose-trend path") ||
+          scrollRef.current?.querySelector('path[stroke="url(#glucose_line_grad)"]');
+        glucosePathRef.current = pathEl;
+      }
+      if (!pathEl) {
+        marker.style.opacity = "0";
+        if (labelEl) labelEl.style.opacity = "0";
+        return;
+      }
+
+      const markerSvgX = (markerTime - L.domainStart) / L.totalMs * L.chartWidth;
+      const sample = sampleGlucosePathAtX(pathEl, markerSvgX);
+      if (!sample || !Number.isFinite(sample.y)) {
+        marker.style.opacity = "0";
+        if (labelEl) labelEl.style.opacity = "0";
+        return;
+      }
+
+      // The marker sits exactly on the rendered curve; the number is the
+      // inverse of the marker's pixel Y through the chart's y-axis scale, so
+      // the two are always perfectly in sync.
+      const viewportX = markerSvgX - scrollLeft;
+      const glucose = L.effMax - (sample.y - GLUCOSE_MARGIN_TOP) / GLUCOSE_PLOT_HEIGHT * (L.effMax - L.effMin);
+      const pctFromTop = (L.effMax - Math.min(glucose, L.effMax)) / (L.effMax - L.effMin);
+      const opacity = pctFromTop <= 0 ? 0 : pctFromTop < 0.1 ? pctFromTop / 0.1 * 0.18 : pctFromTop < 0.24 ? 0.18 + (pctFromTop - 0.1) / 0.14 * 0.82 : 1;
+
+      marker.style.transform = `translate3d(${viewportX}px, ${sample.y}px, 0) translate(-50%, -50%)`;
+      marker.style.opacity = String(opacity);
+      if (labelEl) {
+        labelEl.style.transform = `translate3d(${viewportX}px, 0, 0) translateX(-50%)`;
+        labelEl.style.opacity = "1";
+      }
+      if (numberEl) numberEl.textContent = String(Math.round(glucose));
+
+      const latestPt = pts[pts.length - 1];
+      if (tooltipTimeRef.current) tooltipTimeRef.current.textContent = formatReadingTime(latestPt.time);
+      if (tooltipDateRef.current) tooltipDateRef.current.textContent = Number.isFinite(latestPt.time) ? format(new Date(latestPt.time), "EEEE, MMM d") : "";
+
+      // Glow status — dispatched only on transition, not every frame.
+      const glowStatus = glucose > L.targetHigh ? "high" : glucose < L.targetLow ? "low" : "in_range";
+      const overReference = glucose > L.highReference || glucose < FIXED_LOW_REFERENCE;
+      if (glowStatus !== prevGlowStatusRef.current || overReference !== prevOverReferenceRef.current) {
+        prevGlowStatusRef.current = glowStatus;
+        prevOverReferenceRef.current = overReference;
+        window.dispatchEvent(new CustomEvent("stackd-center-glucose-status", { detail: { status: glowStatus, overReference } }));
+      }
+
+      // Keep the monitoring band overlay in sync with the visible center.
+      overlayRef.current?.(scrollLeft);
     };
-  }, [maxScrollLeft, latestGlucoseBucket, filters.glucose, glucoseLinePoints.length, positionedMonitoringIntervals, isGlucoseStale]);
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, []);
 
   if (!doses.length && !glucoseReadings.length && !carbEntries.length) return null;
 
@@ -1175,7 +1278,9 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           style={{ width: "100%" }}>
       {!isCandlestick && filters.glucose && glucoseLinePoints.length > 0 &&
           <div
-            className="absolute left-1/2 top-0 z-20 -translate-x-1/2 px-3 py-1 text-center pointer-events-none">
+            ref={markerLabelRef}
+            className="pointer-events-none absolute top-0 left-0 z-20 px-3 py-1 text-center"
+            style={{ willChange: "transform", transform: "translate3d(-50%, 0, 0)", opacity: 0 }}>
             
           <div className="flex items-center justify-center gap-1.5 text-2xl font-black leading-none text-white">
             {(onSelectLog || onDeleteLog) && !dexcomConnected &&
@@ -1183,7 +1288,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                 <Info className="h-2.5 w-2.5" />
               </span>
               }
-            <GlucoseTicker ref={tickerRef} initialValue={formatGlucoseDisplay(glucoseLinePoints[glucoseLinePoints.length - 1].value)} /> <span className="text-xs font-medium text-white/35">mg/dL</span>
+            <span ref={markerNumberRef}>{formatGlucoseDisplay(glucoseLinePoints[glucoseLinePoints.length - 1].value)}</span> <span className="text-xs font-medium text-white/35">mg/dL</span>
           </div>
           <div ref={tooltipTimeRef} className="mt-1 text-xs font-medium text-white/35">{format(new Date(glucoseLinePoints[glucoseLinePoints.length - 1].time), "h:mm a")}</div>
           <div ref={tooltipDateRef} className="mt-0.5 text-[10px] font-medium text-white/30">{format(new Date(glucoseLinePoints[glucoseLinePoints.length - 1].time), "EEEE, MMM d")}</div>
@@ -1192,7 +1297,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       {!isCandlestick && filters.glucose && glucoseLinePoints.length > 0 &&
           <div
             ref={centerMarkerRef}
-            className="pointer-events-none absolute left-1/2 top-0 z-10 opacity-0"
+            className="pointer-events-none absolute top-0 left-0 z-10 opacity-0"
             style={{
               width: "9px",
               height: "9px",
@@ -1234,10 +1339,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               const el = event.currentTarget;
               if (el.scrollLeft > maxScrollLeft) {
                 el.scrollLeft = maxScrollLeft;
-                scheduleCenterGlucoseUpdate(maxScrollLeft);
-                return;
               }
-              scheduleCenterGlucoseUpdate(el.scrollLeft);
             }}>
         <div className="relative" style={{ width: chartWidth, height: isCandlestick ? CANDLESTICK_TOTAL_HEIGHT : TWO_PLANE_HEIGHT }}>
           {isCandlestick ?
