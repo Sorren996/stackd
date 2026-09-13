@@ -209,12 +209,11 @@
 
 [data-theme="light"] body {
   background:
-    radial-gradient(circle at 15% 0%, rgba(91,168,138,0.10), transparent 40%),
-    radial-gradient(circle at 90% 8%, rgba(120,160,190,0.08), transparent 42%),
-    radial-gradient(circle at 50% 100%, rgba(150,140,200,0.045), transparent 45%),
-    linear-gradient(to bottom, #eaf1ee 0%, #e2ebe6 100%);
+    radial-gradient(circle at 15% 0%, rgba(188,172,146,0.10), transparent 42%),
+    radial-gradient(circle at 90% 8%, rgba(150,165,175,0.05), transparent 44%),
+    linear-gradient(to bottom, #f7f3ec 0%, #f1ece2 100%);
   background-attachment: fixed;
-  color: #1f2a26;
+  color: #2c2c2e;
 }
 
 [data-theme="light"] input,
@@ -227,18 +226,18 @@
 
 /* Semantic token overrides — shadcn primitives (Dialog, Sheet, Select, etc.) */
 [data-theme="light"] {
-  --background: 150 18% 94%;
-  --foreground: 158 18% 16%;
+  --background: 40 18% 94%;
+  --foreground: 240 5% 18%;
   --card: 0 0% 100%;
-  --card-foreground: 158 18% 16%;
+  --card-foreground: 240 5% 18%;
   --popover: 0 0% 100%;
-  --popover-foreground: 158 18% 16%;
+  --popover-foreground: 240 5% 18%;
   --primary: 162 42% 32%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 150 12% 90%;
-  --secondary-foreground: 158 16% 24%;
-  --muted: 150 12% 92%;
-  --muted-foreground: 155 8% 40%;
+  --secondary: 40 12% 90%;
+  --secondary-foreground: 240 5% 28%;
+  --muted: 40 10% 93%;
+  --muted-foreground: 240 4% 45%;
   --accent: 162 36% 38%;
   --accent-foreground: 0 0% 100%;
   --destructive: 0 62% 48%;
@@ -286,7 +285,7 @@
 }
 
 [data-theme="light"] .stackd-section-label {
-  color: rgba(31,42,38,0.50);
+  color: rgba(60,60,67,0.45);
 }
 
 /* ---- Graph canvas: light instrument surface ---- */
@@ -325,11 +324,11 @@
 /* ---- Native form controls: light pickers, options, placeholders ---- */
 [data-theme="light"] option {
   background-color: #ffffff !important;
-  color: #1f2a26 !important;
+  color: #2c2c2e !important;
 }
 [data-theme="light"] input::placeholder,
 [data-theme="light"] textarea::placeholder {
-  color: rgba(31,42,38,0.42) !important;
+  color: rgba(60,60,67,0.4) !important;
 }
 
 /* ---- Floating action button + bloom menu ---- */
@@ -355,29 +354,29 @@
 }
 
 /* ---- White-channel utility remaps ---- */
-[data-theme="light"] :is(.text-white, .text-white\/90, .text-white\/85){ color: #1f2a26; }
-[data-theme="light"] :is(.text-white\/80, .text-white\/75, .text-white\/70, .text-white\/65){ color: #3a4a43; }
-[data-theme="light"] :is(.text-white\/60, .text-white\/55, .text-white\/50){ color: #58665f; }
-[data-theme="light"] :is(.text-white\/45, .text-white\/40, .text-white\/35){ color: #6e7c75; }
-[data-theme="light"] :is(.text-white\/30, .text-white\/25, .text-white\/20){ color: #8a9890; }
-[data-theme="light"] :is(.text-white\/15, .text-white\/12, .text-white\/10, .text-white\/5){ color: #a7b3ac; }
+[data-theme="light"] :is(.text-white, .text-white\/90, .text-white\/85){ color: #2c2c2e; }
+[data-theme="light"] :is(.text-white\/80, .text-white\/75, .text-white\/70, .text-white\/65){ color: #3a3a3c; }
+[data-theme="light"] :is(.text-white\/60, .text-white\/55, .text-white\/50){ color: #8e8e93; }
+[data-theme="light"] :is(.text-white\/45, .text-white\/40, .text-white\/35){ color: #aeaeb2; }
+[data-theme="light"] :is(.text-white\/30, .text-white\/25, .text-white\/20){ color: #c7c7cc; }
+[data-theme="light"] :is(.text-white\/15, .text-white\/12, .text-white\/10, .text-white\/5){ color: #d1d1d6; }
 
-[data-theme="light"] :is(.bg-white\/5, .bg-white\/\[0\.025\], .bg-white\/\[0\.03\], .bg-white\/\[0\.04\]){ background-color: rgba(31,42,38,0.04); }
-[data-theme="light"] :is(.bg-white\/10, .bg-white\/8, .bg-white\/\[0\.06\], .bg-white\/\[0\.08\]){ background-color: rgba(31,42,38,0.06); }
-[data-theme="light"] :is(.bg-white\/\[0\.10\], .bg-white\/12, .bg-white\/15){ background-color: rgba(31,42,38,0.08); }
-[data-theme="light"] :is(.bg-white\/20, .bg-white\/25){ background-color: rgba(31,42,38,0.10); }
+[data-theme="light"] :is(.bg-white\/5, .bg-white\/\[0\.025\], .bg-white\/\[0\.03\], .bg-white\/\[0\.04\]){ background-color: rgba(60,60,67,0.04); }
+[data-theme="light"] :is(.bg-white\/10, .bg-white\/8, .bg-white\/\[0\.06\], .bg-white\/\[0\.08\]){ background-color: rgba(60,60,67,0.06); }
+[data-theme="light"] :is(.bg-white\/\[0\.10\], .bg-white\/12, .bg-white\/15){ background-color: rgba(60,60,67,0.08); }
+[data-theme="light"] :is(.bg-white\/20, .bg-white\/25){ background-color: rgba(60,60,67,0.10); }
 [data-theme="light"] .bg-white{ background-color: rgba(255,255,255,0.72); }
 
-[data-theme="light"] :is(.border-white\/5, .border-white\/10, .border-white\/\[0\.06\], .border-white\/\[0\.07\]){ border-color: rgba(31,42,38,0.12); }
-[data-theme="light"] :is(.border-white\/12, .border-white\/15, .border-white\/20, .border-white\/\[0\.12\]){ border-color: rgba(31,42,38,0.16); }
-[data-theme="light"] .border-white\/30{ border-color: rgba(31,42,38,0.22); }
+[data-theme="light"] :is(.border-white\/5, .border-white\/10, .border-white\/\[0\.06\], .border-white\/\[0\.07\]){ border-color: rgba(60,60,67,0.12); }
+[data-theme="light"] :is(.border-white\/12, .border-white\/15, .border-white\/20, .border-white\/\[0\.12\]){ border-color: rgba(60,60,67,0.16); }
+[data-theme="light"] .border-white\/30{ border-color: rgba(60,60,67,0.22); }
 
 /* ---- Recharts (Analytics rhythm charts) ---- */
-[data-theme="light"] .recharts-text{ fill: rgba(31,42,38,0.55); }
+[data-theme="light"] .recharts-text{ fill: rgba(60,60,67,0.5); }
 [data-theme="light"] .recharts-cartesian-axis-line,
-[data-theme="light"] .recharts-cartesian-axis-tick-line{ stroke: rgba(31,42,38,0.18); }
+[data-theme="light"] .recharts-cartesian-axis-tick-line{ stroke: rgba(60,60,67,0.18); }
 [data-theme="light"] .recharts-default-tooltip {
   background: rgba(255,255,255,0.92) !important;
-  border-color: rgba(31,42,38,0.12) !important;
-  color: #1f2a26;
+  border-color: rgba(60,60,67,0.12) !important;
+  color: #2c2c2e;
 }
