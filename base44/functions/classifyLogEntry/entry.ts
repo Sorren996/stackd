@@ -23,10 +23,12 @@ export default async function(req: Request): Promise<Response> {
     let payload: any = {};
     try { payload = await req.json(); } catch { /* entity automation always sends JSON */ }
 
+    const user = await base44.auth.me();
+    if (!user) return Response.json({ ok: false, reason: 'unauthorized' }, { status: 401 });
+    const isAdmin = user.role === 'admin';
+
     const event = payload.event || {};
     const data = payload.data || {};
-    const userId: string | undefined = data.created_by_id || data.user_id;
-    if (!userId) return Response.json({ ok: false, reason: 'no user_id' });
 
     const entityName = event.entity_name;
     const entityId = event.entity_id;
@@ -47,9 +49,11 @@ export default async function(req: Request): Promise<Response> {
     } catch {
       return Response.json({ ok: false, reason: 'ownership mismatch' }, { status: 403 });
     }
-    if (!record || record.created_by_id !== userId) {
+    const recordOwner = record.user_id || record.created_by_id;
+    if (!recordOwner || (!isAdmin && recordOwner !== user.id)) {
       return Response.json({ ok: false, reason: 'ownership mismatch' }, { status: 403 });
     }
+    const userId = recordOwner;
 
     const logTimeStr = isCarb ? record.consumed_at : record.administered_at;
     const logTime = new Date(logTimeStr).getTime();
