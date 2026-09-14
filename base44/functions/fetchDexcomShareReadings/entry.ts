@@ -122,6 +122,10 @@ async function getShareSessionId(username, password) {
 export default async function (req) {
   try {
     const base44 = createClientFromRequest(req);
+    const user = await base44.auth.me();
+    if (!user || user.role !== "admin") {
+      return Response.json({ error: "Forbidden" }, { status: 403 });
+    }
     const sr = base44.asServiceRole;
 
     const username = secrets.get("DEXCOM_SHARE_USERNAME");

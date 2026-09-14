@@ -15,6 +15,10 @@ import { dayKeyFromTimezone, recomputeDailySummary } from "../../shared/dailySum
 export default async function (req: Request): Promise<Response> {
   try {
     const base44 = createClientFromRequest(req);
+    const user = await base44.auth.me();
+    if (!user || user.role !== "admin") {
+      return Response.json({ error: "Forbidden" }, { status: 403 });
+    }
     const sr = base44.asServiceRole;
 
     const connections = await sr.entities.DexcomConnection.filter({ status: "connected" });

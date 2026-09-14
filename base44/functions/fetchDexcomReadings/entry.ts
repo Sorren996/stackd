@@ -59,6 +59,10 @@ const MIN_LOOKBACK_MS = 60 * 60 * 1000;               // Min lookback — covers
 export default async function(req) {
   try {
     const base44 = createClientFromRequest(req);
+    const user = await base44.auth.me();
+    if (!user || user.role !== "admin") {
+      return Response.json({ error: "Forbidden" }, { status: 403 });
+    }
     const sr = base44.asServiceRole;
 
     const clientId = secrets.get("DEXCOM_CLIENT_ID");

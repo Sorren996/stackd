@@ -15,6 +15,9 @@ function ownerOf(reading) {
 export default async function(req) {
   try {
     const base44 = createClientFromRequest(req);
+    const user = await base44.auth.me();
+    if (!user) return Response.json({ skipped: true, reason: 'unauthorized' }, { status: 401 });
+    const isAdmin = user.role === 'admin';
     const sr = base44.asServiceRole;
 
     // Entity event payload: { event: { type, entity_name, entity_id }, data }
@@ -45,6 +48,9 @@ export default async function(req) {
     const owner = ownerOf(current);
     if (!owner) {
       return Response.json({ skipped: true, reason: 'no_owner' });
+    }
+    if (!isAdmin && owner !== user.id) {
+      return Response.json({ skipped: true, reason: 'ownership mismatch' }, { status: 403 });
     }
 
     const newTime = new Date(current.recorded_at).getTime();
