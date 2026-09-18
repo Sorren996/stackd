@@ -52,9 +52,7 @@ export default function ComfortZoneCard({ percentage }) {
         <p className="mt-1.5 text-[11px] text-white/35">Time in Comfort Zone</p>
       </div>
 
-      <span className="relative z-10 mt-2 text-xs font-semibold" style={{ color: status.color }}>
-        {status.label}
-      </span>
+
     </motion.div>
   );
 }
