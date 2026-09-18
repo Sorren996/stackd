@@ -139,12 +139,12 @@ export default function MealBalanceCard({ mealInsight, highProteinFatStatus, onO
 
       {/* content */}
       <div className="relative z-10 flex items-center gap-3">
-        <span
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border hidden"
-          style={{ borderColor: `${iconColor}55`, background: `${iconColor}14` }}>
-          
-          <StateIcon state={state} color={iconColor} />
-        </span>
+        
+
+
+
+
+        
         <div className="min-w-0 flex-1">
           <p className="text-[15px] font-bold leading-tight text-white">{headline}</p>
           <p className="mt-0.5 text-[11px] text-white/40">{body}</p>

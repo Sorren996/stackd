@@ -817,19 +817,19 @@ const TREND_ICONS = {
 function SupportiveGlucoseMessage({ insight, trend, TrendIcon }) {
   if (!insight?.message) return null;
 
-  return (
-    <div
-      className="mx-auto mt-2.5 mb-0.5 flex max-w-[92vw] items-center justify-center gap-2 rounded-full px-3.5 py-1.5 hidden"
-      style={{ background: "rgba(255,255,255,0.015)" }}>
-      
-      {TrendIcon &&
-      <TrendIcon className="h-3.5 w-3.5 shrink-0" style={{ color: trend?.color || "rgba(255,255,255,0.45)" }} />
-      }
-      <p className="text-[11px] font-medium leading-tight text-white/50">
-        {insight.message}
-      </p>
-      <div className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: "#61d1b3", boxShadow: "0 0 6px rgba(97,209,179,0.6)" }} />
-    </div>);
+  return null;
+
+
+
+
+
+
+
+
+
+
+
+
 
 }
 

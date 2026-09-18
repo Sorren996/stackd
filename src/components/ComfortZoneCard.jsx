@@ -26,7 +26,7 @@ export default function ComfortZoneCard({ percentage }) {
       
       <div className="relative z-10 mb-1 flex items-start justify-between gap-2">
         <span className="text-[10px] font-semibold uppercase tracking-wider text-white/35">Daily Balance</span>
-        <Wind className="h-3.5 w-3.5 hidden" style={{ color: "rgba(91,168,138,0.6)" }} />
+        
       </div>
 
       <div className="relative z-10 mt-1">

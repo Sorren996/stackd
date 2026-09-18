@@ -77,7 +77,7 @@ export default function CurrentGlucoseCard({
         <span className="text-[10px] font-semibold uppercase tracking-wider text-white/35">
           Current Glucose
         </span>
-        <Droplet className="h-3.5 w-3.5 hidden" style={{ color: "rgba(91,168,138,0.6)" }} />
+        
       </div>
 
       <div className="relative z-10 mt-1 flex items-end gap-1.5">
