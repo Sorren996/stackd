@@ -23,6 +23,7 @@ import {
   isBolusInsulinType,
   isBasalInsulinType } from
 "@/lib/insulinPharmacology";
+import { getBasalRegimenStatus } from "@/lib/basalActivityModel";
 import {
   generateCarbCurve,
   getActiveCarbsNow,
@@ -915,6 +916,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
     [safeDoses, insulinSettings]
   );
   const activeUnits = useMemo(() => getTotalIOB(safeDoses, Date.now()), [safeDoses, nowMinute]);
+  const basalRegimenStatus = useMemo(() => getBasalRegimenStatus(safeDoses, Date.now()), [safeDoses, nowMinute]);
   const activeMealUnits = useMemo(() => getTotalMealIOB(mealCoverageDoses, Date.now()), [mealCoverageDoses, nowMinute]);
   const activeCorrectionUnits = useMemo(() => getTotalCorrectionIOB(mealCoverageDoses, Date.now()), [mealCoverageDoses, nowMinute]);
   const activeInsulinBreakdown = useMemo(() => {
@@ -1245,7 +1247,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
             highProteinFatStatus={highProteinFatStatus}
             onOpenTooltip={() => setOpenTooltip("net-carbs")} />
           
-          <InsulinOnBoardCard totalUnits={activeUnits} breakdown={activeInsulinBreakdown} />
+          <InsulinOnBoardCard totalUnits={activeUnits} breakdown={activeInsulinBreakdown} basalRegimenStatus={basalRegimenStatus} />
         </div>
       </div>
     </>);

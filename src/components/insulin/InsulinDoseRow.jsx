@@ -1,13 +1,22 @@
 import { useId, useMemo } from "react";
-import { generateActivityCurve, formatMinutes } from "@/lib/insulinPharmacology";
+import { generateActivityCurve, formatMinutes, isBasalInsulinType } from "@/lib/insulinPharmacology";
+import { getBasalDoseContributionLabel } from "@/lib/basalActivityModel";
 
 /**
  * Compact insulin dose row showing the PK activity curve, current position
  * marker, status label, and remaining duration. All values come from the
  * existing pharmacokinetic calculation system passed via the `dose` prop.
+ * For basal doses, `regimenStatus` (from getBasalRegimenStatus) drives the
+ * contribution label so this row never disagrees with the IOB card.
  */
-export default function InsulinDoseRow({ dose }) {
+export default function InsulinDoseRow({ dose, regimenStatus = null }) {
   const { shortName, units, iob, color, statusLabel, timingInfo, type, time } = dose;
+  const isBasal = isBasalInsulinType(type);
+  const basalContribution = useMemo(() => {
+    if (!isBasal) return null;
+    return getBasalDoseContributionLabel({ insulin_type: type, units, administered_at: new Date(time).toISOString() }, regimenStatus, Date.now());
+  }, [isBasal, type, units, time, regimenStatus]);
+  const basalPercentMatch = basalContribution?.match(/(\d+)%$/);
   const progress = timingInfo?.progress ?? 0;
   const remainingMin = timingInfo?.remainingMin ?? 0;
   const isSettling = remainingMin <= 1;
@@ -61,9 +70,16 @@ export default function InsulinDoseRow({ dose }) {
           <span className="truncate text-xs font-semibold text-white/85">{shortName}</span>
           <span className="shrink-0 text-[10px] text-white/40">· {formattedUnits}u dose</span>
         </div>
-        <span className="shrink-0 text-sm font-bold text-white">
-          {formattedIob}u <span className="text-[10px] font-medium text-white/40">active</span>
-        </span>
+        {isBasal ? (
+          <span className="shrink-0 text-sm font-bold text-white">
+            {basalPercentMatch ? basalPercentMatch[1] : "—"}
+            {basalPercentMatch && <span className="text-[10px] font-medium text-white/40">%</span>}
+          </span>
+        ) : (
+          <span className="shrink-0 text-sm font-bold text-white">
+            {formattedIob}u <span className="text-[10px] font-medium text-white/40">active</span>
+          </span>
+        )}
       </div>
 
       <div className="relative mt-2 h-6">
@@ -94,7 +110,7 @@ export default function InsulinDoseRow({ dose }) {
       </div>
 
       <div className="mt-1.5 flex items-center justify-between">
-        <span className="text-[10px] text-white/50">{statusLabel}</span>
+        <span className="text-[10px] text-white/50">{isBasal ? basalContribution : statusLabel}</span>
         <span className="text-[10px] font-medium" style={{ color: isSettling ? "rgba(255,255,255,0.35)" : color }}>
           {isSettling ? "Gently settling" : `~${formatMinutes(remainingMin)} remaining`}
         </span>

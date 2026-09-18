@@ -10,13 +10,16 @@ import InfoPopover from "@/components/graph/InfoPopover";
  * IOB totals and dose breakdown calculations from ActiveInsulinBanner — this
  * component only changes the presentation layer.
  */
-export default function InsulinOnBoardCard({ totalUnits, breakdown }) {
-  const hasBolusIOB = totalUnits > 0.01;
+export default function InsulinOnBoardCard({ totalUnits, breakdown, basalRegimenStatus }) {
   const bolusDoses = breakdown.filter((d) => !isBasalInsulinType(d.type));
   const basalDoses = breakdown.filter((d) => isBasalInsulinType(d.type));
   const bolusUnits = bolusDoses.reduce((sum, d) => sum + d.iob, 0);
-  const basalUnits = basalDoses.reduce((sum, d) => sum + d.iob, 0);
+  const hasBolusIOB = bolusUnits > 0.01;
   const [estimateRect, setEstimateRect] = useState(null);
+
+  const coverageDisplay =
+    basalRegimenStatus?.state === "established" ? `${basalRegimenStatus.basalCoverage}` : null;
+  const coverageStateLabel = basalRegimenStatus?.label || "Minimal";
 
   return (
     <motion.div
@@ -51,6 +54,9 @@ export default function InsulinOnBoardCard({ totalUnits, breakdown }) {
             <p className="mt-1 text-[10px] leading-relaxed text-white/55">
               Active insulin and remaining time are estimates based on the insulin profile and time since the dose. Actual insulin action can vary between people and between doses.
             </p>
+            <p className="mt-2 text-[10px] leading-relaxed text-white/55">
+              Basal coverage is modeled separately from bolus insulin — it represents estimated background activity from your basal doses, not the same as bolus IOB. Basal insulin releases gradually over an extended period, and overlapping doses contribute to your ongoing background activity.
+            </p>
           </InfoPopover>
         )}
       </AnimatePresence>
@@ -64,12 +70,16 @@ export default function InsulinOnBoardCard({ totalUnits, breakdown }) {
           <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-white/45">Bolus active</span>
         </div>
         <div className="mx-3 w-px self-stretch bg-white/10" />
-        <div className="flex flex-1 flex-col">
-          <div className="flex items-end gap-1">
-            <span className="text-3xl font-black leading-none text-white">{Math.round(basalUnits)}</span>
-            <span className="mb-0.5 text-[10px] font-medium text-white/40">u</span>
-          </div>
-          <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-white/45">Basal active</span>
+        <div className="flex min-w-0 flex-1 flex-col">
+          {coverageDisplay ? (
+            <div className="flex items-end gap-1">
+              <span className="text-3xl font-black leading-none text-white">{coverageDisplay}</span>
+              <span className="mb-0.5 text-[10px] font-medium text-white/40">%</span>
+            </div>
+          ) : (
+            <span className="truncate text-sm font-bold leading-tight text-white">{coverageStateLabel}</span>
+          )}
+          <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-white/45">Basal Coverage</span>
         </div>
       </div>
 
@@ -91,7 +101,7 @@ export default function InsulinOnBoardCard({ totalUnits, breakdown }) {
               <span className="text-[9px] font-bold uppercase tracking-[0.14em] text-white/35">Basal / Background</span>
               <div className="mt-1.5 divide-y divide-white/[0.06]">
                 {basalDoses.map((dose) => (
-                  <InsulinDoseRow key={dose.id} dose={dose} />
+                  <InsulinDoseRow key={dose.id} dose={dose} regimenStatus={basalRegimenStatus} />
                 ))}
               </div>
             </div>
