@@ -124,13 +124,6 @@ export default function MealBalanceCard({ mealInsight, highProteinFatStatus, onO
       }}
       className="metric-card stackd-card relative col-span-2 w-full cursor-pointer overflow-hidden rounded-2xl p-4">
       
-      {/* faint decorative emblem */}
-      <Sprout
-        className="pointer-events-none absolute right-4 top-1/2 h-6 w-6 -translate-y-1/2"
-        style={{ color: ambientColor, opacity: 0.1 }}
-        strokeWidth={1.5} />
-      
-
       {/* header */}
       <div className="relative z-10 mb-2 flex items-start justify-between">
         <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/35">Meal Balance</span>
@@ -153,9 +146,9 @@ export default function MealBalanceCard({ mealInsight, highProteinFatStatus, onO
 
       {/* outcome line */}
       {outcome &&
-      <div className="relative z-10 mt-2.5 flex items-center gap-1.5 pl-11">
-          {outcome.icon === "clock" && <Clock className="h-3 w-3 shrink-0" style={{ color: outcome.color }} />}
-          <span className="text-[11px] font-semibold" style={{ color: outcome.color }}>{outcome.text}</span>
+      <div className="relative z-10 mt-2.5 flex items-center gap-1.5">
+          {outcome.icon === "clock" && <Clock className="h-3 w-3 shrink-0 text-white/55" />}
+          <span className="text-[11px] font-semibold" style={{ color: outcome.icon === "clock" ? "rgba(255,255,255,0.55)" : outcome.color }}>{outcome.text}</span>
         </div>
       }
 
