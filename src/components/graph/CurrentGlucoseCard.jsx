@@ -94,7 +94,7 @@ export default function CurrentGlucoseCard({
         )}
         <span className="mb-1 text-[11px] font-medium text-white/40">mg/dL</span>
         {latestGlucose && !isStale && (
-          <TrendIcon className="mb-1 h-4 w-4" style={{ color: displayColor }} />
+          <TrendIcon className="self-center h-6 w-6" style={{ color: "#ffffff" }} />
         )}
       </div>
 
