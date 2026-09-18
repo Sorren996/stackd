@@ -113,30 +113,35 @@ export const INSULIN_PROFILES = {
     display_name: "Lantus", generic_name: "insulin glargine", concentration: "U-100",
     category: "Long-Acting", model: "flat", onset: 90, peak: null, duration: 1440, shape: 10,
     color: "#2dd4bf", profile_version: "1.0", source_last_reviewed: "2026-09",
+    dosing_interval_minutes: 1440, days_to_steady_state: 3,
     sources: [{ name: "Lantus FDA Prescribing Information", date: "2023" }],
   },
   "Basaglar": {
     display_name: "Basaglar", generic_name: "insulin glargine", concentration: "U-100",
     category: "Long-Acting", model: "flat", onset: 90, peak: null, duration: 1440, shape: 10,
     color: "#14b8a6", profile_version: "1.0", source_last_reviewed: "2026-09",
+    dosing_interval_minutes: 1440, days_to_steady_state: 3,
     sources: [{ name: "Basaglar FDA Prescribing Information", date: "2023" }],
   },
   "Semglee": {
     display_name: "Semglee", generic_name: "insulin glargine-yfgn", concentration: "U-100",
     category: "Long-Acting", model: "flat", onset: 90, peak: null, duration: 1440, shape: 10,
     color: "#2dd4bf", profile_version: "1.0", source_last_reviewed: "2026-09",
+    dosing_interval_minutes: 1440, days_to_steady_state: 3,
     sources: [{ name: "Semglee FDA Prescribing Information", date: "2021" }],
   },
   "Rezvoglar": {
     display_name: "Rezvoglar", generic_name: "insulin glargine-aglr", concentration: "U-100",
     category: "Long-Acting", model: "flat", onset: 90, peak: null, duration: 1440, shape: 10,
     color: "#14b8a6", profile_version: "1.0", source_last_reviewed: "2026-09",
+    dosing_interval_minutes: 1440, days_to_steady_state: 3,
     sources: [{ name: "Rezvoglar FDA Prescribing Information", date: "2021" }],
   },
   "Toujeo": {
     display_name: "Toujeo", generic_name: "insulin glargine", concentration: "U-300",
     category: "Ultra-Long-Acting", model: "flat", onset: 120, peak: null, duration: 1680, shape: 12,
     color: "#059669", profile_version: "1.0", source_last_reviewed: "2026-09",
+    dosing_interval_minutes: 1440, days_to_steady_state: 5,
     sources: [{ name: "Toujeo FDA Prescribing Information", date: "2023" }, { name: "ADA Standards of Care — U-300 longer duration than U-100", date: "2024" }],
     notes: "Flatter and more prolonged than U-100 glargine.",
   },
@@ -144,6 +149,7 @@ export const INSULIN_PROFILES = {
     display_name: "Levemir", generic_name: "insulin detemir", concentration: "U-100",
     category: "Long-Acting", model: "flat", onset: 90, peak: null, duration: 960, shape: 8,
     color: "#34d399", profile_version: "1.0", source_last_reviewed: "2026-09",
+    dosing_interval_minutes: 1440, days_to_steady_state: 3,
     sources: [{ name: "Levemir FDA Prescribing Information", date: "2023" }],
     notes: "Relatively flat, ~14–24h depending on dose.",
   },
@@ -153,6 +159,7 @@ export const INSULIN_PROFILES = {
     display_name: "Tresiba", generic_name: "insulin degludec", concentration: "U-100",
     category: "Ultra-Long-Acting", model: "flat", onset: 90, peak: null, duration: 2520, shape: 16,
     color: "#10b981", profile_version: "1.0", source_last_reviewed: "2026-09",
+    dosing_interval_minutes: 1440, days_to_steady_state: 3,
     sources: [{ name: "Tresiba FDA Prescribing Information", date: "2023" }],
     notes: "Essentially peakless; ~42h+ pharmacodynamic duration.",
   },
@@ -160,6 +167,7 @@ export const INSULIN_PROFILES = {
     display_name: "Tresiba U-200", generic_name: "insulin degludec", concentration: "U-200",
     category: "Ultra-Long-Acting", model: "flat", onset: 90, peak: null, duration: 2520, shape: 16,
     color: "#10b981", profile_version: "1.0", source_last_reviewed: "2026-09",
+    dosing_interval_minutes: 1440, days_to_steady_state: 3,
     sources: [{ name: "Tresiba FDA Prescribing Information", date: "2023" }],
     notes: "Equivalent unit-based pharmacodynamics to U-100 degludec.",
   },
@@ -169,6 +177,7 @@ export const INSULIN_PROFILES = {
     display_name: "Awiqli", generic_name: "insulin icodec", concentration: "U-700",
     category: "Ultra-Long-Acting", model: "flat", onset: 120, peak: 1080, duration: 10080, shape: 22,
     color: "#047857", profile_version: "1.0", source_last_reviewed: "2026-09",
+    dosing_interval_minutes: 10080, days_to_steady_state: 21,
     sources: [{ name: "Awiqli FDA Clinical Pharmacology Review", date: "2024" }],
     notes: "Weekly insulin. Weeklong half-life; broad low-amplitude profile with concentration peak ~18h. Overlapping weekly doses accumulate.",
   },
@@ -390,18 +399,27 @@ function peakedActivityRel(t, peak, duration, shape) {
   return clamp(erlangPDF(t, k, theta) / peakPdf, 0, 1);
 }
 
-// Broad plateau activity for near-peakless basal insulin. A near-constant
-// release produces a roughly linear decline in remaining insulin across the
-// effective duration (steady background activity, no pronounced peak).
+// Smoothstep easing (3t² - 2t³) — used to give basal insulin's onset and
+// decline soft, continuous curvature instead of hard linear edges.
+function smoothstep(x) {
+  const t = clamp(x, 0, 1);
+  return t * t * (3 - 2 * t);
+}
+
+// Broad plateau activity for near-peakless basal insulin, built from two
+// overlapping soft (smoothstep) transitions rather than a rectangle with
+// linear edges. This gives a gradual onset, a sustained near-plateau, and a
+// long, gently tapering decline — communicating continuous background
+// exposure rather than an insulin reservoir that switches on, holds flat,
+// then falls off in a straight line to zero.
 function flatActivity(t, onset, duration) {
   if (t <= 0 || t >= duration) return 0;
-  const rampEnd = Math.max(1, Math.min(onset, duration * 0.06));
-  const taperStart = duration * 0.9;
-  const floor = 1;
-  if (t < rampEnd) return floor * (t / rampEnd);
-  if (t < taperStart) return floor;
-  const ratio = clamp((t - taperStart) / Math.max(1, duration - taperStart), 0, 1);
-  return floor * (1 - ratio);
+  const riseWindow = Math.max(1, Math.min(onset * 1.6, duration * 0.14));
+  const fallWindow = duration * 0.32;
+  const fallStart = duration - fallWindow;
+  const rise = smoothstep(t / riseWindow);
+  const fall = t <= fallStart ? 1 : 1 - smoothstep((t - fallStart) / fallWindow);
+  return clamp(rise * fall, 0, 1);
 }
 
 export function getRelativeActivityAtMinute(minute, timing) {
