@@ -122,14 +122,14 @@ export default function MealBalanceCard({ mealInsight, highProteinFatStatus, onO
           handleCardClick();
         }
       }}
-      className="metric-card stackd-card relative col-span-2 w-full cursor-pointer overflow-hidden rounded-2xl p-4"
-    >
+      className="metric-card stackd-card relative col-span-2 w-full cursor-pointer overflow-hidden rounded-2xl p-4">
+      
       {/* faint decorative emblem */}
       <Sprout
         className="pointer-events-none absolute right-4 top-1/2 h-6 w-6 -translate-y-1/2"
         style={{ color: ambientColor, opacity: 0.1 }}
-        strokeWidth={1.5}
-      />
+        strokeWidth={1.5} />
+      
 
       {/* header */}
       <div className="relative z-10 mb-2 flex items-start justify-between">
@@ -140,9 +140,9 @@ export default function MealBalanceCard({ mealInsight, highProteinFatStatus, onO
       {/* content */}
       <div className="relative z-10 flex items-center gap-3">
         <span
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border"
-          style={{ borderColor: `${iconColor}55`, background: `${iconColor}14` }}
-        >
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border hidden"
+          style={{ borderColor: `${iconColor}55`, background: `${iconColor}14` }}>
+          
           <StateIcon state={state} color={iconColor} />
         </span>
         <div className="min-w-0 flex-1">
@@ -152,16 +152,16 @@ export default function MealBalanceCard({ mealInsight, highProteinFatStatus, onO
       </div>
 
       {/* outcome line */}
-      {outcome && (
-        <div className="relative z-10 mt-2.5 flex items-center gap-1.5 pl-11">
+      {outcome &&
+      <div className="relative z-10 mt-2.5 flex items-center gap-1.5 pl-11">
           {outcome.icon === "clock" && <Clock className="h-3 w-3 shrink-0" style={{ color: outcome.color }} />}
           <span className="text-[11px] font-semibold" style={{ color: outcome.color }}>{outcome.text}</span>
         </div>
-      )}
+      }
 
       {/* footer: high protein / fat monitoring */}
-      {showFooter && (
-        <div className="relative z-10 mt-3 space-y-1 border-t border-white/10 pt-2.5">
+      {showFooter &&
+      <div className="relative z-10 mt-3 space-y-1 border-t border-white/10 pt-2.5">
           <div className="flex items-center gap-1.5">
             <AlertTriangle className="h-3 w-3 shrink-0 text-amber-400/80" />
             <span className="text-[11px] font-semibold text-amber-400/90">Delayed meal response possible</span>
@@ -170,7 +170,7 @@ export default function MealBalanceCard({ mealInsight, highProteinFatStatus, onO
             Monitor through {formatMonitoringEndTime(highProteinFatStatus.endTime)}
           </p>
         </div>
-      )}
-    </motion.div>
-  );
+      }
+    </motion.div>);
+
 }
