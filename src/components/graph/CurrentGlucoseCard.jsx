@@ -106,12 +106,8 @@ export default function CurrentGlucoseCard({
         {isStale && staleAge && (
           <p className="text-[11px] text-white/35">Last reading {staleAge}</p>
         )}
-        <span
-          className="mt-1.5 block text-xs font-semibold"
-          style={{ color: displayColor }}
-        >
-          {displayLabel}
-        </span>
+
+
       </div>
     </motion.div>
   );
