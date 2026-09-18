@@ -163,12 +163,14 @@ export function getBasalRegimenStatus(doses, atTime = Date.now()) {
     return { ...base, state: "building", label: "Building basal activity", basalCoverage: null };
   }
 
-  if (elapsedDays < daysToSteady) {
-    return { ...base, state: "approaching", label: "Approaching steady state", basalCoverage: null };
-  }
-
   const steadyLevel = getSteadyStateLevel(currentType);
   const ratio = steadyLevel > 0 ? combinedActivity / steadyLevel : 0;
+
+  if (elapsedDays < daysToSteady) {
+    const basalCoverage = Math.round(clamp(ratio, 0, 1) * 100);
+    return { ...base, state: "approaching", label: "Approaching steady state", basalCoverage };
+  }
+
   const basalCoverage = Math.round(clamp(ratio, 0, 1.3) * 100);
   return { ...base, state: "established", label: "Established", basalCoverage };
 }
@@ -179,8 +181,12 @@ export function getBasalRegimenStatus(doses, atTime = Date.now()) {
  */
 export function getBasalDoseContributionLabel(dose, regimenStatus, atTime = Date.now()) {
   if (!dose || !regimenStatus || regimenStatus.state === "none") return "Basal dose";
-  if (regimenStatus.state === "building" || regimenStatus.state === "approaching") {
+  if (regimenStatus.state === "building") {
     return regimenStatus.label;
+  }
+
+  if (regimenStatus.state === "approaching" && regimenStatus.basalCoverage != null) {
+    return `Basal contribution: ${regimenStatus.basalCoverage}%`;
   }
 
   const doseActivity = getDoseRelativeActivity(dose, atTime);

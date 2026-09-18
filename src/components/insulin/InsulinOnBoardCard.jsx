@@ -18,7 +18,9 @@ export default function InsulinOnBoardCard({ totalUnits, breakdown, basalRegimen
   const [estimateRect, setEstimateRect] = useState(null);
 
   const coverageDisplay =
-    basalRegimenStatus?.state === "established" ? `${basalRegimenStatus.basalCoverage}` : null;
+    basalRegimenStatus?.state === "established" || basalRegimenStatus?.state === "approaching"
+      ? `${basalRegimenStatus.basalCoverage}`
+      : null;
   const coverageStateLabel = basalRegimenStatus?.label || "Minimal";
 
   return (
