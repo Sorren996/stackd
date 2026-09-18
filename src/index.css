@@ -131,7 +131,7 @@
   /* Glass surface matching the main page cards — subtle gradient, soft inset glow */
   .glass-card {
     background: linear-gradient(145deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01));
-    border-color: rgba(255, 255, 255, 0.16);
+    border-color: transparent;
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1), 0 4px 12px rgba(0, 0, 0, 0.06), inset 0 1px 1px rgba(255, 255, 255, 0.22), inset 0 -1px 1px rgba(255, 255, 255, 0.05);
     backdrop-filter: blur(4px);
   }
@@ -149,7 +149,7 @@
   /* Glass card surface — the shared card language across every screen. */
   .stackd-card {
     background: linear-gradient(150deg, rgba(255,255,255,0.045), rgba(255,255,255,0.012));
-    border: 1px solid rgba(255,255,255,0.10);
+    border: none;
     box-shadow: 0 12px 40px rgba(0,0,0,0.22), 0 4px 12px rgba(0,0,0,0.10), inset 0 1px 1px rgba(255,255,255,0.08), inset 0 -1px 1px rgba(255,255,255,0.03);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
@@ -251,7 +251,7 @@
 [data-theme="light"] .stackd-card,
 [data-theme="light"] .glass-card {
   background: linear-gradient(150deg, rgba(255,255,255,0.78), rgba(255,255,255,0.52)) !important;
-  border-color: rgba(20,45,38,0.10) !important;
+  border-color: transparent !important;
   box-shadow: 0 12px 36px rgba(20,50,45,0.10), 0 4px 12px rgba(20,50,45,0.06), inset 0 1px 1px rgba(255,255,255,0.9), inset 0 -1px 1px rgba(255,255,255,0.4) !important;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
