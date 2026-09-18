@@ -1,4 +1,4 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { ArrowUp, ArrowUpRight, ArrowRight, ArrowDownRight, ArrowDown, Droplet } from "lucide-react";
 import { motion } from "framer-motion";
 import GlucoseTicker from "./GlucoseTicker";
@@ -53,6 +53,22 @@ export default function CurrentGlucoseCard({
   const displayLabel = isStale ? STALE_LABEL : rangeCardLabel;
   const staleAge = isStale ? formatReadingAge(latestGlucose?.recorded_at) : null;
 
+  // Local "x minutes ago / just now" label for this card only — computed from
+  // the reading's timestamp and the current time, refreshed every 30s so it
+  // stays accurate without affecting any other element that uses readingAgeLabel.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(id);
+  }, []);
+  const freshAgeLabel = (() => {
+    const recordedAt = latestGlucose?.recorded_at;
+    if (!recordedAt) return null;
+    const mins = Math.max(0, Math.round((now - new Date(recordedAt).getTime()) / 60000));
+    if (mins < 1) return "just now";
+    return `${mins} minute${mins === 1 ? "" : "s"} ago`;
+  })();
+
   useEffect(() => {
     if (tickerRef.current && glucoseValue != null && !isStale) {
       tickerRef.current.setValue(String(glucoseValue), true);
@@ -100,8 +116,8 @@ export default function CurrentGlucoseCard({
       </div>
 
       <div className="relative z-10 mt-1">
-        {readingAgeLabel && !isStale && (
-          <p className="text-[11px] text-white/35">{readingAgeLabel}</p>
+        {freshAgeLabel && !isStale && (
+          <p className="text-[11px] text-white/35">{freshAgeLabel}</p>
         )}
         {isStale && staleAge && (
           <p className="text-[11px] text-white/35">Last reading {staleAge}</p>
