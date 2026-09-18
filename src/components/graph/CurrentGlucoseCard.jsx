@@ -22,20 +22,6 @@ const CARD_STYLE = {
 const STALE_COLOR = "rgba(255,255,255,0.3)";
 const STALE_LABEL = "Waiting for a fresh reading";
 
-function AmbientOrb({ color, duration = 6, dimmed = false }) {
-  return (
-    <motion.div
-      animate={{ scale: [1, 1.18, 1], opacity: dimmed ? [0.18, 0.28, 0.18] : [0.45, 0.7, 0.45] }}
-      transition={{ duration, repeat: Infinity, ease: "easeInOut" }}
-      className="h-14 w-14 rounded-full"
-      style={{
-        background: `radial-gradient(circle, ${color}cc 0%, ${color}44 50%, transparent 75%)`,
-        filter: "blur(8px)",
-      }}
-    />
-  );
-}
-
 export default function CurrentGlucoseCard({
   latestGlucose,
   glucoseValue,
@@ -87,9 +73,6 @@ export default function CurrentGlucoseCard({
             "radial-gradient(circle at 30% 0%, rgba(91,168,138,0.07), transparent 50%), radial-gradient(circle at 90% 100%, rgba(255,255,255,0.05), transparent 45%)",
         }}
       />
-      <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2">
-        <AmbientOrb color={displayColor} dimmed={isStale} />
-      </div>
       <div className="relative z-10 mb-1 flex items-start justify-between gap-2">
         <span className="text-[10px] font-semibold uppercase tracking-wider text-white/35">
           Current Glucose

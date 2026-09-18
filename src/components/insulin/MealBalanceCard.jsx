@@ -124,19 +124,7 @@ export default function MealBalanceCard({ mealInsight, highProteinFatStatus, onO
       }}
       className="metric-card stackd-card relative col-span-2 w-full cursor-pointer overflow-hidden rounded-2xl p-4"
     >
-      {/* ambient glow (right side) */}
-      <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2">
-        <motion.div
-          animate={{ scale: [1, 1.18, 1], opacity: [0.4, 0.65, 0.4] }}
-          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-          className="h-16 w-16 rounded-full"
-          style={{
-            background: `radial-gradient(circle, ${ambientColor}cc 0%, ${ambientColor}44 50%, transparent 75%)`,
-            filter: "blur(10px)",
-          }}
-        />
-      </div>
-      {/* faint decorative emblem inside the glow */}
+      {/* faint decorative emblem */}
       <Sprout
         className="pointer-events-none absolute right-4 top-1/2 h-6 w-6 -translate-y-1/2"
         style={{ color: ambientColor, opacity: 0.1 }}

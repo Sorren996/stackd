@@ -1,20 +1,6 @@
 import { motion } from "framer-motion";
 import { Wind } from "lucide-react";
 
-function AmbientOrb({ color, duration = 6 }) {
-  return (
-    <motion.div
-      animate={{ scale: [1, 1.18, 1], opacity: [0.45, 0.7, 0.45] }}
-      transition={{ duration, repeat: Infinity, ease: "easeInOut" }}
-      className="h-14 w-14 rounded-full"
-      style={{
-        background: `radial-gradient(circle, ${color}cc 0%, ${color}44 50%, transparent 75%)`,
-        filter: "blur(8px)",
-      }}
-    />
-  );
-}
-
 function getComfortStatus(percentage) {
   if (percentage === null) return { label: "Waiting for today", color: "rgba(255,255,255,0.5)" };
   if (percentage >= 70) return { label: "Flowing beautifully", color: "#5ba88a" };
@@ -38,10 +24,6 @@ export default function ComfortZoneCard({ percentage }) {
           background: "radial-gradient(circle at 30% 0%, rgba(91,168,138,0.07), transparent 50%), radial-gradient(circle at 90% 100%, rgba(255,255,255,0.05), transparent 45%)",
         }}
       />
-      <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2">
-        <AmbientOrb color={status.color} />
-      </div>
-
       <div className="relative z-10 mb-1 flex items-start justify-between gap-2">
         <span className="text-[10px] font-semibold uppercase tracking-wider text-white/35">Daily Balance</span>
         <Wind className="h-3.5 w-3.5" style={{ color: "rgba(91,168,138,0.6)" }} />
