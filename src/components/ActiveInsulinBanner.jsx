@@ -7,8 +7,8 @@ import {
   ArrowUp,
   ArrowUpRight,
   Info,
-  X,
-} from "lucide-react";
+  X } from
+"lucide-react";
 import { getHighProteinFatMonitoringStatus, formatMonitoringEndTime } from "@/lib/mealMonitoring";
 import {
   generateActivityCurve,
@@ -21,13 +21,13 @@ import {
   getTotalIOB,
   INSULIN_PROFILES,
   isBolusInsulinType,
-  isBasalInsulinType,
-} from "@/lib/insulinPharmacology";
+  isBasalInsulinType } from
+"@/lib/insulinPharmacology";
 import {
   generateCarbCurve,
   getActiveCarbsNow,
-  getCarbAbsorptionAt,
-} from "@/lib/carbAbsorption";
+  getCarbAbsorptionAt } from
+"@/lib/carbAbsorption";
 import { AnimatePresence, motion } from "framer-motion";
 import MealBalanceTooltip from "./MealBalanceTooltip";
 import InsulinOnBoardCard from "./insulin/InsulinOnBoardCard";
@@ -62,14 +62,14 @@ function readTargetRange() {
 
   return {
     low: Number.isFinite(low) ? low : 70,
-    high: Number.isFinite(high) ? high : 180,
+    high: Number.isFinite(high) ? high : 180
   };
 }
 
 function getDefaultMealInsulinTypes() {
-  return Object.entries(INSULIN_PROFILES)
-    .filter(([, profile]) => ["Rapid-Acting", "Short-Acting"].includes(profile.category))
-    .map(([name]) => name);
+  return Object.entries(INSULIN_PROFILES).
+  filter(([, profile]) => ["Rapid-Acting", "Short-Acting"].includes(profile.category)).
+  map(([name]) => name);
 }
 
 function readMealInsulinTypes() {
@@ -115,8 +115,8 @@ function readInsulinSettings() {
     correctionTargetGlucose: correctionTargetGlucose > 0 ? correctionTargetGlucose : 110,
     targetGlucose: correctionTargetGlucose > 0 ? correctionTargetGlucose : 110,
     isComplete:
-      insulinSensitivityMgDlPerUnit > 0 &&
-      mealInsulinUnitsPer5g > 0,
+    insulinSensitivityMgDlPerUnit > 0 &&
+    mealInsulinUnitsPer5g > 0
   };
 }
 
@@ -124,11 +124,11 @@ function getDosePartIOB(dose, targetTime = Date.now(), selectUnits = (item) => i
   const totalUnits = Number(dose?.units);
   const selectedUnits = Number(selectUnits(dose));
   if (
-    !Number.isFinite(totalUnits) ||
-    totalUnits <= 0 ||
-    !Number.isFinite(selectedUnits) ||
-    selectedUnits <= 0
-  ) {
+  !Number.isFinite(totalUnits) ||
+  totalUnits <= 0 ||
+  !Number.isFinite(selectedUnits) ||
+  selectedUnits <= 0)
+  {
     return 0;
   }
 
@@ -192,72 +192,72 @@ function isMealCoverageInsulin(dose, insulinSettings = {}) {
 function buildMealEventGroups(carbEntries, doses, insulinSettings = {}, glucoseReadings = [], targetLow = 70) {
   const preMealWindowMs = (insulinSettings.preMealWindowMinutes ?? DEFAULT_PRE_MEAL_WINDOW_MINUTES) * MINUTE_MS;
   const postMealWindowMs = (insulinSettings.postMealWindowMinutes ?? DEFAULT_POST_MEAL_WINDOW_MINUTES) * MINUTE_MS;
-  const carbEvents = (Array.isArray(carbEntries) ? carbEntries : [])
-    .filter((entry) => {
-      if (entry.classification === "rescue_carbs") return false;
-      if (entry.classification === "meal" || entry.classification === "snack") return true;
-      return !isRescueCarbEntry(entry, glucoseReadings, doses, targetLow);
-    })
-    .map((entry) => ({
-      type: "carb",
-      time: getEntryTime(entry),
-      carbs: Number(entry.carbs),
-      entry,
-    }))
-    .filter((event) => Number.isFinite(event.time) && Number.isFinite(event.carbs) && event.carbs > 0);
+  const carbEvents = (Array.isArray(carbEntries) ? carbEntries : []).
+  filter((entry) => {
+    if (entry.classification === "rescue_carbs") return false;
+    if (entry.classification === "meal" || entry.classification === "snack") return true;
+    return !isRescueCarbEntry(entry, glucoseReadings, doses, targetLow);
+  }).
+  map((entry) => ({
+    type: "carb",
+    time: getEntryTime(entry),
+    carbs: Number(entry.carbs),
+    entry
+  })).
+  filter((event) => Number.isFinite(event.time) && Number.isFinite(event.carbs) && event.carbs > 0);
 
-  const doseEvents = (Array.isArray(doses) ? doses : [])
-    .filter((dose) => isMealCoverageInsulin(dose, insulinSettings))
-    .map((dose) => ({
-      type: "dose",
-      time: getDoseTime(dose),
-      units: Number(dose.units),
-      dose,
-    }))
-    .filter((event) => Number.isFinite(event.time) && Number.isFinite(event.units) && event.units > 0);
+  const doseEvents = (Array.isArray(doses) ? doses : []).
+  filter((dose) => isMealCoverageInsulin(dose, insulinSettings)).
+  map((dose) => ({
+    type: "dose",
+    time: getDoseTime(dose),
+    units: Number(dose.units),
+    dose
+  })).
+  filter((event) => Number.isFinite(event.time) && Number.isFinite(event.units) && event.units > 0);
 
   const carbGroups = [];
 
-  carbEvents
-    .sort((a, b) => a.time - b.time)
-    .forEach((event) => {
-      const lastGroup = carbGroups[carbGroups.length - 1];
-      if (!lastGroup || event.time - lastGroup.end > MEAL_GROUP_WINDOW_MS) {
-        carbGroups.push({
-          start: event.time,
-          end: event.time,
-          carbEvents: [event],
-        });
-        return;
-      }
+  carbEvents.
+  sort((a, b) => a.time - b.time).
+  forEach((event) => {
+    const lastGroup = carbGroups[carbGroups.length - 1];
+    if (!lastGroup || event.time - lastGroup.end > MEAL_GROUP_WINDOW_MS) {
+      carbGroups.push({
+        start: event.time,
+        end: event.time,
+        carbEvents: [event]
+      });
+      return;
+    }
 
-      lastGroup.end = event.time;
-      lastGroup.carbEvents.push(event);
-    });
+    lastGroup.end = event.time;
+    lastGroup.carbEvents.push(event);
+  });
 
-  return carbGroups
-    .map((group) => {
-      const carbs = group.carbEvents.reduce((sum, event) => sum + event.carbs, 0);
-      const carbTimeTotal = group.carbEvents.reduce((sum, event) => sum + event.time * event.carbs, 0);
-      const mealTime = carbs > 0 ? carbTimeTotal / carbs : group.start;
-      const pairingStart = group.start - preMealWindowMs;
-      const pairingEnd = group.end + postMealWindowMs;
-      const groupDoses = doseEvents
-        .filter((event) => event.time >= pairingStart && event.time <= pairingEnd)
-        .map((event) => event.dose);
+  return carbGroups.
+  map((group) => {
+    const carbs = group.carbEvents.reduce((sum, event) => sum + event.carbs, 0);
+    const carbTimeTotal = group.carbEvents.reduce((sum, event) => sum + event.time * event.carbs, 0);
+    const mealTime = carbs > 0 ? carbTimeTotal / carbs : group.start;
+    const pairingStart = group.start - preMealWindowMs;
+    const pairingEnd = group.end + postMealWindowMs;
+    const groupDoses = doseEvents.
+    filter((event) => event.time >= pairingStart && event.time <= pairingEnd).
+    map((event) => event.dose);
 
-      return {
-        ...group,
-        start: pairingStart,
-        end: pairingEnd,
-        carbLogStart: group.start,
-        carbLogEnd: group.end,
-        carbs,
-        mealTime,
-        carbEntries: group.carbEvents.map((event) => event.entry),
-        doses: groupDoses,
-      };
-    });
+    return {
+      ...group,
+      start: pairingStart,
+      end: pairingEnd,
+      carbLogStart: group.start,
+      carbLogEnd: group.end,
+      carbs,
+      mealTime,
+      carbEntries: group.carbEvents.map((event) => event.entry),
+      doses: groupDoses
+    };
+  });
 }
 
 function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latestGlucose, insulinSettings) {
@@ -267,7 +267,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
       status: "Add insulin plan in Settings",
       color: "#d4a056",
       sub: "Enter I:C ratio and sensitivity",
-      details: null,
+      details: null
     };
   }
 
@@ -276,16 +276,16 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
   // Detect recent rescue carbs (proactive low prevention) so we can acknowledge
   // them supportively instead of treating them as an under-dosed meal.
   const nowForRescue = Date.now();
-  const recentRescueCarbs = (Array.isArray(carbEntries) ? carbEntries : [])
-    .filter((entry) => {
-      const entryTime = getEntryTime(entry);
-      return (
-        Number.isFinite(entryTime) &&
-        nowForRescue - entryTime < 2 * 60 * MINUTE_MS &&
-        (entry.classification === "rescue_carbs" ||
-         (!entry.classification && isRescueCarbEntry(entry, glucoseReadings, doses, insulinSettings.targetLow)))
-      );
-    });
+  const recentRescueCarbs = (Array.isArray(carbEntries) ? carbEntries : []).
+  filter((entry) => {
+    const entryTime = getEntryTime(entry);
+    return (
+      Number.isFinite(entryTime) &&
+      nowForRescue - entryTime < 2 * 60 * MINUTE_MS && (
+      entry.classification === "rescue_carbs" ||
+      !entry.classification && isRescueCarbEntry(entry, glucoseReadings, doses, insulinSettings.targetLow)));
+
+  });
   const rescueCarbsTotal = recentRescueCarbs.reduce((sum, entry) => sum + Number(entry.carbs || 0), 0);
 
   if (!groups.length) {
@@ -295,7 +295,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
         status: "Nourishment added to lift your trend",
         color: "#5ba88a",
         sub: `${Math.round(rescueCarbsTotal)}g supportive nourishment`,
-        details: null,
+        details: null
       };
     }
     return {
@@ -303,7 +303,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
       status: "Log carbs to see your rhythm",
       color: "#d4a056",
       sub: "Waiting for carb log",
-      details: null,
+      details: null
     };
   }
 
@@ -319,19 +319,19 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
   const glucoseAtMeal = getClosestGlucose(glucoseReadings, mealTime) ?? latestGlucose ?? null;
   const glucoseValue = Number(glucoseAtMeal?.value);
   const glucoseTime = new Date(glucoseAtMeal?.recorded_at).getTime();
-  const glucoseMinutesFromMeal = Number.isFinite(glucoseTime)
-    ? Math.round(Math.abs(glucoseTime - mealTime) / MINUTE_MS)
-    : null;
-  const outcomeReadings = (Array.isArray(glucoseReadings) ? glucoseReadings : [])
-    .map((reading) => ({ ...reading, time: new Date(reading.recorded_at).getTime(), value: Number(reading.value) }))
-    .filter((reading) =>
-      Number.isFinite(reading.time) &&
-      Number.isFinite(reading.value) &&
-      reading.time >= mealTime + 60 * MINUTE_MS &&
-      reading.time <= mealTime + insulinSettings.outcomeWindowMinutes * MINUTE_MS
-    );
-  const peakOutcome = outcomeReadings.reduce((peak, reading) => (!peak || reading.value > peak.value ? reading : peak), null);
-  const lowOutcome = outcomeReadings.reduce((low, reading) => (!low || reading.value < low.value ? reading : low), null);
+  const glucoseMinutesFromMeal = Number.isFinite(glucoseTime) ?
+  Math.round(Math.abs(glucoseTime - mealTime) / MINUTE_MS) :
+  null;
+  const outcomeReadings = (Array.isArray(glucoseReadings) ? glucoseReadings : []).
+  map((reading) => ({ ...reading, time: new Date(reading.recorded_at).getTime(), value: Number(reading.value) })).
+  filter((reading) =>
+  Number.isFinite(reading.time) &&
+  Number.isFinite(reading.value) &&
+  reading.time >= mealTime + 60 * MINUTE_MS &&
+  reading.time <= mealTime + insulinSettings.outcomeWindowMinutes * MINUTE_MS
+  );
+  const peakOutcome = outcomeReadings.reduce((peak, reading) => !peak || reading.value > peak.value ? reading : peak, null);
+  const lowOutcome = outcomeReadings.reduce((low, reading) => !low || reading.value < low.value ? reading : low, null);
 
   // Glucose at the end of the meal review window — frozen once the window
   // completes. While the window is still active, this is the latest reading
@@ -339,40 +339,40 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
   // before mealWindowEnd so the comparison stays stable over time.
   const mealWindowEnd = mealTime + outcomeWindowMs;
   const windowEndCutoff = mealStillUnderReview ? now : mealWindowEnd;
-  const windowEndGlucoseReading = (Array.isArray(glucoseReadings) ? glucoseReadings : [])
-    .map((reading) => ({ time: new Date(reading.recorded_at).getTime(), value: Number(reading.value) }))
-    .filter((reading) =>
-      Number.isFinite(reading.time) &&
-      Number.isFinite(reading.value) &&
-      reading.time >= mealTime &&
-      reading.time <= windowEndCutoff
-    )
-    .sort((a, b) => a.time - b.time)
-    .pop() ?? null;
+  const windowEndGlucoseReading = (Array.isArray(glucoseReadings) ? glucoseReadings : []).
+  map((reading) => ({ time: new Date(reading.recorded_at).getTime(), value: Number(reading.value) })).
+  filter((reading) =>
+  Number.isFinite(reading.time) &&
+  Number.isFinite(reading.value) &&
+  reading.time >= mealTime &&
+  reading.time <= windowEndCutoff
+  ).
+  sort((a, b) => a.time - b.time).
+  pop() ?? null;
   const windowEndGlucoseValue = Number.isFinite(windowEndGlucoseReading?.value) ? windowEndGlucoseReading.value : null;
 
-  const correctiveInsulinDoses = peakOutcome
-    ? (Array.isArray(doses) ? doses : []).filter((dose) => {
-        const doseTime = getDoseTime(dose);
-        return (
-          isMealCoverageInsulin(dose, insulinSettings) &&
-          Number.isFinite(doseTime) &&
-          doseTime > peakOutcome.time &&
-          doseTime <= mealTime + outcomeWindowMs
-        );
-      })
-    : [];
+  const correctiveInsulinDoses = peakOutcome ?
+  (Array.isArray(doses) ? doses : []).filter((dose) => {
+    const doseTime = getDoseTime(dose);
+    return (
+      isMealCoverageInsulin(dose, insulinSettings) &&
+      Number.isFinite(doseTime) &&
+      doseTime > peakOutcome.time &&
+      doseTime <= mealTime + outcomeWindowMs);
 
-  const correctiveCarbEntries = lowOutcome
-    ? (Array.isArray(carbEntries) ? carbEntries : []).filter((entry) => {
-        const entryTime = getEntryTime(entry);
-        return (
-          Number.isFinite(entryTime) &&
-          entryTime > lowOutcome.time &&
-          entryTime <= mealTime + outcomeWindowMs
-        );
-      })
-    : [];
+  }) :
+  [];
+
+  const correctiveCarbEntries = lowOutcome ?
+  (Array.isArray(carbEntries) ? carbEntries : []).filter((entry) => {
+    const entryTime = getEntryTime(entry);
+    return (
+      Number.isFinite(entryTime) &&
+      entryTime > lowOutcome.time &&
+      entryTime <= mealTime + outcomeWindowMs);
+
+  }) :
+  [];
 
   const hasCorrectiveInsulin = correctiveInsulinDoses.length > 0;
   const hasCorrectiveCarbs = correctiveCarbEntries.length > 0;
@@ -381,25 +381,25 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
   const latestGlucoseTime = new Date(latestGlucose?.recorded_at).getTime();
   const latestIsAfterMeal = Number.isFinite(latestGlucoseTime) && latestGlucoseTime >= mealTime;
   const latestInRange =
-    Number.isFinite(latestGlucoseValue) &&
-    latestGlucoseValue >= insulinSettings.targetLow &&
-    latestGlucoseValue <= insulinSettings.targetHigh;
+  Number.isFinite(latestGlucoseValue) &&
+  latestGlucoseValue >= insulinSettings.targetLow &&
+  latestGlucoseValue <= insulinSettings.targetHigh;
   const latestHigh =
-    Number.isFinite(latestGlucoseValue) &&
-    latestGlucoseValue > insulinSettings.targetHigh;
+  Number.isFinite(latestGlucoseValue) &&
+  latestGlucoseValue > insulinSettings.targetHigh;
   const latestLow =
-    Number.isFinite(latestGlucoseValue) &&
-    latestGlucoseValue < insulinSettings.targetLow;
+  Number.isFinite(latestGlucoseValue) &&
+  latestGlucoseValue < insulinSettings.targetLow;
   const correctionGlucoseValue = glucoseValue;
   const correctionGlucoseAvailable = Number.isFinite(correctionGlucoseValue);
   const correctionGlucoseLow =
-    correctionGlucoseAvailable && correctionGlucoseValue < insulinSettings.targetLow;
+  correctionGlucoseAvailable && correctionGlucoseValue < insulinSettings.targetLow;
   const gramsPerUnit = 5 / insulinSettings.mealInsulinUnitsPer5g;
   const expectedMealUnits = mealGroup.carbs / gramsPerUnit;
   const correctionUnitsNeeded =
-    correctionGlucoseAvailable && correctionGlucoseValue > insulinSettings.targetHigh
-      ? Math.max(0, (correctionGlucoseValue - insulinSettings.correctionTargetGlucose) / insulinSettings.insulinSensitivityMgDlPerUnit)
-      : 0;
+  correctionGlucoseAvailable && correctionGlucoseValue > insulinSettings.targetHigh ?
+  Math.max(0, (correctionGlucoseValue - insulinSettings.correctionTargetGlucose) / insulinSettings.insulinSensitivityMgDlPerUnit) :
+  0;
   const grossDoseEstimate = Math.max(0, expectedMealUnits + correctionUnitsNeeded);
   const bolusIOB = getTotalBolusIOB(mealCoverageDoses, now);
   const loggedMealUnits = sumDoseUnits(pairedDoses, (dose) => dose.meal_units ?? dose.units);
@@ -414,25 +414,25 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
   const coveragePercent = ratio === null ? null : Math.round(ratio * 100);
   const mealCount = mealGroup.carbEntries.length;
   const doseCount = pairedDoses.length;
-  const bolusIOBBreakdown = mealCoverageDoses
-    .map((dose) => {
-      const iob = getDoseIOB(dose, now);
-      if (iob <= 0.01 || !isBolusInsulinType(dose.insulin_type)) return null;
-      const profile = INSULIN_PROFILES[dose.insulin_type];
-      const status = getDoseStatus(dose, now);
-      return {
-        id: dose.id,
-        type: dose.insulin_type,
-        time: getDoseTime(dose),
-        color: profile?.color || "#5ba3b8",
-        category: profile?.category || "Bolus insulin",
-        iob,
-        units: Number(dose.units) || 0,
-        status,
-      };
-    })
-    .filter(Boolean)
-    .sort((a, b) => b.iob - a.iob);
+  const bolusIOBBreakdown = mealCoverageDoses.
+  map((dose) => {
+    const iob = getDoseIOB(dose, now);
+    if (iob <= 0.01 || !isBolusInsulinType(dose.insulin_type)) return null;
+    const profile = INSULIN_PROFILES[dose.insulin_type];
+    const status = getDoseStatus(dose, now);
+    return {
+      id: dose.id,
+      type: dose.insulin_type,
+      time: getDoseTime(dose),
+      color: profile?.color || "#5ba3b8",
+      category: profile?.category || "Bolus insulin",
+      iob,
+      units: Number(dose.units) || 0,
+      status
+    };
+  }).
+  filter(Boolean).
+  sort((a, b) => b.iob - a.iob);
 
   let value = `${estimatedAdditionalUnits.toFixed(1)}u`;
   let status = "Rhythm preview";
@@ -477,28 +477,28 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
 
     if (latestIsAfterMeal && latestInRange) {
       // Currently in range — always show a positive recovery message
-      const startPart = correctionGlucoseAvailable
-        ? `You began at ${Math.round(glucoseValue)} mg/dL`
-        : "You began this meal";
+      const startPart = correctionGlucoseAvailable ?
+      `You began at ${Math.round(glucoseValue)} mg/dL` :
+      "You began this meal";
       const nowPart = `and you're now at ${Math.round(latestGlucoseValue)} mg/dL in your comfortable range`;
 
       if (hadDip) {
         outcomeAssessment = {
           label: "Settled nicely",
           message: `${startPart}, dipped to ${Math.round(lowOutcome.value)} mg/dL along the way, ${nowPart}. Well done finding your footing again.`,
-          color: "#5ba88a",
+          color: "#5ba88a"
         };
       } else if (hadSpike) {
         outcomeAssessment = {
           label: "Settled nicely",
           message: `${startPart}, rose to ${Math.round(peakOutcome.value)} mg/dL after eating, ${nowPart}. Nice work staying with it.`,
-          color: "#5ba88a",
+          color: "#5ba88a"
         };
       } else {
         outcomeAssessment = {
           label: "Tracking beautifully",
           message: `${startPart} ${nowPart}. Your support is aligning beautifully with this meal.`,
-          color: "#5ba88a",
+          color: "#5ba88a"
         };
       }
       value = outcomeAssessment.label;
@@ -510,7 +510,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
         outcomeAssessment = {
           label: "Rising gently",
           message: "Nourishment added. We're keeping a supportive eye on the trend as you gently rise back to your comfortable range.",
-          color: "#5ba88a",
+          color: "#5ba88a"
         };
         value = "Realigning";
         status = "Nourishment added, rising back";
@@ -519,7 +519,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
         outcomeAssessment = {
           label: "Worth a closer look",
           message: "It looks like you've provided a bit more support than this moment needed. Please enjoy a gentle carb source and stay close to the trend while your body settles back.",
-          color: GLUCOSE_STATUS_COLORS.low,
+          color: GLUCOSE_STATUS_COLORS.low
         };
         value = "Take care";
         status = "Glucose dipped below range";
@@ -528,7 +528,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
         outcomeAssessment = {
           label: "Below range",
           message: "Glucose has dipped below your comfortable range. Consider a gentle carb source and follow your established plan.",
-          color: GLUCOSE_STATUS_COLORS.low,
+          color: GLUCOSE_STATUS_COLORS.low
         };
         value = "Take care";
         status = "Below comfort zone";
@@ -540,7 +540,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
         outcomeAssessment = {
           label: "Finding its balance",
           message: "You added a little extra support, and your body is working through it now. We're watching closely as things gently return to a comfortable flow.",
-          color: "#5ba88a",
+          color: "#5ba88a"
         };
         value = "Realigning";
         status = "Support added, settling back";
@@ -549,7 +549,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
         outcomeAssessment = {
           label: "Still settling",
           message: "Glucose is climbing a little higher than we'd like. Let's give it some gentle time to see how your body finds its balance before adding more support.",
-          color: "#d4a056",
+          color: "#d4a056"
         };
         value = "Still settling";
         status = "Glucose trending above range";
@@ -558,7 +558,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
         outcomeAssessment = {
           label: "Above range",
           message: "Glucose is a little above your comfortable range. Give it some gentle time to settle before adding more support.",
-          color: "#d4a056",
+          color: "#d4a056"
         };
         value = "Still settling";
         status = "Above comfort zone";
@@ -577,7 +577,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
       outcomeAssessment = {
         label: "Gentle support",
         message: "You added nourishment to lift a gentle dip. Nicely done catching your rhythm early.",
-        color: "#5ba88a",
+        color: "#5ba88a"
       };
     } else {
       value = "Window passed";
@@ -588,7 +588,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
       outcomeAssessment = {
         label: "Meal window passed",
         message: "Meal window has passed. Nice job staying on top of it.",
-        color: "#5ba88a",
+        color: "#5ba88a"
       };
     }
   }
@@ -602,7 +602,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
       meal: {
         ...mealGroup.carbEntries[0],
         carbs: mealGroup.carbs,
-        time: mealTime,
+        time: mealTime
       },
       mealGroup,
       gramsPerUnit,
@@ -638,8 +638,8 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
       mealStillUnderReview,
       windowStart,
       windowEnd,
-      reviewWindowEnd: mealTime + outcomeWindowMs,
-    },
+      reviewWindowEnd: mealTime + outcomeWindowMs
+    }
   };
 }
 
@@ -659,9 +659,9 @@ function computeNetCarbTrajectory(doses, carbEntries, latestGlucose, insulinSett
     if (curve.length) horizon = Math.max(horizon, curve[curve.length - 1].time);
   });
 
-  const glucoseAsOf = latestGlucose?.recorded_at
-    ? new Date(latestGlucose.recorded_at).getTime()
-    : null;
+  const glucoseAsOf = latestGlucose?.recorded_at ?
+  new Date(latestGlucose.recorded_at).getTime() :
+  null;
 
   if (horizon <= now || !insulinSettings.isComplete) {
     return { points: [], peak: null, trough: null, atNow: 0, glucoseAsOf };
@@ -680,19 +680,19 @@ function computeNetCarbTrajectory(doses, carbEntries, latestGlucose, insulinSett
       bolusIOB,
       mealIOB,
       activeCarbs,
-      net: activeCarbs - mealIOB * gramsPerUnit,
+      net: activeCarbs - mealIOB * gramsPerUnit
     });
   }
 
-  const peak = points.reduce((highest, point) => (point.net > highest.net ? point : highest), points[0]);
-  const trough = points.reduce((lowest, point) => (point.net < lowest.net ? point : lowest), points[0]);
+  const peak = points.reduce((highest, point) => point.net > highest.net ? point : highest, points[0]);
+  const trough = points.reduce((lowest, point) => point.net < lowest.net ? point : lowest, points[0]);
 
   return {
     points,
     peak,
     trough,
     atNow: points[0]?.net ?? 0,
-    glucoseAsOf,
+    glucoseAsOf
   };
 }
 
@@ -721,10 +721,10 @@ function AmbientOrb({ color, duration = 6 }) {
       className="h-14 w-14 rounded-full"
       style={{
         background: `radial-gradient(circle, ${color}cc 0%, ${color}44 50%, transparent 75%)`,
-        filter: "blur(8px)",
-      }}
-    />
-  );
+        filter: "blur(8px)"
+      }} />);
+
+
 }
 
 function RiskSparkline({ points, color }) {
@@ -737,22 +737,22 @@ function RiskSparkline({ points, color }) {
   const max = Math.max(...values, 0);
   const range = max - min || 1;
 
-  const path = points
-    .map((point, index) => {
-      const x = (index / (points.length - 1)) * width;
-      const y = height - ((point.net - min) / range) * height;
-      return `${index ? "L" : "M"} ${x.toFixed(1)} ${y.toFixed(1)}`;
-    })
-    .join(" ");
+  const path = points.
+  map((point, index) => {
+    const x = index / (points.length - 1) * width;
+    const y = height - (point.net - min) / range * height;
+    return `${index ? "L" : "M"} ${x.toFixed(1)} ${y.toFixed(1)}`;
+  }).
+  join(" ");
 
-  const zeroY = height - ((0 - min) / range) * height;
+  const zeroY = height - (0 - min) / range * height;
 
   return (
     <svg className="balance-sparkline" viewBox={`0 0 ${width} ${height}`} width="100%" height={height} preserveAspectRatio="none">
       <line x1="0" y1={zeroY} x2={width} y2={zeroY} stroke="rgba(255,255,255,0.15)" strokeWidth="1" strokeDasharray="3,3" />
       <path d={path} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
+    </svg>);
+
 }
 
 function MetricCard({ label, value, sub, status, color, tooltipId, openTooltip, setOpenTooltip, footer }) {
@@ -763,30 +763,30 @@ function MetricCard({ label, value, sub, status, color, tooltipId, openTooltip, 
       style={{
         background: "linear-gradient(152deg, rgba(255,255,255,0.04), rgba(255,255,255,0.008))",
         borderColor: "rgba(255,255,255,0.09)",
-        boxShadow: "0 8px 32px rgba(0,0,0,0.12), inset 0 1px 1px rgba(255,255,255,0.10), inset 0 0 28px rgba(91,168,138,0.025)",
-      }}
-    >
+        boxShadow: "0 8px 32px rgba(0,0,0,0.12), inset 0 1px 1px rgba(255,255,255,0.10), inset 0 0 28px rgba(91,168,138,0.025)"
+      }}>
+      
       <div
         aria-hidden="true"
         className="pointer-events-none absolute -inset-6 opacity-50"
         style={{
-          background: "radial-gradient(circle at 30% 0%, rgba(91,168,138,0.07), transparent 50%), radial-gradient(circle at 90% 100%, rgba(255,255,255,0.05), transparent 45%)",
-        }}
-      />
+          background: "radial-gradient(circle at 30% 0%, rgba(91,168,138,0.07), transparent 50%), radial-gradient(circle at 90% 100%, rgba(255,255,255,0.05), transparent 45%)"
+        }} />
+      
       <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2">
         <AmbientOrb color={color} />
       </div>
 
       <div className="relative z-10 mb-1 flex items-start justify-between gap-2">
         <span className="text-[10px] font-semibold uppercase tracking-wider text-white/35">{label}</span>
-        {tooltipId && (
-          <button
-            onClick={() => setOpenTooltip(openTooltip === tooltipId ? null : tooltipId)}
-            className="text-white/20 transition-colors hover:text-white/50"
-          >
+        {tooltipId &&
+        <button
+          onClick={() => setOpenTooltip(openTooltip === tooltipId ? null : tooltipId)}
+          className="text-white/20 transition-colors hover:text-white/50">
+          
             <Info className="h-3 w-3" />
           </button>
-        )}
+        }
       </div>
 
       <div className="relative z-10 mt-1">
@@ -797,13 +797,13 @@ function MetricCard({ label, value, sub, status, color, tooltipId, openTooltip, 
       <span className="relative z-10 mt-2 text-xs font-semibold" style={{ color }}>
         {status}
       </span>
-      {footer && (
-        <div className="relative z-10 mt-3 space-y-1.5 border-t border-white/10 pt-3">
+      {footer &&
+      <div className="relative z-10 mt-3 space-y-1.5 border-t border-white/10 pt-3">
           {footer}
         </div>
-      )}
-    </motion.div>
-  );
+      }
+    </motion.div>);
+
 }
 
 const TREND_ICONS = {
@@ -811,7 +811,7 @@ const TREND_ICONS = {
   "up-right": ArrowUpRight,
   right: ArrowRight,
   "down-right": ArrowDownRight,
-  down: ArrowDown,
+  down: ArrowDown
 };
 
 function SupportiveGlucoseMessage({ insight, trend, TrendIcon }) {
@@ -819,18 +819,18 @@ function SupportiveGlucoseMessage({ insight, trend, TrendIcon }) {
 
   return (
     <div
-      className="mx-auto mt-2.5 mb-0.5 flex max-w-[92vw] items-center justify-center gap-2 rounded-full px-3.5 py-1.5"
-      style={{ background: "rgba(255,255,255,0.015)" }}
-    >
-      {TrendIcon && (
-        <TrendIcon className="h-3.5 w-3.5 shrink-0" style={{ color: trend?.color || "rgba(255,255,255,0.45)" }} />
-      )}
+      className="mx-auto mt-2.5 mb-0.5 flex max-w-[92vw] items-center justify-center gap-2 rounded-full px-3.5 py-1.5 hidden"
+      style={{ background: "rgba(255,255,255,0.015)" }}>
+      
+      {TrendIcon &&
+      <TrendIcon className="h-3.5 w-3.5 shrink-0" style={{ color: trend?.color || "rgba(255,255,255,0.45)" }} />
+      }
       <p className="text-[11px] font-medium leading-tight text-white/50">
         {insight.message}
       </p>
       <div className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: "#61d1b3", boxShadow: "0 0 6px rgba(97,209,179,0.6)" }} />
-    </div>
-  );
+    </div>);
+
 }
 
 export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucoseReadings = [], carbEntries = [], graphSlot = null, onEditGlucose = null }) {
@@ -839,7 +839,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
   const [targetRange, setTargetRange] = useState(readTargetRange);
   const [centerGlucoseStatus, setCenterGlucoseStatus] = useState(null);
   const [nowMinute, setNowMinute] = useState(() =>
-    Math.floor(Date.now() / MINUTE_MS)
+  Math.floor(Date.now() / MINUTE_MS)
   );
   const { connected: dexcomConnected } = useDexcomConnection();
   const safeDoses = Array.isArray(doses) ? doses : [];
@@ -919,28 +919,28 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
   const activeCorrectionUnits = useMemo(() => getTotalCorrectionIOB(mealCoverageDoses, Date.now()), [mealCoverageDoses, nowMinute]);
   const activeInsulinBreakdown = useMemo(() => {
     const now = Date.now();
-    return safeDoses
-      .map((dose) => {
-        const iob = getDoseIOB(dose, now);
-        if (iob < 0.5) return null;
+    return safeDoses.
+    map((dose) => {
+      const iob = getDoseIOB(dose, now);
+      if (iob < 0.5) return null;
 
-          const profile = getInsulinProfile(dose.insulin_type);
-          const status = getDoseStatus(dose, now);
-          return {
-            id: dose.id,
-            type: dose.insulin_type,
-            shortName: dose.insulin_type?.split(" ")[0] || "Insulin",
-            category: profile?.category || "Insulin",
-            color: profile?.color || "#5ba3b8",
-            iob,
-            units: Number(dose.units) || 0,
-            statusLabel: status.label,
-            timingInfo: getDoseTimingInfo(dose, now),
-            time: getDoseTime(dose),
-          };
-      })
-      .filter(Boolean)
-      .sort((a, b) => b.iob - a.iob);
+      const profile = getInsulinProfile(dose.insulin_type);
+      const status = getDoseStatus(dose, now);
+      return {
+        id: dose.id,
+        type: dose.insulin_type,
+        shortName: dose.insulin_type?.split(" ")[0] || "Insulin",
+        category: profile?.category || "Insulin",
+        color: profile?.color || "#5ba3b8",
+        iob,
+        units: Number(dose.units) || 0,
+        statusLabel: status.label,
+        timingInfo: getDoseTimingInfo(dose, now),
+        time: getDoseTime(dose)
+      };
+    }).
+    filter(Boolean).
+    sort((a, b) => b.iob - a.iob);
   }, [safeDoses, nowMinute]);
   const activeCarbs = useMemo(() => getActiveCarbsNow(safeCarbEntries), [safeCarbEntries, nowMinute]);
 
@@ -951,9 +951,9 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
 
   const worstPoint = useMemo(() => {
     if (!trajectory.peak || !trajectory.trough) return null;
-    return Math.abs(trajectory.peak.net) >= Math.abs(trajectory.trough.net)
-      ? trajectory.peak
-      : trajectory.trough;
+    return Math.abs(trajectory.peak.net) >= Math.abs(trajectory.trough.net) ?
+    trajectory.peak :
+    trajectory.trough;
   }, [trajectory]);
 
   const highProteinFatStatus = useMemo(
@@ -963,21 +963,21 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
 
   const mealInsightRaw = useMemo(
     () =>
-      computeMealAlignmentInsight(
-        safeDoses,
-        safeCarbEntries,
-        safeGlucoseReadings,
-        latestGlucose,
-        insulinSettings
-      ),
-    [
+    computeMealAlignmentInsight(
       safeDoses,
       safeCarbEntries,
       safeGlucoseReadings,
       latestGlucose,
-      insulinSettings,
-      nowMinute,
-    ]
+      insulinSettings
+    ),
+    [
+    safeDoses,
+    safeCarbEntries,
+    safeGlucoseReadings,
+    latestGlucose,
+    insulinSettings,
+    nowMinute]
+
   );
 
   const [resolvedMealIds, setResolvedMealIds] = useState(() => {
@@ -994,9 +994,9 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
   // When the user marks a meal as resolved, override the review flag so both
   // the card and tooltip present the completed state immediately.
   const mealInsight =
-    isMealResolved && mealInsightRaw?.details
-      ? { ...mealInsightRaw, details: { ...mealInsightRaw.details, mealStillUnderReview: false } }
-      : mealInsightRaw;
+  isMealResolved && mealInsightRaw?.details ?
+  { ...mealInsightRaw, details: { ...mealInsightRaw.details, mealStillUnderReview: false } } :
+  mealInsightRaw;
 
   const handleResolveMeal = () => {
     if (!currentMealId) return;
@@ -1013,37 +1013,37 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
   const isPeakInFuture = Boolean(netPeakTime && netPeakTime > Date.now() + 60000);
   const needsInsulinPlan = !insulinSettings.isComplete;
   const correctionOnlyActive =
-    activeCorrectionUnits > 0.01 &&
-    activeMealUnits <= 0.01 &&
-    activeCarbs <= 0.5;
+  activeCorrectionUnits > 0.01 &&
+  activeMealUnits <= 0.01 &&
+  activeCarbs <= 0.5;
 
-  const netValue = needsInsulinPlan
-    ? "Setup needed"
-    : correctionOnlyActive
-      ? "Correction active"
-      : netActiveCarbs > 5
-        ? "High Carb Activity"
-        : netActiveCarbs < -5
-          ? "High Insulin Activity"
-          : "In balance";
+  const netValue = needsInsulinPlan ?
+  "Setup needed" :
+  correctionOnlyActive ?
+  "Correction active" :
+  netActiveCarbs > 5 ?
+  "High Carb Activity" :
+  netActiveCarbs < -5 ?
+  "High Insulin Activity" :
+  "In balance";
 
-  const netLabel = needsInsulinPlan
-    ? "Add insulin plan in Settings"
-    : correctionOnlyActive
-      ? "No meal carbs digesting"
-      : netActiveCarbs > 5
-        ? "Glucose may rise"
-        : netActiveCarbs < -5
-          ? "Glucose may fall"
-          : "Carbs and insulin are aligned";
+  const netLabel = needsInsulinPlan ?
+  "Add insulin plan in Settings" :
+  correctionOnlyActive ?
+  "No meal carbs digesting" :
+  netActiveCarbs > 5 ?
+  "Glucose may rise" :
+  netActiveCarbs < -5 ?
+  "Glucose may fall" :
+  "Carbs and insulin are aligned";
 
-  const netColor = needsInsulinPlan || correctionOnlyActive
-    ? "#d4a056"
-    : netActiveCarbs > 5
-      ? "#c97060"
-      : netActiveCarbs < -5
-        ? "#6b92c4"
-        : "#5ba88a";
+  const netColor = needsInsulinPlan || correctionOnlyActive ?
+  "#d4a056" :
+  netActiveCarbs > 5 ?
+  "#c97060" :
+  netActiveCarbs < -5 ?
+  "#6b92c4" :
+  "#5ba88a";
 
   const dailyAverage = useMemo(() => {
     const today = new Date();
@@ -1079,52 +1079,52 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
   const glucoseValue = latestGlucose?.value;
   const targetLow = targetRange.low;
   const targetHigh = targetRange.high;
-  const glucoseColor = !glucoseValue
-    ? GLUCOSE_STATUS_COLORS.inRange
-    : glucoseValue < targetLow
-      ? GLUCOSE_STATUS_COLORS.low
-      : glucoseValue > targetHigh
-        ? GLUCOSE_STATUS_COLORS.high
-        : GLUCOSE_STATUS_COLORS.inRange;
+  const glucoseColor = !glucoseValue ?
+  GLUCOSE_STATUS_COLORS.inRange :
+  glucoseValue < targetLow ?
+  GLUCOSE_STATUS_COLORS.low :
+  glucoseValue > targetHigh ?
+  GLUCOSE_STATUS_COLORS.high :
+  GLUCOSE_STATUS_COLORS.inRange;
 
   const inRange = glucoseValue == null ? null : glucoseValue >= targetLow && glucoseValue <= targetHigh;
   const rangeCardLabel =
-    glucoseValue == null
-      ? "No data"
-      : glucoseValue < targetLow
-        ? "Below comfort zone"
-        : glucoseValue > targetHigh
-          ? "Above comfort zone"
-          : "In comfort zone";
+  glucoseValue == null ?
+  "No data" :
+  glucoseValue < targetLow ?
+  "Below comfort zone" :
+  glucoseValue > targetHigh ?
+  "Above comfort zone" :
+  "In comfort zone";
   const rangeSparkColor =
-    glucoseValue == null
-      ? `${GLUCOSE_STATUS_COLORS.inRange}88`
-      : glucoseValue < targetLow
-        ? `${GLUCOSE_STATUS_COLORS.low}88`
-        : glucoseValue > targetHigh
-          ? `${GLUCOSE_STATUS_COLORS.high}88`
-          : `${GLUCOSE_STATUS_COLORS.inRange}88`;
-  const glucoseReadingAgeMinutes = latestGlucose?.recorded_at
-    ? Math.floor((Date.now() - new Date(latestGlucose.recorded_at).getTime()) / MINUTE_MS)
-    : null;
+  glucoseValue == null ?
+  `${GLUCOSE_STATUS_COLORS.inRange}88` :
+  glucoseValue < targetLow ?
+  `${GLUCOSE_STATUS_COLORS.low}88` :
+  glucoseValue > targetHigh ?
+  `${GLUCOSE_STATUS_COLORS.high}88` :
+  `${GLUCOSE_STATUS_COLORS.inRange}88`;
+  const glucoseReadingAgeMinutes = latestGlucose?.recorded_at ?
+  Math.floor((Date.now() - new Date(latestGlucose.recorded_at).getTime()) / MINUTE_MS) :
+  null;
   const supportiveGlucoseInsight = useMemo(
     () =>
-      getSupportiveGlucoseMessage({
-        glucose: latestGlucose,
-        targetLow,
-        targetHigh,
-        trend,
-        activeInsulin: activeUnits,
-        activeCarbs,
-        readingAgeMinutes: glucoseReadingAgeMinutes,
-        seed: latestGlucose?.id || latestGlucose?.recorded_at || `${Math.floor(Date.now() / (30 * MINUTE_MS))}`,
-      }),
+    getSupportiveGlucoseMessage({
+      glucose: latestGlucose,
+      targetLow,
+      targetHigh,
+      trend,
+      activeInsulin: activeUnits,
+      activeCarbs,
+      readingAgeMinutes: glucoseReadingAgeMinutes,
+      seed: latestGlucose?.id || latestGlucose?.recorded_at || `${Math.floor(Date.now() / (30 * MINUTE_MS))}`
+    }),
     [latestGlucose, targetLow, targetHigh, trend, activeUnits, activeCarbs, glucoseReadingAgeMinutes]
   );
   const TrendIcon = TREND_ICONS[trend.icon] || ArrowRight;
 
   const stackingAlertsEnabled =
-    typeof window !== "undefined" && window.localStorage.getItem("stacking_alerts_enabled") !== "false";
+  typeof window !== "undefined" && window.localStorage.getItem("stacking_alerts_enabled") !== "false";
 
   // Counts rapid/short-acting doses that still hold meaningful insulin on
   // board. Uses the same 0.5u IOB threshold as the IOB card's breakdown so the
@@ -1153,8 +1153,8 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
         onClose={() => setOpenTooltip(null)}
         monitoringStatus={highProteinFatStatus}
         glucoseTrend={trend}
-        onResolve={handleResolveMeal}
-      />
+        onResolve={handleResolveMeal} />
+      
 
       <div className="relative -mx-4 px-4 pb-6 pt-2">
         <div className="relative z-10 grid grid-cols-2 gap-3">
@@ -1166,47 +1166,47 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
             trend={trend}
             rangeCardLabel={rangeCardLabel}
             readingAgeLabel={
-              latestGlucose?.recorded_at
-                ? formatClockTime(new Date(latestGlucose.recorded_at).getTime())
-                : null
+            latestGlucose?.recorded_at ?
+            formatClockTime(new Date(latestGlucose.recorded_at).getTime()) :
+            null
             }
             onEdit={onEditGlucose}
-            isStale={isGlucoseStale}
-          />
+            isStale={isGlucoseStale} />
+          
         </div>
 
-        {isGlucoseStale ? (
-          <StaleReadingBanner visible={isGlucoseStale} />
-        ) : (
-          <SupportiveGlucoseMessage insight={supportiveGlucoseInsight} trend={trend} TrendIcon={TrendIcon} />
-        )}
+        {isGlucoseStale ?
+        <StaleReadingBanner visible={isGlucoseStale} /> :
+
+        <SupportiveGlucoseMessage insight={supportiveGlucoseInsight} trend={trend} TrendIcon={TrendIcon} />
+        }
 
         <div
           className="stackd-graph-canvas relative mt-3 overflow-hidden rounded-3xl border border-white/[0.07] pb-1"
           style={{
             background: "linear-gradient(165deg, rgba(255,255,255,0.035), rgba(255,255,255,0.006))",
-            boxShadow: "0 6px 28px rgba(0,0,0,0.10), inset 0 1px 1px rgba(255,255,255,0.06)",
-          }}
-        >
+            boxShadow: "0 6px 28px rgba(0,0,0,0.10), inset 0 1px 1px rgba(255,255,255,0.06)"
+          }}>
+          
           {(() => {
             // Use the scroll marker's status when available; fall back to the
             // latest reading when the graph hasn't reported yet.
-            const status = isGlucoseStale ? null : (centerGlucoseStatus?.status ?? classifyGlucose(glucoseValue, targetLow, targetHigh));
+            const status = isGlucoseStale ? null : centerGlucoseStatus?.status ?? classifyGlucose(glucoseValue, targetLow, targetHigh);
             const isActive = !isGlucoseStale && (status === "high" || status === "low" || status === "in_range");
-            const glowColor = status === "high"
-              ? GLUCOSE_STATUS_COLORS.high
-              : status === "low"
-                ? GLUCOSE_STATUS_COLORS.low
-                : "#2dd4bf";
+            const glowColor = status === "high" ?
+            GLUCOSE_STATUS_COLORS.high :
+            status === "low" ?
+            GLUCOSE_STATUS_COLORS.low :
+            "#2dd4bf";
             // 100% glow over target range, 150% when over the high/low reference line.
-            const overReference = isGlucoseStale ? false : (centerGlucoseStatus?.overReference
-              ?? (glucoseValue != null && (glucoseValue > readHighReference() || glucoseValue < FIXED_LOW_REFERENCE)));
+            const overReference = isGlucoseStale ? false : centerGlucoseStatus?.overReference ?? (
+            glucoseValue != null && (glucoseValue > readHighReference() || glucoseValue < FIXED_LOW_REFERENCE));
             // The color lives in a solid background-color (which the browser
             // can interpolate) and the soft top-to-bottom fade is shaped by a
             // static mask, so transitions between teal / amber / red cross-fade
             // instead of snapping.
             const maskFade = "linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.7) 14%, rgba(0,0,0,0.35) 55%, transparent 100%)";
-            const glowOpacity = isActive ? (overReference ? 0.6 : 0.4) : 0;
+            const glowOpacity = isActive ? overReference ? 0.6 : 0.4 : 0;
             return (
               <div
                 aria-hidden="true"
@@ -1218,16 +1218,16 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
                   maskImage: maskFade,
                   WebkitMaskImage: maskFade,
                   boxShadow: overReference ? `inset 0 30px 80px -30px ${glowColor}aa` : "none",
-                  transition: "opacity 700ms ease-out, background-color 700ms ease-out, box-shadow 700ms ease-out",
-                }}
-              />
-            );
+                  transition: "opacity 700ms ease-out, background-color 700ms ease-out, box-shadow 700ms ease-out"
+                }} />);
+
+
           })()}
           {graphSlot}
         </div>
 
-        {stackingAlertsEnabled && activeRapidCount > 1 && (
-          <div className="dashboard-stacking-alert backdrop-blur-sm mx-0 mt-4 flex w-full max-w-full min-w-0 items-start gap-3 overflow-hidden rounded-xl border border-white/10 p-4 pb-3">
+        {stackingAlertsEnabled && activeRapidCount > 1 &&
+        <div className="dashboard-stacking-alert backdrop-blur-sm mx-0 mt-4 flex w-full max-w-full min-w-0 items-start gap-3 overflow-hidden rounded-xl border border-white/10 p-4 pb-3">
             <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
             <div className="min-w-0">
               <p className="text-sm font-semibold text-white">Multiple Active Doses</p>
@@ -1236,18 +1236,18 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
               </p>
             </div>
           </div>
-        )}
+        }
 
         <p className={`text-legible mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-white ${CLEAN_LAYOUT ? "mt-6 opacity-70" : "mt-4"}`}>Your Rhythm</p>
         <div className="grid grid-cols-1 gap-3">
           <MealBalanceCard
             mealInsight={mealInsight}
             highProteinFatStatus={highProteinFatStatus}
-            onOpenTooltip={() => setOpenTooltip("net-carbs")}
-          />
+            onOpenTooltip={() => setOpenTooltip("net-carbs")} />
+          
           <InsulinOnBoardCard totalUnits={activeUnits} breakdown={activeInsulinBreakdown} />
         </div>
       </div>
-    </>
-  );
+    </>);
+
 }
