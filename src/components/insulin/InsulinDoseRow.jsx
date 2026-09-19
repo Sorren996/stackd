@@ -51,8 +51,8 @@ export default function InsulinDoseRow({ dose, regimenStatus = null }) {
     const H = 100;
     const maxActivity = Math.max(...curve.map((p) => p.activity), 0.001);
     const pts = curve.map((p, i) => ({
-      x: (i / (curve.length - 1)) * W,
-      y: H - (p.activity / maxActivity) * H * 0.82 - 8,
+      x: i / (curve.length - 1) * W,
+      y: H - p.activity / maxActivity * H * 0.82 - 8
     }));
     const line = pts.map((p, i) => `${i ? "L" : "M"} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(" ");
     const area = `${line} L ${W} ${H} L 0 ${H} Z`;
@@ -68,7 +68,7 @@ export default function InsulinDoseRow({ dose, regimenStatus = null }) {
     const hi = Math.min(lo + 1, curve.length - 1);
     const frac = idx - lo;
     const activity = curve[lo].activity + (curve[hi].activity - curve[lo].activity) * frac;
-    return 100 - (activity / maxActivity) * 100 * 0.82 - 8;
+    return 100 - activity / maxActivity * 100 * 0.82 - 8;
   }, [curve, progress]);
   const formattedUnits = units % 1 === 0 ? String(units) : units.toFixed(1);
   // Display-only: IOB is always shown as a whole number for visual consistency
@@ -83,29 +83,29 @@ export default function InsulinDoseRow({ dose, regimenStatus = null }) {
           <span className="truncate text-xs font-semibold text-white/85">{shortName}</span>
           <span className="shrink-0 text-[10px] text-white/40">· {formattedUnits}u dose</span>
         </div>
-        {isBasal ? (
-          <span className="flex shrink-0 items-center gap-1.5">
+        {isBasal ?
+        <span className="flex shrink-0 items-center gap-1.5 hidden">
             <span
-              className="h-1.5 w-1.5 rounded-full"
-              style={{
-                background: basalContribution === "No longer contributing" ? "rgba(255,255,255,0.2)" : color,
-                boxShadow: basalContribution === "No longer contributing" ? "none" : `0 0 5px ${color}80`,
-              }}
-            />
+            className="h-1.5 w-1.5 rounded-full"
+            style={{
+              background: basalContribution === "No longer contributing" ? "rgba(255,255,255,0.2)" : color,
+              boxShadow: basalContribution === "No longer contributing" ? "none" : `0 0 5px ${color}80`
+            }} />
+          
             <span className="text-[10px] font-medium text-white/45">
               {basalContribution === "No longer contributing" ? "Faded" : "Ongoing"}
             </span>
-          </span>
-        ) : (
-          <span className="shrink-0 text-sm font-bold text-white">
+          </span> :
+
+        <span className="shrink-0 text-sm font-bold text-white">
             {formattedIob}u <span className="text-[10px] font-medium text-white/40">active</span>
           </span>
-        )}
+        }
       </div>
 
       <div className="relative mt-2 h-6">
-        {pathData ? (
-          <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+        {pathData ?
+        <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
             <defs>
               <clipPath id={clipId}>
                 <rect x="0" y="0" width={markerPct} height="100" />
@@ -117,13 +117,13 @@ export default function InsulinDoseRow({ dose, regimenStatus = null }) {
               <path d={pathData.area} fill={color} opacity="0.26" />
               <path d={pathData.line} fill="none" stroke={color} strokeWidth="2" vectorEffect="non-scaling-stroke" />
             </g>
-          </svg>
-        ) : (
-          <div className="relative h-full overflow-hidden rounded-full" style={{ background: "rgba(255,255,255,0.05)" }}>
+          </svg> :
+
+        <div className="relative h-full overflow-hidden rounded-full" style={{ background: "rgba(255,255,255,0.05)" }}>
             <div className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${markerPct}%`, background: `linear-gradient(90deg, ${color}20, ${color}40)` }} />
             <div className="absolute inset-y-0" style={{ left: `${markerPct}%`, right: 0, background: `linear-gradient(90deg, ${color}80, ${color}30)` }} />
           </div>
-        )}
+        }
         <div className="pointer-events-none absolute bottom-0 top-0" style={{ left: `${markerPct}%` }}>
           <div className="h-full w-px bg-white/40" />
           <div className="absolute h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white" style={{ top: `${markerY}%`, boxShadow: `0 0 5px ${color}` }} />
@@ -131,17 +131,17 @@ export default function InsulinDoseRow({ dose, regimenStatus = null }) {
       </div>
 
       <div className="mt-1.5 flex items-center justify-between">
-        <span className="text-[10px] text-white/50">{isBasal ? (basalContribution === "No longer contributing" ? "Gently settling" : "Background activity") : statusLabel}</span>
-        {isBasal ? (
-          <span className="text-[10px] font-medium text-white/40">
+        <span className="text-[10px] text-white/50">{isBasal ? basalContribution === "No longer contributing" ? "Gently settling" : "Background activity" : statusLabel}</span>
+        {isBasal ?
+        <span className="text-[10px] font-medium text-white/40">
             {takenAgoLabel ? `Taken ${takenAgoLabel}` : ""}
-          </span>
-        ) : (
-          <span className="text-[10px] font-medium" style={{ color: isSettling ? "rgba(255,255,255,0.35)" : color }}>
+          </span> :
+
+        <span className="text-[10px] font-medium" style={{ color: isSettling ? "rgba(255,255,255,0.35)" : color }}>
             {isSettling ? "Gently settling" : `~${formatMinutes(remainingMin)} remaining`}
           </span>
-        )}
+        }
       </div>
-    </div>
-  );
+    </div>);
+
 }
