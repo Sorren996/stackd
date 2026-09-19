@@ -7,6 +7,8 @@ import LandingHero from "@/components/landing/LandingHero";
 import LandingHowItWorks from "@/components/landing/LandingHowItWorks";
 import LandingFeatures from "@/components/landing/LandingFeatures";
 import LandingFAQ from "@/components/landing/LandingFAQ";
+import InstallGuide from "@/components/landing/InstallGuide";
+import LandingFooter from "@/components/landing/LandingFooter";
 
 const STATS = ["19-page guided flow", "Dexcom optional", "Manual logs welcome", "Split-dose aware"];
 
@@ -188,6 +190,8 @@ export default function Landing() {
 
       <LandingFAQ />
 
+      <InstallGuide />
+
       {/* FINAL CTA */}
       <section className="px-4 py-24 md:py-32">
         <motion.div
@@ -219,26 +223,7 @@ export default function Landing() {
         </motion.div>
       </section>
 
-      {/* FOOTER */}
-      <footer
-        className="px-4 py-12"
-        style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
-      >
-        <div className="mx-auto max-w-5xl">
-          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-sm">
-            <a href="#top" className="font-bold text-white">Stackd</a>
-            <span className="text-white/15">|</span>
-            <Link to="/login" className="text-white/55 transition-colors hover:text-white">Sign in</Link>
-            <Link to="/register" className="text-white/55 transition-colors hover:text-white">Create account</Link>
-            <span className="text-white/55">Privacy</span>
-            <span className="text-white/55">Contact</span>
-          </div>
-          <p className="mx-auto mt-6 max-w-xl text-center text-xs leading-relaxed text-white/35">
-            Stackd is a review and organization tool, not a medical device, and
-            does not provide medical advice.
-          </p>
-        </div>
-      </footer>
+      <LandingFooter />
     </div>
   );
 }

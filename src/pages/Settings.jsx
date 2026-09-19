@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/AuthContext";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
-import { Activity, User, Shield, LogOut, Loader2, HeartPulse, LineChart, LifeBuoy, Inbox, Leaf } from "lucide-react";
+import { Activity, User, Shield, LogOut, Loader2, HeartPulse, LineChart, LifeBuoy, Inbox, Leaf, Smartphone } from "lucide-react";
 import { toast } from "sonner";
 import { SettingsGroup, SettingsRow } from "@/components/settings/SettingsList";
 import SensorSessionCard from "@/components/settings/SensorSessionCard";
@@ -69,6 +69,12 @@ export default function Settings() {
           icon={LineChart}
           title="Display"
           subtext={`Graph max: ${graphHeight} mg/dL`}
+        />
+        <SettingsRow
+          to="/install"
+          icon={Smartphone}
+          title="Add to Home Screen"
+          subtext="Install Stackd as an app on your iPhone"
         />
         <SettingsRow
           to="/settings/support-creator"

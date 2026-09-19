@@ -2,6 +2,9 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 
+const LOGO_URL =
+  "https://media.base44.com/images/public/6a1b93f234a8611ee1595134/1b816d1eb_stackdappiconver3.png";
+
 const NAV_LINKS = [
   { label: "How it works", href: "#how-it-works" },
   { label: "Features", href: "#features" },
@@ -22,8 +25,15 @@ export default function LandingNav() {
       }}
     >
       <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
-        <a href="#top" className="text-xl font-bold tracking-tight text-white">
-          Stackd
+        <a href="#top" className="flex items-center gap-2">
+          <img
+            src={LOGO_URL}
+            alt="Stackd logo"
+            className="h-8 w-8 rounded-lg object-contain"
+          />
+          <span className="text-xl font-bold tracking-tight text-white">
+            Stackd
+          </span>
         </a>
 
         <div className="hidden items-center gap-8 md:flex">

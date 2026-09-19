@@ -13,6 +13,7 @@ import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import Landing from './pages/Landing';
+import Install from './pages/Install';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import History from './pages/History';
@@ -227,6 +228,7 @@ const AuthenticatedApp = () => {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/" element={<Landing />} />
+        <Route path="/install" element={<Install />} />
         <Route path="*" element={<SplashScreen showAuth />} />
       </Routes>
     );
@@ -266,6 +268,7 @@ const AuthenticatedApp = () => {
             <Route path="/settings/support-inbox" element={<SupportInbox />} />
             <Route path="/split-plan/:planId" element={<SplitPlanReview />} />
           </Route>
+          <Route path="/install" element={<Install />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </ErrorBoundary>
