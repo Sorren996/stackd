@@ -60,7 +60,7 @@ export default function InsulinOnBoardCard({ totalUnits, breakdown, basalRegimen
   return (
     <motion.div
       whileTap={{ scale: 0.985 }}
-      className="metric-card stackd-card relative col-span-2 overflow-hidden rounded-2xl p-4"
+      className="relative col-span-2 overflow-hidden rounded-2xl p-4"
     >
       <div className="relative z-10 flex items-center justify-between">
         <div className="flex flex-col gap-0.5">

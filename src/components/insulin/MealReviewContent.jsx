@@ -116,7 +116,7 @@ export default function MealReviewContent({ mealInsight, monitoringStatus, gluco
   if (!mealInsight.details) {
     const needsSetup = mealInsight.value === "Setup needed";
     return (
-      <div className="stackd-card relative overflow-hidden rounded-2xl p-4">
+      <div className="relative overflow-hidden rounded-2xl p-4">
         <div className="space-y-4">
           <div
             className="flex items-start gap-2.5 rounded-xl border p-3"
@@ -197,7 +197,7 @@ export default function MealReviewContent({ mealInsight, monitoringStatus, gluco
     : PALETTE.muted;
 
   return (
-    <div className="stackd-card relative overflow-hidden rounded-2xl p-4">
+    <div className="relative overflow-hidden rounded-2xl p-4">
       <div className="flex flex-col">
         {/* PRIMARY MEAL STATUS */}
         <section className="px-1 pt-1 pb-4">
