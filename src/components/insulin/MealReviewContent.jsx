@@ -1,10 +1,14 @@
-import { CheckCircle2, Clock } from "lucide-react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
+import { CheckCircle2, Clock, ChevronDown, ChevronUp } from "lucide-react";
 
 const RESCUE_COLOR = "#a78bfa";
 const PALETTE = {
   green: "#58a97c",
   amber: "#d4a056",
   muted: "#8a9496",
+  bolus: "#5ba3b8",
 };
 
 const TREND_ARROW = {
@@ -15,8 +19,13 @@ const TREND_ARROW = {
   down: "↓",
 };
 
+function roundUnits(v) {
+  return Math.round(Number(v) || 0);
+}
+
 function formatElapsed(ms) {
-  const totalMin = Math.max(0, Math.round(ms / 60000));
+  if (!Number.isFinite(ms) || ms < 0) return null;
+  const totalMin = Math.round(ms / 60000);
   const h = Math.floor(totalMin / 60);
   const m = totalMin % 60;
   if (h && m) return `${h}h ${m}m`;
@@ -28,35 +37,148 @@ function SectionLabel({ children }) {
   return <p className="stackd-section-label">{children}</p>;
 }
 
-function DetailRow({ label, value, color }) {
+/**
+ * Similar Meals — fetches historical MealResponseAnalysis records with
+ * similar carbohydrate amounts and shows how they actually behaved.
+ * Observational only; never produces a dosing recommendation.
+ */
+function useSimilarMeals(mealCarbs, enabled) {
+  return useQuery({
+    queryKey: ["similar-meals", mealCarbs],
+    queryFn: async () => {
+      const records = await base44.entities.MealResponseAnalysis.list("-meal_time", 100);
+      if (!Array.isArray(records) || !mealCarbs) return [];
+      const tolerance = Math.max(10, mealCarbs * 0.2);
+      return records
+        .filter(
+          (r) =>
+            r.analysis_status === "complete" &&
+            Number.isFinite(r.carbs_logged) &&
+            Number.isFinite(r.peak_glucose) &&
+            Math.abs(r.carbs_logged - mealCarbs) <= tolerance
+        )
+        .slice(0, 5);
+    },
+    enabled: enabled && mealCarbs > 0,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+function SimilarMealsSection({ mealCarbs }) {
+  const { data: similarMeals } = useSimilarMeals(mealCarbs, true);
+  const meals = similarMeals || [];
+
+  if (meals.length < 1) return null;
+
+  const peaks = meals.map((m) => Number(m.peak_glucose)).filter(Number.isFinite);
+  const timesToPeak = meals
+    .map((m) => {
+      if (!m.peak_time || !m.meal_time) return null;
+      return (new Date(m.peak_time).getTime() - new Date(m.meal_time).getTime()) / 60000;
+    })
+    .filter(Number.isFinite);
+
+  const avgPeak = peaks.length ? Math.round(peaks.reduce((s, p) => s + p, 0) / peaks.length) : null;
+  const avgTimeToPeak = timesToPeak.length
+    ? formatElapsed((timesToPeak.reduce((s, t) => s + t, 0) / timesToPeak.length) * 60000)
+    : null;
+
   return (
-    <div className="flex items-center justify-between py-1.5">
-      <span className="text-[12px] text-white/50">{label}</span>
-      <span className="text-[13px] font-bold" style={{ color: color || "rgba(255,255,255,0.9)" }}>
-        {value}
-      </span>
-    </div>
+    <section>
+      <SectionLabel>Similar Meals</SectionLabel>
+      <div className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+        <span className="text-sm text-white/50">
+          {meals.length} previous meal{meals.length === 1 ? "" : "s"}
+        </span>
+        {avgPeak && <span className="text-[11px] text-white/40">Avg peak {avgPeak} mg/dL</span>}
+        {avgTimeToPeak && <span className="text-[11px] text-white/40">Avg to peak {avgTimeToPeak}</span>}
+      </div>
+      <div className="mt-2 space-y-1.5">
+        {meals.slice(0, 3).map((m) => {
+          const timeToPeak =
+            m.peak_time && m.meal_time
+              ? formatElapsed(new Date(m.peak_time).getTime() - new Date(m.meal_time).getTime())
+              : null;
+          return (
+            <div
+              key={m.id}
+              className="flex items-center justify-between rounded-lg border border-white/[0.06] px-3 py-2"
+              style={{ background: "rgba(255,255,255,0.02)" }}
+            >
+              <span className="text-[11px] text-white/60">{Math.round(m.carbs_logged)}g carbs</span>
+              <span className="text-[11px] text-white/50">Peak {Math.round(m.peak_glucose)} mg/dL</span>
+              {timeToPeak && <span className="text-[11px] text-white/40">{timeToPeak} to peak</span>}
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
-function SummaryCell({ label, value, sub }) {
+function HowCalculatedSection({ d }) {
+  const [open, setOpen] = useState(false);
+
+  const mealCarbs = Math.round(d.meal?.carbs || 0);
+  const gramsPerUnit = d.gramsPerUnit;
+  const mealUnits = roundUnits(d.expectedMealUnits);
+  const hasCorrection = d.correctionGlucoseAvailable && d.correctionUnitsNeeded > 0.01;
+  const correctionUnits = roundUnits(d.correctionUnitsNeeded);
+  const totalEstimate = roundUnits(d.grossDoseEstimate);
+  const glucoseAtStart = Math.round(d.correctionGlucoseValue || 0);
+  const target = Math.round(d.correctionTargetGlucose || 0);
+  const sensitivity = d.insulinSensitivityMgDlPerUnit;
+
   return (
-    <div className="flex flex-col items-center px-1 text-center">
-      <p className="text-lg font-bold text-white whitespace-nowrap">{value}</p>
-      <p className="mt-0.5 text-[9px] font-semibold uppercase tracking-wider text-white/40">{label}</p>
-      {sub && <p className="mt-0.5 text-[9px]" style={{ color: PALETTE.muted }}>{sub}</p>}
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-1 text-[11px] font-medium text-white/40 transition hover:text-white/60"
+      >
+        How is this calculated?
+        {open ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+      </button>
+      {open && (
+        <div
+          className="mt-2 space-y-1.5 rounded-xl border p-3"
+          style={{ borderColor: "rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.02)" }}
+        >
+          <p className="text-[11px] font-semibold text-white/60">How Stackd estimated this</p>
+          <div className="space-y-1 text-[11px] leading-relaxed text-white/50">
+            <p>{mealCarbs}g meal carbs</p>
+            {Number.isFinite(gramsPerUnit) && gramsPerUnit > 0 && (
+              <p>÷ {Number(gramsPerUnit.toFixed(1))}g per unit (your carb ratio)</p>
+            )}
+            <p>= {mealUnits}u meal insulin</p>
+            {hasCorrection && (
+              <>
+                <p className="pt-1">{glucoseAtStart} mg/dL at meal start</p>
+                <p>− {target} mg/dL target</p>
+                {Number.isFinite(sensitivity) && sensitivity > 0 && (
+                  <p>÷ {Math.round(sensitivity)} mg/dL per unit (your sensitivity)</p>
+                )}
+                <p>= {correctionUnits}u correction</p>
+              </>
+            )}
+            <p className="pt-1.5 font-semibold text-white/70">
+              {mealUnits}u + {hasCorrection ? `${correctionUnits}u` : "0u"} = {totalEstimate}u estimated bolus
+            </p>
+          </div>
+          <p className="mt-2 text-[10px] text-white/30">
+            Estimate only — not a dosing recommendation. Rescue carbs excluded.
+          </p>
+        </div>
+      )}
     </div>
   );
-}
-
-function fmtUnits(v) {
-  return v % 1 === 0 ? String(v) : v.toFixed(1);
 }
 
 /**
- * Meal Review — redesigned for clarity and calm. Numbers first, short labels,
- * minimal supporting text. No AI-style language. Rescue carbs shown in purple
- * and never included in insulin figures.
+ * Meal Review — a clear, human-readable analysis of the meal.
+ * Focuses exclusively on the meal, glucose response, and BOLUS insulin.
+ * Basal insulin is never shown here — it belongs in the IOB experience.
+ * All insulin values are displayed as whole units.
  */
 export default function MealReviewContent({ mealInsight, monitoringStatus, glucoseTrend, onResolve }) {
   if (!mealInsight) return null;
@@ -66,18 +188,15 @@ export default function MealReviewContent({ mealInsight, monitoringStatus, gluco
   const trendColor = glucoseTrend?.color || PALETTE.muted;
 
   // ── NO ACTIVE MEAL ──────────────────────────────────────────────
-  // Show a lightweight current-state view. No meal calculations, no
-  // estimates, no artificial analysis.
   if (!d || d.noActiveMeal) {
     const glucose = d?.latestGlucoseValue;
     const hasGlucose = Number.isFinite(glucose);
-    const activeInsulin = d?.activeInsulin || 0;
+    const activeBolus = d?.activeInsulin || 0;
     const recentCarbs = d?.recentNormalCarbs || 0;
     const rescueCarbs = d?.rescueCarbs || 0;
 
     return (
       <div className="space-y-5 p-1">
-        {/* Current Glucose */}
         <section>
           <SectionLabel>Current Glucose</SectionLabel>
           <div className="mt-2 flex items-baseline gap-2">
@@ -98,15 +217,13 @@ export default function MealReviewContent({ mealInsight, monitoringStatus, gluco
           <p className="mt-1 text-[11px] text-white/40">No active meal</p>
         </section>
 
-        {/* Insulin on Board */}
-        {activeInsulin > 0.01 && (
+        {activeBolus > 0.01 && (
           <section>
-            <SectionLabel>Insulin on Board</SectionLabel>
-            <p className="mt-2 text-2xl font-bold text-white">{fmtUnits(activeInsulin)}u</p>
+            <SectionLabel>Bolus Active</SectionLabel>
+            <p className="mt-2 text-2xl font-bold text-white">{roundUnits(activeBolus)}u</p>
           </section>
         )}
 
-        {/* Recent Carbs */}
         {recentCarbs > 0 && (
           <section>
             <SectionLabel>Recent Carbs</SectionLabel>
@@ -114,7 +231,6 @@ export default function MealReviewContent({ mealInsight, monitoringStatus, gluco
           </section>
         )}
 
-        {/* Rescue Carbs */}
         {rescueCarbs > 0 && (
           <section>
             <SectionLabel>Rescue Carbs</SectionLabel>
@@ -124,8 +240,7 @@ export default function MealReviewContent({ mealInsight, monitoringStatus, gluco
           </section>
         )}
 
-        {/* Nothing to show */}
-        {!hasGlucose && activeInsulin <= 0.01 && recentCarbs === 0 && rescueCarbs === 0 && (
+        {!hasGlucose && activeBolus <= 0.01 && recentCarbs === 0 && rescueCarbs === 0 && (
           <p className="text-sm text-white/35">
             {mealInsight.value === "Setup needed"
               ? "Add your insulin settings to see meal balance."
@@ -153,23 +268,28 @@ export default function MealReviewContent({ mealInsight, monitoringStatus, gluco
   }
 
   // ── ACTIVE MEAL ────────────────────────────────────────────────
-  const carbs = Math.round(d.meal?.carbs || 0);
+  const mealCarbs = Math.round(d.meal?.carbs || 0);
   const rescueCarbs = d.rescueCarbs || 0;
-  const loggedUnits = d.loggedTotalUnits || 0;
-  const remainingEstimate = d.estimatedAdditionalUnits || 0;
-  const activeInsulin = d.bolusIOB || 0;
+  const bolusTaken = roundUnits(d.loggedTotalUnits || 0);
+  const bolusEstimated = roundUnits(d.grossDoseEstimate || 0);
+  const bolusActive = roundUnits(d.bolusIOB || 0);
   const peakOutcome = d.peakOutcome;
   const peakOutcomeTime = d.peakOutcomeTime;
   const mealTime = d.meal?.time;
   const glucoseNow = Number.isFinite(d.latestGlucoseValue) ? d.latestGlucoseValue : d.windowEndGlucoseValue;
   const hasCurrentGlucose = Number.isFinite(glucoseNow);
+  const glucoseAtStart = d.glucoseValue;
+  const hasStartingGlucose = Number.isFinite(glucoseAtStart);
 
   const elapsedMs = Number.isFinite(mealTime) ? Date.now() - mealTime : null;
-  const peakAfterMs = Number.isFinite(peakOutcomeTime) && Number.isFinite(mealTime) ? peakOutcomeTime - mealTime : null;
+  const peakAfterMs =
+    Number.isFinite(peakOutcomeTime) && Number.isFinite(mealTime) ? peakOutcomeTime - mealTime : null;
+  const peakRise =
+    Number.isFinite(peakOutcome) && hasStartingGlucose ? peakOutcome - glucoseAtStart : null;
 
   return (
     <div className="space-y-5 p-1">
-      {/* Current Glucose */}
+      {/* Current Glucose — primary */}
       {hasCurrentGlucose && (
         <section>
           <SectionLabel>Current Glucose</SectionLabel>
@@ -188,40 +308,120 @@ export default function MealReviewContent({ mealInsight, monitoringStatus, gluco
         </section>
       )}
 
-      {/* Meal Summary */}
+      {/* Peak since meal */}
+      {Number.isFinite(peakOutcome) && (
+        <section>
+          <SectionLabel>Peak Since Meal</SectionLabel>
+          <div className="mt-2 flex items-baseline gap-2">
+            <span className="text-2xl font-bold text-white">{Math.round(peakOutcome)}</span>
+            <span className="text-[11px] text-white/40">mg/dL</span>
+          </div>
+          {peakAfterMs !== null && (
+            <p className="mt-0.5 text-[11px] text-white/40">{formatElapsed(peakAfterMs)} after meal</p>
+          )}
+          {peakRise !== null && peakRise > 0 && (
+            <p className="mt-0.5 text-[11px]" style={{ color: PALETTE.amber }}>
+              +{Math.round(peakRise)} mg/dL from starting
+            </p>
+          )}
+        </section>
+      )}
+
+      {/* Meal Carbs vs Rescue Carbs */}
       <section>
-        <SectionLabel>Meal</SectionLabel>
-        <div className="mt-2.5 grid grid-cols-3 divide-x divide-white/[0.06]">
-          <SummaryCell label="Carbs" value={`${carbs}g`} />
-          <SummaryCell label="Insulin" value={`${fmtUnits(loggedUnits)}u`} />
-          <SummaryCell
-            label="Peak"
-            value={Number.isFinite(peakOutcome) ? Math.round(peakOutcome) : "—"}
-            sub={peakAfterMs !== null ? `${formatElapsed(peakAfterMs)} after` : null}
-          />
+        <SectionLabel>This Meal</SectionLabel>
+        <div className="mt-2 flex items-baseline gap-6">
+          <div>
+            <p className="text-2xl font-bold text-white">{mealCarbs}g</p>
+            <p className="text-[9px] font-semibold uppercase tracking-wider text-white/40">Meal Carbs</p>
+          </div>
+          {rescueCarbs > 0 && (
+            <div>
+              <p className="text-2xl font-bold" style={{ color: RESCUE_COLOR }}>
+                +{rescueCarbs}g
+              </p>
+              <p
+                className="text-[9px] font-semibold uppercase tracking-wider"
+                style={{ color: `${RESCUE_COLOR}99` }}
+              >
+                Rescue Carbs
+              </p>
+            </div>
+          )}
         </div>
         {rescueCarbs > 0 && (
-          <p className="mt-2 text-[11px] font-medium" style={{ color: RESCUE_COLOR }}>
-            + {rescueCarbs}g rescue
+          <p className="mt-1.5 text-[10px] text-white/30">
+            Rescue carbs are excluded from insulin estimation.
           </p>
         )}
       </section>
 
-      {/* Meal Details */}
+      {/* Bolus Insulin */}
       <section>
-        <SectionLabel>Details</SectionLabel>
-        <div className="mt-1">
-          <DetailRow label="Carbs" value={`${carbs}g`} />
-          {rescueCarbs > 0 && (
-            <DetailRow label="Rescue carbs" value={`${rescueCarbs}g`} color={RESCUE_COLOR} />
-          )}
-          <DetailRow label="Insulin" value={`${fmtUnits(loggedUnits)}u`} />
-          <DetailRow label="Insulin on board" value={`${fmtUnits(activeInsulin)}u`} />
-          {remainingEstimate > 0.01 && (
-            <DetailRow label="Remaining" value={`${fmtUnits(remainingEstimate)}u`} color={mealInsight.color} />
+        <SectionLabel>Bolus Insulin</SectionLabel>
+        <div className="mt-2 flex items-baseline gap-6">
+          <div>
+            <p className="text-2xl font-bold text-white">{bolusTaken}u</p>
+            <p className="text-[9px] font-semibold uppercase tracking-wider text-white/40">Taken</p>
+          </div>
+          {bolusEstimated > 0 && (
+            <div>
+              <p className="text-2xl font-bold" style={{ color: PALETTE.bolus }}>
+                {bolusEstimated}u
+              </p>
+              <p className="text-[9px] font-semibold uppercase tracking-wider text-white/40">Estimated</p>
+            </div>
           )}
         </div>
+        <div className="mt-2">
+          <HowCalculatedSection d={d} />
+        </div>
       </section>
+
+      {/* Bolus Active */}
+      {bolusActive > 0 && (
+        <section>
+          <SectionLabel>Bolus Active</SectionLabel>
+          <p className="mt-2 text-2xl font-bold text-white">{bolusActive}u</p>
+          <p className="mt-0.5 text-[10px] text-white/40">Still active from meal/correction boluses</p>
+        </section>
+      )}
+
+      {/* Meal Outcome */}
+      {hasStartingGlucose && Number.isFinite(peakOutcome) && hasCurrentGlucose && (
+        <section>
+          <SectionLabel>Meal Outcome</SectionLabel>
+          <div className="mt-2 flex items-center justify-between gap-2">
+            <div className="text-center">
+              <p className="text-sm font-bold text-white">{Math.round(glucoseAtStart)}</p>
+              <p className="text-[9px] text-white/40">Starting</p>
+            </div>
+            <span className="text-white/20">→</span>
+            <div className="text-center">
+              <p className="text-sm font-bold text-white">{Math.round(peakOutcome)}</p>
+              <p className="text-[9px] text-white/40">Peak</p>
+            </div>
+            <span className="text-white/20">→</span>
+            <div className="text-center">
+              <p className="text-sm font-bold text-white">{Math.round(glucoseNow)}</p>
+              <p className="text-[9px] text-white/40">Current</p>
+            </div>
+          </div>
+          {peakAfterMs !== null && (
+            <p className="mt-1.5 text-center text-[11px] text-white/40">
+              Time to peak: {formatElapsed(peakAfterMs)}
+            </p>
+          )}
+          {elapsedMs !== null && (
+            <p className="mt-0.5 text-center text-[11px] text-white/40">
+              {formatElapsed(elapsedMs)} since meal
+            </p>
+          )}
+        </section>
+      )}
+
+      {/* Similar Meals */}
+      <SimilarMealsSection mealCarbs={mealCarbs} />
 
       {/* High protein/fat monitoring notice */}
       {monitoringStatus?.isActive && (
@@ -236,7 +436,10 @@ export default function MealReviewContent({ mealInsight, monitoringStatus, gluco
           <p className="mt-1.5 text-[10px] leading-relaxed text-white/40">
             Continue monitoring through{" "}
             <span className="font-medium text-amber-400/70">
-              {new Date(monitoringStatus.endTime).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+              {new Date(monitoringStatus.endTime).toLocaleTimeString([], {
+                hour: "numeric",
+                minute: "2-digit",
+              })}
             </span>
             .
           </p>

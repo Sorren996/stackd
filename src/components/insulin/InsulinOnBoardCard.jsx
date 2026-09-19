@@ -116,7 +116,7 @@ export default function InsulinOnBoardCard({ totalUnits, breakdown, basalRegimen
             <div className="mt-2 flex items-center">
               <div className="flex flex-1 flex-col">
                 <div className="flex items-end gap-1">
-                  <span className="text-2xl font-black leading-none text-white">{totalBasalUnits % 1 === 0 ? totalBasalUnits : totalBasalUnits.toFixed(0)}</span>
+                  <span className="text-2xl font-black leading-none text-white">{Math.round(totalBasalUnits)}</span>
                   <span className="mb-0.5 text-[10px] font-medium text-white/40">u</span>
                 </div>
                 <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-white/45">Total Basal</span>
@@ -135,7 +135,7 @@ export default function InsulinOnBoardCard({ totalUnits, breakdown, basalRegimen
                   <div key={t.type} className="flex items-center gap-1.5">
                     <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: t.color }} />
                     <span className="text-[10px] font-medium text-white/55">{t.shortName}</span>
-                    <span className="text-[10px] text-white/40">· {t.units % 1 === 0 ? t.units : t.units.toFixed(1)}u</span>
+                    <span className="text-[10px] text-white/40">· {Math.round(t.units)}u</span>
                   </div>
                 ))}
               </div>

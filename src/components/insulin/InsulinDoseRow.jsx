@@ -71,7 +71,7 @@ export default function InsulinDoseRow({ dose, regimenStatus = null }) {
     const activity = curve[lo].activity + (curve[hi].activity - curve[lo].activity) * frac;
     return 100 - activity / maxActivity * 100 * 0.82 - 8;
   }, [curve, progress]);
-  const formattedUnits = units % 1 === 0 ? String(units) : units.toFixed(1);
+  const formattedUnits = String(Math.round(units));
   // Display-only: IOB is always shown as a whole number for visual consistency
   // with the card totals. The underlying `iob` value retains full precision.
   const formattedIob = String(Math.round(iob));

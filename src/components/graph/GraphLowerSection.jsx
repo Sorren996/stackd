@@ -164,7 +164,7 @@ export default function GraphLowerSection({
       {showInsulin && positionedDoseMarkers.map(({ dose, x, units, key, color, pillTop, peakY, isActive }) => {
         const isEdgeLeft = x < 36;
         const isEdgeRight = x > chartWidth - 36;
-        const formattedUnits = units % 1 === 0 ? String(units) : units.toFixed(1);
+        const formattedUnits = String(Math.round(units));
         const shortLabel = String(dose.insulin_type || "Insulin").split(" ")[0];
         const isSelected = selectedDoseKey === key;
         const isExpired = isActive === false && !isSelected;

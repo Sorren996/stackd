@@ -602,9 +602,12 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           const isBasal = isBasalInsulinType(dose.insulin_type);
           const visualMax = isBasal ? 30 : 70;
           const refMax = isBasal ? maxBasalUnits : maxBolusUnits;
-          point[key] = activity * (doseUnits / refMax) * visualMax;
-          point[`${key}_actual`] = activeUnits;
-          point[`${key}_activity`] = activity;
+          // Basal: flat total amount for the entire modeled duration (no decay).
+          // Bolus: decaying activity curve showing progressive insulin action.
+          const heightFactor = isBasal ? 1 : activity;
+          point[key] = heightFactor * (doseUnits / refMax) * visualMax;
+          point[`${key}_actual`] = isBasal ? doseUnits : activeUnits;
+          point[`${key}_activity`] = isBasal ? 1 : activity;
           point[`${key}_total`] = doseUnits;
         }
       });
@@ -1433,7 +1436,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             <div key={k.label} className="flex items-center gap-1 shrink-0">
               <span className="h-1.5 w-1.5 rounded-full" style={{ background: k.color }} />
               <span className="text-[9px] font-semibold text-white/55">
-                {k.activeUnits % 1 === 0 ? k.activeUnits : k.activeUnits.toFixed(1)}u
+                {Math.round(k.activeUnits)}u
               </span>
               <span className="text-[9px] text-white/35">{k.label}</span>
             </div>
@@ -1474,7 +1477,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               <span className="text-[10px] font-semibold uppercase tracking-wider text-white/40">Insulin</span>
               <p className="text-sm font-bold text-white">{activeMarker.item.insulin_type}</p>
               <div className="flex items-baseline gap-1.5">
-                <span className="text-2xl font-black text-white">{activeMarker.item.units % 1 === 0 ? activeMarker.item.units : activeMarker.item.units.toFixed(1)}</span>
+                <span className="text-2xl font-black text-white">{Math.round(activeMarker.item.units)}</span>
                 <span className="text-xs text-white/40">units</span>
               </div>
               {(() => {
