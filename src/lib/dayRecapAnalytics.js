@@ -30,6 +30,7 @@ export function computeMealOutcomes(carbs, insulin, glucose) {
   if (readings.length < 2) return [];
 
   return (carbs || [])
+    .filter((carb) => carb.is_rescue_carb !== true && carb.classification !== "rescue_carbs")
     .map((carb) => {
       const mealTime = new Date(carb.consumed_at).getTime();
       if (!Number.isFinite(mealTime)) return null;
@@ -285,16 +286,17 @@ export function buildDayTimeline(glucose, carbs, insulin, metrics, recovery, tar
   (carbs || []).forEach((c) => {
     const time = new Date(c.consumed_at).getTime();
     if (!Number.isFinite(time)) return;
+    const isRescue = c.is_rescue_carb === true || c.classification === "rescue_carbs";
     const associatedInsulin = (insulin || []).filter((d) => {
       const dt = new Date(d.administered_at).getTime();
       return Number.isFinite(dt) && Math.abs(dt - time) <= 30 * MIN_MS;
     });
     const insulinUnits = associatedInsulin.reduce((s, d) => s + (Number(d.units) || 0), 0);
     events.push({
-      type: "meal",
+      type: isRescue ? "rescue" : "meal",
       time,
-      label: c.food_name || c.name || "Meal",
-      detail: `${Math.round(Number(c.carbs) || 0)}g carbs${insulinUnits > 0 ? ` · ${insulinUnits}u support` : ""}`,
+      label: c.food_name || c.name || (isRescue ? "Rescue carb" : "Meal"),
+      detail: `${Math.round(Number(c.carbs) || 0)}g${isRescue ? " rescue" : " carbs"}${insulinUnits > 0 ? ` · ${insulinUnits}u support` : ""}`,
     });
   });
 

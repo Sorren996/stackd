@@ -4,6 +4,7 @@ import DaySection from "./DaySection";
 
 const EVENT_CONFIG = {
   meal: { color: "#f59e0b" },
+  rescue: { color: "#a78bfa" },
   insulin: { color: "#5ba3b8" },
   peak: { color: "#d4a056" },
   low: { color: "#e07a6b" },
