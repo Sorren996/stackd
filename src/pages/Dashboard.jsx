@@ -458,12 +458,18 @@ export default function Dashboard() {
         }));
       }
       if (pollResult?.status === "error") {
-        const reason = pollResult?.error || "Unknown error";
-        toast.error(`Refresh unsuccessful — ${reason}`);
+        const reason = String(pollResult?.error || "");
+        // Suppress rate-limit noise — the sync itself is fine, the platform
+        // just throttled a rapid duplicate poll. Only surface real failures.
+        const isRateLimit = /rate limit/i.test(reason);
+        if (!isRateLimit) {
+          toast.error(`Refresh unsuccessful — ${reason || "Unknown error"}`);
+        }
         console.log(JSON.stringify({
           diagStage: "FRONTEND",
-          errorShown: true,
+          errorShown: !isRateLimit,
           reason,
+          rateLimited: isRateLimit,
         }));
       }
     } catch (stateErr) {
