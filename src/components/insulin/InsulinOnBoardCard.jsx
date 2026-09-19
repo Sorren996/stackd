@@ -51,25 +51,25 @@ export default function InsulinOnBoardCard({ totalUnits, breakdown, basalRegimen
 
   // Most recent basal dose — shown as "Tresiba · 30U · Taken 14h ago"
   const latestBasalDose = basalDoses[0] || null;
-  const latestBasalLabel = latestBasalDose
-    ? `${latestBasalDose.shortName} · ${latestBasalDose.units % 1 === 0 ? latestBasalDose.units : latestBasalDose.units.toFixed(1)}u`
-    : null;
+  const latestBasalLabel = latestBasalDose ?
+  `${latestBasalDose.shortName} · ${latestBasalDose.units % 1 === 0 ? latestBasalDose.units : latestBasalDose.units.toFixed(1)}u` :
+  null;
   const latestBasalElapsed = basalRegimenStatus?.elapsedTime ?? null;
   const latestBasalElapsedLabel = latestBasalElapsed != null ? formatElapsed(latestBasalElapsed) : null;
 
   return (
     <motion.div
       whileTap={{ scale: 0.985 }}
-      className="relative col-span-2 overflow-hidden rounded-2xl p-4"
-    >
+      className="relative col-span-2 overflow-hidden rounded-2xl p-4">
+      
       <div className="relative z-10 flex items-center justify-between">
         <div className="flex flex-col gap-0.5">
           <span className="text-[10px] font-semibold uppercase tracking-wider text-white/40">Insulin on Board</span>
           <button
             type="button"
             onClick={(e) => setEstimateRect(e.currentTarget.getBoundingClientRect())}
-            className="flex items-center gap-1 self-start text-white/30 transition-colors hover:text-white/50"
-          >
+            className="flex items-center gap-1 self-start text-white/30 transition-colors hover:text-white/50">
+            
             <span className="text-[9px] font-medium">Estimated activity</span>
             <Info className="h-3 w-3" />
           </button>
@@ -77,15 +77,15 @@ export default function InsulinOnBoardCard({ totalUnits, breakdown, basalRegimen
         <span className="rounded-full border px-2.5 py-0.5 text-[10px] font-semibold" style={{
           color: hasBolusIOB ? "#5ba3b8" : "rgba(255,255,255,0.42)",
           borderColor: hasBolusIOB ? "rgba(6,182,212,0.32)" : "rgba(255,255,255,0.1)",
-          background: hasBolusIOB ? "rgba(6,182,212,0.1)" : "rgba(255,255,255,0.04)",
+          background: hasBolusIOB ? "rgba(6,182,212,0.1)" : "rgba(255,255,255,0.04)"
         }}>
           {hasBolusIOB ? "Supporting you" : "Settled"}
         </span>
       </div>
 
       <AnimatePresence>
-        {estimateRect && (
-          <InfoPopover anchorRect={estimateRect} onClose={() => setEstimateRect(null)}>
+        {estimateRect &&
+        <InfoPopover anchorRect={estimateRect} onClose={() => setEstimateRect(null)}>
             <p className="text-[11px] font-semibold text-white/85">Estimated insulin activity</p>
             <p className="mt-1 text-[10px] leading-relaxed text-white/55">
               Active insulin and remaining time are estimates based on the insulin profile and time since the dose. Actual insulin action can vary between people and between doses.
@@ -94,7 +94,7 @@ export default function InsulinOnBoardCard({ totalUnits, breakdown, basalRegimen
               Basal coverage is modeled separately from bolus insulin — it represents estimated background activity from your basal doses, not the same as bolus IOB. Basal insulin releases gradually over an extended period, and overlapping doses contribute to your ongoing background activity.
             </p>
           </InfoPopover>
-        )}
+        }
       </AnimatePresence>
 
       <div className="relative z-10 mt-3 flex items-center">
@@ -107,86 +107,86 @@ export default function InsulinOnBoardCard({ totalUnits, breakdown, basalRegimen
         </div>
         <div className="mx-3 w-px self-stretch bg-white/10" />
         <div className="flex min-w-0 flex-1 flex-col">
-          {showPercentage ? (
-            <div className="flex items-end gap-1">
+          {showPercentage ?
+          <div className="flex items-end gap-1">
               <span className="text-3xl font-black leading-none text-white">{basalRegimenStatus.basalCoverage}</span>
               <span className="mb-0.5 text-[10px] font-medium text-white/40">%</span>
-            </div>
-          ) : (
-            <span className="truncate text-sm font-bold leading-tight text-white">{coverageLabel}</span>
-          )}
+            </div> :
+
+          <span className="truncate text-sm font-bold leading-tight text-white">{coverageLabel}</span>
+          }
           <div className="mt-0.5 flex items-center gap-1.5">
-            {isBasalActive && (
-              <motion.span
-                animate={{ opacity: [0.4, 1, 0.4], scale: [0.85, 1, 0.85] }}
-                transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
-                className="h-1.5 w-1.5 shrink-0 rounded-full"
-                style={{ background: "#10b981", boxShadow: "0 0 6px rgba(16,185,129,0.6)" }}
-              />
-            )}
+            {isBasalActive &&
+            <motion.span
+              animate={{ opacity: [0.4, 1, 0.4], scale: [0.85, 1, 0.85] }}
+              transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+              className="h-1.5 w-1.5 shrink-0 rounded-full hidden"
+              style={{ background: "#10b981", boxShadow: "0 0 6px rgba(16,185,129,0.6)" }} />
+
+            }
             <span className="text-[10px] font-semibold uppercase tracking-wider text-white/45">Basal Coverage</span>
             <button
               type="button"
               onClick={(e) => setBasalInfoRect(e.currentTarget.getBoundingClientRect())}
-              className="text-white/25 transition-colors hover:text-white/50"
-            >
-              <Info className="h-3 w-3" />
+              className="text-white/25 transition-colors hover:text-white/50">
+              
+              <Info className="h-3 w-3 hidden" />
             </button>
           </div>
         </div>
       </div>
 
       {/* Plain-language coverage state + most recent dose summary */}
-      {basalState !== "none" && (
-        <div className="relative z-10 mt-2 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+      {basalState !== "none" &&
+      <div className="relative z-10 mt-2 flex flex-wrap items-center gap-x-2 gap-y-0.5">
           <span className="text-[11px] font-semibold text-white/70">{coverageLabel}</span>
-          {latestBasalLabel && latestBasalElapsedLabel && (
-            <span className="text-[10px] text-white/40">
+          {latestBasalLabel && latestBasalElapsedLabel &&
+        <span className="text-[10px] text-white/40">
               · {latestBasalLabel} · Taken {latestBasalElapsedLabel}
             </span>
-          )}
+        }
         </div>
-      )}
+      }
 
       <AnimatePresence>
-        {basalInfoRect && (
-          <BasalCoverageInfo
-            anchorRect={basalInfoRect}
-            onClose={() => setBasalInfoRect(null)}
-            insulinType={basalRegimenStatus?.insulinType}
-          />
-        )}
+        {basalInfoRect &&
+        <BasalCoverageInfo
+          anchorRect={basalInfoRect}
+          onClose={() => setBasalInfoRect(null)}
+          insulinType={basalRegimenStatus?.insulinType} />
+
+        }
       </AnimatePresence>
 
-      {breakdown.length ? (
-        <div className="relative z-10 mt-4 space-y-3">
-          {bolusDoses.length > 0 && (
-            <div>
+      {breakdown.length ?
+      <div className="relative z-10 mt-4 space-y-3">
+          {bolusDoses.length > 0 &&
+        <div>
               <span className="text-[9px] font-bold uppercase tracking-[0.14em] text-white/35">Rapid Insulin</span>
               <div className="mt-1.5 divide-y divide-white/[0.06]">
-                {bolusDoses.map((dose) => (
-                  <InsulinDoseRow key={dose.id} dose={dose} />
-                ))}
+                {bolusDoses.map((dose) =>
+            <InsulinDoseRow key={dose.id} dose={dose} />
+            )}
               </div>
             </div>
-          )}
-          {basalDoses.length > 0 && (
-            <div>
+        }
+          {basalDoses.length > 0 &&
+        <div>
               {bolusDoses.length > 0 && <div className="mb-2.5 h-px bg-white/10" />}
               <span className="text-[9px] font-bold uppercase tracking-[0.14em] text-white/35">Basal / Background</span>
               <div className="mt-1.5 divide-y divide-white/[0.06]">
-                {basalDoses.map((dose) => (
-                  <InsulinDoseRow key={dose.id} dose={dose} regimenStatus={basalRegimenStatus} />
-                ))}
+                {basalDoses.map((dose) =>
+            <InsulinDoseRow key={dose.id} dose={dose} regimenStatus={basalRegimenStatus} />
+            )}
               </div>
             </div>
-          )}
-        </div>
-      ) : (
-        <div className="relative z-10 mt-4 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 text-xs text-white/40">
+        }
+        </div> :
+
+      <div className="relative z-10 mt-4 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 text-xs text-white/40">
           No active insulin on board from current logs.
         </div>
-      )}
-    </motion.div>
-  );
+      }
+    </motion.div>);
+
 }
