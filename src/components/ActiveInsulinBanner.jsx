@@ -30,9 +30,7 @@ import {
   getCarbAbsorptionAt } from
 "@/lib/carbAbsorption";
 import { AnimatePresence, motion } from "framer-motion";
-import MealBalanceTooltip from "./MealBalanceTooltip";
-import InsulinOnBoardCard from "./insulin/InsulinOnBoardCard";
-import MealBalanceCard from "./insulin/MealBalanceCard";
+import RhythmSection from "./RhythmSection";
 import ComfortZoneCard from "./ComfortZoneCard";
 import CurrentGlucoseCard from "./graph/CurrentGlucoseCard";
 import { getSupportiveGlucoseMessage } from "@/lib/supportiveMessages";
@@ -835,7 +833,6 @@ function SupportiveGlucoseMessage({ insight, trend, TrendIcon }) {
 }
 
 export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucoseReadings = [], carbEntries = [], graphSlot = null, onEditGlucose = null }) {
-  const [openTooltip, setOpenTooltip] = useState(null);
   const [insulinSettings, setInsulinSettings] = useState(readInsulinSettings);
   const [targetRange, setTargetRange] = useState(readTargetRange);
   const [centerGlucoseStatus, setCenterGlucoseStatus] = useState(null);
@@ -876,32 +873,6 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
 
     return () => window.clearInterval(timer);
   }, []);
-
-  useEffect(() => {
-    if (!openTooltip || typeof window === "undefined") return undefined;
-
-    const scrollY = window.scrollY;
-    const previousBodyOverflow = document.body.style.overflow;
-    const previousBodyPosition = document.body.style.position;
-    const previousBodyTop = document.body.style.top;
-    const previousBodyWidth = document.body.style.width;
-    const previousHtmlOverflow = document.documentElement.style.overflow;
-
-    document.body.style.overflow = "hidden";
-    document.body.style.position = "fixed";
-    document.body.style.top = `-${scrollY}px`;
-    document.body.style.width = "100%";
-    document.documentElement.style.overflow = "hidden";
-
-    return () => {
-      document.body.style.overflow = previousBodyOverflow;
-      document.body.style.position = previousBodyPosition;
-      document.body.style.top = previousBodyTop;
-      document.body.style.width = previousBodyWidth;
-      document.documentElement.style.overflow = previousHtmlOverflow;
-      window.scrollTo(0, scrollY);
-    };
-  }, [openTooltip]);
 
   // Listen for the graph marker's glucose status so the card glow reflects
   // what the user is scrolling over, not just the latest reading.
@@ -1007,7 +978,6 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
     try {
       localStorage.setItem("resolved_meal_ids", JSON.stringify(updated));
     } catch {}
-    setOpenTooltip(null);
   };
 
   const netActiveCarbs = worstPoint?.net ?? 0;
@@ -1149,15 +1119,6 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
 
   return (
     <>
-      <MealBalanceTooltip
-        mealInsight={mealInsight}
-        open={openTooltip === "net-carbs"}
-        onClose={() => setOpenTooltip(null)}
-        monitoringStatus={highProteinFatStatus}
-        glucoseTrend={trend}
-        onResolve={handleResolveMeal} />
-      
-
       <div className="relative -mx-4 px-4 pb-6 pt-2">
         <div className="relative z-10 grid grid-cols-2 gap-3">
           <ComfortZoneCard percentage={comfortZonePercentage} />
@@ -1241,14 +1202,14 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
         }
 
         <p className={`text-legible mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-white ${CLEAN_LAYOUT ? "mt-6 opacity-70" : "mt-4"}`}>Your Rhythm</p>
-        <div className="grid grid-cols-1 gap-3">
-          <MealBalanceCard
-            mealInsight={mealInsight}
-            highProteinFatStatus={highProteinFatStatus}
-            onOpenTooltip={() => setOpenTooltip("net-carbs")} />
-          
-          <InsulinOnBoardCard totalUnits={activeUnits} breakdown={activeInsulinBreakdown} basalRegimenStatus={basalRegimenStatus} />
-        </div>
+        <RhythmSection
+          mealInsight={mealInsight}
+          highProteinFatStatus={highProteinFatStatus}
+          glucoseTrend={trend}
+          onResolveMeal={handleResolveMeal}
+          totalUnits={activeUnits}
+          breakdown={activeInsulinBreakdown}
+          basalRegimenStatus={basalRegimenStatus} />
       </div>
     </>);
 
