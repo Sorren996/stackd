@@ -93,7 +93,7 @@ export default function InsulinDoseRow({ dose, regimenStatus = null }) {
               }}
             />
             <span className="text-[10px] font-medium text-white/45">
-              {basalContribution === "No longer contributing" ? "Faded" : "Active"}
+              {basalContribution === "No longer contributing" ? "Faded" : "Ongoing"}
             </span>
           </span>
         ) : (
@@ -131,7 +131,7 @@ export default function InsulinDoseRow({ dose, regimenStatus = null }) {
       </div>
 
       <div className="mt-1.5 flex items-center justify-between">
-        <span className="text-[10px] text-white/50">{isBasal ? basalContribution : statusLabel}</span>
+        <span className="text-[10px] text-white/50">{isBasal ? (basalContribution === "No longer contributing" ? "Gently settling" : "Background activity") : statusLabel}</span>
         {isBasal ? (
           <span className="text-[10px] font-medium text-white/40">
             {takenAgoLabel ? `Taken ${takenAgoLabel}` : ""}

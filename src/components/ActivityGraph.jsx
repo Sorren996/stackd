@@ -658,9 +658,9 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       const units = getDoseUnits(dose);
       const existing = byType.get(label);
       if (existing) {
-        existing.units += units;
+        existing.activeUnits += iob;
       } else {
-        byType.set(label, { label, color, units });
+        byType.set(label, { label, color, activeUnits: iob });
       }
     });
     return Array.from(byType.values());
@@ -1430,7 +1430,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             <div key={k.label} className="flex items-center gap-1 shrink-0">
               <span className="h-1.5 w-1.5 rounded-full" style={{ background: k.color }} />
               <span className="text-[9px] font-semibold text-white/55">
-                {k.units % 1 === 0 ? k.units : k.units.toFixed(1)}u
+                {k.activeUnits % 1 === 0 ? k.activeUnits : k.activeUnits.toFixed(1)}u
               </span>
               <span className="text-[9px] text-white/35">{k.label}</span>
             </div>
