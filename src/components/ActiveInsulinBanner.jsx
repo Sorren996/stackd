@@ -288,7 +288,14 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
   });
   const rescueCarbsTotal = recentRescueCarbs.reduce((sum, entry) => sum + Number(entry.carbs || 0), 0);
 
-  if (!groups.length) {
+  const now = Date.now();
+  const outcomeWindowMs = insulinSettings.outcomeWindowMinutes * MINUTE_MS;
+  // Only meals still inside the user's configured review window are tracked.
+  // Once the window ends the review resets to "no meal to review yet".
+  // Rescue carbs never open a meal review on their own, regardless of volume.
+  const mealGroup = groups.find((group) => now - group.mealTime <= outcomeWindowMs);
+
+  if (!mealGroup) {
     if (recentRescueCarbs.length) {
       return {
         value: "Gentle support",
@@ -299,7 +306,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
           noActiveMeal: true,
           rescueCarbs: Math.round(rescueCarbsTotal),
           recentNormalCarbs: 0,
-          activeInsulin: getTotalBolusIOB(doses, nowForRescue),
+          activeInsulin: getTotalBolusIOB(doses, now),
           latestGlucoseValue: Number.isFinite(Number(latestGlucose?.value)) ? Number(latestGlucose?.value) : null,
         }
       };
@@ -315,20 +322,17 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
         recentNormalCarbs: Math.round((Array.isArray(carbEntries) ? carbEntries : [])
           .filter((entry) => {
             const eTime = getEntryTime(entry);
-            return Number.isFinite(eTime) && nowForRescue - eTime < 2 * 60 * MINUTE_MS && entry.is_rescue_carb !== true && entry.classification !== "rescue_carbs" && !isRescueCarbEntry(entry, glucoseReadings, doses, insulinSettings.targetLow);
+            return Number.isFinite(eTime) && now - eTime < 2 * 60 * MINUTE_MS && entry.is_rescue_carb !== true && entry.classification !== "rescue_carbs" && !isRescueCarbEntry(entry, glucoseReadings, doses, insulinSettings.targetLow);
           })
           .reduce((sum, entry) => sum + Number(entry.carbs || 0), 0)),
-        activeInsulin: getTotalBolusIOB(doses, nowForRescue),
+        activeInsulin: getTotalBolusIOB(doses, now),
         latestGlucoseValue: Number.isFinite(Number(latestGlucose?.value)) ? Number(latestGlucose?.value) : null,
       }
     };
   }
 
-  const now = Date.now();
-  const outcomeWindowMs = insulinSettings.outcomeWindowMinutes * MINUTE_MS;
-  const mealGroup = groups.find((group) => now - group.mealTime <= outcomeWindowMs) ?? groups[0];
   const mealTime = mealGroup.mealTime;
-  const mealStillUnderReview = now - mealTime <= outcomeWindowMs;
+  const mealStillUnderReview = true;
   const windowStart = mealGroup.start;
   const windowEnd = mealGroup.end;
   const pairedDoses = mealGroup.doses;
@@ -581,32 +585,6 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
         status = "Above comfort zone";
         color = "#d4a056";
       }
-    }
-  }
-
-  if (!mealStillUnderReview) {
-    if (recentRescueCarbs.length) {
-      value = "Gentle support";
-      status = "Nourishment added to lift your trend";
-      color = "#5ba88a";
-      sub = `${Math.round(rescueCarbsTotal)}g supportive nourishment`;
-
-      outcomeAssessment = {
-        label: "Gentle support",
-        message: "You added nourishment to lift a gentle dip. Nicely done catching your rhythm early.",
-        color: "#5ba88a"
-      };
-    } else {
-      value = "Window passed";
-      status = "Nice job staying on top of it";
-      color = "#5ba88a";
-      sub = `${Math.round(mealGroup.carbs)}g meal reviewed`;
-
-      outcomeAssessment = {
-        label: "Meal window passed",
-        message: "Meal window has passed. Nice job staying on top of it.",
-        color: "#5ba88a"
-      };
     }
   }
 
