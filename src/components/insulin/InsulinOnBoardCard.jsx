@@ -130,7 +130,7 @@ export default function InsulinOnBoardCard({ totalUnits, breakdown, basalRegimen
               onClick={(e) => setBasalInfoRect(e.currentTarget.getBoundingClientRect())}
               className="text-white/25 transition-colors hover:text-white/50">
               
-              <Info className="h-3 w-3 hidden" />
+              
             </button>
           </div>
         </div>
