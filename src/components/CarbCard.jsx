@@ -7,9 +7,12 @@ import { motion } from "framer-motion";
 
 const PROFILE_LABELS = { fast: "fast carbs", medium: "medium carbs", slow: "slow carbs" };
 
+const RESCUE_COLOR = "#a78bfa";
+
 export default function CarbCard({ entry, onDelete, locked = false }) {
-  const color = entry.is_custom ? "#8b8b97" : (PROFILE_COLORS[entry.absorption_profile] || "#d4a056");
-  const profileLabel = entry.is_custom ? "custom" : (PROFILE_LABELS[entry.absorption_profile] || "");
+  const isRescue = entry.is_rescue_carb === true || entry.classification === "rescue_carbs";
+  const color = isRescue ? RESCUE_COLOR : (entry.is_custom ? "#8b8b97" : (PROFILE_COLORS[entry.absorption_profile] || "#d4a056"));
+  const profileLabel = isRescue ? "rescue carbs" : (entry.is_custom ? "custom" : (PROFILE_LABELS[entry.absorption_profile] || ""));
   const timeAgo = formatDistanceToNow(new Date(entry.consumed_at), { addSuffix: true });
 
   return (

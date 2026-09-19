@@ -4,6 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { InvokeLLM, UploadFile } from "@/api/integrations";
 import { Camera, Check, Clock, Loader2, PenLine, Sparkles, X } from "lucide-react";
 import HighProteinFatCheckbox from "@/components/HighProteinFatCheckbox";
+import RescueCarbCheckbox from "@/components/RescueCarbCheckbox";
 import { toast } from "sonner";
 import { DateScrollField, TimeScrollField, NumberPadField, TextPadField } from "@/components/FormInputFields";
 import SplitDosePlanner from "@/components/splitdose/SplitDosePlanner";
@@ -75,6 +76,7 @@ function CarbsTab({ open, onSubmit, isPending, onDirtyChange, embedded, external
   const [carbTime, setCarbTime] = useState(() => new Date().toTimeString().slice(0, 5));
   const [carbDate, setCarbDate] = useState(getTodayDateValue);
   const [isHighProteinFat, setIsHighProteinFat] = useState(false);
+  const [isRescueCarb, setIsRescueCarb] = useState(false);
   const [memoryMatch, setMemoryMatch] = useState(null);
   const [memoryCurrent, setMemoryCurrent] = useState(null);
   const [memoryPending, setMemoryPending] = useState(null);
@@ -372,9 +374,11 @@ Do not give insulin dosing advice.
         consumed_at: consumedAt,
         is_custom: true,
         is_high_protein_fat_meal: isHighProteinFat,
+        is_rescue_carb: isRescueCarb,
       },
     ], splitPlan);
     setIsHighProteinFat(false);
+    setIsRescueCarb(false);
   };
 
   const handleSubmitCustom = (splitPlan = null) => {
@@ -400,10 +404,12 @@ Do not give insulin dosing advice.
         consumed_at: consumedAt,
         is_custom: true,
         is_high_protein_fat_meal: isHighProteinFat,
+        is_rescue_carb: isRescueCarb,
       },
     ], splitPlan);
 
     setIsHighProteinFat(false);
+    setIsRescueCarb(false);
     setCustomFoodName("");
     setCustomCarbs("");
   };
@@ -446,10 +452,12 @@ Do not give insulin dosing advice.
         consumed_at: consumedAt,
         is_custom: false,
         is_high_protein_fat_meal: isHighProteinFat,
+        is_rescue_carb: isRescueCarb,
       })),
       splitPlan
     );
     setIsHighProteinFat(false);
+    setIsRescueCarb(false);
   };
 
   return (
@@ -788,8 +796,9 @@ Do not give insulin dosing advice.
             </div>
           )}
 
-          <div className="mt-4">
+          <div className="mt-4 space-y-3">
             <HighProteinFatCheckbox checked={isHighProteinFat} onChange={setIsHighProteinFat} />
+            <RescueCarbCheckbox checked={isRescueCarb} onChange={setIsRescueCarb} />
           </div>
 
           {isHighProteinFat && (

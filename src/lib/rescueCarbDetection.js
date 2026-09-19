@@ -15,6 +15,7 @@ const MINUTE_MS = 60 * 1000;
 // user to categorize it, and keeps these entries from being judged as
 // "under-dosed meals" in the Meal Balance rhythm.
 export function isRescueCarbEntry(entry, glucoseReadings = [], doses = [], targetLow = 70) {
+  if (entry?.is_rescue_carb === true) return true;
   if (!entry?.consumed_at) return false;
 
   const entryTime = new Date(entry.consumed_at).getTime();
