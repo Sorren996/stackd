@@ -2,28 +2,28 @@ import { motion } from "framer-motion";
 
 const STEPS = [
   {
-    image: "https://media.base44.com/images/public/6aad64ef13ea720bbe594d6f/938d3a566_generated_image.png",
+    image: "https://media.base44.com/images/public/6aad64ef13ea720bbe594d6f/740958fde_generated_image.png",
     caption: "1. Open Stackd in Safari",
     description:
       "On your iPhone, open https://stackdose.base44.app in the Safari browser. This has to be Safari, not Chrome or another browser. iOS only allows installing a web app from Safari.",
     alt: "Screenshot showing Stackd opened in the Safari browser on an iPhone",
   },
   {
-    image: "https://media.base44.com/images/public/6aad64ef13ea720bbe594d6f/a26863a8b_generated_image.png",
+    image: "https://media.base44.com/images/public/6aad64ef13ea720bbe594d6f/bac389628_generated_image.png",
     caption: "2. Tap the Share button",
     description:
       "In the toolbar at the bottom of Safari, tap the Share button, the square with an arrow pointing up.",
     alt: "Screenshot showing the Share button in Safari's bottom toolbar on an iPhone",
   },
   {
-    image: "https://media.base44.com/images/public/6aad64ef13ea720bbe594d6f/d1f148ac1_generated_image.png",
+    image: "https://media.base44.com/images/public/6aad64ef13ea720bbe594d6f/83eee739c_generated_image.png",
     caption: '3. Tap "Add to Home Screen"',
     description:
       "Scroll down in the share menu until you see Add to Home Screen, then tap it.",
     alt: "Screenshot showing the Add to Home Screen option in the iOS share menu",
   },
   {
-    image: "https://media.base44.com/images/public/6aad64ef13ea720bbe594d6f/4027bb451_generated_image.png",
+    image: "https://media.base44.com/images/public/6aad64ef13ea720bbe594d6f/33d424842_generated_image.png",
     caption: '4. Tap "Add"',
     description:
       'Confirm the name "Stackd" and tap Add in the top right corner. Stackd now sits on your home screen like any other app.',
