@@ -319,24 +319,24 @@ export default function MealReviewContent({ mealInsight, monitoringStatus, gluco
 
         {/* PRIMARY ACTIONS */}
         <Divider />
-        <section className="px-1 py-4 hidden">
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => openLogger("insulin")}
-              className="flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-[12px] font-semibold text-white transition hover:brightness-110 stackd-btn-primary">
-              
-              <Plus className="h-3.5 w-3.5" strokeWidth={2.5} /> Log Insulin
-            </button>
-            <button
-              type="button"
-              onClick={() => openLogger("carbs")}
-              className="flex items-center justify-center gap-1.5 rounded-xl border border-white/12 bg-white/[0.04] py-2.5 text-[12px] font-semibold text-white/80 backdrop-blur-sm transition hover:bg-white/[0.08] hover:text-white">
-              
-              <Plus className="h-3.5 w-3.5" strokeWidth={2.5} /> Log Carbs
-            </button>
-          </div>
-        </section>
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
 
         {/* Progressive disclosure */}
         <div className="px-1">
