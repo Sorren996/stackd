@@ -540,11 +540,14 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
   const carbEventMarkers = useMemo(() =>
   filteredCarbEntries.
-  map((entry) => ({
-    time: new Date(entry.consumed_at).getTime(),
-    entry,
-    color: CARB_PROFILE_COLORS[entry.absorption_profile] || PROFILE_COLORS[entry.absorption_profile] || "#f59e0b"
-  })).
+  map((entry) => {
+    const isRescue = entry.is_rescue_carb === true || entry.classification === "rescue_carbs";
+    return {
+      time: new Date(entry.consumed_at).getTime(),
+      entry,
+      color: isRescue ? "#a78bfa" : (CARB_PROFILE_COLORS[entry.absorption_profile] || PROFILE_COLORS[entry.absorption_profile] || "#f59e0b")
+    };
+  }).
   filter((marker) => Number.isFinite(marker.time) && marker.time >= domainStart && marker.time <= domainEnd),
   [filteredCarbEntries, domainStart, domainEnd]
   );
@@ -1452,14 +1455,18 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       <InfoPopover anchorRect={activeMarker.rect} onClose={closeMarker}>
           {activeMarker.type === "carbs" &&
         <div className="space-y-1.5">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-white/40">Nourishment</span>
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-2xl font-black text-white">{Math.round(activeMarker.item.carbs)}</span>
-                <span className="text-xs text-white/40">g carbs</span>
-              </div>
-              <p className="text-xs text-white/70">{activeMarker.item.food_name || activeMarker.item.name || "Food"}</p>
-              <p className="text-[11px] text-white/40">{format(new Date(activeMarker.item.consumed_at), "h:mm a · MMM d")}</p>
-
+              {(() => {
+            const isRescue = activeMarker.item.is_rescue_carb === true || activeMarker.item.classification === "rescue_carbs";
+            return <>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: isRescue ? "#a78bfa" : "rgba(255,255,255,0.40)" }}>{isRescue ? "Rescue Carb" : "Nourishment"}</span>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-2xl font-black text-white">{Math.round(activeMarker.item.carbs)}</span>
+                    <span className="text-xs text-white/40">g {isRescue ? "rescue" : "carbs"}</span>
+                  </div>
+                  <p className="text-xs text-white/70">{activeMarker.item.food_name || activeMarker.item.name || "Food"}</p>
+                  <p className="text-[11px] text-white/40">{format(new Date(activeMarker.item.consumed_at), "h:mm a · MMM d")}</p>
+                </>;
+          })()}
             </div>
         }
           {activeMarker.type === "insulin" &&
