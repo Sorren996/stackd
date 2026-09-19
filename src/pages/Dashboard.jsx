@@ -445,6 +445,7 @@ export default function Dashboard() {
 
   // When the on-demand poll inserts new readings, invalidate the glucose
   // queries so the graph and latest-glucose card refresh immediately.
+  // When it fails, surface the actual error so you can see what went wrong.
   useEffect(() => {
     try {
       if (pollResult?.records_inserted > 0) {
@@ -454,6 +455,15 @@ export default function Dashboard() {
           diagStage: "FRONTEND",
           stateUpdated: true,
           invalidatedQueries: ["latest-glucose", "glucose-readings:graph"],
+        }));
+      }
+      if (pollResult?.status === "error") {
+        const reason = pollResult?.error || "Unknown error";
+        toast.error(`Refresh unsuccessful — ${reason}`);
+        console.log(JSON.stringify({
+          diagStage: "FRONTEND",
+          errorShown: true,
+          reason,
         }));
       }
     } catch (stateErr) {
