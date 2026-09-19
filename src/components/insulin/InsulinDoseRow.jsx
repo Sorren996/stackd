@@ -1,6 +1,5 @@
 import { useId, useMemo } from "react";
 import { generateActivityCurve, formatMinutes, isBasalInsulinType } from "@/lib/insulinPharmacology";
-import { getBasalDoseContributionLabel } from "@/lib/basalActivityModel";
 
 const MINUTE_MS = 60 * 1000;
 const HOUR_MS = 60 * MINUTE_MS;
@@ -18,16 +17,18 @@ function formatTakenAgo(ms) {
  * Compact insulin dose row showing the PK activity curve, current position
  * marker, status label, and remaining duration. All values come from the
  * existing pharmacokinetic calculation system passed via the `dose` prop.
- * For basal doses, `regimenStatus` (from getBasalRegimenStatus) drives the
- * contribution label so this row never disagrees with the IOB card.
+ *
+ * For basal doses, the relevance check uses IOB (active units from the
+ * area-based model), NOT relative activity — a basal dose in its onset
+ * phase has near-zero relative activity but high IOB, so it should read
+ * "Ongoing", not "Faded". The status label comes from getDoseStatus which
+ * already uses basal-specific language ("Absorbing gently", "Active in
+ * the background", "Gently winding down").
  */
 export default function InsulinDoseRow({ dose, regimenStatus = null }) {
   const { shortName, units, iob, color, statusLabel, timingInfo, type, time } = dose;
   const isBasal = isBasalInsulinType(type);
-  const basalContribution = useMemo(() => {
-    if (!isBasal) return null;
-    return getBasalDoseContributionLabel({ insulin_type: type, units, administered_at: new Date(time).toISOString() }, regimenStatus, Date.now());
-  }, [isBasal, type, units, time, regimenStatus]);
+  const isBasalActive = iob > 0.01;
   const takenAgoMs = Number.isFinite(time) ? Date.now() - time : null;
   const takenAgoLabel = isBasal ? formatTakenAgo(takenAgoMs) : null;
   const progress = timingInfo?.progress ?? 0;
@@ -52,7 +53,7 @@ export default function InsulinDoseRow({ dose, regimenStatus = null }) {
     const maxActivity = Math.max(...curve.map((p) => p.activity), 0.001);
     const pts = curve.map((p, i) => ({
       x: i / (curve.length - 1) * W,
-      y: H - p.activity / maxActivity * H * 0.82 - 8
+      y: H - p.activity / maxActivity * H * 0.82 - 8,
     }));
     const line = pts.map((p, i) => `${i ? "L" : "M"} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(" ");
     const area = `${line} L ${W} ${H} L 0 ${H} Z`;
@@ -84,16 +85,15 @@ export default function InsulinDoseRow({ dose, regimenStatus = null }) {
           <span className="shrink-0 text-[10px] text-white/40">· {formattedUnits}u dose</span>
         </div>
         {isBasal ?
-        <span className="flex shrink-0 items-center gap-1.5 hidden">
+        <span className="flex shrink-0 items-center gap-1.5">
             <span
             className="h-1.5 w-1.5 rounded-full"
             style={{
-              background: basalContribution === "No longer contributing" ? "rgba(255,255,255,0.2)" : color,
-              boxShadow: basalContribution === "No longer contributing" ? "none" : `0 0 5px ${color}80`
+              background: isBasalActive ? color : "rgba(255,255,255,0.2)",
+              boxShadow: isBasalActive ? `0 0 5px ${color}80` : "none",
             }} />
-          
             <span className="text-[10px] font-medium text-white/45">
-              {basalContribution === "No longer contributing" ? "Faded" : "Ongoing"}
+              {isBasalActive ? "Ongoing" : "Gently settling"}
             </span>
           </span> :
 
@@ -131,7 +131,7 @@ export default function InsulinDoseRow({ dose, regimenStatus = null }) {
       </div>
 
       <div className="mt-1.5 flex items-center justify-between">
-        <span className="text-[10px] text-white/50">{isBasal ? basalContribution === "No longer contributing" ? "Gently settling" : "Background activity" : statusLabel}</span>
+        <span className="text-[10px] text-white/50">{statusLabel}</span>
         {isBasal ?
         <span className="text-[10px] font-medium text-white/40">
             {takenAgoLabel ? `Taken ${takenAgoLabel}` : ""}
@@ -142,6 +142,6 @@ export default function InsulinDoseRow({ dose, regimenStatus = null }) {
           </span>
         }
       </div>
-    </div>);
-
+    </div>
+  );
 }
