@@ -84,10 +84,28 @@ export async function syncShareForConnection(
   conn: any,
   username: string,
   password: string,
-  now: Date
+  now: Date,
+  trigger: string = "scheduled"
 ): Promise<any> {
   const owner = conn.created_by_id;
-  if (!owner) return { status: "skipped_no_owner" };
+  const fnStart = Date.now();
+
+  // ── [DIAG] REFRESH START ──────────────────────────────
+  console.log(JSON.stringify({
+    diagStage: "REFRESH_START",
+    trigger,
+    function: "syncShareForConnection",
+    timestamp: new Date(fnStart).toISOString(),
+    ownerHash: owner ? owner.slice(0, 8) : null, // privacy-safe prefix only
+    connectionId: conn?.id ?? null,
+    hasUsername: !!username,
+    hasPassword: !!password,
+  }));
+
+  if (!owner) {
+    console.log(JSON.stringify({ diagStage: "DATA_PROCESSING", error_code: "DEXCOM_NO_OWNER", message: "No owner on connection" }));
+    return { status: "skipped_no_owner" };
+  }
 
   const diag: any = {
     owner,
@@ -109,15 +127,46 @@ export async function syncShareForConnection(
   };
 
   try {
+    // ── [DIAG] DEXCOM REQUEST (auth step) ────────────────
+    const authStart = Date.now();
+    console.log(JSON.stringify({
+      diagStage: "DEXCOM_REQUEST",
+      step: "authenticate",
+      timestamp: new Date(authStart).toISOString(),
+      endpoint: DEXCOM_SHARE_AUTHENTICATE_ENDPOINT,
+      method: "POST",
+      tokenPresent: false, // Share uses username/password, not a bearer token
+    }));
+
     const sessionId = await getShareSessionId(username, password);
     diag.auth_status = "successful";
     diag.session_valid = true;
 
+    console.log(JSON.stringify({
+      diagStage: "DEXCOM_RESPONSE",
+      step: "authenticate",
+      httpStatus: 200,
+      authSucceeded: true,
+      sessionRetrieved: true,
+      durationMs: Date.now() - authStart,
+    }));
+
+    // ── [DIAG] DEXCOM REQUEST (readings step) ───────────
     const readingsUrl =
       `${DEXCOM_SHARE_BASE_URL_US}${DEXCOM_SHARE_READINGS_ENDPOINT}` +
       `?sessionId=${encodeURIComponent(sessionId)}` +
       `&minutes=${POLL_MINUTES}` +
       `&maxCount=${POLL_MAX_COUNT}`;
+
+    const pollStart = Date.now();
+    console.log(JSON.stringify({
+      diagStage: "DEXCOM_REQUEST",
+      step: "readings",
+      timestamp: new Date(pollStart).toISOString(),
+      endpoint: DEXCOM_SHARE_READINGS_ENDPOINT,
+      method: "POST",
+      tokenPresent: true, // sessionId retrieved from auth step
+    }));
 
     const readingsRes = await fetch(readingsUrl, {
       method: "POST",
@@ -125,13 +174,50 @@ export async function syncShareForConnection(
       body: JSON.stringify({}),
     });
 
+    // ── [DIAG] DEXCOM RESPONSE (readings step) ──────────
+    const pollDurationMs = Date.now() - pollStart;
+    const safeHeaders: any = {};
+    try {
+      readingsRes.headers.forEach((v, k) => {
+        if (/content-type|date|server|cache-control/i.test(k)) safeHeaders[k] = v;
+      });
+    } catch {}
+
     if (!readingsRes.ok) {
-      diag.poll_status = "failed";
-      diag.status = readingsRes.status === 500 ? "session_expired" : "readings_request_failed";
+      let errCode: string | null = null;
+      let errMsg: string | null = null;
+      let errBody: any = null;
       try {
         const errJson = await readingsRes.json();
-        diag.error_detail = (errJson.Code || "").slice(0, 50);
+        errCode = errJson.Code || null;
+        errMsg = errJson.Message || null;
+        errBody = { Code: errCode, Message: errMsg };
       } catch {}
+
+      const errorCode =
+        readingsRes.status === 429 ? "DEXCOM_RATE_LIMIT"
+        : readingsRes.status === 401 || readingsRes.status === 403 ? "DEXCOM_AUTH_ERROR"
+        : readingsRes.status === 500 ? "DEXCOM_API_ERROR"
+        : "DEXCOM_API_ERROR";
+
+      diag.poll_status = "failed";
+      diag.status = readingsRes.status === 500 ? "session_expired" : "readings_request_failed";
+      diag.error_detail = (errCode || "").slice(0, 50);
+
+      console.log(JSON.stringify({
+        diagStage: "DEXCOM_RESPONSE",
+        step: "readings",
+        httpStatus: readingsRes.status,
+        responseHeaders: safeHeaders,
+        responseBody: errBody,
+        containedReadings: false,
+        readingsCount: 0,
+        error_code: errorCode,
+        dexcom_error_code: errCode,
+        dexcom_error_message: errMsg,
+        durationMs: pollDurationMs,
+      }));
+
       return diag;
     }
 
@@ -140,8 +226,36 @@ export async function syncShareForConnection(
     diag.records_returned = records.length;
     diag.poll_status = "successful";
 
+    // Parse newest/oldest timestamps from the raw response
+    let newestReadingTs: string | null = null;
+    let oldestReadingTs: string | null = null;
+    for (const rec of records) {
+      const dt = parseShareTimestamp(rec.DT || rec.ST || rec.WT);
+      if (!dt) continue;
+      const iso = dt.toISOString();
+      if (!newestReadingTs || iso > newestReadingTs) newestReadingTs = iso;
+      if (!oldestReadingTs || iso < oldestReadingTs) oldestReadingTs = iso;
+    }
+
+    console.log(JSON.stringify({
+      diagStage: "DEXCOM_RESPONSE",
+      step: "readings",
+      httpStatus: readingsRes.status,
+      responseHeaders: safeHeaders,
+      containedReadings: records.length > 0,
+      readingsCount: records.length,
+      newestReadingTimestamp: newestReadingTs,
+      oldestReadingTimestamp: oldestReadingTs,
+      durationMs: pollDurationMs,
+    }));
+
     if (!records.length) {
       diag.status = "no_new_records";
+      console.log(JSON.stringify({
+        diagStage: "DATA_PROCESSING",
+        error_code: "DEXCOM_EMPTY_RESPONSE",
+        message: "Dexcom returned 0 readings",
+      }));
       return diag;
     }
 
@@ -169,6 +283,7 @@ export async function syncShareForConnection(
     let latestTime: number | null = null;
     let latestValue: number | null = null;
     let latestTrend: string | null = null;
+    let parseError: string | null = null;
 
     for (const rec of records) {
       const value = rec.Value ?? rec.value;
@@ -180,6 +295,7 @@ export async function syncShareForConnection(
       const dt = parseShareTimestamp(rec.DT || rec.ST || rec.WT);
       if (!dt || Number.isNaN(dt.getTime())) {
         diag.records_rejected++;
+        if (!parseError) parseError = "One or more readings had an unparseable timestamp";
         continue;
       }
       const ts = dt.getTime();
@@ -222,17 +338,82 @@ export async function syncShareForConnection(
       diag.records_parsed++;
     }
 
+    // ── [DIAG] DATA PROCESSING ──────────────────────────
+    const newestIdentified = latestTime != null;
+    console.log(JSON.stringify({
+      diagStage: "DATA_PROCESSING",
+      newestIdentified,
+      readingTimestamp: latestTime ? new Date(latestTime).toISOString() : null,
+      glucoseValue: latestValue,
+      trend: latestTrend,
+      consideredNew: toCreate.length > 0,
+      alreadyStored: diag.records_ignored_duplicates,
+      parseError,
+      recordsParsed: diag.records_parsed,
+      recordsRejected: diag.records_rejected,
+    }));
+
+    if (!newestIdentified) {
+      diag.status = "no_new_records";
+      console.log(JSON.stringify({
+        diagStage: "DATA_PROCESSING",
+        error_code: "DEXCOM_RESPONSE_PARSE_ERROR",
+        message: parseError || "No valid reading identified from Dexcom response",
+      }));
+      return diag;
+    }
+
+    // ── [DIAG] DATABASE/STORAGE ─────────────────────────
+    const dbStart = Date.now();
+    let dbWriteOk = false;
+    let dbError: string | null = null;
+    let insertedIds: any[] = [];
+
     if (toCreate.length) {
-      await sr.entities.GlucoseReading.bulkCreate(toCreate);
-      diag.records_inserted = toCreate.length;
-      diag.inserted_timestamps = toCreate.map((r) => r.recorded_at);
+      try {
+        const created = await sr.entities.GlucoseReading.bulkCreate(toCreate);
+        diag.records_inserted = toCreate.length;
+        diag.inserted_timestamps = toCreate.map((r) => r.recorded_at);
+        insertedIds = Array.isArray(created) ? created.map((r: any) => r?.id).filter(Boolean) : [];
+        dbWriteOk = true;
+      } catch (dbErr: any) {
+        dbError = dbErr?.message || String(dbErr);
+        console.log(JSON.stringify({
+          diagStage: "DATABASE",
+          error_code: "DATABASE_WRITE_ERROR",
+          entity: "GlucoseReading",
+          error: dbError,
+          durationMs: Date.now() - dbStart,
+        }));
+        diag.status = "error";
+        diag.error = `DATABASE_WRITE_ERROR: ${dbError}`;
+        return diag;
+      }
     }
 
     if (manualIdsToDelete.size) {
-      await Promise.all(
-        [...manualIdsToDelete].map((id) => sr.entities.GlucoseReading.delete(id))
-      );
+      try {
+        await Promise.all(
+          [...manualIdsToDelete].map((id) => sr.entities.GlucoseReading.delete(id))
+        );
+      } catch (delErr: any) {
+        // Non-fatal — log but don't fail the sync
+        console.log(JSON.stringify({
+          diagStage: "DATABASE",
+          warning: "manual_reading_delete_failed",
+          error: delErr?.message || String(delErr),
+        }));
+      }
     }
+
+    console.log(JSON.stringify({
+      diagStage: "DATABASE",
+      writeSucceeded: dbWriteOk,
+      entity: "GlucoseReading",
+      recordIds: insertedIds,
+      recordsWritten: diag.records_inserted,
+      durationMs: Date.now() - dbStart,
+    }));
 
     if (latestTime) {
       diag.latest_glucose_timestamp = new Date(latestTime).toISOString();
@@ -242,6 +423,17 @@ export async function syncShareForConnection(
     }
 
     diag.status = toCreate.length > 0 ? "synced" : "no_new_records";
+
+    // ── [DIAG] FUNCTION RESPONSE ─────────────────────────
+    console.log(JSON.stringify({
+      diagStage: "FUNCTION_RESPONSE",
+      status: diag.status,
+      records_inserted: diag.records_inserted,
+      latest_glucose_timestamp: diag.latest_glucose_timestamp,
+      latest_glucose_value: diag.latest_glucose_value,
+      totalDurationMs: Date.now() - fnStart,
+    }));
+
     return diag;
   } catch (error: any) {
     diag.status = "error";
@@ -257,6 +449,20 @@ export async function syncShareForConnection(
       diag.auth_status = "transient_error";
     }
     diag.error = error.shareCode || error.message;
+
+    const errorCode =
+      error.shareCode === "AccountPasswordInvalid" ? "DEXCOM_AUTH_ERROR"
+      : error.shareCode ? "DEXCOM_API_ERROR"
+      : "UNKNOWN_ERROR";
+
+    console.log(JSON.stringify({
+      diagStage: "FUNCTION_RESPONSE",
+      error_code: errorCode,
+      shareCode: error.shareCode || null,
+      message: error.message,
+      totalDurationMs: Date.now() - fnStart,
+    }));
+
     return diag;
   }
 }

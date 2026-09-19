@@ -13,17 +13,42 @@ import { syncShareForConnection } from "../../shared/dexcomShareSync.ts";
 import { dayKeyFromTimezone, recomputeDailySummary } from "../../shared/dailySummary.ts";
 
 export default async function (req: Request): Promise<Response> {
+  const fnStart = Date.now();
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
     if (!user || user.role !== "admin") {
+      console.log(JSON.stringify({
+        diagStage: "FUNCTION_RESPONSE",
+        trigger: "scheduled",
+        function: "syncDexcomGlucose",
+        httpStatus: 403,
+        status: "forbidden",
+      }));
       return Response.json({ error: "Forbidden" }, { status: 403 });
     }
     const sr = base44.asServiceRole;
 
+    // ── [DIAG] REFRESH START (scheduled) ─────────────────
+    console.log(JSON.stringify({
+      diagStage: "REFRESH_START",
+      trigger: "scheduled",
+      function: "syncDexcomGlucose",
+      timestamp: new Date(fnStart).toISOString(),
+      userHash: user?.id ? user.id.slice(0, 8) : null,
+    }));
+
     const connections = await sr.entities.DexcomConnection.filter({ status: "connected" });
 
     if (!connections.length) {
+      console.log(JSON.stringify({
+        diagStage: "FUNCTION_RESPONSE",
+        trigger: "scheduled",
+        httpStatus: 200,
+        status: "skipped",
+        reason: "no_connected_dexcom_accounts",
+        totalDurationMs: Date.now() - fnStart,
+      }));
       return Response.json({ skipped: "no_connected_dexcom_accounts" });
     }
 
@@ -48,7 +73,7 @@ export default async function (req: Request): Promise<Response> {
       }
 
       try {
-        const diag = await syncShareForConnection(sr, conn, conn.share_username, conn.share_password, now);
+        const diag = await syncShareForConnection(sr, conn, conn.share_username, conn.share_password, now, "scheduled");
         results.push(diag);
 
         // Update connection sync health

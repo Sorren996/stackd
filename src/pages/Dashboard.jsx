@@ -406,8 +406,35 @@ export default function Dashboard() {
   const { data: pollResult } = useQuery({
     queryKey: ["dexcom-poll-now"],
     queryFn: async () => {
-      const res = await base44.functions.invoke("pollDexcomNow", {});
-      return res.data;
+      const invokeStart = Date.now();
+      let res;
+      try {
+        res = await base44.functions.invoke("pollDexcomNow", {});
+      } catch (invokeErr) {
+        // ── [DIAG] FRONTEND: request failed ──
+        console.log(JSON.stringify({
+          diagStage: "FRONTEND",
+          error_code: "FRONTEND_REQUEST_ERROR",
+          message: invokeErr?.message || String(invokeErr),
+          durationMs: Date.now() - invokeStart,
+        }));
+        throw invokeErr;
+      }
+      const data = res?.data;
+      // ── [DIAG] FRONTEND: response received ──
+      console.log(JSON.stringify({
+        diagStage: "FRONTEND",
+        httpStatus: res?.status ?? null,
+        hasData: !!data,
+        responseShape: data ? Object.keys(data) : null,
+        status: data?.status ?? null,
+        records_inserted: data?.records_inserted ?? null,
+        latest_glucose: data?.latest_glucose ?? null,
+        latest_glucose_timestamp: data?.latest_glucose_timestamp ?? null,
+        error: data?.error ?? null,
+        durationMs: Date.now() - invokeStart,
+      }));
+      return data;
     },
     enabled: dexcomConnected,
     refetchInterval: dexcomConnected ? 120_000 : false,
@@ -419,9 +446,22 @@ export default function Dashboard() {
   // When the on-demand poll inserts new readings, invalidate the glucose
   // queries so the graph and latest-glucose card refresh immediately.
   useEffect(() => {
-    if (pollResult?.records_inserted > 0) {
-      queryClient.invalidateQueries({ queryKey: ["latest-glucose"] });
-      queryClient.invalidateQueries({ queryKey: ["glucose-readings", "graph"] });
+    try {
+      if (pollResult?.records_inserted > 0) {
+        queryClient.invalidateQueries({ queryKey: ["latest-glucose"] });
+        queryClient.invalidateQueries({ queryKey: ["glucose-readings", "graph"] });
+        console.log(JSON.stringify({
+          diagStage: "FRONTEND",
+          stateUpdated: true,
+          invalidatedQueries: ["latest-glucose", "glucose-readings:graph"],
+        }));
+      }
+    } catch (stateErr) {
+      console.log(JSON.stringify({
+        diagStage: "FRONTEND",
+        error_code: "FRONTEND_STATE_UPDATE_ERROR",
+        message: stateErr?.message || String(stateErr),
+      }));
     }
   }, [pollResult, queryClient]);
 
