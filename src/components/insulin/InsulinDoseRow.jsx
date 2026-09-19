@@ -2,6 +2,18 @@ import { useId, useMemo } from "react";
 import { generateActivityCurve, formatMinutes, isBasalInsulinType } from "@/lib/insulinPharmacology";
 import { getBasalDoseContributionLabel } from "@/lib/basalActivityModel";
 
+const MINUTE_MS = 60 * 1000;
+const HOUR_MS = 60 * MINUTE_MS;
+const DAY_MS = 24 * HOUR_MS;
+
+function formatTakenAgo(ms) {
+  if (!Number.isFinite(ms) || ms < 0) return null;
+  if (ms < MINUTE_MS) return "just now";
+  if (ms < HOUR_MS) return `${Math.round(ms / MINUTE_MS)}m ago`;
+  if (ms < DAY_MS) return `${Math.round(ms / HOUR_MS)}h ago`;
+  return `${Math.round(ms / DAY_MS)}d ago`;
+}
+
 /**
  * Compact insulin dose row showing the PK activity curve, current position
  * marker, status label, and remaining duration. All values come from the
@@ -16,7 +28,8 @@ export default function InsulinDoseRow({ dose, regimenStatus = null }) {
     if (!isBasal) return null;
     return getBasalDoseContributionLabel({ insulin_type: type, units, administered_at: new Date(time).toISOString() }, regimenStatus, Date.now());
   }, [isBasal, type, units, time, regimenStatus]);
-  const basalPercentMatch = basalContribution?.match(/(\d+)%$/);
+  const takenAgoMs = Number.isFinite(time) ? Date.now() - time : null;
+  const takenAgoLabel = isBasal ? formatTakenAgo(takenAgoMs) : null;
   const progress = timingInfo?.progress ?? 0;
   const remainingMin = timingInfo?.remainingMin ?? 0;
   const isSettling = remainingMin <= 1;
@@ -71,9 +84,17 @@ export default function InsulinDoseRow({ dose, regimenStatus = null }) {
           <span className="shrink-0 text-[10px] text-white/40">· {formattedUnits}u dose</span>
         </div>
         {isBasal ? (
-          <span className="shrink-0 text-sm font-bold text-white">
-            {basalPercentMatch ? basalPercentMatch[1] : "—"}
-            {basalPercentMatch && <span className="text-[10px] font-medium text-white/40">%</span>}
+          <span className="flex shrink-0 items-center gap-1.5">
+            <span
+              className="h-1.5 w-1.5 rounded-full"
+              style={{
+                background: basalContribution === "No longer contributing" ? "rgba(255,255,255,0.2)" : color,
+                boxShadow: basalContribution === "No longer contributing" ? "none" : `0 0 5px ${color}80`,
+              }}
+            />
+            <span className="text-[10px] font-medium text-white/45">
+              {basalContribution === "No longer contributing" ? "Faded" : "Active"}
+            </span>
           </span>
         ) : (
           <span className="shrink-0 text-sm font-bold text-white">
@@ -111,9 +132,15 @@ export default function InsulinDoseRow({ dose, regimenStatus = null }) {
 
       <div className="mt-1.5 flex items-center justify-between">
         <span className="text-[10px] text-white/50">{isBasal ? basalContribution : statusLabel}</span>
-        <span className="text-[10px] font-medium" style={{ color: isSettling ? "rgba(255,255,255,0.35)" : color }}>
-          {isSettling ? "Gently settling" : `~${formatMinutes(remainingMin)} remaining`}
-        </span>
+        {isBasal ? (
+          <span className="text-[10px] font-medium text-white/40">
+            {takenAgoLabel ? `Taken ${takenAgoLabel}` : ""}
+          </span>
+        ) : (
+          <span className="text-[10px] font-medium" style={{ color: isSettling ? "rgba(255,255,255,0.35)" : color }}>
+            {isSettling ? "Gently settling" : `~${formatMinutes(remainingMin)} remaining`}
+          </span>
+        )}
       </div>
     </div>
   );

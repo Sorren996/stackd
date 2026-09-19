@@ -1,6 +1,6 @@
 import { useMemo, useRef, useEffect, useState } from "react";
 import { Area, XAxis, YAxis, Line, ComposedChart, ReferenceLine } from "recharts";
-import { generateActivityCurve, getDoseIOB, getInsulinProfile, isBasalInsulinType } from "@/lib/insulinPharmacology";
+import { generateActivityCurve, getDoseIOB, getDoseRelativeActivity, getInsulinProfile, isBasalInsulinType } from "@/lib/insulinPharmacology";
 import { PROFILE_COLORS } from "@/lib/carbAbsorption";
 import { format } from "date-fns";
 import { AlertTriangle, CornerUpRight, SlidersHorizontal, Check, Wheat, Pencil, Trash2, Info } from "lucide-react";
@@ -605,13 +605,28 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           point[`${key}_total`] = doseUnits;
         }
       });
+      // Combined basal coverage — the summed relative activity of every
+      // overlapping basal dose at this moment. Mapped to a subtle band at the
+      // bottom of the glucose chart so it reads as a quiet background layer,
+      // never competing with the glucose line. Normalized by a fixed
+      // steady-state ceiling (~2.5 overlapping doses) so the band fills
+      // proportionally without false precision.
+      let basalSum = 0;
+      allCurvesMeta.forEach(({ dose, key }) => {
+        if (!isBasalInsulinType(dose.insulin_type)) return;
+        const act = point[`${key}_activity`];
+        if (Number.isFinite(act) && act > 0) basalSum += act;
+      });
+      const basalBandHeight = (effectiveMax - effectiveMin) * 0.16;
+      point.basalCoverage = effectiveMin + Math.min(1, basalSum / 2.5) * basalBandHeight;
+
       if (glucoseMap[t] !== undefined) {
         point.glucose = Math.min(glucoseMap[t], effectiveMax);
       }
       result.push(point);
     }
     return result;
-  }, [doses, glucoseReadings, carbEntries, filters, domainStart, domainEnd, allCurvesMeta, glucoseMap, maxBolusUnits, maxBasalUnits, effectiveMax]);
+  }, [doses, glucoseReadings, carbEntries, filters, domainStart, domainEnd, allCurvesMeta, glucoseMap, maxBolusUnits, maxBasalUnits, effectiveMax, effectiveMin]);
 
   const doseKeys = useMemo(() =>
   filteredDoses.map((dose, index) => ({
@@ -650,6 +665,18 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     });
     return Array.from(byType.values());
   }, [allCurvesMeta]);
+
+  // Whether any basal dose has activity overlapping the visible graph window —
+  // gates the subtle basal coverage background layer so it only renders when
+  // there's actually basal insulin to show.
+  const basalCoverageActive = useMemo(() =>
+    filteredDoses.some((dose) => {
+      if (!isBasalInsulinType(dose.insulin_type)) return false;
+      const iob = getDoseIOB(dose, Date.now());
+      return iob >= 0.5 || getDoseRelativeActivity(dose, Date.now()) > 0.01;
+    }),
+    [filteredDoses]
+  );
 
   const totalMs = domainEnd - domainStart;
   const visibleMs = viewWindow * 60 * 60 * 1000;
@@ -1259,6 +1286,10 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                   <stop offset={`${lowPct}%`} stopColor="#5ba88a" stopOpacity={0} />
                   <stop offset="100%" stopColor="#5ba88a" stopOpacity={0} />
                 </linearGradient>
+                <linearGradient id="basal_coverage_grad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#10b981" stopOpacity={0.22} />
+                  <stop offset="100%" stopColor="#10b981" stopOpacity={0.04} />
+                </linearGradient>
                 <linearGradient
                         id="glucose_line_grad"
                         gradientUnits="userSpaceOnUse"
@@ -1300,6 +1331,24 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                       dot={false}
                       activeDot={false}
                       legendType="none" />
+                }
+
+              {/* Subtle basal coverage background layer — the combined,
+                   overlapping activity of all basal doses, rendered as a
+                   quiet band beneath the glucose line. Smooth, no 24h cliff,
+                   visually distinct from rapid insulin curves. */}
+              {filters.insulin && basalCoverageActive &&
+                    <Area
+                      yAxisId="glucose"
+                      type="monotoneX"
+                      dataKey="basalCoverage"
+                      stroke="none"
+                      fill="url(#basal_coverage_grad)"
+                      isAnimationActive={false}
+                      dot={false}
+                      activeDot={false}
+                      legendType="none"
+                      connectNulls={true} />
                 }
 
               {filters.glucose && filteredGlucoseReadings.length > 0 &&
@@ -1371,6 +1420,12 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       </div>
       {filters.insulin && activeDoseKeys.length > 0 && (
         <div className="flex items-center gap-3 px-3 mt-1.5 overflow-x-auto no-scrollbar">
+          {basalCoverageActive && (
+            <div className="flex items-center gap-1 shrink-0">
+              <span className="h-1.5 w-1.5 rounded-full" style={{ background: "#10b981" }} />
+              <span className="text-[9px] text-white/35">Background insulin coverage</span>
+            </div>
+          )}
           {activeDoseKeys.map((k) => (
             <div key={k.label} className="flex items-center gap-1 shrink-0">
               <span className="h-1.5 w-1.5 rounded-full" style={{ background: k.color }} />

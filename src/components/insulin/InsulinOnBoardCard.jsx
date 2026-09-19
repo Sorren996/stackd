@@ -4,11 +4,37 @@ import { Info } from "lucide-react";
 import { isBasalInsulinType } from "@/lib/insulinPharmacology";
 import InsulinDoseRow from "./InsulinDoseRow";
 import InfoPopover from "@/components/graph/InfoPopover";
+import BasalCoverageInfo from "./BasalCoverageInfo";
+
+const MINUTE_MS = 60 * 1000;
+const HOUR_MS = 60 * MINUTE_MS;
+const DAY_MS = 24 * HOUR_MS;
+
+function formatElapsed(ms) {
+  if (!Number.isFinite(ms) || ms < 0) return null;
+  if (ms < MINUTE_MS) return "just now";
+  if (ms < HOUR_MS) {
+    const m = Math.round(ms / MINUTE_MS);
+    return `${m}m ago`;
+  }
+  if (ms < DAY_MS) {
+    const h = Math.round(ms / HOUR_MS);
+    return `${h}h ago`;
+  }
+  const d = Math.round(ms / DAY_MS);
+  return `${d}d ago`;
+}
+
+// States where a modeled percentage is meaningful to display.
+const PERCENTAGE_STATES = new Set(["stabilizing", "steady", "active", "declining"]);
+// States where coverage is actively providing background insulin.
+const ACTIVE_STATES = new Set(["building", "stabilizing", "steady", "active", "declining"]);
 
 /**
- * Redesigned Insulin on Board container. Preserves the existing bolus/basal
- * IOB totals and dose breakdown calculations from ActiveInsulinBanner — this
- * component only changes the presentation layer.
+ * Insulin on Board container. Bolus IOB uses the existing pharmacokinetic
+ * decay model; basal coverage uses the basal activity model's plain-language
+ * states and modeled percentage. The two are visually distinct so the user
+ * never confuses background basal coverage with rapid-acting IOB.
  */
 export default function InsulinOnBoardCard({ totalUnits, breakdown, basalRegimenStatus }) {
   const bolusDoses = breakdown.filter((d) => !isBasalInsulinType(d.type));
@@ -16,12 +42,20 @@ export default function InsulinOnBoardCard({ totalUnits, breakdown, basalRegimen
   const bolusUnits = bolusDoses.reduce((sum, d) => sum + d.iob, 0);
   const hasBolusIOB = bolusUnits > 0.01;
   const [estimateRect, setEstimateRect] = useState(null);
+  const [basalInfoRect, setBasalInfoRect] = useState(null);
 
-  const coverageDisplay =
-    basalRegimenStatus?.state === "established" || basalRegimenStatus?.state === "approaching"
-      ? `${basalRegimenStatus.basalCoverage}`
-      : null;
-  const coverageStateLabel = basalRegimenStatus?.label || "Minimal";
+  const basalState = basalRegimenStatus?.state || "none";
+  const showPercentage = PERCENTAGE_STATES.has(basalState) && basalRegimenStatus?.basalCoverage != null;
+  const coverageLabel = basalRegimenStatus?.coverageLabel || "No basal insulin logged";
+  const isBasalActive = ACTIVE_STATES.has(basalState);
+
+  // Most recent basal dose — shown as "Tresiba · 30U · Taken 14h ago"
+  const latestBasalDose = basalDoses[0] || null;
+  const latestBasalLabel = latestBasalDose
+    ? `${latestBasalDose.shortName} · ${latestBasalDose.units % 1 === 0 ? latestBasalDose.units : latestBasalDose.units.toFixed(1)}u`
+    : null;
+  const latestBasalElapsed = basalRegimenStatus?.elapsedTime ?? null;
+  const latestBasalElapsedLabel = latestBasalElapsed != null ? formatElapsed(latestBasalElapsed) : null;
 
   return (
     <motion.div
@@ -73,17 +107,56 @@ export default function InsulinOnBoardCard({ totalUnits, breakdown, basalRegimen
         </div>
         <div className="mx-3 w-px self-stretch bg-white/10" />
         <div className="flex min-w-0 flex-1 flex-col">
-          {coverageDisplay ? (
+          {showPercentage ? (
             <div className="flex items-end gap-1">
-              <span className="text-3xl font-black leading-none text-white">{coverageDisplay}</span>
+              <span className="text-3xl font-black leading-none text-white">{basalRegimenStatus.basalCoverage}</span>
               <span className="mb-0.5 text-[10px] font-medium text-white/40">%</span>
             </div>
           ) : (
-            <span className="truncate text-sm font-bold leading-tight text-white">{coverageStateLabel}</span>
+            <span className="truncate text-sm font-bold leading-tight text-white">{coverageLabel}</span>
           )}
-          <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-white/45">Basal Coverage</span>
+          <div className="mt-0.5 flex items-center gap-1.5">
+            {isBasalActive && (
+              <motion.span
+                animate={{ opacity: [0.4, 1, 0.4], scale: [0.85, 1, 0.85] }}
+                transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+                className="h-1.5 w-1.5 shrink-0 rounded-full"
+                style={{ background: "#10b981", boxShadow: "0 0 6px rgba(16,185,129,0.6)" }}
+              />
+            )}
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-white/45">Basal Coverage</span>
+            <button
+              type="button"
+              onClick={(e) => setBasalInfoRect(e.currentTarget.getBoundingClientRect())}
+              className="text-white/25 transition-colors hover:text-white/50"
+            >
+              <Info className="h-3 w-3" />
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Plain-language coverage state + most recent dose summary */}
+      {basalState !== "none" && (
+        <div className="relative z-10 mt-2 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+          <span className="text-[11px] font-semibold text-white/70">{coverageLabel}</span>
+          {latestBasalLabel && latestBasalElapsedLabel && (
+            <span className="text-[10px] text-white/40">
+              · {latestBasalLabel} · Taken {latestBasalElapsedLabel}
+            </span>
+          )}
+        </div>
+      )}
+
+      <AnimatePresence>
+        {basalInfoRect && (
+          <BasalCoverageInfo
+            anchorRect={basalInfoRect}
+            onClose={() => setBasalInfoRect(null)}
+            insulinType={basalRegimenStatus?.insulinType}
+          />
+        )}
+      </AnimatePresence>
 
       {breakdown.length ? (
         <div className="relative z-10 mt-4 space-y-3">
