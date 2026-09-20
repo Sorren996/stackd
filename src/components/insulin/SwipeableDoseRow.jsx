@@ -1,27 +1,21 @@
 import { useState } from "react";
-import { motion, useMotionValue, useTransform, animate } from "framer-motion";
+import { motion, useMotionValue, animate } from "framer-motion";
 import { Pencil, Trash2 } from "lucide-react";
 
-const ACTION_WIDTH = 132; // two 56px actions + gap
+const ACTION_WIDTH = 132; // two 56px actions + gap + padding
 const OPEN_THRESHOLD = ACTION_WIDTH * 0.4;
-// Buttons reach full opacity early in the swipe for a natural feel.
-const REVEAL_FRACTION = 0.35;
 
 /**
  * iOS-style swipe-left wrapper for an insulin dose row. The content stays
- * fully transparent — no opaque background. Instead, the edit and delete
- * buttons fade in proportionally to how far the user has swiped left, driven
- * by a motion value on the drag's x position. Releasing past the threshold
- * snaps open; tapping the content while open snaps it closed.
+ * fully transparent. The edit and delete buttons are positioned just past
+ * the right edge (off-screen) and share the same horizontal motion value as
+ * the content, so they slide in from the right alongside the curve — never
+ * overlapping it. Releasing past the threshold snaps open; tapping the
+ * content while open snaps it closed.
  */
 export default function SwipeableDoseRow({ children, onEdit, onDelete }) {
   const [open, setOpen] = useState(false);
   const x = useMotionValue(0);
-
-  const actionsOpacity = useTransform(x, (latest) => {
-    const progress = Math.min(1, Math.abs(latest) / (ACTION_WIDTH * REVEAL_FRACTION));
-    return progress;
-  });
 
   const snapTo = (target, nextOpen) => {
     setOpen(nextOpen);
@@ -52,10 +46,10 @@ export default function SwipeableDoseRow({ children, onEdit, onDelete }) {
 
   return (
     <div className="relative overflow-hidden">
-      {/* Action buttons — fade in as the user swipes left */}
+      {/* Action buttons — start off-screen to the right, slide in with the content */}
       <motion.div
-        style={{ opacity: actionsOpacity }}
-        className="absolute inset-y-0 right-0 flex items-center gap-1 pr-1"
+        style={{ x, left: "100%", width: ACTION_WIDTH }}
+        className="absolute inset-y-0 flex items-center gap-1 pr-1"
       >
         <button
           type="button"
@@ -77,7 +71,7 @@ export default function SwipeableDoseRow({ children, onEdit, onDelete }) {
         </button>
       </motion.div>
 
-      {/* Draggable content — fully transparent, no background */}
+      {/* Draggable content — fully transparent, slides left to reveal buttons */}
       <motion.div
         drag="x"
         style={{ x, touchAction: "pan-y" }}
