@@ -190,6 +190,18 @@
     font-size: 10px;
     color: rgba(255,255,255,0.40);
   }
+
+  /* Swipeable row content — opaque surface that hides action buttons until
+     the user swipes left. Matches the card surface in each theme. */
+  .stackd-swipe-content {
+    background: linear-gradient(165deg, rgba(17,34,50,0.98), rgba(15,36,31,0.98));
+    border-radius: 0.75rem;
+  }
+}
+
+[data-theme="light"] .stackd-swipe-content {
+  background: linear-gradient(165deg, rgba(247,243,236,0.98), rgba(241,236,226,0.98));
+  border-radius: 0.75rem;
 }
 
 /* ============================================================

@@ -66,7 +66,7 @@ export default function SwipeableDoseRow({ children, onEdit, onDelete }) {
         onClick={open ? () => setOpen(false) : undefined}
         animate={{ x: open ? -ACTION_WIDTH : 0 }}
         transition={{ type: "spring", stiffness: 420, damping: 38 }}
-        className="relative z-10 cursor-grab active:cursor-grabbing bg-transparent"
+        className="stackd-swipe-content relative z-10 cursor-grab active:cursor-grabbing"
         style={{ touchAction: "pan-y" }}
       >
         {children}
