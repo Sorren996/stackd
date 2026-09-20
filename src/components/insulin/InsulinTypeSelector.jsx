@@ -49,10 +49,10 @@ export default function InsulinTypeSelector({ value, onChange, options }) {
           scrollbarWidth: "none",
           overscrollBehaviorX: "contain",
           touchAction: "pan-x",
-          paddingLeft: 22,
-          paddingRight: 22,
-          paddingTop: 22,
-          paddingBottom: 22,
+          paddingLeft: 24,
+          paddingRight: 24,
+          paddingTop: 30,
+          paddingBottom: 30,
         }}
       >
         <div className="flex gap-3">

@@ -72,10 +72,10 @@ export default function UnitsStepper({ value, onChange }) {
           scrollbarWidth: "none",
           overscrollBehaviorX: "contain",
           touchAction: "pan-x",
-          paddingLeft: 22,
-          paddingRight: 22,
-          paddingTop: 22,
-          paddingBottom: 22,
+          paddingLeft: 24,
+          paddingRight: 24,
+          paddingTop: 28,
+          paddingBottom: 28,
         }}
       >
         <div className="flex justify-center gap-2">
