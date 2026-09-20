@@ -31,15 +31,9 @@ export default function SplitPlanCard({ plan }) {
       onClick={() => navigate(`/split-plan/${plan.id}`)}
       className="relative flex w-full items-center gap-3 overflow-hidden mt-4 rounded-2xl border p-4 text-left backdrop-blur-sm mb-4"
       style={{
-        background: "linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))",
         borderColor: `${color}40`,
         boxShadow: `0 8px 24px rgba(0,0,0,0.12), inset 0 1px 1px rgba(255,255,255,0.12), 0 0 0 1px ${color}15`
       }}>
-      
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -inset-4 opacity-50"
-        style={{ background: `radial-gradient(circle at 20% 0%, ${color}18, transparent 50%)` }} />
       
       <div
         className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full"

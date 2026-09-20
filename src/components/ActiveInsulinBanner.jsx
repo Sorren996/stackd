@@ -766,17 +766,9 @@ function MetricCard({ label, value, sub, status, color, tooltipId, openTooltip, 
       whileTap={{ scale: 0.985 }}
       className="metric-card relative col-span-2 overflow-hidden rounded-2xl border p-4 backdrop-blur-sm"
       style={{
-        background: "linear-gradient(152deg, rgba(255,255,255,0.04), rgba(255,255,255,0.008))",
         borderColor: "rgba(255,255,255,0.09)",
         boxShadow: "0 8px 32px rgba(0,0,0,0.12), inset 0 1px 1px rgba(255,255,255,0.10), inset 0 0 28px rgba(91,168,138,0.025)"
       }}>
-      
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -inset-6 opacity-50"
-        style={{
-          background: "radial-gradient(circle at 30% 0%, rgba(91,168,138,0.07), transparent 50%), radial-gradient(circle at 90% 100%, rgba(255,255,255,0.05), transparent 45%)"
-        }} />
       
       <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2">
         <AmbientOrb color={color} />
@@ -1153,7 +1145,6 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
         <div
           className="stackd-graph-canvas relative overflow-hidden rounded-3xl pb-1 mt-8"
           style={{
-            background: "linear-gradient(165deg, rgba(255,255,255,0.035), rgba(255,255,255,0.006))",
             boxShadow: "0 6px 28px rgba(0,0,0,0.10), inset 0 1px 1px rgba(255,255,255,0.06)"
           }}>
           

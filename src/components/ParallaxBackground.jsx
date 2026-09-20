@@ -38,8 +38,8 @@ export default function ParallaxBackground() {
       className="pointer-events-none fixed inset-0 -z-10"
       style={{
         background: isLight
-          ? "linear-gradient(to bottom, #f7f3ec 0%, #f1ece2 100%)"
-          : "linear-gradient(to bottom, #112232 0%, #0F241F 100%)",
+          ? "linear-gradient(to bottom, #e6efe9 0%, #f1ece2 30%, #f1ece2 100%)"
+          : "linear-gradient(to bottom, #0F241F 0%, #112232 30%, #112232 100%)",
         backgroundSize: "100% 300%",
         backgroundPosition: "50% 0%",
         backgroundRepeat: "no-repeat",

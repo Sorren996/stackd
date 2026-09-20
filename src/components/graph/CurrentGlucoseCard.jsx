@@ -13,7 +13,6 @@ const TREND_ICONS = {
 };
 
 const CARD_STYLE = {
-  background: "linear-gradient(152deg, rgba(255,255,255,0.04), rgba(255,255,255,0.008))",
   borderColor: "rgba(255,255,255,0.09)",
   boxShadow:
   "0 8px 32px rgba(0,0,0,0.12), inset 0 1px 1px rgba(255,255,255,0.10), inset 0 0 28px rgba(91,168,138,0.025)"
@@ -64,15 +63,7 @@ export default function CurrentGlucoseCard({
   return (
     <motion.div
       className="metric-card stackd-card relative flex min-h-[112px] flex-col justify-between overflow-hidden rounded-2xl p-4">
-      
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -inset-6 opacity-50"
-        style={{
-          background:
-          "radial-gradient(circle at 30% 0%, rgba(91,168,138,0.07), transparent 50%), radial-gradient(circle at 90% 100%, rgba(255,255,255,0.05), transparent 45%)"
-        }} />
-      
+
       <div className="relative z-10 mb-1 flex items-start justify-between gap-2">
         <span className="text-[10px] font-semibold uppercase tracking-wider text-white/35">
           Current Glucose

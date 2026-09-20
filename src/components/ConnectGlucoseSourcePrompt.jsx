@@ -45,7 +45,6 @@ export default function ConnectGlucoseSourcePrompt({ connection }) {
       className="overflow-hidden rounded-2xl border px-4 py-3.5"
       style={{
         borderColor: accent.border,
-        background: accent.bg,
         boxShadow: accent.glow,
         backdropFilter: "blur(4px)",
       }}
@@ -70,7 +69,6 @@ export default function ConnectGlucoseSourcePrompt({ connection }) {
         className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl border py-2.5 text-xs font-semibold transition hover:bg-white/5"
         style={{
           borderColor: accent.ctaBorder,
-          background: "rgba(255,255,255,0.03)",
           color: accent.text,
         }}
       >

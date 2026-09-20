@@ -19,8 +19,6 @@ export default function StaleReadingBanner({ visible }) {
             className="mt-3 overflow-hidden rounded-2xl border px-4 py-3"
             style={{
               borderColor: "rgba(217,169,56,0.28)",
-              background:
-                "linear-gradient(145deg, rgba(217,169,56,0.07), rgba(217,169,56,0.02))",
               boxShadow:
                 "0 0 24px rgba(217,169,56,0.12), inset 0 0 28px rgba(217,169,56,0.08)",
               backdropFilter: "blur(4px)",

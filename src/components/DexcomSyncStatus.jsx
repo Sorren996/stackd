@@ -76,8 +76,6 @@ export default function DexcomSyncStatus() {
       animate={{ opacity: 1, y: 0 }}
       className="rounded-2xl border border-teal-500/15 px-4 py-3"
       style={{
-        background:
-          "linear-gradient(145deg, rgba(91,168,138,0.06), rgba(91,163,184,0.03))",
         backdropFilter: "blur(4px)",
       }}
     >
@@ -125,7 +123,6 @@ export default function DexcomSyncStatus() {
               onClick={() => setShowHelp((v) => !v)}
               className="mt-3 flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left transition hover:bg-white/5"
               style={{
-                background: "rgba(255,255,255,0.03)",
                 borderColor: "rgba(255,255,255,0.08)",
               }}
             >
@@ -154,7 +151,6 @@ export default function DexcomSyncStatus() {
                           <div
                             className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border"
                             style={{
-                              background: "rgba(255,255,255,0.03)",
                               borderColor: "rgba(255,255,255,0.08)",
                             }}
                           >

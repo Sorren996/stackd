@@ -103,7 +103,6 @@ function SimilarMealsSection({ mealCarbs }) {
             <div
               key={m.id}
               className="flex items-center justify-between rounded-lg border border-white/[0.06] px-3 py-2"
-              style={{ background: "rgba(255,255,255,0.02)" }}
             >
               <span className="text-[11px] text-white/60">{Math.round(m.carbs_logged)}g carbs</span>
               <span className="text-[11px] text-white/50">Peak {Math.round(m.peak_glucose)} mg/dL</span>
@@ -142,7 +141,7 @@ function HowCalculatedSection({ d }) {
       {open && (
         <div
           className="mt-2 space-y-1.5 rounded-xl border p-3"
-          style={{ borderColor: "rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.02)" }}
+          style={{ borderColor: "rgba(255,255,255,0.06)" }}
         >
           <p className="text-[11px] font-semibold text-white/60">How Stackd estimated this</p>
           <div className="space-y-1 text-[11px] leading-relaxed text-white/50">
@@ -372,7 +371,7 @@ export default function MealReviewContent({ mealInsight, monitoringStatus, gluco
       {monitoringStatus?.isActive && (
         <div
           className="rounded-xl border p-3"
-          style={{ borderColor: "rgba(217,169,56,0.2)", background: "rgba(217,169,56,0.05)" }}
+          style={{ borderColor: "rgba(217,169,56,0.2)" }}
         >
           <div className="flex items-center gap-2">
             <Clock className="h-3.5 w-3.5 shrink-0 text-amber-400/80" />
@@ -399,7 +398,6 @@ export default function MealReviewContent({ mealInsight, monitoringStatus, gluco
           className="flex w-full items-center justify-center gap-2 rounded-xl border py-2.5 text-[12px] font-semibold transition hover:brightness-110"
           style={{
             borderColor: `${PALETTE.green}40`,
-            background: `${PALETTE.green}12`,
             color: PALETTE.green,
           }}
         >

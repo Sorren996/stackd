@@ -16,14 +16,7 @@ export default function ComfortZoneCard({ percentage }) {
     <motion.div
       whileTap={{ scale: 0.97 }}
       className="metric-card stackd-card relative flex min-h-[112px] flex-col justify-between overflow-hidden rounded-2xl p-4">
-      
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -inset-6 opacity-50"
-        style={{
-          background: "radial-gradient(circle at 30% 0%, rgba(91,168,138,0.07), transparent 50%), radial-gradient(circle at 90% 100%, rgba(255,255,255,0.05), transparent 45%)"
-        }} />
-      
+
       <div className="relative z-10 mb-1 flex items-start justify-between gap-2">
         <span className="text-[10px] font-semibold uppercase tracking-wider text-white/35">Daily Balance</span>
         
