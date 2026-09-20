@@ -2,10 +2,21 @@ import { Minus, Plus } from "lucide-react";
 
 const PRESETS = [5, 10, 15, 20];
 
+const ACTION_BTN_STYLE = {
+  borderColor: "rgba(255,255,255,0.12)",
+  background: "rgba(255,255,255,0.04)",
+  boxShadow: "inset 0 1px 1px rgba(255,255,255,0.05)",
+  color: "rgba(255,255,255,0.85)",
+};
+
 /**
  * Touch-first unit selector for insulin logging.
  * A large central stepper gives ±1 unit precision; quick presets
  * below it act as shortcuts that set the dose exactly. No keyboard.
+ *
+ * The +/- buttons are neutral ACTION buttons — their appearance stays
+ * constant while enabled and never implies selection. Only the dose
+ * value and the matching preset carry a persistent selected state.
  */
 export default function UnitsStepper({ value, onChange }) {
   const current = Number(value) || 0;
@@ -20,18 +31,13 @@ export default function UnitsStepper({ value, onChange }) {
       <span className="stackd-section-label">Units</span>
 
       {/* Central stepper — primary dose display */}
-      <div className="mt-3 flex items-center justify-center gap-5">
+      <div className="mt-3 flex items-center justify-center gap-5" style={{ padding: "18px 0" }}>
         <button
           type="button"
           onClick={() => setUnits(current - 1)}
           disabled={current <= 0}
-          className="flex h-12 w-12 items-center justify-center rounded-full border transition-colors disabled:opacity-30"
-          style={{
-            borderColor: "rgba(255,255,255,0.12)",
-            background: "rgba(255,255,255,0.04)",
-            boxShadow: "inset 0 1px 1px rgba(255,255,255,0.05)",
-            color: "rgba(255,255,255,0.85)",
-          }}
+          className="flex h-12 w-12 items-center justify-center rounded-full border transition-opacity disabled:opacity-30"
+          style={ACTION_BTN_STYLE}
           aria-label="Decrease dose by 1 unit"
         >
           <Minus className="h-5 w-5" />
@@ -45,13 +51,8 @@ export default function UnitsStepper({ value, onChange }) {
         <button
           type="button"
           onClick={() => setUnits(current + 1)}
-          className="flex h-12 w-12 items-center justify-center rounded-full border transition-colors"
-          style={{
-            borderColor: "rgba(91,168,138,0.35)",
-            background: "linear-gradient(145deg, rgba(91,168,138,0.18), rgba(91,163,184,0.10))",
-            boxShadow: "0 6px 18px rgba(91,168,138,0.16), inset 0 1px 1px rgba(255,255,255,0.10)",
-            color: "rgba(255,255,255,0.95)",
-          }}
+          className="flex h-12 w-12 items-center justify-center rounded-full border"
+          style={ACTION_BTN_STYLE}
           aria-label="Increase dose by 1 unit"
         >
           <Plus className="h-5 w-5" />
@@ -60,35 +61,46 @@ export default function UnitsStepper({ value, onChange }) {
 
       {/* Quick presets — shortcuts beneath the total */}
       <div
-        className="no-scrollbar mt-4 flex justify-center gap-2 overflow-x-auto"
-        style={{ WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}
+        className="no-scrollbar flex justify-center gap-2 overflow-x-auto"
+        style={{
+          WebkitOverflowScrolling: "touch",
+          scrollbarWidth: "none",
+          paddingLeft: 22,
+          paddingRight: 22,
+          paddingTop: 22,
+          paddingBottom: 22,
+          marginLeft: -22,
+          marginRight: -22,
+        }}
       >
-        {PRESETS.map((preset) => {
-          const isSelected = current === preset;
-          return (
-            <button
-              key={preset}
-              type="button"
-              onClick={() => setUnits(preset)}
-              className="flex shrink-0 items-center justify-center rounded-full border text-sm font-semibold transition-colors"
-              style={{
-                height: 44,
-                minWidth: 56,
-                borderColor: isSelected ? "rgba(91,168,138,0.55)" : "rgba(255,255,255,0.10)",
-                background: isSelected
-                  ? "linear-gradient(145deg, rgba(91,168,138,0.22), rgba(91,163,184,0.14))"
-                  : "rgba(255,255,255,0.03)",
-                boxShadow: isSelected
-                  ? "0 0 0 1px rgba(91,168,138,0.25), 0 6px 18px rgba(91,168,138,0.18), inset 0 1px 1px rgba(255,255,255,0.10)"
-                  : "inset 0 1px 1px rgba(255,255,255,0.04)",
-                color: isSelected ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.62)",
-              }}
-              aria-pressed={isSelected}
-            >
-              {preset}
-            </button>
-          );
-        })}
+        <div className="flex gap-2">
+          {PRESETS.map((preset) => {
+            const isSelected = current === preset;
+            return (
+              <button
+                key={preset}
+                type="button"
+                onClick={() => setUnits(preset)}
+                className="flex shrink-0 items-center justify-center rounded-full border text-sm font-semibold transition-colors"
+                style={{
+                  height: 44,
+                  minWidth: 56,
+                  borderColor: isSelected ? "rgba(91,168,138,0.60)" : "rgba(255,255,255,0.10)",
+                  background: isSelected
+                    ? "linear-gradient(145deg, rgba(91,168,138,0.20), rgba(91,163,184,0.12))"
+                    : "rgba(255,255,255,0.03)",
+                  boxShadow: isSelected
+                    ? "0 0 0 1px rgba(91,168,138,0.25), 0 0 18px rgba(91,168,138,0.28), inset 0 1px 1px rgba(255,255,255,0.10)"
+                    : "inset 0 1px 1px rgba(255,255,255,0.04)",
+                  color: isSelected ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.62)",
+                }}
+                aria-pressed={isSelected}
+              >
+                {preset}
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
