@@ -10,8 +10,10 @@ export function useDexcomConnection() {
   const { data, isLoading } = useQuery({
     queryKey: ["dexcom-connection"],
     queryFn: () => base44.entities.DexcomConnection.list("-created_date", 1),
-    staleTime: 60 * 1000,
-    gcTime: 5 * 60 * 1000,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const connection = data?.[0];

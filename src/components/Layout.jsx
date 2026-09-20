@@ -57,7 +57,9 @@ export default function Layout() {
     });
     try {
       const refreshPromise = queryClient.refetchQueries({
-        predicate: (query) => query.queryKey[0] !== "dexcom-poll-now",
+        predicate: (query) =>
+          query.queryKey[0] !== "dexcom-poll-now" &&
+          query.queryKey[0] !== "dexcom-connection",
       });
       // Guard against a hung connection — if the refetch can't establish a
       // connection, time out and surface the unsuccessful alert instead of
