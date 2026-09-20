@@ -431,7 +431,7 @@ export default function DoseForm({ open, onOpenChange, mode = "insulin" }) {
                   </div>
                 ) : mode === "insulin" ? (
                   <>
-                    <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-4 pt-3">
+                    <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-5 pb-4 pt-3">
                       <div className="space-y-3">
                         {insulinRows.map((row) => (
                           <div key={row.id} className="space-y-2">

@@ -2,13 +2,12 @@ import { useEffect, useRef } from "react";
 
 /**
  * Inline horizontal insulin type selector rendered as a compact
- * "choice wheel" of consistent circles. Each circle shows the insulin
- * name (no icon), one tap selects, and the row scrolls horizontally
- * when the user's configured library exceeds the available width.
- *
- * The scroll wrapper carries horizontal/vertical padding so each
- * circle's atmospheric glow renders fully without being clipped.
+ * "choice wheel" of consistent circles. The row scrolls horizontally
+ * in isolation; the parent sheet never moves horizontally. Selection
+ * transitions gently illuminate the chosen circle over ~250ms.
  */
+const TRANSITION = "border-color 250ms ease-out, background 250ms ease-out, box-shadow 250ms ease-out, color 250ms ease-out";
+
 export default function InsulinTypeSelector({ value, onChange, options }) {
   const scrollRef = useRef(null);
   const selectedRef = useRef(null);
@@ -22,9 +21,9 @@ export default function InsulinTypeSelector({ value, onChange, options }) {
     const viewLeft = container.scrollLeft;
     const viewRight = viewLeft + container.clientWidth;
     if (elLeft < viewLeft) {
-      container.scrollTo({ left: elLeft - 16, behavior: "smooth" });
+      container.scrollTo({ left: elLeft - 22, behavior: "smooth" });
     } else if (elRight > viewRight) {
-      container.scrollTo({ left: elRight - container.clientWidth + 16, behavior: "smooth" });
+      container.scrollTo({ left: elRight - container.clientWidth + 22, behavior: "smooth" });
     }
   }, [value]);
 
@@ -42,16 +41,18 @@ export default function InsulinTypeSelector({ value, onChange, options }) {
       <span className="stackd-section-label">Insulin Type</span>
       <div
         ref={scrollRef}
-        className="no-scrollbar mt-3 overflow-x-auto"
+        className="no-scrollbar mt-3"
         style={{
+          overflowX: "auto",
+          overflowY: "hidden",
           WebkitOverflowScrolling: "touch",
           scrollbarWidth: "none",
+          overscrollBehaviorX: "contain",
+          touchAction: "pan-x",
           paddingLeft: 22,
           paddingRight: 22,
           paddingTop: 22,
           paddingBottom: 22,
-          marginLeft: -22,
-          marginRight: -22,
         }}
       >
         <div className="flex gap-3">
@@ -63,10 +64,11 @@ export default function InsulinTypeSelector({ value, onChange, options }) {
                 ref={isSelected ? selectedRef : null}
                 type="button"
                 onClick={() => onChange(option.value)}
-                className="flex shrink-0 items-center justify-center rounded-full border text-center transition-colors"
+                className="flex shrink-0 items-center justify-center rounded-full border text-center"
                 style={{
                   height: 88,
                   width: 88,
+                  transition: TRANSITION,
                   borderColor: isSelected ? "rgba(91,168,138,0.65)" : "rgba(255,255,255,0.10)",
                   background: isSelected
                     ? "linear-gradient(145deg, rgba(91,168,138,0.20), rgba(91,163,184,0.10))"
