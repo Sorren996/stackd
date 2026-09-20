@@ -5,6 +5,7 @@ import { LayoutDashboard, CalendarDays, Gauge, CircleUser, Plus, X, Syringe, Dro
 import DoseForm from "@/components/DoseForm";
 import CombinedLogSheet from "@/components/CombinedLogSheet";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
+import { NavGlassShape, ModalGlassShape, useMeasuredWidth, FAB_SIZE, FAB_RADIUS } from "@/components/nav/GlassShape";
 
 const navItems = [
   { path: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -21,14 +22,7 @@ const ALL_ACTIONS = [
 ];
 
 const EASE = [0.22, 1, 0.36, 1];
-
-const FAB_SIZE = 56;
-const NOTCH_RADIUS = 26;
-
-const GLASS_BG = "linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.03))";
-const GLASS_INSET = "inset 0 1px 1px rgba(255,255,255,0.18), inset 0 -1px 1px rgba(255,255,255,0.04)";
-const GLASS_GLOW =
-  "radial-gradient(circle at 25% 0%, rgba(255,255,255,0.26), transparent 34%), radial-gradient(circle at 85% 130%, rgba(45,212,191,0.16), transparent 42%)";
+const NAV_HEIGHT = 60;
 
 function readManualGlucoseEnabled() {
   if (typeof window === "undefined") return true;
@@ -76,6 +70,8 @@ export default function UnifiedBottomNav() {
   const [combinedSheetOpen, setCombinedSheetOpen] = useState(false);
   const [manualGlucoseEnabled, setManualGlucoseEnabled] = useState(readManualGlucoseEnabled);
   const { connected: dexcomConnected } = useDexcomConnection();
+
+  const [navRef, navWidth] = useMeasuredWidth();
 
   const actions = useMemo(
     () =>
@@ -136,8 +132,6 @@ export default function UnifiedBottomNav() {
     setDoseFormOpen(true);
   };
 
-  const notchMask = `radial-gradient(circle ${NOTCH_RADIUS}px at 50% 0%, transparent 92%, #000 100%)`;
-
   // Lock background scroll while the action modal is open.
   useEffect(() => {
     if (!expanded || doseFormOpen) return;
@@ -165,10 +159,10 @@ export default function UnifiedBottomNav() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.18 }}
+            transition={{ duration: 0.2 }}
             className="fixed inset-0 z-40"
             style={{
-              background: "rgba(5,10,12,0.35)",
+              background: "rgba(5,10,12,0.45)",
               backdropFilter: "blur(8px)",
               WebkitBackdropFilter: "blur(8px)",
             }}
@@ -177,10 +171,6 @@ export default function UnifiedBottomNav() {
         )}
       </AnimatePresence>
 
-      {/* Unified surface: nav bar + FAB as one continuous glass component.
-          When the FAB is tapped, a modal panel slides up from the nav as a
-          direct extension — the FAB transforms from + to × and stays at the
-          junction, seamlessly connecting the nav and the modal. */}
       <motion.nav
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
@@ -188,71 +178,72 @@ export default function UnifiedBottomNav() {
         className="fixed inset-x-0 bottom-0 flex justify-center"
         style={{ paddingBottom: "env(safe-area-inset-bottom)", zIndex: expanded ? 50 : 30 }}
       >
-        <div className="relative mx-4 mb-4">
-          {/* ── Action modal — slides up from the nav bar ──
-              Positioned directly above the nav, flush at the bottom so it
-              reads as an extension of the navigation surface. The FAB/×
-              overlaps the bottom center at z-60. */}
+        <div ref={navRef} className="relative mx-4 mb-4" style={{ width: "min(calc(100vw - 2rem), 26rem)" }}>
+          {/* ── Action modal — slides up from behind the nav ──
+              The modal has its own glass surface with a bottom notch that
+              wraps the FAB from above. It springs up from behind the nav,
+              and the FAB stays at the junction, enclosed by both surfaces. */}
           <AnimatePresence>
             {expanded && !doseFormOpen && (
               <motion.div
                 initial={{ y: "100%", opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 exit={{ y: "100%", opacity: 0 }}
-                transition={{ duration: 0.3, ease: EASE }}
-                className="stackd-glass absolute bottom-full left-1/2 z-[55] w-[min(calc(100vw-2rem),26rem)] overflow-hidden rounded-t-[2rem] border border-b-0"
-                style={{ transform: "translateX(-50%)" }}
+                transition={{ type: "spring", stiffness: 380, damping: 32, mass: 0.8 }}
+                className="absolute bottom-full left-0 right-0 z-[45]"
               >
-                {/* Header */}
-                <div className="px-6 pt-7 pb-2 text-center">
-                  <h3 className="text-base font-semibold text-white/90">Log a moment</h3>
-                </div>
+                <ModalGlassShape width={navWidth}>
+                  {/* Header */}
+                  <div className="px-6 pt-7 pb-2 text-center">
+                    <h3 className="text-base font-semibold text-white/90">Log a moment</h3>
+                  </div>
 
-                {/* Options list — vertical, each with a colored circular icon */}
-                <div className="space-y-1 px-4 pb-14">
-                  {actions.map((action) => {
-                    const ActionIcon = action.Icon;
-                    return (
-                      <motion.button
-                        key={action.id}
-                        type="button"
-                        onClick={() => handleSelect(action.id)}
-                        whileTap={{ scale: 0.97 }}
-                        className="flex w-full items-center gap-4 rounded-2xl px-3 py-3 text-left transition-colors hover:bg-white/5"
-                        aria-label={action.label}
-                      >
-                        <span
-                          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border"
-                          style={{
-                            background: `linear-gradient(145deg, rgba(${action.color},0.20), rgba(${action.color},0.08))`,
-                            borderColor: `rgba(${action.color},0.35)`,
-                            boxShadow: `0 4px 14px rgba(${action.color},0.15), inset 0 1px 1px rgba(255,255,255,0.12)`,
-                          }}
+                  {/* Options list */}
+                  <div className="space-y-1 px-4 pb-10">
+                    {actions.map((action) => {
+                      const ActionIcon = action.Icon;
+                      return (
+                        <motion.button
+                          key={action.id}
+                          type="button"
+                          onClick={() => handleSelect(action.id)}
+                          whileTap={{ scale: 0.97 }}
+                          className="flex w-full items-center gap-4 rounded-2xl px-3 py-3 text-left transition-colors hover:bg-white/5"
+                          aria-label={action.label}
                         >
-                          <ActionIcon className="h-5 w-5" style={{ color: `rgba(${action.color},0.95)` }} />
-                        </span>
-                        <span className="text-[15px] font-semibold text-white/85">
-                          {action.label}
-                        </span>
-                      </motion.button>
-                    );
-                  })}
-                </div>
+                          <span
+                            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border"
+                            style={{
+                              background: `linear-gradient(145deg, rgba(${action.color},0.20), rgba(${action.color},0.08))`,
+                              borderColor: `rgba(${action.color},0.35)`,
+                              boxShadow: `0 4px 14px rgba(${action.color},0.15), inset 0 1px 1px rgba(255,255,255,0.12)`,
+                            }}
+                          >
+                            <ActionIcon className="h-5 w-5" style={{ color: `rgba(${action.color},0.95)` }} />
+                          </span>
+                          <span className="text-[15px] font-semibold text-white/85">
+                            {action.label}
+                          </span>
+                        </motion.button>
+                      );
+                    })}
+                  </div>
+                </ModalGlassShape>
               </motion.div>
             )}
           </AnimatePresence>
 
-          {/* ── FAB — solid teal surface, sits in the nav notch ──
-              Stays in place when the modal opens; transforms from + to ×.
-              At z-60 so it sits above both the nav and the modal, creating
-              the seamless junction between the two surfaces. */}
+          {/* ── FAB — stays at the nav's top edge, centered ──
+              The nav's dip wraps its lower half; when the modal opens,
+              the modal's notch wraps its upper half. The FAB doesn't
+              migrate — the surfaces wrap around it. */}
           <button
             type="button"
             onClick={() => setExpanded(!expanded)}
             aria-label={expanded ? "Close menu" : "Open logging menu"}
             className="absolute left-1/2 z-[60] flex -translate-x-1/2 items-center justify-center rounded-full"
             style={{
-              top: `-${FAB_SIZE / 2}px`,
+              top: `-${FAB_RADIUS}px`,
               width: `${FAB_SIZE}px`,
               height: `${FAB_SIZE}px`,
               background: "linear-gradient(145deg, rgba(54,168,138,0.92), rgba(46,140,116,0.92))",
@@ -267,7 +258,7 @@ export default function UnifiedBottomNav() {
                   initial={{ rotate: -90, opacity: 0 }}
                   animate={{ rotate: 0, opacity: 1 }}
                   exit={{ rotate: 90, opacity: 0 }}
-                  transition={{ duration: 0.18, ease: EASE }}
+                  transition={{ duration: 0.2, ease: EASE }}
                   className="flex"
                 >
                   <X className="h-6 w-6 text-white" />
@@ -278,7 +269,7 @@ export default function UnifiedBottomNav() {
                   initial={{ rotate: 90, opacity: 0 }}
                   animate={{ rotate: 0, opacity: 1 }}
                   exit={{ rotate: -90, opacity: 0 }}
-                  transition={{ duration: 0.18, ease: EASE }}
+                  transition={{ duration: 0.2, ease: EASE }}
                   className="flex"
                 >
                   <Plus className="h-6 w-6 text-white" />
@@ -287,65 +278,48 @@ export default function UnifiedBottomNav() {
             </AnimatePresence>
           </button>
 
-          {/* ── Nav bar — single continuous glass surface with FAB notch ── */}
-          <div
-            className="stackd-bottom-nav relative grid w-[min(calc(100vw-2rem),26rem)] grid-cols-4 gap-1 overflow-hidden rounded-[2rem] px-2 py-2.5"
-            style={{ boxShadow: "0 14px 40px rgba(0,0,0,0.30)" }}
-          >
-            {/* Glass layer — masked with the FAB notch */}
-            <div
-              className="stackd-unified-glass absolute inset-0 rounded-[2rem] border backdrop-blur-sm"
-              style={{
-                background: GLASS_BG,
-                borderColor: "rgba(255,255,255,0.12)",
-                boxShadow: GLASS_INSET,
-                WebkitMaskImage: notchMask,
-                maskImage: notchMask,
-              }}
-            />
+          {/* ── Nav bar — glass surface with FAB dip ──
+              The dip is built into the clip-path shape, so the glass
+              fill and border both wrap around the FAB seamlessly. */}
+          <NavGlassShape width={navWidth} height={NAV_HEIGHT}>
+            <div className="relative grid h-full grid-cols-4 gap-1 px-2 py-2.5">
+              {/* Active tab — thin underline indicator */}
+              {indicator.ready && (
+                <motion.div
+                  aria-hidden="true"
+                  initial={false}
+                  animate={{ left: indicator.left + (indicator.width - 24) / 2, opacity: 1 }}
+                  transition={{ type: "spring", stiffness: 460, damping: 34, mass: 0.8 }}
+                  className="pointer-events-none absolute bottom-1 h-[3px] w-6 rounded-full"
+                  style={{ background: "rgba(255,255,255,0.55)" }}
+                />
+              )}
 
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute -inset-8 opacity-70"
-              style={{ background: GLASS_GLOW }}
-            />
-
-            {/* Active tab — thin underline indicator */}
-            {indicator.ready && (
-              <motion.div
-                aria-hidden="true"
-                initial={false}
-                animate={{ left: indicator.left + (indicator.width - 24) / 2, opacity: 1 }}
-                transition={{ type: "spring", stiffness: 460, damping: 34, mass: 0.8 }}
-                className="pointer-events-none absolute bottom-0.5 h-[3px] w-6 rounded-full"
-                style={{ background: "rgba(255,255,255,0.55)" }}
-              />
-            )}
-
-            {navItems.map((item, index) => {
-              const isActive = index === activeIndex;
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.path}
-                  ref={(el) => (tabRefs.current[index] = el)}
-                  to={item.path}
-                  className={`relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-[1.55rem] px-1.5 py-2 text-center transition-colors ${
-                    isActive ? "text-white" : "text-white/45 hover:text-white/75"
-                  }`}
-                  aria-label={item.label}
-                >
-                  <motion.span
-                    className="relative z-10 flex items-center justify-center"
-                    animate={{ scale: isActive ? 1.08 : 1 }}
-                    transition={{ type: "spring", stiffness: 420, damping: 28 }}
+              {navItems.map((item, index) => {
+                const isActive = index === activeIndex;
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.path}
+                    ref={(el) => (tabRefs.current[index] = el)}
+                    to={item.path}
+                    className={`relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-[1.55rem] px-1.5 py-2 text-center transition-colors ${
+                      isActive ? "text-white" : "text-white/45 hover:text-white/75"
+                    }`}
+                    aria-label={item.label}
                   >
-                    <Icon className="h-5 w-5" />
-                  </motion.span>
-                </Link>
-              );
-            })}
-          </div>
+                    <motion.span
+                      className="relative z-10 flex items-center justify-center"
+                      animate={{ scale: isActive ? 1.08 : 1 }}
+                      transition={{ type: "spring", stiffness: 420, damping: 28 }}
+                    >
+                      <Icon className="h-5 w-5" />
+                    </motion.span>
+                  </Link>
+                );
+              })}
+            </div>
+          </NavGlassShape>
         </div>
       </motion.nav>
     </>
