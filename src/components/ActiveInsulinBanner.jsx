@@ -272,22 +272,6 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
 
   const groups = buildMealEventGroups(carbEntries, doses, insulinSettings, glucoseReadings, insulinSettings.targetLow).sort((a, b) => b.mealTime - a.mealTime);
 
-  // Detect recent rescue carbs (proactive low prevention) so we can acknowledge
-  // them supportively instead of treating them as an under-dosed meal.
-  const nowForRescue = Date.now();
-  const recentRescueCarbs = (Array.isArray(carbEntries) ? carbEntries : []).
-  filter((entry) => {
-    const entryTime = getEntryTime(entry);
-    return (
-      Number.isFinite(entryTime) &&
-      nowForRescue - entryTime < 2 * 60 * MINUTE_MS && (
-      entry.is_rescue_carb === true ||
-      entry.classification === "rescue_carbs" ||
-      !entry.classification && isRescueCarbEntry(entry, glucoseReadings, doses, insulinSettings.targetLow)));
-
-  });
-  const rescueCarbsTotal = recentRescueCarbs.reduce((sum, entry) => sum + Number(entry.carbs || 0), 0);
-
   const now = Date.now();
   const outcomeWindowMs = insulinSettings.outcomeWindowMinutes * MINUTE_MS;
   // Only meals still inside the user's configured review window are tracked.
@@ -296,21 +280,6 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
   const mealGroup = groups.find((group) => now - group.mealTime <= outcomeWindowMs);
 
   if (!mealGroup) {
-    if (recentRescueCarbs.length) {
-      return {
-        value: "Gentle support",
-        status: "Nourishment added to lift your trend",
-        color: "#5ba88a",
-        sub: `${Math.round(rescueCarbsTotal)}g supportive nourishment`,
-        details: {
-          noActiveMeal: true,
-          rescueCarbs: Math.round(rescueCarbsTotal),
-          recentNormalCarbs: 0,
-          activeInsulin: getTotalBolusIOB(doses, now),
-          latestGlucoseValue: Number.isFinite(Number(latestGlucose?.value)) ? Number(latestGlucose?.value) : null,
-        }
-      };
-    }
     return {
       value: "No meal data",
       status: "Log carbs to see your rhythm",
@@ -319,12 +288,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
       details: {
         noActiveMeal: true,
         rescueCarbs: 0,
-        recentNormalCarbs: Math.round((Array.isArray(carbEntries) ? carbEntries : [])
-          .filter((entry) => {
-            const eTime = getEntryTime(entry);
-            return Number.isFinite(eTime) && now - eTime < 2 * 60 * MINUTE_MS && entry.is_rescue_carb !== true && entry.classification !== "rescue_carbs" && !isRescueCarbEntry(entry, glucoseReadings, doses, insulinSettings.targetLow);
-          })
-          .reduce((sum, entry) => sum + Number(entry.carbs || 0), 0)),
+        recentNormalCarbs: 0,
         activeInsulin: getTotalBolusIOB(doses, now),
         latestGlucoseValue: Number.isFinite(Number(latestGlucose?.value)) ? Number(latestGlucose?.value) : null,
       }
@@ -638,7 +602,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
         .filter((entry) => {
           if (entry.is_rescue_carb !== true && entry.classification !== "rescue_carbs" && !isRescueCarbEntry(entry, glucoseReadings, doses, insulinSettings.targetLow)) return false;
           const eTime = getEntryTime(entry);
-          return Number.isFinite(eTime) && eTime >= mealGroup.start && eTime <= mealGroup.end;
+          return Number.isFinite(eTime) && eTime >= mealTime && eTime <= mealTime + outcomeWindowMs;
         })
         .reduce((sum, entry) => sum + Number(entry.carbs || 0), 0)),
       windowStart,
