@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { AnimatePresence, motion } from "framer-motion";
 import { DateScrollField, TimeScrollField, NumberPadField, TextPadField } from "@/components/FormInputFields";
 import InsulinTypeSelector from "@/components/insulin/InsulinTypeSelector";
+import UnitsStepper from "@/components/insulin/UnitsStepper";
 import Sheet from "@/components/Sheet";
 
 const CarbsTab = lazy(() => import("@/components/CarbsTab"));
@@ -440,13 +441,9 @@ export default function DoseForm({ open, onOpenChange, mode = "insulin" }) {
                                  onChange={(value) => updateInsulinRow(row.id, { insulinType: value })}
                                  options={insulinTypeOptions}
                                />
-                               <NumberPadField
-                                label="Units"
+                               <UnitsStepper
                                 value={row.units}
                                 onChange={(value) => updateInsulinRow(row.id, { units: value })}
-                                placeholder="0"
-                                maxLength={4}
-                                large
                               />
                             </div>
                             {insulinRows.length > 1 && (
