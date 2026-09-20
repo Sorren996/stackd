@@ -71,7 +71,6 @@ export default function UnitsStepper({ value, onChange }) {
           WebkitOverflowScrolling: "touch",
           scrollbarWidth: "none",
           overscrollBehaviorX: "contain",
-          touchAction: "pan-x",
           paddingLeft: 24,
           paddingRight: 24,
           paddingTop: 28,

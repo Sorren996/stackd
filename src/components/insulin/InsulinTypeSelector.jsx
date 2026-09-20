@@ -48,7 +48,6 @@ export default function InsulinTypeSelector({ value, onChange, options }) {
           WebkitOverflowScrolling: "touch",
           scrollbarWidth: "none",
           overscrollBehaviorX: "contain",
-          touchAction: "pan-x",
           paddingLeft: 24,
           paddingRight: 24,
           paddingTop: 30,
