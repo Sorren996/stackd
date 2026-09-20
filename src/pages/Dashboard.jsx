@@ -729,6 +729,8 @@ export default function Dashboard() {
                 )
               }
               onEditGlucose={dexcomConnected ? null : (reading) => setEditingLog({ type: "glucose", item: reading })}
+              onEditDose={(log) => setEditingLog(log)}
+              onDeleteDose={handleDeleteLog}
             />
           </div>
 

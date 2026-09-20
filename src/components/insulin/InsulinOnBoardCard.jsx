@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Info } from "lucide-react";
 import { isBasalInsulinType } from "@/lib/insulinPharmacology";
 import InsulinDoseRow from "./InsulinDoseRow";
+import SwipeableDoseRow from "./SwipeableDoseRow";
 import InfoPopover from "@/components/graph/InfoPopover";
 import BasalCoverageInfo from "./BasalCoverageInfo";
 
@@ -21,7 +22,7 @@ import BasalCoverageInfo from "./BasalCoverageInfo";
  * getDoseIOB / generateActivityCurve calculations from
  * insulinPharmacology.js, so they never disagree.
  */
-export default function InsulinOnBoardCard({ totalUnits, breakdown, basalRegimenStatus }) {
+export default function InsulinOnBoardCard({ totalUnits, breakdown, basalRegimenStatus, onEditDose, onDeleteDose }) {
   const bolusDoses = breakdown.filter((d) => !isBasalInsulinType(d.type));
   const basalDoses = breakdown.filter((d) => isBasalInsulinType(d.type));
   const bolusUnits = bolusDoses.reduce((sum, d) => sum + d.iob, 0);
@@ -103,7 +104,13 @@ export default function InsulinOnBoardCard({ totalUnits, breakdown, basalRegimen
               {/* Detail rows */}
               <div className="mt-3 space-y-1">
                 {bolusDoses.map((dose) => (
-                  <InsulinDoseRow key={dose.id} dose={dose} />
+                  <SwipeableDoseRow
+                    key={dose.id}
+                    onEdit={onEditDose ? () => onEditDose(dose.id) : undefined}
+                    onDelete={onDeleteDose ? () => onDeleteDose(dose.id) : undefined}
+                  >
+                    <InsulinDoseRow dose={dose} />
+                  </SwipeableDoseRow>
                 ))}
               </div>
               </>
@@ -157,7 +164,13 @@ export default function InsulinOnBoardCard({ totalUnits, breakdown, basalRegimen
               {/* Detail rows */}
               <div className="mt-3 space-y-1">
                 {basalDoses.map((dose) => (
-                  <InsulinDoseRow key={dose.id} dose={dose} />
+                  <SwipeableDoseRow
+                    key={dose.id}
+                    onEdit={onEditDose ? () => onEditDose(dose.id) : undefined}
+                    onDelete={onDeleteDose ? () => onDeleteDose(dose.id) : undefined}
+                  >
+                    <InsulinDoseRow dose={dose} />
+                  </SwipeableDoseRow>
                 ))}
               </div>
             </div>

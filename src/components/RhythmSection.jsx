@@ -25,6 +25,8 @@ export default function RhythmSection({
   totalUnits,
   breakdown,
   basalRegimenStatus,
+  onEditDose,
+  onDeleteDose,
 }) {
   const [tab, setTab] = useState("meal");
   const [direction, setDirection] = useState(0);
@@ -91,6 +93,8 @@ export default function RhythmSection({
                 totalUnits={totalUnits}
                 breakdown={breakdown}
                 basalRegimenStatus={basalRegimenStatus}
+                onEditDose={onEditDose}
+                onDeleteDose={onDeleteDose}
               />
             )}
           </motion.div>

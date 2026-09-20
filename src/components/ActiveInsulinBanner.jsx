@@ -838,7 +838,7 @@ function SupportiveGlucoseMessage({ insight, trend, TrendIcon }) {
 
 }
 
-export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucoseReadings = [], carbEntries = [], graphSlot = null, onEditGlucose = null }) {
+export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucoseReadings = [], carbEntries = [], graphSlot = null, onEditGlucose = null, onEditDose = null, onDeleteDose = null }) {
   const [insulinSettings, setInsulinSettings] = useState(readInsulinSettings);
   const [targetRange, setTargetRange] = useState(readTargetRange);
   const [centerGlucoseStatus, setCenterGlucoseStatus] = useState(null);
@@ -1215,7 +1215,15 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
           onResolveMeal={handleResolveMeal}
           totalUnits={activeUnits}
           breakdown={activeInsulinBreakdown}
-          basalRegimenStatus={basalRegimenStatus} />
+          basalRegimenStatus={basalRegimenStatus}
+          onEditDose={onEditDose ? (id) => {
+            const dose = safeDoses.find((d) => d.id === id);
+            if (dose) onEditDose({ type: "insulin", item: dose });
+          } : null}
+          onDeleteDose={onDeleteDose ? (id) => {
+            const dose = safeDoses.find((d) => d.id === id);
+            if (dose) onDeleteDose({ type: "insulin", item: dose });
+          } : null} />
       </div>
     </>);
 
