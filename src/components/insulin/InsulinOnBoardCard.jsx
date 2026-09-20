@@ -79,12 +79,12 @@ export default function InsulinOnBoardCard({ totalUnits, breakdown, basalRegimen
       {/* Dose rows — each section introduced by its uppercase label, with
           the summary numbers sitting beneath it. Whitespace separates
           sections; no divider lines or boxed containers. */}
-      {breakdown.length ? (
         <div className="relative z-10 space-y-7 pt-4">
-          {bolusDoses.length > 0 && (
-            <div>
-              <span className="text-[9px] font-bold uppercase tracking-[0.14em] text-white/35">Rapid Insulin</span>
+          <div>
+            <span className="text-[9px] font-bold uppercase tracking-[0.14em] text-white/35">Rapid Insulin</span>
 
+            {bolusDoses.length > 0 ? (
+              <>
               {/* Summary numbers */}
               <div className="mt-3 flex items-end gap-6">
                 <div className="flex flex-col">
@@ -106,8 +106,11 @@ export default function InsulinOnBoardCard({ totalUnits, breakdown, basalRegimen
                   <InsulinDoseRow key={dose.id} dose={dose} />
                 ))}
               </div>
-            </div>
-          )}
+              </>
+            ) : (
+              <p className="mt-3 text-sm text-white/40">No bolus on board.</p>
+            )}
+          </div>
 
           {basalDoses.length > 0 && (
             <div>
@@ -160,9 +163,6 @@ export default function InsulinOnBoardCard({ totalUnits, breakdown, basalRegimen
             </div>
           )}
         </div>
-      ) : (
-        <p className="relative z-10 mt-4 text-sm text-white/40">No active insulin on board from current logs.</p>
-      )}
 
       <AnimatePresence>
         {basalInfoRect &&

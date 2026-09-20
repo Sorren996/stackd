@@ -15,6 +15,9 @@ import RescueCarbCheckbox from "@/components/RescueCarbCheckbox";
 import { toast } from "sonner";
 import { getVersionString } from "@/lib/appVersion";
 import { DateScrollField, TimeScrollField, NumberPadField, TextPadField, SelectField } from "@/components/FormInputFields";
+import InsulinTypeSelector from "@/components/insulin/InsulinTypeSelector";
+import UnitsStepper from "@/components/insulin/UnitsStepper";
+import { getDefaultInsulinLibrary } from "@/lib/userSettings";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 import { useVisibilityRefresh } from "@/hooks/useVisibilityRefresh";
 import DexcomSyncStatus from "@/components/DexcomSyncStatus";
@@ -115,11 +118,15 @@ function getEditInitialForm(log) {
   };
 }
 
-const insulinTypeOptions = Object.entries(INSULIN_PROFILES).map(([name, profile]) => ({
-  value: name,
-  label: name,
-  description: profile.category,
-}));
+function readInsulinLibrary() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem("insulin_library") || "null");
+    if (Array.isArray(parsed) && parsed.length) return parsed;
+  } catch {
+    // fall through to defaults
+  }
+  return getDefaultInsulinLibrary();
+}
 
 const absorptionProfileOptions = [
   { value: "fast", label: "Fast", description: "Fast carbs" },
@@ -129,12 +136,31 @@ const absorptionProfileOptions = [
 
 function EditLogSheet({ log, onClose, onSave, isSaving }) {
   const [form, setForm] = useState(() => getEditInitialForm(log));
+  const [insulinLibrary, setInsulinLibrary] = useState(readInsulinLibrary);
   const todayDateValue = getTodayDateValue();
   const nowTimeString = new Date().toTimeString().slice(0, 5);
 
   useEffect(() => {
     setForm(getEditInitialForm(log));
   }, [log]);
+
+  useEffect(() => {
+    const refresh = () => setInsulinLibrary(readInsulinLibrary());
+    window.addEventListener("insulin-settings-updated", refresh);
+    window.addEventListener("storage", refresh);
+    return () => {
+      window.removeEventListener("insulin-settings-updated", refresh);
+      window.removeEventListener("storage", refresh);
+    };
+  }, []);
+
+  const insulinTypeOptions = useMemo(
+    () =>
+      Object.entries(INSULIN_PROFILES)
+        .filter(([name]) => insulinLibrary.includes(name))
+        .map(([name, profile]) => ({ value: name, label: name, description: profile.category })),
+    [insulinLibrary]
+  );
 
   if (!log) return null;
 
@@ -231,15 +257,16 @@ function EditLogSheet({ log, onClose, onSave, isSaving }) {
         <div className="space-y-4">
           {log.type === "insulin" && (
             <>
-              <SelectField
-                label="Insulin type"
+              <InsulinTypeSelector
                 value={form.insulin_type}
                 onChange={(value) => updateField("insulin_type", value)}
                 options={insulinTypeOptions}
-                placeholder="Insulin type"
+              />
+              <UnitsStepper
+                value={form.units}
+                onChange={(value) => updateField("units", value)}
               />
               <div className="grid grid-cols-1 gap-2">
-                <NumberPadField label="Total" value={form.units} onChange={(value) => updateField("units", value)} />
                 <NumberPadField label="Meal" value={form.meal_units} onChange={(value) => updateField("meal_units", value)} />
                 <NumberPadField label="Correction" value={form.correction_units} onChange={(value) => updateField("correction_units", value)} />
               </div>

@@ -189,64 +189,9 @@ export default function MealReviewContent({ mealInsight, monitoringStatus, gluco
 
   // ── NO ACTIVE MEAL ──────────────────────────────────────────────
   if (!d || d.noActiveMeal) {
-    const glucose = d?.latestGlucoseValue;
-    const hasGlucose = Number.isFinite(glucose);
-    const activeBolus = d?.activeInsulin || 0;
-    const recentCarbs = d?.recentNormalCarbs || 0;
-    const rescueCarbs = d?.rescueCarbs || 0;
-
     return (
-      <div className="space-y-5 p-1">
-        <section>
-          <SectionLabel>Current Glucose</SectionLabel>
-          <div className="mt-2 flex items-baseline gap-2">
-            {hasGlucose ? (
-              <>
-                <span className="text-3xl font-black text-white">{Math.round(glucose)}</span>
-                <span className="text-[11px] text-white/40">mg/dL</span>
-                {trendArrow && (
-                  <span className="ml-0.5 text-lg font-bold" style={{ color: trendColor }}>
-                    {trendArrow}
-                  </span>
-                )}
-              </>
-            ) : (
-              <span className="text-lg text-white/40">No recent reading</span>
-            )}
-          </div>
-          <p className="mt-1 text-[11px] text-white/40">No active meal</p>
-        </section>
-
-        {activeBolus > 0.01 && (
-          <section>
-            <SectionLabel>Bolus Active</SectionLabel>
-            <p className="mt-2 text-2xl font-bold text-white">{roundUnits(activeBolus)}u</p>
-          </section>
-        )}
-
-        {recentCarbs > 0 && (
-          <section>
-            <SectionLabel>Recent Carbs</SectionLabel>
-            <p className="mt-2 text-2xl font-bold text-white">{recentCarbs}g</p>
-          </section>
-        )}
-
-        {rescueCarbs > 0 && (
-          <section>
-            <SectionLabel>Rescue Carbs</SectionLabel>
-            <p className="mt-2 text-2xl font-bold" style={{ color: RESCUE_COLOR }}>
-              {rescueCarbs}g
-            </p>
-          </section>
-        )}
-
-        {!hasGlucose && activeBolus <= 0.01 && recentCarbs === 0 && rescueCarbs === 0 && (
-          <p className="text-sm text-white/35">
-            {mealInsight.value === "Setup needed"
-              ? "Add your insulin settings to see meal balance."
-              : "Log a meal to open a review window."}
-          </p>
-        )}
+      <div className="p-1">
+        <p className="text-sm text-white/40">No meal to review yet.</p>
       </div>
     );
   }

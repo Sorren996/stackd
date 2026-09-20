@@ -6,8 +6,10 @@ import { toast } from "sonner";
 import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
 import { getDefaultInsulinLibrary } from "@/lib/userSettings";
 import { useCreateDoses, useCreateCarbs } from "@/hooks/useLogMutations";
-import { DateScrollField, TimeScrollField, TextPadField, NumberPadField, SelectField } from "@/components/FormInputFields";
+import { DateScrollField, TimeScrollField, TextPadField } from "@/components/FormInputFields";
 import Sheet from "@/components/Sheet";
+import InsulinTypeSelector from "@/components/insulin/InsulinTypeSelector";
+import UnitsStepper from "@/components/insulin/UnitsStepper";
 
 const CarbsTab = lazy(() => import("@/components/CarbsTab"));
 
@@ -69,6 +71,7 @@ function normalizeCarbEntryForSave(entry) {
     consumed_at: entry.consumed_at || new Date().toISOString(),
     is_custom: entry.is_custom === true,
     is_high_protein_fat_meal: entry.is_high_protein_fat_meal === true,
+    is_rescue_carb: entry.is_rescue_carb === true,
   };
 }
 
@@ -346,22 +349,15 @@ export default function CombinedLogSheet({ open, onOpenChange }) {
               <div className="space-y-2 px-5 pb-2">
                 {insulinRows.map((row) => (
                   <div key={row.id} className="space-y-2">
-                    <div className="grid grid-cols-1 gap-2">
-                      <SelectField
-                        label="Insulin type"
-                        value={row.insulinType}
-                        onChange={(value) => updateInsulinRow(row.id, { insulinType: value })}
-                        options={insulinTypeOptions}
-                        placeholder="Insulin type"
-                      />
-                      <NumberPadField
-                        label="Units"
-                        value={row.units}
-                        onChange={(value) => updateInsulinRow(row.id, { units: value })}
-                        placeholder="0"
-                        maxLength={4}
-                      />
-                    </div>
+                    <InsulinTypeSelector
+                      value={row.insulinType}
+                      onChange={(value) => updateInsulinRow(row.id, { insulinType: value })}
+                      options={insulinTypeOptions}
+                    />
+                    <UnitsStepper
+                      value={row.units}
+                      onChange={(value) => updateInsulinRow(row.id, { units: value })}
+                    />
                     {insulinRows.length > 1 && (
                       <button
                         type="button"
