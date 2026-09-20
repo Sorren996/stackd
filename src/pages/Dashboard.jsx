@@ -3,7 +3,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import ActivityGraph from "../components/ActivityGraph";
 import ActiveInsulinBanner from "../components/ActiveInsulinBanner";
-import FloatingActionMenu from "@/components/FloatingActionMenu";
 import SplitPlanCard from "@/components/splitdose/SplitPlanCard";
 import { isActivePlan, cancelSplitPlansForMeal, cleanupSplitPlansForDose } from "@/lib/splitDoseUtils";
 import DoseCard from "../components/DoseCard";
@@ -717,8 +716,6 @@ export default function Dashboard() {
 
         </>
       )}
-
-      <FloatingActionMenu />
 
       <div className="flex w-full justify-center pt-8 pb-4">
         <span className="text-[10px] font-medium tracking-wide text-white/20">

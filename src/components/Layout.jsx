@@ -1,21 +1,15 @@
-import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
+import { memo, useEffect, useState } from "react";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { Wind, Leaf, Waves, CircleUser, RefreshCw, Check, AlertTriangle } from "lucide-react";
+import { RefreshCw, Check, AlertTriangle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Dashboard from "../pages/Dashboard";
 import HistoryPage from "../pages/History";
 import SettingsPage from "../pages/Settings";
 import AnalyticsPage from "../pages/Analytics";
 import ThemeToggle from "./ThemeToggle";
+import UnifiedBottomNav from "./UnifiedBottomNav";
 import { useRealtimeLogSync } from "@/hooks/useRealtimeLogSync";
-
-const navItems = [
-  { path: "/", label: "My Flow", icon: Wind },
-  { path: "/history", label: "My Journal", icon: Leaf },
-  { path: "/analytics", label: "My Rhythms", icon: Waves },
-  { path: "/settings", label: "Profile", icon: CircleUser },
-];
 
 const CachedDashboard = memo(Dashboard);
 const CachedHistoryPage = memo(HistoryPage);
@@ -107,47 +101,6 @@ export default function Layout() {
       setVisitedTabs((tabs) => (tabs.settings ? tabs : { ...tabs, settings: true }));
     }
   }, [isDashboardRoute, isHistoryRoute, isAnalyticsRoute, isSettingsRoute]);
-
-  // Active tab index — derived purely from the route so the indicator is
-  // independent of page content, scroll position, or mount state.
-  const activeIndex = (() => {
-    if (location.pathname.startsWith("/settings")) return 3;
-    const idx = navItems.findIndex((it) => it.path === location.pathname);
-    return idx === -1 ? 0 : idx;
-  })();
-
-  const tabRefs = useRef([]);
-  const navContainerRef = useRef(null);
-  // Indicator box measured in the nav container's own coordinate space.
-  const [indicator, setIndicator] = useState({ left: 0, width: 0, top: 0, height: 0, ready: false });
-
-  // Measure the active tab's offset within the nav container. offsetLeft /
-  // offsetTop are relative to the nav's padding box (its positioned ancestor),
-  // NEVER the viewport — so scrolling the page cannot affect the indicator's
-  // coordinates. Because all tabs share the same width/height, only `left`
-  // changes between tabs, so the indicator moves strictly horizontally.
-  const measureIndicator = useCallback(() => {
-    const el = tabRefs.current[activeIndex];
-    if (!el) return;
-    const first = tabRefs.current[0] || el;
-    setIndicator({
-      left: el.offsetLeft,
-      width: el.offsetWidth,
-      top: first.offsetTop,
-      height: first.offsetHeight,
-      ready: true,
-    });
-  }, [activeIndex]);
-
-  useLayoutEffect(() => {
-    measureIndicator();
-  }, [measureIndicator]);
-
-  useEffect(() => {
-    const onResize = () => measureIndicator();
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, [measureIndicator]);
 
   const handleLogoClick = () => {
     navigate("/");
@@ -270,97 +223,7 @@ export default function Layout() {
         </div>
       </main>
 
-      <motion.nav
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.2 }}
-        className="fixed inset-x-0 bottom-0 z-30 flex justify-center pb-safe"
-      >
-        <div
-          className="stackd-bottom-nav relative mx-4 mb-4 grid w-[min(calc(100vw-2rem),26rem)] grid-cols-4 gap-1 overflow-hidden rounded-[2rem] border px-2 py-1.5 backdrop-blur-sm"
-          style={{
-            background:
-              "linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.03))",
-            borderColor: "rgba(255,255,255,0.12)",
-            boxShadow:
-              "0 14px 40px rgba(0,0,0,0.30), inset 0 1px 1px rgba(255,255,255,0.18), inset 0 -1px 1px rgba(255,255,255,0.04)",
-          }}
-        >
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute -inset-8 opacity-70"
-            style={{
-              background:
-                "radial-gradient(circle at 25% 0%, rgba(255,255,255,0.26), transparent 34%), radial-gradient(circle at 85% 130%, rgba(45,212,191,0.16), transparent 42%)",
-            }}
-          />
-
-          {/* Single persistent indicator. It is positioned entirely within
-              the nav container via offsetLeft (scroll-independent) and only
-              its horizontal position animates — page scroll, content mount,
-              or route transitions cannot move it vertically. */}
-          {indicator.ready && (
-            <motion.div
-              aria-hidden="true"
-              initial={false}
-              animate={{ left: indicator.left, width: indicator.width }}
-              transition={{ type: "spring", stiffness: 460, damping: 34, mass: 0.8 }}
-              className="pointer-events-none absolute rounded-[1.55rem]"
-              style={{
-                top: indicator.top,
-                height: indicator.height,
-                background:
-                  "linear-gradient(145deg, rgba(255,255,255,0.16), rgba(255,255,255,0.05))",
-                border: "1px solid rgba(255,255,255,0.18)",
-                boxShadow:
-                  "0 8px 20px rgba(0,0,0,0.18), inset 0 1px 1px rgba(255,255,255,0.22), inset 0 -1px 1px rgba(255,255,255,0.06)",
-              }}
-            />
-          )}
-
-          {navItems.map((item, index) => {
-            const isActive = index === activeIndex;
-            const Icon = item.icon;
-
-            return (
-              <Link
-                key={item.path}
-                ref={(el) => (tabRefs.current[index] = el)}
-                to={item.path}
-                className={`relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-[1.55rem] px-1.5 py-2 text-center transition-colors ${
-                  isActive ? "text-white" : "text-white/45 hover:text-white/75"
-                }`}
-              >
-                <motion.span
-                  className="relative z-10 flex items-center justify-center"
-                  animate={{
-                    y: isActive ? -1 : 0,
-                    scale: isActive ? 1.07 : 1,
-                  }}
-                  transition={{
-                    type: "spring",
-                    stiffness: 420,
-                    damping: 28,
-                  }}
-                >
-                  <Icon className="h-5 w-5" />
-                </motion.span>
-
-                <motion.span
-                  className="relative z-10 whitespace-nowrap text-[10px] font-semibold leading-none"
-                  animate={{
-                    opacity: isActive ? 1 : 0.64,
-                    y: isActive ? 0 : 1,
-                  }}
-                  transition={{ duration: 0.16 }}
-                >
-                  {item.label}
-                </motion.span>
-              </Link>
-            );
-          })}
-        </div>
-      </motion.nav>
+      <UnifiedBottomNav />
     </div>
   );
 }
