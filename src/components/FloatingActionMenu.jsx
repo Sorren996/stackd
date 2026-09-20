@@ -3,29 +3,46 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Syringe, Droplets, Wheat, Utensils } from "lucide-react";
 import DoseForm from "@/components/DoseForm";
 import CombinedLogSheet from "@/components/CombinedLogSheet";
-import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 
-const ACTIONS = [
+const ALL_ACTIONS = [
+  { id: "both", label: "Meal + Support", Icon: Utensils, color: "45,212,191" },
+  { id: "carbs", label: "Nourishment", Icon: Wheat, color: "212,160,86" },
   { id: "insulin", label: "Support", Icon: Syringe, color: "91,163,184" },
   { id: "glucose", label: "Glucose", Icon: Droplets, color: "91,168,138" },
-  { id: "carbs", label: "Nourishment", Icon: Wheat, color: "212,160,86" },
-  { id: "both", label: "Meal + Support", Icon: Utensils, color: "45,212,191" },
 ];
 
+const EASE = [0.22, 1, 0.36, 1];
+
+function readManualGlucoseEnabled() {
+  if (typeof window === "undefined") return true;
+  const raw = window.localStorage.getItem("manual_glucose_logging_enabled");
+  return raw === null ? true : raw === "true";
+}
+
 export default function FloatingActionMenu() {
-  const { connected } = useDexcomConnection();
   const [expanded, setExpanded] = useState(false);
   const [selectedMode, setSelectedMode] = useState(null);
   const [doseFormOpen, setDoseFormOpen] = useState(false);
   const [doseFormPreloaded, setDoseFormPreloaded] = useState(false);
   const [combinedSheetOpen, setCombinedSheetOpen] = useState(false);
+  const [manualGlucoseEnabled, setManualGlucoseEnabled] = useState(readManualGlucoseEnabled);
 
-  // When a glucose source is connected, readings flow in automatically —
-  // step aside so manual glucose logging doesn't compete with the sensor.
+  // Glucose appears only when the user has manual glucose logging enabled.
   const actions = useMemo(
-    () => (connected ? ACTIONS.filter((a) => a.id !== "glucose") : ACTIONS),
-    [connected]
+    () => (manualGlucoseEnabled ? ALL_ACTIONS : ALL_ACTIONS.filter((a) => a.id !== "glucose")),
+    [manualGlucoseEnabled]
   );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const refresh = () => setManualGlucoseEnabled(readManualGlucoseEnabled());
+    window.addEventListener("insulin-settings-updated", refresh);
+    window.addEventListener("storage", refresh);
+    return () => {
+      window.removeEventListener("insulin-settings-updated", refresh);
+      window.removeEventListener("storage", refresh);
+    };
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -81,91 +98,91 @@ export default function FloatingActionMenu() {
         <CombinedLogSheet open={combinedSheetOpen} onOpenChange={setCombinedSheetOpen} />
       )}
 
-      {/* Backdrop when bloom menu is open */}
+      {/* Outside-tap catcher — transparent, not a modal. Keeps the page
+          feeling open while still dismissing the action menu on tap. */}
       <AnimatePresence>
         {expanded && !doseFormOpen && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
+            transition={{ duration: 0.18 }}
+            className="fixed inset-0 z-40"
+            style={{ background: "rgba(0,0,0,0.15)" }}
             onClick={() => setExpanded(false)}
           />
         )}
       </AnimatePresence>
 
-      {/* Bloom buttons + main FAB */}
-      <div className="fixed bottom-24 right-5 z-50 flex flex-col items-end gap-2.5">
+      {/* FAB + action menu — centered over the bottom navigation, overlapping
+          its top edge. The FAB stays anchored; actions emerge upward. */}
+      <div
+        className="fixed left-1/2 z-50 flex -translate-x-1/2 flex-col items-center"
+        style={{ bottom: "calc(env(safe-area-inset-bottom) + 3.125rem)" }}
+      >
         <AnimatePresence>
-          {expanded && !doseFormOpen &&
-            actions.slice()
-              .reverse()
-              .map((action, index) => {
+          {expanded && !doseFormOpen && (
+            <motion.div
+              initial="hidden"
+              animate="show"
+              exit="hidden"
+              variants={{ show: { transition: { staggerChildren: 0.05 } } }}
+              className="flex flex-col items-center gap-4 pb-4"
+            >
+              {actions.map((action) => {
                 const ActionIcon = action.Icon;
-                const delay = (actions.length - 1 - index) * 0.06;
                 return (
                   <motion.button
                     key={action.id}
                     type="button"
                     onClick={() => handleSelect(action.id)}
-                    initial={{ opacity: 0, scale: 0, y: 30 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0, y: 30 }}
-                    transition={{ type: "spring", stiffness: 380, damping: 22, delay }}
-                    whileTap={{ scale: 0.92 }}
-                    className="flex items-center justify-center gap-3"
+                    variants={{
+                      hidden: { opacity: 0, y: 14 },
+                      show: { opacity: 1, y: 0 },
+                    }}
+                    transition={{ duration: 0.22, ease: EASE }}
+                    whileTap={{ scale: 0.94 }}
+                    className="flex items-center gap-3"
                     aria-label={action.label}
                   >
-                    <motion.span
-                      initial={{ opacity: 0, x: 8 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 8 }}
-                      transition={{ delay: delay + 0.04 }}
-                      className="stackd-fab-pill rounded-full border px-3 py-1.5 text-sm font-semibold backdrop-blur-sm"
+                    <span
+                      className="flex h-11 w-11 items-center justify-center rounded-full border backdrop-blur-sm"
                       style={{
-                        color: `rgba(${action.color},1)`,
-                        background:
-                          "linear-gradient(145deg, rgba(15,24,22,0.9), rgba(15,24,22,0.72))",
-                        borderColor: `rgba(${action.color},0.5)`,
-                        boxShadow: `0 6px 18px rgba(${action.color},0.22)`,
+                        background: `linear-gradient(145deg, rgba(${action.color},0.16), rgba(${action.color},0.06))`,
+                        borderColor: `rgba(${action.color},0.32)`,
+                        boxShadow: `0 6px 18px rgba(${action.color},0.18), inset 0 1px 1px rgba(255,255,255,0.12)`,
+                      }}
+                    >
+                      <ActionIcon className="h-5 w-5" style={{ color: `rgba(${action.color},0.95)` }} />
+                    </span>
+                    <span
+                      className="rounded-full border px-3 py-1.5 text-sm font-semibold backdrop-blur-sm"
+                      style={{
+                        color: "rgba(255,255,255,0.92)",
+                        background: "linear-gradient(145deg, rgba(15,24,22,0.72), rgba(15,24,22,0.52))",
+                        borderColor: `rgba(${action.color},0.28)`,
                       }}
                     >
                       {action.label}
-                    </motion.span>
-                    <motion.span
-                      className="stackd-fab-icon flex h-12 w-12 items-center justify-center rounded-full border backdrop-blur-sm"
-                      style={{
-                        background:
-                          "linear-gradient(145deg, rgba(255,255,255,0.14), rgba(255,255,255,0.04))",
-                        borderColor: `rgba(${action.color},0.5)`,
-                        boxShadow: `0 8px 24px rgba(${action.color},0.25), inset 0 1px 1px rgba(255,255,255,0.2)`,
-                      }}
-                    >
-                      <ActionIcon
-                        className="h-6 w-6"
-                        style={{ color: `rgba(${action.color},0.95)` }}
-                      />
-                    </motion.span>
+                    </span>
                   </motion.button>
                 );
               })}
+            </motion.div>
+          )}
         </AnimatePresence>
 
-        {/* Main FAB */}
+        {/* Main FAB — anchored, + morphs to × via a smooth rotation */}
         <motion.button
           type="button"
           onClick={() => setExpanded(!expanded)}
-          whileTap={{ scale: 0.9 }}
-          animate={{ rotate: expanded ? 135 : 0 }}
-          transition={{ type: "spring", stiffness: 380, damping: 20 }}
-          className="stackd-fab flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border backdrop-blur-sm"
+          whileTap={{ scale: 0.92 }}
+          className="stackd-fab relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border backdrop-blur-sm"
           style={{
-            background:
-              "linear-gradient(145deg, rgba(255,255,255,0.24), rgba(255,255,255,0.08))",
-            borderColor: "rgba(255,255,255,0.28)",
+            background: "linear-gradient(145deg, rgba(255,255,255,0.22), rgba(255,255,255,0.06))",
+            borderColor: "rgba(255,255,255,0.26)",
             boxShadow:
-              "0 18px 48px rgba(0,0,0,0.34), inset 0 1px 1px rgba(255,255,255,0.42), inset 0 -1px 1px rgba(255,255,255,0.1)",
+              "0 16px 44px rgba(0,0,0,0.34), inset 0 1px 1px rgba(255,255,255,0.4), inset 0 -1px 1px rgba(255,255,255,0.1)",
           }}
           aria-label={expanded ? "Close menu" : "Open logging menu"}
         >
@@ -174,10 +191,16 @@ export default function FloatingActionMenu() {
             className="pointer-events-none absolute -inset-5 opacity-80"
             style={{
               background:
-                "radial-gradient(circle at 28% 0%, rgba(255,255,255,0.34), transparent 38%), radial-gradient(circle at 80% 120%, rgba(45,212,191,0.22), transparent 44%)",
+                "radial-gradient(circle at 28% 0%, rgba(255,255,255,0.32), transparent 38%), radial-gradient(circle at 80% 120%, rgba(45,212,191,0.22), transparent 44%)",
             }}
           />
-          <Plus className="relative z-10 h-6 w-6 text-white/85 drop-shadow-sm" />
+          <motion.span
+            animate={{ rotate: expanded ? 45 : 0 }}
+            transition={{ duration: 0.28, ease: EASE }}
+            className="relative z-10 flex"
+          >
+            <Plus className="h-6 w-6 text-white/90 drop-shadow-sm" />
+          </motion.span>
         </motion.button>
       </div>
     </>

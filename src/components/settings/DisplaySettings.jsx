@@ -1,5 +1,5 @@
 import { useUserSettings } from "@/hooks/useUserSettings";
-import { LineChart, Check, Loader2, Gauge } from "lucide-react";
+import { LineChart, Check, Loader2, Gauge, Droplets } from "lucide-react";
 import {
   HIGH_REFERENCE_DEFAULT,
   HIGH_REFERENCE_MIN,
@@ -19,6 +19,15 @@ export default function DisplaySettings() {
   const currentHigh = Number.isFinite(settings?.high_glucose_reference)
     ? Math.max(HIGH_REFERENCE_MIN, Math.min(HIGH_REFERENCE_MAX, Math.round(settings.high_glucose_reference / HIGH_REFERENCE_STEP) * HIGH_REFERENCE_STEP))
     : HIGH_REFERENCE_DEFAULT;
+  const manualGlucoseEnabled = settings?.manual_glucose_logging_enabled !== false;
+
+  const handleToggleManualGlucose = () => {
+    if (isSaving) return;
+    const next = !manualGlucoseEnabled;
+    localStorage.setItem("manual_glucose_logging_enabled", String(next));
+    window.dispatchEvent(new Event("insulin-settings-updated"));
+    save({ manual_glucose_logging_enabled: next });
+  };
 
   const handleSelectHeight = (value) => {
     if (value === currentHeight || isSaving) return;
@@ -100,6 +109,40 @@ export default function DisplaySettings() {
           real reading rises above or dips below your chosen scale, the graph gently expands to
           show the true value without changing your saved preference.
         </p>
+      </div>
+
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 px-1">
+          <Droplets className="h-4 w-4 text-teal-400/80" />
+          <h3 className="text-sm font-bold text-white uppercase tracking-wider">Manual Glucose Logging</h3>
+        </div>
+        <button
+          type="button"
+          onClick={handleToggleManualGlucose}
+          disabled={isSaving}
+          className="glass-card border rounded-3xl p-4 w-full flex items-center justify-between gap-4 text-left transition active:scale-[0.99] hover:bg-white/[0.04]"
+        >
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-white">Log glucose by hand</p>
+            <p className="text-xs text-white/40 mt-0.5 leading-relaxed">
+              Show Glucose in the logging menu so you can add fingerstick readings. Turn off if your sensor provides readings automatically.
+            </p>
+          </div>
+          <span
+            className="relative h-7 w-12 shrink-0 rounded-full border transition-colors"
+            style={{
+              background: manualGlucoseEnabled
+                ? "linear-gradient(145deg, rgba(91,168,138,0.55), rgba(91,163,184,0.40))"
+                : "rgba(255,255,255,0.06)",
+              borderColor: manualGlucoseEnabled ? "rgba(91,168,138,0.50)" : "rgba(255,255,255,0.12)",
+            }}
+          >
+            <span
+              className="absolute top-1/2 h-5 w-5 -translate-y-1/2 rounded-full bg-white shadow-md transition-all"
+              style={{ left: manualGlucoseEnabled ? "calc(100% - 22px)" : "2px" }}
+            />
+          </span>
+        </button>
       </div>
 
       <p className="text-center text-[10px] text-white/25 px-4 leading-relaxed">

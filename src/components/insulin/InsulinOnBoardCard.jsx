@@ -49,18 +49,15 @@ export default function InsulinOnBoardCard({ totalUnits, breakdown, basalRegimen
   }, [basalDoses]);
 
   return (
-    <motion.div
-      whileTap={{ scale: 0.985 }}
-      className="relative col-span-2 overflow-hidden rounded-2xl p-4">
-
+    <motion.div whileTap={{ scale: 0.985 }} className="relative col-span-2 px-1 pt-1">
       {/* Header */}
       <div className="relative z-10 flex items-center justify-between">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-white/40">Insulin on Board</span>
+        <span className="text-[11px] font-semibold text-white/45">Insulin on Board</span>
         <button
           type="button"
           onClick={(e) => setEstimateRect(e.currentTarget.getBoundingClientRect())}
           className="flex items-center gap-1 text-white/30 transition-colors hover:text-white/50">
-          <span className="text-[9px] font-medium">Estimated activity</span>
+          <span className="text-[10px] font-medium">Estimated activity</span>
           <Info className="h-3 w-3" />
         </button>
       </div>
@@ -79,113 +76,103 @@ export default function InsulinOnBoardCard({ totalUnits, breakdown, basalRegimen
         }
       </AnimatePresence>
 
-      {/* Primary: Rapid-acting IOB + dose count */}
-      <div className="relative z-10 mt-3 flex items-center">
-        <div className="flex flex-1 flex-col">
-          <div className="flex items-end gap-1">
-            <span className="text-3xl font-black leading-none text-white">{Math.round(bolusUnits)}</span>
-            <span className="mb-0.5 text-[10px] font-medium text-white/40">u</span>
-          </div>
-          <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-white/45">Rapid-Acting Active</span>
-        </div>
-        <div className="mx-3 w-px self-stretch bg-white/10" />
-        <div className="flex flex-1 flex-col">
-          <span className="text-3xl font-black leading-none text-white">{bolusDoses.length}</span>
-          <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-white/45">Doses Active</span>
-        </div>
-      </div>
+      {/* Dose rows — each section introduced by its uppercase label, with
+          the summary numbers sitting beneath it. Whitespace separates
+          sections; no divider lines or boxed containers. */}
+      {breakdown.length ? (
+        <div className="relative z-10 space-y-7 pt-4">
+          {bolusDoses.length > 0 && (
+            <div>
+              <span className="text-[9px] font-bold uppercase tracking-[0.14em] text-white/35">Rapid Insulin</span>
 
-      {/* Divider */}
-      <div className="relative z-10 my-4 h-px bg-white/10" />
-
-      {/* Basal Coverage — aggregates ALL relevant basal doses */}
-      <div className="relative z-10">
-        <div className="flex items-center justify-between">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-white/40">Basal Coverage</span>
-          {basalDoses.length > 0 && (
-            <button
-              type="button"
-              onClick={(e) => setBasalInfoRect(e.currentTarget.getBoundingClientRect())}
-              className="text-white/25 transition-colors hover:text-white/50">
-              <Info className="h-3 w-3" />
-            </button>
-          )}
-        </div>
-        {basalDoses.length > 0 ? (
-          <>
-            <div className="mt-2 flex items-center">
-              <div className="flex flex-1 flex-col">
-                <div className="flex items-end gap-1">
-                  <span className="text-2xl font-black leading-none text-white">{Math.round(totalBasalUnits)}</span>
-                  <span className="mb-0.5 text-[10px] font-medium text-white/40">u</span>
-                </div>
-                <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-white/45">Total Basal</span>
-              </div>
-              <div className="mx-3 w-px self-stretch bg-white/10" />
-              <div className="flex flex-1 flex-col">
-                <span className="text-2xl font-black leading-none text-white">{basalDoseCount}</span>
-                <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-white/45">{basalDoseCount === 1 ? "Dose" : "Doses"}</span>
-              </div>
-            </div>
-            <p className="mt-1.5 text-[10px] font-medium text-white/40">Background · Ongoing</p>
-            {/* Per-type breakdown */}
-            {basalTypeBreakdown.length > 1 && (
-              <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
-                {basalTypeBreakdown.map((t) => (
-                  <div key={t.type} className="flex items-center gap-1.5">
-                    <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: t.color }} />
-                    <span className="text-[10px] font-medium text-white/55">{t.shortName}</span>
-                    <span className="text-[10px] text-white/40">· {Math.round(t.units)}u</span>
+              {/* Summary numbers */}
+              <div className="mt-3 flex items-end gap-6">
+                <div className="flex flex-col">
+                  <div className="flex items-end gap-1">
+                    <span className="text-3xl font-black leading-none text-white">{Math.round(bolusUnits)}</span>
+                    <span className="mb-0.5 text-[10px] font-medium text-white/40">u</span>
                   </div>
+                  <span className="mt-1 text-[11px] font-medium text-white/45">Rapid-acting on board</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-3xl font-black leading-none text-white">{bolusDoses.length}</span>
+                  <span className="mt-1 text-[11px] font-medium text-white/45">Active doses</span>
+                </div>
+              </div>
+
+              {/* Detail rows */}
+              <div className="mt-3 space-y-1">
+                {bolusDoses.map((dose) => (
+                  <InsulinDoseRow key={dose.id} dose={dose} />
                 ))}
               </div>
-            )}
-          </>
-        ) : (
-          <p className="mt-2 text-sm text-white/40">No basal insulin logged</p>
-        )}
-      </div>
+            </div>
+          )}
+
+          {basalDoses.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="text-[9px] font-bold uppercase tracking-[0.14em] text-white/35">Basal / Background</span>
+                <button
+                  type="button"
+                  onClick={(e) => setBasalInfoRect(e.currentTarget.getBoundingClientRect())}
+                  className="text-white/25 transition-colors hover:text-white/50">
+                  <Info className="h-3 w-3" />
+                </button>
+              </div>
+
+              {/* Summary numbers */}
+              <div className="mt-3 flex items-end gap-6">
+                <div className="flex flex-col">
+                  <div className="flex items-end gap-1">
+                    <span className="text-2xl font-black leading-none text-white">{Math.round(totalBasalUnits)}</span>
+                    <span className="mb-0.5 text-[10px] font-medium text-white/40">u</span>
+                  </div>
+                  <span className="mt-1 text-[11px] font-medium text-white/45">Total basal</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-2xl font-black leading-none text-white">{basalDoseCount}</span>
+                  <span className="mt-1 text-[11px] font-medium text-white/45">{basalDoseCount === 1 ? "Dose" : "Doses"}</span>
+                </div>
+              </div>
+
+              <p className="mt-2 text-[11px] font-medium text-white/40">Background · Ongoing</p>
+
+              {/* Per-type breakdown */}
+              {basalTypeBreakdown.length > 1 && (
+                <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+                  {basalTypeBreakdown.map((t) => (
+                    <div key={t.type} className="flex items-center gap-1.5">
+                      <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: t.color }} />
+                      <span className="text-[10px] font-medium text-white/55">{t.shortName}</span>
+                      <span className="text-[10px] text-white/40">· {Math.round(t.units)}u</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Detail rows */}
+              <div className="mt-3 space-y-1">
+                {basalDoses.map((dose) => (
+                  <InsulinDoseRow key={dose.id} dose={dose} />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <p className="relative z-10 mt-4 text-sm text-white/40">No active insulin on board from current logs.</p>
+      )}
 
       <AnimatePresence>
         {basalInfoRect &&
         <BasalCoverageInfo
           anchorRect={basalInfoRect}
           onClose={() => setBasalInfoRect(null)}
-          insulinType={basalRegimenStatus?.insulinType} />
+          insulinType={basalRegimenStatus?.insulinType}
+        />
         }
       </AnimatePresence>
-
-      {/* Dose rows — each row's "Xu active" uses the same getDoseIOB value
-          that contributes to the primary IOB total above. */}
-      {breakdown.length ?
-      <div className="relative z-10 mt-4 space-y-3">
-          {bolusDoses.length > 0 &&
-        <div>
-              <span className="text-[9px] font-bold uppercase tracking-[0.14em] text-white/35">Rapid Insulin</span>
-              <div className="mt-1.5 divide-y divide-white/[0.06]">
-                {bolusDoses.map((dose) =>
-            <InsulinDoseRow key={dose.id} dose={dose} />
-            )}
-              </div>
-            </div>
-        }
-          {basalDoses.length > 0 &&
-        <div>
-              {bolusDoses.length > 0 && <div className="mb-2.5 h-px bg-white/10" />}
-              <span className="text-[9px] font-bold uppercase tracking-[0.14em] text-white/35">Basal / Background</span>
-              <div className="mt-1.5 divide-y divide-white/[0.06]">
-                {basalDoses.map((dose) =>
-            <InsulinDoseRow key={dose.id} dose={dose} />
-            )}
-              </div>
-            </div>
-        }
-        </div> :
-
-      <div className="relative z-10 mt-4 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 text-xs text-white/40">
-          No active insulin on board from current logs.
-        </div>
-      }
     </motion.div>
   );
 }

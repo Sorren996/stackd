@@ -37,37 +37,30 @@ export default function RhythmSection({
 
   return (
     <div>
-      {/* Segmented pill navigation */}
-      <div
-        className="relative flex rounded-full p-1"
-        style={{
-          background: "rgba(255,255,255,0.04)",
-          border: "1px solid rgba(255,255,255,0.06)",
-        }}
-      >
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => handleTabChange(t.id)}
-            className="relative flex-1 rounded-full py-2 text-[12px] font-semibold"
-          >
-            {tab === t.id && (
-              <motion.div
-                layoutId="rhythm-tab-indicator"
-                className="absolute inset-0 rounded-full"
-                style={{
-                  background: "rgba(255,255,255,0.08)",
-                  boxShadow: "inset 0 1px 1px rgba(255,255,255,0.08), 0 2px 8px rgba(0,0,0,0.12)",
-                }}
-                transition={{ duration: 0.25, ease: EASE }}
-              />
-            )}
-            <span className={`relative z-10 transition-colors duration-200 ${tab === t.id ? "text-white" : "text-white/40"}`}>
+      {/* Segmented navigation — subtle, integrated, not a heavy pill */}
+      <div className="relative flex items-center gap-7">
+        {TABS.map((t) => {
+          const isActive = tab === t.id;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => handleTabChange(t.id)}
+              className="relative pb-1.5 text-[13px] font-semibold transition-colors duration-200"
+              style={{ color: isActive ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.40)" }}
+            >
               {t.label}
-            </span>
-          </button>
-        ))}
+              {isActive && (
+                <motion.div
+                  layoutId="rhythm-tab-indicator"
+                  className="absolute -bottom-px left-0 right-0 h-[2px] rounded-full"
+                  style={{ background: "rgba(255,255,255,0.55)" }}
+                  transition={{ duration: 0.25, ease: EASE }}
+                />
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {/* Content — horizontal slide transition */}

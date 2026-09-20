@@ -122,6 +122,11 @@
       "type": "string",
       "format": "date-time",
       "description": "Timestamp of the last successful Coach background review, used for cooldown."
+    },
+    "manual_glucose_logging_enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether the user can manually log glucose readings. When enabled, Glucose appears as a FAB action. When disabled, manual glucose logging is hidden (useful when a CGM provides readings automatically)."
     }
   },
   "rls": {

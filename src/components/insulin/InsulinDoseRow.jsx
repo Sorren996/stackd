@@ -98,7 +98,7 @@ export default function InsulinDoseRow({ dose, regimenStatus = null }) {
           </span> :
 
         <span className="shrink-0 text-sm font-bold text-white">
-            {formattedIob}u <span className="text-[10px] font-medium text-white/40">active</span>
+            {formattedIob}u <span className="text-[10px] font-medium text-white/40">on board</span>
           </span>
         }
       </div>
@@ -111,11 +111,11 @@ export default function InsulinDoseRow({ dose, regimenStatus = null }) {
                 <rect x="0" y="0" width={markerPct} height="100" />
               </clipPath>
             </defs>
-            <path d={pathData.area} fill={color} opacity="0.1" />
-            <path d={pathData.line} fill="none" stroke={color} strokeWidth="1.5" opacity="0.25" vectorEffect="non-scaling-stroke" />
+            <path d={pathData.area} fill={color} opacity="0.06" />
+            <path d={pathData.line} fill="none" stroke={color} strokeWidth="1.5" opacity="0.18" vectorEffect="non-scaling-stroke" />
             <g clipPath={`url(#${clipId})`}>
-              <path d={pathData.area} fill={color} opacity="0.26" />
-              <path d={pathData.line} fill="none" stroke={color} strokeWidth="2" vectorEffect="non-scaling-stroke" />
+              <path d={pathData.area} fill={color} opacity="0.18" />
+              <path d={pathData.line} fill="none" stroke={color} strokeWidth="1.75" opacity="0.9" vectorEffect="non-scaling-stroke" />
             </g>
           </svg> :
 
