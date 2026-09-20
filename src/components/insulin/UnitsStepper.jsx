@@ -4,8 +4,8 @@ const PRESETS = [5, 10, 15, 20];
 
 /**
  * Touch-first unit selector for insulin logging.
- * Quick presets set the dose in one tap; a central stepper gives
- * ±1 unit precision without opening the keyboard.
+ * A large central stepper gives ±1 unit precision; quick presets
+ * below it act as shortcuts that set the dose exactly. No keyboard.
  */
 export default function UnitsStepper({ value, onChange }) {
   const current = Number(value) || 0;
@@ -19,9 +19,48 @@ export default function UnitsStepper({ value, onChange }) {
     <div>
       <span className="stackd-section-label">Units</span>
 
-      {/* Quick presets */}
+      {/* Central stepper — primary dose display */}
+      <div className="mt-3 flex items-center justify-center gap-5">
+        <button
+          type="button"
+          onClick={() => setUnits(current - 1)}
+          disabled={current <= 0}
+          className="flex h-12 w-12 items-center justify-center rounded-full border transition-colors disabled:opacity-30"
+          style={{
+            borderColor: "rgba(255,255,255,0.12)",
+            background: "rgba(255,255,255,0.04)",
+            boxShadow: "inset 0 1px 1px rgba(255,255,255,0.05)",
+            color: "rgba(255,255,255,0.85)",
+          }}
+          aria-label="Decrease dose by 1 unit"
+        >
+          <Minus className="h-5 w-5" />
+        </button>
+
+        <div className="flex min-w-[104px] items-baseline justify-center gap-1">
+          <span className="text-4xl font-black leading-none text-white">{current}</span>
+          <span className="text-sm font-medium text-white/45">U</span>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setUnits(current + 1)}
+          className="flex h-12 w-12 items-center justify-center rounded-full border transition-colors"
+          style={{
+            borderColor: "rgba(91,168,138,0.35)",
+            background: "linear-gradient(145deg, rgba(91,168,138,0.18), rgba(91,163,184,0.10))",
+            boxShadow: "0 6px 18px rgba(91,168,138,0.16), inset 0 1px 1px rgba(255,255,255,0.10)",
+            color: "rgba(255,255,255,0.95)",
+          }}
+          aria-label="Increase dose by 1 unit"
+        >
+          <Plus className="h-5 w-5" />
+        </button>
+      </div>
+
+      {/* Quick presets — shortcuts beneath the total */}
       <div
-        className="no-scrollbar mt-2 flex gap-2 overflow-x-auto"
+        className="no-scrollbar mt-4 flex justify-center gap-2 overflow-x-auto"
         style={{ WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}
       >
         {PRESETS.map((preset) => {
@@ -50,45 +89,6 @@ export default function UnitsStepper({ value, onChange }) {
             </button>
           );
         })}
-      </div>
-
-      {/* Central stepper */}
-      <div className="mt-3 flex items-center justify-center gap-4">
-        <button
-          type="button"
-          onClick={() => setUnits(current - 1)}
-          disabled={current <= 0}
-          className="flex h-12 w-12 items-center justify-center rounded-full border transition-colors disabled:opacity-30"
-          style={{
-            borderColor: "rgba(255,255,255,0.12)",
-            background: "rgba(255,255,255,0.04)",
-            boxShadow: "inset 0 1px 1px rgba(255,255,255,0.05)",
-            color: "rgba(255,255,255,0.85)",
-          }}
-          aria-label="Decrease dose by 1 unit"
-        >
-          <Minus className="h-5 w-5" />
-        </button>
-
-        <div className="flex min-w-[96px] items-baseline justify-center gap-1">
-          <span className="text-4xl font-black leading-none text-white">{current}</span>
-          <span className="text-sm font-medium text-white/45">U</span>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => setUnits(current + 1)}
-          className="flex h-12 w-12 items-center justify-center rounded-full border transition-colors"
-          style={{
-            borderColor: "rgba(91,168,138,0.35)",
-            background: "linear-gradient(145deg, rgba(91,168,138,0.18), rgba(91,163,184,0.10))",
-            boxShadow: "0 6px 18px rgba(91,168,138,0.16), inset 0 1px 1px rgba(255,255,255,0.10)",
-            color: "rgba(255,255,255,0.95)",
-          }}
-          aria-label="Increase dose by 1 unit"
-        >
-          <Plus className="h-5 w-5" />
-        </button>
       </div>
     </div>
   );
