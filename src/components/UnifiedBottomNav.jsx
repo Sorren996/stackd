@@ -14,10 +14,10 @@ const navItems = [
 ];
 
 const ALL_ACTIONS = [
-  { id: "both", label: "Meal + Support", Icon: Utensils, color: "45,212,191" },
-  { id: "carbs", label: "Nourishment", Icon: Wheat, color: "212,160,86" },
-  { id: "insulin", label: "Support", Icon: Syringe, color: "91,163,184" },
   { id: "glucose", label: "Glucose", Icon: Droplets, color: "91,168,138" },
+  { id: "insulin", label: "Support", Icon: Syringe, color: "91,163,184" },
+  { id: "carbs", label: "Nourishment", Icon: Wheat, color: "212,160,86" },
+  { id: "both", label: "Meal + Support", Icon: Utensils, color: "45,212,191" },
 ];
 
 const EASE = [0.22, 1, 0.36, 1];
@@ -214,8 +214,8 @@ export default function UnifiedBottomNav() {
                 animate="show"
                 exit="hidden"
                 variants={{ show: { transition: { staggerChildren: 0.05 } } }}
-                className="absolute left-1/2 z-[55] flex -translate-x-1/2 flex-col-reverse items-center gap-4"
-                style={{ bottom: "100%" }}
+                className="absolute left-1/2 z-[55] flex flex-col-reverse items-center gap-4"
+                style={{ bottom: "100%", transform: "translateX(-50%) translateY(-25%)" }}
               >
                 {actions.map((action) => {
                   const ActionIcon = action.Icon;
