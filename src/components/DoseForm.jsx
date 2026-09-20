@@ -8,7 +8,8 @@ import { getDefaultInsulinLibrary } from "@/lib/userSettings";
 import { X, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AnimatePresence, motion } from "framer-motion";
-import { DateScrollField, TimeScrollField, NumberPadField, TextPadField, SelectField } from "@/components/FormInputFields";
+import { DateScrollField, TimeScrollField, NumberPadField, TextPadField } from "@/components/FormInputFields";
+import InsulinTypeSelector from "@/components/insulin/InsulinTypeSelector";
 import Sheet from "@/components/Sheet";
 
 const CarbsTab = lazy(() => import("@/components/CarbsTab"));
@@ -434,14 +435,12 @@ export default function DoseForm({ open, onOpenChange, mode = "insulin" }) {
                         {insulinRows.map((row) => (
                           <div key={row.id} className="space-y-2">
                             <div className="grid grid-cols-1 gap-2">
-                              <SelectField
-                                label="Insulin type"
-                                value={row.insulinType}
-                                onChange={(value) => updateInsulinRow(row.id, { insulinType: value })}
-                                options={insulinTypeOptions}
-                                placeholder="Insulin type"
-                              />
-                              <NumberPadField
+                               <InsulinTypeSelector
+                                 value={row.insulinType}
+                                 onChange={(value) => updateInsulinRow(row.id, { insulinType: value })}
+                                 options={insulinTypeOptions}
+                               />
+                               <NumberPadField
                                 label="Units"
                                 value={row.units}
                                 onChange={(value) => updateInsulinRow(row.id, { units: value })}
