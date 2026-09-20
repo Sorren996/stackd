@@ -17,6 +17,8 @@ export default function DexcomConnect() {
     queryKey: ["dexcom-connection"],
     queryFn: () => base44.entities.DexcomConnection.list("-created_date", 1),
     refetchOnWindowFocus: true,
+    staleTime: 60 * 1000,
+    gcTime: 5 * 60 * 1000,
   });
 
   const current = connection?.[0];
