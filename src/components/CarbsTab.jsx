@@ -463,89 +463,63 @@ Do not give insulin dosing advice.
   return (
     <>
       <style>{`
-        @keyframes ai-estimate-pulse {
-          0%, 100% {
-            box-shadow:
-              0 0 0 1px rgba(20, 184, 166, 0.55),
-              0 0 14px rgba(20, 184, 166, 0.22),
-              inset 0 0 0 1px rgba(20, 184, 166, 0.2);
-          }
-          50% {
-            box-shadow:
-              0 0 0 1px rgba(15, 118, 110, 0.9),
-              0 0 24px rgba(15, 118, 110, 0.42),
-              inset 0 0 0 1px rgba(20, 184, 166, 0.28);
-          }
+        @keyframes stackd-fade-up {
+          from { opacity: 0; transform: translateY(6px); }
+          to { opacity: 1; transform: translateY(0); }
         }
-
-        .ai-estimate-field {
-          position: relative;
-          border-radius: 1rem;
-          border: 1px solid rgba(20, 184, 166, 0.42);
-          overflow: hidden;
-          background: rgba(255, 255, 255, 0.05);
-          box-shadow:
-            0 0 0 1px rgba(20, 184, 166, 0.16),
-            0 0 16px rgba(20, 184, 166, 0.12);
-          transition: border-color 180ms ease, box-shadow 180ms ease;
-        }
-
-        .ai-estimate-field-active {
-          border-color: rgba(15, 118, 110, 0.95);
-          animation: ai-estimate-pulse 1.45s ease-in-out infinite;
-        }
-
-        .ai-estimate-field-inner {
-          position: relative;
-          z-index: 1;
-          border-radius: 1rem;
-          background: transparent;
-        }
+        .stackd-reveal { animation: stackd-fade-up 280ms ease-out both; }
       `}</style>
 
       <div className={embedded ? "flex flex-col" : "flex min-h-0 flex-1 flex-col overflow-hidden"}>
         {CUSTOM_MODE_ENABLED && (
           <div className="px-5 pb-2 pt-4">
-            <div className="flex rounded-2xl border border-white/10 bg-white/[0.04] p-1" style={{ boxShadow: "inset 0 1px 1px rgba(255,255,255,0.06)" }}>
+            <div className="flex rounded-2xl border p-1" style={{ borderColor: "rgba(255,255,255,0.10)", background: "rgba(255,255,255,0.03)", boxShadow: "inset 0 1px 1px rgba(255,255,255,0.06)" }}>
               {[
                 ["estimate", "AI Estimate", Sparkles],
                 ["custom", "Custom", PenLine],
-              ].map(([id, label, Icon]) => (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => setMode(id)}
-                  className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2 text-sm font-medium transition-all ${
-                    mode === id ? "text-white" : "text-white/40 hover:text-white/60"
-                  }`}
-                  style={mode === id ? { background: "linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.04))", boxShadow: "inset 0 1px 1px rgba(255,255,255,0.12), 0 2px 8px rgba(0,0,0,0.15)" } : undefined}
-                >
-                  <Icon className="h-3.5 w-3.5" />
-                  {label}
-                </button>
-              ))}
+              ].map(([id, label, Icon]) => {
+                const selected = mode === id;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setMode(id)}
+                    className="flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-medium"
+                    style={{
+                      transition: "border-color 250ms ease-out, background 250ms ease-out, box-shadow 250ms ease-out, color 250ms ease-out",
+                      border: `1px solid ${selected ? "rgba(91,168,138,0.50)" : "transparent"}`,
+                      background: selected ? "linear-gradient(145deg, rgba(91,168,138,0.18), rgba(91,163,184,0.10))" : "transparent",
+                      boxShadow: selected ? "0 0 0 1px rgba(91,168,138,0.18), 0 0 16px rgba(91,168,138,0.16), inset 0 1px 1px rgba(255,255,255,0.10)" : "none",
+                      color: selected ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.45)",
+                    }}
+                    aria-pressed={selected}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    {label}
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
 
-        <div className={embedded ? "px-5 pb-6 pt-2" : "min-h-0 flex-1 overflow-y-auto px-5 pb-6 pt-2"}>
+        <div className={embedded ? "px-5 pb-6 pt-2" : "min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-5 pb-6 pt-2"}>
           {isCustomMode ? (
-            <div className="space-y-5">
-              <div className="relative overflow-hidden rounded-2xl border border-white/12 p-4" style={{ background: "linear-gradient(145deg, rgba(255,255,255,0.035), rgba(255,255,255,0.008))", boxShadow: "0 8px 24px rgba(0,0,0,0.15), inset 0 1px 1px rgba(255,255,255,0.07)" }}>
-                <div className="relative z-10 mb-3 flex items-center gap-2">
-                  <PenLine className="h-4 w-4 text-amber-400" />
-                  <p className="text-sm font-bold uppercase tracking-widest text-white/40">Custom entry</p>
-                </div>
-
-                <div className="space-y-3">
+            <div className="space-y-4">
+              <div>
+                <span className="stackd-section-label">Food Name</span>
+                <div className="mt-2">
                   <TextPadField
-                    label="Food name"
                     value={customFoodName}
                     onChange={setCustomFoodName}
                     placeholder="e.g. Rice and chicken"
                   />
+                </div>
+              </div>
+              <div>
+                <span className="stackd-section-label">Carbs</span>
+                <div className="mt-2">
                   <NumberPadField
-                    label="Carbs"
                     value={customCarbs}
                     onChange={setCustomCarbs}
                     unit="g"
@@ -556,87 +530,99 @@ Do not give insulin dosing advice.
               </div>
             </div>
           ) : isEstimateMode ? (
-            <div className="space-y-5">
-              <div className="relative overflow-hidden rounded-2xl border border-white/12 p-4" style={{ background: "linear-gradient(145deg, rgba(255,255,255,0.035), rgba(255,255,255,0.008))", boxShadow: "0 8px 24px rgba(0,0,0,0.15), inset 0 1px 1px rgba(255,255,255,0.07)" }}>
-                <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-20 opacity-50" style={{ background: "radial-gradient(ellipse 70% 100% at 30% 0%, rgba(45,212,191,0.1), transparent 70%)" }} />
-                <div className="relative z-10 mb-3 flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-teal-300" />
-                  <p className="text-sm font-bold uppercase tracking-widest text-white/40">Estimate a meal</p>
-                </div>
-
-                <div className={`ai-estimate-field ${isEstimatingMeal ? "ai-estimate-field-active" : ""}`}>
-                  <div className="ai-estimate-field-inner p-1">
-                    <TextPadField
-                      value={mealText}
-                      onChange={setMealText}
-                      placeholder="e.g. 2 slices pepperoni pizza and a 12 oz coke, or add a photo"
-                      multiline
-                    />
-                  </div>
-                </div>
-
-                <div className="mt-3">
-                  {mealPhoto ? (
-                    <div className="overflow-hidden rounded-2xl border border-teal-500/30 bg-teal-500/[0.04]">
-                      <div className="relative aspect-[4/3] w-full bg-black/20">
-                        <img
-                          src={mealPhoto}
-                          alt="Selected meal"
-                          className="h-full w-full object-cover"
-                        />
-                        <button
-                          type="button"
-                          onClick={clearMealPhoto}
-                          className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-black/45 text-white/70 backdrop-blur-sm transition hover:text-white"
-                          aria-label="Remove meal photo"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                      <div className="flex items-center gap-2 px-3 py-2 text-xs text-teal-100/70">
-                        <Camera className="h-3.5 w-3.5" />
-                        <span className="truncate">{mealPhotoName || "Meal photo attached"}</span>
-                      </div>
-                    </div>
-                  ) : (
-                    <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-teal-500/35 bg-teal-500/[0.03] px-4 py-3 text-sm font-semibold text-teal-100/75 transition hover:border-teal-400/60 hover:bg-teal-500/[0.06] hover:text-teal-50">
-                      <Camera className="h-4 w-4" />
-                      Add food photo
-                      <input
-                        type="file"
-                        accept="image/*"
-                        capture="environment"
-                        onChange={handlePhotoChange}
-                        className="hidden"
-                      />
-                    </label>
-                  )}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleEstimateMeal}
-                  disabled={(!mealText.trim() && !mealPhotoFile) || isEstimatingMeal}
-                  className="relative z-10 mt-3 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-2xl py-3 text-sm font-semibold text-white transition disabled:opacity-40"
-                  style={{ background: "linear-gradient(145deg, rgba(20,184,166,0.9), rgba(15,118,110,0.85))", boxShadow: "0 8px 24px rgba(20,184,166,0.3), inset 0 1px 1px rgba(255,255,255,0.2)" }}
-                >
-                  <EstimateButtonIcon className={`h-4 w-4 ${isEstimatingMeal ? "animate-spin" : ""}`} />
-                  <span className="whitespace-nowrap">{estimateButtonLabel}</span>
-                </button>
+            <div className="space-y-4">
+              <div>
+                <span className="stackd-section-label">Meal</span>
+                <textarea
+                  value={mealText}
+                  onChange={(e) => setMealText(e.target.value)}
+                  placeholder="Describe your meal..."
+                  rows={3}
+                  className="stackd-input mt-2 w-full resize-none rounded-2xl border px-4 py-3.5 text-sm text-white placeholder:text-white/40 focus:outline-none"
+                  style={{
+                    background: "linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))",
+                    borderColor: "rgba(255,255,255,0.12)",
+                    boxShadow: "inset 0 1px 1px rgba(255,255,255,0.06)",
+                    transition: "border-color 250ms ease-out, box-shadow 250ms ease-out",
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = "rgba(91,168,138,0.55)";
+                    e.currentTarget.style.boxShadow = "0 0 0 1px rgba(91,168,138,0.20), 0 0 18px rgba(91,168,138,0.16), inset 0 1px 1px rgba(255,255,255,0.08)";
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)";
+                    e.currentTarget.style.boxShadow = "inset 0 1px 1px rgba(255,255,255,0.06)";
+                  }}
+                />
               </div>
 
-              {estimatedMeal ? (
-                <div className="relative overflow-hidden rounded-2xl border border-white/12 p-4" style={{ background: "linear-gradient(145deg, rgba(255,255,255,0.035), rgba(255,255,255,0.008))", boxShadow: "0 8px 24px rgba(0,0,0,0.15), inset 0 1px 1px rgba(255,255,255,0.07)" }}>
-                  <p className="mb-3 text-sm font-bold uppercase tracking-widest text-white/40">Review estimate</p>
+              <div>
+                {mealPhoto ? (
+                  <div className="overflow-hidden rounded-2xl border" style={{ borderColor: "rgba(255,255,255,0.12)" }}>
+                    <div className="relative aspect-[4/3] w-full bg-black/20">
+                      <img src={mealPhoto} alt="Selected meal" className="h-full w-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={clearMealPhoto}
+                        className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-black/45 text-white/70 backdrop-blur-sm transition hover:text-white"
+                        aria-label="Remove meal photo"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <label
+                    className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-sm font-medium transition"
+                    style={{
+                      borderColor: "rgba(255,255,255,0.12)",
+                      background: "rgba(255,255,255,0.03)",
+                      color: "rgba(255,255,255,0.55)",
+                    }}
+                  >
+                    <Camera className="h-4 w-4" />
+                    Add food photo
+                    <input type="file" accept="image/*" capture="environment" onChange={handlePhotoChange} className="hidden" />
+                  </label>
+                )}
+              </div>
 
-                  <TextPadField
-                    label="Meal name"
-                    value={estimatedMeal.mealName}
-                    onChange={(value) => updateEstimatedMeal({ mealName: value })}
-                    placeholder="Meal name"
-                  />
+              <button
+                type="button"
+                onClick={handleEstimateMeal}
+                disabled={(!mealText.trim() && !mealPhotoFile) || isEstimatingMeal}
+                className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-semibold"
+                style={{
+                  background: (!mealText.trim() && !mealPhotoFile) || isEstimatingMeal
+                    ? "rgba(255,255,255,0.04)"
+                    : "linear-gradient(145deg, rgba(91,168,138,0.92), rgba(70,140,116,0.88))",
+                  border: `1px solid ${(!mealText.trim() && !mealPhotoFile) || isEstimatingMeal ? "rgba(255,255,255,0.08)" : "rgba(120,210,180,0.30)"}`,
+                  boxShadow: (!mealText.trim() && !mealPhotoFile) || isEstimatingMeal
+                    ? "inset 0 1px 1px rgba(255,255,255,0.04)"
+                    : "0 8px 22px rgba(91,168,138,0.22), inset 0 1px 1px rgba(255,255,255,0.20)",
+                  color: (!mealText.trim() && !mealPhotoFile) || isEstimatingMeal ? "rgba(255,255,255,0.35)" : "#ffffff",
+                  transition: "background 250ms ease-out, box-shadow 250ms ease-out, color 250ms ease-out, border-color 250ms ease-out",
+                }}
+              >
+                <EstimateButtonIcon className={`h-4 w-4 ${isEstimatingMeal ? "animate-spin" : ""}`} />
+                <span className="whitespace-nowrap">{estimateButtonLabel}</span>
+              </button>
 
-                  <div className="mt-3 grid grid-cols-2 gap-2">
+              {estimatedMeal && (
+                <div className="stackd-reveal space-y-3">
+                  <div>
+                    <span className="stackd-section-label">Estimated Nutrition</span>
+                    <div className="mt-2">
+                      <TextPadField
+                        label="Meal name"
+                        value={estimatedMeal.mealName}
+                        onChange={(value) => updateEstimatedMeal({ mealName: value })}
+                        placeholder="Meal name"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
                     {[
                       ["carbs", "Carbs", "g"],
                       ["protein", "Protein", "g"],
@@ -656,20 +642,17 @@ Do not give insulin dosing advice.
                     ))}
                   </div>
 
+                  <div className="flex items-center justify-between rounded-xl border px-3 py-2.5" style={{ borderColor: "rgba(255,255,255,0.10)", background: "rgba(255,255,255,0.03)" }}>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-white/45">Absorption</span>
+                    <span className="text-sm font-semibold text-white/80">{ABSORPTION_CATEGORY[estimatedMeal.absorptionProfile] || "Medium"}</span>
+                  </div>
+
                   {estimatedMeal.assumptions?.length > 0 && (
-                    <div className="mt-3 rounded-xl bg-white/[0.04] px-3 py-2">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-white/35">Assumptions</p>
-                      <p className="mt-1 text-xs leading-relaxed text-white/45">{estimatedMeal.assumptions.join("; ")}</p>
-                    </div>
+                    <p className="px-1 text-[11px] leading-relaxed text-white/35">{estimatedMeal.assumptions.join("; ")}</p>
                   )}
                 </div>
-              ) : (
-                <div className="flex min-h-[160px] items-center justify-center rounded-2xl border border-dashed border-white/12 px-6 text-center" style={{ background: "rgba(255,255,255,0.015)", boxShadow: "inset 0 1px 1px rgba(255,255,255,0.04)" }}>
-                  <p className="text-sm leading-relaxed text-white/35">
-                    Enter a meal description above to estimate carbs, GI, calories, protein, fat, and absorption speed.
-                  </p>
-                </div>
               )}
+
               {estimatedMeal && (Number(estimatedMeal.protein) >= 30 || Number(estimatedMeal.fat) >= 20) && !isHighProteinFat && (
                 <div className="rounded-xl border border-amber-500/20 bg-amber-500/[0.06] px-3.5 py-2.5">
                   <p className="text-[11px] leading-relaxed text-amber-200/70">
@@ -681,8 +664,10 @@ Do not give insulin dosing advice.
           ) : (
             <div className="space-y-5">
               <div className="relative">
-                <p className="mb-3 text-sm font-bold uppercase tracking-widest text-white/40">Search Foods</p>
-                <TextPadField value={carbSearch} onChange={setCarbSearch} placeholder="Search foods..." />
+                <span className="stackd-section-label">Search Foods</span>
+                <div className="mt-2">
+                  <TextPadField value={carbSearch} onChange={setCarbSearch} placeholder="Search foods..." />
+                </div>
 
                 {filteredFoods.length > 0 && (
                   <div className="mt-2 overflow-hidden rounded-2xl border border-white/10 bg-[hsl(162,10%,12%)] shadow-xl">
@@ -715,11 +700,11 @@ Do not give insulin dosing advice.
 
               {recentFoods.length > 0 && carbSearch === "" && (
                 <div>
-                  <p className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-white/40">
-                    <Clock className="h-3.5 w-3.5" />
+                  <span className="stackd-section-label flex items-center gap-1.5">
+                    <Clock className="h-3 w-3" />
                     Recently Used
-                  </p>
-                  <div className="flex flex-wrap gap-2">
+                  </span>
+                  <div className="mt-2 flex flex-wrap gap-2">
                     {recentFoods.map((food) => {
                       const alreadySelected = !!selectedFoods.find((item) => item.food.name === food.name);
                       return (
@@ -745,8 +730,8 @@ Do not give insulin dosing advice.
 
               {selectedFoods.length > 0 && (
                 <div>
-                  <p className="mb-3 text-sm font-bold uppercase tracking-widest text-white/40">Selected Foods</p>
-                  <div className="space-y-2">
+                  <span className="stackd-section-label">Selected Foods</span>
+                  <div className="mt-2 space-y-2">
                     {selectedFoods.map(({ food, carbs }) => (
                       <div key={food.name} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
                         <div className="min-w-0 flex-1">
@@ -790,9 +775,11 @@ Do not give insulin dosing advice.
 
           {!embedded && (
             <div className="mt-5">
-              <p className="mb-3 text-sm font-bold uppercase tracking-widest text-white/40">Time Consumed</p>
-              <DateScrollField label="Date" value={carbDate} onChange={setCarbDate} max={todayDateValue} />
-              <TimeScrollField label="Consumed at" value={carbTime} onChange={setCarbTime} max={carbDate === todayDateValue ? nowTimeString : undefined} />
+              <span className="stackd-section-label">Time Consumed</span>
+              <div className="mt-2 space-y-3">
+                <DateScrollField label="Date" value={carbDate} onChange={setCarbDate} max={todayDateValue} />
+                <TimeScrollField label="Consumed at" value={carbTime} onChange={setCarbTime} max={carbDate === todayDateValue ? nowTimeString : undefined} />
+              </div>
             </div>
           )}
 
