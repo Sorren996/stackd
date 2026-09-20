@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Wind, Leaf, Waves, CircleUser, Plus, Syringe, Droplets, Wheat, Utensils } from "lucide-react";
 import DoseForm from "@/components/DoseForm";
 import CombinedLogSheet from "@/components/CombinedLogSheet";
+import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 
 const navItems = [
   { path: "/", label: "My Flow", icon: Wind },
@@ -85,10 +86,16 @@ export default function UnifiedBottomNav() {
   const [doseFormPreloaded, setDoseFormPreloaded] = useState(false);
   const [combinedSheetOpen, setCombinedSheetOpen] = useState(false);
   const [manualGlucoseEnabled, setManualGlucoseEnabled] = useState(readManualGlucoseEnabled);
+  const { connected: dexcomConnected } = useDexcomConnection();
 
+  // A connected CGM streams glucose automatically — step aside so manual
+  // logging doesn't duplicate what the sensor already provides.
   const actions = useMemo(
-    () => (manualGlucoseEnabled ? ALL_ACTIONS : ALL_ACTIONS.filter((a) => a.id !== "glucose")),
-    [manualGlucoseEnabled]
+    () =>
+      manualGlucoseEnabled && !dexcomConnected
+        ? ALL_ACTIONS
+        : ALL_ACTIONS.filter((a) => a.id !== "glucose"),
+    [manualGlucoseEnabled, dexcomConnected]
   );
 
   useEffect(() => {
@@ -144,6 +151,17 @@ export default function UnifiedBottomNav() {
 
   const notchMask = `radial-gradient(circle ${NOTCH_RADIUS}px at 50% 0%, transparent 92%, #000 100%)`;
 
+  // Lock background scroll while the action menu is open so the dimmed,
+  // blurred page stays put behind the emerging options.
+  useEffect(() => {
+    if (!expanded || doseFormOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [expanded, doseFormOpen]);
+
   return (
     <>
       {(doseFormPreloaded || doseFormOpen) && (
@@ -154,7 +172,7 @@ export default function UnifiedBottomNav() {
         <CombinedLogSheet open={combinedSheetOpen} onOpenChange={setCombinedSheetOpen} />
       )}
 
-      {/* Outside-tap catcher — transparent dim, not a modal. */}
+      {/* Blurred backdrop — dims and freezes the page while the menu is open. */}
       <AnimatePresence>
         {expanded && !doseFormOpen && (
           <motion.div
@@ -163,70 +181,17 @@ export default function UnifiedBottomNav() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.18 }}
             className="fixed inset-0 z-40"
-            style={{ background: "rgba(0,0,0,0.15)" }}
+            style={{
+              background: "rgba(5,10,12,0.35)",
+              backdropFilter: "blur(8px)",
+              WebkitBackdropFilter: "blur(8px)",
+            }}
             onClick={() => setExpanded(false)}
           />
         )}
       </AnimatePresence>
 
-      {/* Action menu — emerges above the FAB. Rendered above the nav so it
-          stays clickable while the dim is visible. */}
-      <div
-        className="fixed left-1/2 z-[55] flex -translate-x-1/2 flex-col items-center"
-        style={{ bottom: "calc(env(safe-area-inset-bottom) + 3.5rem)" }}
-      >
-        <AnimatePresence>
-          {expanded && !doseFormOpen && (
-            <motion.div
-              initial="hidden"
-              animate="show"
-              exit="hidden"
-              variants={{ show: { transition: { staggerChildren: 0.05 } } }}
-              className="flex flex-col items-center gap-4 pb-2"
-            >
-              {actions.map((action) => {
-                const ActionIcon = action.Icon;
-                return (
-                  <motion.button
-                    key={action.id}
-                    type="button"
-                    onClick={() => handleSelect(action.id)}
-                    variants={{
-                      hidden: { opacity: 0, y: 14 },
-                      show: { opacity: 1, y: 0 },
-                    }}
-                    transition={{ duration: 0.22, ease: EASE }}
-                    whileTap={{ scale: 0.94 }}
-                    className="flex items-center gap-3"
-                    aria-label={action.label}
-                  >
-                    <span
-                      className="flex h-11 w-11 items-center justify-center rounded-full border backdrop-blur-sm"
-                      style={{
-                        background: `linear-gradient(145deg, rgba(${action.color},0.16), rgba(${action.color},0.06))`,
-                        borderColor: `rgba(${action.color},0.32)`,
-                        boxShadow: `0 6px 18px rgba(${action.color},0.18), inset 0 1px 1px rgba(255,255,255,0.12)`,
-                      }}
-                    >
-                      <ActionIcon className="h-5 w-5" style={{ color: `rgba(${action.color},0.95)` }} />
-                    </span>
-                    <span
-                      className="rounded-full border px-3 py-1.5 text-sm font-semibold backdrop-blur-sm"
-                      style={{
-                        color: "rgba(255,255,255,0.92)",
-                        background: "linear-gradient(145deg, rgba(15,24,22,0.72), rgba(15,24,22,0.52))",
-                        borderColor: `rgba(${action.color},0.28)`,
-                      }}
-                    >
-                      {action.label}
-                    </span>
-                  </motion.button>
-                );
-              })}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+
 
       {/* Unified surface: nav bar + FAB as one continuous glass component.
           The FAB shares the nav's exact glass material and rises from a
@@ -240,26 +205,76 @@ export default function UnifiedBottomNav() {
         style={{ paddingBottom: "env(safe-area-inset-bottom)", zIndex: expanded ? 50 : 30 }}
       >
         <div className="relative mx-4 mb-4">
-          {/* FAB — same glass as the nav, no border, no separate shadow.
-              Centered on the nav's top edge so it rises from the surface. */}
+          {/* Action menu — emerges from the FAB's exact position. The first
+              option overlays the FAB spot and the rest rise above it. */}
+          <AnimatePresence>
+            {expanded && !doseFormOpen && (
+              <motion.div
+                initial="hidden"
+                animate="show"
+                exit="hidden"
+                variants={{ show: { transition: { staggerChildren: 0.05 } } }}
+                className="absolute left-1/2 z-[55] flex -translate-x-1/2 flex-col-reverse items-center gap-4"
+                style={{ bottom: "100%" }}
+              >
+                {actions.map((action) => {
+                  const ActionIcon = action.Icon;
+                  return (
+                    <motion.button
+                      key={action.id}
+                      type="button"
+                      onClick={() => handleSelect(action.id)}
+                      variants={{
+                        hidden: { opacity: 0, y: 24 },
+                        show: { opacity: 1, y: 0 },
+                      }}
+                      transition={{ duration: 0.22, ease: EASE }}
+                      whileTap={{ scale: 0.94 }}
+                      className="flex items-center gap-3"
+                      aria-label={action.label}
+                    >
+                      <span
+                        className="flex h-11 w-11 items-center justify-center rounded-full border backdrop-blur-sm"
+                        style={{
+                          background: `linear-gradient(145deg, rgba(${action.color},0.16), rgba(${action.color},0.06))`,
+                          borderColor: `rgba(${action.color},0.32)`,
+                          boxShadow: `0 6px 18px rgba(${action.color},0.18), inset 0 1px 1px rgba(255,255,255,0.12)`,
+                        }}
+                      >
+                        <ActionIcon className="h-5 w-5" style={{ color: `rgba(${action.color},0.95)` }} />
+                      </span>
+                      <span
+                        className="rounded-full border px-3 py-1.5 text-sm font-semibold backdrop-blur-sm"
+                        style={{
+                          color: "rgba(255,255,255,0.92)",
+                          background: "linear-gradient(145deg, rgba(15,24,22,0.72), rgba(15,24,22,0.52))",
+                          borderColor: `rgba(${action.color},0.28)`,
+                        }}
+                      >
+                        {action.label}
+                      </span>
+                    </motion.button>
+                  );
+                })}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* FAB — transparent, no background or border. Just the + glyph
+              floating over the notch. The action menu emerges from here. */}
           <button
             type="button"
             onClick={() => setExpanded(!expanded)}
             aria-label={expanded ? "Close menu" : "Open logging menu"}
-            className="stackd-unified-fab absolute left-1/2 z-20 flex -translate-x-1/2 items-center justify-center overflow-hidden rounded-full backdrop-blur-sm"
+            className="absolute left-1/2 z-20 flex -translate-x-1/2 items-center justify-center rounded-full"
             style={{
               top: `-${FAB_SIZE / 2}px`,
               width: `${FAB_SIZE}px`,
               height: `${FAB_SIZE}px`,
-              background: GLASS_BG,
-              boxShadow: GLASS_INSET,
+              background: "transparent",
+              border: "none",
             }}
           >
-            <span
-              aria-hidden="true"
-              className="pointer-events-none absolute -inset-3 opacity-80"
-              style={{ background: GLASS_GLOW }}
-            />
             <motion.span
               animate={{ rotate: expanded ? 45 : 0 }}
               transition={{ duration: 0.28, ease: EASE }}
