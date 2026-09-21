@@ -1162,7 +1162,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
           </div>
         }
 
-        <p className={`text-legible mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-white ${CLEAN_LAYOUT ? "mt-6 opacity-70" : "mt-4"}`}>Your Rhythm</p>
+        <p className={`text-legible mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-white ${CLEAN_LAYOUT ? "mt-6 opacity-70" : "mt-4"}`}>At a Glance</p>
         <RhythmSection
           mealInsight={mealInsight}
           highProteinFatStatus={highProteinFatStatus}

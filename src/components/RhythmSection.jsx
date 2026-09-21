@@ -4,8 +4,8 @@ import MealReviewContent from "@/components/insulin/MealReviewContent";
 import InsulinOnBoardCard from "@/components/insulin/InsulinOnBoardCard";
 
 const TABS = [
-  { id: "meal", label: "Meal Review" },
   { id: "iob", label: "Insulin on Board" },
+  { id: "meal", label: "Meal Review" },
 ];
 
 const EASE = [0.22, 1, 0.36, 1];
@@ -28,12 +28,12 @@ export default function RhythmSection({
   onEditDose,
   onDeleteDose,
 }) {
-  const [tab, setTab] = useState("meal");
+  const [tab, setTab] = useState("iob");
   const [direction, setDirection] = useState(0);
 
   const handleTabChange = (newTab) => {
     if (newTab === tab) return;
-    setDirection(newTab === "iob" ? 1 : -1);
+    setDirection(newTab === "meal" ? 1 : -1);
     setTab(newTab);
   };
 
@@ -81,20 +81,20 @@ export default function RhythmSection({
             exit="exit"
             transition={{ duration: 0.25, ease: EASE }}
           >
-            {tab === "meal" ? (
-              <MealReviewContent
-                mealInsight={mealInsight}
-                monitoringStatus={highProteinFatStatus}
-                glucoseTrend={glucoseTrend}
-                onResolve={onResolveMeal}
-              />
-            ) : (
+            {tab === "iob" ? (
               <InsulinOnBoardCard
                 totalUnits={totalUnits}
                 breakdown={breakdown}
                 basalRegimenStatus={basalRegimenStatus}
                 onEditDose={onEditDose}
                 onDeleteDose={onDeleteDose}
+              />
+            ) : (
+              <MealReviewContent
+                mealInsight={mealInsight}
+                monitoringStatus={highProteinFatStatus}
+                glucoseTrend={glucoseTrend}
+                onResolve={onResolveMeal}
               />
             )}
           </motion.div>
