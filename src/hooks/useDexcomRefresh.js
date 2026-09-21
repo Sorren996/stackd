@@ -55,9 +55,11 @@ export function useDexcomRefresh() {
           const res = await base44.functions.invoke("pollDexcomNow", { force });
           const data = res?.data;
 
-          // If new readings were inserted, invalidate glucose queries
-          // so the graph and latest-glucose card refresh immediately.
-          if (data?.records_inserted > 0) {
+          // Invalidate glucose queries whenever the poll returns a valid
+          // latest reading timestamp — even when the frontend's own poll
+          // didn't insert it (the scheduled workflow may have ingested it
+          // first, so records_inserted is 0 but a newer reading now exists).
+          if (data?.latest_glucose_timestamp) {
             invalidateGlucoseQueries(queryClient);
           }
 

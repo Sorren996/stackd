@@ -64,9 +64,11 @@ export default async function (req: Request): Promise<Response> {
       }
 
       try {
-        // The scheduled pass uses the same reading-age gate as the
-        // on-demand poll. Non-forced — the gate decides based on the
-        // newest reading timestamp.
+        // The scheduled pass always force-fetches. The 5-min workflow
+        // cadence is already conservative enough to protect the Share API;
+        // the reading-age gate only needs to guard the frontend's 60s poll.
+        // Forcing guarantees every scheduled run pulls whatever Share has,
+        // cutting worst-case ingestion delay from ~12 min to ~5 min.
         const result = await requestDexcomRefreshIfNeeded(
           sr,
           base44,
@@ -75,7 +77,7 @@ export default async function (req: Request): Promise<Response> {
           conn.share_password,
           now,
           "scheduled",
-          false
+          true
         );
 
         results.push(result);
