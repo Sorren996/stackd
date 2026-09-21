@@ -6,7 +6,8 @@ import {
   DEXCOM_SHARE_AUTHENTICATE_ENDPOINT,
   DEXCOM_SHARE_LOGIN_ENDPOINT,
   DEXCOM_SHARE_READINGS_ENDPOINT,
-  DEXCOM_SHARE_HEADERS,
+  DEXCOM_SHARE_AUTH_HEADERS,
+  DEXCOM_SHARE_READINGS_HEADERS,
   DEXCOM_SHARE_DEFAULT_UUID,
 } from "../../shared/dexcomShareConfig.ts";
 
@@ -61,7 +62,7 @@ function isCleanUuid(value) {
 async function sharePost(endpoint, body) {
   const res = await fetch(`${DEXCOM_SHARE_BASE_URL_US}${endpoint}`, {
     method: "POST",
-    headers: DEXCOM_SHARE_HEADERS,
+    headers: DEXCOM_SHARE_AUTH_HEADERS,
     body: JSON.stringify(body || {}),
   });
 
@@ -115,6 +116,21 @@ async function getShareSessionId(username, password) {
   }
 
   return String(sessionId).replace(/"/g, "");
+}
+
+// Fetch readings with the correct request shape: Accept + User-Agent only,
+// NO Content-Type, empty body. Some Share servers silently return [] when
+// given Content-Type: application/json with a {} body.
+async function fetchReadingsOnce(sessionId) {
+  const readingsUrl =
+    `${DEXCOM_SHARE_BASE_URL_US}${DEXCOM_SHARE_READINGS_ENDPOINT}` +
+    `?sessionId=${encodeURIComponent(sessionId)}` +
+    `&minutes=${POLL_MINUTES}` +
+    `&maxCount=${POLL_MAX_COUNT}`;
+  return await fetch(readingsUrl, {
+    method: "POST",
+    headers: DEXCOM_SHARE_READINGS_HEADERS,
+  });
 }
 
 // ── Main ──────────────────────────────────────────────────────
@@ -189,17 +205,17 @@ export default async function (req) {
         diag.session_valid = true;
 
         // ── 2. Fetch recent readings ────────────────────────
-        const readingsUrl =
-          `${DEXCOM_SHARE_BASE_URL_US}${DEXCOM_SHARE_READINGS_ENDPOINT}` +
-          `?sessionId=${encodeURIComponent(sessionId)}` +
-          `&minutes=${POLL_MINUTES}` +
-          `&maxCount=${POLL_MAX_COUNT}`;
+        let readingsRes = await fetchReadingsOnce(sessionId);
 
-        const readingsRes = await fetch(readingsUrl, {
-          method: "POST",
-          headers: DEXCOM_SHARE_HEADERS,
-          body: JSON.stringify({}),
-        });
+        // Session expiry retry — re-authenticate and retry once on 500/401.
+        if (readingsRes.status === 500 || readingsRes.status === 401) {
+          try {
+            const newSessionId = await getShareSessionId(username, password);
+            readingsRes = await fetchReadingsOnce(newSessionId);
+          } catch {
+            // Re-auth failed — fall through to the error handler below.
+          }
+        }
 
         if (!readingsRes.ok) {
           diag.poll_status = "failed";

@@ -99,6 +99,19 @@ export default function DexcomConnect() {
               ) : (
                 <DexcomSyncStatus />
               )}
+              {current?.last_sync_error && (
+                <div className="flex items-start gap-2 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3">
+                  <AlertCircle className="h-4 w-4 text-amber-300 shrink-0 mt-0.5" />
+                  <div className="min-w-0">
+                    <p className="text-xs text-amber-200 font-medium">
+                      Last sync couldn't reach Dexcom
+                    </p>
+                    <p className="text-[11px] text-amber-200/60 mt-0.5 leading-relaxed break-words">
+                      {current.last_sync_error}
+                    </p>
+                  </div>
+                </div>
+              )}
               <button
                 type="button"
                 onClick={handleDisconnect}

@@ -28,11 +28,30 @@ export const DEXCOM_SHARE_AUTHENTICATE_ENDPOINT = "General/AuthenticatePublisher
 export const DEXCOM_SHARE_LOGIN_ENDPOINT = "General/LoginPublisherAccountById";
 export const DEXCOM_SHARE_READINGS_ENDPOINT = "Publisher/ReadPublisherLatestGlucoseValues";
 
-// Standard headers for all Share API requests.
-export const DEXCOM_SHARE_HEADERS = {
-  "Accept-Encoding": "application/json",
+// User-Agent — mimics the official Dexcom Follow app, which Share servers
+// accept. Required on all Share requests; some servers reject missing UAs.
+export const DEXCOM_SHARE_USER_AGENT = "Dexcom Follow/5.0.0.0";
+
+// Headers for auth requests (AuthenticatePublisherAccount, LoginPublisherAccountById).
+// These endpoints expect a JSON request body, so Content-Type is required.
+export const DEXCOM_SHARE_AUTH_HEADERS = {
   "Content-Type": "application/json",
+  "User-Agent": DEXCOM_SHARE_USER_AGENT,
 };
+
+// Headers for readings requests (ReadPublisherLatestGlucoseValues).
+// MUST NOT include Content-Type and MUST send an empty body — some Share
+// servers silently return [] when given Content-Type: application/json
+// with a stub {} body. Match xdrip4ios/FLwatch read-path shape exactly:
+// only Accept + User-Agent, empty body.
+export const DEXCOM_SHARE_READINGS_HEADERS = {
+  "Accept": "application/json",
+  "User-Agent": DEXCOM_SHARE_USER_AGENT,
+};
+
+// Backward-compatible alias — auth headers are the "default" Share headers.
+// Readings requests must use DEXCOM_SHARE_READINGS_HEADERS instead.
+export const DEXCOM_SHARE_HEADERS = DEXCOM_SHARE_AUTH_HEADERS;
 
 // The all-zeros UUID — Dexcom returns this when something goes wrong.
 export const DEXCOM_SHARE_DEFAULT_UUID = "00000000-0000-0000-0000-000000000000";

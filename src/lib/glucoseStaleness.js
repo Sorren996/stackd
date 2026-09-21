@@ -2,7 +2,9 @@
 // received a fresh CGM reading within the threshold window, the app calmly
 // signals that the data stream has gone quiet and recovers automatically.
 
-export const STALE_READING_MINUTES = 15;
+// Dexcom G7 cadence is ~5 minutes; 8 min = cadence + 3 min grace (matches
+// FLwatch's CGMProviderKind stale window). Anything older is visibly flagged.
+export const STALE_READING_MINUTES = 8;
 const MINUTE_MS = 60 * 1000;
 
 /**

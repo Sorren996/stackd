@@ -8,7 +8,8 @@ import {
   DEXCOM_SHARE_AUTHENTICATE_ENDPOINT,
   DEXCOM_SHARE_LOGIN_ENDPOINT,
   DEXCOM_SHARE_READINGS_ENDPOINT,
-  DEXCOM_SHARE_HEADERS,
+  DEXCOM_SHARE_AUTH_HEADERS,
+  DEXCOM_SHARE_READINGS_HEADERS,
   DEXCOM_SHARE_DEFAULT_UUID,
 } from "./dexcomShareConfig.ts";
 
@@ -52,7 +53,7 @@ function isCleanUuid(value: string): boolean {
 async function sharePost(endpoint: string, body: any): Promise<any> {
   const res = await fetch(`${DEXCOM_SHARE_BASE_URL_US}${endpoint}`, {
     method: "POST",
-    headers: DEXCOM_SHARE_HEADERS,
+    headers: DEXCOM_SHARE_AUTH_HEADERS,
     body: JSON.stringify(body || {}),
   });
   if (!res.ok) {
@@ -94,6 +95,22 @@ export async function getShareSessionId(username: string, password: string): Pro
     throw error;
   }
   return String(sessionId).replace(/"/g, "");
+}
+
+// Fetch readings from Share with the correct request shape: Accept +
+// User-Agent headers only, NO Content-Type, empty body. Some Share servers
+// silently return [] when given Content-Type: application/json with a {}
+// body — this helper matches the xdrip4ios/FLwatch read-path shape exactly.
+async function fetchReadingsOnce(sessionId: string): Promise<Response> {
+  const readingsUrl =
+    `${DEXCOM_SHARE_BASE_URL_US}${DEXCOM_SHARE_READINGS_ENDPOINT}` +
+    `?sessionId=${encodeURIComponent(sessionId)}` +
+    `&minutes=${POLL_MINUTES}` +
+    `&maxCount=${POLL_MAX_COUNT}`;
+  return await fetch(readingsUrl, {
+    method: "POST",
+    headers: DEXCOM_SHARE_READINGS_HEADERS,
+  });
 }
 
 export async function syncShareForConnection(
@@ -169,12 +186,6 @@ export async function syncShareForConnection(
     }));
 
     // ── [DIAG] DEXCOM REQUEST (readings step) ───────────
-    const readingsUrl =
-      `${DEXCOM_SHARE_BASE_URL_US}${DEXCOM_SHARE_READINGS_ENDPOINT}` +
-      `?sessionId=${encodeURIComponent(sessionId)}` +
-      `&minutes=${POLL_MINUTES}` +
-      `&maxCount=${POLL_MAX_COUNT}`;
-
     const pollStart = Date.now();
     console.log(JSON.stringify({
       diagStage: "DEXCOM_REQUEST",
@@ -185,11 +196,33 @@ export async function syncShareForConnection(
       tokenPresent: true, // sessionId retrieved from auth step
     }));
 
-    const readingsRes = await fetch(readingsUrl, {
-      method: "POST",
-      headers: DEXCOM_SHARE_HEADERS,
-      body: JSON.stringify({}),
-    });
+    let readingsRes = await fetchReadingsOnce(sessionId);
+
+    // Session expiry retry — if the readings request fails with 500 or 401,
+    // the session may have expired between auth and read. Re-authenticate
+    // and retry once before surfacing an error. Mirrors FLwatch's
+    // DexcomShareProvider.reload() sessionInvalid → re-auth → retry pattern.
+    if (readingsRes.status === 500 || readingsRes.status === 401) {
+      console.log(JSON.stringify({
+        diagStage: "DEXCOM_RESPONSE",
+        step: "readings",
+        httpStatus: readingsRes.status,
+        retrying: "session_expired_reauth",
+        message: "Session expired — re-authenticating and retrying once",
+      }));
+      try {
+        const newSessionId = await getShareSessionId(username, password);
+        readingsRes = await fetchReadingsOnce(newSessionId);
+      } catch (reauthErr: any) {
+        console.log(JSON.stringify({
+          diagStage: "DEXCOM_RESPONSE",
+          step: "readings",
+          retrying: "session_expired_reauth",
+          reauth_failed: true,
+          error: reauthErr?.shareCode || reauthErr?.message,
+        }));
+      }
+    }
 
     // ── [DIAG] DEXCOM RESPONSE (readings step) ──────────
     const pollDurationMs = Date.now() - pollStart;
