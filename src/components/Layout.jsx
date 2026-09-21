@@ -10,6 +10,7 @@ import AnalyticsPage from "../pages/Analytics";
 import ThemeToggle from "./ThemeToggle";
 import UnifiedBottomNav from "./UnifiedBottomNav";
 import { useRealtimeLogSync } from "@/hooks/useRealtimeLogSync";
+import { useDexcomRefresh } from "@/hooks/useDexcomRefresh";
 
 const CachedDashboard = memo(Dashboard);
 const CachedHistoryPage = memo(HistoryPage);
@@ -35,31 +36,32 @@ export default function Layout() {
   // including Dexcom syncs that land while the user is on Journal/Rhythms.
   useRealtimeLogSync();
 
+  const { requestRefresh } = useDexcomRefresh();
+
   const queryClient = useQueryClient();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshAlert, setRefreshAlert] = useState(null);
 
   // Re-pulls the latest information from the database for every cached query,
-  // without kicking off the external Dexcom Share poll.
+  // and triggers a forced Dexcom Share refresh so new readings are pulled
+  // immediately on manual refresh.
   const handleRefresh = async () => {
     if (isRefreshing) return;
     setIsRefreshing(true);
     let timeoutId;
     let sawError = false;
-    // Watch the query cache for any failed refetch during this refresh so a
-    // second tap (while still offline) is still reported as unsuccessful —
-    // inspecting final query status alone is racy because a refetch clears
-    // the previous error state to "pending" before it fails again.
     const unsubscribe = queryClient.getQueryCache().subscribe((event) => {
       if (event.type !== "updated" || event.action?.type !== "error") return;
-      if (event.query?.queryKey[0] === "dexcom-poll-now") return;
       sawError = true;
     });
     try {
+      // Trigger a forced Dexcom refresh (bypasses the reading-age gate,
+      // but still respects the in-flight lock via the singleton promise).
+      // This runs in parallel with the DB query refetch below.
+      const dexcomPromise = requestRefresh(true).catch(() => {});
+
       const refreshPromise = queryClient.refetchQueries({
-        predicate: (query) =>
-          query.queryKey[0] !== "dexcom-poll-now" &&
-          query.queryKey[0] !== "dexcom-connection",
+        predicate: (query) => query.queryKey[0] !== "dexcom-connection",
       });
       // Guard against a hung connection — if the refetch can't establish a
       // connection, time out and surface the unsuccessful alert instead of
@@ -69,12 +71,13 @@ export default function Layout() {
       });
       await Promise.race([refreshPromise, timeoutPromise]);
       clearTimeout(timeoutId);
-      // Use three independent signals so an offline refresh can never report a
-      // false success: error events during the refresh, the browser's own
-      // connectivity flag, and any query left in an error state afterward.
+      // Wait for the Dexcom refresh to settle (it may have invalidated
+      // glucose queries, which will refetch after this).
+      await dexcomPromise;
+
       const offline = typeof navigator !== "undefined" && navigator.onLine === false;
       const hasErrorQuery = queryClient.getQueryCache().getAll().some(
-        (q) => q.queryKey[0] !== "dexcom-poll-now" && q.state.status === "error"
+        (q) => q.state.status === "error"
       );
       setRefreshAlert({ type: sawError || offline || hasErrorQuery ? "error" : "success" });
     } catch {

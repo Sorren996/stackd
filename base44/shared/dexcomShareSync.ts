@@ -17,6 +17,23 @@ const POLL_MAX_COUNT = 6;
 const PROXIMITY_MS = 5 * 60 * 1000;
 const DEDUP_WINDOW_MS = 60 * 1000;
 
+// ── Cadence-aware refresh gate ─────────────────────────────
+// Dexcom G7 publishes a new reading approximately every 5 minutes.
+// We add a propagation grace period to account for the cloud/upload
+// delay between the sensor reading and Share availability. The
+// reading-age gate skips a network request when the newest cached
+// reading is still younger than cadence + grace, because Dexcom
+// almost certainly hasn't published (or propagated) the next one yet.
+export const DEXCOM_CADENCE_MS = 5 * 60 * 1000;       // 5 min — G7 source cadence
+export const PROPAGATION_GRACE_MS = 2 * 60 * 1000;   // 2 min — Share cloud propagation
+export const FRESH_THRESHOLD_MS = DEXCOM_CADENCE_MS + PROPAGATION_GRACE_MS; // 7 min
+
+// Short in-flight lock — if a fetch started within this window, assume
+// another request is already in progress and join it rather than starting
+// a second API call. This is a secondary guard; the frontend singleton
+// promise is the primary concurrency control.
+const IN_FLIGHT_LOCK_MS = 15 * 1000;
+
 function parseShareTimestamp(dtString: string): Date | null {
   if (!dtString) return null;
   const match = String(dtString).match(/Date\((\d+)/);
@@ -420,8 +437,13 @@ export async function syncShareForConnection(
       diag.latest_glucose_value = latestValue;
       diag.latest_glucose_trend = latestTrend;
       diag.latest_glucose_age = Math.round((now.getTime() - latestTime) / 60000) + "m";
+      // Time from the Dexcom reading timestamp → Stackd receiving it.
+      // This isolates Dexcom Share publication/propagation latency from
+      // Stackd's own processing/persistence delay.
+      diag.reading_to_receipt_ms = Date.now() - latestTime;
     }
 
+    diag.received_at = new Date().toISOString();
     diag.status = toCreate.length > 0 ? "synced" : "no_new_records";
 
     // ── [DIAG] FUNCTION RESPONSE ─────────────────────────
@@ -431,6 +453,8 @@ export async function syncShareForConnection(
       records_inserted: diag.records_inserted,
       latest_glucose_timestamp: diag.latest_glucose_timestamp,
       latest_glucose_value: diag.latest_glucose_value,
+      reading_to_receipt_ms: diag.reading_to_receipt_ms,
+      received_at: diag.received_at,
       totalDurationMs: Date.now() - fnStart,
     }));
 
@@ -465,4 +489,165 @@ export async function syncShareForConnection(
 
     return diag;
   }
+}
+
+// ── Centralized refresh gate ──────────────────────────────────
+//
+// requestDexcomRefreshIfNeeded is the single entry point for deciding
+// whether to hit the Dexcom Share API. It uses the actual reading
+// timestamp (not the last API request time) to determine freshness.
+//
+// Decision flow:
+//   1. In-flight lock: if a fetch started < IN_FLIGHT_LOCK_MS ago, skip.
+//   2. Reading-age gate: if the newest cached reading is younger than
+//      FRESH_THRESHOLD_MS (cadence + grace), skip — Dexcom hasn't
+//      published/propagated the next reading yet.
+//   3. Otherwise (or if force): perform the Share fetch via
+//      syncShareForConnection.
+//
+// `base44User` is the user-context client (for RLS-scoped reads of the
+// latest reading). `sr` is the service-role client (for writes).
+
+export async function requestDexcomRefreshIfNeeded(
+  sr: any,
+  base44User: any,
+  conn: any,
+  username: string,
+  password: string,
+  now: Date,
+  trigger: string = "scheduled",
+  force: boolean = false
+): Promise<any> {
+  const owner = conn.created_by_id;
+  const gateStart = Date.now();
+
+  // ── [DIAG] GATE ENTRY ─────────────────────────────────
+  console.log(JSON.stringify({
+    diagStage: "GATE_ENTRY",
+    trigger,
+    force,
+    function: "requestDexcomRefreshIfNeeded",
+    timestamp: new Date(gateStart).toISOString(),
+    ownerHash: owner ? owner.slice(0, 8) : null,
+    connectionId: conn?.id ?? null,
+  }));
+
+  if (!owner) {
+    return { status: "skipped_no_owner", trigger, force };
+  }
+
+  // 1. Load the newest cached reading for this user.
+  let newestReading: any = null;
+  let newestReadingTs: number | null = null;
+  let readingAgeMs: number | null = null;
+
+  try {
+    const latest = await base44User.entities.GlucoseReading.list("-recorded_at", 1);
+    newestReading = latest?.[0] ?? null;
+    if (newestReading?.recorded_at) {
+      const ts = new Date(newestReading.recorded_at).getTime();
+      if (Number.isFinite(ts)) {
+        newestReadingTs = ts;
+        readingAgeMs = now.getTime() - ts;
+      }
+    }
+  } catch (readErr: any) {
+    console.log(JSON.stringify({
+      diagStage: "GATE_ENTRY",
+      warning: "latest_reading_query_failed",
+      error: readErr?.message || String(readErr),
+    }));
+  }
+
+  // 2. In-flight lock — a fetch that started very recently is likely
+  //    still in progress (scheduled sync + on-demand poll colliding).
+  //    Skip unless forced.
+  const lastFetchedAt = conn.last_fetched_at
+    ? new Date(conn.last_fetched_at).getTime()
+    : null;
+  const inFlightWindow = lastFetchedAt !== null && Number.isFinite(lastFetchedAt)
+    ? now.getTime() - lastFetchedAt < IN_FLIGHT_LOCK_MS
+    : false;
+
+  if (!force && inFlightWindow) {
+    const result = {
+      status: "skipped_in_flight",
+      skipped: true,
+      reason: "in_flight_lock",
+      trigger,
+      force,
+      last_fetched_at: conn.last_fetched_at,
+      in_flight_lock_ms: IN_FLIGHT_LOCK_MS,
+      reading_age_ms: readingAgeMs,
+      reading_age_minutes: readingAgeMs != null ? Math.round(readingAgeMs / 60000) : null,
+      latest_glucose_timestamp: newestReadingTs ? new Date(newestReadingTs).toISOString() : null,
+      latest_glucose_value: newestReading?.value ?? null,
+      latest_glucose_trend: newestReading?.trend ?? null,
+      totalDurationMs: Date.now() - gateStart,
+    };
+    console.log(JSON.stringify({
+      diagStage: "GATE_DECISION",
+      decision: "skip_in_flight",
+      trigger,
+      force,
+      reading_age_ms: readingAgeMs,
+    }));
+    return result;
+  }
+
+  // 3. Reading-age gate — if the newest reading is still within the
+  //    expected cadence + propagation grace, use cached data.
+  const isFresh = readingAgeMs != null && readingAgeMs < FRESH_THRESHOLD_MS;
+
+  if (!force && isFresh) {
+    const result = {
+      status: "skipped_fresh_cache",
+      skipped: true,
+      reason: "reading_age_below_threshold",
+      trigger,
+      force,
+      reading_age_ms: readingAgeMs,
+      reading_age_minutes: Math.round(readingAgeMs! / 60000),
+      fresh_threshold_ms: FRESH_THRESHOLD_MS,
+      fresh_threshold_minutes: Math.round(FRESH_THRESHOLD_MS / 60000),
+      latest_glucose_timestamp: newestReadingTs ? new Date(newestReadingTs).toISOString() : null,
+      latest_glucose_value: newestReading?.value ?? null,
+      latest_glucose_trend: newestReading?.trend ?? null,
+      totalDurationMs: Date.now() - gateStart,
+    };
+    console.log(JSON.stringify({
+      diagStage: "GATE_DECISION",
+      decision: "skip_fresh_cache",
+      trigger,
+      force,
+      reading_age_ms: readingAgeMs,
+      fresh_threshold_ms: FRESH_THRESHOLD_MS,
+    }));
+    return result;
+  }
+
+  // 4. Reading is stale (or forced) — proceed with the Share API call.
+  console.log(JSON.stringify({
+    diagStage: "GATE_DECISION",
+    decision: "fetch",
+    trigger,
+    force,
+    reading_age_ms: readingAgeMs,
+    reading_age_minutes: readingAgeMs != null ? Math.round(readingAgeMs / 60000) : null,
+    fresh_threshold_ms: FRESH_THRESHOLD_MS,
+  }));
+
+  const diag = await syncShareForConnection(sr, conn, username, password, now, trigger);
+
+  // 5. Enrich diagnostics with gate context.
+  diag.gate = {
+    force,
+    reading_age_before_ms: readingAgeMs,
+    reading_age_before_minutes: readingAgeMs != null ? Math.round(readingAgeMs / 60000) : null,
+    fresh_threshold_ms: FRESH_THRESHOLD_MS,
+    had_cached_reading: newestReadingTs != null,
+    skipped: false,
+  };
+
+  return diag;
 }

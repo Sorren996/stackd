@@ -1,15 +1,17 @@
-// Consolidated Dexcom Share Glucose Sync.
+// Consolidated Dexcom Share Glucose Sync — scheduled pass.
 //
-// For each connected user, authenticates with THEIR OWN Dexcom Share
-// credentials (stored per-user in their DexcomConnection record) and pulls
-// near-real-time glucose readings. The API V3 OAuth path has been removed —
-// Share is now the sole glucose source.
+// Iterates all connected users and runs each through the centralized
+// reading-age gate (requestDexcomRefreshIfNeeded). The gate skips users
+// whose newest cached reading is still within the expected Dexcom G7
+// cadence + propagation grace, preventing unnecessary API calls while
+// ensuring readings are fetched promptly once a new one is likely
+// available.
 //
-// After syncing, runs incremental spike detection and DailySummary updates
-// for any days that received new readings.
+// After syncing, runs DailySummary updates for any days that received
+// new readings.
 
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.40";
-import { syncShareForConnection } from "../../shared/dexcomShareSync.ts";
+import { requestDexcomRefreshIfNeeded } from "../../shared/dexcomShareSync.ts";
 import { dayKeyFromTimezone, recomputeDailySummary } from "../../shared/dailySummary.ts";
 
 export default async function (req: Request): Promise<Response> {
@@ -29,7 +31,6 @@ export default async function (req: Request): Promise<Response> {
     }
     const sr = base44.asServiceRole;
 
-    // ── [DIAG] REFRESH START (scheduled) ─────────────────
     console.log(JSON.stringify({
       diagStage: "REFRESH_START",
       trigger: "scheduled",
@@ -62,42 +63,42 @@ export default async function (req: Request): Promise<Response> {
         continue;
       }
 
-      // Skip if an on-demand poll just synced this user (within 2 min).
-      // Prevents redundant Share API calls when the user is actively viewing.
-      if (conn.last_fetched_at) {
-        const lastFetched = new Date(conn.last_fetched_at).getTime();
-        if (Number.isFinite(lastFetched) && now.getTime() - lastFetched < 2 * 60 * 1000) {
-          results.push({ owner, status: "skipped_recent_sync" });
-          continue;
-        }
-      }
-
       try {
-        const diag = await syncShareForConnection(sr, conn, conn.share_username, conn.share_password, now, "scheduled");
-        results.push(diag);
+        // The scheduled pass uses the same reading-age gate as the
+        // on-demand poll. Non-forced — the gate decides based on the
+        // newest reading timestamp.
+        const result = await requestDexcomRefreshIfNeeded(
+          sr,
+          base44,
+          conn,
+          conn.share_username,
+          conn.share_password,
+          now,
+          "scheduled",
+          false
+        );
 
-        // Update connection sync health
+        results.push(result);
+
+        // Update connection sync health.
         const statusPatch: any = {
-          last_sync_status: diag.status,
-          last_sync_error: diag.status === "error" ? (diag.error || "Unknown error") : null,
+          last_sync_status: result.status,
+          last_sync_error: result.status === "error" ? (result.error || "Unknown error") : null,
         };
 
-        if (diag.status === "error" && (diag.auth_status === "failed_invalid_credentials" || diag.auth_status === "failed")) {
+        if (result.status === "error" && (result.auth_status === "failed_invalid_credentials" || result.auth_status === "failed")) {
           statusPatch.status = "error";
-        } else if (diag.status !== "error") {
+        } else if (result.status !== "error") {
           statusPatch.status = "connected";
-          // Only stamp last_fetched_at when new records were actually inserted.
-          // A no-data run shouldn't block the next on-demand pull, since
-          // Dexcom may publish fresh data moments after a "no new data" sync.
-          if (diag.records_inserted > 0) {
-            statusPatch.last_fetched_at = now.toISOString();
-          }
+          // Stamp last_fetched_at on every attempt so it serves as the
+          // in-flight lock for concurrent calls.
+          statusPatch.last_fetched_at = now.toISOString();
         }
 
         await sr.entities.DexcomConnection.update(conn.id, statusPatch).catch(() => {});
 
-        // DailySummary updates for new readings
-        if (diag.records_inserted > 0) {
+        // DailySummary updates for new readings.
+        if (result.records_inserted > 0) {
           try {
             const settings = await sr.entities.UserSettings.filter({ created_by_id: owner }, "-created_date", 1);
             const s: any = settings[0];
@@ -106,7 +107,7 @@ export default async function (req: Request): Promise<Response> {
             const targetHigh = Number.isFinite(s?.target_range_high) ? s.target_range_high : 180;
 
             const affectedDates = new Set<string>();
-            for (const ts of (diag.inserted_timestamps || [])) {
+            for (const ts of (result.inserted_timestamps || [])) {
               const dk = dayKeyFromTimezone(ts, timezone);
               if (dk) affectedDates.add(dk);
             }

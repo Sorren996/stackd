@@ -1,20 +1,16 @@
 // On-demand Dexcom Share sync for the actively-viewing user.
 //
-// The scheduled syncDexcomGlucose automation runs every 5 minutes (the
-// platform minimum for scheduled tasks). When a user is actively looking at
-// their Dashboard, that 5-minute gap is the largest contributor to perceived
-// latency. This function lets the frontend trigger an immediate Share fetch
-// for the calling user only, complementing the scheduled pass.
+// This is the frontend-facing entry point for the centralized reading-age
+// gate (requestDexcomRefreshIfNeeded). It accepts an optional `force`
+// flag that bypasses the reading-age gate but still respects the in-flight
+// lock.
 //
-// A per-connection rate limit (MIN_SYNC_GAP_MS) prevents redundant API calls
-// — if the scheduled pass or a previous on-demand poll just ran, we return
-// "too_soon" without hitting Dexcom.
+// The scheduled syncDexcomGlucose workflow uses the same gate function, so
+// there is exactly one sync decision system — not two competing ones.
 
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.42";
-import { syncShareForConnection } from "../../shared/dexcomShareSync.ts";
-
-const MIN_SYNC_GAP_MS = 75 * 1000; // Don't hit Share more than once per 75s
-const STALE_READING_MS = 4 * 60 * 1000; // Pull anyway if newest reading is older than 4 min
+import { requestDexcomRefreshIfNeeded } from "../../shared/dexcomShareSync.ts";
+import { dayKeyFromTimezone, recomputeDailySummary } from "../../shared/dailySummary.ts";
 
 export default async function (req: Request): Promise<Response> {
   const fnStart = Date.now();
@@ -22,17 +18,26 @@ export default async function (req: Request): Promise<Response> {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me().catch(() => null);
 
-    // ── [DIAG] REFRESH START (manual/on-demand) ──────────
+    // Parse force flag from request body (default false).
+    let force = false;
+    try {
+      const body = await req.json().catch(() => ({}));
+      force = body?.force === true;
+    } catch {
+      // No body or invalid JSON — default to non-forced.
+    }
+
     console.log(JSON.stringify({
       diagStage: "REFRESH_START",
       trigger: "manual",
       function: "pollDexcomNow",
+      force,
       timestamp: new Date(fnStart).toISOString(),
       userHash: user?.id ? user.id.slice(0, 8) : null,
       userEmailPresent: !!user?.email,
     }));
 
-    // User-context lookup — RLS ensures only the calling user's connection
+    // User-context lookup — RLS ensures only the calling user's connection.
     const connections = await base44.entities.DexcomConnection.list("-created_date", 1);
     const conn = connections?.[0];
 
@@ -60,88 +65,87 @@ export default async function (req: Request): Promise<Response> {
       return Response.json({ status: "no_credentials" });
     }
 
-    // Rate limit — skip if we synced very recently (scheduled or on-demand).
-    // But if the newest stored reading is older than STALE_READING_MS, Dexcom
-    // has almost certainly published fresh data since, so pull anyway.
-    if (conn.last_fetched_at) {
-      const lastFetched = new Date(conn.last_fetched_at).getTime();
-      if (Number.isFinite(lastFetched) && Date.now() - lastFetched < MIN_SYNC_GAP_MS) {
-        const latest = await base44.entities.GlucoseReading.list("-recorded_at", 1);
-        const newestRecordedAt = latest?.[0]?.recorded_at
-          ? new Date(latest[0].recorded_at).getTime()
-          : null;
-        const newestIsStale = !Number.isFinite(newestRecordedAt)
-          || Date.now() - newestRecordedAt > STALE_READING_MS;
-        if (!newestIsStale) {
-          console.log(JSON.stringify({
-            diagStage: "FUNCTION_RESPONSE",
-            trigger: "manual",
-            httpStatus: 200,
-            status: "too_soon",
-            error_code: "DEXCOM_NO_NEW_READING",
-            message: "Rate-limited; newest stored reading is still fresh",
-            totalDurationMs: Date.now() - fnStart,
-          }));
-          return Response.json({ status: "too_soon" });
-        }
-      }
-    }
-
     const now = new Date();
     const sr = base44.asServiceRole;
 
-    try {
-      const diag = await syncShareForConnection(sr, conn, conn.share_username, conn.share_password, now, "manual");
+    // ── Centralized reading-age gate ──────────────────────
+    const result = await requestDexcomRefreshIfNeeded(
+      sr,
+      base44,
+      conn,
+      conn.share_username,
+      conn.share_password,
+      now,
+      "manual",
+      force
+    );
 
-      // Update connection sync health (same pattern as syncDexcomGlucose)
-      const statusPatch: any = {
-        last_sync_status: diag.status,
-        last_sync_error: diag.status === "error" ? (diag.error || "Unknown error") : null,
-      };
+    // ── Update connection sync health ────────────────────
+    const statusPatch: any = {
+      last_sync_status: result.status,
+      last_sync_error: result.status === "error" ? (result.error || "Unknown error") : null,
+    };
 
-      if (diag.status === "error" && (diag.auth_status === "failed_invalid_credentials" || diag.auth_status === "failed")) {
-        statusPatch.status = "error";
-      } else if (diag.status !== "error") {
-        statusPatch.status = "connected";
-        statusPatch.last_fetched_at = now.toISOString();
-      }
-
-      await sr.entities.DexcomConnection.update(conn.id, statusPatch).catch(() => {});
-
-      const httpStatus = diag.status === "error" ? 200 : 200; // preserves existing behavior
-      console.log(JSON.stringify({
-        diagStage: "FUNCTION_RESPONSE",
-        trigger: "manual",
-        httpStatus,
-        status: diag.status,
-        records_inserted: diag.records_inserted || 0,
-        latest_glucose: diag.latest_glucose_value ?? null,
-        latest_glucose_timestamp: diag.latest_glucose_timestamp ?? null,
-        latest_glucose_trend: diag.latest_glucose_trend ?? null,
-        error: diag.error ?? null,
-        totalDurationMs: Date.now() - fnStart,
-      }));
-
-      return Response.json({
-        status: diag.status,
-        records_inserted: diag.records_inserted || 0,
-        latest_glucose: diag.latest_glucose_value ?? null,
-        latest_glucose_timestamp: diag.latest_glucose_timestamp ?? null,
-        latest_glucose_trend: diag.latest_glucose_trend ?? null,
-      });
-    } catch (error: any) {
-      console.log(JSON.stringify({
-        diagStage: "FUNCTION_RESPONSE",
-        trigger: "manual",
-        httpStatus: 200,
-        status: "error",
-        error_code: "BACKEND_FUNCTION_ERROR",
-        shareCode: error.shareCode || null,
-        message: error.message,
-        totalDurationMs: Date.now() - fnStart,
-      }));
-      return Response.json({ status: "error", error: error.shareCode || error.message });
+    if (result.status === "error" && (result.auth_status === "failed_invalid_credentials" || result.auth_status === "failed")) {
+      statusPatch.status = "error";
+    } else if (result.status !== "error") {
+      statusPatch.status = "connected";
+      // Stamp last_fetched_at on every attempt (not just when records are
+      // inserted) so it serves as the in-flight lock for concurrent calls.
+      statusPatch.last_fetched_at = now.toISOString();
     }
+
+    await sr.entities.DexcomConnection.update(conn.id, statusPatch).catch(() => {});
+
+    // ── DailySummary updates for new readings ────────────
+    if (result.records_inserted > 0) {
+      try {
+        const settings = await sr.entities.UserSettings.filter({ created_by_id: conn.created_by_id }, "-created_date", 1);
+        const s: any = settings[0];
+        const timezone = s?.timezone || "UTC";
+        const targetLow = Number.isFinite(s?.target_range_low) ? s.target_range_low : 70;
+        const targetHigh = Number.isFinite(s?.target_range_high) ? s.target_range_high : 180;
+
+        const affectedDates = new Set<string>();
+        for (const ts of (result.inserted_timestamps || [])) {
+          const dk = dayKeyFromTimezone(ts, timezone);
+          if (dk) affectedDates.add(dk);
+        }
+        for (const dateStr of affectedDates) {
+          await recomputeDailySummary(sr, conn.created_by_id, dateStr, timezone, targetLow, targetHigh, true);
+        }
+      } catch {
+        // DailySummary failure is non-fatal
+      }
+    }
+
+    console.log(JSON.stringify({
+      diagStage: "FUNCTION_RESPONSE",
+      trigger: "manual",
+      force,
+      httpStatus: 200,
+      status: result.status,
+      skipped: result.skipped === true,
+      reason: result.reason ?? null,
+      records_inserted: result.records_inserted || 0,
+      latest_glucose: result.latest_glucose_value ?? null,
+      latest_glucose_timestamp: result.latest_glucose_timestamp ?? null,
+      latest_glucose_trend: result.latest_glucose_trend ?? null,
+      reading_age_ms: result.reading_age_ms ?? null,
+      error: result.error ?? null,
+      totalDurationMs: Date.now() - fnStart,
+    }));
+
+    return Response.json({
+      status: result.status,
+      skipped: result.skipped === true,
+      reason: result.reason ?? null,
+      records_inserted: result.records_inserted || 0,
+      latest_glucose: result.latest_glucose_value ?? null,
+      latest_glucose_timestamp: result.latest_glucose_timestamp ?? null,
+      latest_glucose_trend: result.latest_glucose_trend ?? null,
+      reading_age_ms: result.reading_age_ms ?? null,
+    });
   } catch (error: any) {
     console.log(JSON.stringify({
       diagStage: "FUNCTION_RESPONSE",

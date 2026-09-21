@@ -20,6 +20,7 @@ import UnitsStepper from "@/components/insulin/UnitsStepper";
 import { getDefaultInsulinLibrary } from "@/lib/userSettings";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 import { useVisibilityRefresh } from "@/hooks/useVisibilityRefresh";
+import { useDexcomRefresh } from "@/hooks/useDexcomRefresh";
 import DexcomSyncStatus from "@/components/DexcomSyncStatus";
 import ConnectGlucoseSourcePrompt from "@/components/ConnectGlucoseSourcePrompt";
 import SensorSessionBanner from "@/components/SensorSessionBanner";
@@ -337,6 +338,7 @@ export default function Dashboard() {
   const [editingLog, setEditingLog] = useState(null);
   const { connected: dexcomConnected, isLoading: dexcomLoading, connection: dexcomConnection } = useDexcomConnection();
   useVisibilityRefresh();
+  const { requestRefresh } = useDexcomRefresh();
   const stackingAlertsEnabled = localStorage.getItem("stacking_alerts_enabled") !== "false";
 
   useEffect(() => {
@@ -432,87 +434,61 @@ export default function Dashboard() {
     placeholderData: () => queryClient.getQueryData(["insulin-doses", "graph"]) ?? doses,
   });
 
-  // On-demand Dexcom Share sync — when the user is actively viewing the
-  // Dashboard, trigger an immediate Share fetch every 2 minutes instead of
-  // waiting up to 5 minutes for the scheduled pass. The function rate-limits
-  // itself (2 min per connection) so this stays light on the Dexcom API.
-  const { data: pollResult } = useQuery({
-    queryKey: ["dexcom-poll-now"],
-    queryFn: async () => {
-      const invokeStart = Date.now();
-      let res;
-      try {
-        res = await base44.functions.invoke("pollDexcomNow", {});
-      } catch (invokeErr) {
-        // ── [DIAG] FRONTEND: request failed ──
-        console.log(JSON.stringify({
-          diagStage: "FRONTEND",
-          error_code: "FRONTEND_REQUEST_ERROR",
-          message: invokeErr?.message || String(invokeErr),
-          durationMs: Date.now() - invokeStart,
-        }));
-        throw invokeErr;
-      }
-      const data = res?.data;
-      // ── [DIAG] FRONTEND: response received ──
-      console.log(JSON.stringify({
-        diagStage: "FRONTEND",
-        httpStatus: res?.status ?? null,
-        hasData: !!data,
-        responseShape: data ? Object.keys(data) : null,
-        status: data?.status ?? null,
-        records_inserted: data?.records_inserted ?? null,
-        latest_glucose: data?.latest_glucose ?? null,
-        latest_glucose_timestamp: data?.latest_glucose_timestamp ?? null,
-        error: data?.error ?? null,
-        durationMs: Date.now() - invokeStart,
-      }));
-      return data;
-    },
-    enabled: dexcomConnected,
-    refetchInterval: dexcomConnected ? 120_000 : false,
-    refetchOnWindowFocus: true,
-    staleTime: 0,
-    gcTime: 30 * 1000,
-  });
-
-  // When the on-demand poll inserts new readings, invalidate the glucose
-  // queries so the graph and latest-glucose card refresh immediately.
-  // When it fails, surface the actual error so you can see what went wrong.
+  // ── Cadence-aware Dexcom refresh ──────────────────────────
+  // The Dashboard periodically asks the centralized gate whether a new
+  // reading is likely available. The gate (pollDexcomNow →
+  // requestDexcomRefreshIfNeeded) checks the newest reading timestamp
+  // and skips the API call when the cached reading is still within the
+  // expected G7 cadence + propagation grace. This lets us check
+  // frequently (every 60s) without hammering the Share API.
+  //
+  // The singleton promise in useDexcomRefresh collapses simultaneous
+  // triggers (periodic timer, foreground, manual refresh) into one call.
   useEffect(() => {
-    try {
-      if (pollResult?.records_inserted > 0) {
-        queryClient.invalidateQueries({ queryKey: ["latest-glucose"] });
-        queryClient.invalidateQueries({ queryKey: ["glucose-readings", "graph"] });
-        console.log(JSON.stringify({
-          diagStage: "FRONTEND",
-          stateUpdated: true,
-          invalidatedQueries: ["latest-glucose", "glucose-readings:graph"],
-        }));
-      }
-      if (pollResult?.status === "error") {
-        const reason = String(pollResult?.error || "");
-        // Suppress rate-limit noise — the sync itself is fine, the platform
-        // just throttled a rapid duplicate poll. Only surface real failures.
-        const isRateLimit = /rate limit/i.test(reason);
-        if (!isRateLimit) {
-          toast.error(`Refresh unsuccessful — ${reason || "Unknown error"}`);
+    if (!dexcomConnected) return undefined;
+
+    let cancelled = false;
+
+    const poll = async () => {
+      if (cancelled) return;
+      try {
+        const result = await requestRefresh(false);
+        // Surface real errors (not skips or rate-limit noise).
+        if (result?.status === "error") {
+          const reason = String(result?.error || "");
+          if (!/rate limit/i.test(reason)) {
+            toast.error(`Refresh unsuccessful — ${reason || "Unknown error"}`);
+          }
         }
-        console.log(JSON.stringify({
-          diagStage: "FRONTEND",
-          errorShown: !isRateLimit,
-          reason,
-          rateLimited: isRateLimit,
-        }));
+      } catch {
+        // Non-fatal — the next opportunity will try again.
       }
-    } catch (stateErr) {
-      console.log(JSON.stringify({
-        diagStage: "FRONTEND",
-        error_code: "FRONTEND_STATE_UPDATE_ERROR",
-        message: stateErr?.message || String(stateErr),
-      }));
-    }
-  }, [pollResult, queryClient]);
+    };
+
+    // Initial check on mount / when connection becomes active.
+    poll();
+
+    // Periodic check — the backend gate prevents unnecessary API calls.
+    const intervalId = setInterval(poll, 60_000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(intervalId);
+    };
+  }, [dexcomConnected, requestRefresh]);
+
+  // Foreground refresh — when the PWA returns to the foreground, check
+  // for new readings immediately (the OS may have suspended the timer).
+  useEffect(() => {
+    if (!dexcomConnected) return undefined;
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        requestRefresh(false).catch(() => {});
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [dexcomConnected, requestRefresh]);
 
   const { data: splitPlans = [] } = useQuery({
     queryKey: ["split-plans"],
