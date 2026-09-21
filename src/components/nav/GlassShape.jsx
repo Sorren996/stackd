@@ -1,56 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 
 export const CORNER_RADIUS = 28;
-export const DIP_RADIUS = 28;
-export const NOTCH_RADIUS = 28;
 export const FAB_RADIUS = 28;
 export const FAB_SIZE = 56;
-
-/**
- * Nav shape: rounded rect with a downward semicircular dip at the top
- * center. The FAB sits in this dip — the nav's border traces down into
- * the dip and back up, wrapping the FAB's lower half.
- */
-export function navShapePath(W, H, cr = CORNER_RADIUS, dipR = DIP_RADIUS) {
-  if (!W || !H) return "";
-  return [
-    `M ${cr},0`,
-    `L ${W / 2 - dipR},0`,
-    `A ${dipR},${dipR} 0 0 1 ${W / 2 + dipR},0`,
-    `L ${W - cr},0`,
-    `A ${cr},${cr} 0 0 1 ${W},${cr}`,
-    `L ${W},${H - cr}`,
-    `A ${cr},${cr} 0 0 1 ${W - cr},${H}`,
-    `L ${cr},${H}`,
-    `A ${cr},${cr} 0 0 1 0,${H - cr}`,
-    `L 0,${cr}`,
-    `A ${cr},${cr} 0 0 1 ${cr},0`,
-    `Z`,
-  ].join(" ");
-}
-
-/**
- * Modal shape: rounded rect with an upward semicircular notch at the
- * bottom center. When the modal sits above the nav, this notch wraps
- * the FAB's upper half — mirroring the nav's dip from above.
- */
-export function modalShapePath(W, H, cr = CORNER_RADIUS, notchR = NOTCH_RADIUS) {
-  if (!W || !H) return "";
-  return [
-    `M ${cr},0`,
-    `L ${W - cr},0`,
-    `A ${cr},${cr} 0 0 1 ${W},${cr}`,
-    `L ${W},${H - cr}`,
-    `A ${cr},${cr} 0 0 1 ${W - cr},${H}`,
-    `L ${W / 2 + notchR},${H}`,
-    `A ${notchR},${notchR} 0 0 0 ${W / 2 - notchR},${H}`,
-    `L ${cr},${H}`,
-    `A ${cr},${cr} 0 0 1 0,${H - cr}`,
-    `L 0,${cr}`,
-    `A ${cr},${cr} 0 0 1 ${cr},0`,
-    `Z`,
-  ].join(" ");
-}
+export const CUTOUT_RADIUS = 32; // FAB radius + 4px gap so the notch is visible
+export const NAV_HEIGHT = 60;
 
 /** Measure an element's pixel width via ResizeObserver. */
 export function useMeasuredWidth() {
@@ -68,109 +22,89 @@ export function useMeasuredWidth() {
 }
 
 /**
- * Nav glass surface — clip-path shape with darker-tinted glass fill,
- * SVG border, and drop shadow. The FAB dip is built into the path so
- * the border traces around the FAB seamlessly.
+ * Unified glass surface — one continuous shape that encompasses both the
+ * navigation bar and the expanded menu. A circular cutout at the FAB
+ * position is created via CSS mask-image. When the shape is short (closed),
+ * the cutout sits at the top edge and reads as a semicircular dip. As the
+ * shape grows upward (open), the cutout transitions into a full circular
+ * hole in the center — all without any topology change, so the transition
+ * is perfectly smooth.
+ *
+ * The border is drawn as two SVG layers: the rounded-rect stroke with the
+ * circle masked out (so no straight line continues behind the FAB), and
+ * the circle stroke clipped to the rect (so only the portion inside the
+ * shape is visible).
  */
-export function NavGlassShape({ width, height, children }) {
-  const path = width > 0 && height > 0 ? navShapePath(width, height) : "";
+export function UnifiedGlassShape({ width, totalHeight, cutoutCy, children }) {
+  const show = width > 0 && totalHeight > 0;
+  const maskGradient = `radial-gradient(circle at 50% ${cutoutCy}px, transparent ${CUTOUT_RADIUS}px, black ${CUTOUT_RADIUS + 1}px)`;
 
   return (
-    <div className="relative" style={{ width: width || "100%", height }}>
-      {path && (
-        <div
-          className="absolute inset-0"
-          style={{ filter: "drop-shadow(0 14px 40px rgba(0,0,0,0.30))" }}
-        >
+    <div className="relative" style={{ width: width || "100%", height: totalHeight }}>
+      {show && (
+        <>
+          {/* Glass fill — clip to rounded rect, mask out the FAB circle */}
           <div
-            className="stackd-nav-glass absolute inset-0"
-            style={{
-              clipPath: `path("${path}")`,
-              WebkitClipPath: `path("${path}")`,
-            }}
-          />
+            className="absolute inset-0"
+            style={{ filter: "drop-shadow(0 14px 40px rgba(0,0,0,0.30))", pointerEvents: "none" }}
+          >
+            <div
+              className="stackd-nav-glass absolute inset-0"
+              style={{
+                clipPath: `inset(0 round ${CORNER_RADIUS}px)`,
+                WebkitClipPath: `inset(0 round ${CORNER_RADIUS}px)`,
+                maskImage: maskGradient,
+                WebkitMaskImage: maskGradient,
+                pointerEvents: "none",
+              }}
+            />
+          </div>
+
+          {/* Border — rect with circle masked out + circle clipped to rect */}
           <svg
-            className="absolute"
             width={width}
-            height={height}
+            height={totalHeight}
+            className="absolute top-0 left-0 pointer-events-none"
             style={{ overflow: "visible" }}
           >
-            <path
-              d={path}
+            <defs>
+              <clipPath id="unified-rect-clip">
+                <rect width={width} height={totalHeight} rx={CORNER_RADIUS} />
+              </clipPath>
+              <mask id="unified-border-mask" maskType="luminance">
+                <rect width={width} height={totalHeight} fill="white" />
+                <circle cx={width / 2} cy={cutoutCy} r={CUTOUT_RADIUS} fill="black" />
+              </mask>
+            </defs>
+            {/* Rect border — the circle area is masked out so no straight
+                edge continues behind the FAB */}
+            <rect
+              width={width}
+              height={totalHeight}
+              rx={CORNER_RADIUS}
               fill="none"
               className="stackd-nav-border"
               strokeWidth="1"
+              mask="url(#unified-border-mask)"
             />
-          </svg>
-        </div>
-      )}
-      <div className="relative h-full" style={{ zIndex: 1 }}>
-        {children}
-      </div>
-    </div>
-  );
-}
-
-/**
- * Modal glass surface — same darker-tinted glass, with an upward notch
- * at the bottom center. Height is measured from content so the shape
- * always wraps the action list.
- */
-export function ModalGlassShape({ width, children }) {
-  const contentRef = useRef(null);
-  const [height, setHeight] = useState(0);
-
-  useEffect(() => {
-    if (!contentRef.current) return;
-    const update = () => setHeight(contentRef.current.offsetHeight);
-    update();
-    const observer = new ResizeObserver(update);
-    observer.observe(contentRef.current);
-    return () => observer.disconnect();
-  }, []);
-
-  const path = width > 0 && height > 0 ? modalShapePath(width, height) : "";
-
-  return (
-    <div className="relative" style={{ width: width || "100%" }}>
-      {path && (
-        <div
-          className="absolute"
-          style={{
-            top: 0,
-            left: 0,
-            width,
-            height,
-            filter: "drop-shadow(0 -10px 30px rgba(0,0,0,0.25))",
-          }}
-        >
-          <div
-            className="stackd-nav-glass absolute"
-            style={{
-              width,
-              height,
-              top: 0,
-              left: 0,
-              clipPath: `path("${path}")`,
-              WebkitClipPath: `path("${path}")`,
-            }}
-          />
-          <svg
-            className="absolute"
-            width={width}
-            height={height}
-            style={{ overflow: "visible" }}
-          >
-            <path
-              d={path}
+            {/* Circle border — clipped to the rect so only the portion
+                inside the shape is drawn (dip at edge, full circle in middle) */}
+            <circle
+              cx={width / 2}
+              cy={cutoutCy}
+              r={CUTOUT_RADIUS}
               fill="none"
               className="stackd-nav-border"
               strokeWidth="1"
+              clipPath="url(#unified-rect-clip)"
             />
           </svg>
-        </div>
+        </>
       )}
-      <div ref={contentRef} className="relative" style={{ zIndex: 1 }}>
+
+      {/* Content layer — pointer-events none so clicks on transparent areas
+          (the cutout) pass through to the backdrop */}
+      <div className="relative h-full" style={{ zIndex: 1, pointerEvents: "none" }}>
         {children}
       </div>
     </div>
