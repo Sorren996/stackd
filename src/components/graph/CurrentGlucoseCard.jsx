@@ -1,15 +1,17 @@
 import { useRef, useEffect, useState } from "react";
-import { ArrowUp, ArrowUpRight, ArrowRight, ArrowDownRight, ArrowDown, Droplet } from "lucide-react";
+import { ArrowUp, ArrowUpRight, ArrowRight, ArrowDownRight, ArrowDown, ChevronsUp, ChevronsDown, Droplet } from "lucide-react";
 import { motion } from "framer-motion";
 import GlucoseTicker from "./GlucoseTicker";
 import { formatReadingAge } from "@/lib/glucoseStaleness";
 
 const TREND_ICONS = {
+  "double_up": ChevronsUp,
   up: ArrowUp,
   "up-right": ArrowUpRight,
   right: ArrowRight,
   "down-right": ArrowDownRight,
-  down: ArrowDown
+  down: ArrowDown,
+  "double_down": ChevronsDown
 };
 
 const CARD_STYLE = {

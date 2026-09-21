@@ -6,6 +6,8 @@ import {
   ArrowRight,
   ArrowUp,
   ArrowUpRight,
+  ChevronsDown,
+  ChevronsUp,
   Info,
   X } from
 "lucide-react";
@@ -768,11 +770,13 @@ function MetricCard({ label, value, sub, status, color, tooltipId, openTooltip, 
 }
 
 const TREND_ICONS = {
+  "double_up": ChevronsUp,
   up: ArrowUp,
   "up-right": ArrowUpRight,
   right: ArrowRight,
   "down-right": ArrowDownRight,
-  down: ArrowDown
+  down: ArrowDown,
+  "double_down": ChevronsDown
 };
 
 function SupportiveGlucoseMessage({ insight, trend, TrendIcon }) {

@@ -60,7 +60,7 @@ export function computeGlucoseTrend(readings) {
     const delta = last.v - prev.v;
     const absDelta = Math.abs(delta);
     if (gapMin > 0 && gapMin <= 45) {
-      if (absDelta >= 25) return { icon: delta > 0 ? "up" : "down", label: delta > 0 ? "Rising" : "Falling" };
+      if (absDelta >= 25) return { icon: delta > 0 ? "double_up" : "double_down", label: delta > 0 ? "Rising quickly" : "Falling quickly" };
       if (absDelta >= 12) return { icon: delta > 0 ? "up-right" : "down-right", label: delta > 0 ? "Slowly rising" : "Slowly falling" };
     } else if (gapMin > 45 && gapMin <= 180) {
       if (absDelta >= 40) return { icon: delta > 0 ? "up" : "down", label: delta > 0 ? "Rising" : "Falling" };
@@ -100,11 +100,11 @@ export function computeGlucoseTrend(readings) {
   const slopePerMs = den !== 0 ? num / den : 0;
   const ratePerMin = slopePerMs * 60000;
 
-  if (ratePerMin >= RATE_FAST) return { icon: "up", label: "Rising" };
+  if (ratePerMin >= RATE_FAST) return { icon: "double_up", label: "Rising quickly" };
   if (ratePerMin >= RATE_SLOW) return { icon: "up-right", label: "Slowly rising" };
   if (ratePerMin > RATE_SLOW_NEG) return { icon: "right", label: "Stable" };
   if (ratePerMin > RATE_FAST_NEG) return { icon: "down-right", label: "Slowly falling" };
-  return { icon: "down", label: "Falling" };
+  return { icon: "double_down", label: "Falling quickly" };
 }
 
 // Maps a native Dexcom trend string to our icon/label format.
@@ -120,13 +120,13 @@ export function mapDexcomTrend(rawTrend) {
     .replace(/^_/, "")
     .trim();
 
-  if (t === "double_up" || t === "up_up") return { icon: "up", label: "Rising quickly" };
+  if (t === "double_up" || t === "up_up") return { icon: "double_up", label: "Rising quickly" };
   if (t === "single_up" || t === "up") return { icon: "up", label: "Rising" };
   if (t === "forty_five_up" || t === "down_up") return { icon: "up-right", label: "Slowly rising" };
   if (t === "flat") return { icon: "right", label: "Stable" };
   if (t === "forty_five_down" || t === "up_down") return { icon: "down-right", label: "Slowly falling" };
   if (t === "single_down" || t === "down") return { icon: "down", label: "Falling" };
-  if (t === "double_down" || t === "down_down") return { icon: "down", label: "Falling quickly" };
+  if (t === "double_down" || t === "down_down") return { icon: "double_down", label: "Falling quickly" };
 
   return null;
 }
