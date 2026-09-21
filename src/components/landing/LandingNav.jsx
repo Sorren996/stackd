@@ -6,8 +6,8 @@ const LOGO_URL =
   "https://media.base44.com/images/public/6a1b93f234a8611ee1595134/1b816d1eb_stackdappiconver3.png";
 
 const NAV_LINKS = [
-  { label: "How it works", href: "#how-it-works" },
-  { label: "Features", href: "#features" },
+  { label: "The Review", href: "#how-it-works" },
+  { label: "What it brings", href: "#features" },
   { label: "FAQ", href: "#faq" },
 ];
 
@@ -53,7 +53,7 @@ export default function LandingNav() {
             to="/register"
             className="stackd-btn-primary rounded-full px-5 py-2 text-sm font-semibold text-white transition-transform active:scale-95"
           >
-            Get started free
+            Try Stackd
           </Link>
           <button
             onClick={() => setOpen(!open)}

@@ -45,7 +45,7 @@ export default function InstallGuide() {
           transition={{ duration: 0.5 }}
           className="text-center text-2xl font-bold tracking-tight text-white md:text-4xl"
         >
-          Add Stackd to your Home Screen
+          Keep Stackd close.
         </motion.h2>
 
         <motion.p

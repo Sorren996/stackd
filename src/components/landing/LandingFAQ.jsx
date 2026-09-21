@@ -4,32 +4,32 @@ import { ChevronDown } from "lucide-react";
 
 const FAQS = [
   {
-    q: "Is Stackd medical advice?",
-    a: "No. Stackd is a review and organization tool. It walks you through your own numbers, settings, and plans so you can make your decision with everything in front of you. It doesn't tell you what to dose, and it isn't a medical device. Decisions about your insulin always stay with you and your care team.",
+    q: "Does Stackd work with Dexcom?",
+    a: "Yes. Stackd connects to your Dexcom Share account so your recent readings and trends flow in automatically. Setup is a one-time connection — you enter your Dexcom Share credentials and Stackd handles the rest.",
   },
   {
-    q: "Do I need a Dexcom to use Stackd?",
-    a: "No. A Dexcom is supported and convenient, but it's not required. You can log readings manually and get the full guided review either way.",
+    q: "Do I need a CGM?",
+    a: "No. A Dexcom is supported and convenient, but it's not required. You can log readings manually and get the full guided review either way. Manual entries are a first-class part of the experience, not a workaround.",
   },
   {
-    q: "Does it work with my Dexcom?",
-    a: "Yes. If you use a Dexcom CGM, Stackd connects to your account so your recent readings and trends flow in automatically. Setup is a one-time connection.",
+    q: "How does Stackd handle manual glucose entries?",
+    a: "Manual entries are treated the same way as Dexcom readings — they appear on your glucose graph, factor into your trend, and are included in your review. If a Dexcom reading arrives near the same time as a manual entry, the manual one is gently replaced so you don't see duplicates.",
   },
   {
-    q: "Do I need any special hardware?",
-    a: "No. There's nothing extra to buy and no hardware requirement. Connect a Dexcom if you have one, or enter readings by hand if you don't.",
+    q: "What does Stackd track?",
+    a: "Stackd brings together your glucose readings and trend, active insulin and recent insulin activity, meal carbohydrates and absorption information, meal context, and your configured insulin settings and review preferences. Everything is organized into one guided review before you dose.",
   },
   {
-    q: "How long does a review take?",
-    a: "The guided flow is designed to be completed in a few minutes. It's thorough by design, but each step is short.",
+    q: "Does Stackd calculate my insulin dose?",
+    a: "No. Stackd is a review and organization tool — it does not calculate, recommend, or suggest insulin doses. It brings the relevant information together so you can review it in one place and make your own decision. The dose always stays with you.",
   },
   {
-    q: "Is my data private?",
-    a: "Your readings, settings, and dose plans belong to you. We don't sell your data.",
+    q: "Is Stackd a replacement for medical advice?",
+    a: "No. Stackd is not a medical device and does not provide medical advice. It organizes information you already have into a review you can use. Decisions about your insulin always stay with you and your care team.",
   },
   {
-    q: "Can I use Stackd if I don't split my doses?",
-    a: "Yes. The split dose review is one part of the flow. If you take single doses, the rest of the guided review still applies.",
+    q: "How is my data handled?",
+    a: "Your readings, settings, and dose logs belong to you. They're stored securely and tied to your account — only you can see your own data. Stackd doesn't sell your data. Your Dexcom credentials are stored securely and used only to fetch your readings.",
   },
 ];
 
