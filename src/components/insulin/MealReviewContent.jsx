@@ -223,7 +223,7 @@ export default function MealReviewContent({ mealInsight, monitoringStatus, gluco
     Number.isFinite(peakOutcome) && hasStartingGlucose ? peakOutcome - glucoseAtStart : null;
 
   return (
-    <div className="space-y-3.5 p-1 pb-4">
+    <div className="space-y-4 p-1 pb-6">
       {/* Header — Meal Review + time since meal */}
       <div>
         <SectionLabel>Meal Review</SectionLabel>
