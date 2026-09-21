@@ -649,5 +649,20 @@ export async function requestDexcomRefreshIfNeeded(
     skipped: false,
   };
 
+  // 6. Preserve cached reading info when the sync returned no new records.
+  //    syncShareForConnection only sets latest_glucose_* when it inserts
+  //    new readings. When Share returns the same readings we already have
+  //    (no_new_records), the UI still needs the cached reading's value and
+  //    timestamp so it can display the current glucose without a separate
+  //    query.
+  if (!diag.latest_glucose_timestamp && newestReadingTs != null) {
+    diag.latest_glucose_timestamp = new Date(newestReadingTs).toISOString();
+    diag.latest_glucose_value = newestReading?.value ?? null;
+    diag.latest_glucose_trend = newestReading?.trend ?? null;
+    diag.latest_glucose_age = readingAgeMs != null
+      ? Math.round(readingAgeMs / 60000) + "m"
+      : null;
+  }
+
   return diag;
 }
