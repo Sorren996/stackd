@@ -12,11 +12,13 @@ const PALETTE = {
 };
 
 const TREND_ARROW = {
+  "double_up": "⇈",
   up: "↑",
   "up-right": "↗",
   right: "→",
   "down-right": "↘",
   down: "↓",
+  "double_down": "⇊",
 };
 
 function roundUnits(v) {

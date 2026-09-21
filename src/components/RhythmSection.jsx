@@ -67,7 +67,7 @@ export default function RhythmSection({
 
       {/* Content — horizontal slide transition */}
       <div className="relative mt-4 overflow-hidden">
-        <AnimatePresence mode="wait" custom={direction}>
+        <AnimatePresence mode="popLayout" custom={direction}>
           <motion.div
             key={tab}
             custom={direction}
