@@ -224,126 +224,127 @@ export default function MealReviewContent({ mealInsight, monitoringStatus, gluco
 
   return (
     <div className="space-y-4 p-1 pb-6">
-      {/* Header — Meal Review + time since meal */}
-      <div>
-        <SectionLabel>Meal Review</SectionLabel>
-        {elapsedMs !== null && (
-          <p className="mt-0.5 text-[11px] text-white/40">{formatElapsed(elapsedMs)} since meal</p>
-        )}
-      </div>
+      <SectionLabel>Meal Review</SectionLabel>
 
-      {/* Current Glucose — primary, visually dominant */}
-      {hasCurrentGlucose && (
-        <section>
-          <SectionLabel>Current Glucose</SectionLabel>
-          <div className="mt-1 flex items-baseline gap-1.5">
-            <span className="text-3xl font-black text-white">{Math.round(glucoseNow)}</span>
-            <span className="text-[11px] text-white/40">mg/dL</span>
-            {trendArrow && (
-              <span className="ml-0.5 text-lg font-bold" style={{ color: trendColor }}>
-                {trendArrow}
-              </span>
-            )}
-          </div>
-        </section>
-      )}
-
-      {/* Peak Since Meal — value + consolidated context line */}
-      {Number.isFinite(peakOutcome) && (
-        <section>
-          <SectionLabel>Peak Since Meal</SectionLabel>
-          <div className="mt-1 flex items-baseline gap-1.5">
-            <span className="text-2xl font-bold text-white">{Math.round(peakOutcome)}</span>
-            <span className="text-[11px] text-white/40">mg/dL</span>
-          </div>
-          {(peakAfterMs !== null || (peakRise !== null && peakRise > 0)) && (
-            <p className="mt-0.5 text-[11px] text-white/40">
-              {peakAfterMs !== null && `${formatElapsed(peakAfterMs)} after meal`}
-              {peakAfterMs !== null && peakRise !== null && peakRise > 0 && " · "}
-              {peakRise !== null && peakRise > 0 && (
-                <span style={{ color: PALETTE.amber }}>+{Math.round(peakRise)} mg/dL from starting</span>
+      {/* ROW 1 — Glucose Summary: Current | Peak */}
+      {(hasCurrentGlucose || Number.isFinite(peakOutcome)) && (
+        <div className="grid grid-cols-2 gap-6">
+          {hasCurrentGlucose && (
+            <div>
+              <SectionLabel>Current Glucose</SectionLabel>
+              <div className="mt-1 flex items-baseline gap-1.5">
+                <span className="text-3xl font-black text-white">{Math.round(glucoseNow)}</span>
+                <span className="text-[11px] text-white/40">mg/dL</span>
+                {trendArrow && (
+                  <span className="ml-0.5 text-lg font-bold" style={{ color: trendColor }}>
+                    {trendArrow}
+                  </span>
+                )}
+              </div>
+              {elapsedMs !== null && (
+                <p className="mt-0.5 text-[11px] text-white/40">{formatElapsed(elapsedMs)} since meal</p>
               )}
-            </p>
+            </div>
           )}
-        </section>
+          {Number.isFinite(peakOutcome) && (
+            <div>
+              <SectionLabel>Peak Since Meal</SectionLabel>
+              <div className="mt-1 flex items-baseline gap-1.5">
+                <span className="text-2xl font-bold text-white">{Math.round(peakOutcome)}</span>
+                <span className="text-[11px] text-white/40">mg/dL</span>
+              </div>
+              {(peakAfterMs !== null || (peakRise !== null && peakRise > 0)) && (
+                <p className="mt-0.5 text-[11px] text-white/40">
+                  {peakAfterMs !== null && `${formatElapsed(peakAfterMs)} after meal`}
+                  {peakAfterMs !== null && peakRise !== null && peakRise > 0 && " · "}
+                  {peakRise !== null && peakRise > 0 && (
+                    <span style={{ color: PALETTE.amber }}>+{Math.round(peakRise)} mg/dL from starting</span>
+                  )}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
       )}
 
-      {/* This Meal — compact, inline label */}
-      <section>
-        <SectionLabel>This Meal</SectionLabel>
-        <div className="mt-1 flex items-baseline gap-2">
-          <span className="text-2xl font-bold text-white">{mealCarbs}g</span>
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-white/40">Meal Carbs</span>
+      {/* ROW 2 — Meal + Bolus Insulin */}
+      <div className="grid grid-cols-2 gap-6">
+        <div>
+          <SectionLabel>This Meal</SectionLabel>
+          <div className="mt-1 flex items-baseline gap-2">
+            <span className="text-2xl font-bold text-white">{mealCarbs}g</span>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-white/40">Meal Carbs</span>
+          </div>
           {rescueCarbs > 0 && (
             <>
-              <span className="text-2xl font-bold" style={{ color: RESCUE_COLOR }}>+{rescueCarbs}g</span>
-              <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: `${RESCUE_COLOR}99` }}>Rescue</span>
+              <div className="mt-0.5 flex items-baseline gap-2">
+                <span className="text-lg font-bold" style={{ color: RESCUE_COLOR }}>+{rescueCarbs}g</span>
+                <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: `${RESCUE_COLOR}99` }}>Rescue</span>
+              </div>
+              <p className="mt-0.5 text-[10px] text-white/30">Excluded from insulin estimation.</p>
             </>
           )}
         </div>
-        {rescueCarbs > 0 && (
-          <p className="mt-0.5 text-[10px] text-white/30">Rescue carbs excluded from insulin estimation.</p>
-        )}
-      </section>
-
-      {/* Bolus Insulin — Taken / Estimated side by side */}
-      <section>
-        <SectionLabel>Bolus Insulin</SectionLabel>
-        <div className="mt-1 flex items-start gap-8">
-          <div>
-            <p className="text-2xl font-bold leading-none text-white">{bolusTaken}u</p>
-            <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-white/40">Taken</p>
-          </div>
-          {bolusEstimated > 0 && (
+        <div>
+          <SectionLabel>Bolus Insulin</SectionLabel>
+          <div className="mt-1 flex items-start gap-6">
             <div>
-              <p className="text-2xl font-bold leading-none" style={{ color: PALETTE.bolus }}>{bolusEstimated}u</p>
-              <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-white/40">Estimated</p>
+              <p className="text-2xl font-bold leading-none text-white">{bolusTaken}u</p>
+              <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-white/40">Taken</p>
+            </div>
+            {bolusEstimated > 0 && (
+              <div>
+                <p className="text-2xl font-bold leading-none" style={{ color: PALETTE.bolus }}>{bolusEstimated}u</p>
+                <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-white/40">Estimated</p>
+              </div>
+            )}
+          </div>
+          <div className="mt-1.5">
+            <HowCalculatedSection d={d} />
+          </div>
+        </div>
+      </div>
+
+      {/* ROW 3 — Bolus Active + Meal Outcome */}
+      {(bolusActive > 0 || (hasStartingGlucose && Number.isFinite(peakOutcome) && hasCurrentGlucose)) && (
+        <div className="grid grid-cols-2 gap-6">
+          {bolusActive > 0 && (
+            <div>
+              <SectionLabel>Bolus Active</SectionLabel>
+              <p className="mt-1 text-2xl font-bold leading-none text-white">{bolusActive}u</p>
+              <p className="mt-0.5 text-[10px] text-white/40">Still active from meal/correction boluses</p>
+            </div>
+          )}
+          {hasStartingGlucose && Number.isFinite(peakOutcome) && hasCurrentGlucose && (
+            <div>
+              <SectionLabel>Meal Outcome</SectionLabel>
+              <div className="mt-1.5 flex items-center justify-between gap-1.5">
+                <div className="text-center">
+                  <p className="text-base font-bold text-white">{Math.round(glucoseAtStart)}</p>
+                  <p className="text-[9px] text-white/40">Starting</p>
+                </div>
+                <span className="text-white/20">→</span>
+                <div className="text-center">
+                  <p className="text-base font-bold text-white">{Math.round(peakOutcome)}</p>
+                  <p className="text-[9px] text-white/40">Peak</p>
+                </div>
+                <span className="text-white/20">→</span>
+                <div className="text-center">
+                  <p className="text-base font-bold text-white">{Math.round(glucoseNow)}</p>
+                  <p className="text-[9px] text-white/40">Current</p>
+                </div>
+              </div>
+              <div className="mt-1.5 space-y-0.5">
+                {peakAfterMs !== null && (
+                  <p className="text-[11px] text-white/40">{formatElapsed(peakAfterMs)} · Time to peak</p>
+                )}
+                {elapsedMs !== null && (
+                  <p className="text-[11px] text-white/40">{formatElapsed(elapsedMs)} · Since meal</p>
+                )}
+              </div>
             </div>
           )}
         </div>
-        <div className="mt-1.5">
-          <HowCalculatedSection d={d} />
-        </div>
-      </section>
-
-      {/* Bolus Active — open on background, no card */}
-      {bolusActive > 0 && (
-        <section>
-          <SectionLabel>Bolus Active</SectionLabel>
-          <p className="mt-1 text-2xl font-bold leading-none text-white">{bolusActive}u</p>
-          <p className="mt-0.5 text-[10px] text-white/40">Still active from meal/correction boluses</p>
-        </section>
-      )}
-
-      {/* Meal Outcome — compact visual sequence */}
-      {hasStartingGlucose && Number.isFinite(peakOutcome) && hasCurrentGlucose && (
-        <section>
-          <SectionLabel>Meal Outcome</SectionLabel>
-          <div className="mt-1.5 flex items-center justify-between gap-2">
-            <div className="text-center">
-              <p className="text-base font-bold text-white">{Math.round(glucoseAtStart)}</p>
-              <p className="text-[9px] text-white/40">Starting</p>
-            </div>
-            <span className="text-white/20">→</span>
-            <div className="text-center">
-              <p className="text-base font-bold text-white">{Math.round(peakOutcome)}</p>
-              <p className="text-[9px] text-white/40">Peak</p>
-            </div>
-            <span className="text-white/20">→</span>
-            <div className="text-center">
-              <p className="text-base font-bold text-white">{Math.round(glucoseNow)}</p>
-              <p className="text-[9px] text-white/40">Current</p>
-            </div>
-          </div>
-          <div className="mt-1.5 space-y-0.5">
-            {peakAfterMs !== null && (
-              <p className="text-[11px] text-white/40">{formatElapsed(peakAfterMs)} · Time to peak</p>
-            )}
-            {elapsedMs !== null && (
-              <p className="text-[11px] text-white/40">{formatElapsed(elapsedMs)} · Since meal</p>
-            )}
-          </div>
-        </section>
       )}
 
       {/* Similar Meals — open text, no borders */}
