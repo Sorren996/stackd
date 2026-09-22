@@ -620,7 +620,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           const activeUnits = curve[lo].activeUnits + ratio * (curve[hi].activeUnits - curve[lo].activeUnits);
           const peak = curvePeakActivity[key] || 1;
           const normalizedActivity = peak > 0 ? activity / peak : 0;
-          point[key] = effectiveMin + normalizedActivity * (effectiveMax - effectiveMin) * 0.18;
+          point[key] = effectiveMin + normalizedActivity * (effectiveMax - effectiveMin) * 0.063;
           point[`${key}_actual`] = activeUnits;
           point[`${key}_activity`] = activity;
           point[`${key}_total`] = doseUnits;
@@ -755,10 +755,10 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         const na = peakAct > 0 ? closest.activity / peakAct : 0;
         peakInfoByKey[key] = {
           peakTime: closest.time,
-          peakY: INSULIN_MARGIN_TOP + (1 - na) * INSULIN_PLOT_HEIGHT
+          peakY: INSULIN_MARGIN_TOP + (1 - na * 0.35) * INSULIN_PLOT_HEIGHT
         };
       } else {
-        peakInfoByKey[key] = { peakTime: peak.time, peakY: INSULIN_MARGIN_TOP };
+        peakInfoByKey[key] = { peakTime: peak.time, peakY: INSULIN_MARGIN_TOP + 0.65 * INSULIN_PLOT_HEIGHT };
       }
     });
 
