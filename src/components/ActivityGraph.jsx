@@ -467,8 +467,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     { offset: 0, color: GLUCOSE_STATUS_COLORS.high, opacity: 0.85 },
     { offset: highRefPct, color: GLUCOSE_STATUS_COLORS.high, opacity: 0.9 },
     { offset: Math.max(0, hi - 3), color: GLUCOSE_STATUS_COLORS.high, opacity: 0.85 },
-    { offset: Math.min(100, hi + 3), color: gTheme.inRangeColor, opacity: 0.85 },
-    { offset: Math.max(0, lo - 3), color: gTheme.inRangeColor, opacity: 0.85 },
+    { offset: Math.min(100, hi + 3), color: gTheme.inRangeColor, opacity: 0.9 },
+    { offset: Math.max(0, lo - 3), color: gTheme.inRangeColor, opacity: 0.9 },
     { offset: Math.min(100, lo + 3), color: GLUCOSE_STATUS_COLORS.low, opacity: 0.85 },
     { offset: lowRefPct, color: GLUCOSE_STATUS_COLORS.low, opacity: 0.9 },
     { offset: 100, color: GLUCOSE_STATUS_COLORS.low, opacity: 0.9 }];
@@ -1300,8 +1300,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                       type="monotoneX"
                       dataKey="glucose"
                       stroke="none"
-                      fill="#4d5742"
-                      fillOpacity={0.12}
+                      fill="#5b6550"
+                      fillOpacity={0.14}
                       isAnimationActive={false}
                       dot={false}
                       activeDot={false}
@@ -1317,7 +1317,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                     yAxisId="glucose"
                     y={highReference}
                     stroke={GLUCOSE_STATUS_COLORS.high}
-                    strokeOpacity={0.45}
+                    strokeOpacity={0.30}
                     strokeWidth={1}
                     strokeDasharray="6 5"
                   />
@@ -1325,7 +1325,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                     yAxisId="glucose"
                     y={FIXED_LOW_REFERENCE}
                     stroke={GLUCOSE_STATUS_COLORS.low}
-                    strokeOpacity={0.4}
+                    strokeOpacity={0.28}
                     strokeWidth={1}
                     strokeDasharray="6 5"
                   />
@@ -1334,8 +1334,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                     x={Date.now()}
                     yAxisId="glucose"
                     stroke="#3f3830"
-                    strokeWidth={1.25}
-                    strokeOpacity={0.5}
+                    strokeWidth={1}
+                    strokeOpacity={0.3}
                   />
                 </>
                     }
@@ -1363,9 +1363,9 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                   type="basis"
                   dataKey={k.key}
                   name={k.label}
-                  stroke={k.isBasal ? "#b8aea0" : "#8a7f70"}
-                  strokeWidth={1.5}
-                  strokeOpacity={0.35}
+                  stroke={k.isBasal ? "#a8b0a4" : gTheme.insulinCurveColor}
+                  strokeWidth={k.isBasal ? 1 : gTheme.insulinCurveWidth}
+                  strokeOpacity={k.isBasal ? gTheme.insulinCurveOpacity * 0.65 : gTheme.insulinCurveOpacity}
                   fill="none"
                   dot={false}
                   activeDot={false}
@@ -1420,7 +1420,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       </div>
       <div className="flex items-center gap-4 px-3 mt-2 flex-wrap">
         <div className="flex items-center gap-1.5">
-          <div className="h-[2px] w-4" style={{ background: "#3f3830" }} />
+          <div className="h-[2px] w-4" style={{ background: "#5b6550" }} />
           <span className="text-[10px]" style={{ color: "#746959" }}>glucose</span>
         </div>
         <div className="flex items-center gap-1.5">
