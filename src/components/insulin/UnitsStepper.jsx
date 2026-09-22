@@ -5,8 +5,7 @@ const PRESETS = [5, 10, 15, 20];
 const TRANSITION = "border-color 250ms ease-out, background 250ms ease-out, color 250ms ease-out";
 
 const ACTION_BTN_STYLE = {
-  borderColor: "#eadccf",
-  background: "#fdf9f2",
+  background: "#f7f1e8",
   color: "#3f3830",
   transition: "transform 120ms ease-out, opacity 120ms ease-out",
 };
@@ -34,7 +33,7 @@ export default function UnitsStepper({ value, onChange }) {
           type="button"
           onClick={() => setUnits(current - 1)}
           disabled={current <= 0}
-          className="flex h-12 w-12 items-center justify-center rounded-full border active:scale-95 disabled:opacity-30"
+          className="flex h-12 w-12 items-center justify-center rounded-full active:scale-95 disabled:opacity-30"
           style={ACTION_BTN_STYLE}
           aria-label="Decrease dose by 1 unit"
         >
@@ -49,7 +48,7 @@ export default function UnitsStepper({ value, onChange }) {
         <button
           type="button"
           onClick={() => setUnits(current + 1)}
-          className="flex h-12 w-12 items-center justify-center rounded-full border active:scale-95"
+          className="flex h-12 w-12 items-center justify-center rounded-full active:scale-95"
           style={ACTION_BTN_STYLE}
           aria-label="Increase dose by 1 unit"
         >
@@ -80,14 +79,13 @@ export default function UnitsStepper({ value, onChange }) {
                 key={preset}
                 type="button"
                 onClick={() => setUnits(preset)}
-                className="flex shrink-0 items-center justify-center rounded-full border text-sm font-semibold"
+                className="flex shrink-0 items-center justify-center rounded-full text-sm font-semibold"
                 style={{
                   height: 44,
                   minWidth: 56,
-                  transition: TRANSITION,
-                  borderColor: isSelected ? "rgba(91,101,80,0.50)" : "#eadccf",
-                  background: isSelected ? "rgba(91,101,80,0.12)" : "#fdf9f2",
-                  color: isSelected ? "#3f3830" : "#8a7f70",
+                  transition: "background 250ms ease-out, color 250ms ease-out",
+                  background: isSelected ? "#9c5228" : "#f7f1e8",
+                  color: isSelected ? "#f7f1e8" : "#8a7f70",
                 }}
                 aria-pressed={isSelected}
               >

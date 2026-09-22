@@ -1,6 +1,6 @@
 const GLASS_SURFACE = {
-  background: "#fdf9f2",
-  borderColor: "#eadccf",
+  background: "#f7f1e8",
+  borderColor: "transparent",
   boxShadow: "none"
 };
 

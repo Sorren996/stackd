@@ -42,6 +42,9 @@
     --mustard-text: #8a5a12;   /* 5.3:1 — projection/warning text */
     --red-text: #9c3f2e;       /* 5.9:1 — above-range/error text */
 
+    /* ── Copper accent — selected chips, active nav, highlights ── */
+    --copper: #9c5228;         /* 5.1:1 — interaction accent */
+
     /* Chart / data colors */
     --chart-1: 88 8% 35%;               /* sage — in range */
     --chart-2: 30 16% 22%;              /* espresso — ink curve */
@@ -92,6 +95,8 @@
     --sage-text: #4d5742;
     --mustard-text: #8a5a12;
     --red-text: #9c3f2e;
+
+    --copper: #9c5228;
 
     --chart-1: 88 8% 35%;
     --chart-2: 30 16% 22%;
@@ -157,6 +162,8 @@
   .text-sage-text { color: #4d5742; }   /* 6.8:1 — positive state text */
   .text-mustard-text { color: #8a5a12; } /* 5.3:1 — warning/projection text */
   .text-red-text { color: #9c3f2e; }     /* 5.9:1 — error/above-range text */
+  .text-copper { color: #9c5228; }       /* 5.1:1 — interaction accent */
+  .bg-copper { background-color: #9c5228; }
 
   /* Big anchor numbers — light weight, tabular numerals */
   .anchor-number {

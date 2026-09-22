@@ -48,6 +48,7 @@ module.exports = {
   			'sage-text': '#4d5742',
   			'mustard-text': '#8a5a12',
   			'red-text': '#9c3f2e',
+  			copper: '#9c5228',
   			chart: {
   				'1': 'hsl(var(--chart-1))',
   				'2': 'hsl(var(--chart-2))',

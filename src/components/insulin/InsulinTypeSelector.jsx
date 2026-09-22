@@ -6,7 +6,7 @@ import { useEffect, useRef } from "react";
  * in isolation; the parent sheet never moves horizontally. Selection
  * transitions gently illuminate the chosen circle over ~250ms.
  */
-const TRANSITION = "border-color 250ms ease-out, background 250ms ease-out, color 250ms ease-out";
+const TRANSITION = "background 250ms ease-out, color 250ms ease-out";
 
 export default function InsulinTypeSelector({ value, onChange, options }) {
   const scrollRef = useRef(null);
@@ -63,14 +63,13 @@ export default function InsulinTypeSelector({ value, onChange, options }) {
                 ref={isSelected ? selectedRef : null}
                 type="button"
                 onClick={() => onChange(option.value)}
-                className="flex shrink-0 items-center justify-center rounded-full border text-center"
+                className="flex shrink-0 items-center justify-center rounded-full text-center"
                 style={{
                   height: 88,
                   width: 88,
                   transition: TRANSITION,
-                  borderColor: isSelected ? "rgba(91,101,80,0.50)" : "#eadccf",
-                  background: isSelected ? "rgba(91,101,80,0.12)" : "#fdf9f2",
-                  color: isSelected ? "#3f3830" : "#8a7f70",
+                  background: isSelected ? "#9c5228" : "#fdf9f2",
+                  color: isSelected ? "#f7f1e8" : "#8a7f70",
                 }}
                 aria-pressed={isSelected}
               >

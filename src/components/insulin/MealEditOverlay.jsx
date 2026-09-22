@@ -110,10 +110,9 @@ export default function MealEditOverlay({ entries, onClose }) {
       onClick={onClose}
     >
       <div
-        className="meal-edit-overlay max-h-[calc(100dvh-8rem)] w-full max-w-md overflow-y-auto rounded-3xl border p-5 sm:max-h-[calc(100dvh-3rem)]"
+        className="meal-edit-overlay max-h-[calc(100dvh-8rem)] w-full max-w-md overflow-y-auto rounded-3xl p-5 sm:max-h-[calc(100dvh-3rem)]"
         style={{
           background: PALETTE.surface,
-          borderColor: PALETTE.hairline,
           boxShadow: "0 8px 28px rgba(63, 56, 48, 0.12), 0 2px 8px rgba(63, 56, 48, 0.06)",
         }}
         onClick={(e) => e.stopPropagation()}
@@ -126,8 +125,8 @@ export default function MealEditOverlay({ entries, onClose }) {
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-full border transition hover:opacity-70"
-            style={{ background: PALETTE.canvas, borderColor: PALETTE.hairline, color: PALETTE.muted }}
+            className="flex h-8 w-8 items-center justify-center rounded-full transition hover:opacity-70"
+            style={{ background: PALETTE.canvas, color: PALETTE.muted }}
           >
             <X className="h-4 w-4" />
           </button>
@@ -141,8 +140,8 @@ export default function MealEditOverlay({ entries, onClose }) {
                 value={item.food_name}
                 onChange={(e) => updateItem(index, "food_name", e.target.value)}
                 placeholder="Food name"
-                className="flex-1 rounded-xl border px-3 py-2.5 text-sm outline-none transition"
-                style={{ background: PALETTE.canvas, borderColor: PALETTE.hairline, color: PALETTE.ink }}
+                className="flex-1 rounded-xl px-3 py-2.5 text-sm outline-none transition"
+                style={{ background: PALETTE.canvas, color: PALETTE.ink }}
               />
               <div className="relative w-24">
                 <input
@@ -151,8 +150,8 @@ export default function MealEditOverlay({ entries, onClose }) {
                   value={item.carbs}
                   onChange={(e) => updateItem(index, "carbs", e.target.value)}
                   placeholder="0"
-                  className="w-full rounded-xl border px-3 py-2.5 pr-8 text-sm outline-none transition"
-                  style={{ background: PALETTE.canvas, borderColor: PALETTE.hairline, color: PALETTE.ink }}
+                  className="w-full rounded-xl px-3 py-2.5 pr-8 text-sm outline-none transition"
+                  style={{ background: PALETTE.canvas, color: PALETTE.ink }}
                 />
                 <span
                   className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs"
@@ -164,8 +163,8 @@ export default function MealEditOverlay({ entries, onClose }) {
               <button
                 type="button"
                 onClick={() => removeItem(index)}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border transition hover:opacity-70"
-                style={{ background: PALETTE.canvas, borderColor: PALETTE.hairline, color: PALETTE.danger }}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition hover:opacity-70"
+                style={{ background: PALETTE.canvas, color: PALETTE.danger }}
                 aria-label="Remove item"
               >
                 <Trash2 className="h-3.5 w-3.5" />
@@ -176,8 +175,8 @@ export default function MealEditOverlay({ entries, onClose }) {
           <button
             type="button"
             onClick={addItem}
-            className="flex w-full items-center justify-center gap-1.5 rounded-xl border py-2.5 text-sm font-medium transition hover:opacity-70"
-            style={{ borderColor: PALETTE.hairline, background: PALETTE.canvas, color: PALETTE.muted }}
+            className="flex w-full items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-medium transition hover:opacity-70"
+            style={{ background: PALETTE.canvas, color: PALETTE.muted }}
           >
             <Plus className="h-4 w-4" />
             Add item
