@@ -10,10 +10,7 @@ export default function SplashScreen({ showAuth = false }) {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.5, ease: "easeInOut" }}
-      style={{
-        background:
-          "radial-gradient(ellipse 120% 60% at 50% 100%, hsl(162, 28%, 10%) 0%, hsl(160, 14%, 7%) 55%, hsl(158, 10%, 5%) 100%)",
-      }}
+      style={{ background: "#f7f1e8" }}
     >
       <motion.img
         src={LOGO_URL}
@@ -40,17 +37,19 @@ export default function SplashScreen({ showAuth = false }) {
         >
           <button
             onClick={() => { window.location.href = '/login'; }}
-            className="w-full rounded-2xl border border-white/20 py-4 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/10"
+            className="w-full rounded-2xl py-4 text-sm font-semibold transition"
             style={{
-              background: "linear-gradient(145deg, rgba(91,168,138,0.3), rgba(91,163,184,0.2))",
-              boxShadow: "0 8px 24px rgba(0,0,0,0.2), inset 0 1px 1px rgba(255,255,255,0.15)",
+              background: "#3f3830",
+              color: "#f7f1e8",
+              boxShadow: "0 4px 16px rgba(63, 56, 48, 0.15)",
             }}
           >
             Log In
           </button>
           <button
             onClick={() => { window.location.href = '/register'; }}
-            className="w-full rounded-2xl border border-white/10 py-4 text-sm font-medium text-white/60 transition hover:text-white/80 hover:bg-white/5"
+            className="w-full rounded-2xl border py-4 text-sm font-medium text-white/60 transition hover:text-white/80"
+            style={{ borderColor: "#eadccf", background: "#fdf9f2" }}
           >
             Create Account
           </button>

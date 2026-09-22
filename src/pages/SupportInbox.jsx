@@ -8,16 +8,16 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 
 const TICKET_TYPE_META = {
-  support: { icon: LifeBuoy, label: "Support", color: "text-teal-400" },
-  bug: { icon: Bug, label: "Bug", color: "text-rose-400" },
-  feedback: { icon: MessageSquare, label: "Feedback", color: "text-amber-400" },
+  support: { icon: LifeBuoy, label: "Support", color: "#5b6550" },
+  bug: { icon: Bug, label: "Bug", color: "#c97060" },
+  feedback: { icon: MessageSquare, label: "Feedback", color: "#af751b" },
 };
 
 const STATUS_META = {
-  open: { label: "Open", className: "bg-teal-500/15 text-teal-300 border-teal-500/25" },
-  in_progress: { label: "In Progress", className: "bg-amber-500/15 text-amber-300 border-amber-500/25" },
-  resolved: { label: "Resolved", className: "bg-emerald-500/15 text-emerald-300 border-emerald-500/25" },
-  closed: { label: "Closed", className: "bg-white/10 text-white/50 border-white/15" },
+  open: { label: "Open", style: { background: "rgba(91,101,80,0.12)", color: "#5b6550", border: "1px solid rgba(91,101,80,0.25)" } },
+  in_progress: { label: "In Progress", style: { background: "rgba(175,117,27,0.12)", color: "#af751b", border: "1px solid rgba(175,117,27,0.25)" } },
+  resolved: { label: "Resolved", style: { background: "rgba(91,101,80,0.12)", color: "#5b6550", border: "1px solid rgba(91,101,80,0.25)" } },
+  closed: { label: "Closed", style: { background: "rgba(63,56,48,0.06)", color: "#8a7f70", border: "1px solid #eadccf" } },
 };
 
 const STATUS_FLOW = ["open", "in_progress", "resolved", "closed"];
@@ -68,7 +68,7 @@ export default function SupportInbox() {
     return (
       <div className="mx-auto max-w-md space-y-4 pt-8 text-center">
         <p className="text-sm text-white/50">This area is reserved for administrators.</p>
-        <Link to="/settings" className="inline-flex items-center gap-1 text-sm text-teal-400">
+        <Link to="/settings" className="inline-flex items-center gap-1 text-sm" style={{ color: "#5b6550" }}>
           <ChevronLeft className="h-4 w-4" /> Back to Settings
         </Link>
       </div>
@@ -78,7 +78,7 @@ export default function SupportInbox() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
-        <Loader2 className="w-7 h-7 animate-spin text-teal-400" />
+        <Loader2 className="w-7 h-7 animate-spin" style={{ color: "#5b6550" }} />
       </div>
     );
   }
@@ -89,7 +89,7 @@ export default function SupportInbox() {
         <Link
           to="/settings"
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-white/70 transition hover:text-white"
-          style={{ background: "linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))", borderColor: "rgba(255,255,255,0.14)" }}
+          style={{ background: "#fdf9f2", borderColor: "#eadccf" }}
         >
           <ChevronLeft className="h-4 w-4" />
         </Link>
@@ -100,7 +100,7 @@ export default function SupportInbox() {
       </div>
 
       {tickets.length === 0 ? (
-        <div className="glass-card rounded-3xl border p-10 text-center">
+        <div className="glass-card rounded-3xl border p-10 text-center" style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}>
           <LifeBuoy className="mx-auto h-8 w-8 text-white/25" />
           <p className="mt-3 text-sm text-white/50">No support submissions yet.</p>
           <p className="text-xs text-white/30">When someone reaches out, their message will appear here.</p>
@@ -114,7 +114,7 @@ export default function SupportInbox() {
             const isExpanded = expandedId === ticket.id;
 
             return (
-              <div key={ticket.id} className="glass-card rounded-3xl border overflow-hidden">
+              <div key={ticket.id} className="glass-card rounded-3xl border overflow-hidden" style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}>
                 <button
                   type="button"
                   onClick={() => {
@@ -123,13 +123,13 @@ export default function SupportInbox() {
                   }}
                   className="w-full flex items-start gap-3 p-4 text-left transition hover:bg-white/[0.02]"
                 >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04]">
-                    <TypeIcon className={`h-4 w-4 ${typeMeta.color}`} />
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border" style={{ borderColor: "#eadccf", background: "#f7f1e8" }}>
+                    <TypeIcon className="h-4 w-4" style={{ color: typeMeta.color }} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm font-semibold text-white">{typeMeta.label}</span>
-                      <span className={`text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full border ${statusMeta.className}`}>
+                      <span className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full border" style={statusMeta.style}>
                         {statusMeta.label}
                       </span>
                       <span className="text-[10px] text-white/30">{ticket.category?.replace(/_/g, " ")}</span>
@@ -143,7 +143,7 @@ export default function SupportInbox() {
                 </button>
 
                 {isExpanded && (
-                  <div className="border-t border-white/8 px-4 py-4 space-y-3" style={{ background: "rgba(255,255,255,0.015)" }}>
+                  <div className="border-t px-4 py-4 space-y-3" style={{ borderColor: "#eadccf", background: "#f7f1e8" }}>
                     <div>
                       <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40 mb-1">Message</p>
                       <p className="text-sm text-white/80 whitespace-pre-wrap leading-relaxed">{ticket.message}</p>
@@ -152,13 +152,13 @@ export default function SupportInbox() {
                     {ticket.diagnostic_metadata && Object.keys(ticket.diagnostic_metadata).length > 0 && (
                       <div>
                         <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40 mb-1">Diagnostics (shared with consent)</p>
-                        <pre className="text-[10px] text-white/50 bg-black/30 rounded-xl p-3 overflow-x-auto whitespace-pre-wrap">{JSON.stringify(ticket.diagnostic_metadata, null, 2)}</pre>
+                        <pre className="text-[10px] text-white/50 rounded-xl p-3 overflow-x-auto whitespace-pre-wrap" style={{ background: "#fdf9f2", border: "1px solid #eadccf" }}>{JSON.stringify(ticket.diagnostic_metadata, null, 2)}</pre>
                       </div>
                     )}
 
                     {ticket.admin_response && (
                       <div>
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-teal-400/70 mb-1">Your response</p>
+                        <p className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: "#5b6550", opacity: 0.7 }}>Your response</p>
                         <p className="text-sm text-white/80 whitespace-pre-wrap leading-relaxed">{ticket.admin_response}</p>
                       </div>
                     )}
@@ -169,14 +169,16 @@ export default function SupportInbox() {
                         onChange={(e) => setResponseText(e.target.value)}
                         placeholder="Write a thoughtful reply..."
                         rows={3}
-                        className="w-full rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-teal-500/40"
+                        className="w-full rounded-2xl border px-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none"
+                        style={{ borderColor: "#eadccf", background: "#fdf9f2" }}
                       />
                       <div className="mt-2 flex items-center gap-2">
                         <button
                           type="button"
                           onClick={() => handleRespond(ticket)}
                           disabled={!responseText.trim() || updateTicket.isPending}
-                          className="flex items-center gap-1.5 rounded-xl border border-teal-500/25 bg-teal-500/10 px-4 py-2 text-xs font-semibold text-teal-300 transition hover:bg-teal-500/20 disabled:opacity-40"
+                          className="flex items-center gap-1.5 rounded-xl border px-4 py-2 text-xs font-semibold transition disabled:opacity-40"
+                          style={{ borderColor: "rgba(91,101,80,0.25)", background: "rgba(91,101,80,0.10)", color: "#5b6550" }}
                         >
                           <Send className="h-3 w-3" /> Save Response
                         </button>
@@ -185,7 +187,8 @@ export default function SupportInbox() {
                             type="button"
                             onClick={() => advanceStatus(ticket)}
                             disabled={updateTicket.isPending}
-                            className="rounded-xl border border-white/12 bg-white/[0.04] px-4 py-2 text-xs font-semibold text-white/70 transition hover:bg-white/8 disabled:opacity-40"
+                            className="rounded-xl border px-4 py-2 text-xs font-semibold text-white/70 transition disabled:opacity-40"
+                            style={{ borderColor: "#eadccf", background: "#fdf9f2" }}
                           >
                             Mark as {STATUS_FLOW[STATUS_FLOW.indexOf(ticket.status) + 1]?.replace(/_/g, " ") || "resolved"}
                           </button>

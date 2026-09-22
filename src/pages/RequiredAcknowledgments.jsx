@@ -127,7 +127,7 @@ export default function RequiredAcknowledgments() {
   const allSections = ACKNOWLEDGMENT_STEPS.filter((s) => s.sections).flatMap((s) => s.sections);
 
   return (
-    <div className="fixed inset-0 z-[200] flex flex-col" style={{ background: "radial-gradient(ellipse 120% 60% at 50% 100%, hsl(162,28%,10%) 0%, hsl(160,14%,7%) 55%, hsl(158,10%,5%) 100%)" }}>
+    <div className="fixed inset-0 z-[200] flex flex-col" style={{ background: "#f7f1e8" }}>
       <DocumentModal docKey={activeDoc} onClose={() => setActiveDoc(null)} />
 
       {/* Header */}
@@ -137,12 +137,13 @@ export default function RequiredAcknowledgments() {
             <button
               type="button"
               onClick={() => setStep((s) => Math.max(0, s - 1))}
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/60 transition hover:text-white"
+              className="flex h-9 w-9 items-center justify-center rounded-full border text-white/60 transition hover:text-white"
+              style={{ background: "#fdf9f2", borderColor: "#eadccf" }}
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
           )}
-          {isFirstStep && <Leaf className="h-5 w-5 text-[#5ba88a]" />}
+          {isFirstStep && <Leaf className="h-5 w-5" style={{ color: "#5b6550" }} />}
         </div>
         <span className="text-xs font-semibold text-white/40">
           Step {step + 1} of {ACKNOWLEDGMENT_STEPS.length}
@@ -150,7 +151,8 @@ export default function RequiredAcknowledgments() {
         <button
           type="button"
           onClick={() => logout()}
-          className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/50 transition hover:text-white"
+          className="flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium text-white/50 transition hover:text-white"
+          style={{ background: "#fdf9f2", borderColor: "#eadccf" }}
         >
           <LogOut className="h-3.5 w-3.5" />
           Sign Out
@@ -159,10 +161,10 @@ export default function RequiredAcknowledgments() {
 
       {/* Progress bar */}
       <div className="px-5 pb-2">
-        <div className="h-1 w-full overflow-hidden rounded-full bg-white/8">
+        <div className="h-1 w-full overflow-hidden rounded-full" style={{ background: "#eadccf" }}>
           <motion.div
             className="h-full rounded-full"
-            style={{ background: "linear-gradient(90deg, #5ba88a, #5ba3b8)" }}
+            style={{ background: "#5b6550" }}
             animate={{ width: `${((step + 1) / ACKNOWLEDGMENT_STEPS.length) * 100}%` }}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
           />
@@ -184,9 +186,9 @@ export default function RequiredAcknowledgments() {
                 <div className="flex flex-col items-center py-8 text-center">
                   <div
                     className="mb-6 flex h-20 w-20 items-center justify-center rounded-full"
-                    style={{ background: "radial-gradient(circle, rgba(91,168,138,0.2), transparent 70%)" }}
+                    style={{ background: "radial-gradient(circle, rgba(91, 101, 80, 0.15), transparent 70%)" }}
                   >
-                    <Leaf className="h-10 w-10 text-[#5ba88a]" />
+                    <Leaf className="h-10 w-10" style={{ color: "#5b6550" }} />
                   </div>
                   <h1 className="mb-4 text-2xl font-bold text-white">Welcome to Stackd</h1>
                   <p className="mb-3 text-sm leading-relaxed text-white/55">
@@ -228,17 +230,17 @@ export default function RequiredAcknowledgments() {
                           key={section.checkboxId}
                           className="flex items-center gap-3 rounded-xl border p-3"
                           style={{
-                            borderColor: checked ? "rgba(91,168,138,0.25)" : "rgba(255,255,255,0.08)",
-                            background: checked ? "rgba(91,168,138,0.06)" : "rgba(255,255,255,0.02)",
+                            borderColor: checked ? "rgba(91, 101, 80, 0.25)" : "#eadccf",
+                            background: checked ? "rgba(91, 101, 80, 0.06)" : "#fdf9f2",
                           }}
                         >
                           <div
                             className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md"
                             style={{
-                              background: checked ? "rgba(91,168,138,0.85)" : "rgba(255,255,255,0.06)",
+                              background: checked ? "#5b6550" : "#f7f1e8",
                             }}
                           >
-                            {checked && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
+                            {checked && <Check className="h-3 w-3" strokeWidth={3} style={{ color: "#f7f1e8" }} />}
                           </div>
                           <span className="text-xs font-medium text-white/70">{section.title}</span>
                         </div>
@@ -246,14 +248,14 @@ export default function RequiredAcknowledgments() {
                     })}
                   </div>
                   {!allDocsOpened && (
-                    <p className="flex items-center gap-2 text-xs text-amber-400/70">
+                    <p className="flex items-center gap-2 text-xs" style={{ color: "#af751b", opacity: 0.7 }}>
                       <AlertCircle className="h-3.5 w-3.5" />
                       Please open and review the Terms of Use and Privacy Notice.
                     </p>
                   )}
                   {submitError && (
-                    <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3">
-                      <p className="flex items-center gap-2 text-xs text-red-400">
+                    <div className="rounded-xl border p-3" style={{ borderColor: "rgba(201,112,96,0.20)", background: "rgba(201,112,96,0.05)" }}>
+                      <p className="flex items-center gap-2 text-xs" style={{ color: "#c97060" }}>
                         <AlertCircle className="h-3.5 w-3.5 shrink-0" />
                         {submitError}
                       </p>
@@ -261,7 +263,8 @@ export default function RequiredAcknowledgments() {
                         type="button"
                         onClick={handleRetry}
                         disabled={isSubmitting}
-                        className="mt-2 flex items-center gap-1.5 rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-1.5 text-xs font-semibold text-red-300 transition hover:bg-red-500/10 disabled:opacity-40"
+                        className="mt-2 flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition disabled:opacity-40"
+                        style={{ borderColor: "rgba(201,112,96,0.20)", background: "rgba(201,112,96,0.05)", color: "#c97060" }}
                       >
                         <RefreshCw className="h-3 w-3" />
                         Try Again
@@ -277,8 +280,8 @@ export default function RequiredAcknowledgments() {
 
       {/* Bottom action bar */}
       <div
-        className="border-t border-white/10 px-5 py-3 pb-[max(env(safe-area-inset-bottom),0.75rem)]"
-        style={{ background: "linear-gradient(160deg, hsl(162,12%,9%), hsl(162,10%,6%))" }}
+        className="border-t px-5 py-3 pb-[max(env(safe-area-inset-bottom),0.75rem)]"
+        style={{ background: "#fdf9f2", borderColor: "#eadccf" }}
       >
         <div className="mx-auto max-w-md">
           {isLastStep ? (
@@ -286,14 +289,11 @@ export default function RequiredAcknowledgments() {
               type="button"
               onClick={handleAccept}
               disabled={!canAccept}
-              className="w-full rounded-2xl py-4 text-base font-semibold text-white transition active:scale-[0.99] disabled:opacity-40"
+              className="w-full rounded-2xl py-4 text-base font-semibold transition active:scale-[0.99] disabled:opacity-40"
               style={{
-                background: canAccept
-                  ? "linear-gradient(145deg, rgba(91,168,138,0.9), rgba(91,163,184,0.75))"
-                  : "rgba(255,255,255,0.06)",
-                boxShadow: canAccept
-                  ? "0 10px 30px rgba(91,163,184,0.2), inset 0 1px 1px rgba(255,255,255,0.2)"
-                  : "none",
+                background: canAccept ? "#3f3830" : "#eadccf",
+                color: canAccept ? "#f7f1e8" : "#a89e8d",
+                boxShadow: canAccept ? "0 4px 16px rgba(63, 56, 48, 0.15)" : "none",
               }}
             >
               {isSubmitting ? (
@@ -310,14 +310,11 @@ export default function RequiredAcknowledgments() {
               type="button"
               onClick={() => canProceed && setStep((s) => s + 1)}
               disabled={!canProceed}
-              className="w-full rounded-2xl py-4 text-base font-semibold text-white transition active:scale-[0.99] disabled:opacity-40"
+              className="w-full rounded-2xl py-4 text-base font-semibold transition active:scale-[0.99] disabled:opacity-40"
               style={{
-                background: canProceed
-                  ? "linear-gradient(145deg, rgba(255,255,255,0.18), rgba(255,255,255,0.08))"
-                  : "rgba(255,255,255,0.06)",
-                boxShadow: canProceed
-                  ? "0 10px 30px rgba(0,0,0,0.2), inset 0 1px 1px rgba(255,255,255,0.15)"
-                  : "none",
+                background: canProceed ? "#3f3830" : "#eadccf",
+                color: canProceed ? "#f7f1e8" : "#a89e8d",
+                boxShadow: canProceed ? "0 4px 16px rgba(63, 56, 48, 0.15)" : "none",
               }}
             >
               {isFirstStep ? "Begin" : "Continue"}

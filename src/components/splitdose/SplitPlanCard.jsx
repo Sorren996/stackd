@@ -4,22 +4,22 @@ import { Split, Clock, ChevronRight } from "lucide-react";
 import { getPlanStatus, formatTimeRemaining, STATUS_LABELS } from "@/lib/splitDoseUtils";
 
 const STATUS_COLORS = {
-  planned: "#5ba88a",
-  review_approaching: "#d4a056",
-  review_due: "#d4a056",
-  postponed: "#6b92c4",
-  draft: "#5ba88a",
-  completed: "#5ba88a",
-  modified: "#5ba3b8",
-  skipped: "#6b92c4",
-  expired: "#6b92c4",
-  cancelled: "#6b92c4"
+  planned: "#5b6550",
+  review_approaching: "#af751b",
+  review_due: "#af751b",
+  postponed: "#8a7f70",
+  draft: "#5b6550",
+  completed: "#5b6550",
+  modified: "#5b6550",
+  skipped: "#8a7f70",
+  expired: "#8a7f70",
+  cancelled: "#8a7f70"
 };
 
 export default function SplitPlanCard({ plan }) {
   const navigate = useNavigate();
   const status = getPlanStatus(plan);
-  const color = STATUS_COLORS[status] || "#5ba88a";
+  const color = STATUS_COLORS[status] || "#5b6550";
   const label = STATUS_LABELS[status] || "Split plan";
 
   const timeRemaining = formatTimeRemaining(plan.current_review_at || plan.original_review_at);
@@ -29,10 +29,11 @@ export default function SplitPlanCard({ plan }) {
       type="button"
       whileTap={{ scale: 0.98 }}
       onClick={() => navigate(`/split-plan/${plan.id}`)}
-      className="relative flex w-full items-center gap-3 overflow-hidden mt-4 rounded-2xl border p-4 text-left backdrop-blur-sm mb-4"
+      className="relative flex w-full items-center gap-3 overflow-hidden mt-4 rounded-2xl border p-4 text-left mb-4"
       style={{
+        background: "#fdf9f2",
         borderColor: `${color}40`,
-        boxShadow: `0 8px 24px rgba(0,0,0,0.12), inset 0 1px 1px rgba(255,255,255,0.12), 0 0 0 1px ${color}15`
+        boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)"
       }}>
       
       <div

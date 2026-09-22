@@ -121,7 +121,8 @@ export default function MealMemoryModal({ open, match, currentMeal, onContinue, 
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.2 }}
-        className="fixed inset-0 z-[90] flex items-end justify-center overflow-y-auto bg-black/70 px-3 pb-6 pt-6 backdrop-blur-sm sm:items-center sm:px-4"
+        className="fixed inset-0 z-[90] flex items-end justify-center overflow-y-auto px-3 pb-6 pt-6 sm:items-center sm:px-4"
+        style={{ background: "rgba(63, 56, 48, 0.25)" }}
       >
         <motion.div
           initial={{ y: 40, scale: 0.98, opacity: 0 }}
@@ -129,17 +130,17 @@ export default function MealMemoryModal({ open, match, currentMeal, onContinue, 
           exit={{ y: 20, scale: 0.98, opacity: 0 }}
           transition={{ type: "spring", stiffness: 320, damping: 30 }}
           onClick={(e) => e.stopPropagation()}
-          className="stackd-glass meal-memory-modal w-full max-w-md max-h-[calc(100dvh-3rem)] overflow-y-auto rounded-3xl border p-5"
+          className="meal-memory-modal w-full max-w-md max-h-[calc(100dvh-3rem)] overflow-y-auto rounded-3xl border p-5"
           style={{
-            background: "linear-gradient(165deg, rgba(18,28,23,0.96), rgba(10,16,13,0.97))",
-            borderColor: "rgba(255,255,255,0.14)",
-            boxShadow: "0 24px 80px rgba(0,0,0,0.45), inset 0 1px 1px rgba(255,255,255,0.1)",
+            background: "#fdf9f2",
+            borderColor: "#eadccf",
+            boxShadow: "0 8px 28px rgba(63, 56, 48, 0.12)",
           }}
         >
           <div className="mb-3 flex items-start justify-between">
             <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full border border-teal-400/25 bg-teal-400/10">
-                <Sparkles className="h-4 w-4 text-teal-300" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-full border" style={{ borderColor: "rgba(91,101,80,0.25)", background: "rgba(91,101,80,0.10)" }}>
+                <Sparkles className="h-4 w-4" style={{ color: "#5b6550" }} />
               </div>
               <h2 className="text-base font-semibold text-white">You've had something similar before</h2>
             </div>
@@ -147,7 +148,7 @@ export default function MealMemoryModal({ open, match, currentMeal, onContinue, 
               type="button"
               onClick={onClose}
               className="flex h-8 w-8 items-center justify-center rounded-full border text-white/60 transition hover:text-white"
-              style={{ background: "linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))", borderColor: "rgba(255,255,255,0.12)" }}
+              style={{ background: "#f7f1e8", borderColor: "#eadccf" }}
               aria-label="Dismiss"
             >
               <X className="h-4 w-4" />
@@ -155,8 +156,8 @@ export default function MealMemoryModal({ open, match, currentMeal, onContinue, 
           </div>
 
           {aggregate && (
-            <div className="mb-3 rounded-xl border border-teal-400/15 bg-teal-400/[0.05] px-3 py-2.5">
-              <p className="text-[11px] leading-relaxed text-teal-100/85">{aggregate}</p>
+            <div className="mb-3 rounded-xl border px-3 py-2.5" style={{ borderColor: "rgba(91,101,80,0.15)", background: "rgba(91,101,80,0.05)" }}>
+              <p className="text-[11px] leading-relaxed" style={{ color: "#5b6550", opacity: 0.85 }}>{aggregate}</p>
             </div>
           )}
 
@@ -175,7 +176,7 @@ export default function MealMemoryModal({ open, match, currentMeal, onContinue, 
                 transition={{ duration: 0.25 }}
                 className="overflow-hidden"
               >
-                <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                <div className="mt-4 rounded-2xl border p-4" style={{ borderColor: "#eadccf", background: "#f7f1e8" }}>
                   <div className="mb-3 flex items-center gap-2">
                     <Clock className="h-3.5 w-3.5 text-white/45" />
                     <p className="text-xs font-semibold text-white/70">
@@ -185,7 +186,7 @@ export default function MealMemoryModal({ open, match, currentMeal, onContinue, 
 
                   <ResponseSparkline analysis={analysis} />
 
-                  <div className="mt-3 divide-y divide-white/5">
+                  <div className="mt-3 divide-y" style={{ borderColor: "#eadccf" }}>
                     <DetailRow label="Carbs logged" value={`${Math.round(analysis.carbs_logged)}g`} />
                     <DetailRow
                       label="Starting glucose"
@@ -226,11 +227,11 @@ export default function MealMemoryModal({ open, match, currentMeal, onContinue, 
                   </div>
 
                   {confounders.length > 0 && (
-                    <div className="mt-3 rounded-xl border border-amber-400/15 bg-amber-400/[0.05] px-3 py-2">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-200/70">Context that affected this response</p>
+                    <div className="mt-3 rounded-xl border px-3 py-2" style={{ borderColor: "rgba(175,117,27,0.15)", background: "rgba(175,117,27,0.05)" }}>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "#af751b", opacity: 0.7 }}>Context that affected this response</p>
                       <ul className="mt-1 space-y-0.5">
                         {confounders.map((c) => (
-                          <li key={c} className="flex items-center gap-1.5 text-[11px] text-amber-100/70">
+                          <li key={c} className="flex items-center gap-1.5 text-[11px]" style={{ color: "#af751b", opacity: 0.7 }}>
                             <Activity className="h-3 w-3 shrink-0" /> {c}
                           </li>
                         ))}
@@ -246,16 +247,16 @@ export default function MealMemoryModal({ open, match, currentMeal, onContinue, 
             <button
               type="button"
               onClick={onContinue}
-              className="w-full rounded-2xl py-3.5 text-sm font-semibold text-white transition"
-              style={{ background: "linear-gradient(145deg, rgba(91,168,138,0.9), rgba(91,163,184,0.78))", boxShadow: "0 8px 24px rgba(91,163,184,0.22), inset 0 1px 1px rgba(255,255,255,0.2)" }}
+              className="w-full rounded-2xl py-3.5 text-sm font-semibold transition"
+              style={{ background: "#3f3830", color: "#f7f1e8", boxShadow: "0 4px 16px rgba(63, 56, 48, 0.15)" }}
             >
               Continue logging
             </button>
             <button
               type="button"
               onClick={() => setShowDetails((v) => !v)}
-              className="flex w-full items-center justify-center gap-1.5 rounded-2xl border py-3 text-sm font-semibold text-white/80 transition hover:bg-white/5"
-              style={{ borderColor: "rgba(255,255,255,0.14)", background: "rgba(255,255,255,0.04)" }}
+              className="flex w-full items-center justify-center gap-1.5 rounded-2xl border py-3 text-sm font-semibold text-white/80 transition"
+              style={{ borderColor: "#eadccf", background: "#f7f1e8" }}
             >
               {showDetails ? "Hide past response" : "View past response"}
               <ArrowRight className="h-3.5 w-3.5" />

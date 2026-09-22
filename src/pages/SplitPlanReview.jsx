@@ -267,7 +267,7 @@ export default function SplitPlanReview() {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 text-center">
         <p className="text-sm text-white/45">This plan could not be found.</p>
-        <button onClick={() => navigate("/")} className="mt-4 text-sm text-teal-300/80 underline">
+        <button onClick={() => navigate("/")} className="mt-4 text-sm underline" style={{ color: "#5b6550" }}>
           Return to your flow
         </button>
       </div>
@@ -285,7 +285,7 @@ export default function SplitPlanReview() {
           type="button"
           onClick={() => navigate("/")}
           className="flex h-9 w-9 items-center justify-center rounded-full border text-white/60 transition hover:text-white"
-          style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.1)" }}
+          style={{ background: "#fdf9f2", borderColor: "#eadccf" }}
         >
           <ChevronLeft className="h-5 w-5" />
         </button>
@@ -296,7 +296,7 @@ export default function SplitPlanReview() {
       </div>
 
       {/* Meal summary */}
-      <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+      <div className="rounded-2xl border p-4" style={{ borderColor: "#eadccf", background: "#fdf9f2", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}>
         <p className="text-sm font-bold uppercase tracking-widest text-white/40">{plan.meal_name || "Meal"}</p>
         <div className="mt-2 grid grid-cols-2 gap-3 text-xs">
           <InfoRow label="Meal time" value={mealTime ? formatClockTime(mealTime) : "--"} />
@@ -323,13 +323,13 @@ export default function SplitPlanReview() {
           </p>
 
           {/* Glucose status */}
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+          <div className="rounded-2xl border p-4" style={{ borderColor: "#eadccf", background: "#fdf9f2", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}>
             <p className="mb-3 text-[10px] font-bold uppercase tracking-wider text-white/35">Current Glucose</p>
             {isGlucoseMissing ? (
               <SafetyMessage
                 title="Current glucose unavailable"
                 message="Log a glucose reading to see where you are right now."
-                color="#d4a056"
+                color="#af751b"
                 actionLabel="Log glucose"
                 onAction={() => navigate("/")}
               />
@@ -337,7 +337,7 @@ export default function SplitPlanReview() {
               <SafetyMessage
                 title="Glucose data may be outdated"
                 message="Check a current glucose reading before making a treatment decision."
-                color="#d4a056"
+                color="#af751b"
                 glucoseValue={latestGlucose?.value}
                 glucoseTime={formatElapsedTime(latestGlucose?.recorded_at, now)}
               />
@@ -346,7 +346,7 @@ export default function SplitPlanReview() {
                 <span className="text-3xl font-bold text-white">{latestGlucose.value}</span>
                 <span className="text-xs text-white/40">mg/dL</span>
                 <div className="ml-auto flex items-center gap-1.5">
-                  <TrendIcon className="h-4 w-4" style={{ color: isGlucoseLow ? "#6b92c4" : "#5ba88a" }} />
+                  <TrendIcon className="h-4 w-4" style={{ color: isGlucoseLow ? "#c97060" : "#5b6550" }} />
                   <span className="text-xs font-medium text-white/60">{trend.label}</span>
                 </div>
               </div>
@@ -363,21 +363,21 @@ export default function SplitPlanReview() {
             <CautionCard
               title="Glucose is currently trending down"
               message="Review your established treatment plan and active insulin before making a dosing decision."
-              color="#6b92c4"
+              color="#8a7f70"
             />
           )}
           {isGlucoseLow && (
             <CautionCard
               title="Glucose is below your comfort zone"
               message="Take care of your glucose first. You can still log insulin that was already administered, but consider whether now is the right moment."
-              color="#6b92c4"
+              color="#c97060"
             />
           )}
           {additionalInsulin.length > 0 && (
             <CautionCard
               title="Additional insulin has been logged since this plan was created"
               message={`${additionalInsulin.length} dose${additionalInsulin.length > 1 ? "s" : ""} logged after the first portion. Review your active insulin before deciding on the remaining portion.`}
-              color="#d4a056"
+              color="#af751b"
               items={additionalInsulin.map((d) => ({
                 label: `${d.insulin_type} · ${d.units}u`,
                 time: formatClockTime(d.administered_at),
@@ -386,21 +386,21 @@ export default function SplitPlanReview() {
           )}
 
           {/* Active insulin */}
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+          <div className="rounded-2xl border p-4" style={{ borderColor: "#eadccf", background: "#fdf9f2", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}>
             <div className="flex items-center justify-between">
               <p className="text-[10px] font-bold uppercase tracking-wider text-white/35">Active Insulin (IOB)</p>
               <span className="text-lg font-bold text-white">{activeIOB.toFixed(1)}u</span>
             </div>
             {hpfStatus.isActive && (
-              <div className="mt-2 flex items-center gap-1.5 border-t border-white/8 pt-2">
-                <AlertTriangle className="h-3 w-3 text-amber-400/80" />
-                <span className="text-[11px] text-amber-400/70">High protein/fat window still active</span>
+              <div className="mt-2 flex items-center gap-1.5 border-t pt-2" style={{ borderColor: "#eadccf" }}>
+                <AlertTriangle className="h-3 w-3" style={{ color: "#af751b", opacity: 0.8 }} />
+                <span className="text-[11px]" style={{ color: "#af751b", opacity: 0.7 }}>High protein/fat window still active</span>
               </div>
             )}
           </div>
 
           {carbsAfterMeal.length > 0 && (
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+            <div className="rounded-2xl border p-4" style={{ borderColor: "#eadccf", background: "#fdf9f2", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}>
               <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-white/35">Carbs Logged After Meal</p>
               {carbsAfterMeal.slice(0, 3).map((c) => (
                 <div key={c.id} className="flex items-center justify-between py-1 text-xs">
@@ -416,10 +416,11 @@ export default function SplitPlanReview() {
             <button
               type="button"
               onClick={() => handleOpenLogSheet(plan.follow_up_planned_units)}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-semibold text-white transition"
+              className="flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-semibold transition"
               style={{
-                background: "linear-gradient(145deg, rgba(91,168,138,0.85), rgba(91,163,184,0.72))",
-                boxShadow: "0 8px 28px rgba(91,163,184,0.22), inset 0 1px 1px rgba(255,255,255,0.2)",
+                background: "#3f3830",
+                color: "#f7f1e8",
+                boxShadow: "0 4px 16px rgba(63, 56, 48, 0.15)",
               }}
             >
               <Check className="h-4 w-4" />
@@ -443,7 +444,7 @@ export default function SplitPlanReview() {
 
       {/* Terminal state display */}
       {isTerminal && (
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-center">
+        <div className="rounded-2xl border p-4 text-center" style={{ borderColor: "#eadccf", background: "#fdf9f2", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}>
           <p className="text-sm font-semibold text-white">{STATUS_LABELS[planStatus]}</p>
           {plan.follow_up_decision_at && (
             <p className="mt-1 text-xs text-white/40">Decided {formatElapsedTime(plan.follow_up_decision_at, now)}</p>
@@ -504,7 +505,7 @@ function SafetyMessage({ title, message, color, glucoseValue, glucoseTime, actio
         <p className="mt-2 text-xs text-white/50">Last reading: {glucoseValue} mg/dL · {glucoseTime}</p>
       )}
       {actionLabel && onAction && (
-        <button type="button" onClick={onAction} className="mt-3 rounded-xl border border-white/15 px-3 py-2 text-xs font-semibold text-white/70">
+        <button type="button" onClick={onAction} className="mt-3 rounded-xl border px-3 py-2 text-xs font-semibold text-white/70" style={{ borderColor: "#eadccf", background: "#fdf9f2" }}>
           {actionLabel}
         </button>
       )}
@@ -541,7 +542,8 @@ function ActionButton({ icon: Icon, label, onClick }) {
     <button
       type="button"
       onClick={onClick}
-      className="flex min-h-[44px] flex-col items-center justify-center gap-1 rounded-2xl border border-white/10 bg-white/[0.03] py-2 text-[10px] font-medium text-white/60 transition hover:text-white/80"
+      className="flex min-h-[44px] flex-col items-center justify-center gap-1 rounded-2xl border py-2 text-[10px] font-medium text-white/60 transition hover:text-white/80"
+      style={{ borderColor: "#eadccf", background: "#fdf9f2" }}
     >
       <Icon className="h-4 w-4" />
       {label}
@@ -555,7 +557,8 @@ function LogFollowUpSheet({ amount, setAmount, time, setTime, plannedAmount, ins
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[100] flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center"
+      className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center"
+      style={{ background: "rgba(63, 56, 48, 0.25)" }}
       onClick={onClose}
     >
       <motion.div
@@ -565,11 +568,11 @@ function LogFollowUpSheet({ amount, setAmount, time, setTime, plannedAmount, ins
         transition={{ type: "spring", stiffness: 380, damping: 32 }}
         onClick={(e) => e.stopPropagation()}
         className="w-full max-w-md rounded-t-3xl border p-5 sm:rounded-3xl"
-        style={{ background: "linear-gradient(165deg, hsl(162,12%,9%), hsl(162,10%,6%))", borderColor: "rgba(255,255,255,0.14)", boxShadow: "0 -24px 60px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.1)" }}
+        style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 8px 28px rgba(63, 56, 48, 0.12)" }}
       >
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-base font-semibold text-white">Log follow-up portion</h3>
-          <button type="button" onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-full border text-white/60" style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.1)" }}>
+          <button type="button" onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-full border text-white/60" style={{ background: "#f7f1e8", borderColor: "#eadccf" }}>
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -580,11 +583,11 @@ function LogFollowUpSheet({ amount, setAmount, time, setTime, plannedAmount, ins
 
         <div className="space-y-3">
           <NumberPadField label="Amount" value={amount} onChange={setAmount} unit="units" placeholder="0" maxLength={4} large />
-          <div className="flex items-center justify-between rounded-xl bg-white/[0.04] px-3 py-2">
+          <div className="flex items-center justify-between rounded-xl px-3 py-2" style={{ background: "#f7f1e8" }}>
             <span className="text-[10px] uppercase tracking-wider text-white/35">Planned amount</span>
             <span className="text-sm font-semibold text-white/60">{plannedAmount} units</span>
           </div>
-          <div className="flex items-center justify-between rounded-xl bg-white/[0.04] px-3 py-2">
+          <div className="flex items-center justify-between rounded-xl px-3 py-2" style={{ background: "#f7f1e8" }}>
             <span className="text-[10px] uppercase tracking-wider text-white/35">Insulin type</span>
             <span className="text-sm font-semibold text-white/60">{insulinType || "--"}</span>
           </div>
@@ -595,8 +598,8 @@ function LogFollowUpSheet({ amount, setAmount, time, setTime, plannedAmount, ins
           type="button"
           onClick={onConfirm}
           disabled={isSubmitting || !amount || Number(amount) <= 0}
-          className="mt-4 w-full rounded-2xl py-3.5 text-sm font-semibold text-white transition disabled:opacity-40"
-          style={{ background: "linear-gradient(145deg, rgba(91,168,138,0.85), rgba(91,163,184,0.72))", boxShadow: "0 8px 28px rgba(91,163,184,0.22), inset 0 1px 1px rgba(255,255,255,0.2)" }}
+          className="mt-4 w-full rounded-2xl py-3.5 text-sm font-semibold transition disabled:opacity-40"
+          style={{ background: "#3f3830", color: "#f7f1e8", boxShadow: "0 4px 16px rgba(63, 56, 48, 0.15)" }}
         >
           {isSubmitting ? "Logging..." : "Confirm and log"}
         </button>
@@ -611,7 +614,8 @@ function PostponeSheet({ onSelect, onClose }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[100] flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center"
+      className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center"
+      style={{ background: "rgba(63, 56, 48, 0.25)" }}
       onClick={onClose}
     >
       <motion.div
@@ -621,11 +625,11 @@ function PostponeSheet({ onSelect, onClose }) {
         transition={{ type: "spring", stiffness: 380, damping: 32 }}
         onClick={(e) => e.stopPropagation()}
         className="w-full max-w-md rounded-t-3xl border p-5 sm:rounded-3xl"
-        style={{ background: "linear-gradient(165deg, hsl(162,12%,9%), hsl(162,10%,6%))", borderColor: "rgba(255,255,255,0.14)", boxShadow: "0 -24px 60px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.1)" }}
+        style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 8px 28px rgba(63, 56, 48, 0.12)" }}
       >
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-base font-semibold text-white">Review later</h3>
-          <button type="button" onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-full border text-white/60" style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.1)" }}>
+          <button type="button" onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-full border text-white/60" style={{ background: "#f7f1e8", borderColor: "#eadccf" }}>
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -635,7 +639,8 @@ function PostponeSheet({ onSelect, onClose }) {
               key={option.value}
               type="button"
               onClick={() => onSelect(option.value)}
-              className="flex min-h-[44px] items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] py-3 text-sm font-medium text-white/70 transition hover:text-white"
+              className="flex min-h-[44px] items-center justify-center gap-2 rounded-2xl border py-3 text-sm font-medium text-white/70 transition hover:text-white"
+              style={{ borderColor: "#eadccf", background: "#f7f1e8" }}
             >
               <Bell className="h-3.5 w-3.5" />
               {option.label}

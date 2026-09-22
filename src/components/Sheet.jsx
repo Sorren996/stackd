@@ -62,7 +62,8 @@ export default function Sheet({ open, onClose, children, accentColor }) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: prefersReducedMotion ? 0 : 0.2 }}
-            className="absolute inset-0 bg-black/55 backdrop-blur-[6px]"
+            className="absolute inset-0"
+            style={{ background: "rgba(63, 56, 48, 0.25)" }}
             onClick={onClose}
           />
 
@@ -96,14 +97,11 @@ export default function Sheet({ open, onClose, children, accentColor }) {
             dragConstraints={{ top: 0, bottom: 0 }}
             dragElastic={{ top: 0, bottom: 0.5 }}
             onDragEnd={handleDragEnd}
-            className="stackd-sheet-surface relative flex h-[90dvh] max-h-[92dvh] flex-col overflow-hidden rounded-t-[28px] border-t"
-            // Change from solid gradient to semi-transparent surface with blur
-style={{
-  background: "rgba(20, 25, 23, 0.11)", // Semi-transparent deep charcoal
-  backdropFilter: "blur(24px)",        // The frosted effect
-  WebkitBackdropFilter: "blur(24px)", // Required for Safari/iOS
-  borderColor: "rgba(255,255,255,0.1)",
-  boxShadow: "0 -24px 60px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.08)",
+            className="relative flex h-[90dvh] max-h-[92dvh] flex-col overflow-hidden rounded-t-[28px] border-t"
+            style={{
+  background: "#fdf9f2",
+  borderColor: "#eadccf",
+  boxShadow: "0 -12px 40px rgba(63, 56, 48, 0.10)",
   willChange: "transform",
 }}
           >
@@ -114,7 +112,7 @@ style={{
               role="button"
               aria-label="Drag down to dismiss"
             >
-              <div className="h-1.5 w-10 rounded-full bg-white/20" />
+              <div className="h-1.5 w-10 rounded-full" style={{ background: "#d8cec2" }} />
             </div>
 
             {children}

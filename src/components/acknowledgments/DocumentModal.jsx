@@ -18,11 +18,11 @@ export default function DocumentModal({ docKey, onClose }) {
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         className="fixed inset-0 z-[300] flex flex-col"
-        style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)" }}
+        style={{ background: "rgba(63, 56, 48, 0.25)" }}
       >
         <div
-          className="flex items-center justify-between border-b border-white/10 px-5 py-4 pt-[max(env(safe-area-inset-top),1rem)]"
-          style={{ background: "linear-gradient(160deg, hsl(162,12%,9%), hsl(162,10%,6%))" }}
+          className="flex items-center justify-between border-b px-5 py-4 pt-[max(env(safe-area-inset-top),1rem)]"
+          style={{ background: "#fdf9f2", borderColor: "#eadccf" }}
         >
           <div>
             <h2 className="text-base font-bold text-white">{doc.title}</h2>
@@ -31,7 +31,8 @@ export default function DocumentModal({ docKey, onClose }) {
           <button
             type="button"
             onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/60 transition hover:text-white"
+            className="flex h-9 w-9 items-center justify-center rounded-full border text-white/60 transition hover:text-white"
+            style={{ background: "#f7f1e8", borderColor: "#eadccf" }}
           >
             <X className="h-4 w-4" />
           </button>
@@ -39,7 +40,7 @@ export default function DocumentModal({ docKey, onClose }) {
 
         <div
           className="flex-1 overflow-y-auto px-5 py-5 pb-[max(env(safe-area-inset-bottom),2rem)]"
-          style={{ scrollbarWidth: "thin" }}
+          style={{ scrollbarWidth: "thin", background: "#fdf9f2" }}
         >
           <div className="mx-auto max-w-md space-y-4">
             {paragraphs.map((para, i) => (
@@ -50,15 +51,12 @@ export default function DocumentModal({ docKey, onClose }) {
           </div>
         </div>
 
-        <div className="border-t border-white/10 px-5 py-3 pb-[max(env(safe-area-inset-bottom),0.75rem)]" style={{ background: "linear-gradient(160deg, hsl(162,12%,9%), hsl(162,10%,6%))" }}>
+        <div className="border-t px-5 py-3 pb-[max(env(safe-area-inset-bottom),0.75rem)]" style={{ background: "#fdf9f2", borderColor: "#eadccf" }}>
           <button
             type="button"
             onClick={onClose}
-            className="w-full rounded-2xl py-3.5 text-sm font-semibold text-white transition active:scale-[0.99]"
-            style={{
-              background: "linear-gradient(145deg, rgba(91,168,138,0.85), rgba(91,163,184,0.72))",
-              boxShadow: "0 8px 24px rgba(91,163,184,0.18), inset 0 1px 1px rgba(255,255,255,0.2)",
-            }}
+            className="w-full rounded-2xl py-3.5 text-sm font-semibold transition active:scale-[0.99]"
+            style={{ background: "#3f3830", color: "#f7f1e8", boxShadow: "0 4px 16px rgba(63, 56, 48, 0.15)" }}
           >
             I have read this document
           </button>

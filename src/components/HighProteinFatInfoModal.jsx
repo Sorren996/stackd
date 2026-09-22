@@ -62,7 +62,8 @@ export default function HighProteinFatInfoModal({ open, onClose }) {
         aria-label="High protein and high fat meals"
       >
         <div
-          className="fixed inset-0 bg-black/80"
+          className="fixed inset-0"
+          style={{ background: "rgba(63, 56, 48, 0.25)" }}
           aria-hidden="true"
           onTouchMove={(e) => e.preventDefault()}
         />
@@ -72,12 +73,11 @@ export default function HighProteinFatInfoModal({ open, onClose }) {
           exit={{ opacity: 0, scale: 0.96, y: 8 }}
           transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
           onClick={(e) => e.stopPropagation()}
-          className="stackd-glass relative z-10 flex max-h-[85dvh] w-full max-w-sm flex-col overflow-hidden rounded-3xl border shadow-2xl"
+          className="relative z-10 flex max-h-[85dvh] w-full max-w-sm flex-col overflow-hidden rounded-3xl border shadow-2xl"
           style={{
-            background: "linear-gradient(165deg, rgba(18,28,23,0.97), rgba(10,16,13,0.98))",
-            borderColor: "rgba(255,255,255,0.14)",
-            boxShadow:
-              "0 24px 80px rgba(0,0,0,0.6), inset 0 1px 1px rgba(255,255,255,0.1)",
+            background: "#fdf9f2",
+            borderColor: "#eadccf",
+            boxShadow: "0 8px 28px rgba(63, 56, 48, 0.12)",
           }}
         >
           <div className="flex shrink-0 items-center justify-between px-5 pb-2 pt-5">
@@ -90,8 +90,8 @@ export default function HighProteinFatInfoModal({ open, onClose }) {
               onClick={onClose}
               className="flex h-8 w-8 items-center justify-center rounded-full border text-white/60 transition hover:text-white"
               style={{
-                background: "rgba(255,255,255,0.06)",
-                borderColor: "rgba(255,255,255,0.12)",
+                background: "#f7f1e8",
+                borderColor: "#eadccf",
               }}
               aria-label="Close"
             >
@@ -146,13 +146,13 @@ export default function HighProteinFatInfoModal({ open, onClose }) {
               <div
                 className="rounded-2xl border p-4"
                 style={{
-                  borderColor: "rgba(217,169,56,0.25)",
-                  background: "rgba(217,169,56,0.06)",
+                  borderColor: "rgba(175,117,27,0.25)",
+                  background: "rgba(175,117,27,0.06)",
                 }}
               >
                 <div className="mb-2 flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4 text-amber-400/80" />
-                  <span className="text-sm font-semibold text-amber-300/90">
+                  <AlertTriangle className="h-4 w-4" style={{ color: "#af751b", opacity: 0.8 }} />
+                  <span className="text-sm font-semibold" style={{ color: "#af751b", opacity: 0.9 }}>
                     Monitoring reminder
                   </span>
                 </div>
@@ -168,12 +168,11 @@ export default function HighProteinFatInfoModal({ open, onClose }) {
             <button
               type="button"
               onClick={onClose}
-              className="mt-5 w-full rounded-2xl py-3.5 text-sm font-semibold text-white transition"
+              className="mt-5 w-full rounded-2xl py-3.5 text-sm font-semibold transition"
               style={{
-                background:
-                  "linear-gradient(145deg, rgba(91,168,138,0.85), rgba(91,163,184,0.72))",
-                boxShadow:
-                  "0 8px 28px rgba(91,163,184,0.22), inset 0 1px 1px rgba(255,255,255,0.2)",
+                background: "#3f3830",
+                color: "#f7f1e8",
+                boxShadow: "0 4px 16px rgba(63, 56, 48, 0.15)",
               }}
             >
               Understood

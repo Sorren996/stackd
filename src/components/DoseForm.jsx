@@ -415,7 +415,7 @@ export default function DoseForm({ open, onOpenChange, mode = "insulin" }) {
               type="button"
               onClick={attemptClose}
               className="flex h-8 w-8 items-center justify-center rounded-full border text-white/60 transition hover:text-white"
-              style={{ background: "linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))", borderColor: "rgba(255,255,255,0.12)" }}
+              style={{ background: "#f7f1e8", borderColor: "#eadccf" }}
               aria-label="Close"
             >
               <X className="h-4 w-4" />
@@ -462,8 +462,8 @@ export default function DoseForm({ open, onOpenChange, mode = "insulin" }) {
                         <button
                           type="button"
                           onClick={addInsulinRow}
-                          className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 py-3 text-sm font-medium text-white/60 transition hover:border-teal-400/50 hover:bg-teal-400/5 hover:text-teal-300"
-                          style={{ boxShadow: "inset 0 1px 1px rgba(255,255,255,0.04)" }}
+                          className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed py-3 text-sm font-medium text-white/60 transition"
+                          style={{ borderColor: "#eadccf" }}
                         >
                           <Plus className="h-4 w-4" />
                           Add another dose
@@ -489,8 +489,8 @@ export default function DoseForm({ open, onOpenChange, mode = "insulin" }) {
                         type="button"
                         onClick={handleSubmitInsulin}
                         disabled={!totalUnits || loggingTab === "insulin" || createDoses.isPending}
-                        className="w-full rounded-2xl py-4 text-base font-semibold text-white transition disabled:opacity-40"
-                        style={{ background: "linear-gradient(145deg, rgba(91,168,138,0.85), rgba(91,163,184,0.72))", boxShadow: "0 8px 28px rgba(91,163,184,0.22), inset 0 1px 1px rgba(255,255,255,0.2)" }}
+                        className="w-full rounded-2xl py-4 text-base font-semibold transition disabled:opacity-40"
+                        style={{ background: "#3f3830", color: "#f7f1e8", boxShadow: "0 4px 16px rgba(63, 56, 48, 0.15)" }}
                       >
                         {loggingTab === "insulin" || createDoses.isPending
                           ? "Logging..."
@@ -523,8 +523,8 @@ export default function DoseForm({ open, onOpenChange, mode = "insulin" }) {
                         type="button"
                         onClick={handleSubmitGlucose}
                         disabled={!glucoseValue || loggingTab === "glucose" || createGlucose.isPending}
-                        className="w-full rounded-2xl py-4 text-base font-semibold text-white transition disabled:opacity-40"
-                        style={{ background: "linear-gradient(145deg, rgba(91,168,138,0.85), rgba(91,163,184,0.72))", boxShadow: "0 8px 28px rgba(91,163,184,0.22), inset 0 1px 1px rgba(255,255,255,0.2)" }}
+                        className="w-full rounded-2xl py-4 text-base font-semibold transition disabled:opacity-40"
+                        style={{ background: "#3f3830", color: "#f7f1e8", boxShadow: "0 4px 16px rgba(63, 56, 48, 0.15)" }}
                       >
                         {loggingTab === "glucose" || createGlucose.isPending ? "Logging..." : `Log ${glucoseValue || "--"} mg/dL`}
                       </button>
@@ -544,7 +544,8 @@ export default function DoseForm({ open, onOpenChange, mode = "insulin" }) {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.18 }}
-              className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 px-6 backdrop-blur-sm"
+              className="fixed inset-0 z-[100] flex items-center justify-center px-6"
+              style={{ background: "rgba(63, 56, 48, 0.25)" }}
               onClick={() => setShowDiscardPrompt(false)}
             >
               <motion.div
@@ -553,8 +554,8 @@ export default function DoseForm({ open, onOpenChange, mode = "insulin" }) {
                 exit={{ scale: 0.92, opacity: 0 }}
                 transition={{ type: "spring", stiffness: 380, damping: 28 }}
                 onClick={(e) => e.stopPropagation()}
-                className="stackd-glass w-full max-w-sm rounded-3xl border p-6 text-center"
-                style={{ background: "linear-gradient(165deg, hsl(162,12%,11%), hsl(162,10%,7%))", borderColor: "rgba(255,255,255,0.14)", boxShadow: "0 24px 60px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.08)" }}
+                className="w-full max-w-sm rounded-3xl border p-6 text-center"
+                style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 8px 28px rgba(63, 56, 48, 0.12)" }}
               >
                 <h3 className="text-lg font-semibold text-white">Discard this entry?</h3>
                 <p className="mt-2 text-sm leading-relaxed text-white/55">
@@ -565,15 +566,15 @@ export default function DoseForm({ open, onOpenChange, mode = "insulin" }) {
                     type="button"
                     onClick={() => setShowDiscardPrompt(false)}
                     className="flex-1 rounded-2xl border py-3 text-sm font-semibold text-white/80 transition hover:text-white"
-                    style={{ borderColor: "rgba(255,255,255,0.14)", background: "rgba(255,255,255,0.04)" }}
+                    style={{ borderColor: "#eadccf", background: "#f7f1e8" }}
                   >
                     Keep editing
                   </button>
                   <button
                     type="button"
                     onClick={discardAndClose}
-                    className="flex-1 rounded-2xl py-3 text-sm font-semibold text-white transition"
-                    style={{ background: "linear-gradient(145deg, rgba(201,112,96,0.8), rgba(180,90,75,0.7))", boxShadow: "0 6px 20px rgba(201,112,96,0.2)" }}
+                    className="flex-1 rounded-2xl py-3 text-sm font-semibold transition"
+                    style={{ background: "#c97060", color: "#f7f1e8" }}
                   >
                     Discard
                   </button>

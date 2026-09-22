@@ -128,14 +128,10 @@ export default function SplitDosePlanner({ mealName, expectedDose, onConfirm }) 
                 className="flex-1 rounded-full border px-3 py-2.5 text-xs font-semibold transition"
                 style={{
                   transition: SEGMENT_TRANSITION,
-                  borderColor: isSelected ? "rgba(91,168,138,0.65)" : "rgba(255,255,255,0.10)",
-                  background: isSelected
-                    ? "linear-gradient(145deg, rgba(91,168,138,0.20), rgba(91,163,184,0.10))"
-                    : "rgba(255,255,255,0.03)",
-                  boxShadow: isSelected
-                    ? "0 0 0 1px rgba(91,168,138,0.30), 0 0 18px rgba(91,168,138,0.28), inset 0 1px 1px rgba(255,255,255,0.10)"
-                    : "inset 0 1px 1px rgba(255,255,255,0.04)",
-                  color: isSelected ? "rgba(255,255,255,0.97)" : "rgba(255,255,255,0.60)",
+                  borderColor: isSelected ? "rgba(91,101,80,0.55)" : "#eadccf",
+                  background: isSelected ? "rgba(91,101,80,0.12)" : "#fdf9f2",
+                  boxShadow: isSelected ? "0 0 0 1px rgba(91,101,80,0.20)" : "none",
+                  color: isSelected ? "#3f3830" : "#8a7f70",
                 }}
                 aria-pressed={isSelected}
               >
@@ -160,12 +156,12 @@ export default function SplitDosePlanner({ mealName, expectedDose, onConfirm }) 
                   <div className="flex items-center justify-between">
                     <span className="stackd-section-label">Total Meal Insulin</span>
                     {expectedDose ? (
-                      <span className="text-[11px] text-teal-300/60">
+                      <span className="text-[11px]" style={{ color: "#5b6550", opacity: 0.6 }}>
                         estimate {expectedDose}u
                       </span>
                     ) : null}
                   </div>
-                  <div className="mt-3 flex items-baseline gap-2 border-b border-white/8 pb-5">
+                  <div className="mt-3 flex items-baseline gap-2 border-b pb-5" style={{ borderColor: "#eadccf" }}>
                     <InlineNumberInput
                       value={totalPlannedUnits}
                       onChange={handleTotalChange}
@@ -211,14 +207,10 @@ export default function SplitDosePlanner({ mealName, expectedDose, onConfirm }) 
                           className="rounded-full px-3.5 py-1.5 text-xs font-semibold transition"
                           style={{
                             transition: SEGMENT_TRANSITION,
-                            border: `1px solid ${isSelected ? "rgba(91,168,138,0.55)" : "rgba(255,255,255,0.08)"}`,
-                            background: isSelected
-                              ? "linear-gradient(145deg, rgba(91,168,138,0.18), rgba(91,163,184,0.10))"
-                              : "transparent",
-                            boxShadow: isSelected
-                              ? "0 0 14px rgba(91,168,138,0.22), inset 0 1px 1px rgba(255,255,255,0.08)"
-                              : "none",
-                            color: isSelected ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.55)",
+                            border: `1px solid ${isSelected ? "rgba(91,101,80,0.55)" : "#eadccf"}`,
+                            background: isSelected ? "rgba(91,101,80,0.12)" : "transparent",
+                            boxShadow: isSelected ? "0 0 14px rgba(91,101,80,0.15)" : "none",
+                            color: isSelected ? "#3f3830" : "#8a7f70",
                           }}
                           aria-pressed={isSelected}
                         >
@@ -230,7 +222,7 @@ export default function SplitDosePlanner({ mealName, expectedDose, onConfirm }) 
                 </div>
 
                 {/* Subtle divider between portions */}
-                <div className="border-t border-white/8" />
+                <div className="border-t" style={{ borderColor: "#eadccf" }} />
 
                 {/* Second portion */}
                 <div>
@@ -252,7 +244,7 @@ export default function SplitDosePlanner({ mealName, expectedDose, onConfirm }) 
                 </div>
 
                 {/* Timing — native iOS setting row */}
-                <div className="flex items-center justify-between gap-3 border-t border-white/8 pt-5">
+                <div className="flex items-center justify-between gap-3 border-t pt-5" style={{ borderColor: "#eadccf" }}>
                   <span className="stackd-section-label">Take Remaining Portion</span>
                   <div className="relative flex items-center">
                     <select
@@ -271,7 +263,7 @@ export default function SplitDosePlanner({ mealName, expectedDose, onConfirm }) 
                 </div>
 
                 {/* Insulin type — native iOS setting row */}
-                <div className="flex items-center justify-between gap-3 border-t border-white/8 pt-5">
+                <div className="flex items-center justify-between gap-3 border-t pt-5" style={{ borderColor: "#eadccf" }}>
                   <span className="stackd-section-label">Insulin Type</span>
                   <div className="relative flex min-w-0 items-center">
                     <select
@@ -299,10 +291,11 @@ export default function SplitDosePlanner({ mealName, expectedDose, onConfirm }) 
                   type="button"
                   onClick={() => setShowConfirmation(true)}
                   disabled={!canReview}
-                  className="w-full rounded-2xl py-4 text-base font-semibold text-white transition disabled:opacity-40"
+                  className="w-full rounded-2xl py-4 text-base font-semibold transition disabled:opacity-40"
                   style={{
-                    background: "linear-gradient(145deg, rgba(91,168,138,0.85), rgba(91,163,184,0.72))",
-                    boxShadow: "0 8px 28px rgba(91,163,184,0.22), inset 0 1px 1px rgba(255,255,255,0.2)",
+                    background: "#3f3830",
+                    color: "#f7f1e8",
+                    boxShadow: "0 4px 16px rgba(63, 56, 48, 0.15)",
                   }}
                 >
                   Review plan
