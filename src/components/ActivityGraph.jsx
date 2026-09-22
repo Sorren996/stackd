@@ -581,6 +581,23 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     () => Math.max(...filteredDoses.filter((d) => isBasalInsulinType(d.insulin_type)).map(getDoseUnits), 1),
     [filteredDoses]
   );
+
+  // Peak activity per curve — used to normalize each curve so every dose
+  // produces a clearly visible curve regardless of unit size. Without this,
+  // small activity values (peak ~0.02) map to a near-flat line at the chart
+  // floor and are invisible against the glucose scale.
+  const curvePeakActivity = useMemo(() => {
+    const peaks = {};
+    allCurvesMeta.forEach(({ key, curve }) => {
+      let peak = 0;
+      for (const p of curve) {
+        if (p.activity > peak) peak = p.activity;
+      }
+      peaks[key] = peak || 1;
+    });
+    return peaks;
+  }, [allCurvesMeta]);
+
   const chartData = useMemo(() => {
     if (!doses.length && !glucoseReadings.length && !carbEntries.length) return [];
     const result = [];
@@ -600,11 +617,9 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           const ratio = hi === lo ? 0 : (t - curve[lo].time) / (curve[hi].time - curve[lo].time);
           const activity = curve[lo].activity + ratio * (curve[hi].activity - curve[lo].activity);
           const activeUnits = curve[lo].activeUnits + ratio * (curve[hi].activeUnits - curve[lo].activeUnits);
-          const isBasal = isBasalInsulinType(dose.insulin_type);
-          const visualMax = isBasal ? 30 : 70;
-          const refMax = isBasal ? maxBasalUnits : maxBolusUnits;
-          const insulinNormalized = (activity * (doseUnits / refMax) * visualMax) / 75;
-          point[key] = effectiveMin + insulinNormalized * (effectiveMax - effectiveMin) * 0.15;
+          const peak = curvePeakActivity[key] || 1;
+          const normalizedActivity = peak > 0 ? activity / peak : 0;
+          point[key] = effectiveMin + normalizedActivity * (effectiveMax - effectiveMin) * 0.18;
           point[`${key}_actual`] = activeUnits;
           point[`${key}_activity`] = activity;
           point[`${key}_total`] = doseUnits;
@@ -616,7 +631,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       result.push(point);
     }
     return result;
-  }, [doses, glucoseReadings, carbEntries, filters, domainStart, domainEnd, allCurvesMeta, glucoseMap, maxBolusUnits, maxBasalUnits, effectiveMax, effectiveMin]);
+  }, [doses, glucoseReadings, carbEntries, filters, domainStart, domainEnd, allCurvesMeta, glucoseMap, maxBolusUnits, maxBasalUnits, curvePeakActivity, effectiveMax, effectiveMin]);
 
   const doseKeys = useMemo(() =>
   filteredDoses.map((dose, index) => ({
@@ -1400,12 +1415,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                     background: "#f7f1e8",
                   }}
                 />
-                <div
-                  className="absolute left-1/2 -translate-x-1/2 -translate-y-[160%] whitespace-nowrap rounded-full border px-1.5 py-0.5 text-[9px] font-semibold leading-none"
-                  style={{ color: "#3f3830", borderColor: "#eadccf", background: "#fdf9f2" }}
-                >
-                  {Math.round(entry.carbs)}g
-                </div>
               </div>
             );
           })}
