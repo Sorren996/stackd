@@ -1,4 +1,4 @@
-import { ComposedChart, Area, Line, XAxis, YAxis } from "recharts";
+import { ComposedChart, Line, XAxis, YAxis } from "recharts";
 import { format } from "date-fns";
 import { Wheat } from "lucide-react";
 import { useIsLightTheme } from "@/lib/theme";
@@ -96,15 +96,6 @@ export default function GraphLowerSection({
           data={chartData}
           margin={{ top: insulinMarginTop, right: 0, left: -20, bottom: 0 }}
         >
-          <defs>
-            {doseKeys.map((k) => (
-              <linearGradient key={`insulin_fill_${k.key}`} id={`insulin_fill_${k.key}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={k.color} stopOpacity={k.isActive === false ? 0.4 : 0.9} />
-                <stop offset="100%" stopColor={k.color} stopOpacity={k.isActive === false ? 0.1 : 0.25} />
-              </linearGradient>
-            ))}
-          </defs>
-
           <XAxis
             dataKey="time"
             type="number"
