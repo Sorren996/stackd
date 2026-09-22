@@ -455,33 +455,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const highPct = ((effectiveMax - targetHigh) / rangeTotal * 100).toFixed(1);
   const lowPct = ((effectiveMax - targetLow) / rangeTotal * 100).toFixed(1);
 
-  // Glucose line gradient stops, fully derived from the user's target range so
-  // the red / white / amber transitions track custom ranges (not just the 70–180 preset).
-  // Stops are clamped to monotonically increasing offsets to avoid invalid gradients
-  // when the target band is narrow or sits near the chart edges.
-  const lineGradStops = useMemo(() => {
-    const hi = Number(highPct);
-    const lo = Number(lowPct);
-    const highRefPct = Number(((effectiveMax - highReference) / rangeTotal * 100).toFixed(1));
-    const lowRefPct = Number(((effectiveMax - FIXED_LOW_REFERENCE) / rangeTotal * 100).toFixed(1));
-    const raw = [
-    { offset: 0, color: GLUCOSE_STATUS_COLORS.high, opacity: 0.85 },
-    { offset: highRefPct, color: GLUCOSE_STATUS_COLORS.high, opacity: 0.9 },
-    { offset: Math.max(0, hi - 3), color: GLUCOSE_STATUS_COLORS.high, opacity: 0.85 },
-    { offset: Math.min(100, hi + 3), color: gTheme.inRangeColor, opacity: 0.9 },
-    { offset: Math.max(0, lo - 3), color: gTheme.inRangeColor, opacity: 0.9 },
-    { offset: Math.min(100, lo + 3), color: GLUCOSE_STATUS_COLORS.low, opacity: 0.85 },
-    { offset: lowRefPct, color: GLUCOSE_STATUS_COLORS.low, opacity: 0.9 },
-    { offset: 100, color: GLUCOSE_STATUS_COLORS.low, opacity: 0.9 }];
-
-    let prev = 0;
-    return raw.map((stop) => {
-      const offset = Math.max(prev, Math.min(100, stop.offset));
-      prev = offset;
-      return { ...stop, offset };
-    });
-  }, [highPct, lowPct, effectiveMax, rangeTotal, highReference]);
-
   // Only include doses/carbs if their filter is on
   const filteredDoses = filters.insulin ? doses : [];
   const filteredCarbEntries = filters.carbs ? carbEntries.map(normalizeCarbEntry).filter((entry) => entry.carbs > 0 && entry.consumed_at) : [];
@@ -1245,7 +1218,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               height: "9px",
               willChange: "transform, opacity"
             }}>
-        <div className="absolute inset-0 rounded-full" style={{ background: gTheme.markerColor, boxShadow: `0 0 6px ${gTheme.markerColor}66, 0 0 14px ${gTheme.markerColor}26` }} />
+        <div className="absolute inset-0 rounded-full" style={{ background: "#9c5228", boxShadow: `0 0 6px #9c522866, 0 0 14px #9c522826` }} />
         <div className="absolute -inset-[3px] rounded-full border" style={{ borderColor: "#eadccf" }} />
       </div>
           }
@@ -1312,24 +1285,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                     height={GLUCOSE_CHART_HEIGHT}
                     data={chartData}
                     margin={{ top: GLUCOSE_MARGIN_TOP, right: 0, left: -20, bottom: 0 }}>
-              <defs>
-                <linearGradient
-                        id="glucose_line_grad"
-                        gradientUnits="userSpaceOnUse"
-                        x1="0"
-                        y1={GLUCOSE_MARGIN_TOP}
-                        x2="0"
-                        y2={GLUCOSE_CHART_HEIGHT}>
-                  {lineGradStops.map((stop, index) =>
-                        <stop
-                          key={`glucose_line_stop_${index}`}
-                          offset={`${stop.offset}%`}
-                          stopColor={stop.color}
-                          stopOpacity={stop.opacity} />
-                    )}
-                </linearGradient>
-              </defs>
-
               {filters.glucose && (
                 <ReferenceArea
                   yAxisId="glucose"
@@ -1342,21 +1297,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               )}
 
               <YAxis yAxisId="glucose" domain={[effectiveMin, effectiveMax]} allowDataOverflow hide />
-
-              {filters.glucose && filteredGlucoseReadings.length > 0 &&
-                    <Area
-                      yAxisId="glucose"
-                      type="monotoneX"
-                      dataKey="glucose"
-                      stroke="none"
-                      fill="#5b6550"
-                      fillOpacity={0.14}
-                      isAnimationActive={false}
-                      dot={false}
-                      activeDot={false}
-                      connectNulls={true}
-                      legendType="none" />
-                }
 
               {filters.glucose && filteredGlucoseReadings.length > 0 &&
                     <>
@@ -1395,7 +1335,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                       dataKey="glucose"
                       name="Glucose"
                       className="stackd-glucose-trend"
-                      stroke="url(#glucose_line_grad)"
+                      stroke="#5b6550"
                       strokeWidth={2.75}
                       strokeLinecap="round"
                       strokeLinejoin="round"

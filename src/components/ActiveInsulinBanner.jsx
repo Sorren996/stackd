@@ -1175,7 +1175,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
         <div className="relative pt-3 pb-5">
           {(() => {
             const status = isGlucoseStale ? null : centerGlucoseStatus?.status ?? classifyGlucose(glucoseValue, targetLow, targetHigh);
-            const isActive = !isGlucoseStale && (status === "high" || status === "low" || status === "in_range");
+            const isActive = !isGlucoseStale && (status === "high" || status === "low");
             const glowColor = status === "high" ? GLUCOSE_STATUS_COLORS.high : status === "low" ? GLUCOSE_STATUS_COLORS.low : "#5b6550";
             const overReference = isGlucoseStale ? false : centerGlucoseStatus?.overReference ?? (glucoseValue != null && (glucoseValue > readHighReference() || glucoseValue < FIXED_LOW_REFERENCE));
             const maskFade = "linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.7) 14%, rgba(0,0,0,0.35) 55%, transparent 100%)";
