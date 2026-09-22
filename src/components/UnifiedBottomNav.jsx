@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence, animate } from "framer-motion";
-import { LayoutDashboard, CalendarDays, Gauge, CircleUser, Plus, X, Syringe, Droplets, Wheat, Utensils } from "lucide-react";
+import { Home, BookOpen, Activity, CircleUser, Plus, X, Syringe, Droplets, Wheat, Utensils } from "lucide-react";
 import DoseForm from "@/components/DoseForm";
 import CombinedLogSheet from "@/components/CombinedLogSheet";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 import { UnifiedGlassShape, useMeasuredWidth, FAB_SIZE, FAB_RADIUS, NAV_HEIGHT } from "@/components/nav/GlassShape";
 
 const navItems = [
-  { path: "/", label: "Dashboard", icon: LayoutDashboard },
-  { path: "/history", label: "Daily Log", icon: CalendarDays },
-  { path: "/analytics", label: "Time in Range", icon: Gauge },
+  { path: "/", label: "Home", icon: Home },
+  { path: "/history", label: "Journal", icon: BookOpen },
+  { path: "/analytics", label: "Rhythm", icon: Activity },
   { path: "/settings", label: "Profile", icon: CircleUser },
 ];
 
@@ -196,9 +196,7 @@ export default function UnifiedBottomNav() {
             transition={{ duration: 0.2 }}
             className="fixed inset-0 z-40"
             style={{
-              background: "rgba(5,10,12,0.45)",
-              backdropFilter: "blur(8px)",
-              WebkitBackdropFilter: "blur(8px)",
+              background: "rgba(63,56,48,0.20)",
             }}
             onClick={() => handleFabClick()}
           />
@@ -238,7 +236,7 @@ export default function UnifiedBottomNav() {
               <div ref={menuContentRef}>
                 {/* Header */}
                 <div className="px-6 pt-7 pb-2 text-center">
-                  <h3 className="text-base font-semibold text-white/90">Log a moment</h3>
+                  <h3 className="text-base font-semibold" style={{ color: "#3f3830" }}>Log a moment</h3>
                 </div>
 
                 {/* Options */}
@@ -251,20 +249,19 @@ export default function UnifiedBottomNav() {
                         type="button"
                         onClick={() => handleSelect(action.id)}
                         whileTap={{ scale: 0.97 }}
-                        className="flex w-full items-center gap-4 rounded-2xl px-3 py-3 text-left transition-colors hover:bg-white/5"
+                        className="flex w-full items-center gap-4 rounded-2xl px-3 py-3 text-left transition-colors hover:bg-black/[0.03]"
                         aria-label={action.label}
                       >
                         <span
                           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border"
                           style={{
-                            background: `linear-gradient(145deg, rgba(${action.color},0.20), rgba(${action.color},0.08))`,
-                            borderColor: `rgba(${action.color},0.35)`,
-                            boxShadow: `0 4px 14px rgba(${action.color},0.15), inset 0 1px 1px rgba(255,255,255,0.12)`,
+                            background: "#fdf9f2",
+                            borderColor: "#eadccf",
                           }}
                         >
-                          <ActionIcon className="h-5 w-5" style={{ color: `rgba(${action.color},0.95)` }} />
+                          <ActionIcon className="h-5 w-5" style={{ color: "#8a7f70" }} />
                         </span>
-                        <span className="text-[15px] font-semibold text-white/85">
+                        <span className="text-[15px] font-semibold" style={{ color: "#3f3830" }}>
                           {action.label}
                         </span>
                       </motion.button>
@@ -294,7 +291,7 @@ export default function UnifiedBottomNav() {
                     animate={{ left: indicator.left + (indicator.width - 24) / 2, opacity: 1 }}
                     transition={{ type: "spring", stiffness: 460, damping: 34, mass: 0.8 }}
                     className="pointer-events-none absolute bottom-1 h-[3px] w-6 rounded-full"
-                    style={{ background: "rgba(255,255,255,0.55)" }}
+                    style={{ background: "#3f3830" }}
                   />
                 )}
 
@@ -307,8 +304,9 @@ export default function UnifiedBottomNav() {
                       ref={(el) => (tabRefs.current[index] = el)}
                       to={item.path}
                       className={`relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-[1.55rem] px-1.5 py-2 text-center transition-colors ${
-                        isActive ? "text-white" : "text-white/45 hover:text-white/75"
+                        isActive ? "" : "hover:opacity-70"
                       }`}
+                      style={{ color: isActive ? "#3f3830" : "#a89e8d" }}
                       aria-label={item.label}
                     >
                       <motion.span
@@ -316,8 +314,11 @@ export default function UnifiedBottomNav() {
                         animate={{ scale: isActive ? 1.08 : 1 }}
                         transition={{ type: "spring", stiffness: 420, damping: 28 }}
                       >
-                        <Icon className="h-5 w-5" />
+                        <Icon className="h-5 w-5" strokeWidth={isActive ? 2 : 1.5} />
                       </motion.span>
+                      <span className="relative z-10 text-[9px] font-semibold tracking-wide" style={{ color: isActive ? "#3f3830" : "#a89e8d" }}>
+                        {item.label}
+                      </span>
                     </Link>
                   );
                 })}
@@ -338,9 +339,9 @@ export default function UnifiedBottomNav() {
               bottom: NAV_HEIGHT - FAB_RADIUS,
               width: FAB_SIZE,
               height: FAB_SIZE,
-              background: "linear-gradient(145deg, rgba(54,168,138,0.92), rgba(46,140,116,0.92))",
-              border: "1px solid rgba(120,210,180,0.30)",
-              boxShadow: "0 8px 24px rgba(54,168,138,0.30), inset 0 1px 1px rgba(255,255,255,0.25)",
+              background: "#3f3830",
+              border: "1px solid #3f3830",
+              boxShadow: "0 6px 20px rgba(63,56,48,0.20)",
               pointerEvents: "auto",
             }}
           >
@@ -354,7 +355,7 @@ export default function UnifiedBottomNav() {
                   transition={{ duration: 0.2, ease: EASE }}
                   className="flex"
                 >
-                  <X className="h-6 w-6 text-white" />
+                  <X className="h-6 w-6" style={{ color: "#f7f1e8" }} />
                 </motion.span>
               ) : (
                 <motion.span
@@ -365,7 +366,7 @@ export default function UnifiedBottomNav() {
                   transition={{ duration: 0.2, ease: EASE }}
                   className="flex"
                 >
-                  <Plus className="h-6 w-6 text-white" />
+                  <Plus className="h-6 w-6" style={{ color: "#f7f1e8" }} />
                 </motion.span>
               )}
             </AnimatePresence>

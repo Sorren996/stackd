@@ -1,65 +1,68 @@
-// Stackd centralized design system — the visual language of the My Flow
-// screen, exposed as reusable style objects and color tokens so every
-// surface across the app inherits the same premium dark-glass aesthetic.
+// Stackd centralized design system — warm editorial palette.
+// Exported as reusable style objects and color tokens so every surface
+// across the app inherits the same warm editorial aesthetic.
 
-// Primary accent: teal / mint — positive, active, comfortable states.
-export const ACCENT_TEAL = "#2dd4b4";
-export const ACCENT_TEAL_SOFT = "#5ba88a";
-// Secondary accent: violet — used sparingly for analytical elements.
-export const ACCENT_PURPLE = "#8b73f7";
-// Status accents
-export const ACCENT_AMBER = "#d4a056";
-export const ACCENT_CORAL = "#e07a6b";
+// State color (steady/connected/positive): muted sage — single color only.
+export const ACCENT_SAGE = "#5b6550";
+export const ACCENT_SAGE_SOFT = "#5b6550";
+// Future/projection accent: muted mustard
+export const ACCENT_MUSTARD = "#af751b";
+// Status accents (used sparingly, only where semantically necessary)
+export const ACCENT_AMBER = "#af751b";   // attention / glucose change
+export const ACCENT_CORAL = "#c97060";   // lows — muted, not neon
+
+// ── Backward-compatible aliases (old export names → editorial values) ──
+export const ACCENT_TEAL = "#5b6550";       // was teal, now sage
+export const ACCENT_TEAL_SOFT = "#5b6550";
+export const ACCENT_PURPLE = "#8a7f70";     // was violet, now taupe
 
 // Text hierarchy
-export const TEXT_PRIMARY = "rgba(255,255,255,0.95)";
-export const TEXT_SECONDARY = "rgba(255,255,255,0.55)";
-export const TEXT_TERTIARY = "rgba(255,255,255,0.35)";
+export const TEXT_PRIMARY = "#3f3830";     // roasted espresso
+export const TEXT_SECONDARY = "#8a7f70";  // warm taupe
+export const TEXT_TERTIARY = "#a89e8d";   // faint labels
 
-// Translucent borders / dividers
-export const BORDER_SUBTLE = "rgba(255,255,255,0.10)";
+// Hairline borders / dividers
+export const BORDER_SUBTLE = "#eadccf";
+export const BORDER_DOTTED = "#d8cec2";
 
-// Muted, nature-derived wellness palette (legacy, still referenced)
+// Muted wellness palette (legacy interface — remapped to editorial colors)
 export const WELLNESS_COLORS = {
-  inRange: "#5ba88a",
-  below: "#e07a6b",
-  above: "#d4a056",
-  high: "#c97060",
-  insulin: "#5ba3b8",
-  good: "#5ba88a",
+  inRange: "#5b6550",    // sage
+  below: "#c97060",      // muted coral
+  above: "#af751b",      // muted mustard
+  high: "#af751b",
+  insulin: "#8a7f70",    // taupe
+  good: "#5b6550",
   fast: "#c97060",
-  medium: "#d4a056",
-  slow: "#9a8fc7",
-  custom: "#8b8b97",
-  accent: "#5ba88a",
+  medium: "#af751b",
+  slow: "#8a7f70",
+  custom: "#8a7f70",
+  accent: "#5b6550",
 };
 
-// Unified glass card surface — matches the My Flow cards.
+// Flat editorial card surface — no glassmorphism
 export const GLASS_SURFACE = {
-  background: "linear-gradient(150deg, rgba(255,255,255,0.045), rgba(255,255,255,0.012))",
-  borderColor: "rgba(255,255,255,0.10)",
-  boxShadow:
-    "0 12px 40px rgba(0,0,0,0.22), 0 4px 12px rgba(0,0,0,0.10), inset 0 1px 1px rgba(255,255,255,0.08), inset 0 -1px 1px rgba(255,255,255,0.03)",
-  backdropFilter: "blur(8px)",
-  WebkitBackdropFilter: "blur(8px)",
+  background: "transparent",
+  borderColor: "transparent",
+  boxShadow: "none",
+  backdropFilter: "none",
+  WebkitBackdropFilter: "none",
 };
 
-// Floating glass surface — modals, sheets, popovers, tooltips.
+// Floating overlay surface — #fdf9f2, soft shadow, hairline border
 export const GLASS_FLOATING = {
-  background: "linear-gradient(165deg, rgba(18,28,23,0.80), rgba(10,16,13,0.84))",
-  borderColor: "rgba(255,255,255,0.12)",
-  boxShadow:
-    "0 18px 50px rgba(0,0,0,0.45), inset 0 1px 1px rgba(255,255,255,0.10)",
-  backdropFilter: "blur(18px)",
-  WebkitBackdropFilter: "blur(18px)",
+  background: "#fdf9f2",
+  borderColor: "#eadccf",
+  boxShadow: "0 8px 28px rgba(63,56,48,0.12), 0 2px 8px rgba(63,56,48,0.06)",
+  backdropFilter: "none",
+  WebkitBackdropFilter: "none",
 };
 
-// Modal backdrop — dims the page while keeping ambient glow.
+// Modal backdrop — warm scrim
 export const MODAL_BACKDROP = {
-  background: "rgba(5,10,12,0.6)",
-  backdropFilter: "blur(6px)",
-  WebkitBackdropFilter: "blur(6px)",
+  background: "rgba(63,56,48,0.25)",
+  backdropFilter: "none",
+  WebkitBackdropFilter: "none",
 };
 
-export const CARD_SHADOW =
-  "0 6px 24px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)";
+export const CARD_SHADOW = "0 2px 12px rgba(63,56,48,0.06)";

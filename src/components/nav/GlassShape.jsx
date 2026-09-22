@@ -46,7 +46,7 @@ export function UnifiedGlassShape({ width, totalHeight, cutoutCy, children }) {
           {/* Glass fill — clip to rounded rect, mask out the FAB circle */}
           <div
             className="absolute inset-0"
-            style={{ filter: "drop-shadow(0 14px 40px rgba(0,0,0,0.30))", pointerEvents: "none" }}
+            style={{ filter: "drop-shadow(0 4px 20px rgba(63,56,48,0.10))", pointerEvents: "none" }}
           >
             <div
               className="stackd-nav-glass absolute inset-0"

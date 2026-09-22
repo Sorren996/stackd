@@ -112,12 +112,12 @@ export default function Layout() {
   };
 
   return (
-    <div className="isolate relative min-h-screen overflow-x-hidden text-white">
+    <div className="isolate relative min-h-screen overflow-x-hidden text-foreground">
       <header className="fixed inset-x-0 top-0 z-50 bg-transparent">
         <div
           className="mx-auto grid h-14 max-w-6xl grid-cols-[1fr_auto_1fr] items-center px-4"
           style={{
-            background: "linear-gradient(to bottom, rgba(0,0,0,0.7), rgba(0,0,0,0.25), transparent)",
+            background: "linear-gradient(to bottom, rgba(247,241,232,0.92), rgba(247,241,232,0.6), transparent)",
           }}
         >
           <div />
@@ -171,29 +171,21 @@ export default function Layout() {
             animate={{ opacity: 1, x: "-50%", y: 0, scale: 1 }}
             exit={{ opacity: 0, x: "-50%", y: -10, scale: 0.96 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="fixed left-1/2 top-16 z-[60] flex items-center gap-2 rounded-full border px-4 py-2 backdrop-blur-md"
-            style={
-              refreshAlert.type === "success"
-                ? {
-                    background: "linear-gradient(145deg, rgba(91,168,138,0.24), rgba(91,168,138,0.10))",
-                    borderColor: "rgba(91,168,138,0.42)",
-                    boxShadow: "0 8px 24px rgba(0,0,0,0.18), 0 0 18px rgba(91,168,138,0.18)",
-                  }
-                : {
-                    background: "linear-gradient(145deg, rgba(217,169,56,0.24), rgba(217,169,56,0.10))",
-                    borderColor: "rgba(217,169,56,0.42)",
-                    boxShadow: "0 8px 24px rgba(0,0,0,0.18), 0 0 18px rgba(217,169,56,0.18)",
-                  }
-            }
+            className="fixed left-1/2 top-16 z-[60] flex items-center gap-2 rounded-full border px-4 py-2"
+            style={{
+              background: "#fdf9f2",
+              borderColor: "#eadccf",
+              boxShadow: "0 8px 28px rgba(63,56,48,0.12)",
+            }}
           >
             {refreshAlert.type === "success" ? (
-              <Check className="h-3.5 w-3.5 shrink-0" style={{ color: "rgba(120,200,170,0.95)" }} />
+              <Check className="h-3.5 w-3.5 shrink-0" style={{ color: "#5b6550" }} />
             ) : (
-              <AlertTriangle className="h-3.5 w-3.5 shrink-0" style={{ color: "rgba(230,190,110,0.95)" }} />
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0" style={{ color: "#af751b" }} />
             )}
             <span
               className="whitespace-nowrap text-xs font-semibold"
-              style={{ color: refreshAlert.type === "success" ? "rgba(190,232,212,0.96)" : "rgba(244,214,150,0.96)" }}
+              style={{ color: refreshAlert.type === "success" ? "#5b6550" : "#af751b" }}
             >
               {refreshAlert.type === "success" ? "Refreshed with the latest" : "Refresh unsuccessful — please try again"}
             </span>

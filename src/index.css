@@ -5,13 +5,59 @@
 @tailwind utilities;
 
 @layer base {
- body {
-    @apply text-sm text-foreground; /* Defaults unstyled text to Small instead of Base */
+  body {
+    @apply text-sm text-foreground;
   }
 
   :root {
-    color-scheme: dark;
+    color-scheme: light;
     --font-sans: 'Montserrat', system-ui;
+    --font-serif: Georgia, 'Times New Roman', serif;
+
+    /* ── Warm Editorial Palette ─────────────────────────── */
+    --background: 36 39% 94%;           /* #f7f1e8 warm sandstone canvas */
+    --foreground: 30 16% 22%;           /* #3f3830 roasted espresso ink */
+    --card: 36 47% 97%;                 /* #fdf9f2 elevated / overlay surface */
+    --card-foreground: 30 16% 22%;
+    --popover: 36 47% 97%;
+    --popover-foreground: 30 16% 22%;
+    --primary: 30 16% 22%;              /* espresso ink — primary buttons */
+    --primary-foreground: 36 39% 94%;   /* sandstone text on espresso */
+    --secondary: 36 24% 90%;
+    --secondary-foreground: 30 10% 35%;
+    --muted: 36 20% 92%;
+    --muted-foreground: 30 8% 50%;      /* #8a7f70 warm taupe — secondary text */
+    --accent: 88 8% 35%;                /* #5b6550 muted sage — steady/positive */
+    --accent-foreground: 36 39% 94%;
+    --destructive: 0 45% 50%;
+    --destructive-foreground: 36 39% 94%;
+    --border: 30 18% 87%;               /* #eadccf hairline border */
+    --input: 30 18% 87%;
+    --ring: 30 16% 22%;
+
+    /* Chart / data colors */
+    --chart-1: 88 8% 35%;               /* sage — in range */
+    --chart-2: 30 16% 22%;              /* espresso — ink curve */
+    --chart-3: 32 76% 39%;              /* #af751b muted mustard — projection */
+    --chart-4: 30 8% 50%;               /* taupe — secondary data */
+    --chart-5: 0 30% 50%;               /* muted coral — lows */
+
+    --radius: 0.75rem;
+
+    /* Sidebar tokens (shadcn compatibility — unused but kept valid) */
+    --sidebar-background: 36 39% 94%;
+    --sidebar-foreground: 30 16% 22%;
+    --sidebar-primary: 30 16% 22%;
+    --sidebar-primary-foreground: 36 39% 94%;
+    --sidebar-accent: 36 24% 90%;
+    --sidebar-accent-foreground: 30 16% 22%;
+    --sidebar-border: 30 18% 87%;
+    --sidebar-ring: 30 16% 22%;
+  }
+
+  /* Dark mode retained as a fallback for the theme toggle.
+     The warm editorial theme is the default at :root. */
+  .dark {
     --background: 160 12% 7%;
     --foreground: 160 8% 92%;
     --card: 162 10% 11%;
@@ -36,50 +82,14 @@
     --chart-3: 258 45% 53%;
     --chart-4: 38 75% 51%;
     --chart-5: 337 33% 25%;
-    --radius: 0.75rem;
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 213 82% 39%;
+    --sidebar-background: 160 12% 7%;
+    --sidebar-foreground: 160 8% 92%;
+    --sidebar-primary: 162 38% 28%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 210 30% 94%;
-    --sidebar-accent-foreground: 215 25% 20%;
-    --sidebar-border: 214 20% 90%;
-    --sidebar-ring: 213 80% 39%;
-  }
-
-  .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-accent: 160 8% 16%;
+    --sidebar-accent-foreground: 160 8% 80%;
+    --sidebar-border: 162 8% 18%;
+    --sidebar-ring: 162 38% 35%;
   }
 }
 
@@ -93,7 +103,6 @@
     -webkit-tap-highlight-color: transparent;
   }
 
-  /* Keep form fields usable — selection inside inputs must still work. */
   input, textarea, select, [contenteditable="true"] {
     -webkit-user-select: text;
     -moz-user-select: text;
@@ -103,36 +112,86 @@
 
   body {
     @apply text-foreground;
-    background: linear-gradient(to bottom, #0F241F 0%, #112232 30%, #112232 100%);
-    background-attachment: fixed;
+    background: #f7f1e8;
     min-height: 100vh;
-    color-scheme: dark;
+    color-scheme: light;
   }
 
-  /* Force dark mode on all native input controls (keyboards, numpads,
-     date/time pickers) regardless of the device's system appearance. */
   input, textarea, select,
   input::placeholder, textarea::placeholder,
   input[type="date"], input[type="time"], input[type="datetime-local"],
   input[type="number"], input[type="text"], input[type="email"], input[type="password"] {
-    color-scheme: dark;
+    color-scheme: light;
   }
 }
 
 @layer utilities {
-  /* Keeps white text legible over bright background image highlights */
-  .text-legible {
-    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.35), 0 0 1px rgba(0, 0, 0, 0.25);
-  }
-  .text-legible-strong {
-    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.45), 0 0 1px rgba(0, 0, 0, 0.3);
+  /* ── Editorial typography utilities ─────────────────────── */
+
+  /* Serif-italic accent word for headers (Georgia italic) */
+  .font-serif-italic {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 400;
   }
 
-  /* Glass surface matching the main page cards — subtle gradient, soft inset glow */
-  .glass-card {
-    background: transparent;
-    border-color: transparent;
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1), 0 4px 12px rgba(0, 0, 0, 0.06), inset 0 1px 1px rgba(255, 255, 255, 0.22), inset 0 -1px 1px rgba(255, 255, 255, 0.05);
+  /* Big anchor numbers — light weight, tabular numerals */
+  .anchor-number {
+    font-weight: 300;
+    font-size: 44px;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+
+  /* Section label — uppercase, letterspaced, faint, with hairline rule */
+  .section-label {
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    font-weight: 700;
+    font-size: 10px;
+    color: #a89e8d;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #eadccf;
+  }
+
+  /* Dotted leader line for ledger rows */
+  .dotted-leader {
+    border-bottom: 1px dotted #d8cec2;
+  }
+
+  /* ── Surface utilities (flat editorial — no glassmorphism) ── */
+
+  /* Elevated / overlay surface — #fdf9f2, soft shadow, hairline border */
+  .editorial-surface {
+    background: #fdf9f2;
+    border: 1px solid #eadccf;
+    box-shadow: 0 2px 12px rgba(63, 56, 48, 0.06);
+  }
+
+  /* Floating overlay card — dropdowns, pickers, popovers */
+  .editorial-overlay {
+    background: #fdf9f2;
+    border: 1px solid #eadccf;
+    box-shadow: 0 8px 28px rgba(63, 56, 48, 0.12), 0 2px 8px rgba(63, 56, 48, 0.06);
+  }
+
+  /* Modal backdrop — warm scrim */
+  .editorial-backdrop {
+    background: rgba(63, 56, 48, 0.25);
+  }
+
+  /* Input surface */
+  .editorial-input {
+    background: #fdf9f2;
+    border: 1px solid #eadccf;
+  }
+
+  /* Primary button — solid espresso with sandstone text */
+  .editorial-btn-primary {
+    background: #3f3830;
+    color: #f7f1e8;
+    border: none;
   }
 
   .no-scrollbar::-webkit-scrollbar {
@@ -143,267 +202,175 @@
     scrollbar-width: none;
   }
 
-  /* ── Stackd unified glass design system ─────────────────────────── */
+  /* ── Legacy glass utilities remapped to flat editorial ──
+     These keep existing className references working without
+     touching component code. Over time they can be replaced
+     with the editorial-* names above. */
 
-  /* Glass card surface — the shared card language across every screen. */
-  .stackd-card {
+  .glass-card, .stackd-card {
     background: transparent;
     border: none;
-    box-shadow: 0 12px 40px rgba(0,0,0,0.22), 0 4px 12px rgba(0,0,0,0.10), inset 0 1px 1px rgba(255,255,255,0.08), inset 0 -1px 1px rgba(255,255,255,0.03);
+    box-shadow: none;
   }
 
-  /* Floating glass surface — modals, sheets, popovers, tooltips. */
   .stackd-glass {
-    background: linear-gradient(165deg, rgba(18,28,23,0.80), rgba(10,16,13,0.84));
-    border: 1px solid rgba(255,255,255,0.12);
-    box-shadow: 0 18px 50px rgba(0,0,0,0.45), inset 0 1px 1px rgba(255,255,255,0.10);
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
+    background: #fdf9f2;
+    border: 1px solid #eadccf;
+    box-shadow: 0 8px 28px rgba(63, 56, 48, 0.12), 0 2px 8px rgba(63, 56, 48, 0.06);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
 
-  /* Modal backdrop — dims the page while keeping ambient glow. */
   .stackd-modal-backdrop {
-    background: rgba(5,10,12,0.6);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
+    background: rgba(63, 56, 48, 0.25);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
 
-  /* Glass input surface. */
   .stackd-input {
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.10);
-    box-shadow: inset 0 1px 2px rgba(0,0,0,0.18);
+    background: #fdf9f2;
+    border: 1px solid #eadccf;
+    box-shadow: none;
   }
 
-  /* Teal primary button surface. */
   .stackd-btn-primary {
-    background: linear-gradient(145deg, rgba(54,168,138,0.92), rgba(46,140,116,0.92));
-    border: 1px solid rgba(120,210,180,0.30);
-    box-shadow: 0 8px 22px rgba(54,168,138,0.22), inset 0 1px 1px rgba(255,255,255,0.20);
+    background: #3f3830;
+    border: 1px solid #3f3830;
+    box-shadow: none;
+    color: #f7f1e8;
   }
 
-  /* Section label — uppercase, letter-spaced, muted. */
   .stackd-section-label {
     text-transform: uppercase;
     letter-spacing: 0.16em;
     font-weight: 700;
     font-size: 10px;
-    color: rgba(255,255,255,0.40);
+    color: #a89e8d;
   }
 
-  /* Wrapped nav/modal glass surface — darker tint, reads near-solid. */
   .stackd-nav-glass {
-    background: linear-gradient(165deg, rgba(22,32,27,0.88), rgba(12,20,17,0.93));
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    box-shadow: inset 0 1px 1px rgba(255,255,255,0.12), inset 0 -1px 1px rgba(255,255,255,0.03);
+    background: #fdf9f2;
+    border: 1px solid #eadccf;
+    box-shadow: 0 4px 20px rgba(63, 56, 48, 0.10);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
 
   .stackd-nav-border {
-    stroke: rgba(255,255,255,0.10);
+    stroke: #eadccf;
   }
 
+  .stackd-graph-canvas {
+    background: transparent;
+    border: 1px solid #eadccf;
+    box-shadow: none;
+  }
+
+  .stackd-popover {
+    background: #fdf9f2;
+    border: 1px solid #eadccf;
+    box-shadow: 0 8px 28px rgba(63, 56, 48, 0.12);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .stackd-top-control {
+    background: #fdf9f2;
+    border: 1px solid #eadccf;
+  }
+
+  .stackd-filter-dropdown {
+    background: #fdf9f2;
+    border: 1px solid #eadccf;
+    box-shadow: 0 8px 28px rgba(63, 56, 48, 0.12);
+  }
+
+  .stackd-sheet-surface {
+    background: #fdf9f2;
+    border: 1px solid #eadccf;
+    box-shadow: 0 -12px 40px rgba(63, 56, 48, 0.10);
+  }
+
+  .stackd-fab {
+    background: #3f3830;
+    border: 1px solid #3f3830;
+    box-shadow: 0 6px 20px rgba(63, 56, 48, 0.20);
+  }
+  .stackd-fab-pill {
+    background: #fdf9f2;
+    border: 1px solid #eadccf;
+  }
+  .stackd-fab-icon {
+    background: #fdf9f2;
+    border: 1px solid #eadccf;
+  }
+
+  .stackd-bottom-nav {
+    box-shadow: 0 4px 20px rgba(63, 56, 48, 0.10);
+  }
+  .stackd-unified-glass {
+    background: #fdf9f2;
+    border: 1px solid #eadccf;
+    box-shadow: 0 4px 20px rgba(63, 56, 48, 0.10);
+  }
+  .stackd-unified-fab {
+    background: #3f3830;
+    box-shadow: 0 6px 20px rgba(63, 56, 48, 0.20);
+  }
 }
 
 /* ============================================================
-   STACKD LIGHT MODE
-   Every rule below is scoped to [data-theme="light"], so the
-   default Dark Mode keeps its exact existing appearance.
-   The Activity Graph receives a purpose-built light canvas via
-   .stackd-graph-canvas and the per-theme palette in graphTheme.js.
+   WHITE-CHANNEL UTILITY REMAPS
+   The app was built with a dark theme using text-white, bg-white,
+   and rgba(255,255,255,...) extensively. These rules remap those
+   utilities to the warm editorial palette so every screen
+   inherits the new theme without per-component edits.
    ============================================================ */
 
-[data-theme="light"] {
-  color-scheme: light;
-}
+/* Primary text — was white, now espresso ink */
+.text-white { color: #3f3830; }
+.text-white\/90 { color: #3f3830; }
+.text-white\/85 { color: #3f3830; }
+.text-white\/80 { color: #4a423a; }
+.text-white\/75 { color: #4a423a; }
+.text-white\/70 { color: #5a5048; }
+.text-white\/65 { color: #5a5048; }
+.text-white\/60 { color: #8a7f70; }     /* warm taupe — secondary */
+.text-white\/55 { color: #8a7f70; }
+.text-white\/50 { color: #a89e8d; }     /* faint labels */
+.text-white\/45 { color: #a89e8d; }
+.text-white\/40 { color: #a89e8d; }
+.text-white\/35 { color: #b8aea0; }
+.text-white\/30 { color: #b8aea0; }
+.text-white\/25 { color: #c8beb0; }
+.text-white\/20 { color: #d8cec2; }
+.text-white\/15 { color: #e0d6c8; }
+.text-white\/12 { color: #e0d6c8; }
+.text-white\/10 { color: #e8e0d4; }
+.text-white\/5 { color: #ede5da; }
 
-[data-theme="light"] body {
-  background:
-    radial-gradient(circle at 15% 0%, rgba(188,172,146,0.10), transparent 42%),
-    radial-gradient(circle at 90% 8%, rgba(150,165,175,0.05), transparent 44%),
-    linear-gradient(to bottom, #e6efe9 0%, #f1ece2 30%, #f1ece2 100%);
-  background-attachment: fixed;
-  color: #2c2c2e;
-}
+.text-black, .text-black\/90, .text-black\/80 { color: #3f3830; }
 
-[data-theme="light"] input,
-[data-theme="light"] textarea,
-[data-theme="light"] select,
-[data-theme="light"] input::placeholder,
-[data-theme="light"] textarea::placeholder {
-  color-scheme: light;
-}
+/* Background tints — were translucent white, now warm surface tints */
+.bg-white { background-color: #fdf9f2; }
+.bg-white\/5, .bg-white\/\[0\.025\], .bg-white\/\[0\.03\], .bg-white\/\[0\.04\] { background-color: rgba(63, 56, 48, 0.03); }
+.bg-white\/10, .bg-white\/8, .bg-white\/\[0\.06\], .bg-white\/\[0\.08\] { background-color: rgba(63, 56, 48, 0.05); }
+.bg-white\/\[0\.10\], .bg-white\/12, .bg-white\/15 { background-color: rgba(63, 56, 48, 0.07); }
+.bg-white\/20, .bg-white\/25 { background-color: rgba(63, 56, 48, 0.10); }
 
-/* Semantic token overrides — shadcn primitives (Dialog, Sheet, Select, etc.) */
-[data-theme="light"] {
-  --background: 40 18% 94%;
-  --foreground: 240 5% 18%;
-  --card: 0 0% 100%;
-  --card-foreground: 240 5% 18%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 240 5% 18%;
-  --primary: 162 42% 32%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 40 12% 90%;
-  --secondary-foreground: 240 5% 28%;
-  --muted: 40 10% 93%;
-  --muted-foreground: 240 4% 45%;
-  --accent: 162 36% 38%;
-  --accent-foreground: 0 0% 100%;
-  --destructive: 0 62% 48%;
-  --destructive-foreground: 0 0% 100%;
-  --border: 155 12% 82%;
-  --input: 155 12% 84%;
-  --ring: 162 42% 38%;
-}
+/* Border tints — were translucent white, now warm hairlines */
+.border-white\/5, .border-white\/10, .border-white\/\[0\.06\], .border-white\/\[0\.07\] { border-color: #eadccf; }
+.border-white\/12, .border-white\/15, .border-white\/20, .border-white\/\[0\.12\] { border-color: #d8cec2; }
+.border-white\/30 { border-color: #c8beb0; }
+.border-white\/40 { border-color: #b8aea0; }
+.border-white\/50 { border-color: #a89e8d; }
 
-/* ---- Glass surfaces ---- */
-[data-theme="light"] .stackd-card,
-[data-theme="light"] .glass-card {
-  background: transparent !important;
-  border-color: transparent !important;
-  box-shadow: 0 12px 36px rgba(20,50,45,0.10), 0 4px 12px rgba(20,50,45,0.06), inset 0 1px 1px rgba(255,255,255,0.9), inset 0 -1px 1px rgba(255,255,255,0.4) !important;
-}
-
-[data-theme="light"] .stackd-glass {
-  background: linear-gradient(165deg, rgba(255,255,255,0.90), rgba(244,250,247,0.86)) !important;
-  border-color: rgba(20,45,38,0.12) !important;
-  box-shadow: 0 18px 50px rgba(20,50,45,0.16), inset 0 1px 1px rgba(255,255,255,0.9) !important;
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-}
-
-[data-theme="light"] .stackd-modal-backdrop {
-  background: rgba(120,140,135,0.30) !important;
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-}
-
-[data-theme="light"] .stackd-input {
-  background: rgba(255,255,255,0.6) !important;
-  border-color: rgba(20,45,38,0.14) !important;
-  box-shadow: inset 0 1px 2px rgba(20,50,45,0.06) !important;
-}
-
-[data-theme="light"] .stackd-btn-primary {
-  background: linear-gradient(145deg, rgba(46,140,116,0.96), rgba(38,120,100,0.96));
-  border-color: rgba(54,168,138,0.40);
-  box-shadow: 0 8px 22px rgba(46,140,116,0.24), inset 0 1px 1px rgba(255,255,255,0.30);
-  color: #ffffff;
-}
-
-[data-theme="light"] .stackd-section-label {
-  color: rgba(60,60,67,0.45);
-}
-
-/* ---- Graph canvas: light instrument surface ---- */
-[data-theme="light"] .stackd-graph-canvas {
-  background: linear-gradient(165deg, rgba(255,255,255,0.82), rgba(241,247,244,0.74)) !important;
-  border-color: rgba(20,45,38,0.10) !important;
-  box-shadow: 0 12px 38px rgba(20,50,45,0.14), inset 0 1px 1px rgba(255,255,255,0.9) !important;
-}
-
-/* ---- Portaled popover (InfoPopover) ---- */
-[data-theme="light"] .stackd-popover {
-  background: linear-gradient(165deg, rgba(255,255,255,0.93), rgba(244,250,247,0.88)) !important;
-  border-color: rgba(20,45,38,0.12) !important;
-  box-shadow: 0 18px 50px rgba(20,50,45,0.20), inset 0 1px 1px rgba(255,255,255,0.9) !important;
-}
-
-/* ---- Top controls (refresh + theme toggle) ---- */
-[data-theme="light"] .stackd-top-control {
-  background: rgba(255,255,255,0.62) !important;
-  border-color: rgba(20,45,38,0.12) !important;
-}
-
-[data-theme="light"] .stackd-filter-dropdown {
-  background: linear-gradient(165deg, rgba(255,255,255,0.93), rgba(244,250,247,0.88)) !important;
-  border-color: rgba(20,45,38,0.12) !important;
-  box-shadow: 0 18px 50px rgba(20,50,45,0.20) !important;
-}
-
-/* ---- Custom bottom Sheet (log forms) ---- */
-[data-theme="light"] .stackd-sheet-surface {
-  background: linear-gradient(165deg, rgba(255,255,255,0.96), rgba(244,250,247,0.92)) !important;
-  border-color: rgba(20,45,38,0.12) !important;
-  box-shadow: 0 -24px 60px rgba(20,50,45,0.22), inset 0 1px 1px rgba(255,255,255,0.9) !important;
-}
-
-/* ---- Native form controls: light pickers, options, placeholders ---- */
-[data-theme="light"] option {
-  background-color: #ffffff !important;
-  color: #2c2c2e !important;
-}
-[data-theme="light"] input::placeholder,
-[data-theme="light"] textarea::placeholder {
-  color: rgba(60,60,67,0.4) !important;
-}
-
-/* ---- Floating action button + bloom menu ---- */
-[data-theme="light"] .stackd-fab {
-  background: linear-gradient(145deg, rgba(255,255,255,0.92), rgba(244,250,247,0.78)) !important;
-  border-color: rgba(20,45,38,0.16) !important;
-  box-shadow: 0 18px 48px rgba(20,50,45,0.20), inset 0 1px 1px rgba(255,255,255,0.9), inset 0 -1px 1px rgba(255,255,255,0.4) !important;
-}
-[data-theme="light"] .stackd-fab-pill {
-  background: linear-gradient(145deg, rgba(255,255,255,0.94), rgba(244,250,247,0.84)) !important;
-  border-color: rgba(20,45,38,0.16) !important;
-}
-[data-theme="light"] .stackd-fab-icon {
-  background: linear-gradient(145deg, rgba(255,255,255,0.90), rgba(244,250,247,0.72)) !important;
-  border-color: rgba(20,45,38,0.16) !important;
-}
-
-/* ---- Bottom navigation (unified nav + FAB surface) ---- */
-[data-theme="light"] .stackd-bottom-nav {
-  box-shadow: 0 14px 40px rgba(20,50,45,0.14) !important;
-}
-[data-theme="light"] .stackd-unified-glass {
-  background: linear-gradient(135deg, rgba(255,255,255,0.74), rgba(255,255,255,0.50)) !important;
-  border-color: rgba(20,45,38,0.12) !important;
-  box-shadow: inset 0 1px 1px rgba(255,255,255,0.9), inset 0 -1px 1px rgba(255,255,255,0.4) !important;
-}
-[data-theme="light"] .stackd-unified-fab {
-  background: linear-gradient(135deg, rgba(255,255,255,0.74), rgba(255,255,255,0.50)) !important;
-  box-shadow: inset 0 1px 1px rgba(255,255,255,0.9), inset 0 -1px 1px rgba(255,255,255,0.4) !important;
-}
-
-[data-theme="light"] .stackd-nav-glass {
-  background: linear-gradient(165deg, rgba(255,255,255,0.90), rgba(244,250,247,0.86)) !important;
-  box-shadow: inset 0 1px 1px rgba(255,255,255,0.9), inset 0 -1px 1px rgba(255,255,255,0.4) !important;
-}
-
-[data-theme="light"] .stackd-nav-border {
-  stroke: rgba(20,45,38,0.12) !important;
-}
-
-/* ---- White-channel utility remaps ---- */
-[data-theme="light"] :is(.text-white, .text-white\/90, .text-white\/85){ color: #3a3a3c; }
-[data-theme="light"] :is(.text-white\/80, .text-white\/75, .text-white\/70, .text-white\/65){ color: #4a4a4d; }
-[data-theme="light"] .text-black,
-[data-theme="light"] .text-black\/90,
-[data-theme="light"] .text-black\/80{ color: #3a3a3c; }
-[data-theme="light"] :is(.text-white\/60, .text-white\/55, .text-white\/50){ color: #8e8e93; }
-[data-theme="light"] :is(.text-white\/45, .text-white\/40, .text-white\/35){ color: #aeaeb2; }
-[data-theme="light"] :is(.text-white\/30, .text-white\/25, .text-white\/20){ color: #c7c7cc; }
-[data-theme="light"] :is(.text-white\/15, .text-white\/12, .text-white\/10, .text-white\/5){ color: #d1d1d6; }
-
-[data-theme="light"] :is(.bg-white\/5, .bg-white\/\[0\.025\], .bg-white\/\[0\.03\], .bg-white\/\[0\.04\]){ background-color: rgba(60,60,67,0.04); }
-[data-theme="light"] :is(.bg-white\/10, .bg-white\/8, .bg-white\/\[0\.06\], .bg-white\/\[0\.08\]){ background-color: rgba(60,60,67,0.06); }
-[data-theme="light"] :is(.bg-white\/\[0\.10\], .bg-white\/12, .bg-white\/15){ background-color: rgba(60,60,67,0.08); }
-[data-theme="light"] :is(.bg-white\/20, .bg-white\/25){ background-color: rgba(60,60,67,0.10); }
-[data-theme="light"] .bg-white{ background-color: rgba(255,255,255,0.72); }
-
-[data-theme="light"] :is(.border-white\/5, .border-white\/10, .border-white\/\[0\.06\], .border-white\/\[0\.07\]){ border-color: rgba(60,60,67,0.12); }
-[data-theme="light"] :is(.border-white\/12, .border-white\/15, .border-white\/20, .border-white\/\[0\.12\]){ border-color: rgba(60,60,67,0.16); }
-[data-theme="light"] .border-white\/30{ border-color: rgba(60,60,67,0.22); }
-
-/* ---- Recharts (Analytics rhythm charts) ---- */
-[data-theme="light"] .recharts-text{ fill: rgba(60,60,67,0.5); }
-[data-theme="light"] .recharts-cartesian-axis-line,
-[data-theme="light"] .recharts-cartesian-axis-tick-line{ stroke: rgba(60,60,67,0.18); }
-[data-theme="light"] .recharts-default-tooltip {
-  background: rgba(255,255,255,0.92) !important;
-  border-color: rgba(60,60,67,0.12) !important;
-  color: #2c2c2e;
+/* ── Recharts (Analytics rhythm charts) ── */
+.recharts-text { fill: #8a7f70; }
+.recharts-cartesian-axis-line,
+.recharts-cartesian-axis-tick-line { stroke: #eadccf; }
+.recharts-default-tooltip {
+  background: #fdf9f2 !important;
+  border-color: #eadccf !important;
+  color: #3f3830;
 }
