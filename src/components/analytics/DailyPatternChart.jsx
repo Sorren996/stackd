@@ -2,7 +2,7 @@ import { Area, AreaChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis, Tool
 import { ArrowUp } from "lucide-react";
 import NotEnoughData from "@/components/analytics/NotEnoughData";
 
-const LINE_COLOR = "#5ba3b8";
+const LINE_COLOR = "#3f3830";
 
 function formatHourLabel(label) {
   if (!label) return "";
@@ -23,10 +23,10 @@ function ChartTooltip({ active, payload }) {
   if (!data || data.avg === null) return null;
   return (
     <div className="rounded-xl border px-3 py-2" style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 8px 28px rgba(63,56,48,0.12)" }}>
-      <p className="text-xs font-semibold text-white">{formatHourLabel(data.hour)}</p>
+      <p className="text-xs font-semibold" style={{ color: "#3f3830" }}>{formatHourLabel(data.hour)}</p>
       <p className="text-sm font-bold" style={{ color: "#5b6550" }}>{data.avg} mg/dL</p>
       {data.count > 0 && (
-        <p className="text-[10px] text-white/40">{data.count} reading{data.count !== 1 ? "s" : ""}</p>
+        <p className="text-[10px]" style={{ color: "#a89e8d" }}>{data.count} reading{data.count !== 1 ? "s" : ""}</p>
       )}
     </div>
   );
@@ -35,15 +35,12 @@ function ChartTooltip({ active, payload }) {
 export default function DailyPatternChart({ hourlyAverages, targetLow, targetHigh, hasEnough = true }) {
   if (!hasEnough) {
     return (
-      <div className="glass-card relative overflow-hidden rounded-3xl border p-5" style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}>
-        <div className="relative z-10">
-          <div className="flex flex-col">
-            <p className="text-[10px] font-bold uppercase tracking-[0.20em] text-white">Daily Rhythm</p>
-            <p className="mt-0.5 text-[11px] text-white/30">Average glucose throughout the day</p>
-          </div>
+      <section className="px-1">
+        <div className="section-label">Daily Rhythm</div>
+        <div className="pt-3">
           <NotEnoughData />
         </div>
-      </div>
+      </section>
     );
   }
   const dataWithValues = hourlyAverages.filter((d) => d.avg !== null);
@@ -56,29 +53,17 @@ export default function DailyPatternChart({ hourlyAverages, targetLow, targetHig
   const insight = getRhythmInsight(hourlyAverages);
 
   return (
-    <div className="glass-card relative overflow-hidden rounded-3xl border p-5" style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}>
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-12 flex justify-center opacity-60"
-      >
-        <div
-          className="h-32 w-48 rounded-full"
-          style={{ background: "radial-gradient(circle, rgba(91,163,184,0.08), transparent 70%)", filter: "blur(6px)" }}
-        />
-      </div>
+    <section className="px-1">
+      <div className="section-label">Daily Rhythm</div>
+      <div className="pt-3">
+        <p className="text-[11px] mb-2" style={{ color: "#a89e8d" }}>Average glucose throughout the day</p>
 
-      <div className="relative z-10">
-        <div className="flex flex-col">
-          <p className="text-[10px] font-bold uppercase tracking-[0.20em] text-white">Daily Rhythm</p>
-          <p className="mt-0.5 text-[11px] text-white/30">Average glucose throughout the day</p>
-        </div>
-
-        <div className="mt-2 h-48">
+        <div className="h-48">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={hourlyAverages} margin={{ top: 6, right: 4, left: -8, bottom: 0 }}>
               <defs>
                 <linearGradient id="glucoseGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={LINE_COLOR} stopOpacity={0.22} />
+                  <stop offset="0%" stopColor={LINE_COLOR} stopOpacity={0.12} />
                   <stop offset="100%" stopColor={LINE_COLOR} stopOpacity={0} />
                 </linearGradient>
               </defs>
@@ -109,14 +94,13 @@ export default function DailyPatternChart({ hourlyAverages, targetLow, targetHig
                 type="monotone"
                 dataKey="avg"
                 stroke={LINE_COLOR}
-                strokeWidth={2.4}
+                strokeWidth={2.25}
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 fill="url(#glucoseGradient)"
                 connectNulls
                 dot={false}
                 activeDot={{ r: 3.5, fill: LINE_COLOR, stroke: "#fdf9f2", strokeWidth: 1 }}
-                style={{ filter: "drop-shadow(0 1px 4px rgba(91,163,184,0.35))" }}
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -124,18 +108,13 @@ export default function DailyPatternChart({ hourlyAverages, targetLow, targetHig
 
         {insight && (
           <div className="mt-2 flex items-center gap-2">
-            <span
-              className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
-              style={{ background: `${LINE_COLOR}1a`, color: LINE_COLOR }}
-            >
-              <ArrowUp className="h-3 w-3" strokeWidth={2.5} />
-            </span>
-            <p className="text-[11px] text-white/45">
-              <span className="font-semibold text-white/70">Highest average around {insight.peakHour}</span>
+            <ArrowUp className="h-3 w-3 shrink-0" strokeWidth={2} style={{ color: "#8a7f70" }} />
+            <p className="text-[11px]" style={{ color: "#8a7f70" }}>
+              <span className="font-semibold" style={{ color: "#3f3830" }}>Highest average around {insight.peakHour}</span>
             </p>
           </div>
         )}
       </div>
-    </div>
+    </section>
   );
 }

@@ -476,19 +476,21 @@ export default function History() {
       {level === "month" ? (
         <PageHeader italicWord="journal" />
       ) : (
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 px-1 pb-3">
           <button
             type="button"
             onClick={goBack}
             aria-label="Back"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-white/70 transition hover:text-white"
-            style={{ background: "#fdf9f2", borderColor: "#eadccf" }}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition"
+            style={{ color: "#8a7f70" }}
           >
-            <ChevronLeft className="h-4 w-4" />
+            <ChevronLeft className="h-5 w-5" />
           </button>
-          <div className="min-w-0">
-            <h2 className="text-lg font-semibold text-white truncate">{headerTitle}</h2>
-            <p className="text-xs text-white/40">{headerSub}</p>
+          <div className="min-w-0 flex-1">
+            <h2 className="text-lg font-semibold truncate" style={{ color: "#3f3830" }}>
+              {headerTitle}
+            </h2>
+            <p className="text-xs" style={{ color: "#a89e8d" }}>{headerSub}</p>
           </div>
         {level === "recap" && selectedDay && allDays.length > 1 && (
           <div className="ml-auto flex items-center gap-1.5">
@@ -501,8 +503,8 @@ export default function History() {
               }}
               disabled={!allDays.some((d) => d.date < selectedDay)}
               aria-label="Previous day"
-              className="flex h-9 w-9 items-center justify-center rounded-full border text-white/70 transition hover:text-white disabled:opacity-30"
-              style={{ background: "#fdf9f2", borderColor: "#eadccf" }}
+              className="flex h-8 w-8 items-center justify-center rounded-full transition disabled:opacity-30"
+              style={{ color: "#8a7f70" }}
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
@@ -515,10 +517,10 @@ export default function History() {
               }}
               disabled={!allDays.some((d) => d.date > selectedDay)}
               aria-label="Next day"
-              className="flex h-9 w-9 items-center justify-center rounded-full border text-white/70 transition hover:text-white disabled:opacity-30"
-              style={{ background: "#fdf9f2", borderColor: "#eadccf" }}
+              className="flex h-8 w-8 items-center justify-center rounded-full transition disabled:opacity-30"
+              style={{ color: "#8a7f70" }}
             >
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-5 w-5" />
             </button>
           </div>
         )}

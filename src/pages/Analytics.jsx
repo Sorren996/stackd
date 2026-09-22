@@ -1,45 +1,24 @@
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useEffect, useMemo, useState } from "react";
-import { subDays } from "date-fns";
+import { subDays, format } from "date-fns";
 import { motion } from "framer-motion";
 import PageHeader from "@/components/editorial/PageHeader";
 import AnchorNumber from "@/components/editorial/AnchorNumber";
+import HairlineSection from "@/components/editorial/HairlineSection";
+import LedgerRow from "@/components/editorial/LedgerRow";
 import { Activity } from "lucide-react";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 import { filterReadingsForStats } from "@/lib/timeInRange";
-import { WELLNESS_COLORS } from "@/lib/glassTheme";
-import ZoneOfBalanceRing from "@/components/analytics/ZoneOfBalanceRing";
 import DailyPatternChart from "@/components/analytics/DailyPatternChart";
-import MomentsOfCare from "@/components/analytics/MomentsOfCare";
 import RangeSelector from "@/components/analytics/RangeSelector";
 import { fetchAllGlucoseReadings } from "@/lib/fetchAllGlucose";
 import { evaluateSufficiency } from "@/lib/dataSufficiency";
-import AtAGlanceMetrics from "@/components/analytics/AtAGlanceMetrics";
-import RhythmInsight from "@/components/analytics/RhythmInsight";
 
 const ANALYTICS_RANGE_KEY = "analytics_range_days";
 const DEFAULT_RANGE_DAYS = 30;
 
-const PERIOD_SHORT = { 7: "7d", 14: "14d", 30: "30d", 60: "60d", 90: "90d", 270: "9mo" };
 const PERIOD_LONG = { 7: "7 days", 14: "14 days", 30: "30 days", 60: "60 days", 90: "90 days", 270: "9 months" };
-
-function formatComparison(delta, unit, lowerIsBetter, periodShort) {
-  if (delta === null || !Number.isFinite(delta)) return null;
-  const threshold = unit === "%" ? 0.05 : 0.5;
-  if (Math.abs(delta) < threshold) {
-    return { text: "— No change", color: "rgba(255,255,255,0.25)" };
-  }
-  const isImprovement = lowerIsBetter ? delta < 0 : delta > 0;
-  const color = isImprovement ? WELLNESS_COLORS.inRange : WELLNESS_COLORS.above;
-  const arrow = delta < 0 ? "↓" : "↑";
-  const absVal = Math.abs(delta);
-  const formatted = unit === "%" ? absVal.toFixed(1) : Math.round(absVal);
-  return { text: `${arrow} ${formatted}${unit} · prev ${periodShort}`, color };
-}
-// Dexcom Share emits a reading every 5 minutes (288/day). 90 days needs ~26k
-// readings; fetch a little extra so the full window is covered.
-const ANALYTICS_FETCH_LIMIT = 30000;
 
 function readStoredRange() {
   if (typeof window === "undefined") return DEFAULT_RANGE_DAYS;
@@ -57,17 +36,7 @@ function readTargetRange() {
   };
 }
 
-const SEGMENTS = [
-  { label: "Early Morning", period: "12am – 6am", start: 0, end: 6 },
-  { label: "Morning", period: "6am – 12pm", start: 6, end: 12 },
-  { label: "Afternoon", period: "12pm – 6pm", start: 12, end: 18 },
-  { label: "Evening", period: "6pm – 12am", start: 18, end: 24 },
-];
-
-const HOUR_LABELS = [
-  "12a", "1a", "2a", "3a", "4a", "5a", "6a", "7a", "8a", "9a", "10a", "11a",
-  "12p", "1p", "2p", "3p", "4p", "5p", "6p", "7p", "8p", "9p", "10p", "11p",
-];
+const DAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
 
 export default function Analytics() {
   const [rangeDays, setRangeDays] = useState(readStoredRange);
@@ -96,9 +65,7 @@ export default function Analytics() {
     setRangeDays(days);
     try {
       window.localStorage.setItem(ANALYTICS_RANGE_KEY, String(days));
-    } catch {
-      // Storage failure is non-fatal — the in-memory state still drives the view.
-    }
+    } catch {}
   };
 
   useEffect(() => {
@@ -117,17 +84,43 @@ export default function Analytics() {
       readings.filter((r) => new Date(r.recorded_at) >= cutoff && Number.isFinite(r.value)),
       dexcomConnected
     );
-
     if (!recent.length) return null;
 
     const { low, high } = targetRange;
-
     const inRangeCount = recent.filter((r) => r.value >= low && r.value <= high).length;
     const aboveCount = recent.filter((r) => r.value > high).length;
     const belowCount = recent.filter((r) => r.value < low).length;
     const total = recent.length;
     const averageGlucose = recent.reduce((s, r) => s + r.value, 0) / total;
 
+    // Per-day breakdown for bar chart
+    const dayBuckets = {};
+    recent.forEach((r) => {
+      const dayKey = format(new Date(r.recorded_at), "yyyy-MM-dd");
+      if (!dayBuckets[dayKey]) dayBuckets[dayKey] = [];
+      dayBuckets[dayKey].push(r.value);
+    });
+    const days = Object.entries(dayBuckets)
+      .map(([date, values]) => {
+        const inRange = values.filter((v) => v >= low && v <= high).length;
+        return {
+          date,
+          dayLabel: DAY_LABELS[new Date(date).getDay()],
+          tir: Math.round((inRange / values.length) * 100),
+          count: values.length,
+        };
+      })
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(-7);
+
+    const bestDay = days.reduce((best, d) => (d.tir > (best?.tir ?? -1) ? d : best), null);
+    const hardestDay = days.reduce((worst, d) => (d.tir < (worst?.tir ?? 101) ? d : worst), null);
+
+    // Hourly averages for DailyPatternChart
+    const HOUR_LABELS = [
+      "12a", "1a", "2a", "3a", "4a", "5a", "6a", "7a", "8a", "9a", "10a", "11a",
+      "12p", "1p", "2p", "3p", "4p", "5p", "6p", "7p", "8p", "9p", "10p", "11p",
+    ];
     const hourlyBuckets = Array.from({ length: 24 }, () => []);
     recent.forEach((r) => {
       const hour = new Date(r.recorded_at).getHours();
@@ -139,90 +132,30 @@ export default function Analytics() {
       count: values.length,
     }));
 
-    const segments = SEGMENTS.map((seg) => {
-      const segReadings = recent.filter((r) => {
-        const hour = new Date(r.recorded_at).getHours();
-        return hour >= seg.start && hour < seg.end;
-      });
-      const segTotal = segReadings.length;
-      const segInRange = segReadings.filter((r) => r.value >= low && r.value <= high).length;
-      const segAbove = segReadings.filter((r) => r.value > high).length;
-      const segBelow = segReadings.filter((r) => r.value < low).length;
-      const segAvg = segTotal ? segReadings.reduce((s, r) => s + r.value, 0) / segTotal : null;
-      return {
-        ...seg,
-        count: segTotal,
-        avg: segAvg ? Math.round(segAvg) : null,
-        inRangePct: segTotal ? (segInRange / segTotal) * 100 : 0,
-        abovePct: segTotal ? (segAbove / segTotal) * 100 : 0,
-        belowPct: segTotal ? (segBelow / segTotal) * 100 : 0,
-      };
-    });
-
     return {
       total,
       inRangePercent: (inRangeCount / total) * 100,
       abovePercent: (aboveCount / total) * 100,
       belowPercent: (belowCount / total) * 100,
       averageGlucose,
+      days,
+      bestDay,
+      hardestDay,
       hourlyAverages,
-      segments,
       sufficiency: evaluateSufficiency(recent, rangeDays),
     };
   }, [readings, targetRange, dexcomConnected, rangeDays]);
 
-  // GMI (Glucose Management Indicator) is calculated from the current selected
-  // range using the standard formula: GMI = 3.31 + 0.02392 × mean glucose (mg/dL).
   const gmi = useMemo(() => {
     if (!stats || !Number.isFinite(stats.averageGlucose)) return null;
     return 3.31 + 0.02392 * stats.averageGlucose;
   }, [stats]);
 
-  // Previous-period metrics for period-over-period comparison.
-  const prevStats = useMemo(() => {
-    const now = new Date();
-    const currentStart = subDays(now, rangeDays);
-    const prevStart = subDays(now, rangeDays * 2);
-    const prevReadings = filterReadingsForStats(
-      readings.filter((r) => {
-        const d = new Date(r.recorded_at);
-        return d >= prevStart && d < currentStart && Number.isFinite(r.value);
-      }),
-      dexcomConnected
-    );
-    if (!prevReadings.length) return null;
-    const { low, high } = targetRange;
-    const total = prevReadings.length;
-    const avg = prevReadings.reduce((s, r) => s + r.value, 0) / total;
-    const inRange = prevReadings.filter((r) => r.value >= low && r.value <= high).length;
-    return {
-      averageGlucose: avg,
-      gmi: 3.31 + 0.02392 * avg,
-      inRangePercent: (inRange / total) * 100,
-      sufficiency: evaluateSufficiency(prevReadings, rangeDays),
-    };
-  }, [readings, targetRange, dexcomConnected, rangeDays]);
-
-  const currentSufficiency = stats?.sufficiency ?? { hasEnough: false, daysCovered: 0, totalReadings: 0 };
-  const previousSufficiency = prevStats?.sufficiency ?? { hasEnough: false, daysCovered: 0, totalReadings: 0 };
-
-  const comparisons = useMemo(() => {
-    if (!stats) return null;
-    const periodShort = PERIOD_SHORT[rangeDays] || `${rangeDays}d`;
-    if (!prevStats || !previousSufficiency.hasEnough) {
-      const placeholder = { text: "Not enough data yet", color: "rgba(255,255,255,0.3)" };
-      return {
-        averageGlucose: placeholder,
-        gmi: gmi !== null ? placeholder : null,
-        inRangePercent: placeholder,
-      };
-    }
-    return {
-      averageGlucose: formatComparison(stats.averageGlucose - prevStats.averageGlucose, " mg/dL", true, periodShort),
-      gmi: gmi !== null ? formatComparison(gmi - prevStats.gmi, "%", true, periodShort) : null,
-      inRangePercent: formatComparison(stats.inRangePercent - prevStats.inRangePercent, "%", false, periodShort),
-    };
-  }, [stats, prevStats, previousSufficiency, gmi, rangeDays]);
+  const dateRangeText = useMemo(() => {
+    const end = new Date();
+    const start = subDays(end, rangeDays);
+    return `Past ${PERIOD_LONG[rangeDays] || `${rangeDays} days`} · ${format(start, "MMM d")}–${format(end, "MMM d")}`;
+  }, [rangeDays]);
 
   if (isLoading) {
     return (
@@ -235,123 +168,109 @@ export default function Analytics() {
   if (!stats) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
-        <Activity className="w-10 h-10 text-white/20 mb-3" />
-        <h3 className="text-lg font-semibold text-white">Your journey awaits</h3>
-        <p className="mt-1 max-w-[240px] text-sm text-white/35">
+        <Activity className="w-10 h-10 mb-3" style={{ color: "#a89e8d" }} />
+        <h3 className="text-lg font-semibold" style={{ color: "#3f3830" }}>Your journey awaits</h3>
+        <p className="mt-1 max-w-[240px] text-sm" style={{ color: "#a89e8d" }}>
           Log a few glucose readings to begin revealing your body's gentle patterns.
         </p>
       </div>
     );
   }
 
+  const hasEnough = stats.sufficiency?.hasEnough ?? false;
+
   return (
-    <div className="space-y-4 pb-24">
+    <div className="mx-auto max-w-md space-y-6 pb-24 pt-2">
       {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="space-y-3 px-1"
-      >
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">My Rhythms</h1>
-          <p className="mt-1 text-sm text-white/35">
-            Gentle insights from your last {PERIOD_LONG[rangeDays] || `${rangeDays} days`}
-          </p>
-        </div>
-        <div className="flex justify-center">
-          <RangeSelector value={rangeDays} onChange={handleRangeChange} />
-        </div>
-      </motion.div>
+      <PageHeader italicWord="rhythm" rightText={dateRangeText} />
 
-      {/* Primary Stackd Card: Hero + Metrics + Insight */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.05 }}
-      >
-        <div className="glass-card relative overflow-hidden rounded-3xl border p-5" style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}>
-          {/* Ambient glow */}
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-x-0 top-10 flex justify-center"
-          >
-            <div
-              className="h-48 w-48 rounded-full"
-              style={{
-                background: "radial-gradient(circle, rgba(91,101,80,0.06) 0%, transparent 65%)",
-                filter: "blur(8px)",
-              }}
-            />
-          </div>
+      {/* Range selector */}
+      <div className="flex justify-center px-1">
+        <RangeSelector value={rangeDays} onChange={handleRangeChange} />
+      </div>
 
-          <div className="relative z-10">
-            {/* Eyebrow */}
-            <div className="flex flex-col items-center">
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white">Time in Your Comfort Zone</p>
-              <p className="mt-0.5 text-[11px] text-white/30">Last {PERIOD_LONG[rangeDays] || `${rangeDays} days`}</p>
-            </div>
-
-            {/* Donut + Breakdown */}
-            <ZoneOfBalanceRing
-              inRangePercent={stats.inRangePercent}
-              abovePercent={stats.abovePercent}
-              belowPercent={stats.belowPercent}
-              totalReadings={stats.total}
-              comparisons={comparisons}
-              rangeDays={rangeDays}
-              hasEnough={currentSufficiency.hasEnough}
-            />
-
-            {/* Divider */}
-            <div className="my-3 h-px w-full" style={{ background: "linear-gradient(to right, transparent, #eadccf, transparent)" }} />
-
-            {/* Metrics */}
-            <AtAGlanceMetrics
-              averageGlucose={stats.averageGlucose}
-              gmi={gmi}
-              targetLow={targetRange.low}
-              targetHigh={targetRange.high}
-              comparisons={comparisons}
-              rangeDays={rangeDays}
-              hasEnough={currentSufficiency.hasEnough}
-            />
-
-            {/* Divider */}
-            <div className="my-3 h-px w-full" style={{ background: "linear-gradient(to right, transparent, #eadccf, transparent)" }} />
-
-            {/* Insight */}
-            <RhythmInsight
-              inRangePercent={stats.inRangePercent}
-              rangeDays={rangeDays}
-              hasEnough={currentSufficiency.hasEnough}
-            />
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Daily rhythm chart */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.1 }}
-      >
-        <DailyPatternChart
-          hourlyAverages={stats.hourlyAverages}
-          targetLow={targetRange.low}
-          targetHigh={targetRange.high}
-          hasEnough={currentSufficiency.hasEnough}
+      {/* Anchor: Time in comfort zone */}
+      <div className="px-1">
+        <AnchorNumber
+          value={`${Math.round(stats.inRangePercent)}%`}
+          caption={
+            <>
+              of the past {PERIOD_LONG[rangeDays] || `${rangeDays} days`} spent{" "}
+              <span className="font-serif-italic">in your comfort zone</span>
+              {hasEnough ? " — steady cadence" : " — still gathering"}
+            </>
+          }
         />
-      </motion.div>
+      </div>
 
-      {/* Moments of care */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.15 }}
-      >
-        <MomentsOfCare segments={stats.segments} hasEnough={currentSufficiency.hasEnough} />
-      </motion.div>
+      {/* Daily bar chart */}
+      {stats.days.length > 0 && (
+        <HairlineSection label="Daily Balance">
+          <div className="flex items-end justify-between gap-2 pt-2 pb-3" style={{ height: 120 }}>
+            {stats.days.map((d, i) => (
+              <div key={i} className="flex flex-1 flex-col items-center gap-1.5">
+                <span className="text-[10px] font-medium tabular-nums" style={{ color: "#8a7f70" }}>
+                  {d.tir}
+                </span>
+                <div
+                  className="w-full rounded-t-sm"
+                  style={{
+                    height: `${Math.max(d.tir, 4)}%`,
+                    background: d.tir >= 70 ? "#5b6550" : d.tir >= 50 ? "#af751b" : "#c97060",
+                    opacity: 0.85,
+                    minHeight: 4,
+                  }}
+                />
+                <span className="text-[10px] font-medium" style={{ color: "#a89e8d" }}>
+                  {d.dayLabel}
+                </span>
+              </div>
+            ))}
+          </div>
+          {(stats.bestDay || stats.hardestDay) && (
+            <div className="flex justify-between pt-2 text-xs" style={{ color: "#8a7f70" }}>
+              {stats.bestDay && (
+                <span>
+                  Best day{" "}
+                  <span className="font-semibold" style={{ color: "#3f3830" }}>
+                    {format(new Date(stats.bestDay.date), "EEEE")} · {stats.bestDay.tir}%
+                  </span>
+                </span>
+              )}
+              {stats.hardestDay && (
+                <span>
+                  Hardest{" "}
+                  <span className="font-semibold" style={{ color: "#3f3830" }}>
+                    {format(new Date(stats.hardestDay.date), "EEEE")} · {stats.hardestDay.tir}%
+                  </span>
+                </span>
+              )}
+            </div>
+          )}
+        </HairlineSection>
+      )}
+
+      {/* At a glance metrics */}
+      <HairlineSection label="At a Glance">
+        <LedgerRow label="Average glucose" value={`${Math.round(stats.averageGlucose)} mg/dL`} />
+        {gmi !== null && <LedgerRow label="GMI" value={`${gmi.toFixed(1)}%`} />}
+        <LedgerRow label="Time above range" value={`${stats.abovePercent.toFixed(0)}%`} />
+        <LedgerRow label="Time below range" value={`${stats.belowPercent.toFixed(0)}%`} />
+        <LedgerRow label="Readings" value={String(stats.total)} />
+      </HairlineSection>
+
+      {/* Daily pattern chart (existing component) */}
+      <DailyPatternChart
+        hourlyAverages={stats.hourlyAverages || []}
+        targetLow={targetRange.low}
+        targetHigh={targetRange.high}
+        hasEnough={hasEnough}
+      />
+
+      <p className="px-1 pt-2 text-xs" style={{ color: "#a89e8d" }}>
+        Patterns describe the last {PERIOD_LONG[rangeDays] || `${rangeDays} days`} —{" "}
+        <span className="font-serif-italic">the rhythm is yours to read.</span>
+      </p>
     </div>
   );
 }

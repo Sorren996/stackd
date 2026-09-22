@@ -3,7 +3,7 @@ import DexcomConnect from "@/components/settings/DexcomConnect";
 
 export default function DexcomSettingsPage() {
   return (
-    <SettingsSubPage title="Glucose Source">
+    <SettingsSubPage title="Glucose" italicWord="source">
       <DexcomConnect />
     </SettingsSubPage>
   );

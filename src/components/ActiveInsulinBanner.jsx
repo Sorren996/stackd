@@ -1085,9 +1085,42 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
     return "In comfort zone";
   };
 
+  const dailyTimeBreakdown = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const readingsToday = filterReadingsForStats(
+      safeGlucoseReadings.filter((reading) => new Date(reading.recorded_at) >= today),
+      dexcomConnected
+    );
+    if (!readingsToday.length) return null;
+    const intervalMin = 5;
+    const totalMin = readingsToday.length * intervalMin;
+    const inR = readingsToday.filter((r) => r.value >= targetRange.low && r.value <= targetRange.high).length;
+    const above = readingsToday.filter((r) => r.value > targetRange.high).length;
+    const below = readingsToday.filter((r) => r.value < targetRange.low).length;
+    const fmt = (m) => {
+      if (m < 60) return `${m}m`;
+      return `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, "0")}m`;
+    };
+    return {
+      inRange: fmt(inR * intervalMin),
+      above: fmt(above * intervalMin),
+      below: fmt(below * intervalMin),
+    };
+  }, [safeGlucoseReadings, targetRange.low, targetRange.high, dexcomConnected]);
+
+  const dexcomModel = useMemo(() => {
+    try {
+      return window.localStorage.getItem("cgm_model") || "G7";
+    } catch {
+      return "G7";
+    }
+  }, []);
+
   return (
     <>
       <div className="relative -mx-4 px-4 pb-6 pt-2">
+        <div className="section-label">Current Glucose</div>
         <AnchorNumber
           value={isGlucoseStale ? "—" : (glucoseValue != null ? Math.round(glucoseValue) : "—")}
           unit="mg/dL"
@@ -1097,7 +1130,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
             if (mins < 1) return "just now";
             if (mins < 60) return `${mins}m ago`;
             return `${Math.floor(mins / 60)}h ${mins % 60}m ago`;
-          })()}`}
+          })()}${dexcomConnected ? ` · Dexcom ${dexcomModel}` : ""}`}
           dot
           dotColor={isGlucoseStale ? "#a89e8d" : (inRange ? "#5b6550" : glucoseColor)}
         />
@@ -1108,7 +1141,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
         <SupportiveGlucoseMessage insight={supportiveGlucoseInsight} trend={trend} TrendIcon={TrendIcon} />
         }
 
-        <div className="section-label mt-6">Your Flow</div>
+        <div className="section-label mt-6">Activity Graph</div>
         <div
           className="relative overflow-hidden pt-3">
           
@@ -1169,6 +1202,12 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
             unit="%"
             caption={`of today spent in your comfort zone — ${targetLow}–${targetHigh} mg/dL`}
           />
+          {dailyTimeBreakdown && (
+            <div className="mt-2 flex justify-between text-xs" style={{ color: "#a89e8d" }}>
+              <span>{dailyTimeBreakdown.inRange} in range so far</span>
+              <span>{dailyTimeBreakdown.above} above · {dailyTimeBreakdown.below} below</span>
+            </div>
+          )}
         </div>
 
         <div className="section-label mt-4">At a Glance</div>

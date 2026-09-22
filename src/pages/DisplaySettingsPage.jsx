@@ -3,7 +3,7 @@ import DisplaySettings from "@/components/settings/DisplaySettings";
 
 export default function DisplaySettingsPage() {
   return (
-    <SettingsSubPage title="Display">
+    <SettingsSubPage title="Display" italicWord="preferences">
       <DisplaySettings />
     </SettingsSubPage>
   );

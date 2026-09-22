@@ -2,11 +2,11 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/AuthContext";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
-import { Activity, User, Shield, LogOut, Loader2, HeartPulse, LineChart, LifeBuoy, Inbox, Leaf, Smartphone } from "lucide-react";
 import { toast } from "sonner";
-import { SettingsGroup, SettingsRow } from "@/components/settings/SettingsList";
-import SensorSessionCard from "@/components/settings/SensorSessionCard";
 import PageHeader from "@/components/editorial/PageHeader";
+import HairlineSection from "@/components/editorial/HairlineSection";
+import LedgerRow from "@/components/editorial/LedgerRow";
+import SensorSessionCard from "@/components/settings/SensorSessionCard";
 
 function readGraphHeight() {
   const v = Number(window.localStorage.getItem("graph_height"));
@@ -17,7 +17,7 @@ export default function Settings() {
   const { logout, user } = useAuth();
   const queryClient = useQueryClient();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const { connected: dexcomConnected } = useDexcomConnection();
+  const { connected: dexcomConnected, connection } = useDexcomConnection();
   const graphHeight = readGraphHeight();
 
   const handleLogout = async () => {
@@ -31,98 +31,67 @@ export default function Settings() {
     }
   };
 
-  const profileSubtext = user?.email || "Name, email & password";
+  const dexcomStatus = dexcomConnected
+    ? `${connection?.cgm_model || "G7"} · connected`
+    : "not connected";
 
   return (
-    <div className="mx-auto max-w-md space-y-5 pb-4 pt-2">
-      <h1 className="px-3 text-lg font-bold text-white">Settings</h1>
+    <div className="mx-auto max-w-md space-y-6 pb-4 pt-2">
+      <PageHeader italicWord="profile" rightText="synced just now" />
+
+      {/* Connection status line */}
+      <div className="flex items-center gap-2 px-1">
+        <span
+          className="inline-block h-2 w-2 rounded-full"
+          style={{ background: dexcomConnected ? "#5b6550" : "#a89e8d" }}
+        />
+        <span className="text-xs font-medium" style={{ color: "#8a7f70" }}>
+          {dexcomConnected
+            ? `Dexcom ${connection?.cgm_model || "G7"} · connected · updating every 5 min`
+            : "No glucose source connected"}
+        </span>
+      </div>
 
       <SensorSessionCard />
 
-      <SettingsGroup label="Account">
-        <SettingsRow
-          to="/settings/profile"
-          icon={User}
-          title="Profile"
-          subtext={profileSubtext}
-        />
-      </SettingsGroup>
+      <HairlineSection label="Insulin Plan">
+        <LedgerRow label="Insulin settings" value="Meal & correction" to="/settings/insulin" />
+      </HairlineSection>
 
-      <SettingsGroup label="Health & Data">
-        <SettingsRow
-          to="/settings/insulin"
-          icon={Activity}
-          title="Insulin Settings"
-          subtext="Meal & correction settings"
-        />
-        <SettingsRow
-          to="/settings/dexcom"
-          icon={HeartPulse}
-          title="Glucose Source"
-          subtext={dexcomConnected ? "Dexcom connected" : "Not connected"}
-          last
-        />
-      </SettingsGroup>
+      <HairlineSection label="Glucose">
+        <LedgerRow label="Dexcom connection" value={dexcomStatus} to="/settings/dexcom" />
+      </HairlineSection>
 
-      <SettingsGroup label="App">
-        <SettingsRow
-          to="/settings/display"
-          icon={LineChart}
-          title="Display"
-          subtext={`Graph max: ${graphHeight} mg/dL`}
-        />
-        <SettingsRow
-          to="/install"
-          icon={Smartphone}
-          title="Add to Home Screen"
-          subtext="Install Stackd as an app on your iPhone"
-        />
-        <SettingsRow
-          to="/settings/support-creator"
-          icon={Leaf}
-          title="Support the Creator"
-          subtext="Optional gifts to help Stackd grow"
-          last
-        />
-      </SettingsGroup>
+      <HairlineSection label="App">
+        <LedgerRow label="Display" value={`Graph max: ${graphHeight}`} to="/settings/display" />
+        <LedgerRow label="Add to Home Screen" value="Install" to="/install" />
+        <LedgerRow label="Support the Creator" value="Optional gifts" to="/settings/support-creator" />
+      </HairlineSection>
 
-      <SettingsGroup label="Privacy & Help">
-        <SettingsRow
-          to="/settings/privacy-consent"
-          icon={Shield}
-          title="Privacy & Consent"
-          subtext="Privacy, consent & account controls"
-        />
-        <SettingsRow
-          to="/settings/contact-support"
-          icon={LifeBuoy}
-          title="Contact & Support"
-          subtext="Help, feedback & bug reports"
-          last
-        />
-      </SettingsGroup>
+      <HairlineSection label="Privacy & Help">
+        <LedgerRow label="Privacy & Consent" value="Consent & controls" to="/settings/privacy-consent" />
+        <LedgerRow label="Contact & Support" value="Help & feedback" to="/settings/contact-support" />
+      </HairlineSection>
 
       {user?.role === "admin" && (
-        <SettingsGroup label="Admin">
-          <SettingsRow
-            to="/settings/support-inbox"
-            icon={Inbox}
-            title="Support Inbox"
-            subtext="Review community help requests"
-          />
-        </SettingsGroup>
+        <HairlineSection label="Admin">
+          <LedgerRow label="Support Inbox" value="Review requests" to="/settings/support-inbox" />
+        </HairlineSection>
       )}
 
-      <SettingsGroup>
-        <SettingsRow
+      <HairlineSection label="Account">
+        <LedgerRow label="Profile" value={user?.email || "Name & email"} to="/settings/profile" />
+        <LedgerRow
+          label={isLoggingOut ? "Logging out..." : "Log Out"}
           onClick={handleLogout}
-          icon={isLoggingOut ? Loader2 : LogOut}
-          title={isLoggingOut ? "Logging out..." : "Log Out"}
           danger
-          last
-          iconClassName={isLoggingOut ? "animate-spin" : ""}
         />
-      </SettingsGroup>
+      </HairlineSection>
+
+      <p className="px-1 pt-2 text-xs" style={{ color: "#a89e8d" }}>
+        Your settings shape what every review shows —{" "}
+        <span className="font-serif-italic">changes apply to logs going forward.</span>
+      </p>
     </div>
   );
 }
