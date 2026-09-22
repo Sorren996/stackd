@@ -48,6 +48,7 @@ import { isRescueCarbEntry } from "@/lib/rescueCarbDetection";
 import { GLUCOSE_STATUS_COLORS, classifyGlucose, readHighReference, FIXED_LOW_REFERENCE } from "@/lib/glucoseStatus";
 import AnchorNumber from "@/components/editorial/AnchorNumber";
 import HairlineSection from "@/components/editorial/HairlineSection";
+import { format } from "date-fns";
 
 // Flip to false to instantly revert to the original dense dashboard layout.
 const CLEAN_LAYOUT = true;
@@ -1121,23 +1122,32 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
 
   return (
     <div className="space-y-5">
-      {/* 1. YOUR DAY CARD — Current Glucose + Daily Balance */}
+      {/* 1. YOUR DAY CARD — Header + Current Glucose + Daily Balance */}
       <DashboardCard className="p-5">
-        <div className="section-label">Current Glucose</div>
+        {/* Card header — "Your day" + current date/time */}
+        <div className="flex items-baseline justify-between">
+          <h1 className="hdr">Your <em>day</em></h1>
+          <span className="hdr-date">{format(new Date(nowMinute * MINUTE_MS), "EEE, MMM d · h:mm a")}</span>
+        </div>
+
+        <div className="section-label mt-5">Current Glucose</div>
         <AnchorNumber
           value={isGlucoseStale ? "—" : (glucoseValue != null ? Math.round(glucoseValue) : "—")}
           unit="mg/dL"
-          caption={isGlucoseStale ? "Waiting for a fresh reading" : `${trend?.label || "Steady"} · updated ${(() => {
-            if (!latestGlucose?.recorded_at) return "just now";
-            const mins = Math.max(0, Math.round((nowMinute * MINUTE_MS - new Date(latestGlucose.recorded_at).getTime()) / 60000));
-            if (mins < 1) return "just now";
-            if (mins < 60) return `${mins}m ago`;
-            return `${Math.floor(mins / 60)}h ${mins % 60}m ago`;
-          })()}${dexcomConnected ? ` · Dexcom ${dexcomModel}` : ""}`}
+          caption={isGlucoseStale ? "Waiting for a fresh reading" : (trend?.label || "Steady")}
           dot
           dotColor={isGlucoseStale ? "#a89e8d" : (inRange ? "#5b6550" : glucoseColor)}
-          trendIcon={!isGlucoseStale && glucoseValue != null ? <TrendIcon className="h-5 w-5" /> : null}
+          trendIcon={!isGlucoseStale && glucoseValue != null ? <TrendIcon size={30} strokeWidth={2.5} /> : null}
           trendColor={glucoseColor}
+          subcaption={isGlucoseStale ? null : (
+            <span className="font-serif-italic">updated {(() => {
+              if (!latestGlucose?.recorded_at) return "just now";
+              const mins = Math.max(0, Math.round((nowMinute * MINUTE_MS - new Date(latestGlucose.recorded_at).getTime()) / 60000));
+              if (mins < 1) return "just now";
+              if (mins < 60) return `${mins}m ago`;
+              return `${Math.floor(mins / 60)}h ${mins % 60}m ago`;
+            })()}</span>
+          )}
         />
 
         {isGlucoseStale ? (
@@ -1146,10 +1156,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
           <SupportiveGlucoseMessage insight={supportiveGlucoseInsight} trend={trend} TrendIcon={TrendIcon} />
         )}
 
-        {/* Internal hairline separator */}
-        <div className="my-5 h-px" style={{ background: "#eadccf" }} />
-
-        <div className="section-label">Daily Balance</div>
+        <div className="section-label mt-6">Daily Balance</div>
         <AnchorNumber
           value={comfortZonePercentage != null ? Math.round(comfortZonePercentage) : "—"}
           unit="%"

@@ -666,8 +666,6 @@ export default function Dashboard() {
         isSaving={updateLog.isPending}
       />
 
-      <PageHeader italicWord="day" />
-
       <SensorSessionBanner />
 
       <div className="mb-4 space-y-3">
