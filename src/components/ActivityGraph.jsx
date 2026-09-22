@@ -986,11 +986,11 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       const proximity = Math.max(0, 1 - distance / halfSpan);
       const isActive = centerTime >= iv.start && centerTime < iv.end;
 
-      // Interpolate from soft dormant purple to vibrant organic purple
+      // Interpolate from soft dormant mauve to vibrant organic purple
       const t = isActive ? 1 : proximity * 0.7;
-      const r = Math.round(148 + (178 - 148) * t);
-      const g = Math.round(130 + (108 - 130) * t);
-      const b = Math.round(196 + (230 - 196) * t);
+      const r = Math.round(138 + (168 - 138) * t);
+      const g = Math.round(120 + (96 - 120) * t);
+      const b = Math.round(168 + (205 - 168) * t);
       const alpha = (0.10 + t * 0.18).toFixed(3);
       const glowAlpha = (0.05 + t * 0.22).toFixed(3);
       const glowSize = Math.round(10 + t * 26);
@@ -1425,7 +1425,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               {(() => {
             const iob = getDoseIOB(activeMarker.item, Date.now());
             return iob > 0.01 ?
-            <p className="text-[11px] text-teal-300/80">{Math.round(iob)}u estimated active</p> :
+            <p className="text-[11px]" style={{ color: "#5b6550" }}>{Math.round(iob)}u estimated active</p> :
             <p className="text-[11px] text-white/40">Support complete</p>;
           })()}
               <p className="text-[11px] text-white/40">{format(new Date(activeMarker.item.administered_at), "h:mm a · MMM d")}</p>
@@ -1452,14 +1452,14 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                 </button>
           }
               {onDeleteLog && !confirmDelete &&
-          <button type="button" onClick={() => setConfirmDelete(true)} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-rose-400/20 py-2 text-xs font-semibold text-rose-300/80 transition hover:bg-rose-500/10" style={{ background: "rgba(244,63,94,0.04)" }}>
+          <button type="button" onClick={() => setConfirmDelete(true)} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border py-2 text-xs font-semibold transition" style={{ background: "rgba(200,112,96,0.06)", borderColor: "rgba(200,112,96,0.25)", color: "#c97060" }}>
                   <Trash2 className="h-3 w-3" /> Remove
                 </button>
           }
               {confirmDelete &&
           <>
                   <button type="button" onClick={() => setConfirmDelete(false)} className="flex-1 rounded-xl border border-white/12 py-2 text-xs font-semibold text-white/70 transition hover:bg-white/5" style={{ background: "rgba(255,255,255,0.04)" }}>Keep it</button>
-                  <button type="button" onClick={handleDelete} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-rose-400/30 py-2 text-xs font-semibold text-rose-200 transition hover:bg-rose-500/20" style={{ background: "rgba(244,63,94,0.12)" }}>
+                  <button type="button" onClick={handleDelete} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border py-2 text-xs font-semibold transition" style={{ background: "rgba(200,112,96,0.15)", borderColor: "rgba(200,112,96,0.35)", color: "#c97060" }}>
                     <Trash2 className="h-3 w-3" /> Confirm remove
                   </button>
                 </>

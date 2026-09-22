@@ -22,7 +22,7 @@ export default function TimeViewToggle({ value, onChange }) {
             <motion.div
               layoutId="time-view-active"
               className="absolute inset-0 rounded-md"
-              style={{ background: "rgba(53,168,121,0.15)" }}
+              style={{ background: "rgba(91,101,80,0.15)" }}
               transition={{ type: "spring", stiffness: 380, damping: 30 }}
             />
           )}

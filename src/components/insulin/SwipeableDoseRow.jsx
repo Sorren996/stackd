@@ -54,8 +54,8 @@ export default function SwipeableDoseRow({ children, onEdit, onDelete }) {
         <button
           type="button"
           onClick={handleEdit}
-          className="flex h-9 w-14 items-center justify-center rounded-lg text-white"
-          style={{ background: "linear-gradient(145deg, rgba(91,168,138,0.85), rgba(91,163,184,0.72))" }}
+          className="flex h-9 w-14 items-center justify-center rounded-lg"
+          style={{ background: "#5b6550", color: "#fdf9f2" }}
           aria-label="Edit dose"
         >
           <Pencil className="h-4 w-4" />
@@ -63,8 +63,8 @@ export default function SwipeableDoseRow({ children, onEdit, onDelete }) {
         <button
           type="button"
           onClick={handleDelete}
-          className="flex h-9 w-14 items-center justify-center rounded-lg text-white"
-          style={{ background: "linear-gradient(145deg, rgba(201,112,96,0.85), rgba(180,90,75,0.72))" }}
+          className="flex h-9 w-14 items-center justify-center rounded-lg"
+          style={{ background: "#c97060", color: "#fdf9f2" }}
           aria-label="Delete dose"
         >
           <Trash2 className="h-4 w-4" />

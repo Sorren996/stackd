@@ -3,11 +3,11 @@ import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { CheckCircle2, Clock, ChevronDown, ChevronUp } from "lucide-react";
 
-const RESCUE_COLOR = "#a78bfa";
+const RESCUE_COLOR = "#8a6db8";
 const PALETTE = {
-  green: "#58a97c",
-  amber: "#d4a056",
-  muted: "#8a9496",
+  green: "#5b6550",
+  amber: "#af751b",
+  muted: "#8a7f70",
   bolus: "#5ba3b8",
 };
 

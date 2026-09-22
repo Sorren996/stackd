@@ -49,14 +49,14 @@ export default function RhythmSection({
               type="button"
               onClick={() => handleTabChange(t.id)}
               className="relative pb-1.5 text-[13px] font-semibold transition-colors duration-200"
-              style={{ color: isActive ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.40)" }}
+              style={{ color: isActive ? "#3f3830" : "#8a7f70" }}
             >
               {t.label}
               {isActive && (
                 <motion.div
                   layoutId="rhythm-tab-indicator"
                   className="absolute -bottom-px left-0 right-0 h-[2px] rounded-full"
-                  style={{ background: "rgba(255,255,255,0.55)" }}
+                  style={{ background: "#3f3830" }}
                   transition={{ duration: 0.25, ease: EASE }}
                 />
               )}

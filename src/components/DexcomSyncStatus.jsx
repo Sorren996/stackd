@@ -152,7 +152,7 @@ export default function DexcomSyncStatus() {
                           <div
                             className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border"
                             style={{
-                              borderColor: "rgba(255,255,255,0.08)",
+                              borderColor: "#eadccf",
                             }}
                           >
                             <Icon className="h-3 w-3" style={{ color: "#8a7f70" }} />

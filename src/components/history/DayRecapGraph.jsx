@@ -43,7 +43,7 @@ function EventDot({ cx, cy, payload, color, onSelect, r = 4.5 }) {
       cy={cy}
       r={r}
       fill={fill}
-      stroke="rgba(15,20,18,0.9)"
+      stroke="rgba(253,249,242,0.9)"
       strokeWidth={1}
       style={{ cursor: "pointer" }}
       onClick={(e) => {
@@ -73,17 +73,17 @@ function EventPopover({ event, onClose }) {
         style={{ left: event.cx, top: event.cy - 10 }}
       >
         <div
-          className="stackd-glass pointer-events-auto w-max max-w-[280px] rounded-xl border px-3.5 py-3 shadow-xl"
+          className="pointer-events-auto w-max max-w-[280px] rounded-xl border px-3.5 py-3 shadow-xl"
           style={{
-            background: "linear-gradient(165deg, rgba(20,30,26,0.97), rgba(12,18,15,0.97))",
-            borderColor: "rgba(255,255,255,0.16)",
-            backdropFilter: "blur(12px)",
+            background: "#fdf9f2",
+            borderColor: "#eadccf",
+            boxShadow: "0 8px 28px rgba(63, 56, 48, 0.12), 0 2px 8px rgba(63, 56, 48, 0.06)",
           }}
         >
           <div className="mb-1.5 flex items-center gap-1.5">
             <span
               className="inline-block h-2 w-2 rounded-full"
-              style={{ background: payload.dotColor || (isCarb ? "#f59e0b" : "#5ba3b8") }}
+              style={{ background: payload.dotColor || (isCarb ? "#af751b" : "#5ba3b8") }}
             />
             <span className="text-[11px] font-bold text-white">
               {isCarb ? (payload.name || "Nourishment") : (payload.type || "Support")}
@@ -97,7 +97,7 @@ function EventPopover({ event, onClose }) {
                 {payload.profile ? ` · ${payload.profile}` : ""}
               </p>
               {payload.highPF && (
-                <p className="text-[10px] font-medium text-purple-300/70">Higher protein / fat</p>
+                <p className="text-[10px] font-medium" style={{ color: "#8a6db8" }}>Higher protein / fat</p>
               )}
               {payload.glucoseAt != null && (
                 <p className="text-[10px] text-white/45">{Math.round(payload.glucoseAt)} mg/dL at meal</p>
@@ -111,7 +111,7 @@ function EventPopover({ event, onClose }) {
               {payload.rise != null && (
                 <p
                   className="text-[10px] font-medium"
-                  style={{ color: payload.rise > 30 ? "#d4a056" : payload.rise < 0 ? "#5ba88a" : "rgba(255,255,255,0.6)" }}
+                  style={{ color: payload.rise > 30 ? "#af751b" : payload.rise < 0 ? "#5b6550" : "#8a7f70" }}
                 >
                   Glucose {payload.rise > 0 ? "rose" : "changed"} {payload.rise > 0 ? "+" : ""}
                   {Math.round(payload.rise)} mg/dL over the following hour
@@ -131,7 +131,7 @@ function EventPopover({ event, onClose }) {
               {payload.change != null && (
                 <p
                   className="text-[10px] font-medium"
-                  style={{ color: payload.change < -10 ? "#5ba88a" : payload.change > 10 ? "#d4a056" : "rgba(255,255,255,0.6)" }}
+                  style={{ color: payload.change < -10 ? "#5b6550" : payload.change > 10 ? "#af751b" : "#8a7f70" }}
                 >
                   Glucose {payload.change > 0 ? "rose" : "eased"} {payload.change > 0 ? "+" : ""}
                   {Math.round(payload.change)} mg/dL over the following hour
@@ -168,8 +168,9 @@ export default function DayRecapGraph({ glucose, carbs, insulin, targetLow, targ
       <div
         className="stackd-card flex h-[180px] items-center justify-center rounded-2xl border"
         style={{
-          background: "linear-gradient(145deg, rgba(255,255,255,0.03), rgba(255,255,255,0.008))",
-          borderColor: "rgba(255,255,255,0.10)",
+          background: "#fdf9f2",
+          borderColor: "#eadccf",
+          boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)",
         }}
       >
         <p className="text-xs text-white/40">Not enough glucose data to chart this day</p>
@@ -222,7 +223,7 @@ export default function DayRecapGraph({ glucose, carbs, insulin, targetLow, targ
         highPF: c.is_high_protein_fat_meal,
         notes: c.notes,
         time: c.consumed_at,
-        dotColor: "#f59e0b",
+        dotColor: "#af751b",
         glucoseAt,
         glucoseAt60: at60?.value ?? null,
         glucoseAt120: at120?.value ?? null,
@@ -265,8 +266,9 @@ export default function DayRecapGraph({ glucose, carbs, insulin, targetLow, targ
     <div
       className="stackd-card relative rounded-2xl border p-3"
       style={{
-        background: "linear-gradient(145deg, rgba(255,255,255,0.03), rgba(255,255,255,0.008))",
-        borderColor: "rgba(255,255,255,0.10)",
+        background: "#fdf9f2",
+        borderColor: "#eadccf",
+        boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)",
       }}
     >
       <div className="relative">
@@ -295,7 +297,7 @@ export default function DayRecapGraph({ glucose, carbs, insulin, targetLow, targ
             tickLine={false}
           />
           <YAxis domain={[yMin, yMax]} hide />
-          <ReferenceArea y1={targetLow} y2={targetHigh} fill="#5ba88a" fillOpacity={0.06} />
+          <ReferenceArea y1={targetLow} y2={targetHigh} fill="#5b6550" fillOpacity={0.06} />
           <ReferenceLine
             y={targetHigh}
             stroke={gTheme.refLineStroke}
@@ -343,7 +345,7 @@ export default function DayRecapGraph({ glucose, carbs, insulin, targetLow, targ
               y={d.y}
               r={3.5}
               fill={GLUCOSE_STATUS_COLORS.inRange}
-              stroke="#ffffff"
+              stroke="#fdf9f2"
               strokeWidth={1.2}
             />
           ))}
@@ -352,7 +354,7 @@ export default function DayRecapGraph({ glucose, carbs, insulin, targetLow, targ
       <EventPopover event={selected} onClose={() => setSelected(null)} />
       </div>
       <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 px-1">
-        <Legend color="#f59e0b" label="Nourishment" />
+        <Legend color="#af751b" label="Nourishment" />
         <Legend color="#5ba3b8" label="Support" />
         <Legend color={GLUCOSE_STATUS_COLORS.inRange} label="Manual reading" ring />
       </div>

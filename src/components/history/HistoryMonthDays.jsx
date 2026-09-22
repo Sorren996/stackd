@@ -1,7 +1,7 @@
 import { format, parseISO } from "date-fns";
 import { ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
-import { GLASS_SURFACE } from "@/lib/glassTheme";
+import { GLASS_FLOATING } from "@/lib/glassTheme";
 
 function dayAvg(day) {
   return day.glucose.count ? Math.round(day.glucose.sum / day.glucose.count) : null;
@@ -34,8 +34,8 @@ export default function HistoryMonthDays({ days, onSelectDay }) {
             type="button"
             whileTap={{ scale: 0.98 }}
             onClick={() => onSelectDay(day.date)}
-            className="flex w-full items-center gap-3 rounded-2xl border px-4 py-3.5 text-left backdrop-blur-sm transition-colors hover:bg-white/[0.04]"
-            style={GLASS_SURFACE}
+            className="flex w-full items-center gap-3 rounded-2xl border px-4 py-3.5 text-left transition-colors hover:bg-white/[0.04]"
+            style={GLASS_FLOATING}
           >
             <div className="min-w-0 flex-1">
               <span className="text-sm font-bold text-white">{format(parsed, "EEEE, MMMM d")}</span>
@@ -46,7 +46,7 @@ export default function HistoryMonthDays({ days, onSelectDay }) {
                       {avg}
                       <span className="ml-0.5 text-[10px] font-medium text-white/40">mg/dL</span>
                     </span>
-                    <span className="text-xs font-semibold text-teal-300/80">{tir}% in range</span>
+                    <span className="text-xs font-semibold" style={{ color: "#5b6550" }}>{tir}% in range</span>
                   </>
                 ) : (
                   <span className="text-xs font-medium text-white/40">No glucose data</span>

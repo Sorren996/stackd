@@ -150,7 +150,7 @@ export default function GraphLowerSection({
               type="button"
               onClick={(e) => { e.stopPropagation(); onCarbTap(entry, e.currentTarget.getBoundingClientRect()); }}
               aria-label={`Carbs ${Math.round(entry.carbs)}g`}
-              className="pointer-events-auto relative flex cursor-pointer items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-semibold leading-none backdrop-blur-sm transition hover:brightness-125"
+              className="pointer-events-auto relative flex cursor-pointer items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-semibold leading-none transition hover:brightness-110"
               style={{ top: pillTop, color, borderColor: `${color}30`, background: gTheme.pillBg }}
             >
               <Wheat className="h-2.5 w-2.5" />
@@ -213,7 +213,7 @@ export default function GraphLowerSection({
               type="button"
               onClick={(e) => { e.stopPropagation(); onDoseTap(dose, key, e.currentTarget.getBoundingClientRect()); }}
               aria-label={`${formattedUnits} units ${shortLabel}`}
-              className="pointer-events-auto relative flex cursor-pointer items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-semibold leading-none backdrop-blur-sm transition hover:brightness-125"
+              className="pointer-events-auto relative flex cursor-pointer items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-semibold leading-none transition hover:brightness-110"
               style={{
                 top: insulinLaneTop + pillTop,
                 color,

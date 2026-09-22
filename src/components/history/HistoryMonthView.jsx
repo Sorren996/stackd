@@ -1,6 +1,6 @@
 import { CalendarDays, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
-import { GLASS_SURFACE } from "@/lib/glassTheme";
+import { GLASS_FLOATING } from "@/lib/glassTheme";
 import { monthStats } from "@/lib/historyAggregations";
 import HistoryStat from "./HistoryStat";
 
@@ -38,8 +38,8 @@ export default function HistoryMonthView({ months, onSelectMonth }) {
             type="button"
             whileTap={{ scale: 0.98 }}
             onClick={() => onSelectMonth(month.key)}
-            className="flex w-full items-center gap-3 rounded-2xl border px-4 py-4 text-left backdrop-blur-sm transition-colors hover:bg-white/[0.04]"
-            style={GLASS_SURFACE}
+            className="flex w-full items-center gap-3 rounded-2xl border px-4 py-4 text-left transition-colors hover:bg-white/[0.04]"
+            style={GLASS_FLOATING}
           >
             <div className="min-w-0 flex-1">
               <div className="flex items-baseline justify-between gap-2">

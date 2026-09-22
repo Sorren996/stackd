@@ -6,8 +6,9 @@ function Metric({ label, value, unit, accent }) {
     <div
       className="rounded-2xl border px-3.5 py-3"
       style={{
-        background: "linear-gradient(145deg, rgba(255,255,255,0.035), rgba(255,255,255,0.008))",
-        borderColor: "rgba(255,255,255,0.10)",
+        background: "#fdf9f2",
+        borderColor: "#eadccf",
+        boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)",
       }}
     >
       <p className="text-[10px] font-semibold uppercase tracking-wider text-white/35">{label}</p>
@@ -26,8 +27,9 @@ export default function DaySummary({ metrics, daySummary, manualCount, hasCGM, t
       <div
         className="rounded-2xl border px-4 py-5 text-center"
         style={{
-          background: "linear-gradient(145deg, rgba(255,255,255,0.03), rgba(255,255,255,0.008))",
-          borderColor: "rgba(255,255,255,0.10)",
+          background: "#fdf9f2",
+          borderColor: "#eadccf",
+          boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)",
         }}
       >
         <p className="text-sm font-medium text-white/55">No glucose data for this day</p>
@@ -44,7 +46,7 @@ export default function DaySummary({ metrics, daySummary, manualCount, hasCGM, t
           <span className="text-xs font-medium text-white/40">mg/dL</span>
           <span
             className="ml-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold text-white/55"
-            style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.12)" }}
+            style={{ background: "#f7f1e8", borderColor: "#eadccf" }}
           >
             {manualCount} manual {manualCount === 1 ? "reading" : "readings"}
           </span>
@@ -73,7 +75,7 @@ export default function DaySummary({ metrics, daySummary, manualCount, hasCGM, t
           <p className="text-[10px] font-medium text-white/40">mg/dL average</p>
         </div>
         <div className="text-right">
-          <span className="text-4xl font-black text-teal-300/90">{tir}%</span>
+          <span className="text-4xl font-black" style={{ color: "#5b6550" }}>{tir}%</span>
           <p className="text-[10px] font-medium text-white/40">in your comfort zone</p>
         </div>
       </div>

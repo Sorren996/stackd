@@ -190,8 +190,8 @@ function EditLogSheet({ log, onClose, onSave, isSaving }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-end justify-center overflow-y-auto bg-black/75 px-3 pb-24 pt-6 sm:items-center sm:px-4 sm:pb-6 sm:backdrop-blur-sm">
-      <div className="edit-log-sheet max-h-[calc(100dvh-8rem)] w-full max-w-md overflow-y-auto rounded-3xl border p-5 sm:max-h-[calc(100dvh-3rem)]" style={{ background: "linear-gradient(165deg, rgba(18,28,23,0.94), rgba(10,16,13,0.96))", borderColor: "rgba(255,255,255,0.14)", boxShadow: "0 24px 80px rgba(0,0,0,0.45), inset 0 1px 1px rgba(255,255,255,0.12), inset 0 -1px 1px rgba(255,255,255,0.04)", backdropFilter: "blur(20px)" }}>
+    <div className="fixed inset-0 z-[80] flex items-end justify-center overflow-y-auto px-3 pb-24 pt-6 sm:items-center sm:px-4 sm:pb-6" style={{ background: "rgba(63, 56, 48, 0.25)" }}>
+      <div className="edit-log-sheet max-h-[calc(100dvh-8rem)] w-full max-w-md overflow-y-auto rounded-3xl border p-5 sm:max-h-[calc(100dvh-3rem)]" style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 8px 28px rgba(63, 56, 48, 0.12), 0 2px 8px rgba(63, 56, 48, 0.06)" }}>
         <style>{`
           .edit-log-sheet input,
           .edit-log-sheet select,
@@ -201,7 +201,7 @@ function EditLogSheet({ log, onClose, onSave, isSaving }) {
         `}</style>
         <div className="mb-5 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-white">{title}</h2>
-          <button type="button" onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-full border text-white/70 transition hover:text-white" style={{ background: "linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))", borderColor: "rgba(255,255,255,0.14)" }}>
+          <button type="button" onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-full border text-white/70 transition hover:text-white" style={{ background: "#f7f1e8", borderColor: "#eadccf" }}>
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -254,7 +254,7 @@ function EditLogSheet({ log, onClose, onSave, isSaving }) {
           <DateScrollField label="Date" value={form.date} onChange={(value) => updateField("date", value)} max={todayDateValue} />
           <TimeScrollField label="Logged at" value={form.time} onChange={(value) => updateField("time", value)} max={form.date === todayDateValue ? nowTimeString : undefined} />
           <TextPadField label="Notes" value={form.notes} onChange={(value) => updateField("notes", value)} placeholder="Notes" multiline />
-          <button type="button" onClick={submit} disabled={isSaving} className="sticky bottom-0 w-full rounded-2xl py-4 text-base font-semibold text-white transition disabled:opacity-40" style={{ background: "linear-gradient(145deg, rgba(91,168,138,0.85), rgba(91,163,184,0.72))", boxShadow: "0 8px 28px rgba(91,163,184,0.22), 0 -8px 20px rgba(10,18,16,0.9), inset 0 1px 1px rgba(255,255,255,0.2)" }}>
+          <button type="button" onClick={submit} disabled={isSaving} className="sticky bottom-0 w-full rounded-2xl py-4 text-base font-semibold transition disabled:opacity-40" style={{ background: "#3f3830", color: "#f7f1e8", boxShadow: "0 4px 16px rgba(63, 56, 48, 0.15)" }}>
             {isSaving ? "Saving..." : "Save moment"}
           </button>
         </div>
@@ -478,7 +478,7 @@ export default function History() {
             onClick={goBack}
             aria-label="Back"
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-white/70 transition hover:text-white"
-            style={{ background: "linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))", borderColor: "rgba(255,255,255,0.14)" }}
+            style={{ background: "#fdf9f2", borderColor: "#eadccf" }}
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
@@ -499,7 +499,7 @@ export default function History() {
               disabled={!allDays.some((d) => d.date < selectedDay)}
               aria-label="Previous day"
               className="flex h-9 w-9 items-center justify-center rounded-full border text-white/70 transition hover:text-white disabled:opacity-30"
-              style={{ background: "linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))", borderColor: "rgba(255,255,255,0.14)" }}
+              style={{ background: "#fdf9f2", borderColor: "#eadccf" }}
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
@@ -513,7 +513,7 @@ export default function History() {
               disabled={!allDays.some((d) => d.date > selectedDay)}
               aria-label="Next day"
               className="flex h-9 w-9 items-center justify-center rounded-full border text-white/70 transition hover:text-white disabled:opacity-30"
-              style={{ background: "linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))", borderColor: "rgba(255,255,255,0.14)" }}
+              style={{ background: "#fdf9f2", borderColor: "#eadccf" }}
             >
               <ChevronRight className="h-4 w-4" />
             </button>

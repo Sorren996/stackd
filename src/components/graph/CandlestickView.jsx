@@ -16,13 +16,13 @@ const INSULIN_PLANE_HEIGHT = 82;
 const LOWER_GAP = 4;
 
 const PALETTE = {
-  surface: "#0c1314",
-  cardBg: "#151d1e",
-  muted: "#8a9496",
-  green: "#58a97c",
-  high: "#d4a056",
-  low: "#6b92c4",
-  spike: "#E9A284",
+  surface: "#fdf9f2",
+  cardBg: "#fdf9f2",
+  muted: "#8a7f70",
+  green: "#5b6550",
+  high: "#af751b",
+  low: "#c97060",
+  spike: "#c97060",
 };
 
 function valueToY(value, marginTop, plotHeight, min, max) {
@@ -85,7 +85,7 @@ function CandlestickShape(props) {
 
   return (
     <g>
-      <rect x={barX} y={drawHighY} width={barWidth} height={barHeight} rx={rx} fill="rgba(58,54,66,0.5)" />
+      <rect x={barX} y={drawHighY} width={barWidth} height={barHeight} rx={rx} fill="rgba(63,56,48,0.18)" />
       {exceedsHigh && redBottom > drawHighY && (
         <rect x={barX} y={drawHighY} width={barWidth} height={redBottom - drawHighY} fill="url(#candle_high_fade)" />
       )}
@@ -93,7 +93,7 @@ function CandlestickShape(props) {
         <rect x={barX} y={blueTop} width={barWidth} height={drawLowY - blueTop} fill="url(#candle_low_fade)" />
       )}
       <circle cx={x + width / 2} cy={clampedAvgY} r={3.4} fill={dotColor} />
-      <circle cx={x + width / 2} cy={clampedAvgY} r={3.4} fill="none" stroke="rgba(12,19,20,0.7)" strokeWidth={1} />
+      <circle cx={x + width / 2} cy={clampedAvgY} r={3.4} fill="none" stroke="rgba(253,249,242,0.8)" strokeWidth={1} />
       {entirelyAbove && (
         <line x1={barX - 1} y1={plotTop} x2={barX + barWidth + 1} y2={plotTop} stroke={PALETTE.high} strokeWidth={1.5} strokeLinecap="round" />
       )}
@@ -287,16 +287,16 @@ export default function CandlestickView({
       >
         <defs>
           <linearGradient id="candle_range_grad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#5ba88a" stopOpacity={0} />
-            <stop offset={`${highPct}%`} stopColor="#5ba88a" stopOpacity={0} />
-            <stop offset={`${highPct}%`} stopColor="#5ba88a" stopOpacity={0.04} />
-            <stop offset={`${lowPct}%`} stopColor="#5ba88a" stopOpacity={0.04} />
-            <stop offset={`${lowPct}%`} stopColor="#5ba88a" stopOpacity={0} />
-            <stop offset="100%" stopColor="#5ba88a" stopOpacity={0} />
+            <stop offset="0%" stopColor="#5b6550" stopOpacity={0} />
+            <stop offset={`${highPct}%`} stopColor="#5b6550" stopOpacity={0} />
+            <stop offset={`${highPct}%`} stopColor="#5b6550" stopOpacity={0.04} />
+            <stop offset={`${lowPct}%`} stopColor="#5b6550" stopOpacity={0.04} />
+            <stop offset={`${lowPct}%`} stopColor="#5b6550" stopOpacity={0} />
+            <stop offset="100%" stopColor="#5b6550" stopOpacity={0} />
           </linearGradient>
           <linearGradient id="candle_high_fade" gradientUnits="userSpaceOnUse" x1="0" y1={marginTop} x2="0" y2={targetHighY}>
-            <stop offset="0%" stopColor="#d4a056" stopOpacity={0.55} />
-            <stop offset="100%" stopColor="#d4a056" stopOpacity={0.06} />
+            <stop offset="0%" stopColor="#af751b" stopOpacity={0.55} />
+            <stop offset="100%" stopColor="#af751b" stopOpacity={0.06} />
           </linearGradient>
           <linearGradient id="candle_low_fade" gradientUnits="userSpaceOnUse" x1="0" y1={targetLowY} x2="0" y2={marginTop + plotHeight}>
             <stop offset="0%" stopColor={GLUCOSE_STATUS_COLORS.low} stopOpacity={0.06} />
@@ -401,7 +401,7 @@ export default function CandlestickView({
           const carbGrams = activeTooltip.hourCarbs.reduce((s, c) => s + (Number(c.carbs) || 0), 0);
           return (
             <div className="fixed z-[200]" style={{ left, top: openBelow ? activeTooltip.rect.bottom + 8 : top, transform: openBelow ? "none" : "translateY(-100%)" }}>
-              <div className="stackd-popover rounded-2xl border p-3" style={{ width: tipW, background: "linear-gradient(165deg, rgba(18,28,23,0.98), rgba(10,16,13,0.99))", borderColor: "rgba(255,255,255,0.12)", boxShadow: "0 18px 50px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.08)", backdropFilter: "blur(12px)" }}>
+              <div className="stackd-popover rounded-2xl border p-3" style={{ width: tipW, background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 8px 28px rgba(63, 56, 48, 0.12), 0 2px 8px rgba(63, 56, 48, 0.06)" }}>
               <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/45">Hourly glucose</p>
               <p className="mt-0.5 text-[11px] font-medium text-white/55">{format(hourStart, "h a")} – {format(hourEnd, "h a")}</p>
               <div className="mt-2 flex items-end justify-between">
@@ -422,8 +422,8 @@ export default function CandlestickView({
               )}
               {(doseUnits > 0 || carbGrams > 0) && (
                 <div className="mt-2 flex flex-wrap gap-1.5 border-t border-white/8 pt-2">
-                  {doseUnits > 0 && <span className="rounded-full bg-teal-500/10 px-2 py-0.5 text-[10px] font-medium text-teal-300/80">{doseUnits.toFixed(doseUnits % 1 ? 1 : 0)}u support</span>}
-                  {carbGrams > 0 && <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-300/80">{Math.round(carbGrams)}g nourishment</span>}
+                  {doseUnits > 0 && <span className="rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ background: "rgba(91,101,80,0.10)", color: "#5b6550" }}>{doseUnits.toFixed(doseUnits % 1 ? 1 : 0)}u support</span>}
+                  {carbGrams > 0 && <span className="rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ background: "rgba(175,117,27,0.10)", color: "#af751b" }}>{Math.round(carbGrams)}g nourishment</span>}
                 </div>
               )}
               </div>
