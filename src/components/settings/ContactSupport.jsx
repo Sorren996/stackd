@@ -96,11 +96,11 @@ export default function ContactSupport() {
                 }
               >
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border" style={active ? { borderColor: "rgba(91,101,80,0.30)", background: "rgba(91,101,80,0.10)" } : { borderColor: "#eadccf", background: "#f7f1e8" }}>
-                  <Icon className="h-5 w-5" style={{ color: active ? "#5b6550" : "#8a7f70" }} />
+                  <Icon className="h-5 w-5" style={{ color: active ? "#4d5742" : "#6b6153" }} />
                 </div>
                 <div className="flex-1 text-left min-w-0">
                   <p className="text-sm font-semibold" style={{ color: active ? "#3f3830" : "#3f3830" }}>{t.label}</p>
-                  <p className="text-xs mt-0.5 leading-relaxed" style={{ color: "#a89e8d" }}>{t.desc}</p>
+                  <p className="text-xs mt-0.5 leading-relaxed" style={{ color: "#746959" }}>{t.desc}</p>
                 </div>
               </button>
             );
@@ -112,7 +112,7 @@ export default function ContactSupport() {
         <HairlineSection label="Your Message">
           <div className="space-y-4 pt-3 pb-2">
             <div>
-              <label className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "#a89e8d" }}>Category</label>
+              <label className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "#746959" }}>Category</label>
               <div className="mt-2 flex flex-wrap gap-2">
                 {CATEGORIES.map((c) => (
                   <button
@@ -122,7 +122,7 @@ export default function ContactSupport() {
                     className="rounded-full border px-3 py-1.5 text-xs font-medium transition"
                     style={category === c.key
                       ? { borderColor: "rgba(91,101,80,0.40)", background: "rgba(91,101,80,0.12)", color: "#3f3830" }
-                      : { borderColor: "#eadccf", background: "#f7f1e8", color: "#8a7f70" }
+                      : { borderColor: "#eadccf", background: "#f7f1e8", color: "#6b6153" }
                     }
                   >
                     {c.label}
@@ -132,7 +132,7 @@ export default function ContactSupport() {
             </div>
 
             <div>
-              <label className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "#a89e8d" }}>Message</label>
+              <label className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "#746959" }}>Message</label>
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
@@ -149,15 +149,15 @@ export default function ContactSupport() {
                 onClick={() => setIncludeDiagnostics((v) => !v)}
                 className="mt-0.5 h-5 w-5 shrink-0 rounded-md border flex items-center justify-center transition"
                 style={includeDiagnostics
-                  ? { borderColor: "#5b6550", background: "rgba(91,101,80,0.20)" }
+                  ? { borderColor: "#4d5742", background: "rgba(91,101,80,0.20)" }
                   : { borderColor: "#eadccf", background: "#f7f1e8" }
                 }
               >
-                {includeDiagnostics && <span className="h-2.5 w-2.5 rounded-sm" style={{ background: "#5b6550" }} />}
+                {includeDiagnostics && <span className="h-2.5 w-2.5 rounded-sm" style={{ background: "#4d5742" }} />}
               </button>
               <div>
                 <p className="text-xs font-medium" style={{ color: "#3f3830" }}>Include diagnostic information</p>
-                <p className="text-[10px] mt-0.5 leading-relaxed" style={{ color: "#a89e8d" }}>
+                <p className="text-[10px] mt-0.5 leading-relaxed" style={{ color: "#746959" }}>
                   Includes technical information such as app version and connection status. Your password and Dexcom credentials are never included.
                 </p>
               </div>
@@ -178,8 +178,8 @@ export default function ContactSupport() {
       )}
 
       <div className="flex items-start gap-2.5 px-1">
-        <ShieldCheck className="h-3.5 w-3.5 mt-0.5 shrink-0" style={{ color: "#5b6550" }} />
-        <p className="text-[10px] leading-relaxed" style={{ color: "#a89e8d" }}>
+        <ShieldCheck className="h-3.5 w-3.5 mt-0.5 shrink-0" style={{ color: "#4d5742" }} />
+        <p className="text-[10px] leading-relaxed" style={{ color: "#746959" }}>
           Your message is sent securely and associated with your account. We never receive your password or Dexcom credentials through this form.
         </p>
       </div>

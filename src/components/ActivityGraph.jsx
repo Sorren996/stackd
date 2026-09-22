@@ -213,7 +213,7 @@ function TimeAxisTick({ x, y, payload }) {
         x={x}
         y={y + 11}
         textAnchor="middle"
-        fill="#a89e8d"
+        fill="#746959"
         fontSize={9}
         fontWeight={500}>
         {format(date, "h a")}
@@ -266,7 +266,7 @@ function FilterDropdown({ filters, onChange, anchorRect }) {
   const items = [
   { key: "glucose", label: "Glucose", color: "#3f3830" },
   { key: "insulin", label: "Insulin", color: "#5b6550" },
-  { key: "carbs", label: "Carbs", color: "#af751b" }];
+  { key: "carbs", label: "Carbs", color: "#8a5a12" }];
 
 
   const MARGIN = 8;
@@ -1114,7 +1114,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
         {/* Left: YOUR FLOW label + filter button */}
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-bold uppercase tracking-[0.16em]" style={{ color: "#a89e8d" }}>Activity Graph</span>
+          <span className="text-[10px] font-bold uppercase tracking-[0.16em]" style={{ color: "#746959" }}>Activity Graph</span>
           <div className="relative justify-start">
           <button
             onClick={(e) => {
@@ -1154,7 +1154,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           type="button"
           onClick={scrollToLatestGlucose}
           className="absolute right-2 top-0 z-30 flex h-8 w-8 items-center justify-center rounded-full border shadow-lg transition hover:opacity-70"
-          style={{ borderColor: "#eadccf", background: "#fdf9f2", color: "#8a7f70" }}
+          style={{ borderColor: "#eadccf", background: "#fdf9f2", color: "#6b6153" }}
           aria-label="Scroll to latest glucose">
           <CornerUpRight className="h-4 w-4" />
         </button>
@@ -1168,14 +1168,14 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             
           <div className="flex items-center justify-center gap-1.5 text-2xl font-black leading-none" style={{ color: "#3f3830" }}>
             {(onSelectLog || onDeleteLog) && !dexcomConnected &&
-              <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border" style={{ borderColor: "#eadccf", background: "#fdf9f2", color: "#a89e8d" }}>
+              <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border" style={{ borderColor: "#eadccf", background: "#fdf9f2", color: "#746959" }}>
                 <Info className="h-2.5 w-2.5" />
               </span>
               }
-            <GlucoseTicker ref={tickerRef} initialValue={formatGlucoseDisplay(glucoseLinePoints[glucoseLinePoints.length - 1].value)} /> <span className="text-xs font-medium" style={{ color: "#a89e8d" }}>mg/dL</span>
+            <GlucoseTicker ref={tickerRef} initialValue={formatGlucoseDisplay(glucoseLinePoints[glucoseLinePoints.length - 1].value)} /> <span className="text-xs font-medium" style={{ color: "#746959" }}>mg/dL</span>
           </div>
-          <div ref={tooltipTimeRef} className="mt-1 text-xs font-medium" style={{ color: "#a89e8d" }}>{format(new Date(glucoseLinePoints[glucoseLinePoints.length - 1].time), "h:mm a")}</div>
-          <div ref={tooltipDateRef} className="mt-0.5 text-[10px] font-medium" style={{ color: "#a89e8d" }}>{format(new Date(glucoseLinePoints[glucoseLinePoints.length - 1].time), "EEEE, MMM d")}</div>
+          <div ref={tooltipTimeRef} className="mt-1 text-xs font-medium" style={{ color: "#746959" }}>{format(new Date(glucoseLinePoints[glucoseLinePoints.length - 1].time), "h:mm a")}</div>
+          <div ref={tooltipDateRef} className="mt-0.5 text-[10px] font-medium" style={{ color: "#746959" }}>{format(new Date(glucoseLinePoints[glucoseLinePoints.length - 1].time), "EEEE, MMM d")}</div>
         </div>
           }
       {!isCandlestick && filters.glucose && glucoseLinePoints.length > 0 &&
@@ -1428,15 +1428,15 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       <div className="flex items-center gap-4 px-3 mt-2">
         <div className="flex items-center gap-1.5">
           <div className="h-[2px] w-4" style={{ background: "#3f3830" }} />
-          <span className="text-[10px]" style={{ color: "#a89e8d" }}>glucose</span>
+          <span className="text-[10px]" style={{ color: "#746959" }}>glucose</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="h-2 w-2 rounded-full border-[1.5px]" style={{ borderColor: "#3f3830", background: "#f7f1e8" }} />
-          <span className="text-[10px]" style={{ color: "#a89e8d" }}>meals</span>
+          <span className="text-[10px]" style={{ color: "#746959" }}>meals</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-4 border-t-2 border-dotted" style={{ borderColor: "#af751b" }} />
-          <span className="text-[10px]" style={{ color: "#a89e8d" }}>projected</span>
+          <span className="text-[10px]" style={{ color: "#746959" }}>projected</span>
         </div>
       </div>
       <div
@@ -1445,8 +1445,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           style={{ opacity: 0, transform: "translateY(4px)", transition: "opacity 350ms ease-in-out, transform 350ms ease-in-out", minHeight: 16, display: isCandlestick ? "none" : undefined }}
           aria-hidden="true">
           
-        <AlertTriangle className="h-3 w-3" style={{ color: "#af751b" }} />
-        <span className="text-[9px] font-medium" style={{ color: "#af751b" }}>Delayed glucose response possible. Monitor for extended high's and low's.</span>
+        <AlertTriangle className="h-3 w-3" style={{ color: "#8a5a12" }} />
+        <span className="text-[9px] font-medium" style={{ color: "#8a5a12" }}>Delayed glucose response possible. Monitor for extended high's and low's.</span>
       </div>
       </div>
 
@@ -1460,40 +1460,40 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                   <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: isRescue ? "#8a6db8" : "#a89e8d" }}>{isRescue ? "Rescue Carb" : "Nourishment"}</span>
                   <div className="flex items-baseline gap-1.5">
                     <span className="text-2xl font-black" style={{ color: "#3f3830" }}>{Math.round(activeMarker.item.carbs)}</span>
-                    <span className="text-xs" style={{ color: "#8a7f70" }}>g {isRescue ? "rescue" : "carbs"}</span>
+                    <span className="text-xs" style={{ color: "#6b6153" }}>g {isRescue ? "rescue" : "carbs"}</span>
                   </div>
                   <p className="text-xs" style={{ color: "#3f3830" }}>{activeMarker.item.food_name || activeMarker.item.name || "Food"}</p>
-                  <p className="text-[11px]" style={{ color: "#a89e8d" }}>{format(new Date(activeMarker.item.consumed_at), "h:mm a · MMM d")}</p>
+                  <p className="text-[11px]" style={{ color: "#746959" }}>{format(new Date(activeMarker.item.consumed_at), "h:mm a · MMM d")}</p>
                 </>;
           })()}
             </div>
         }
           {activeMarker.type === "insulin" &&
         <div className="space-y-1.5">
-              <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "#a89e8d" }}>Insulin</span>
+              <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "#746959" }}>Insulin</span>
               <p className="text-sm font-bold" style={{ color: "#3f3830" }}>{activeMarker.item.insulin_type}</p>
               <div className="flex items-baseline gap-1.5">
                 <span className="text-2xl font-black" style={{ color: "#3f3830" }}>{Math.round(activeMarker.item.units)}</span>
-                <span className="text-xs" style={{ color: "#8a7f70" }}>units</span>
+                <span className="text-xs" style={{ color: "#6b6153" }}>units</span>
               </div>
               {(() => {
             const iob = getDoseIOB(activeMarker.item, Date.now());
             return iob > 0.01 ?
             <p className="text-[11px]" style={{ color: "#5b6550" }}>{Math.round(iob)}u estimated active</p> :
-            <p className="text-[11px]" style={{ color: "#a89e8d" }}>Support complete</p>;
+            <p className="text-[11px]" style={{ color: "#746959" }}>Support complete</p>;
           })()}
-              <p className="text-[11px]" style={{ color: "#a89e8d" }}>{format(new Date(activeMarker.item.administered_at), "h:mm a · MMM d")}</p>
+              <p className="text-[11px]" style={{ color: "#746959" }}>{format(new Date(activeMarker.item.administered_at), "h:mm a · MMM d")}</p>
 
             </div>
         }
           {activeMarker.type === "glucose" &&
         <div className="space-y-1.5">
-              <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "#a89e8d" }}>Glucose</span>
+              <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "#746959" }}>Glucose</span>
               <div className="flex items-baseline gap-1.5">
                 <span className="text-3xl font-black" style={{ color: "#3f3830" }}>{activeMarker.item.value}</span>
-                <span className="text-xs" style={{ color: "#8a7f70" }}>mg/dL</span>
+                <span className="text-xs" style={{ color: "#6b6153" }}>mg/dL</span>
               </div>
-              <p className="text-[11px]" style={{ color: "#a89e8d" }}>{activeMarker.item.source === "dexcom" ? "CGM" : activeMarker.item.source === "system" ? "System" : "Manual"} · {format(new Date(activeMarker.item.recorded_at), "h:mm a · MMM d")}</p>
+              <p className="text-[11px]" style={{ color: "#746959" }}>{activeMarker.item.source === "dexcom" ? "CGM" : activeMarker.item.source === "system" ? "System" : "Manual"} · {format(new Date(activeMarker.item.recorded_at), "h:mm a · MMM d")}</p>
 
             </div>
         }

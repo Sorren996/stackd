@@ -3,9 +3,9 @@
 // Used across all glucose UI so status colors stay consistent everywhere.
 
 export const GLUCOSE_STATUS_COLORS = {
-  inRange: "#5b6550", // muted sage — steady/positive
-  high: "#af751b",   // muted mustard — above range
-  low: "#c97060",    // muted coral — below range
+  inRange: "#4d5742", // sage — in-range/positive (WCAG 6.8:1)
+  high: "#8a5a12",   // mustard — above range (WCAG 5.3:1)
+  low: "#9c3f2e",    // clay red — below range (WCAG 5.9:1)
 };
 
 // Configurable "High" glucose reference line.

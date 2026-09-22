@@ -77,7 +77,7 @@ export default function ProfileSettings() {
                 }}
                 disabled={isSavingName}
                 className="text-xs font-medium transition disabled:opacity-40"
-                style={{ color: "#8a7f70" }}
+                style={{ color: "#6b6153" }}
               >
                 Cancel
               </button>
@@ -117,7 +117,7 @@ export default function ProfileSettings() {
           />
         ) : (
           <div className="py-3 space-y-3">
-            <p className="text-xs leading-relaxed" style={{ color: "#8a7f70" }}>
+            <p className="text-xs leading-relaxed" style={{ color: "#6b6153" }}>
               We've sent a secure password reset link to {user?.email}. Follow the link in your email to set a new password.
             </p>
             <div className="flex items-center gap-3">
@@ -126,7 +126,7 @@ export default function ProfileSettings() {
                 onClick={handleSendPasswordReset}
                 disabled={isSendingReset}
                 className="text-xs font-medium transition disabled:opacity-40"
-                style={{ color: "#8a7f70" }}
+                style={{ color: "#6b6153" }}
               >
                 {isSendingReset ? "Resending..." : "Resend link"}
               </button>
@@ -134,7 +134,7 @@ export default function ProfileSettings() {
                 type="button"
                 onClick={() => setPasswordStep("idle")}
                 className="text-xs font-medium transition"
-                style={{ color: "#a89e8d" }}
+                style={{ color: "#746959" }}
               >
                 Back
               </button>
@@ -143,7 +143,7 @@ export default function ProfileSettings() {
         )}
       </HairlineSection>
 
-      <p className="px-1 text-xs" style={{ color: "#a89e8d" }}>
+      <p className="px-1 text-xs" style={{ color: "#746959" }}>
         Your identity stays private — <span className="font-serif-italic">only you see these details.</span>
       </p>
     </div>

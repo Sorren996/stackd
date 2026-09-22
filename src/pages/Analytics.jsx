@@ -160,7 +160,7 @@ export default function Analytics() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
-        <div className="w-8 h-8 border-4 rounded-full animate-spin" style={{ borderColor: "#eadccf", borderTopColor: "#5b6550" }} />
+        <div className="w-8 h-8 border-4 rounded-full animate-spin" style={{ borderColor: "#eadccf", borderTopColor: "#4d5742" }} />
       </div>
     );
   }
@@ -168,9 +168,9 @@ export default function Analytics() {
   if (!stats) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
-        <Activity className="w-10 h-10 mb-3" style={{ color: "#a89e8d" }} />
+        <Activity className="w-10 h-10 mb-3" style={{ color: "#746959" }} />
         <h3 className="text-lg font-semibold" style={{ color: "#3f3830" }}>Your journey awaits</h3>
-        <p className="mt-1 max-w-[240px] text-sm" style={{ color: "#a89e8d" }}>
+        <p className="mt-1 max-w-[240px] text-sm" style={{ color: "#746959" }}>
           Log a few glucose readings to begin revealing your body's gentle patterns.
         </p>
       </div>
@@ -216,12 +216,12 @@ export default function Analytics() {
                   className="w-full rounded-t-sm"
                   style={{
                     height: `${Math.max(d.tir, 4)}%`,
-                    background: d.tir >= 70 ? "#5b6550" : d.tir >= 50 ? "#af751b" : "#c97060",
+                    background: d.tir >= 70 ? "#4d5742" : d.tir >= 50 ? "#af751b" : "#c97060",
                     opacity: 0.85,
                     minHeight: 4,
                   }}
                 />
-                <span className="text-[10px] font-medium" style={{ color: "#a89e8d" }}>
+                <span className="text-[10px] font-medium" style={{ color: "#746959" }}>
                   {d.dayLabel}
                 </span>
               </div>
@@ -267,7 +267,7 @@ export default function Analytics() {
         hasEnough={hasEnough}
       />
 
-      <p className="px-1 pt-2 text-xs" style={{ color: "#a89e8d" }}>
+      <p className="px-1 pt-2 text-xs" style={{ color: "#746959" }}>
         Patterns describe the last {PERIOD_LONG[rangeDays] || `${rangeDays} days`} —{" "}
         <span className="font-serif-italic">the rhythm is yours to read.</span>
       </p>

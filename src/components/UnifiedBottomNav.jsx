@@ -226,7 +226,7 @@ export default function UnifiedBottomNav() {
                         className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition-colors hover:bg-black/[0.03]"
                         aria-label={action.label}
                       >
-                        <ActionIcon className="h-4 w-4 shrink-0" style={{ color: "#8a7f70" }} />
+                        <ActionIcon className="h-4 w-4 shrink-0" style={{ color: "#6b6153" }} />
                         <span className="text-sm font-medium" style={{ color: "#3f3830" }}>
                           {action.label}
                         </span>

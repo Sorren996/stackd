@@ -268,7 +268,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
     return {
       value: "Setup needed",
       status: "Add insulin plan in Settings",
-      color: "#d4a056",
+      color: "#8a5a12",
       sub: "Enter I:C ratio and sensitivity",
       details: null
     };
@@ -287,7 +287,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
     return {
       value: "No meal data",
       status: "Log carbs to see your rhythm",
-      color: "#d4a056",
+      color: "#8a5a12",
       sub: "Waiting for carb log",
       details: {
         noActiveMeal: true,
@@ -425,14 +425,14 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
 
   let value = `${estimatedAdditionalUnits.toFixed(1)}u`;
   let status = "Rhythm preview";
-  let color = "#5ba88a";
+  let color = "#4d5742";
   let sub = `${Math.round(mealGroup.carbs)}g carbs · ${loggedTotalUnits.toFixed(1)}u logged`;
 
   // --- Point-in-time assessment (fixed at meal time, does not change as IOB decays) ---
   if (ratio === null) {
     value = "Review";
     status = "Not enough data to preview your rhythm";
-    color = "#d4a056";
+    color = "#8a5a12";
   } else if (correctionGlucoseLow) {
     value = "Review";
     status = "Glucose is below range - take care first";
@@ -440,19 +440,19 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
   } else if (ratio < 0.75) {
     value = `${estimatedAdditionalUnits.toFixed(1)}u`;
     status = "Below your historical rhythm";
-    color = "#c97060";
+    color = "#9c3f2e";
   } else if (ratio > 1.25) {
     value = "Above rhythm";
     status = `${coverageGapAbs.toFixed(1)}u above your historical rhythm`;
-    color = "#6b92c4";
+    color = "#8a5a12";
   } else if (!correctionGlucoseAvailable) {
     value = `${expectedMealUnits.toFixed(1)}u`;
     status = "Rhythm preview - glucose unavailable";
-    color = "#d4a056";
+    color = "#8a5a12";
   } else {
     value = "In rhythm";
     status = "Matches your historical rhythm";
-    color = "#5ba88a";
+    color = "#4d5742";
   }
 
   // --- Continuous monitoring (evolves as glucose readings come in) ---
@@ -475,35 +475,35 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
         outcomeAssessment = {
           label: "Settled nicely",
           message: `${startPart}, dipped to ${Math.round(lowOutcome.value)} mg/dL along the way, ${nowPart}. Well done finding your footing again.`,
-          color: "#5ba88a"
+          color: "#4d5742"
         };
       } else if (hadSpike) {
         outcomeAssessment = {
           label: "Settled nicely",
           message: `${startPart}, rose to ${Math.round(peakOutcome.value)} mg/dL after eating, ${nowPart}. Nice work staying with it.`,
-          color: "#5ba88a"
+          color: "#4d5742"
         };
       } else {
         outcomeAssessment = {
           label: "Tracking beautifully",
           message: `${startPart} ${nowPart}. Your support is aligning beautifully with this meal.`,
-          color: "#5ba88a"
+          color: "#4d5742"
         };
       }
       value = outcomeAssessment.label;
       status = "Back in a comfortable range";
-      color = "#5ba88a";
+      color = "#4d5742";
     } else if (latestIsAfterMeal && latestLow) {
       // Currently below range
       if (hadDip && hasCorrectiveCarbs) {
         outcomeAssessment = {
           label: "Rising gently",
           message: "Nourishment added. We're keeping a supportive eye on the trend as you gently rise back to your comfortable range.",
-          color: "#5ba88a"
+          color: "#4d5742"
         };
         value = "Realigning";
         status = "Nourishment added, rising back";
-        color = "#5ba88a";
+        color = "#4d5742";
       } else if (hadDip) {
         outcomeAssessment = {
           label: "Worth a closer look",
@@ -529,29 +529,29 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
         outcomeAssessment = {
           label: "Finding its balance",
           message: "You added a little extra support, and your body is working through it now. We're watching closely as things gently return to a comfortable flow.",
-          color: "#5ba88a"
+          color: "#4d5742"
         };
         value = "Realigning";
         status = "Support added, settling back";
-        color = "#5ba88a";
+        color = "#4d5742";
       } else if (hadSpike) {
         outcomeAssessment = {
           label: "Still settling",
           message: "Glucose is climbing a little higher than we'd like. Let's give it some gentle time to see how your body finds its balance before adding more support.",
-          color: "#d4a056"
+          color: "#8a5a12"
         };
         value = "Still settling";
         status = "Glucose trending above range";
-        color = "#d4a056";
+        color = "#8a5a12";
       } else {
         outcomeAssessment = {
           label: "Above range",
           message: "Glucose is a little above your comfortable range. Give it some gentle time to settle before adding more support.",
-          color: "#d4a056"
+          color: "#8a5a12"
         };
         value = "Still settling";
         status = "Above comfort zone";
-        color = "#d4a056";
+        color = "#8a5a12";
       }
     }
   }
@@ -978,12 +978,12 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
   "Carbs and insulin are aligned";
 
   const netColor = needsInsulinPlan || correctionOnlyActive ?
-  "#d4a056" :
+  "#8a5a12" :
   netActiveCarbs > 5 ?
-  "#c97060" :
+  "#9c3f2e" :
   netActiveCarbs < -5 ?
-  "#6b92c4" :
-  "#5ba88a";
+  "#8a5a12" :
+  "#4d5742";
 
   const dailyAverage = useMemo(() => {
     const today = new Date();
@@ -1203,7 +1203,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
             caption={`of today spent in your comfort zone — ${targetLow}–${targetHigh} mg/dL`}
           />
           {dailyTimeBreakdown && (
-            <div className="mt-2 flex justify-between text-xs" style={{ color: "#a89e8d" }}>
+            <div className="mt-2 flex justify-between text-xs" style={{ color: "#746959" }}>
               <span>{dailyTimeBreakdown.inRange} in range so far</span>
               <span>{dailyTimeBreakdown.above} above · {dailyTimeBreakdown.below} below</span>
             </div>

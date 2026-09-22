@@ -49,7 +49,7 @@ export default function RhythmSection({
               type="button"
               onClick={() => handleTabChange(t.id)}
               className="relative pb-1.5 text-[13px] font-semibold transition-colors duration-200"
-              style={{ color: isActive ? "#3f3830" : "#8a7f70" }}
+              style={{ color: isActive ? "#3f3830" : "#6b6153" }}
             >
               {t.label}
               {isActive && (

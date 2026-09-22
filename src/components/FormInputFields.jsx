@@ -16,7 +16,7 @@ export function NumberPadField({ label, value, onChange, unit, placeholder = "--
   return (
     <div className={`stackd-input rounded-xl border p-3 ${large ? "px-6 py-6" : ""}`} style={GLASS_SURFACE}>
       <div className="flex items-center justify-between gap-3">
-        <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wider" style={{ color: "#8a7f70" }}>{label}</span>
+        <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wider" style={{ color: "#6b6153" }}>{label}</span>
         <div className="flex min-w-0 items-baseline gap-1">
           <input
             type="text"
@@ -29,7 +29,7 @@ export function NumberPadField({ label, value, onChange, unit, placeholder = "--
             style={{ color: "#3f3830" }}
           />
           
-          {unit && <span className="shrink-0 text-xs" style={{ color: "#8a7f70" }}>{unit}</span>}
+          {unit && <span className="shrink-0 text-xs" style={{ color: "#6b6153" }}>{unit}</span>}
         </div>
       </div>
     </div>);
@@ -39,7 +39,7 @@ export function NumberPadField({ label, value, onChange, unit, placeholder = "--
 export function TextPadField({ label, value, onChange, placeholder, multiline = false }) {
   return (
     <div>
-      {label && <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider" style={{ color: "#8a7f70" }}>{label}</span>}
+      {label && <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider" style={{ color: "#6b6153" }}>{label}</span>}
       {multiline ?
       <textarea
         value={value || ""}
@@ -67,7 +67,7 @@ export function DateScrollField({ label, value, onChange, max }) {
   return (
     <div className="stackd-input rounded-2xl border p-3" style={GLASS_SURFACE}>
       <div className="flex items-center justify-between">
-        <span className="text-sm" style={{ color: "#8a7f70" }}>{label}</span>
+        <span className="text-sm" style={{ color: "#6b6153" }}>{label}</span>
         <input
           type="date"
           value={value || ""}
@@ -85,7 +85,7 @@ export function TimeScrollField({ label, value, onChange, max }) {
   return (
     <div className="rounded-2xl border p-3 my-3" style={GLASS_SURFACE}>
       <div className="flex items-center justify-between">
-        <span className="text-sm" style={{ color: "#8a7f70" }}>{label}</span>
+        <span className="text-sm" style={{ color: "#6b6153" }}>{label}</span>
         <input
           type="time"
           value={value || ""}
@@ -103,7 +103,7 @@ export function SelectField({ label, value, onChange, options, placeholder = "Se
   return (
     <div className="stackd-input rounded-xl border p-3" style={GLASS_SURFACE}>
       <div className="flex items-center justify-between gap-3">
-        <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wider" style={{ color: "#8a7f70" }}>{label}</span>
+        <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wider" style={{ color: "#6b6153" }}>{label}</span>
         <select
           value={value || ""}
           onChange={(e) => onChange(e.target.value)}

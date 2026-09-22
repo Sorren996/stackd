@@ -103,7 +103,7 @@ export default function MealProjectionChart({
 
       {/* NOW vertical line */}
       <line x1={nowX} y1={padTop} x2={nowX} y2={H - padBottom} stroke="#3f3830" strokeWidth={1.25} opacity={0.6} />
-      <text x={nowX} y={H - 6} textAnchor="middle" fill="#a89e8d" fontSize={9} fontWeight={600} letterSpacing="0.1em">NOW</text>
+      <text x={nowX} y={H - 6} textAnchor="middle" fill="#746959" fontSize={9} fontWeight={600} letterSpacing="0.1em">NOW</text>
 
       {/* Meal marker — open ring */}
       <circle cx={mealX} cy={points[0]?.y ?? padTop} r={4} fill="#f7f1e8" stroke="#3f3830" strokeWidth={1.5} />

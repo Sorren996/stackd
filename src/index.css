@@ -24,9 +24,9 @@
     --primary: 30 16% 22%;              /* espresso ink — primary buttons */
     --primary-foreground: 36 39% 94%;   /* sandstone text on espresso */
     --secondary: 36 24% 90%;
-    --secondary-foreground: 30 10% 35%;
+    --secondary-foreground: 35 13% 37%;
     --muted: 36 20% 92%;
-    --muted-foreground: 30 8% 50%;      /* #8a7f70 warm taupe — secondary text */
+    --muted-foreground: 36 13% 40%;      /* #8a7f70 warm taupe — secondary text */
     --accent: 88 8% 35%;                /* #5b6550 muted sage — steady/positive */
     --accent-foreground: 36 39% 94%;
     --destructive: 0 45% 50%;
@@ -34,6 +34,13 @@
     --border: 30 18% 87%;               /* #eadccf hairline border */
     --input: 30 18% 87%;
     --ring: 30 16% 22%;
+
+    /* ── Verified WCAG-compliant text tokens (all ≥ 4.5:1 on #f7f1e8) ── */
+    --faint: #746959;          /* 4.8:1 — smallest text tier: labels, ticks, timestamps */
+    --taupe: #6b6153;          /* 5.4:1 — secondary text: captions, values, annotations */
+    --sage-text: #4d5742;      /* 6.8:1 — in-range/positive state text */
+    --mustard-text: #8a5a12;   /* 5.3:1 — projection/warning text */
+    --red-text: #9c3f2e;       /* 5.9:1 — above-range/error text */
 
     /* Chart / data colors */
     --chart-1: 88 8% 35%;               /* sage — in range */
@@ -68,9 +75,9 @@
     --primary: 30 16% 22%;
     --primary-foreground: 36 39% 94%;
     --secondary: 36 24% 90%;
-    --secondary-foreground: 30 10% 35%;
+    --secondary-foreground: 35 13% 37%;
     --muted: 36 20% 92%;
-    --muted-foreground: 30 8% 50%;
+    --muted-foreground: 36 13% 40%;
     --accent: 88 8% 35%;
     --accent-foreground: 36 39% 94%;
     --destructive: 0 45% 50%;
@@ -78,6 +85,14 @@
     --border: 30 18% 87%;
     --input: 30 18% 87%;
     --ring: 30 16% 22%;
+
+    /* Verified WCAG-compliant text tokens (mirror :root) */
+    --faint: #746959;
+    --taupe: #6b6153;
+    --sage-text: #4d5742;
+    --mustard-text: #8a5a12;
+    --red-text: #9c3f2e;
+
     --chart-1: 88 8% 35%;
     --chart-2: 30 16% 22%;
     --chart-3: 32 76% 39%;
@@ -136,6 +151,13 @@
     font-weight: 400;
   }
 
+  /* ── WCAG-compliant text color utilities (≥ 4.5:1 on sandstone) ── */
+  .text-sec { color: #6b6153; }          /* 5.4:1 — secondary text */
+  .text-muted-text { color: #746959; }  /* 4.8:1 — smallest text tier */
+  .text-sage-text { color: #4d5742; }   /* 6.8:1 — positive state text */
+  .text-mustard-text { color: #8a5a12; } /* 5.3:1 — warning/projection text */
+  .text-red-text { color: #9c3f2e; }     /* 5.9:1 — error/above-range text */
+
   /* Big anchor numbers — light weight, tabular numerals */
   .anchor-number {
     font-weight: 300;
@@ -151,7 +173,7 @@
     letter-spacing: 0.16em;
     font-weight: 700;
     font-size: 10px;
-    color: #a89e8d;
+    color: #746959;
     padding-bottom: 6px;
     border-bottom: 1px solid #eadccf;
   }
@@ -231,7 +253,7 @@
   .nav .tab .lb { font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; }
   .nav .tab.on svg * { stroke: var(--ink, #3f3830); stroke-width: 2; }
   .nav .tab.on .lb { color: var(--ink, #3f3830); font-weight: 600; }
-  .nav .tab.off svg * { stroke: var(--faint, #a89e8d); stroke-width: 1.5; }
+  .nav .tab.off svg * { stroke: #a89e8d; stroke-width: 1.5; }
   .nav .tab.off .lb { color: var(--faint, #a89e8d); }
 
   /* Floating overlays — dropdowns, pickers */
@@ -283,7 +305,7 @@
     letter-spacing: 0.16em;
     font-weight: 700;
     font-size: 10px;
-    color: #a89e8d;
+    color: #746959;
   }
 
   .stackd-nav-glass {
@@ -373,19 +395,19 @@
 .text-white\/75 { color: #4a423a; }
 .text-white\/70 { color: #5a5048; }
 .text-white\/65 { color: #5a5048; }
-.text-white\/60 { color: #8a7f70; }     /* warm taupe — secondary */
-.text-white\/55 { color: #8a7f70; }
-.text-white\/50 { color: #a89e8d; }     /* faint labels */
-.text-white\/45 { color: #a89e8d; }
-.text-white\/40 { color: #a89e8d; }
-.text-white\/35 { color: #b8aea0; }
-.text-white\/30 { color: #b8aea0; }
-.text-white\/25 { color: #c8beb0; }
-.text-white\/20 { color: #d8cec2; }
-.text-white\/15 { color: #e0d6c8; }
-.text-white\/12 { color: #e0d6c8; }
-.text-white\/10 { color: #e8e0d4; }
-.text-white\/5 { color: #ede5da; }
+.text-white\/60 { color: #6b6153; }     /* secondary text — WCAG 5.4:1 */
+.text-white\/55 { color: #6b6153; }
+.text-white\/50 { color: #746959; }     /* muted text — WCAG 4.8:1 */
+.text-white\/45 { color: #746959; }
+.text-white\/40 { color: #746959; }
+.text-white\/35 { color: #746959; }
+.text-white\/30 { color: #746959; }
+.text-white\/25 { color: #746959; }
+.text-white\/20 { color: #746959; }
+.text-white\/15 { color: #746959; }
+.text-white\/12 { color: #746959; }
+.text-white\/10 { color: #746959; }
+.text-white\/5 { color: #746959; }
 
 .text-black, .text-black\/90, .text-black\/80 { color: #3f3830; }
 
@@ -404,7 +426,7 @@
 .border-white\/50 { border-color: #a89e8d; }
 
 /* ── Recharts (Analytics rhythm charts) ── */
-.recharts-text { fill: #8a7f70; }
+.recharts-text { fill: #6b6153; }
 .recharts-cartesian-axis-line,
 .recharts-cartesian-axis-tick-line { stroke: #eadccf; }
 .recharts-default-tooltip {

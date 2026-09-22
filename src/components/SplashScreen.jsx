@@ -49,7 +49,7 @@ export default function SplashScreen({ showAuth = false }) {
           <button
             onClick={() => { window.location.href = '/register'; }}
             className="w-full rounded-2xl border py-4 text-sm font-medium transition"
-            style={{ borderColor: "#eadccf", background: "#fdf9f2", color: "#8a7f70" }}
+            style={{ borderColor: "#eadccf", background: "#fdf9f2", color: "#6b6153" }}
           >
             Create Account
           </button>

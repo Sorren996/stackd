@@ -25,7 +25,7 @@ export default function NoticeSection({ section, checkboxes, onToggle, openedDoc
           type="button"
           onClick={() => onOpenDocument(section.documentKey)}
           className="mb-3 inline-flex items-center gap-1.5 text-xs font-semibold transition"
-          style={{ color: isDocOpened ? "#5b6550" : "#af751b" }}
+          style={{ color: isDocOpened ? "#4d5742" : "#8a5a12" }}
         >
           {isDocOpened ? "\u2713 " : ""}
           {isDocOpened ? "Document reviewed" : `Read full ${section.title}`}

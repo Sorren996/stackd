@@ -482,7 +482,7 @@ export default function History() {
             onClick={goBack}
             aria-label="Back"
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition"
-            style={{ color: "#8a7f70" }}
+            style={{ color: "#6b6153" }}
           >
             <ChevronLeft className="h-5 w-5" />
           </button>
@@ -490,7 +490,7 @@ export default function History() {
             <h2 className="text-lg font-semibold truncate" style={{ color: "#3f3830" }}>
               {headerTitle}
             </h2>
-            <p className="text-xs" style={{ color: "#a89e8d" }}>{headerSub}</p>
+            <p className="text-xs" style={{ color: "#746959" }}>{headerSub}</p>
           </div>
         {level === "recap" && selectedDay && allDays.length > 1 && (
           <div className="ml-auto flex items-center gap-1.5">
@@ -504,7 +504,7 @@ export default function History() {
               disabled={!allDays.some((d) => d.date < selectedDay)}
               aria-label="Previous day"
               className="flex h-8 w-8 items-center justify-center rounded-full transition disabled:opacity-30"
-              style={{ color: "#8a7f70" }}
+              style={{ color: "#6b6153" }}
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
@@ -518,7 +518,7 @@ export default function History() {
               disabled={!allDays.some((d) => d.date > selectedDay)}
               aria-label="Next day"
               className="flex h-8 w-8 items-center justify-center rounded-full transition disabled:opacity-30"
-              style={{ color: "#8a7f70" }}
+              style={{ color: "#6b6153" }}
             >
               <ChevronRight className="h-5 w-5" />
             </button>

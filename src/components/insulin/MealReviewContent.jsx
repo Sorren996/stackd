@@ -6,11 +6,11 @@ import MealEditOverlay from "./MealEditOverlay";
 
 const RESCUE_COLOR = "#8a6db8";
 const PALETTE = {
-  green: "#5b6550",
-  amber: "#af751b",
-  muted: "#8a7f70",
+  green: "#4d5742",
+  amber: "#8a5a12",
+  muted: "#6b6153",
   ink: "#3f3830",
-  faint: "#a89e8d",
+  faint: "#746959",
   hairline: "#eadccf",
 };
 

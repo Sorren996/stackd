@@ -73,15 +73,15 @@ export default function ConsentManagement() {
           <div className="pt-3 pb-2 space-y-3">
             <div className="flex items-center gap-3">
               {isComplete && bundleCurrent ? (
-                <CheckCircle2 className="w-5 h-5 shrink-0" style={{ color: "#5b6550" }} />
+                <CheckCircle2 className="w-5 h-5 shrink-0" style={{ color: "#4d5742" }} />
               ) : (
-                <XCircle className="w-5 h-5 shrink-0" style={{ color: "#af751b" }} />
+                <XCircle className="w-5 h-5 shrink-0" style={{ color: "#8a5a12" }} />
               )}
               <div>
                 <p className="text-sm font-semibold" style={{ color: "#3f3830" }}>
                   {isComplete && bundleCurrent ? "All acknowledgments current" : "Acknowledgments required"}
                 </p>
-                <p className="text-xs" style={{ color: "#a89e8d" }}>
+                <p className="text-xs" style={{ color: "#746959" }}>
                   {isComplete && bundleCurrent
                     ? "Your acknowledgments are up to date."
                     : "Please complete the required acknowledgments."}
@@ -138,12 +138,12 @@ export default function ConsentManagement() {
                 onClick={() => setShowWithdrawModal(true)}
                 className="flex w-full items-center gap-3 text-left transition hover:opacity-70"
               >
-                <Shield className="w-4 h-4 shrink-0" style={{ color: "#af751b", opacity: 0.7 }} />
+                <Shield className="w-4 h-4 shrink-0" style={{ color: "#8a5a12", opacity: 0.7 }} />
                 <div className="flex-1">
                   <p className="text-sm font-medium" style={{ color: "#3f3830" }}>Withdraw Health Data Consent</p>
-                  <p className="text-[10px]" style={{ color: "#a89e8d" }}>Revoke consent and review acknowledgments again</p>
+                  <p className="text-[10px]" style={{ color: "#746959" }}>Revoke consent and review acknowledgments again</p>
                 </div>
-                <span className="text-sm" style={{ color: "#a89e8d" }}>›</span>
+                <span className="text-sm" style={{ color: "#746959" }}>›</span>
               </button>
             </div>
           </HairlineSection>
@@ -151,7 +151,7 @@ export default function ConsentManagement() {
 
         {isLoading && (
           <div className="flex justify-center py-4">
-            <Loader2 className="h-4 w-4 animate-spin" style={{ color: "#a89e8d" }} />
+            <Loader2 className="h-4 w-4 animate-spin" style={{ color: "#746959" }} />
           </div>
         )}
       </div>
@@ -178,10 +178,10 @@ export default function ConsentManagement() {
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="mb-4 flex items-start gap-3">
-                  <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" style={{ color: "#af751b" }} />
+                  <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" style={{ color: "#8a5a12" }} />
                   <div>
                     <h3 className="text-base font-bold" style={{ color: "#3f3830" }}>Withdraw Health Data Consent?</h3>
-                    <p className="mt-1 text-xs" style={{ color: "#8a7f70" }}>
+                    <p className="mt-1 text-xs" style={{ color: "#6b6153" }}>
                       Withdrawing consent will affect your access to Stackd's features.
                     </p>
                   </div>
@@ -196,7 +196,7 @@ export default function ConsentManagement() {
                   ].map((item, i) => (
                     <div key={i} className="flex items-start gap-2">
                       <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full" style={{ background: "#a89e8d" }} />
-                      <p className="text-xs leading-relaxed" style={{ color: "#8a7f70" }}>{item}</p>
+                      <p className="text-xs leading-relaxed" style={{ color: "#6b6153" }}>{item}</p>
                     </div>
                   ))}
                 </div>
@@ -206,7 +206,7 @@ export default function ConsentManagement() {
                     onClick={() => setShowWithdrawModal(false)}
                     disabled={isWithdrawing}
                     className="flex-1 rounded-2xl border py-3 text-sm font-medium transition disabled:opacity-50"
-                    style={{ borderColor: "#eadccf", background: "#f7f1e8", color: "#8a7f70" }}
+                    style={{ borderColor: "#eadccf", background: "#f7f1e8", color: "#6b6153" }}
                   >
                     Cancel
                   </button>

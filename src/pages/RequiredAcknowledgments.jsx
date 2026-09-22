@@ -138,21 +138,21 @@ export default function RequiredAcknowledgments() {
               type="button"
               onClick={() => setStep((s) => Math.max(0, s - 1))}
               className="flex h-8 w-8 items-center justify-center transition"
-              style={{ color: "#8a7f70" }}
+              style={{ color: "#6b6153" }}
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
           )}
-          {isFirstStep && <Leaf className="h-5 w-5" style={{ color: "#5b6550" }} />}
+          {isFirstStep && <Leaf className="h-5 w-5" style={{ color: "#4d5742" }} />}
         </div>
-        <span className="text-xs font-semibold" style={{ color: "#a89e8d" }}>
+        <span className="text-xs font-semibold" style={{ color: "#746959" }}>
           Step {step + 1} of {ACKNOWLEDGMENT_STEPS.length}
         </span>
         <button
           type="button"
           onClick={() => logout()}
           className="flex items-center gap-1.5 text-xs font-medium transition"
-          style={{ color: "#8a7f70" }}
+          style={{ color: "#6b6153" }}
         >
           <LogOut className="h-3.5 w-3.5" />
           Sign Out
@@ -188,13 +188,13 @@ export default function RequiredAcknowledgments() {
                     className="mb-6 flex h-20 w-20 items-center justify-center rounded-full"
                     style={{ background: "radial-gradient(circle, rgba(91, 101, 80, 0.15), transparent 70%)" }}
                   >
-                    <Leaf className="h-10 w-10" style={{ color: "#5b6550" }} />
+                    <Leaf className="h-10 w-10" style={{ color: "#4d5742" }} />
                   </div>
                   <h1 className="mb-4 text-2xl font-semibold" style={{ color: "#3f3830" }}>Welcome to <span className="font-serif-italic">Stackd</span></h1>
-                  <p className="mb-3 text-sm leading-relaxed" style={{ color: "#8a7f70" }}>
+                  <p className="mb-3 text-sm leading-relaxed" style={{ color: "#6b6153" }}>
                     Before we begin your wellness journey together, we need to review a few important acknowledgments.
                   </p>
-                  <p className="text-sm leading-relaxed" style={{ color: "#a89e8d" }}>
+                  <p className="text-sm leading-relaxed" style={{ color: "#746959" }}>
                     This helps ensure you understand how Stackd supports you and what it can and cannot do. Take your time — there's no rush.
                   </p>
                 </div>
@@ -219,7 +219,7 @@ export default function RequiredAcknowledgments() {
               {currentStepData.key === "review" && (
                 <div className="space-y-5">
                   <h2 className="text-lg font-semibold" style={{ color: "#3f3830" }}>Review & <span className="font-serif-italic">Accept</span></h2>
-                  <p className="text-sm leading-relaxed" style={{ color: "#8a7f70" }}>
+                  <p className="text-sm leading-relaxed" style={{ color: "#6b6153" }}>
                     Please confirm that you have reviewed and accepted all of the following:
                   </p>
                   <div className="space-y-2">

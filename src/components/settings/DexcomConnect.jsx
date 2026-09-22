@@ -72,20 +72,20 @@ export default function DexcomConnect() {
     <div className="space-y-4">
       <HairlineSection label="Glucose Source">
         <div className="pt-3 pb-2">
-          <p className="text-xs leading-relaxed mb-4" style={{ color: "#8a7f70" }}>
+          <p className="text-xs leading-relaxed mb-4" style={{ color: "#6b6153" }}>
             Connect your Dexcom account so your readings flow into Stackd gently and automatically — no manual logging required.
           </p>
 
           {isLoading ? (
             <div className="flex items-center justify-center py-3">
-              <Loader2 className="h-4 w-4 animate-spin" style={{ color: "#a89e8d" }} />
+              <Loader2 className="h-4 w-4 animate-spin" style={{ color: "#746959" }} />
             </div>
           ) : isConnected ? (
             <div className="space-y-4">
               {hasDexcomData ? (
                 <div className="flex items-center gap-2 rounded-2xl border px-4 py-3" style={{ borderColor: "rgba(91,101,80,0.20)", background: "rgba(91,101,80,0.08)" }}>
-                  <Sparkles className="h-4 w-4" style={{ color: "#5b6550" }} />
-                  <p className="text-xs font-medium" style={{ color: "#5b6550" }}>
+                  <Sparkles className="h-4 w-4" style={{ color: "#4d5742" }} />
+                  <p className="text-xs font-medium" style={{ color: "#4d5742" }}>
                     Connected and flowing. Your glucose rhythm is syncing peacefully.
                   </p>
                 </div>
@@ -94,12 +94,12 @@ export default function DexcomConnect() {
               )}
               {current?.last_sync_error && (
                 <div className="flex items-start gap-2 rounded-2xl border px-4 py-3" style={{ borderColor: "rgba(175,117,27,0.20)", background: "rgba(175,117,27,0.08)" }}>
-                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" style={{ color: "#af751b" }} />
+                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" style={{ color: "#8a5a12" }} />
                   <div className="min-w-0">
-                    <p className="text-xs font-medium" style={{ color: "#af751b" }}>
+                    <p className="text-xs font-medium" style={{ color: "#8a5a12" }}>
                       Last sync couldn't reach Dexcom
                     </p>
-                    <p className="text-[11px] mt-0.5 leading-relaxed break-words" style={{ color: "#af751b", opacity: 0.6 }}>
+                    <p className="text-[11px] mt-0.5 leading-relaxed break-words" style={{ color: "#8a5a12", opacity: 0.6 }}>
                       {current.last_sync_error}
                     </p>
                   </div>
@@ -110,7 +110,7 @@ export default function DexcomConnect() {
                 onClick={handleDisconnect}
                 disabled={disconnecting}
                 className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border transition-all text-sm font-medium disabled:opacity-40"
-                style={{ borderColor: "#eadccf", background: "#f7f1e8", color: "#8a7f70" }}
+                style={{ borderColor: "#eadccf", background: "#f7f1e8", color: "#6b6153" }}
               >
                 {disconnecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Unlink className="h-4 w-4" />}
                 {disconnecting ? "Disconnecting..." : "Disconnect"}
@@ -120,15 +120,15 @@ export default function DexcomConnect() {
             <div className="space-y-3">
               {hasError && (
                 <div className="flex items-start gap-2 rounded-2xl border px-4 py-3" style={{ borderColor: "rgba(201,112,96,0.20)", background: "rgba(201,112,96,0.08)" }}>
-                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" style={{ color: "#c97060" }} />
-                  <p className="text-xs font-medium leading-relaxed" style={{ color: "#c97060" }}>
+                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" style={{ color: "#9c3f2e" }} />
+                  <p className="text-xs font-medium leading-relaxed" style={{ color: "#9c3f2e" }}>
                     Your last sync couldn't reach Dexcom. Please re-enter your credentials to reconnect.
                   </p>
                 </div>
               )}
 
               <div>
-                <label className="text-xs font-medium mb-1.5 block" style={{ color: "#8a7f70" }}>Dexcom username or email</label>
+                <label className="text-xs font-medium mb-1.5 block" style={{ color: "#6b6153" }}>Dexcom username or email</label>
                 <input
                   type="text"
                   value={username}
@@ -142,7 +142,7 @@ export default function DexcomConnect() {
               </div>
 
               <div>
-                <label className="text-xs font-medium mb-1.5 block" style={{ color: "#8a7f70" }}>Dexcom password</label>
+                <label className="text-xs font-medium mb-1.5 block" style={{ color: "#6b6153" }}>Dexcom password</label>
                 <div className="relative">
                   <input
                     type={showPassword ? "text" : "password"}
@@ -158,7 +158,7 @@ export default function DexcomConnect() {
                     type="button"
                     onClick={() => setShowPassword((v) => !v)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 transition"
-                    style={{ color: "#a89e8d" }}
+                    style={{ color: "#746959" }}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -181,8 +181,8 @@ export default function DexcomConnect() {
       </HairlineSection>
 
       <div className="flex items-start gap-2 px-1">
-        <Lock className="h-3.5 w-3.5 shrink-0 mt-0.5" style={{ color: "#b8aea0" }} />
-        <p className="text-xs leading-relaxed" style={{ color: "#a89e8d" }}>
+        <Lock className="h-3.5 w-3.5 shrink-0 mt-0.5" style={{ color: "#a89e8d" }} />
+        <p className="text-xs leading-relaxed" style={{ color: "#746959" }}>
           Your Dexcom username and password are stored privately and used only to read your glucose readings.
           They are never visible to other users, admins, or support staff. Disconnecting permanently deletes them.
         </p>

@@ -19,7 +19,7 @@ const CARD_STYLE = {
   boxShadow: "none"
 };
 
-const STALE_COLOR = "#a89e8d";
+const STALE_COLOR = "#746959";
 const STALE_LABEL = "Waiting for a fresh reading";
 
 export default function CurrentGlucoseCard({
@@ -67,7 +67,7 @@ export default function CurrentGlucoseCard({
       style={{ background: "transparent", border: "none", boxShadow: "none" }}>
 
       <div className="relative z-10 mb-1 flex items-start justify-between gap-2">
-        <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "#a89e8d" }}>
+        <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "#746959" }}>
           Current Glucose
         </span>
         
@@ -75,7 +75,7 @@ export default function CurrentGlucoseCard({
 
       <div className="relative z-10 mt-1 flex items-end gap-1.5">
         {isStale ?
-        <span className="text-4xl font-black leading-none" style={{ color: "#a89e8d" }}>--</span> :
+        <span className="text-4xl font-black leading-none" style={{ color: "#746959" }}>--</span> :
         glucoseValue != null ?
         <GlucoseTicker
           ref={tickerRef}
@@ -86,7 +86,7 @@ export default function CurrentGlucoseCard({
 
         <span className="text-4xl font-black leading-none" style={{ color: "#3f3830" }}>--</span>
         }
-        <span className="mb-1 text-[11px] font-medium" style={{ color: "#a89e8d" }}>mg/dL</span>
+        <span className="mb-1 text-[11px] font-medium" style={{ color: "#746959" }}>mg/dL</span>
         {latestGlucose && !isStale &&
         <TrendIcon className="self-center h-6 w-6" style={{ color: "#3f3830" }} />
         }
@@ -94,10 +94,10 @@ export default function CurrentGlucoseCard({
 
       <div className="relative z-10 mt-1">
         {freshAgeLabel && !isStale &&
-        <p className="text-[11px]" style={{ color: "#a89e8d" }}>{freshAgeLabel}</p>
+        <p className="text-[11px]" style={{ color: "#746959" }}>{freshAgeLabel}</p>
         }
         {isStale && staleAge &&
-        <p className="text-[11px]" style={{ color: "#a89e8d" }}>Last reading {staleAge}</p>
+        <p className="text-[11px]" style={{ color: "#746959" }}>Last reading {staleAge}</p>
         }
 
 

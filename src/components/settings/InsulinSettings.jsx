@@ -48,7 +48,7 @@ function SectionLabel({ icon: Icon, children }) {
         className="flex h-5 w-5 items-center justify-center rounded-full"
         style={{ background: "rgba(91,101,80,0.12)", border: "1px solid rgba(91,101,80,0.28)" }}
       >
-        <Icon className="h-3 w-3" style={{ color: "#5b6550" }} />
+        <Icon className="h-3 w-3" style={{ color: "#4d5742" }} />
       </span>
       <h3 className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/40">{children}</h3>
     </div>
@@ -93,8 +93,8 @@ function SettingHelpButton({ id, openHelp, setOpenHelp }) {
       }}
       className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition"
       style={openHelp === id
-        ? { borderColor: "rgba(91,101,80,0.45)", background: "rgba(91,101,80,0.12)", color: "#5b6550" }
-        : { borderColor: "#eadccf", background: "#fdf9f2", color: "#8a7f70" }
+        ? { borderColor: "rgba(91,101,80,0.45)", background: "rgba(91,101,80,0.12)", color: "#4d5742" }
+        : { borderColor: "#eadccf", background: "#fdf9f2", color: "#6b6153" }
       }
       aria-label={`${help.title} help`}
     >
@@ -249,7 +249,7 @@ function NumberPadField({ label, value, onChange, placeholder = "--", decimal = 
       }}
     >
       <button type="button" onClick={() => setOpen((value) => !value)} className="flex min-h-10 w-full flex-col items-start justify-center gap-0.5 text-left">
-        <span className={`max-w-full truncate text-base font-bold leading-tight ${textValue ? "" : "text-white/25"}`} style={textValue ? { color: "#5b6550" } : undefined}>{textValue || placeholder}</span>
+        <span className={`max-w-full truncate text-base font-bold leading-tight ${textValue ? "" : "text-white/25"}`} style={textValue ? { color: "#4d5742" } : undefined}>{textValue || placeholder}</span>
       </button>
       <CustomInputTray open={open} onClose={() => setOpen(false)} title={label} anchorRef={fieldRef}>
         <div className="grid grid-cols-3 gap-2.5">
@@ -498,7 +498,7 @@ export default function InsulinSettings() {
             <div className="flex-1 flex flex-col justify-center space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-[10px] text-white/40 uppercase tracking-wider">Custom Range</span>
-                <span className="text-sm font-bold" style={{ color: "#5b6550" }}>{targetLow}–{targetHigh} mg/dL</span>
+                <span className="text-sm font-bold" style={{ color: "#4d5742" }}>{targetLow}–{targetHigh} mg/dL</span>
               </div>
               <Slider
                 min={70}
@@ -520,7 +520,7 @@ export default function InsulinSettings() {
           <div className="flex items-center justify-between gap-4 pt-3 pb-2">
             <div className="space-y-0.5">
               <Label className="text-sm font-semibold text-white/90 flex items-center gap-2">
-                <Target className="w-4 h-4" style={{ color: "#5b6550" }} />
+                <Target className="w-4 h-4" style={{ color: "#4d5742" }} />
                 Insulin Stacking Warnings
               </Label>
               <p className="text-xs text-white/40">Alert when multiple rapid doses overlap</p>

@@ -45,7 +45,7 @@ export default function Settings() {
           className="inline-block h-2 w-2 rounded-full"
           style={{ background: dexcomConnected ? "#5b6550" : "#a89e8d" }}
         />
-        <span className="text-xs font-medium" style={{ color: "#8a7f70" }}>
+        <span className="text-xs font-medium" style={{ color: "#6b6153" }}>
           {dexcomConnected
             ? `Dexcom ${connection?.cgm_model || "G7"} · connected · updating every 5 min`
             : "No glucose source connected"}

@@ -296,7 +296,7 @@ export default function CombinedLogSheet({ open, onOpenChange }) {
               type="button"
               onClick={attemptClose}
               className="flex h-8 w-8 items-center justify-center rounded-full border transition"
-              style={{ background: "#f7f1e8", borderColor: "#eadccf", color: "#8a7f70" }}
+              style={{ background: "#f7f1e8", borderColor: "#eadccf", color: "#6b6153" }}
               aria-label="Close"
             >
               <X className="h-4 w-4" />
@@ -309,8 +309,8 @@ export default function CombinedLogSheet({ open, onOpenChange }) {
             <div className="min-h-0 flex-1 overflow-y-auto pb-2">
               {/* Nourishment header */}
               <div className="flex items-center gap-2 px-5 pt-1 pb-1">
-                <Wheat className="h-3.5 w-3.5" style={{ color: "#af751b" }} />
-                <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "#af751b" }}>
+                <Wheat className="h-3.5 w-3.5" style={{ color: "#8a5a12" }} />
+                <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "#8a5a12" }}>
                   Nourishment
                 </span>
               </div>
@@ -318,7 +318,7 @@ export default function CombinedLogSheet({ open, onOpenChange }) {
               {/* CarbsTab (embedded — no internal scroll, no submit, no timestamp) */}
               <Suspense
                 fallback={
-                  <div className="flex h-32 items-center justify-center text-sm" style={{ color: "#a89e8d" }}>Loading...</div>
+                  <div className="flex h-32 items-center justify-center text-sm" style={{ color: "#746959" }}>Loading...</div>
                 }
               >
                 <CarbsTab
@@ -339,8 +339,8 @@ export default function CombinedLogSheet({ open, onOpenChange }) {
                 className="mx-5 mt-3 flex items-center gap-2 border-t pt-3 pb-1"
                 style={{ borderColor: "#eadccf" }}
               >
-                <Syringe className="h-3.5 w-3.5" style={{ color: "#5b6550" }} />
-                <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "#5b6550" }}>
+                <Syringe className="h-3.5 w-3.5" style={{ color: "#4d5742" }} />
+                <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "#4d5742" }}>
                   Support
                 </span>
               </div>
@@ -363,7 +363,7 @@ export default function CombinedLogSheet({ open, onOpenChange }) {
                         type="button"
                         onClick={() => removeInsulinRow(row.id)}
                         className="flex items-center gap-1 px-1 text-xs transition"
-                        style={{ color: "#a89e8d" }}
+                        style={{ color: "#746959" }}
                       >
                         <Trash2 className="h-3 w-3" />
                         Remove this row
@@ -375,7 +375,7 @@ export default function CombinedLogSheet({ open, onOpenChange }) {
                   type="button"
                   onClick={addInsulinRow}
                   className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed py-3 text-sm font-medium transition"
-                  style={{ borderColor: "#eadccf", color: "#8a7f70" }}
+                  style={{ borderColor: "#eadccf", color: "#6b6153" }}
                 >
                   <Plus className="h-4 w-4" />
                   Add another dose
@@ -394,10 +394,10 @@ export default function CombinedLogSheet({ open, onOpenChange }) {
                     >
                       <div className="flex items-center justify-between gap-2">
                         <div className="min-w-0">
-                          <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#5b6550" }}>
+                          <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#4d5742" }}>
                             Expected meal insulin
                           </p>
-                          <p className="mt-0.5 text-[10px] leading-relaxed" style={{ color: "#8a7f70" }}>
+                          <p className="mt-0.5 text-[10px] leading-relaxed" style={{ color: "#6b6153" }}>
                             Based on {Math.round(liveCarbs)}g · your saved ratio · 1u per {mealPlan.gramsPerUnit.toFixed(1)}g
                           </p>
                         </div>
@@ -405,7 +405,7 @@ export default function CombinedLogSheet({ open, onOpenChange }) {
                           {expectedMealInsulin.toFixed(1)}u
                         </span>
                       </div>
-                      <p className="mt-2 text-[10px] leading-relaxed" style={{ color: "#a89e8d" }}>
+                      <p className="mt-2 text-[10px] leading-relaxed" style={{ color: "#746959" }}>
                         An estimate based on your saved settings and previous meal patterns — not a dosing instruction. Use it as a reference and follow your individual plan and how your body responds.
                       </p>
                     </div>
@@ -414,10 +414,10 @@ export default function CombinedLogSheet({ open, onOpenChange }) {
                       className="rounded-xl border p-3"
                       style={{ borderColor: "rgba(175,117,27,0.25)", background: "rgba(175,117,27,0.06)" }}
                     >
-                      <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#af751b", opacity: 0.8 }}>
+                      <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#8a5a12", opacity: 0.8 }}>
                         Add your meal ratio
                       </p>
-                      <p className="mt-1 text-[10px] leading-relaxed" style={{ color: "#8a7f70" }}>
+                      <p className="mt-1 text-[10px] leading-relaxed" style={{ color: "#6b6153" }}>
                         Set your insulin-to-carb ratio in Settings to see an expected meal insulin estimate here.
                       </p>
                     </div>
@@ -446,7 +446,7 @@ export default function CombinedLogSheet({ open, onOpenChange }) {
               {Object.entries(insulinTotals).length > 0 && !isSaving && (
                 <div className="mb-2 px-1">
                   {Object.entries(insulinTotals).map(([type, units]) => (
-                    <p key={type} className="text-xs" style={{ color: "#a89e8d" }}>
+                    <p key={type} className="text-xs" style={{ color: "#746959" }}>
                       {type.split(" ")[0]} · {units % 1 === 0 ? units : units.toFixed(1)}u
                     </p>
                   ))}
@@ -498,7 +498,7 @@ export default function CombinedLogSheet({ open, onOpenChange }) {
                   }}
                 >
                   <h3 className="text-lg font-semibold" style={{ color: "#3f3830" }}>Discard this entry?</h3>
-                  <p className="mt-2 text-sm leading-relaxed" style={{ color: "#8a7f70" }}>
+                  <p className="mt-2 text-sm leading-relaxed" style={{ color: "#6b6153" }}>
                     Your moment hasn't been saved yet. You'll lose what you've entered.
                   </p>
                   <div className="mt-6 flex gap-3">

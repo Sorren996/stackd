@@ -31,13 +31,13 @@ export default function StaleReadingBanner({ visible }) {
               >
                 <CloudOff
                   className="h-4 w-4"
-                  style={{ color: "#af751b" }}
+                  style={{ color: "#8a5a12" }}
                 />
               </motion.div>
               <div className="min-w-0 flex-1">
                 <p
                   className="text-xs font-semibold"
-                  style={{ color: "#af751b" }}
+                  style={{ color: "#8a5a12" }}
                 >
                   No recent updates from your glucose source
                 </p>

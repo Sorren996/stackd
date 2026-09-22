@@ -177,13 +177,13 @@ export default function Layout() {
             }}
           >
             {refreshAlert.type === "success" ? (
-              <Check className="h-3.5 w-3.5 shrink-0" style={{ color: "#5b6550" }} />
+              <Check className="h-3.5 w-3.5 shrink-0" style={{ color: "#4d5742" }} />
             ) : (
-              <AlertTriangle className="h-3.5 w-3.5 shrink-0" style={{ color: "#af751b" }} />
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0" style={{ color: "#8a5a12" }} />
             )}
             <span
               className="whitespace-nowrap text-xs font-semibold"
-              style={{ color: refreshAlert.type === "success" ? "#5b6550" : "#af751b" }}
+              style={{ color: refreshAlert.type === "success" ? "#4d5742" : "#8a5a12" }}
             >
               {refreshAlert.type === "success" ? "Refreshed with the latest" : "Refresh unsuccessful — please try again"}
             </span>

@@ -8,10 +8,10 @@ import IobDecayChart from "./IobDecayChart";
 
 const PALETTE = {
   ink: "#3f3830",
-  muted: "#8a7f70",
-  faint: "#a89e8d",
-  green: "#5b6550",
-  amber: "#af751b",
+  muted: "#6b6153",
+  faint: "#746959",
+  green: "#4d5742",
+  amber: "#8a5a12",
   hairline: "#eadccf",
 };
 

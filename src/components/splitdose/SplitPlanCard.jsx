@@ -4,22 +4,22 @@ import { Split, Clock, ChevronRight } from "lucide-react";
 import { getPlanStatus, formatTimeRemaining, STATUS_LABELS } from "@/lib/splitDoseUtils";
 
 const STATUS_COLORS = {
-  planned: "#5b6550",
-  review_approaching: "#af751b",
-  review_due: "#af751b",
-  postponed: "#8a7f70",
-  draft: "#5b6550",
-  completed: "#5b6550",
-  modified: "#5b6550",
-  skipped: "#8a7f70",
-  expired: "#8a7f70",
-  cancelled: "#8a7f70"
+  planned: "#4d5742",
+  review_approaching: "#8a5a12",
+  review_due: "#8a5a12",
+  postponed: "#6b6153",
+  draft: "#4d5742",
+  completed: "#4d5742",
+  modified: "#4d5742",
+  skipped: "#6b6153",
+  expired: "#6b6153",
+  cancelled: "#6b6153"
 };
 
 export default function SplitPlanCard({ plan }) {
   const navigate = useNavigate();
   const status = getPlanStatus(plan);
-  const color = STATUS_COLORS[status] || "#5b6550";
+  const color = STATUS_COLORS[status] || "#4d5742";
   const label = STATUS_LABELS[status] || "Split plan";
 
   const timeRemaining = formatTimeRemaining(plan.current_review_at || plan.original_review_at);

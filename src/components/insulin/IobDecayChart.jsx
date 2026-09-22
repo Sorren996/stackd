@@ -116,7 +116,7 @@ export default function IobDecayChart({ bolusDoses, basalDoses, now = Date.now()
 
       {/* NOW vertical line */}
       <line x1={nowX} y1={padTop} x2={nowX} y2={basalBandY} stroke="#3f3830" strokeWidth={1.25} opacity={0.5} />
-      <text x={nowX} y={H - 4} textAnchor="middle" fill="#a89e8d" fontSize={9} fontWeight={600} letterSpacing="0.1em">NOW</text>
+      <text x={nowX} y={H - 4} textAnchor="middle" fill="#746959" fontSize={9} fontWeight={600} letterSpacing="0.1em">NOW</text>
 
       {/* Open-ring markers at each dose time */}
       {doseMarkers.map((m, i) => (
@@ -126,11 +126,11 @@ export default function IobDecayChart({ bolusDoses, basalDoses, now = Date.now()
       {/* Flat basal band */}
       <rect x={padX} y={basalBandY} width={W - padX * 2} height={basalBandH} fill="#5b6550" opacity={0.10} rx={2} />
       <line x1={padX} y1={basalBandY + basalBandH + 1} x2={W - padX} y2={basalBandY + basalBandH + 1} stroke="#eadccf" strokeWidth={0.5} />
-      <text x={padX + 2} y={basalBandY + basalBandH - 1} fill="#a89e8d" fontSize={7} fontWeight={600} letterSpacing="0.12em">BASAL · STEADY BACKGROUND</text>
+      <text x={padX + 2} y={basalBandY + basalBandH - 1} fill="#746959" fontSize={7} fontWeight={600} letterSpacing="0.12em">BASAL · STEADY BACKGROUND</text>
 
       {/* X-axis tick labels */}
       {xLabels.map((l, i) => (
-        <text key={`label_${i}`} x={l.x} y={H - 12} textAnchor={i === 0 ? "start" : i === xLabels.length - 1 ? "end" : "middle"} fill="#a89e8d" fontSize={9}>
+        <text key={`label_${i}`} x={l.x} y={H - 12} textAnchor={i === 0 ? "start" : i === xLabels.length - 1 ? "end" : "middle"} fill="#746959" fontSize={9}>
           {l.label}
         </text>
       ))}

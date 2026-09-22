@@ -12,7 +12,7 @@ export default function PageHeader({ italicWord, date = new Date(), showDate = t
         Your <span className="font-serif-italic" style={{ fontWeight: 400 }}>{italicWord}</span>
       </h1>
       {showDate && (
-        <span className="text-xs font-medium" style={{ color: "#a89e8d" }}>
+        <span className="text-xs font-medium" style={{ color: "#746959" }}>
           {rightText || format(date, "EEE, MMM d · h:mm aa")}
         </span>
       )}

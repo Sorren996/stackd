@@ -2,10 +2,10 @@ import { motion } from "framer-motion";
 import { Wind } from "lucide-react";
 
 function getComfortStatus(percentage) {
-  if (percentage === null) return { label: "Waiting for today", color: "#a89e8d" };
-  if (percentage >= 70) return { label: "Flowing beautifully", color: "#5b6550" };
-  if (percentage >= 50) return { label: "Finding your rhythm", color: "#af751b" };
-  return { label: "Every moment counts", color: "#c97060" };
+  if (percentage === null) return { label: "Waiting for today", color: "#746959" };
+  if (percentage >= 70) return { label: "Flowing beautifully", color: "#4d5742" };
+  if (percentage >= 50) return { label: "Finding your rhythm", color: "#8a5a12" };
+  return { label: "Every moment counts", color: "#9c3f2e" };
 }
 
 export default function ComfortZoneCard({ percentage }) {
@@ -19,13 +19,13 @@ export default function ComfortZoneCard({ percentage }) {
       style={{ background: "transparent", border: "none", boxShadow: "none" }}>
 
       <div className="relative z-10 mb-1 flex items-start justify-between gap-2">
-        <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "#a89e8d" }}>Daily Balance</span>
+        <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "#746959" }}>Daily Balance</span>
         
       </div>
 
       <div className="relative z-10 mt-1">
         <span className="text-4xl font-black leading-none" style={{ color: "#3f3830" }}>{displayValue}</span>
-        <p className="mt-1.5 text-[11px]" style={{ color: "#a89e8d" }}>Time in Comfort Zone</p>
+        <p className="mt-1.5 text-[11px]" style={{ color: "#746959" }}>Time in Comfort Zone</p>
       </div>
 
 

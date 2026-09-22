@@ -415,7 +415,7 @@ export default function DoseForm({ open, onOpenChange, mode = "insulin" }) {
               type="button"
               onClick={attemptClose}
               className="flex h-8 w-8 items-center justify-center rounded-full border transition"
-              style={{ background: "#f7f1e8", borderColor: "#eadccf", color: "#8a7f70" }}
+              style={{ background: "#f7f1e8", borderColor: "#eadccf", color: "#6b6153" }}
               aria-label="Close"
             >
               <X className="h-4 w-4" />
@@ -426,7 +426,7 @@ export default function DoseForm({ open, onOpenChange, mode = "insulin" }) {
           <div className="relative min-h-0 flex-1 overflow-hidden flex min-h-0 flex-col">
                 {mode === "carbs" ? (
                   <div className="min-h-0 flex-1 overflow-y-auto">
-                    <Suspense fallback={<div className="flex h-full items-center justify-center text-sm" style={{ color: "#a89e8d" }}>Loading...</div>}>
+                    <Suspense fallback={<div className="flex h-full items-center justify-center text-sm" style={{ color: "#746959" }}>Loading...</div>}>
                       <CarbsTab open={open} onSubmit={handleSubmitCarbs} isPending={loggingTab === "carbs" || createCarb.isPending} onDirtyChange={setCarbsDirty} />
                     </Suspense>
                   </div>
@@ -452,7 +452,7 @@ export default function DoseForm({ open, onOpenChange, mode = "insulin" }) {
                                 type="button"
                                 onClick={() => removeInsulinRow(row.id)}
                                 className="flex items-center gap-1 px-1 text-xs transition"
-                                style={{ color: "#a89e8d" }}
+                                style={{ color: "#746959" }}
                               >
                                 <Trash2 className="h-3 w-3" />
                                 Remove this row
@@ -464,7 +464,7 @@ export default function DoseForm({ open, onOpenChange, mode = "insulin" }) {
                           type="button"
                           onClick={addInsulinRow}
                           className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed py-3 text-sm font-medium transition"
-                          style={{ borderColor: "#eadccf", color: "#8a7f70" }}
+                          style={{ borderColor: "#eadccf", color: "#6b6153" }}
                         >
                           <Plus className="h-4 w-4" />
                           Add another dose
@@ -480,7 +480,7 @@ export default function DoseForm({ open, onOpenChange, mode = "insulin" }) {
                       {Object.entries(insulinTotals).length > 0 && loggingTab !== "insulin" && !createDoses.isPending && (
                         <div className="mb-2 px-1">
                           {Object.entries(insulinTotals).map(([type, units]) => (
-                             <p key={type} className="text-xs" style={{ color: "#a89e8d" }}>
+                             <p key={type} className="text-xs" style={{ color: "#746959" }}>
                               {type.split(" ")[0]} · {units % 1 === 0 ? units : units.toFixed(1)}u
                             </p>
                           ))}
@@ -559,7 +559,7 @@ export default function DoseForm({ open, onOpenChange, mode = "insulin" }) {
                 style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 8px 28px rgba(63, 56, 48, 0.12)" }}
               >
                 <h3 className="text-lg font-semibold" style={{ color: "#3f3830" }}>Discard this entry?</h3>
-                <p className="mt-2 text-sm leading-relaxed" style={{ color: "#8a7f70" }}>
+                <p className="mt-2 text-sm leading-relaxed" style={{ color: "#6b6153" }}>
                   Your moment hasn't been saved yet. You'll lose what you've entered.
                 </p>
                 <div className="mt-6 flex gap-3">

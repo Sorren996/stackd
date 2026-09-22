@@ -31,7 +31,7 @@ export default function InsulinTypeSelector({ value, onChange, options }) {
     return (
       <div>
         <span className="stackd-section-label">Insulin Type</span>
-        <p className="mt-2 text-xs" style={{ color: "#a89e8d" }}>Add insulin types in Settings to log a dose.</p>
+        <p className="mt-2 text-xs" style={{ color: "#746959" }}>Add insulin types in Settings to log a dose.</p>
       </div>
     );
   }

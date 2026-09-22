@@ -14,7 +14,7 @@ const MIN_CENTS = 100;
 const MAX_CENTS = 250000;
 
 const GIFT_GRADIENT = {
-  background: "#af751b",
+  background: "#8a5a12",
   color: "#f7f1e8",
 };
 const MONTHLY_GRADIENT = {
@@ -156,7 +156,7 @@ export default function SupportCreator() {
             <Leaf className="h-5 w-5" style={{ color: "#5b6550" }} />
           </div>
           <div>
-            <p className="text-sm leading-relaxed" style={{ color: "#8a7f70" }}>
+            <p className="text-sm leading-relaxed" style={{ color: "#6b6153" }}>
               Stackd is made with care, one leaf at a time. If it brings you a little calm, you can send a little sunshine back — a one-time gift or ongoing monthly patronage. Always optional, always appreciated.
             </p>
           </div>
@@ -177,7 +177,7 @@ export default function SupportCreator() {
                 type="button"
                 onClick={() => setTab(id)}
                 className="flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-medium transition-all"
-                style={active ? { background: "#3f3830", color: "#f7f1e8" } : { color: "#8a7f70" }}
+                style={active ? { background: "#3f3830", color: "#f7f1e8" } : { color: "#6b6153" }}
               >
                 <Icon className="h-3.5 w-3.5" />
                 {label}
@@ -207,7 +207,7 @@ export default function SupportCreator() {
                 }
               >
                 <span className="block text-lg font-bold" style={{ color: "#3f3830" }}>{formatCents(cents)}</span>
-                <span className="mt-0.5 block text-[10px] uppercase tracking-wider" style={{ color: "#a89e8d" }}>
+                <span className="mt-0.5 block text-[10px] uppercase tracking-wider" style={{ color: "#746959" }}>
                   {isMonthly ? "/ month" : "gift"}
                 </span>
               </button>
@@ -253,7 +253,7 @@ export default function SupportCreator() {
         )}
       </button>
 
-      <p className="px-1 text-center text-[11px] leading-relaxed" style={{ color: "#a89e8d" }}>
+      <p className="px-1 text-center text-[11px] leading-relaxed" style={{ color: "#746959" }}>
         Payments are handled securely by Stripe. You can manage or cancel monthly patronage anytime.
       </p>
 
@@ -261,7 +261,7 @@ export default function SupportCreator() {
       {hasCustomer && (
         <HairlineSection label="Managing your support">
           <div className="pt-3 pb-2 space-y-3">
-            <p className="text-xs leading-relaxed" style={{ color: "#8a7f70" }}>
+            <p className="text-xs leading-relaxed" style={{ color: "#6b6153" }}>
               Update your card, view invoices, or cancel a monthly patronage through Stripe's secure billing portal.
             </p>
             <button
@@ -368,14 +368,14 @@ function VerifyPanel({ state, onClose }) {
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-bold" style={{ color: "#3f3830" }}>{title}</p>
-          <p className="mt-1 text-[13px] leading-relaxed" style={{ color: "#8a7f70" }}>{body}</p>
+          <p className="mt-1 text-[13px] leading-relaxed" style={{ color: "#6b6153" }}>{body}</p>
         </div>
         {showClose && (
           <button
             type="button"
             onClick={onClose}
             className="shrink-0 rounded-full p-1 transition"
-            style={{ color: "#a89e8d" }}
+            style={{ color: "#746959" }}
             aria-label="Dismiss"
           >
             <X className="h-4 w-4" />

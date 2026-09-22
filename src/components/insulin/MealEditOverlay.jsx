@@ -6,12 +6,12 @@ import { toast } from "sonner";
 
 const PALETTE = {
   ink: "#3f3830",
-  muted: "#8a7f70",
-  faint: "#a89e8d",
+  muted: "#6b6153",
+  faint: "#746959",
   hairline: "#eadccf",
   surface: "#fdf9f2",
   canvas: "#f7f1e8",
-  danger: "#c97060",
+  danger: "#9c3f2e",
 };
 
 /**

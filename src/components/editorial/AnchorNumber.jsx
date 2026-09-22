@@ -12,7 +12,7 @@ export default function AnchorNumber({ value, unit, caption, dot, dotColor = "#5
           {value}
         </span>
         {unit && (
-          <span className="text-sm font-medium" style={{ color: "#8a7f70" }}>
+          <span className="text-sm font-medium" style={{ color: "#6b6153" }}>
             {unit}
           </span>
         )}
@@ -25,13 +25,13 @@ export default function AnchorNumber({ value, unit, caption, dot, dotColor = "#5
               style={{ background: dotColor }}
             />
           )}
-          <span className="text-sm font-medium" style={{ color: "#8a7f70" }}>
+          <span className="text-sm font-medium" style={{ color: "#6b6153" }}>
             {caption}
           </span>
         </div>
       )}
       {subcaption && (
-        <p className="mt-1 text-xs" style={{ color: "#a89e8d" }}>
+        <p className="mt-1 text-xs" style={{ color: "#746959" }}>
           {subcaption}
         </p>
       )}

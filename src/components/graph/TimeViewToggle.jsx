@@ -17,7 +17,7 @@ export default function TimeViewToggle({ value, onChange }) {
           className={`relative px-2 py-0.5 text-[11px] font-semibold rounded-md transition-colors ${
             value === view.value ? "" : "hover:opacity-70"
           }`}
-          style={{ color: value === view.value ? "#3f3830" : "#a89e8d" }}
+          style={{ color: value === view.value ? "#3f3830" : "#746959" }}
         >
           {value === view.value && (
             <motion.div

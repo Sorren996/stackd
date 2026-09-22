@@ -11,7 +11,7 @@ export default function LedgerRow({ label, value, timestamp, to, onClick, danger
   const content = (
     <div className="flex items-baseline gap-2 py-2.5">
       {timestamp && (
-        <span className="shrink-0 text-xs" style={{ color: "#a89e8d" }}>
+        <span className="shrink-0 text-xs" style={{ color: "#746959" }}>
           {timestamp}
         </span>
       )}
@@ -34,7 +34,7 @@ export default function LedgerRow({ label, value, timestamp, to, onClick, danger
           {actionLabel}
         </span>
       ) : (to || onClick) && (
-        <span className="shrink-0 text-sm" style={{ color: "#a89e8d" }}>
+        <span className="shrink-0 text-sm" style={{ color: "#746959" }}>
           ›
         </span>
       )}

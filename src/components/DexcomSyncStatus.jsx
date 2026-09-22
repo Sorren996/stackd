@@ -86,10 +86,10 @@ export default function DexcomSyncStatus() {
           transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
           className="mt-0.5"
         >
-          <CloudDownload className="h-4 w-4" style={{ color: "#5b6550" }} />
+          <CloudDownload className="h-4 w-4" style={{ color: "#4d5742" }} />
         </motion.div>
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-semibold" style={{ color: "#5b6550" }}>
+          <p className="text-xs font-semibold" style={{ color: "#4d5742" }}>
             {isOverdue
               ? "Taking a little longer than expected"
               : "Connecting to your glucose source"}
@@ -155,7 +155,7 @@ export default function DexcomSyncStatus() {
                               borderColor: "#eadccf",
                             }}
                           >
-                            <Icon className="h-3 w-3" style={{ color: "#8a7f70" }} />
+                            <Icon className="h-3 w-3" style={{ color: "#6b6153" }} />
                           </div>
                           <div className="min-w-0">
                             <p className="text-[11px] font-medium text-white/60">

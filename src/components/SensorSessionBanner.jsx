@@ -41,8 +41,8 @@ export default function SensorSessionBanner() {
               boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)",
             }}
           >
-            <Clock className="h-4 w-4 shrink-0" style={{ color: "#af751b" }} />
-            <span className="text-xs font-medium leading-tight" style={{ color: "#af751b" }}>
+            <Clock className="h-4 w-4 shrink-0" style={{ color: "#8a5a12" }} />
+            <span className="text-xs font-medium leading-tight" style={{ color: "#8a5a12" }}>
               {message}
             </span>
           </Link>

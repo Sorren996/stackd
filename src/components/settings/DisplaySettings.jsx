@@ -48,7 +48,7 @@ export default function DisplaySettings() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-[40vh]">
-        <Loader2 className="h-6 w-6 animate-spin" style={{ color: "#a89e8d" }} />
+        <Loader2 className="h-6 w-6 animate-spin" style={{ color: "#746959" }} />
       </div>
     );
   }
@@ -73,9 +73,9 @@ export default function DisplaySettings() {
               >
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold" style={{ color: "#3f3830" }}>{opt.label}</p>
-                  <p className="text-xs mt-0.5 leading-relaxed" style={{ color: "#a89e8d" }}>{opt.desc}</p>
+                  <p className="text-xs mt-0.5 leading-relaxed" style={{ color: "#746959" }}>{opt.desc}</p>
                 </div>
-                {selected && <Check className="h-5 w-5 shrink-0" style={{ color: "#5b6550" }} />}
+                {selected && <Check className="h-5 w-5 shrink-0" style={{ color: "#4d5742" }} />}
               </button>
             );
           })}
@@ -85,19 +85,19 @@ export default function DisplaySettings() {
       <HairlineSection label="High Glucose Line">
         <div className="pt-3 pb-2">
           <div className="flex items-baseline justify-between">
-            <span className="text-xs" style={{ color: "#8a7f70" }}>Secondary reference on Your Flow</span>
-            <span className="text-2xl font-bold" style={{ color: "#af751b" }}>{currentHigh}<span className="ml-1 text-xs font-medium" style={{ color: "#a89e8d" }}>mg/dL</span></span>
+            <span className="text-xs" style={{ color: "#6b6153" }}>Secondary reference on Your Flow</span>
+            <span className="text-2xl font-bold" style={{ color: "#8a5a12" }}>{currentHigh}<span className="ml-1 text-xs font-medium" style={{ color: "#746959" }}>mg/dL</span></span>
           </div>
           <div className="mt-4">
             <HighGlucosePicker value={currentHigh} onChange={handleSelectHigh} />
           </div>
-          <p className="mt-3 text-[11px] leading-relaxed" style={{ color: "#a89e8d" }}>
+          <p className="mt-3 text-[11px] leading-relaxed" style={{ color: "#746959" }}>
             Choose from {HIGH_REFERENCE_MIN}–{HIGH_REFERENCE_MAX} mg/dL in steps of {HIGH_REFERENCE_STEP}. This is a visual reference only — it never changes when glucose is considered high. Your target range stays separate.
           </p>
         </div>
       </HairlineSection>
 
-      <p className="px-1 text-[11px] leading-relaxed" style={{ color: "#a89e8d" }}>
+      <p className="px-1 text-[11px] leading-relaxed" style={{ color: "#746959" }}>
         Graph height sets the normal upper limit of your glucose graph across every Your Flow view. Whenever a real reading rises above or dips below your chosen scale, the graph gently expands to show the true value without changing your saved preference.
       </p>
 
@@ -110,7 +110,7 @@ export default function DisplaySettings() {
         >
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold" style={{ color: "#3f3830" }}>Log glucose by hand</p>
-            <p className="text-xs mt-0.5 leading-relaxed" style={{ color: "#a89e8d" }}>
+            <p className="text-xs mt-0.5 leading-relaxed" style={{ color: "#746959" }}>
               Show Glucose in the logging menu so you can add fingerstick readings. Turn off if your sensor provides readings automatically.
             </p>
           </div>
@@ -131,7 +131,7 @@ export default function DisplaySettings() {
         </button>
       </HairlineSection>
 
-      <p className="px-1 text-[10px] leading-relaxed" style={{ color: "#b8aea0" }}>
+      <p className="px-1 text-[10px] leading-relaxed" style={{ color: "#746959" }}>
         These are display preferences only. They never change, round, or hide your actual glucose readings.
       </p>
     </div>
