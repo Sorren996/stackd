@@ -3,9 +3,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { Link } from "react-router-dom";
-import { ChevronLeft, LifeBuoy, Bug, MessageSquare, Loader2, Send } from "lucide-react";
+import { ChevronLeft, ChevronDown, ChevronUp, LifeBuoy, Bug, MessageSquare, Loader2, Send } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import PageHeader from "@/components/editorial/PageHeader";
+import HairlineSection from "@/components/editorial/HairlineSection";
 
 const TICKET_TYPE_META = {
   support: { icon: LifeBuoy, label: "Support", color: "#5b6550" },
@@ -14,10 +16,10 @@ const TICKET_TYPE_META = {
 };
 
 const STATUS_META = {
-  open: { label: "Open", style: { background: "rgba(91,101,80,0.12)", color: "#5b6550", border: "1px solid rgba(91,101,80,0.25)" } },
-  in_progress: { label: "In Progress", style: { background: "rgba(175,117,27,0.12)", color: "#af751b", border: "1px solid rgba(175,117,27,0.25)" } },
-  resolved: { label: "Resolved", style: { background: "rgba(91,101,80,0.12)", color: "#5b6550", border: "1px solid rgba(91,101,80,0.25)" } },
-  closed: { label: "Closed", style: { background: "rgba(63,56,48,0.06)", color: "#8a7f70", border: "1px solid #eadccf" } },
+  open: { label: "Open", color: "#5b6550" },
+  in_progress: { label: "In Progress", color: "#af751b" },
+  resolved: { label: "Resolved", color: "#5b6550" },
+  closed: { label: "Closed", color: "#8a7f70" },
 };
 
 const STATUS_FLOW = ["open", "in_progress", "resolved", "closed"];
@@ -67,7 +69,7 @@ export default function SupportInbox() {
   if (user?.role !== "admin") {
     return (
       <div className="mx-auto max-w-md space-y-4 pt-8 text-center">
-        <p className="text-sm text-white/50">This area is reserved for administrators.</p>
+        <p className="text-sm" style={{ color: "#8a7f70" }}>This area is reserved for administrators.</p>
         <Link to="/settings" className="inline-flex items-center gap-1 text-sm" style={{ color: "#5b6550" }}>
           <ChevronLeft className="h-4 w-4" /> Back to Settings
         </Link>
@@ -84,123 +86,117 @@ export default function SupportInbox() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4 pb-8 pt-2">
-      <div className="flex items-center gap-3">
-        <Link
-          to="/settings"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-white/70 transition hover:text-white"
-          style={{ background: "#fdf9f2", borderColor: "#eadccf" }}
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </Link>
-        <div>
-          <h1 className="text-lg font-bold text-white">Support Inbox</h1>
-          <p className="text-xs text-white/40">{tickets.length} {tickets.length === 1 ? "submission" : "submissions"} from your community</p>
-        </div>
-      </div>
+    <div className="mx-auto max-w-2xl space-y-6 pb-8 pt-2">
+      <PageHeader italicWord="inbox" rightText={`${tickets.length} ${tickets.length === 1 ? "submission" : "submissions"}`} />
 
       {tickets.length === 0 ? (
-        <div className="glass-card rounded-3xl border p-10 text-center" style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}>
-          <LifeBuoy className="mx-auto h-8 w-8 text-white/25" />
-          <p className="mt-3 text-sm text-white/50">No support submissions yet.</p>
-          <p className="text-xs text-white/30">When someone reaches out, their message will appear here.</p>
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <LifeBuoy className="h-8 w-8 mb-3" style={{ color: "#a89e8d" }} />
+          <p className="text-sm" style={{ color: "#8a7f70" }}>No support submissions yet.</p>
+          <p className="text-xs mt-1" style={{ color: "#a89e8d" }}>When someone reaches out, their message will appear here.</p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {tickets.map((ticket) => {
-            const typeMeta = TICKET_TYPE_META[ticket.ticket_type] || TICKET_TYPE_META.support;
-            const statusMeta = STATUS_META[ticket.status] || STATUS_META.open;
-            const TypeIcon = typeMeta.icon;
-            const isExpanded = expandedId === ticket.id;
+        <HairlineSection label="Submissions">
+          <div className="pt-1 pb-2">
+            {tickets.map((ticket) => {
+              const typeMeta = TICKET_TYPE_META[ticket.ticket_type] || TICKET_TYPE_META.support;
+              const statusMeta = STATUS_META[ticket.status] || STATUS_META.open;
+              const isExpanded = expandedId === ticket.id;
 
-            return (
-              <div key={ticket.id} className="glass-card rounded-3xl border overflow-hidden" style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setExpandedId(isExpanded ? null : ticket.id);
-                    setResponseText("");
-                  }}
-                  className="w-full flex items-start gap-3 p-4 text-left transition hover:bg-white/[0.02]"
-                >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border" style={{ borderColor: "#eadccf", background: "#f7f1e8" }}>
-                    <TypeIcon className="h-4 w-4" style={{ color: typeMeta.color }} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-semibold text-white">{typeMeta.label}</span>
-                      <span className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full border" style={statusMeta.style}>
-                        {statusMeta.label}
-                      </span>
-                      <span className="text-[10px] text-white/30">{ticket.category?.replace(/_/g, " ")}</span>
-                    </div>
-                    <p className="mt-1 text-xs text-white/50 line-clamp-2">{ticket.message}</p>
-                    <p className="mt-1 text-[10px] text-white/30">
-                      {format(new Date(ticket.created_date), "MMM d · h:mm a")}
-                      {ticket.include_diagnostics ? " · diagnostics included" : ""}
-                    </p>
-                  </div>
-                </button>
+              return (
+                <div key={ticket.id}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setExpandedId(isExpanded ? null : ticket.id);
+                      setResponseText("");
+                    }}
+                    className="flex w-full items-baseline gap-2 py-2.5 text-left transition hover:opacity-70"
+                  >
+                    <span className="shrink-0 text-sm font-medium" style={{ color: "#3f3830" }}>
+                      {typeMeta.label}
+                    </span>
+                    <span className="shrink-0 text-[10px]" style={{ color: "#a89e8d" }}>
+                      {ticket.category?.replace(/_/g, " ")}
+                    </span>
+                    <span className="flex-1 overflow-hidden">
+                      <span className="dotted-leader block" />
+                    </span>
+                    <span className="shrink-0 text-xs font-semibold" style={{ color: statusMeta.color }}>
+                      {statusMeta.label}
+                    </span>
+                    <span className="shrink-0 text-[10px]" style={{ color: "#a89e8d" }}>
+                      {format(new Date(ticket.created_date), "MMM d")}
+                    </span>
+                    <span className="shrink-0">
+                      {isExpanded ? <ChevronUp className="h-4 w-4" style={{ color: "#a89e8d" }} /> : <ChevronDown className="h-4 w-4" style={{ color: "#a89e8d" }} />}
+                    </span>
+                  </button>
 
-                {isExpanded && (
-                  <div className="border-t px-4 py-4 space-y-3" style={{ borderColor: "#eadccf", background: "#f7f1e8" }}>
-                    <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40 mb-1">Message</p>
-                      <p className="text-sm text-white/80 whitespace-pre-wrap leading-relaxed">{ticket.message}</p>
-                    </div>
-
-                    {ticket.diagnostic_metadata && Object.keys(ticket.diagnostic_metadata).length > 0 && (
+                  {isExpanded && (
+                    <div className="pb-4 space-y-3">
                       <div>
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40 mb-1">Diagnostics (shared with consent)</p>
-                        <pre className="text-[10px] text-white/50 rounded-xl p-3 overflow-x-auto whitespace-pre-wrap" style={{ background: "#fdf9f2", border: "1px solid #eadccf" }}>{JSON.stringify(ticket.diagnostic_metadata, null, 2)}</pre>
+                        <p className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: "#a89e8d" }}>Message</p>
+                        <p className="text-sm whitespace-pre-wrap leading-relaxed" style={{ color: "#3f3830" }}>{ticket.message}</p>
+                        <p className="mt-1 text-[10px]" style={{ color: "#a89e8d" }}>
+                          {format(new Date(ticket.created_date), "MMM d · h:mm a")}
+                          {ticket.include_diagnostics ? " · diagnostics included" : ""}
+                        </p>
                       </div>
-                    )}
 
-                    {ticket.admin_response && (
+                      {ticket.diagnostic_metadata && Object.keys(ticket.diagnostic_metadata).length > 0 && (
+                        <div>
+                          <p className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: "#a89e8d" }}>Diagnostics (shared with consent)</p>
+                          <pre className="text-[10px] rounded-xl p-3 overflow-x-auto whitespace-pre-wrap" style={{ background: "#fdf9f2", border: "1px solid #eadccf", color: "#8a7f70" }}>{JSON.stringify(ticket.diagnostic_metadata, null, 2)}</pre>
+                        </div>
+                      )}
+
+                      {ticket.admin_response && (
+                        <div>
+                          <p className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: "#5b6550", opacity: 0.7 }}>Your response</p>
+                          <p className="text-sm whitespace-pre-wrap leading-relaxed" style={{ color: "#3f3830" }}>{ticket.admin_response}</p>
+                        </div>
+                      )}
+
                       <div>
-                        <p className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: "#5b6550", opacity: 0.7 }}>Your response</p>
-                        <p className="text-sm text-white/80 whitespace-pre-wrap leading-relaxed">{ticket.admin_response}</p>
-                      </div>
-                    )}
-
-                    <div>
-                      <textarea
-                        value={responseText}
-                        onChange={(e) => setResponseText(e.target.value)}
-                        placeholder="Write a thoughtful reply..."
-                        rows={3}
-                        className="w-full rounded-2xl border px-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none"
-                        style={{ borderColor: "#eadccf", background: "#fdf9f2" }}
-                      />
-                      <div className="mt-2 flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleRespond(ticket)}
-                          disabled={!responseText.trim() || updateTicket.isPending}
-                          className="flex items-center gap-1.5 rounded-xl border px-4 py-2 text-xs font-semibold transition disabled:opacity-40"
-                          style={{ borderColor: "rgba(91,101,80,0.25)", background: "rgba(91,101,80,0.10)", color: "#5b6550" }}
-                        >
-                          <Send className="h-3 w-3" /> Save Response
-                        </button>
-                        {ticket.status !== "closed" && (
+                        <textarea
+                          value={responseText}
+                          onChange={(e) => setResponseText(e.target.value)}
+                          placeholder="Write a thoughtful reply..."
+                          rows={3}
+                          className="w-full rounded-2xl border px-3 py-2.5 text-sm focus:outline-none resize-none"
+                          style={{ borderColor: "#eadccf", background: "#fdf9f2", color: "#3f3830" }}
+                        />
+                        <div className="mt-2 flex items-center gap-2">
                           <button
                             type="button"
-                            onClick={() => advanceStatus(ticket)}
-                            disabled={updateTicket.isPending}
-                            className="rounded-xl border px-4 py-2 text-xs font-semibold text-white/70 transition disabled:opacity-40"
-                            style={{ borderColor: "#eadccf", background: "#fdf9f2" }}
+                            onClick={() => handleRespond(ticket)}
+                            disabled={!responseText.trim() || updateTicket.isPending}
+                            className="flex items-center gap-1.5 rounded-xl border px-4 py-2 text-xs font-semibold transition disabled:opacity-40"
+                            style={{ borderColor: "rgba(91,101,80,0.25)", background: "rgba(91,101,80,0.10)", color: "#5b6550" }}
                           >
-                            Mark as {STATUS_FLOW[STATUS_FLOW.indexOf(ticket.status) + 1]?.replace(/_/g, " ") || "resolved"}
+                            <Send className="h-3 w-3" /> Save Response
                           </button>
-                        )}
+                          {ticket.status !== "closed" && (
+                            <button
+                              type="button"
+                              onClick={() => advanceStatus(ticket)}
+                              disabled={updateTicket.isPending}
+                              className="rounded-xl border px-4 py-2 text-xs font-semibold transition disabled:opacity-40"
+                              style={{ borderColor: "#eadccf", background: "#f7f1e8", color: "#8a7f70" }}
+                            >
+                              Mark as {STATUS_FLOW[STATUS_FLOW.indexOf(ticket.status) + 1]?.replace(/_/g, " ") || "resolved"}
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </HairlineSection>
       )}
     </div>
   );

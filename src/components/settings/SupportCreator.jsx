@@ -6,6 +6,8 @@ import moment from "moment";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, Leaf, Sparkles, Heart, ExternalLink, X, AlertCircle, Hourglass } from "lucide-react";
 import { NumberPadField } from "@/components/FormInputFields";
+import HairlineSection from "@/components/editorial/HairlineSection";
+import LedgerRow from "@/components/editorial/LedgerRow";
 
 const PRESET_CENTS = [300, 500, 1000];
 const MIN_CENTS = 100;
@@ -13,12 +15,10 @@ const MAX_CENTS = 250000;
 
 const GIFT_GRADIENT = {
   background: "#af751b",
-  boxShadow: "0 6px 20px rgba(175,117,27,0.25)",
   color: "#f7f1e8",
 };
 const MONTHLY_GRADIENT = {
   background: "#5b6550",
-  boxShadow: "0 6px 20px rgba(91,101,80,0.25)",
   color: "#f7f1e8",
 };
 
@@ -150,22 +150,18 @@ export default function SupportCreator() {
         )}
       </AnimatePresence>
 
-      {/* Intro */}
-      <div className="relative overflow-hidden rounded-2xl border p-5" style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}>
-        <div aria-hidden className="pointer-events-none absolute -right-6 -top-8 h-28 w-28 rounded-full blur-2xl" style={{ background: "rgba(91,101,80,0.10)" }} />
-        <div className="relative flex items-start gap-3">
+      <HairlineSection label="Support the Creator">
+        <div className="flex items-start gap-3 pt-3 pb-2">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border" style={{ borderColor: "rgba(91,101,80,0.25)", background: "rgba(91,101,80,0.08)" }}>
             <Leaf className="h-5 w-5" style={{ color: "#5b6550" }} />
           </div>
           <div>
-            <h2 className="text-base font-bold text-white">Support the Creator</h2>
-            <p className="mt-1 text-[13px] leading-relaxed text-white/55">
-              Stackd is made with care, one leaf at a time. If it brings you a little calm, you can send a little
-              sunshine back — a one-time gift or ongoing monthly patronage. Always optional, always appreciated.
+            <p className="text-sm leading-relaxed" style={{ color: "#8a7f70" }}>
+              Stackd is made with care, one leaf at a time. If it brings you a little calm, you can send a little sunshine back — a one-time gift or ongoing monthly patronage. Always optional, always appreciated.
             </p>
           </div>
         </div>
-      </div>
+      </HairlineSection>
 
       {/* Tabs */}
       <div className="rounded-2xl border p-1" style={{ borderColor: "#eadccf", background: "#f7f1e8" }}>
@@ -180,17 +176,8 @@ export default function SupportCreator() {
                 key={id}
                 type="button"
                 onClick={() => setTab(id)}
-                className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-medium transition-all ${
-                  active ? "text-white" : "text-white/40 hover:text-white/60"
-                }`}
-                style={
-                  active
-                    ? {
-                        background: "#3f3830",
-                        color: "#f7f1e8",
-                      }
-                    : undefined
-                }
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-medium transition-all"
+                style={active ? { background: "#3f3830", color: "#f7f1e8" } : { color: "#8a7f70" }}
               >
                 <Icon className="h-3.5 w-3.5" />
                 {label}
@@ -202,7 +189,7 @@ export default function SupportCreator() {
 
       {/* Presets */}
       <div>
-        <p className="mb-2 px-1 text-[10px] font-bold uppercase tracking-[0.18em] text-white/35">
+        <p className="mb-2 px-1 section-label">
           {isMonthly ? "Choose your monthly patronage" : "Choose a gift amount"}
         </p>
         <div className="grid grid-cols-3 gap-2">
@@ -215,12 +202,12 @@ export default function SupportCreator() {
                 onClick={() => selectPreset(cents)}
                 className="rounded-2xl border px-3 py-4 text-center transition-all"
                 style={active
-                  ? { borderColor: "rgba(91,101,80,0.50)", background: "rgba(91,101,80,0.12)", boxShadow: "0 0 16px rgba(91,101,80,0.15)" }
+                  ? { borderColor: "rgba(91,101,80,0.50)", background: "rgba(91,101,80,0.12)" }
                   : { borderColor: "#eadccf", background: "#fdf9f2" }
                 }
               >
-                <span className="block text-lg font-bold text-white">{formatCents(cents)}</span>
-                <span className="mt-0.5 block text-[10px] uppercase tracking-wider text-white/40">
+                <span className="block text-lg font-bold" style={{ color: "#3f3830" }}>{formatCents(cents)}</span>
+                <span className="mt-0.5 block text-[10px] uppercase tracking-wider" style={{ color: "#a89e8d" }}>
                   {isMonthly ? "/ month" : "gift"}
                 </span>
               </button>
@@ -231,7 +218,7 @@ export default function SupportCreator() {
 
       {/* Custom amount */}
       <div>
-        <p className="mb-2 px-1 text-[10px] font-bold uppercase tracking-[0.18em] text-white/35">Or a custom amount</p>
+        <p className="mb-2 px-1 section-label">Or a custom amount</p>
         <NumberPadField
           label={isMonthly ? "Custom monthly amount" : "Custom gift amount"}
           value={customAmount}
@@ -250,7 +237,7 @@ export default function SupportCreator() {
         type="button"
         onClick={handleConfirm}
         disabled={!canConfirm}
-        className="flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-base font-semibold text-white transition disabled:opacity-40"
+        className="flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-base font-semibold transition disabled:opacity-40"
         style={isMonthly ? MONTHLY_GRADIENT : GIFT_GRADIENT}
       >
         {isCreating ? (
@@ -266,71 +253,54 @@ export default function SupportCreator() {
         )}
       </button>
 
-      <p className="px-1 text-center text-[11px] leading-relaxed text-white/35">
+      <p className="px-1 text-center text-[11px] leading-relaxed" style={{ color: "#a89e8d" }}>
         Payments are handled securely by Stripe. You can manage or cancel monthly patronage anytime.
       </p>
 
       {/* Manage monthly support */}
       {hasCustomer && (
-        <div className="rounded-2xl border p-4" style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}>
-          <div className="flex items-center gap-2">
-            <Heart className="h-4 w-4" style={{ color: "#5b6550" }} />
-            <p className="text-sm font-semibold text-white">Managing your support</p>
+        <HairlineSection label="Managing your support">
+          <div className="pt-3 pb-2 space-y-3">
+            <p className="text-xs leading-relaxed" style={{ color: "#8a7f70" }}>
+              Update your card, view invoices, or cancel a monthly patronage through Stripe's secure billing portal.
+            </p>
+            <button
+              type="button"
+              onClick={handleManage}
+              disabled={isOpeningPortal}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border py-3 text-sm font-semibold transition disabled:opacity-50"
+              style={{ borderColor: "rgba(91,101,80,0.30)", background: "rgba(91,101,80,0.08)", color: "#5b6550" }}
+            >
+              {isOpeningPortal ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Opening portal...
+                </>
+              ) : (
+                <>
+                  <ExternalLink className="h-4 w-4" />
+                  Open billing portal
+                </>
+              )}
+            </button>
           </div>
-          <p className="mt-1 text-[12px] leading-relaxed text-white/50">
-            Update your card, view invoices, or cancel a monthly patronage through Stripe's secure billing portal.
-          </p>
-          <button
-            type="button"
-            onClick={handleManage}
-            disabled={isOpeningPortal}
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border py-3 text-sm font-semibold transition disabled:opacity-50"
-            style={{ borderColor: "rgba(91,101,80,0.30)", background: "rgba(91,101,80,0.08)", color: "#5b6550" }}
-          >
-            {isOpeningPortal ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Opening portal...
-              </>
-            ) : (
-              <>
-                <ExternalLink className="h-4 w-4" />
-                Open billing portal
-              </>
-            )}
-          </button>
-        </div>
+        </HairlineSection>
       )}
 
       {/* History */}
       {supports.length > 0 && (
-        <div>
-          <p className="mb-2 flex items-center gap-2 px-1 text-[10px] font-bold uppercase tracking-[0.18em] text-white/35">
-            <Leaf className="h-3 w-3" />
-            Your kindness
-          </p>
-          <div className="overflow-hidden rounded-2xl border" style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}>
-            {supports.map((record, index) => (
-              <div
+        <HairlineSection label="Your kindness">
+          <div className="pt-1 pb-2">
+            {supports.map((record) => (
+              <LedgerRow
                 key={record.id}
-                className="flex items-center justify-between px-4 py-3"
-                style={index !== supports.length - 1 ? { borderBottom: "1px solid #eadccf" } : undefined}
-              >
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-white/85">
-                    {formatCents(record.amount_cents)}{" "}
-                    {record.support_type === "monthly" ? "monthly patronage" : "gift"}
-                  </p>
-                  <p className="mt-0.5 text-[11px] text-white/40">
-                    {moment(record.created_date).format("MMM D, YYYY")}
-                    {record.support_type === "monthly" && record.status === "active" ? " · active" : ""}
-                  </p>
-                </div>
-                <Leaf className="h-4 w-4 shrink-0" style={{ color: "#5b6550", opacity: 0.5 }} />
-              </div>
+                label={formatCents(record.amount_cents)}
+                value={record.support_type === "monthly" ? "monthly" : "gift"}
+                timestamp={moment(record.created_date).format("MMM D, YYYY")}
+              />
             ))}
           </div>
-        </div>
+        </HairlineSection>
       )}
     </div>
   );
@@ -390,21 +360,22 @@ function VerifyPanel({ state, onClose }) {
   const { Icon, iconClass, title, body, showClose, iconColor } = config;
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border p-5" style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}>
+    <div className="relative overflow-hidden rounded-2xl border p-5" style={{ background: "#fdf9f2", borderColor: "#eadccf" }}>
       <div aria-hidden className="pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full blur-3xl" style={{ background: "rgba(91,101,80,0.10)" }} />
       <div className="relative flex items-start gap-3">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border" style={{ borderColor: "rgba(91,101,80,0.25)", background: "rgba(91,101,80,0.08)" }}>
           {Icon && <Icon className={`h-5 w-5 ${iconClass}`} style={{ color: iconColor }} />}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-bold text-white">{title}</p>
-          <p className="mt-1 text-[13px] leading-relaxed text-white/55">{body}</p>
+          <p className="text-sm font-bold" style={{ color: "#3f3830" }}>{title}</p>
+          <p className="mt-1 text-[13px] leading-relaxed" style={{ color: "#8a7f70" }}>{body}</p>
         </div>
         {showClose && (
           <button
             type="button"
             onClick={onClose}
-            className="shrink-0 rounded-full p-1 text-white/40 transition hover:text-white/70"
+            className="shrink-0 rounded-full p-1 transition"
+            style={{ color: "#a89e8d" }}
             aria-label="Dismiss"
           >
             <X className="h-4 w-4" />

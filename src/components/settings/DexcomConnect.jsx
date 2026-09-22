@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, HeartPulse, Unlink, Sparkles, Lock, Eye, EyeOff, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import DexcomSyncStatus from "@/components/DexcomSyncStatus";
+import HairlineSection from "@/components/editorial/HairlineSection";
 
 export default function DexcomConnect() {
   const queryClient = useQueryClient();
@@ -69,23 +70,15 @@ export default function DexcomConnect() {
 
   return (
     <div className="space-y-4">
-      <div className="glass-card rounded-3xl border p-5" style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}>
-        <div className="flex items-start gap-4">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border" style={{ borderColor: "rgba(91,101,80,0.20)", background: "rgba(91,101,80,0.08)" }}>
-            <HeartPulse className="h-5 w-5" style={{ color: "#5b6550" }} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-white">Glucose Source</p>
-            <p className="text-xs text-white/40 mt-0.5 leading-relaxed">
-              Connect your Dexcom account so your readings flow into Stackd gently and automatically — no manual logging required.
-            </p>
-          </div>
-        </div>
+      <HairlineSection label="Glucose Source">
+        <div className="pt-3 pb-2">
+          <p className="text-xs leading-relaxed mb-4" style={{ color: "#8a7f70" }}>
+            Connect your Dexcom account so your readings flow into Stackd gently and automatically — no manual logging required.
+          </p>
 
-        <div className="mt-5">
           {isLoading ? (
-            <div className="flex items-center justify-center py-3 text-white/40">
-              <Loader2 className="h-4 w-4 animate-spin" />
+            <div className="flex items-center justify-center py-3">
+              <Loader2 className="h-4 w-4 animate-spin" style={{ color: "#a89e8d" }} />
             </div>
           ) : isConnected ? (
             <div className="space-y-4">
@@ -116,8 +109,8 @@ export default function DexcomConnect() {
                 type="button"
                 onClick={handleDisconnect}
                 disabled={disconnecting}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border text-white/60 hover:text-white/80 transition-all text-sm font-medium disabled:opacity-40"
-                style={{ borderColor: "#eadccf", background: "#f7f1e8" }}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border transition-all text-sm font-medium disabled:opacity-40"
+                style={{ borderColor: "#eadccf", background: "#f7f1e8", color: "#8a7f70" }}
               >
                 {disconnecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Unlink className="h-4 w-4" />}
                 {disconnecting ? "Disconnecting..." : "Disconnect"}
@@ -135,7 +128,7 @@ export default function DexcomConnect() {
               )}
 
               <div>
-                <label className="text-xs font-medium text-white/50 mb-1.5 block">Dexcom username or email</label>
+                <label className="text-xs font-medium mb-1.5 block" style={{ color: "#8a7f70" }}>Dexcom username or email</label>
                 <input
                   type="text"
                   value={username}
@@ -143,13 +136,13 @@ export default function DexcomConnect() {
                   placeholder="Your Dexcom account email"
                   autoCapitalize="none"
                   autoCorrect="off"
-                  className="w-full rounded-2xl border px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none"
-                  style={{ background: "#f7f1e8", borderColor: "#eadccf" }}
+                  className="w-full rounded-2xl border px-4 py-3 text-sm focus:outline-none"
+                  style={{ background: "#f7f1e8", borderColor: "#eadccf", color: "#3f3830" }}
                 />
               </div>
 
               <div>
-                <label className="text-xs font-medium text-white/50 mb-1.5 block">Dexcom password</label>
+                <label className="text-xs font-medium mb-1.5 block" style={{ color: "#8a7f70" }}>Dexcom password</label>
                 <div className="relative">
                   <input
                     type={showPassword ? "text" : "password"}
@@ -158,13 +151,14 @@ export default function DexcomConnect() {
                     placeholder="Your Dexcom account password"
                     autoCapitalize="none"
                     autoCorrect="off"
-                    className="w-full rounded-2xl border px-4 py-3 pr-11 text-sm text-white placeholder:text-white/30 focus:outline-none"
-                    style={{ background: "#f7f1e8", borderColor: "#eadccf" }}
+                    className="w-full rounded-2xl border px-4 py-3 pr-11 text-sm focus:outline-none"
+                    style={{ background: "#f7f1e8", borderColor: "#eadccf", color: "#3f3830" }}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 transition"
+                    style={{ color: "#a89e8d" }}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -184,11 +178,11 @@ export default function DexcomConnect() {
             </div>
           )}
         </div>
-      </div>
+      </HairlineSection>
 
-      <div className="flex items-start gap-2 px-2">
-        <Lock className="h-3.5 w-3.5 text-white/25 shrink-0 mt-0.5" />
-        <p className="text-xs text-white/30 leading-relaxed">
+      <div className="flex items-start gap-2 px-1">
+        <Lock className="h-3.5 w-3.5 shrink-0 mt-0.5" style={{ color: "#b8aea0" }} />
+        <p className="text-xs leading-relaxed" style={{ color: "#a89e8d" }}>
           Your Dexcom username and password are stored privately and used only to read your glucose readings.
           They are never visible to other users, admins, or support staff. Disconnecting permanently deletes them.
         </p>

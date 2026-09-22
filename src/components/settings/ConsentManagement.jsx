@@ -5,10 +5,12 @@ import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { ACKNOWLEDGMENT_VERSIONS, LEGAL_DOCUMENTS } from "@/lib/acknowledgmentConfig";
 import DocumentModal from "@/components/acknowledgments/DocumentModal";
-import { Shield, FileText, AlertTriangle, Loader2, ChevronRight, CheckCircle2, XCircle } from "lucide-react";
+import { Shield, AlertTriangle, Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
+import HairlineSection from "@/components/editorial/HairlineSection";
+import LedgerRow from "@/components/editorial/LedgerRow";
 
 export default function ConsentManagement() {
   const { user, checkUserAuth } = useAuth();
@@ -66,116 +68,91 @@ export default function ConsentManagement() {
     <>
       <DocumentModal docKey={activeDoc} onClose={() => setActiveDoc(null)} />
 
-      <div className="space-y-3">
-        <h3 className="text-sm font-bold text-white uppercase tracking-wider px-1">Legal & Consent</h3>
+      <div className="space-y-6">
+        <HairlineSection label="Legal & Consent">
+          <div className="pt-3 pb-2 space-y-3">
+            <div className="flex items-center gap-3">
+              {isComplete && bundleCurrent ? (
+                <CheckCircle2 className="w-5 h-5 shrink-0" style={{ color: "#5b6550" }} />
+              ) : (
+                <XCircle className="w-5 h-5 shrink-0" style={{ color: "#af751b" }} />
+              )}
+              <div>
+                <p className="text-sm font-semibold" style={{ color: "#3f3830" }}>
+                  {isComplete && bundleCurrent ? "All acknowledgments current" : "Acknowledgments required"}
+                </p>
+                <p className="text-xs" style={{ color: "#a89e8d" }}>
+                  {isComplete && bundleCurrent
+                    ? "Your acknowledgments are up to date."
+                    : "Please complete the required acknowledgments."}
+                </p>
+              </div>
+            </div>
 
-        {/* Status card */}
-        <div className="glass-card border rounded-3xl p-4 space-y-4" style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}>
-          <div className="flex items-center gap-3">
-            {isComplete && bundleCurrent ? (
-              <CheckCircle2 className="w-5 h-5 shrink-0" style={{ color: "#5b6550" }} />
-            ) : (
-              <XCircle className="w-5 h-5 shrink-0" style={{ color: "#af751b" }} />
+            {latestAck?.accepted_at && (
+              <div className="space-y-1 border-t pt-3" style={{ borderColor: "#eadccf" }}>
+                <LedgerRow label="Last accepted" value={format(new Date(latestAck.accepted_at), "MMM d, yyyy")} />
+                <LedgerRow label="Bundle version" value={latestAck.acknowledgment_bundle_version} />
+                <LedgerRow
+                  label="Health data consent"
+                  value={user?.health_data_consent_active ? "Active" : "Withdrawn"}
+                />
+              </div>
             )}
-            <div>
-              <p className="text-sm font-semibold text-white/90">
-                {isComplete && bundleCurrent ? "All acknowledgments current" : "Acknowledgments required"}
-              </p>
-              <p className="text-xs text-white/40">
-                {isComplete && bundleCurrent
-                  ? "Your acknowledgments are up to date."
-                  : "Please complete the required acknowledgments."}
-              </p>
-            </div>
           </div>
+        </HairlineSection>
 
-          {latestAck?.accepted_at && (
-            <div className="space-y-1 border-t pt-3" style={{ borderColor: "#eadccf" }}>
-              <div className="flex justify-between">
-                <span className="text-xs text-white/35">Last accepted</span>
-                <span className="text-xs font-medium text-white/60">
-                  {format(new Date(latestAck.accepted_at), "MMM d, yyyy 'at' h:mm a")}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-xs text-white/35">Bundle version</span>
-                <span className="text-xs font-medium text-white/60">{latestAck.acknowledgment_bundle_version}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-xs text-white/35">Health data consent</span>
-                <span className="text-xs font-medium" style={{ color: user?.health_data_consent_active ? "#5b6550" : "#af751b" }}>
-                  {user?.health_data_consent_active ? "Active" : "Withdrawn"}
-                </span>
-              </div>
-            </div>
-          )}
-        </div>
+        <HairlineSection label="Documents">
+          <div className="pt-1 pb-2">
+            {Object.entries(LEGAL_DOCUMENTS).map(([key, doc]) => (
+              <LedgerRow
+                key={key}
+                label={doc.title}
+                value={`v${doc.version}`}
+                onClick={() => setActiveDoc(key)}
+              />
+            ))}
+          </div>
+        </HairlineSection>
 
-        {/* Document links */}
-        <div className="glass-card border rounded-3xl p-2" style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}>
-          {Object.entries(LEGAL_DOCUMENTS).map(([key, doc]) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setActiveDoc(key)}
-              className="flex w-full items-center justify-between rounded-2xl px-3 py-3 transition hover:bg-white/5"
-            >
-              <div className="flex items-center gap-3">
-                <FileText className="w-4 h-4 text-white/40" />
-                <div className="text-left">
-                  <p className="text-sm font-medium text-white/80">{doc.title}</p>
-                  <p className="text-[10px] text-white/30">Version {doc.version}</p>
-                </div>
-              </div>
-              <ChevronRight className="w-4 h-4 text-white/30" />
-            </button>
-          ))}
-        </div>
-
-        {/* Acknowledgment history */}
         {ackRecords.length > 0 && (
-          <div className="glass-card border rounded-3xl p-4 space-y-3" style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}>
-            <p className="text-xs font-bold text-white/50 uppercase tracking-wider">Acknowledgment History</p>
-            <div className="space-y-2">
+          <HairlineSection label="Acknowledgment History">
+            <div className="pt-1 pb-2">
               {ackRecords.slice(0, 5).map((record) => (
-                <div key={record.id} className="flex items-center justify-between rounded-xl px-3 py-2" style={{ background: "#f7f1e8" }}>
-                  <div>
-                    <p className="text-xs font-medium text-white/70">
-                      {record.consent_source.replace(/_/g, " ")}
-                    </p>
-                    <p className="text-[10px] text-white/30">
-                      {format(new Date(record.accepted_at || record.created_date), "MMM d, yyyy")}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {record.withdrawn_at && (
-                      <span className="text-[10px] font-medium" style={{ color: "#af751b", opacity: 0.6 }}>withdrawn</span>
-                    )}
-                    <span className="text-[10px] text-white/30">v{record.acknowledgment_bundle_version}</span>
-                  </div>
-                </div>
+                <LedgerRow
+                  key={record.id}
+                  label={record.consent_source.replace(/_/g, " ")}
+                  value={record.withdrawn_at ? "withdrawn" : `v${record.acknowledgment_bundle_version}`}
+                  timestamp={format(new Date(record.accepted_at || record.created_date), "MMM d, yyyy")}
+                />
               ))}
             </div>
-          </div>
+          </HairlineSection>
         )}
 
-        {/* Withdraw consent */}
         {isComplete && (
-          <button
-            type="button"
-            onClick={() => setShowWithdrawModal(true)}
-            className="w-full flex items-center justify-between rounded-2xl border px-4 py-3.5 transition"
-            style={{ borderColor: "rgba(175,117,27,0.15)", background: "rgba(175,117,27,0.03)" }}
-          >
-            <div className="flex items-center gap-3">
-              <Shield className="w-4 h-4" style={{ color: "#af751b", opacity: 0.7 }} />
-              <div className="text-left">
-                <p className="text-sm font-medium text-white/70">Withdraw Health Data Consent</p>
-                <p className="text-[10px] text-white/30">Revoke consent and review acknowledgments again</p>
-              </div>
+          <HairlineSection label="Withdraw">
+            <div className="pt-3 pb-2">
+              <button
+                type="button"
+                onClick={() => setShowWithdrawModal(true)}
+                className="flex w-full items-center gap-3 text-left transition hover:opacity-70"
+              >
+                <Shield className="w-4 h-4 shrink-0" style={{ color: "#af751b", opacity: 0.7 }} />
+                <div className="flex-1">
+                  <p className="text-sm font-medium" style={{ color: "#3f3830" }}>Withdraw Health Data Consent</p>
+                  <p className="text-[10px]" style={{ color: "#a89e8d" }}>Revoke consent and review acknowledgments again</p>
+                </div>
+                <span className="text-sm" style={{ color: "#a89e8d" }}>›</span>
+              </button>
             </div>
-            <ChevronRight className="w-4 h-4 text-white/30" />
-          </button>
+          </HairlineSection>
+        )}
+
+        {isLoading && (
+          <div className="flex justify-center py-4">
+            <Loader2 className="h-4 w-4 animate-spin" style={{ color: "#a89e8d" }} />
+          </div>
         )}
       </div>
 
@@ -201,60 +178,60 @@ export default function ConsentManagement() {
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="mb-4 flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" style={{ color: "#af751b" }} />
-                <div>
-                  <h3 className="text-base font-bold text-white">Withdraw Health Data Consent?</h3>
-                  <p className="mt-1 text-xs text-white/50">
-                    Withdrawing consent will affect your access to Stackd's features.
-                  </p>
-                </div>
-              </div>
-              <div className="space-y-2.5 mb-5">
-                {[
-                  "All health-related features will be locked until you re-complete the acknowledgment flow.",
-                  "Your existing health data will remain stored unless you explicitly delete it.",
-                  "You can request full data deletion from Settings at any time.",
-                  "Legally required acknowledgment records may be retained for compliance.",
-                  "Withdrawing consent does not automatically cancel any subscription.",
-                ].map((item, i) => (
-                  <div key={i} className="flex items-start gap-2">
-                    <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-white/30" />
-                    <p className="text-xs leading-relaxed text-white/55">{item}</p>
+                  <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" style={{ color: "#af751b" }} />
+                  <div>
+                    <h3 className="text-base font-bold" style={{ color: "#3f3830" }}>Withdraw Health Data Consent?</h3>
+                    <p className="mt-1 text-xs" style={{ color: "#8a7f70" }}>
+                      Withdrawing consent will affect your access to Stackd's features.
+                    </p>
                   </div>
-                ))}
-              </div>
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowWithdrawModal(false)}
-                  disabled={isWithdrawing}
-                  className="flex-1 rounded-2xl border py-3 text-sm font-medium text-white/60 transition disabled:opacity-50"
-                  style={{ borderColor: "#eadccf", background: "#f7f1e8" }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleWithdraw}
-                  disabled={isWithdrawing}
-                  className="flex-1 rounded-2xl py-3 text-sm font-semibold transition active:scale-[0.98] disabled:opacity-50"
-                  style={{ background: "#af751b", color: "#f7f1e8" }}
-                >
-                  {isWithdrawing ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Withdrawing...
-                    </span>
-                  ) : (
-                    "Withdraw Consent"
-                  )}
-                </button>
-              </div>
+                </div>
+                <div className="space-y-2.5 mb-5">
+                  {[
+                    "All health-related features will be locked until you re-complete the acknowledgment flow.",
+                    "Your existing health data will remain stored unless you explicitly delete it.",
+                    "You can request full data deletion from Settings at any time.",
+                    "Legally required acknowledgment records may be retained for compliance.",
+                    "Withdrawing consent does not automatically cancel any subscription.",
+                  ].map((item, i) => (
+                    <div key={i} className="flex items-start gap-2">
+                      <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full" style={{ background: "#a89e8d" }} />
+                      <p className="text-xs leading-relaxed" style={{ color: "#8a7f70" }}>{item}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowWithdrawModal(false)}
+                    disabled={isWithdrawing}
+                    className="flex-1 rounded-2xl border py-3 text-sm font-medium transition disabled:opacity-50"
+                    style={{ borderColor: "#eadccf", background: "#f7f1e8", color: "#8a7f70" }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleWithdraw}
+                    disabled={isWithdrawing}
+                    className="flex-1 rounded-2xl py-3 text-sm font-semibold transition active:scale-[0.98] disabled:opacity-50"
+                    style={{ background: "#af751b", color: "#f7f1e8" }}
+                  >
+                    {isWithdrawing ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Withdrawing...
+                      </span>
+                    ) : (
+                      "Withdraw Consent"
+                    )}
+                  </button>
+                </div>
+              </motion.div>
             </motion.div>
-            </motion.div>
-            </AnimatePresence>,
-            document.body
-            )}
-            </>
-            );
-            }
+          </AnimatePresence>,
+          document.body
+        )}
+    </>
+  );
+}

@@ -2,23 +2,21 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
-import { Shield, Trash2, AlertTriangle, Loader2, Download } from "lucide-react";
+import { Shield, Trash2, AlertTriangle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import ConsentManagement from "@/components/settings/ConsentManagement";
+import HairlineSection from "@/components/editorial/HairlineSection";
+import LedgerRow from "@/components/editorial/LedgerRow";
 
 export default function PrivacyConsent() {
   const { logout } = useAuth();
   const queryClient = useQueryClient();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
 
   const handleDeleteAccount = async () => {
     setIsDeletingAccount(true);
     try {
-      // Remove all user-owned data across every entity. Uses deleteMany with
-      // empty filters — RLS scopes each deletion to the authenticated user's
-      // own records only, so no other user's data is affected.
       await Promise.all([
         base44.entities.InsulinDose.deleteMany({}),
         base44.entities.GlucoseReading.deleteMany({}),
@@ -46,78 +44,38 @@ export default function PrivacyConsent() {
     }
   };
 
-  const handleExportCSV = async () => {
-    setIsExporting(true);
-    try {
-      const doses = await base44.entities.InsulinDose.list("-administered_at", 1000);
-      const glucose = await base44.entities.GlucoseReading.list("-recorded_at", 1000);
-      const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
-      const filteredDoses = doses.filter((d) => new Date(d.administered_at).getTime() >= cutoff);
-      const filteredGlucose = glucose.filter((g) => new Date(g.recorded_at).getTime() >= cutoff);
-
-      let csv = "Type,Value / Units,Insulin Type,Timestamp,Notes\n";
-      filteredDoses.forEach((d) => {
-        csv += `Insulin,${d.units},"${d.insulin_type}",${d.administered_at},"${d.notes || ""}"\n`;
-      });
-      filteredGlucose.forEach((g) => {
-        csv += `Glucose,${g.value},,${g.recorded_at},"${g.notes || ""}"\n`;
-      });
-
-      const link = document.createElement("a");
-      link.href = encodeURI("data:text/csv;charset=utf-8," + csv);
-      link.download = `stackd_30day_${new Date().toISOString().slice(0, 10)}.csv`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      toast.success("Exported 30 days of data!");
-    } catch {
-      toast.error("We couldn't export your data. Please try again.");
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
   return (
     <div className="space-y-6">
       <ConsentManagement />
 
-      {/* Privacy Notice */}
-      <div className="space-y-3">
-        <h3 className="text-sm font-bold text-white uppercase tracking-wider px-1">Privacy</h3>
-        <div className="glass-card border rounded-3xl p-4 space-y-3" style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}>
-          <div className="flex items-start gap-3">
-            <Shield className="w-4 h-4 mt-0.5 shrink-0" style={{ color: "#5b6550" }} />
-            <div className="space-y-1.5">
-              <p className="text-sm font-semibold text-white/90">Your data is private & secure</p>
-              <p className="text-xs text-white/40 leading-relaxed">
-                All health data logged in Stackd — including glucose readings, insulin doses, and carbohydrate entries — is stored securely and is only accessible by you. We do not share, sell, or transmit your personal health information to any third parties.
-              </p>
-              <p className="text-xs text-white/40 leading-relaxed">
-                Data is encrypted in transit and at rest. You can export or delete your data at any time from this settings page.
-              </p>
-            </div>
+      <HairlineSection label="Privacy">
+        <div className="flex items-start gap-3 pt-3 pb-2">
+          <Shield className="w-4 h-4 mt-0.5 shrink-0" style={{ color: "#5b6550" }} />
+          <div className="space-y-2">
+            <p className="text-sm font-semibold" style={{ color: "#3f3830" }}>Your data is private & secure</p>
+            <p className="text-xs leading-relaxed" style={{ color: "#8a7f70" }}>
+              All health data logged in Stackd — including glucose readings, insulin doses, and carbohydrate entries — is stored securely and is only accessible by you. We do not share, sell, or transmit your personal health information to any third parties.
+            </p>
+            <p className="text-xs leading-relaxed" style={{ color: "#8a7f70" }}>
+              Data is encrypted in transit and at rest. You can export or delete your data at any time from this settings page.
+            </p>
           </div>
-
-       
-         
         </div>
-      </div>
+      </HairlineSection>
 
-      {/* Delete Account */}
-      <div className="space-y-3">
-        <h3 className="text-sm font-bold text-white uppercase tracking-wider px-1">Danger Zone</h3>
+      <HairlineSection label="Danger Zone">
         {!showDeleteConfirm ? (
-          <button
-            type="button"
-            onClick={() => setShowDeleteConfirm(true)}
-            className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl border text-sm font-medium transition-all"
-            style={{ borderColor: "rgba(201,112,96,0.15)", color: "rgba(201,112,96,0.6)" }}
-          >
-            <Trash2 className="w-4 h-4" />
-            Delete Account
-          </button>
+          <div className="pt-3 pb-2">
+            <LedgerRow
+              label="Delete account"
+              value="Permanent"
+              danger
+              actionLabel="Delete"
+              onClick={() => setShowDeleteConfirm(true)}
+            />
+          </div>
         ) : (
-          <div className="border rounded-3xl p-5 space-y-4" style={{ background: "rgba(201,112,96,0.04)", borderColor: "rgba(201,112,96,0.20)" }}>
+          <div className="rounded-2xl border p-5 space-y-4 mt-3 mb-2" style={{ background: "rgba(201,112,96,0.04)", borderColor: "rgba(201,112,96,0.20)" }}>
             <div className="flex items-start gap-3">
               <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" style={{ color: "#c97060" }} />
               <div>
@@ -131,8 +89,8 @@ export default function PrivacyConsent() {
               <button
                 type="button"
                 onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 text-sm py-3 rounded-2xl border text-white/60 transition-all text-sm font-medium"
-                style={{ borderColor: "#eadccf", background: "#f7f1e8" }}
+                className="flex-1 text-sm py-3 rounded-2xl border transition-all font-medium"
+                style={{ borderColor: "#eadccf", background: "#f7f1e8", color: "#8a7f70" }}
               >
                 Cancel
               </button>
@@ -149,7 +107,7 @@ export default function PrivacyConsent() {
             </div>
           </div>
         )}
-      </div>
+      </HairlineSection>
     </div>
   );
 }
