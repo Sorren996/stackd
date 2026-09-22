@@ -9,14 +9,15 @@ const VIEWS = [
 
 export default function TimeViewToggle({ value, onChange }) {
   return (
-    <div className="flex items-center gap-0.5 rounded-lg border border-white/5 bg-white/[0.03] p-0.5">
+    <div className="flex items-center gap-0.5 rounded-lg border p-0.5" style={{ borderColor: "#eadccf", background: "#fdf9f2" }}>
       {VIEWS.map((view) => (
         <button
           key={view.value}
           onClick={() => onChange(view.value)}
           className={`relative px-2 py-0.5 text-[11px] font-semibold rounded-md transition-colors ${
-            value === view.value ? "text-white" : "text-white/40 hover:text-white/70"
+            value === view.value ? "" : "hover:opacity-70"
           }`}
+          style={{ color: value === view.value ? "#3f3830" : "#a89e8d" }}
         >
           {value === view.value && (
             <motion.div

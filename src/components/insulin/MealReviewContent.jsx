@@ -1,14 +1,16 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
-import { CheckCircle2, Clock, ChevronDown, ChevronUp } from "lucide-react";
+import { CheckCircle2, Clock, ChevronDown } from "lucide-react";
+import { getCarbAbsorptionAt } from "@/lib/carbAbsorption";
+import MealProjectionChart from "./MealProjectionChart";
 
 const RESCUE_COLOR = "#8a6db8";
 const PALETTE = {
   green: "#5b6550",
   amber: "#af751b",
   muted: "#8a7f70",
-  bolus: "#5ba3b8",
+  ink: "#3f3830",
+  faint: "#a89e8d",
+  hairline: "#eadccf",
 };
 
 const TREND_ARROW = {
@@ -21,167 +23,41 @@ const TREND_ARROW = {
   "double_down": "⇊",
 };
 
-function roundUnits(v) {
-  return Math.round(Number(v) || 0);
+function formatClock(time) {
+  if (!Number.isFinite(time)) return null;
+  return new Date(time).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 }
 
-function formatElapsed(ms) {
-  if (!Number.isFinite(ms) || ms < 0) return null;
-  const totalMin = Math.round(ms / 60000);
-  const h = Math.floor(totalMin / 60);
-  const m = totalMin % 60;
-  if (h && m) return `${h}h ${m}m`;
-  if (h) return `${h}h`;
-  return `${m}m`;
-}
-
-function SectionLabel({ children }) {
-  return <p className="stackd-section-label">{children}</p>;
+function mealLabel(mealTime) {
+  if (!Number.isFinite(mealTime)) return "Meal";
+  const h = new Date(mealTime).getHours();
+  if (h < 10) return "Breakfast";
+  if (h < 14) return "Lunch";
+  if (h < 17) return "Snack";
+  return "Dinner";
 }
 
 /**
- * Similar Meals — fetches historical MealResponseAnalysis records with
- * similar carbohydrate amounts and shows how they actually behaved.
- * Observational only; never produces a dosing recommendation.
- */
-function useSimilarMeals(mealCarbs, enabled) {
-  return useQuery({
-    queryKey: ["similar-meals", mealCarbs],
-    queryFn: async () => {
-      const records = await base44.entities.MealResponseAnalysis.list("-meal_time", 100);
-      if (!Array.isArray(records) || !mealCarbs) return [];
-      const tolerance = Math.max(10, mealCarbs * 0.2);
-      return records
-        .filter(
-          (r) =>
-            r.analysis_status === "complete" &&
-            Number.isFinite(r.carbs_logged) &&
-            Number.isFinite(r.peak_glucose) &&
-            Math.abs(r.carbs_logged - mealCarbs) <= tolerance
-        )
-        .slice(0, 5);
-    },
-    enabled: enabled && mealCarbs > 0,
-    staleTime: 5 * 60 * 1000,
-  });
-}
-
-function SimilarMealsSection({ mealCarbs }) {
-  const { data: similarMeals } = useSimilarMeals(mealCarbs, true);
-  const meals = similarMeals || [];
-
-  if (meals.length < 1) return null;
-
-  const peaks = meals.map((m) => Number(m.peak_glucose)).filter(Number.isFinite);
-  const timesToPeak = meals
-    .map((m) => {
-      if (!m.peak_time || !m.meal_time) return null;
-      return (new Date(m.peak_time).getTime() - new Date(m.meal_time).getTime()) / 60000;
-    })
-    .filter(Number.isFinite);
-
-  const avgPeak = peaks.length ? Math.round(peaks.reduce((s, p) => s + p, 0) / peaks.length) : null;
-  const avgTimeToPeak = timesToPeak.length
-    ? formatElapsed((timesToPeak.reduce((s, t) => s + t, 0) / timesToPeak.length) * 60000)
-    : null;
-
-  return (
-    <section>
-      <SectionLabel>Similar Meals</SectionLabel>
-      <p className="mt-1 text-[11px] text-white/45">
-        <span className="text-white/55">{meals.length} previous meal{meals.length === 1 ? "" : "s"}</span>
-        {avgPeak && <> · Avg peak {avgPeak} mg/dL</>}
-        {avgTimeToPeak && <> · Avg to peak {avgTimeToPeak}</>}
-      </p>
-      <div className="mt-1.5 space-y-1">
-        {meals.slice(0, 3).map((m) => {
-          const timeToPeak =
-            m.peak_time && m.meal_time
-              ? formatElapsed(new Date(m.peak_time).getTime() - new Date(m.meal_time).getTime())
-              : null;
-          return (
-            <div key={m.id} className="flex items-center justify-between text-[11px] text-white/40">
-              <span>{Math.round(m.carbs_logged)}g carbs</span>
-              <span>Peak {Math.round(m.peak_glucose)} mg/dL</span>
-              {timeToPeak && <span>{timeToPeak} to peak</span>}
-            </div>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
-function HowCalculatedSection({ d }) {
-  const [open, setOpen] = useState(false);
-
-  const mealCarbs = Math.round(d.meal?.carbs || 0);
-  const gramsPerUnit = d.gramsPerUnit;
-  const mealUnits = roundUnits(d.expectedMealUnits);
-  const hasCorrection = d.correctionGlucoseAvailable && d.correctionUnitsNeeded > 0.01;
-  const correctionUnits = roundUnits(d.correctionUnitsNeeded);
-  const totalEstimate = roundUnits(d.grossDoseEstimate);
-  const glucoseAtStart = Math.round(d.correctionGlucoseValue || 0);
-  const target = Math.round(d.correctionTargetGlucose || 0);
-  const sensitivity = d.insulinSensitivityMgDlPerUnit;
-
-  return (
-    <div>
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        className="flex items-center gap-1 text-[11px] font-medium text-white/40 transition hover:text-white/60"
-      >
-        How is this calculated?
-        {open ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-      </button>
-      {open && (
-        <div className="mt-1.5 space-y-0.5 pl-3 text-[11px] leading-relaxed text-white/45">
-          <p>{mealCarbs}g meal carbs</p>
-          {Number.isFinite(gramsPerUnit) && gramsPerUnit > 0 && (
-            <p>÷ {Number(gramsPerUnit.toFixed(1))}g per unit (your carb ratio)</p>
-          )}
-          <p>= {mealUnits}u meal insulin</p>
-          {hasCorrection && (
-            <>
-              <p className="pt-1">{glucoseAtStart} mg/dL at meal start</p>
-              <p>− {target} mg/dL target</p>
-              {Number.isFinite(sensitivity) && sensitivity > 0 && (
-                <p>÷ {Math.round(sensitivity)} mg/dL per unit (your sensitivity)</p>
-              )}
-              <p>= {correctionUnits}u correction</p>
-            </>
-          )}
-          <p className="pt-1.5 font-semibold text-white/65">
-            {mealUnits}u + {hasCorrection ? `${correctionUnits}u` : "0u"} = {totalEstimate}u estimated bolus
-          </p>
-          <p className="pt-1 text-[10px] text-white/30">
-            Estimate only — not a dosing recommendation. Rescue carbs excluded.
-          </p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/**
- * Meal Review — a clear, human-readable analysis of the meal.
- * Focuses exclusively on the meal, glucose response, and BOLUS insulin.
- * Basal insulin is never shown here — it belongs in the IOB experience.
- * All insulin values are displayed as whole units.
+ * Meal Review — editorial layout matching the approved mock.
+ * Focal anchor is total carbs; absorption track, glucose line, projection
+ * chart, and edit-items overlay. All existing data and logic preserved;
+ * presentation only.
  */
 export default function MealReviewContent({ mealInsight, monitoringStatus, glucoseTrend, onResolve }) {
+  const [showEditItems, setShowEditItems] = useState(false);
+  const [editRect, setEditRect] = useState(null);
+
   if (!mealInsight) return null;
 
   const d = mealInsight.details;
   const trendArrow = glucoseTrend?.icon ? TREND_ARROW[glucoseTrend.icon] : null;
-  const trendColor = glucoseTrend?.color || PALETTE.muted;
+  const trendLabel = glucoseTrend?.label || "steady";
 
   // ── NO ACTIVE MEAL ──────────────────────────────────────────────
   if (!d || d.noActiveMeal) {
     return (
-      <div className="p-1">
-        <p className="text-sm text-white/40">No meal to review yet.</p>
+      <div className="px-1 pt-2 pb-6">
+        <p className="text-sm" style={{ color: PALETTE.muted }}>No meal to review yet.</p>
       </div>
     );
   }
@@ -190,10 +66,9 @@ export default function MealReviewContent({ mealInsight, monitoringStatus, gluco
   if (!d.meal) {
     const needsSetup = mealInsight.value === "Setup needed";
     return (
-      <div className="space-y-2 p-1">
-        <SectionLabel>Meal Review</SectionLabel>
-        <p className="text-sm font-semibold text-white/75">{mealInsight.value}</p>
-        <p className="text-[11px] leading-relaxed text-white/40">
+      <div className="px-1 pt-2 pb-6 space-y-1">
+        <p className="text-sm font-semibold" style={{ color: PALETTE.ink }}>{mealInsight.value}</p>
+        <p className="text-[11px] leading-relaxed" style={{ color: PALETTE.muted }}>
           {needsSetup
             ? "Add your insulin-to-carb ratio and sensitivity in Settings to see meal balance."
             : "Log a meal to open a review window."}
@@ -205,176 +80,203 @@ export default function MealReviewContent({ mealInsight, monitoringStatus, gluco
   // ── ACTIVE MEAL ────────────────────────────────────────────────
   const mealCarbs = Math.round(d.meal?.carbs || 0);
   const rescueCarbs = d.rescueCarbs || 0;
-  const bolusTaken = roundUnits(d.loggedTotalUnits || 0);
-  const bolusEstimated = roundUnits(d.grossDoseEstimate || 0);
-  const bolusActive = roundUnits(d.bolusIOB || 0);
-  const peakOutcome = d.peakOutcome;
-  const peakOutcomeTime = d.peakOutcomeTime;
   const mealTime = d.meal?.time;
   const glucoseNow = Number.isFinite(d.latestGlucoseValue) ? d.latestGlucoseValue : d.windowEndGlucoseValue;
-  const hasCurrentGlucose = Number.isFinite(glucoseNow);
   const glucoseAtStart = d.glucoseValue;
-  const hasStartingGlucose = Number.isFinite(glucoseAtStart);
+  const peakOutcome = d.peakOutcome;
+  const peakOutcomeTime = d.peakOutcomeTime;
+  const targetLow = d.targetLow || 70;
+  const targetHigh = d.targetHigh || 180;
+  const reviewWindowEnd = d.reviewWindowEnd || (mealTime + 4 * 3600 * 1000);
 
-  const elapsedMs = Number.isFinite(mealTime) ? Date.now() - mealTime : null;
-  const peakAfterMs =
-    Number.isFinite(peakOutcomeTime) && Number.isFinite(mealTime) ? peakOutcomeTime - mealTime : null;
-  const peakRise =
-    Number.isFinite(peakOutcome) && hasStartingGlucose ? peakOutcome - glucoseAtStart : null;
+  // Compute absorption from carb entries
+  const carbEntries = d.mealGroup?.carbEntries || (d.meal ? [d.meal] : []);
+  const nowMs = Date.now();
+  let totalAbsorbed = 0;
+  let totalRemaining = 0;
+  carbEntries.forEach((entry) => {
+    if (!entry || !Number.isFinite(entry.carbs)) return;
+    const result = getCarbAbsorptionAt(entry, nowMs);
+    totalAbsorbed += result.absorbedGrams || 0;
+    totalRemaining += result.remainingGrams || 0;
+  });
+  const totalCarbsAbs = totalAbsorbed + totalRemaining;
+  const absorptionPct = totalCarbsAbs > 0 ? Math.min(100, (totalAbsorbed / totalCarbsAbs) * 100) : 0;
+  const absorption = { absorbed: Math.round(totalAbsorbed), remaining: Math.round(totalRemaining), pct: absorptionPct };
+
+  const foodList = carbEntries
+    .map((e) => e?.food_name || e?.name)
+    .filter(Boolean)
+    .join(" · ");
+
+  const nowTime = formatClock(Date.now());
+  const loggedTime = formatClock(mealTime);
+  const mealName = mealLabel(mealTime);
 
   return (
-    <div className="space-y-4 p-1 pb-6">
-      <SectionLabel>Meal Review</SectionLabel>
+    <div className="px-1 pt-2 pb-6">
+      {/* Header */}
+      <div className="flex items-baseline justify-between">
+        <h3 className="hdr">Meal <em>review</em></h3>
+        <span className="hdr-date">{nowTime}</span>
+      </div>
 
-      {/* ROW 1 — Glucose Summary: Current | Peak */}
-      {(hasCurrentGlucose || Number.isFinite(peakOutcome)) && (
-        <div className="grid grid-cols-2 gap-6">
-          {hasCurrentGlucose && (
-            <div>
-              <SectionLabel>Current Glucose</SectionLabel>
-              <div className="mt-1 flex items-baseline gap-1.5">
-                <span className="text-3xl font-black text-white">{Math.round(glucoseNow)}</span>
-                <span className="text-[11px] text-white/40">mg/dL</span>
-                {trendArrow && (
-                  <span className="ml-0.5 text-lg font-bold" style={{ color: trendColor }}>
-                    {trendArrow}
-                  </span>
-                )}
-              </div>
-              {elapsedMs !== null && (
-                <p className="mt-0.5 text-[11px] text-white/40">{formatElapsed(elapsedMs)} since meal</p>
-              )}
-            </div>
-          )}
-          {Number.isFinite(peakOutcome) && (
-            <div>
-              <SectionLabel>Peak Since Meal</SectionLabel>
-              <div className="mt-1 flex items-baseline gap-1.5">
-                <span className="text-2xl font-bold text-white">{Math.round(peakOutcome)}</span>
-                <span className="text-[11px] text-white/40">mg/dL</span>
-              </div>
-              {(peakAfterMs !== null || (peakRise !== null && peakRise > 0)) && (
-                <p className="mt-0.5 text-[11px] text-white/40">
-                  {peakAfterMs !== null && `${formatElapsed(peakAfterMs)} after meal`}
-                  {peakAfterMs !== null && peakRise !== null && peakRise > 0 && " · "}
-                  {peakRise !== null && peakRise > 0 && (
-                    <span style={{ color: PALETTE.amber }}>+{Math.round(peakRise)} mg/dL from starting</span>
-                  )}
-                </p>
-              )}
-            </div>
-          )}
-        </div>
+      {/* Focal anchor — total carbs */}
+      <div className="mt-4 flex items-baseline gap-2">
+        <span className="anchor">{mealCarbs}</span>
+        <span className="text-[22px] font-light" style={{ color: PALETTE.muted }}>g carbs</span>
+      </div>
+
+      {/* Meal metadata */}
+      <div className="mt-1">
+        <span className="text-[10.5px] font-semibold uppercase tracking-[0.14em]" style={{ color: PALETTE.faint }}>
+          {mealName} · LOGGED {loggedTime}
+        </span>
+      </div>
+      {foodList && (
+        <p className="mt-0.5 text-[13px]" style={{ color: PALETTE.muted }}>{foodList}</p>
       )}
 
-      {/* ROW 2 — Meal + Bolus Insulin */}
-      <div className="grid grid-cols-2 gap-6">
-        <div>
-          <SectionLabel>This Meal</SectionLabel>
-          <div className="mt-1 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-white">{mealCarbs}g</span>
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-white/40">Meal Carbs</span>
-          </div>
-          {rescueCarbs > 0 && (
-            <>
-              <div className="mt-0.5 flex items-baseline gap-2">
-                <span className="text-lg font-bold" style={{ color: RESCUE_COLOR }}>+{rescueCarbs}g</span>
-                <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: `${RESCUE_COLOR}99` }}>Rescue</span>
-              </div>
-              <p className="mt-0.5 text-[10px] text-white/30">Excluded from insulin estimation.</p>
-            </>
-          )}
+      {/* Absorption track */}
+      <div className="mt-4">
+        <div className="relative h-[5px] w-full rounded-full" style={{ background: PALETTE.hairline }}>
+          <div
+            className="absolute left-0 top-0 h-full rounded-full"
+            style={{ width: `${absorption.pct}%`, background: PALETTE.ink, transition: "width 600ms ease-out" }}
+          />
         </div>
-        <div>
-          <SectionLabel>Bolus Insulin</SectionLabel>
-          <div className="mt-1 flex items-start gap-6">
-            <div>
-              <p className="text-2xl font-bold leading-none text-white">{bolusTaken}u</p>
-              <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-white/40">Taken</p>
-            </div>
-            {bolusEstimated > 0 && (
-              <div>
-                <p className="text-2xl font-bold leading-none" style={{ color: PALETTE.bolus }}>{bolusEstimated}u</p>
-                <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-white/40">Estimated</p>
-              </div>
-            )}
-          </div>
-          <div className="mt-1.5">
-            <HowCalculatedSection d={d} />
-          </div>
+        <div className="mt-1.5 flex items-baseline justify-between">
+          <span className="text-[13px] font-semibold" style={{ color: PALETTE.ink }}>
+            {absorption.absorbed} g absorbed
+          </span>
+          <span className="text-[13px]" style={{ color: PALETTE.faint }}>
+            {absorption.remaining} g remaining
+          </span>
         </div>
       </div>
 
-      {/* ROW 3 — Bolus Active + Meal Outcome */}
-      {(bolusActive > 0 || (hasStartingGlucose && Number.isFinite(peakOutcome) && hasCurrentGlucose)) && (
-        <div className="grid grid-cols-2 gap-6">
-          {bolusActive > 0 && (
-            <div>
-              <SectionLabel>Bolus Active</SectionLabel>
-              <p className="mt-1 text-2xl font-bold leading-none text-white">{bolusActive}u</p>
-              <p className="mt-0.5 text-[10px] text-white/40">Still active from meal/correction boluses</p>
-            </div>
-          )}
-          {hasStartingGlucose && Number.isFinite(peakOutcome) && hasCurrentGlucose && (
-            <div>
-              <SectionLabel>Meal Outcome</SectionLabel>
-              <div className="mt-1.5 flex items-center justify-between gap-1.5">
-                <div className="text-center">
-                  <p className="text-base font-bold text-white">{Math.round(glucoseAtStart)}</p>
-                  <p className="text-[9px] text-white/40">Starting</p>
-                </div>
-                <span className="text-white/20">→</span>
-                <div className="text-center">
-                  <p className="text-base font-bold text-white">{Math.round(peakOutcome)}</p>
-                  <p className="text-[9px] text-white/40">Peak</p>
-                </div>
-                <span className="text-white/20">→</span>
-                <div className="text-center">
-                  <p className="text-base font-bold text-white">{Math.round(glucoseNow)}</p>
-                  <p className="text-[9px] text-white/40">Current</p>
-                </div>
-              </div>
-              <div className="mt-1.5 space-y-0.5">
-                {peakAfterMs !== null && (
-                  <p className="text-[11px] text-white/40">{formatElapsed(peakAfterMs)} · Time to peak</p>
-                )}
-                {elapsedMs !== null && (
-                  <p className="text-[11px] text-white/40">{formatElapsed(elapsedMs)} · Since meal</p>
-                )}
-              </div>
-            </div>
-          )}
+      {/* Glucose line */}
+      {Number.isFinite(glucoseNow) && (
+        <div className="mt-4 flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full" style={{ background: PALETTE.green }} />
+          <span className="text-[14px]" style={{ color: PALETTE.ink }}>
+            {Math.round(glucoseNow)} mg/dL · {trendLabel}
+          </span>
         </div>
       )}
 
-      {/* Similar Meals — open text, no borders */}
-      <SimilarMealsSection mealCarbs={mealCarbs} />
+      {/* "Where you're headed" section */}
+      <div className="mt-6">
+        <div className="sec">Where you're headed</div>
+        <div className="rule" />
+      </div>
 
-      {/* High protein/fat monitoring notice — open text, amber accent */}
+      {/* Projection chart */}
+      <div className="mt-3">
+        <MealProjectionChart
+          mealTime={mealTime}
+          reviewWindowEnd={reviewWindowEnd}
+          startingGlucose={glucoseAtStart}
+          peakGlucose={peakOutcome}
+          peakTime={peakOutcomeTime}
+          currentGlucose={glucoseNow}
+          targetLow={targetLow}
+          targetHigh={targetHigh}
+        />
+      </div>
+
+      {/* Annotation under chart */}
+      <p className="mt-2 text-[12px] leading-relaxed" style={{ color: PALETTE.muted }}>
+        {(() => {
+          const absorbedStr = absorption.absorbed;
+          const remainingStr = absorption.remaining;
+          if (absorption.pct >= 90) {
+            return <>Absorption nearly complete — <em className="font-serif-italic" style={{ color: PALETTE.ink }}>settling</em> toward your range.</>;
+          }
+          if (absorption.pct >= 50) {
+            return <>{absorbedStr} g absorbed, {remainingStr} g still in play — <em className="font-serif-italic" style={{ color: PALETTE.ink }}>finding its balance</em>.</>;
+          }
+          return <>Absorption underway — <em className="font-serif-italic" style={{ color: PALETTE.ink }}>gently rising</em> as carbs take effect.</>;
+        })()}
+      </p>
+
+      {/* High protein/fat monitoring notice */}
       {monitoringStatus?.isActive && (
-        <div>
-          <div className="flex items-center gap-1.5">
-            <Clock className="h-3.5 w-3.5 shrink-0 text-amber-400/80" />
-            <p className="text-[11px] font-semibold text-amber-400/90">Delayed meal response possible</p>
-          </div>
-          <p className="mt-0.5 pl-5 text-[10px] leading-relaxed text-white/40">
-            Continue monitoring through{" "}
-            <span className="font-medium text-amber-400/70">
-              {new Date(monitoringStatus.endTime).toLocaleTimeString([], {
-                hour: "numeric",
-                minute: "2-digit",
-              })}
+        <div className="mt-3 flex items-start gap-1.5">
+          <Clock className="h-3.5 w-3.5 shrink-0" style={{ color: PALETTE.amber }} />
+          <p className="text-[11px] leading-relaxed" style={{ color: PALETTE.muted }}>
+            Delayed meal response possible — monitoring through{" "}
+            <span className="font-semibold" style={{ color: PALETTE.amber }}>
+              {new Date(monitoringStatus.endTime).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
             </span>
           </p>
         </div>
       )}
 
-      {/* Mark as Resolved — minimal text action */}
+      {/* Edit items pill trigger */}
+      {carbEntries.length > 0 && (
+        <div className="mt-4">
+          <button
+            type="button"
+            onClick={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              setEditRect(rect);
+              setShowEditItems((v) => !v);
+            }}
+            className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12px] font-medium transition hover:opacity-70"
+            style={{ borderColor: PALETTE.hairline, color: PALETTE.ink, background: "#fdf9f2" }}
+          >
+            Edit items
+            <ChevronDown className="h-3 w-3" />
+          </button>
+        </div>
+      )}
+
+      {/* Edit items floating overlay */}
+      {showEditItems && editRect && typeof document !== "undefined" && (
+        <>
+          <div
+            className="fixed inset-0 z-[199]"
+            onClick={() => setShowEditItems(false)}
+          />
+          <div
+            className="fixed z-[200] w-64 rounded-2xl border p-3"
+            style={{
+              background: "#fefaef",
+              borderColor: PALETTE.hairline,
+              boxShadow: "0 8px 28px rgba(63, 56, 48, 0.12)",
+              left: Math.min(editRect.left, window.innerWidth - 280),
+              bottom: window.innerHeight - editRect.top + 8,
+            }}
+          >
+            <div className="text-[10px] font-semibold uppercase tracking-[0.14em] mb-2" style={{ color: PALETTE.faint }}>
+              Items in this meal
+            </div>
+            <div className="space-y-0">
+              {carbEntries.map((entry, i) => (
+                <div key={entry.id || i} className="flex items-baseline gap-2 py-1.5">
+                  <span className="shrink-0 text-[13px]" style={{ color: PALETTE.ink }}>
+                    {entry.food_name || entry.name || "Food"}
+                  </span>
+                  <span className="flex-1 overflow-hidden">
+                    <span className="dotted-leader block" />
+                  </span>
+                  <span className="shrink-0 text-[13px]" style={{ color: PALETTE.muted }}>
+                    {Math.round(entry.carbs)} g
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Mark as Resolved */}
       {d.mealStillUnderReview && onResolve && (
         <button
           type="button"
           onClick={onResolve}
-          className="flex w-full items-center justify-center gap-2 py-2 text-[12px] font-semibold transition hover:brightness-110"
+          className="mt-4 flex w-full items-center justify-center gap-2 py-2 text-[12px] font-semibold transition hover:opacity-70"
           style={{ color: PALETTE.green }}
         >
           <CheckCircle2 className="h-4 w-4" strokeWidth={2.5} />

@@ -1,4 +1,4 @@
-import { ComposedChart, Area, XAxis, YAxis } from "recharts";
+import { ComposedChart, Area, Line, XAxis, YAxis } from "recharts";
 import { format } from "date-fns";
 import { Wheat } from "lucide-react";
 import { useIsLightTheme } from "@/lib/theme";
@@ -55,21 +55,22 @@ export default function GraphLowerSection({
     const isSelected = selectedDoseKey === k.key;
     const isDimmed = selectedDoseKey && !isSelected;
     const isExpired = k.isActive === false;
+    const isBasal = k.isBasal;
     return (
-      <Area
+      <Line
         key={k.key}
         yAxisId="insulin"
         type="basis"
         dataKey={k.key}
         name={k.label}
-        stroke={k.color}
-        strokeWidth={isSelected ? 1.5 : isExpired ? 0.8 : 1}
-        strokeOpacity={isDimmed ? 0.1 : isSelected ? 0.65 : isExpired ? 0.16 : 0.4}
-        fill={`url(#insulin_fill_${k.key})`}
-        fillOpacity={isDimmed ? 0.03 : isSelected ? 0.28 : isExpired ? 0.07 : 0.22}
+        stroke={isBasal ? gTheme.basalBandColor : gTheme.insulinCurveColor}
+        strokeWidth={gTheme.insulinCurveWidth}
+        strokeOpacity={isDimmed ? 0.08 : isSelected ? 0.7 : isExpired ? 0.12 : gTheme.insulinCurveOpacity}
+        fill="none"
         dot={false}
         activeDot={false}
         isAnimationActive={false}
+        connectNulls={true}
       />
     );
   };
@@ -124,6 +125,20 @@ export default function GraphLowerSection({
         </ComposedChart>
       </div>
 
+      {/* Flat basal strip at the bottom of the insulin lane */}
+      {hasCurves && doseKeys.some((k) => k.isBasal) && (
+        <div
+          className="pointer-events-none absolute left-0 right-0 z-[1]"
+          style={{
+            bottom: xAxisHeight - 2,
+            height: 10,
+            background: gTheme.basalBandColor,
+            opacity: gTheme.basalBandOpacity,
+            borderRadius: 2,
+          }}
+        />
+      )}
+
       {/* Carb pills — compact, in carb lane */}
       {showCarbs && positionedCarbMarkers.map(({ entry, color, x, lane }) => {
         const isEdgeLeft = x < 40;
@@ -150,8 +165,8 @@ export default function GraphLowerSection({
               type="button"
               onClick={(e) => { e.stopPropagation(); onCarbTap(entry, e.currentTarget.getBoundingClientRect()); }}
               aria-label={`Carbs ${Math.round(entry.carbs)}g`}
-              className="pointer-events-auto relative flex cursor-pointer items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-semibold leading-none transition hover:brightness-110"
-              style={{ top: pillTop, color, borderColor: `${color}30`, background: gTheme.pillBg }}
+              className="pointer-events-auto relative flex cursor-pointer items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-semibold leading-none transition hover:opacity-70"
+              style={{ top: pillTop, color: "#3f3830", borderColor: "#eadccf", background: gTheme.pillBg }}
             >
               <Wheat className="h-2.5 w-2.5" />
               <span>{Math.round(entry.carbs)}g</span>
@@ -216,10 +231,10 @@ export default function GraphLowerSection({
               className="pointer-events-auto relative flex cursor-pointer items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-semibold leading-none transition hover:brightness-110"
               style={{
                 top: insulinLaneTop + pillTop,
-                color,
-                background: isSelected ? `${color}22` : gTheme.pillBg,
-                border: `1px solid ${isSelected ? color : `${color}35`}`,
-                boxShadow: isSelected ? `0 0 8px ${color}40` : "none",
+                color: "#3f3830",
+                background: gTheme.pillBg,
+                border: `1px solid ${isSelected ? "#3f3830" : "#eadccf"}`,
+                boxShadow: isSelected ? "0 0 8px rgba(63,56,48,0.15)" : "none",
               }}
             >
               <span>{formattedUnits}u</span>
