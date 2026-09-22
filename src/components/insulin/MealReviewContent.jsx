@@ -96,7 +96,13 @@ export default function MealReviewContent({ mealInsight, monitoringStatus, gluco
   let totalRemaining = 0;
   carbEntries.forEach((entry) => {
     if (!entry || !Number.isFinite(entry.carbs)) return;
-    const result = getCarbAbsorptionAt(entry, nowMs);
+    // For custom entries or entries without a validated absorption profile,
+    // use a default "medium" profile so the absorption track still reflects
+    // digestion timing.
+    const entryForCalc = (!entry.absorption_profile || entry.is_custom)
+      ? { ...entry, absorption_profile: entry.absorption_profile || "medium", is_custom: false }
+      : entry;
+    const result = getCarbAbsorptionAt(entryForCalc, nowMs);
     totalAbsorbed += result.absorbedGrams || 0;
     totalRemaining += result.remainingGrams || 0;
   });

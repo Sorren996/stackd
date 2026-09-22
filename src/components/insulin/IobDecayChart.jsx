@@ -22,7 +22,7 @@ export default function IobDecayChart({ bolusDoses, basalDoses, now = Date.now()
   const { totalPath, dosePaths, dashedPath, nowX, doseMarkers, basalBandY, xLabels } = useMemo(() => {
     // Time range: from earliest dose to latest dose end + 2h, or now + 3h
     const doseStarts = bolusDoses.map((d) => d.time).filter(Number.isFinite);
-    const domainStart = doseStarts.length ? Math.min(...doseStarts) - 30 * MINUTE_MS : now - 4 * 3600 * 1000;
+    const domainStart = doseStarts.length ? Math.min(...doseStarts) : now - 4 * 3600 * 1000;
     const domainEnd = now + 3 * 3600 * 1000;
     const domainMs = Math.max(1, domainEnd - domainStart);
 
@@ -105,7 +105,7 @@ export default function IobDecayChart({ bolusDoses, basalDoses, now = Date.now()
     <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} preserveAspectRatio="none" style={{ display: "block" }}>
       {/* Thin individual dose curves */}
       {dosePaths.map((path, i) => (
-        <path key={`dose_${i}`} d={path} fill="none" stroke="#3f3830" strokeWidth={1.5} opacity={0.25} strokeLinecap="round" />
+        <path key={`dose_${i}`} d={path} fill="none" stroke="#3f3830" strokeWidth={1.5} opacity={0.35} strokeLinecap="round" />
       ))}
 
       {/* Bold total bolus IOB — solid to NOW */}

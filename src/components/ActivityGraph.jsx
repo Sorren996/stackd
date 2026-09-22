@@ -1,5 +1,5 @@
 import { useMemo, useRef, useEffect, useState } from "react";
-import { Area, XAxis, YAxis, Line, ComposedChart, ReferenceLine } from "recharts";
+import { Area, XAxis, YAxis, Line, ComposedChart, ReferenceLine, ReferenceArea } from "recharts";
 import { generateActivityCurve, getDoseIOB, getDoseRelativeActivity, getInsulinProfile, isBasalInsulinType } from "@/lib/insulinPharmacology";
 import { PROFILE_COLORS } from "@/lib/carbAbsorption";
 import { format } from "date-fns";
@@ -1230,24 +1230,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
 
               <>
-          {positionedMonitoringIntervals.map((iv, idx) =>
-                <div
-                  key={`monitoring_band_${idx}`}
-                  ref={(el) => monitoringBandRefs.current[idx] = el}
-                  className="pointer-events-none absolute z-[2]"
-                  style={{
-                    left: iv.x,
-                    top: monitoringBandTop,
-                    width: iv.width,
-                    height: monitoringBandHeight,
-                    opacity: 0,
-                    transition: "opacity 1000ms ease-in-out",
-                    borderRadius: 4,
-                    willChange: "opacity"
-                  }}
-                  aria-hidden="true" />
-
-                )}
           <div style={{ position: "absolute", top: 0, left: 0 }}>
             <ComposedChart
                     width={chartWidth}
@@ -1280,12 +1262,23 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                 </linearGradient>
               </defs>
 
+              {filters.glucose && (
+                <ReferenceArea
+                  yAxisId="glucose"
+                  x1={Date.now()}
+                  x2={domainEnd}
+                  fill="#af751b"
+                  fillOpacity={0.06}
+                  stroke="none"
+                />
+              )}
+
               <XAxis
-                      dataKey="time"
-                      type="number"
-                      domain={[domainStart, domainEnd]}
-                      ticks={timeTicks}
-                      tick={false}
+                dataKey="time"
+                type="number"
+                domain={[domainStart, domainEnd]}
+                ticks={timeTicks}
+                tick={false}
                       axisLine={false}
                       tickLine={false}
                       height={0}
