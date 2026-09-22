@@ -414,8 +414,8 @@ export default function DoseForm({ open, onOpenChange, mode = "insulin" }) {
             <button
               type="button"
               onClick={attemptClose}
-              className="flex h-8 w-8 items-center justify-center rounded-full border transition"
-              style={{ background: "#f7f1e8", borderColor: "#eadccf", color: "#6b6153" }}
+              className="flex h-8 w-8 items-center justify-center rounded-full transition hover:opacity-70"
+              style={{ background: "#f7f1e8", color: "#6b6153" }}
               aria-label="Close"
             >
               <X className="h-4 w-4" />
@@ -463,8 +463,8 @@ export default function DoseForm({ open, onOpenChange, mode = "insulin" }) {
                         <button
                           type="button"
                           onClick={addInsulinRow}
-                          className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed py-3 text-sm font-medium transition"
-                          style={{ borderColor: "#eadccf", color: "#6b6153" }}
+                          className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-medium transition hover:opacity-70"
+                          style={{ background: "#f7f1e8", color: "#6b6153" }}
                         >
                           <Plus className="h-4 w-4" />
                           Add another dose
@@ -555,8 +555,8 @@ export default function DoseForm({ open, onOpenChange, mode = "insulin" }) {
                 exit={{ scale: 0.92, opacity: 0 }}
                 transition={{ type: "spring", stiffness: 380, damping: 28 }}
                 onClick={(e) => e.stopPropagation()}
-                className="w-full max-w-sm rounded-3xl border p-6 text-center"
-                style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 8px 28px rgba(63, 56, 48, 0.12)" }}
+                className="w-full max-w-sm rounded-3xl p-6 text-center"
+                style={{ background: "#fdf9f2", boxShadow: "0 8px 28px rgba(63, 56, 48, 0.12)" }}
               >
                 <h3 className="text-lg font-semibold" style={{ color: "#3f3830" }}>Discard this entry?</h3>
                 <p className="mt-2 text-sm leading-relaxed" style={{ color: "#6b6153" }}>
@@ -566,8 +566,8 @@ export default function DoseForm({ open, onOpenChange, mode = "insulin" }) {
                   <button
                     type="button"
                     onClick={() => setShowDiscardPrompt(false)}
-                    className="flex-1 rounded-2xl border py-3 text-sm font-semibold transition"
-                    style={{ borderColor: "#eadccf", background: "#f7f1e8", color: "#3f3830" }}
+                    className="flex-1 rounded-2xl py-3 text-sm font-semibold transition hover:opacity-70"
+                    style={{ background: "#f7f1e8", color: "#3f3830" }}
                   >
                     Keep editing
                   </button>
