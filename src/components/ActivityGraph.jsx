@@ -34,18 +34,15 @@ const CANDLESTICK_TOTAL_HEIGHT = 425;
 const CHART_MARGIN_TOP = 70;
 const CHART_MARGIN_BOTTOM = 0;
 const X_AXIS_HEIGHT = 30;
-const GLUCOSE_CHART_HEIGHT = 224;
-const GLUCOSE_MARGIN_TOP = 62;
+const GLUCOSE_CHART_HEIGHT = 234;
+const GLUCOSE_MARGIN_TOP = 72;
 const GLUCOSE_PLOT_HEIGHT = GLUCOSE_CHART_HEIGHT - GLUCOSE_MARGIN_TOP;
 const CARB_LANE_HEIGHT = 34;
-const INSULIN_CHART_HEIGHT = 112;
-const INSULIN_MARGIN_TOP = 36;
-const INSULIN_PLOT_HEIGHT = INSULIN_CHART_HEIGHT - INSULIN_MARGIN_TOP - X_AXIS_HEIGHT;
+const INSULIN_PLOT_HEIGHT = 46;
 const MAIN_CHART_HEIGHT = GLUCOSE_CHART_HEIGHT + X_AXIS_HEIGHT;
-const ROW_GAP = 12;
+const ROW_GAP = 4;
 const INSULIN_ROW_TOP = GLUCOSE_CHART_HEIGHT + ROW_GAP;
 const GRAPH_BOTTOM_INSET = 14;
-const TWO_ROW_HEIGHT = INSULIN_ROW_TOP + INSULIN_CHART_HEIGHT + X_AXIS_HEIGHT + GRAPH_BOTTOM_INSET;
 const GLUCOSE_MIN = 40;
 const GLUCOSE_MAX = 250;
 const CARB_PROFILE_COLORS = {
@@ -600,6 +597,55 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     return peaks;
   }, [allCurvesMeta]);
 
+  // Dynamic gap between glucose and insulin rows, based on the tallest
+  // visible insulin curve. Shrinks when curves are short or absent, grows
+  // when bolus peaks need room for their unit labels and leaders.
+  const dynamicInsulinMarginTop = useMemo(() => {
+    const minGap = 8;
+    const clearance = 8;
+    const curveHeight = 0.35 * INSULIN_PLOT_HEIGHT;
+    const pillHeight = 16;
+    const pillGap = 3;
+
+    let minOffset = Infinity;
+    allCurvesMeta.forEach(({ dose, key, curve }) => {
+      if (!curve.length) return;
+      const isBasal = isBasalInsulinType(dose.insulin_type);
+      let peakTime;
+      let offset;
+      if (isBasal) {
+        const doseStart = new Date(dose.administered_at || dose.created_at || dose.created_date).getTime();
+        const targetTime = doseStart + 60 * 60 * 1000;
+        let closest = curve[0];
+        for (const p of curve) {
+          if (Math.abs(p.time - targetTime) < Math.abs(closest.time - targetTime)) closest = p;
+        }
+        const peakAct = curvePeakActivity[key] || 1;
+        const na = peakAct > 0 ? closest.activity / peakAct : 0;
+        offset = (1 - na * 0.35) * INSULIN_PLOT_HEIGHT - pillHeight - pillGap;
+        peakTime = closest.time;
+      } else {
+        let peak = curve[0];
+        for (const p of curve) {
+          if (p.activity > peak.activity) peak = p;
+        }
+        offset = 0.65 * INSULIN_PLOT_HEIGHT - pillHeight - pillGap;
+        peakTime = peak.time;
+      }
+      if (peakTime < domainStart || peakTime > domainEnd) return;
+      minOffset = Math.min(minOffset, offset);
+    });
+
+    if (!Number.isFinite(minOffset)) {
+      return Math.max(minGap - ROW_GAP, 2);
+    }
+    const targetGap = Math.max(curveHeight + clearance - minOffset, minGap);
+    return Math.max(targetGap - ROW_GAP, 2);
+  }, [allCurvesMeta, curvePeakActivity, domainStart, domainEnd]);
+
+  const insulinChartHeight = INSULIN_PLOT_HEIGHT + dynamicInsulinMarginTop + X_AXIS_HEIGHT;
+  const twoRowHeight = INSULIN_ROW_TOP + insulinChartHeight + X_AXIS_HEIGHT + GRAPH_BOTTOM_INSET;
+
   const chartData = useMemo(() => {
     if (!doses.length && !glucoseReadings.length && !carbEntries.length) return [];
     const result = [];
@@ -756,10 +802,10 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         const na = peakAct > 0 ? closest.activity / peakAct : 0;
         peakInfoByKey[key] = {
           peakTime: closest.time,
-          peakY: INSULIN_MARGIN_TOP + (1 - na * 0.35) * INSULIN_PLOT_HEIGHT
+          peakY: dynamicInsulinMarginTop + (1 - na * 0.35) * INSULIN_PLOT_HEIGHT
         };
       } else {
-        peakInfoByKey[key] = { peakTime: peak.time, peakY: INSULIN_MARGIN_TOP + 0.65 * INSULIN_PLOT_HEIGHT };
+        peakInfoByKey[key] = { peakTime: peak.time, peakY: dynamicInsulinMarginTop + 0.65 * INSULIN_PLOT_HEIGHT };
       }
     });
 
@@ -804,7 +850,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       return { dose, x, units, key, color, pillTop, peakY, isActive };
     }).
     filter(Boolean);
-  }, [filteredDoses, allCurvesMeta, curvePeakActivity, maxBolusUnits, maxBasalUnits, domainStart, domainEnd, totalMs, chartWidth]);
+  }, [filteredDoses, allCurvesMeta, curvePeakActivity, maxBolusUnits, maxBasalUnits, domainStart, domainEnd, totalMs, chartWidth, dynamicInsulinMarginTop]);
 
   const getGlucoseY = (value) => {
     const clamped = Math.min(Math.max(value, effectiveMin), effectiveMax);
@@ -1240,7 +1286,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               }
               scheduleCenterGlucoseUpdate(el.scrollLeft);
             }}>
-        <div className="relative" style={{ width: chartWidth, height: isCandlestick ? CANDLESTICK_TOTAL_HEIGHT : TWO_ROW_HEIGHT }}>
+        <div className="relative"           style={{ width: chartWidth, height: isCandlestick ? CANDLESTICK_TOTAL_HEIGHT : twoRowHeight }}>
           {isCandlestick ?
               <CandlestickView
                 glucoseReadings={filteredGlucoseReadings}
@@ -1365,9 +1411,9 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           <div style={{ position: "absolute", top: INSULIN_ROW_TOP, left: 0 }}>
             <ComposedChart
                     width={chartWidth}
-                    height={INSULIN_CHART_HEIGHT + X_AXIS_HEIGHT + GRAPH_BOTTOM_INSET}
+                    height={insulinChartHeight + X_AXIS_HEIGHT + GRAPH_BOTTOM_INSET}
                     data={chartData}
-                    margin={{ top: INSULIN_MARGIN_TOP, right: 0, left: -20, bottom: GRAPH_BOTTOM_INSET }}>
+                    margin={{ top: dynamicInsulinMarginTop, right: 0, left: -20, bottom: GRAPH_BOTTOM_INSET }}>
               <XAxis
                 dataKey="time"
                 type="number"
@@ -1432,7 +1478,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             <div
               key={`hit_${m.key}`}
               className="absolute z-[7] cursor-pointer"
-              style={{ left: m.x - 30, top: INSULIN_ROW_TOP + INSULIN_MARGIN_TOP, width: 60, height: INSULIN_PLOT_HEIGHT }}
+              style={{ left: m.x - 30, top: INSULIN_ROW_TOP + dynamicInsulinMarginTop, width: 60, height: INSULIN_PLOT_HEIGHT }}
               onClick={(e) => { e.stopPropagation(); handleDoseTap(m.dose, m.key, e.currentTarget.getBoundingClientRect()); }}
             />
           ))}
