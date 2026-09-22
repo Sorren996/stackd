@@ -78,18 +78,18 @@ export default function InfoLayers() {
             transition={{ duration: 0.4, delay: i * 0.06 }}
             className="flex items-center gap-4 rounded-2xl p-4"
             style={{
-              background: "rgba(255,255,255,0.025)",
-              border: "1px solid rgba(255,255,255,0.06)",
+              background: "#fdf9f2",
+              border: "1px solid #eadccf",
             }}
           >
             <div
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
               style={{
-                background: "rgba(54,168,138,0.10)",
-                border: "1px solid rgba(54,168,138,0.18)",
+                background: "rgba(91, 101, 80, 0.10)",
+                border: "1px solid rgba(91, 101, 80, 0.20)",
               }}
             >
-              <Icon className="h-5 w-5" style={{ color: "#5ba88a" }} />
+              <Icon className="h-5 w-5" style={{ color: "#5b6550" }} />
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-white">{layer.label}</p>

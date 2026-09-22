@@ -54,16 +54,16 @@ export default function LandingFeatures() {
                 viewport={{ once: true, margin: "-60px" }}
                 transition={{ duration: 0.4, delay: (i % 3) * 0.08 }}
                 className="stackd-card rounded-2xl p-5"
-                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
+                style={{ background: "#fdf9f2", border: "1px solid #eadccf" }}
               >
                 <div
                   className="flex h-10 w-10 items-center justify-center rounded-xl"
                   style={{
-                    background: "rgba(54,168,138,0.12)",
-                    border: "1px solid rgba(54,168,138,0.20)",
+                    background: "rgba(91, 101, 80, 0.10)",
+                    border: "1px solid rgba(91, 101, 80, 0.20)",
                   }}
                 >
-                  <Icon className="h-5 w-5" style={{ color: "#5ba88a" }} />
+                  <Icon className="h-5 w-5" style={{ color: "#5b6550" }} />
                 </div>
                 <h3 className="mt-4 text-base font-semibold text-white">
                   {feature.title}

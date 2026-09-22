@@ -25,7 +25,7 @@ const SCREENS = [
             trend: "flat",
           }}
           glucoseValue={142}
-          glucoseColor="#5ba88a"
+          glucoseColor="#5b6550"
           trend={{ icon: "right" }}
           rangeCardLabel="In comfort zone"
           isStale={false}
@@ -100,15 +100,15 @@ const SCREENS = [
       <div className="flex items-center gap-3 px-1">
         <div
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
-          style={{ background: "#5ba88a1a", border: "1px solid #5ba88a40" }}
+          style={{ background: "rgba(91, 101, 80, 0.10)", border: "1px solid rgba(91, 101, 80, 0.25)" }}
         >
-          <Split className="h-4 w-4" style={{ color: "#5ba88a" }} />
+          <Split className="h-4 w-4" style={{ color: "#5b6550" }} />
         </div>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-white">Pizza</p>
           <div className="mt-0.5 flex items-center gap-1.5">
-            <Clock className="h-3 w-3" style={{ color: "#5ba88a" }} />
-            <span className="text-xs" style={{ color: "#5ba88a" }}>Review in 45m</span>
+            <Clock className="h-3 w-3" style={{ color: "#5b6550" }} />
+            <span className="text-xs" style={{ color: "#5b6550" }}>Review in 45m</span>
           </div>
         </div>
         <ChevronRight className="h-4 w-4 shrink-0 text-white/30" />
@@ -122,9 +122,9 @@ const SCREENS = [
       <div className="flex flex-col items-center justify-center py-6 text-center">
         <div
           className="flex h-12 w-12 items-center justify-center rounded-full"
-          style={{ background: "#5ba88a15", border: "1px solid #5ba88a30" }}
+          style={{ background: "rgba(91, 101, 80, 0.10)", border: "1px solid rgba(91, 101, 80, 0.25)" }}
         >
-          <Check className="h-6 w-6" style={{ color: "#5ba88a" }} strokeWidth={2.5} />
+          <Check className="h-6 w-6" style={{ color: "#5b6550" }} strokeWidth={2.5} />
         </div>
         <p className="mt-3 text-sm font-semibold text-white">Everything checked</p>
         <p className="mt-0.5 text-[11px] text-white/40">Ready when you are</p>
@@ -134,11 +134,9 @@ const SCREENS = [
 ];
 
 const CARD_STYLE = {
-  background: "linear-gradient(165deg, rgba(18,28,23,0.60), rgba(10,16,13,0.50))",
-  border: "1px solid rgba(255,255,255,0.08)",
-  boxShadow: "0 16px 48px rgba(0,0,0,0.25), inset 0 1px 1px rgba(255,255,255,0.06)",
-  backdropFilter: "blur(12px)",
-  WebkitBackdropFilter: "blur(12px)",
+  background: "#fdf9f2",
+  border: "1px solid #eadccf",
+  boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)",
 };
 
 export default function ReviewShowcase() {

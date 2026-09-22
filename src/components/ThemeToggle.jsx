@@ -13,10 +13,10 @@ export default function ThemeToggle() {
       onClick={toggle}
       disabled
       aria-label={isLight ? "Switch to Dark Mode" : "Switch to Light Mode"}
-      className="stackd-top-control hidden flex h-9 w-9 items-center justify-center rounded-full backdrop-blur-sm border transition-all"
+      className="stackd-top-control hidden flex h-9 w-9 items-center justify-center rounded-full border transition-all"
       style={{
-        background: "rgba(255,255,255,0.05)",
-        borderColor: "rgba(255,255,255,0.05)",
+        background: "#fdf9f2",
+        borderColor: "#eadccf",
       }}
     >
       {isLight ? (

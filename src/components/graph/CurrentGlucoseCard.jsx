@@ -15,12 +15,11 @@ const TREND_ICONS = {
 };
 
 const CARD_STYLE = {
-  borderColor: "rgba(255,255,255,0.09)",
-  boxShadow:
-  "0 8px 32px rgba(0,0,0,0.12), inset 0 1px 1px rgba(255,255,255,0.10), inset 0 0 28px rgba(91,168,138,0.025)"
+  borderColor: "#eadccf",
+  boxShadow: "none"
 };
 
-const STALE_COLOR = "rgba(255,255,255,0.3)";
+const STALE_COLOR = "#a89e8d";
 const STALE_LABEL = "Waiting for a fresh reading";
 
 export default function CurrentGlucoseCard({
@@ -87,7 +86,7 @@ export default function CurrentGlucoseCard({
         }
         <span className="mb-1 text-[11px] font-medium text-white/40">mg/dL</span>
         {latestGlucose && !isStale &&
-        <TrendIcon className="self-center h-6 w-6" style={{ color: "#ffffff" }} />
+        <TrendIcon className="self-center h-6 w-6" style={{ color: "#3f3830" }} />
         }
       </div>
 

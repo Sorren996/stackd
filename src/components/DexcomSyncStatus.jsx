@@ -74,9 +74,10 @@ export default function DexcomSyncStatus() {
     <motion.div
       initial={{ opacity: 0, y: -6 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-2xl border border-teal-500/15 px-4 py-3"
+      className="rounded-2xl border px-4 py-3"
       style={{
-        backdropFilter: "blur(4px)",
+        borderColor: "#eadccf",
+        background: "#fdf9f2",
       }}
     >
       <div className="flex items-start gap-3">
@@ -85,10 +86,10 @@ export default function DexcomSyncStatus() {
           transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
           className="mt-0.5"
         >
-          <CloudDownload className="h-4 w-4 text-teal-300/80" />
+          <CloudDownload className="h-4 w-4" style={{ color: "#5b6550" }} />
         </motion.div>
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-semibold text-teal-200/90">
+          <p className="text-xs font-semibold" style={{ color: "#5b6550" }}>
             {isOverdue
               ? "Taking a little longer than expected"
               : "Connecting to your glucose source"}
@@ -123,7 +124,7 @@ export default function DexcomSyncStatus() {
               onClick={() => setShowHelp((v) => !v)}
               className="mt-3 flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left transition hover:bg-white/5"
               style={{
-                borderColor: "rgba(255,255,255,0.08)",
+                borderColor: "#eadccf",
               }}
             >
               <span className="text-[11px] font-medium text-white/55">
@@ -154,7 +155,7 @@ export default function DexcomSyncStatus() {
                               borderColor: "rgba(255,255,255,0.08)",
                             }}
                           >
-                            <Icon className="h-3 w-3 text-teal-300/60" />
+                            <Icon className="h-3 w-3" style={{ color: "#8a7f70" }} />
                           </div>
                           <div className="min-w-0">
                             <p className="text-[11px] font-medium text-white/60">

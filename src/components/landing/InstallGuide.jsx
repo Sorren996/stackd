@@ -68,16 +68,16 @@ export default function InstallGuide() {
               transition={{ duration: 0.4, delay: (i % 2) * 0.1 }}
               className="rounded-2xl p-5"
               style={{
-                background: "rgba(255,255,255,0.03)",
-                border: "1px solid rgba(255,255,255,0.06)",
+                background: "#fdf9f2",
+                border: "1px solid #eadccf",
               }}
             >
               <h3 className="text-sm font-semibold text-white">{step.caption}</h3>
               <div
                 className="mt-4 flex items-center justify-center overflow-hidden rounded-xl"
                 style={{
-                  background: "rgba(255,255,255,0.02)",
-                  border: "1px solid rgba(255,255,255,0.06)",
+                  background: "#f7f1e8",
+                  border: "1px solid #eadccf",
                   height: "220px",
                 }}
               >

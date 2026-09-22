@@ -6,13 +6,11 @@ import HeroShowcase from "./HeroShowcase";
 export default function LandingHero() {
   return (
     <section id="top" className="relative overflow-hidden px-4 pt-12 pb-16 md:pt-20 md:pb-24">
-      {/* Ambient glow */}
+      {/* Ambient warmth — flat sandstone wash, no gradient */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0"
-        style={{
-          background: "radial-gradient(circle at 50% 0%, rgba(54,168,138,0.08), transparent 55%)",
-        }}
+        style={{ background: "rgba(253, 249, 242, 0.6)" }}
       />
 
       <div className="relative z-10 mx-auto max-w-5xl">

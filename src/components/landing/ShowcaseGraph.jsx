@@ -12,11 +12,11 @@ export default function ShowcaseGraph({ height = 150, showInsulin = true, classN
         className="absolute inset-0 h-full w-full"
       >
         {/* Target range band */}
-        <rect x="0" y="47" width="320" height="73" fill="#5ba88a" opacity="0.05" />
+        <rect x="0" y="47" width="320" height="73" fill="#5b6550" opacity="0.05" />
 
         {/* Target range reference lines */}
-        <line x1="0" y1="47" x2="320" y2="47" stroke="rgba(255,255,255,0.07)" strokeWidth="0.5" strokeDasharray="3 4" vectorEffect="non-scaling-stroke" />
-        <line x1="0" y1="120" x2="320" y2="120" stroke="rgba(255,255,255,0.07)" strokeWidth="0.5" strokeDasharray="3 4" vectorEffect="non-scaling-stroke" />
+        <line x1="0" y1="47" x2="320" y2="47" stroke="#eadccf" strokeWidth="0.5" strokeDasharray="3 4" vectorEffect="non-scaling-stroke" />
+        <line x1="0" y1="120" x2="320" y2="120" stroke="#eadccf" strokeWidth="0.5" strokeDasharray="3 4" vectorEffect="non-scaling-stroke" />
 
         {/* Insulin activity area */}
         {showInsulin && (
@@ -43,7 +43,7 @@ export default function ShowcaseGraph({ height = 150, showInsulin = true, classN
         <path
           d="M 0 90 Q 27 88 53 83 Q 80 73 107 57 Q 133 48 160 50 Q 187 60 213 70 Q 240 75 267 72 Q 293 73 320 72"
           fill="none"
-          stroke="#ffffff"
+          stroke="#3f3830"
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -53,12 +53,13 @@ export default function ShowcaseGraph({ height = 150, showInsulin = true, classN
 
       {/* Current value marker (HTML for crisp rendering) */}
       <div
-        className="absolute h-2.5 w-2.5 rounded-full bg-white"
+        className="absolute h-2.5 w-2.5 rounded-full"
         style={{
           right: "2px",
           top: "51%",
           transform: "translateY(-50%)",
-          boxShadow: "0 0 10px rgba(255,255,255,0.5)",
+          background: "#3f3830",
+          boxShadow: "0 0 8px rgba(63, 56, 48, 0.3)",
         }}
       />
     </div>

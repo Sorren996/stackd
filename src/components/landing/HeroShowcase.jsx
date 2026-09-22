@@ -16,7 +16,7 @@ const SHOWCASE_GLUCOSE = {
     trend: "flat",
   },
   glucoseValue: 142,
-  glucoseColor: "#5ba88a",
+  glucoseColor: "#5b6550",
   trend: { icon: "right" },
   rangeCardLabel: "In comfort zone",
   isStale: false,
@@ -39,11 +39,9 @@ export default function HeroShowcase() {
     <div
       className="relative w-full overflow-hidden rounded-3xl p-4"
       style={{
-        background: "linear-gradient(165deg, rgba(18,28,23,0.60), rgba(10,16,13,0.50))",
-        border: "1px solid rgba(255,255,255,0.08)",
-        boxShadow: "0 20px 60px rgba(0,0,0,0.30), inset 0 1px 1px rgba(255,255,255,0.08)",
-        backdropFilter: "blur(12px)",
-        WebkitBackdropFilter: "blur(12px)",
+        background: "#fdf9f2",
+        border: "1px solid #eadccf",
+        boxShadow: "0 4px 20px rgba(63, 56, 48, 0.08)",
       }}
     >
       {/* Top cards — 2-col grid matching the real dashboard */}
@@ -58,7 +56,7 @@ export default function HeroShowcase() {
       </div>
 
       {/* IOB section */}
-      <div className="mt-4 pt-3" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+      <div className="mt-4 pt-3" style={{ borderTop: "1px solid #eadccf" }}>
         <div className="flex items-center justify-between">
           <span className="text-[11px] font-semibold text-white/45">Insulin on Board</span>
           <span className="text-[10px] font-medium text-white/30">Estimated activity</span>

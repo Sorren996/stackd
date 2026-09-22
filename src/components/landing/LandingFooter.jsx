@@ -7,7 +7,7 @@ export default function LandingFooter() {
   return (
     <footer
       className="px-4 py-12"
-      style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
+      style={{ borderTop: "1px solid #eadccf" }}
     >
       <div className="mx-auto max-w-5xl">
         <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-sm">

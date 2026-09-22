@@ -8,12 +8,12 @@ import { useState, useEffect, useCallback } from "react";
 const THEME_KEY = "stackd-theme";
 
 function readInitialTheme() {
-  if (typeof window === "undefined") return "dark";
+  if (typeof window === "undefined") return "light";
   try {
     const stored = window.localStorage.getItem(THEME_KEY);
-    return stored === "light" ? "light" : "dark";
+    return stored === "dark" ? "dark" : "light";
   } catch {
-    return "dark";
+    return "light";
   }
 }
 
@@ -32,7 +32,7 @@ export function useTheme() {
   }, [theme]);
 
   const setTheme = useCallback((next) => {
-    setThemeState(next === "light" ? "light" : "dark");
+    setThemeState(next === "dark" ? "dark" : "light");
   }, []);
 
   const toggle = useCallback(() => {

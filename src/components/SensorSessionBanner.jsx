@@ -34,14 +34,15 @@ export default function SensorSessionBanner() {
         >
           <Link
             to="/settings"
-            className="flex w-full max-w-md items-center gap-2 rounded-2xl border px-4 py-2 backdrop-blur-md"
+            className="flex w-full max-w-md items-center gap-2 rounded-2xl border px-4 py-2"
             style={{
-              borderColor: "rgba(217,169,56,0.38)",
-              boxShadow: "0 8px 24px rgba(0,0,0,0.16), 0 0 18px rgba(217,169,56,0.14)",
+              borderColor: "#eadccf",
+              background: "#fdf9f2",
+              boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)",
             }}
           >
-            <Clock className="h-4 w-4 shrink-0" style={{ color: "rgba(230,190,110,0.95)" }} />
-            <span className="text-xs font-medium leading-tight" style={{ color: "rgba(244,214,150,0.95)" }}>
+            <Clock className="h-4 w-4 shrink-0" style={{ color: "#af751b" }} />
+            <span className="text-xs font-medium leading-tight" style={{ color: "#af751b" }}>
               {message}
             </span>
           </Link>

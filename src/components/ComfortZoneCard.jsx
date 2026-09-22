@@ -2,10 +2,10 @@ import { motion } from "framer-motion";
 import { Wind } from "lucide-react";
 
 function getComfortStatus(percentage) {
-  if (percentage === null) return { label: "Waiting for today", color: "rgba(255,255,255,0.5)" };
-  if (percentage >= 70) return { label: "Flowing beautifully", color: "#5ba88a" };
-  if (percentage >= 50) return { label: "Finding your rhythm", color: "#d4a056" };
-  return { label: "Every moment counts", color: "#e07a6b" };
+  if (percentage === null) return { label: "Waiting for today", color: "#a89e8d" };
+  if (percentage >= 70) return { label: "Flowing beautifully", color: "#5b6550" };
+  if (percentage >= 50) return { label: "Finding your rhythm", color: "#af751b" };
+  return { label: "Every moment counts", color: "#c97060" };
 }
 
 export default function ComfortZoneCard({ percentage }) {

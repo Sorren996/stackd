@@ -60,9 +60,8 @@ export default function LandingHowItWorks() {
                   <div
                     className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full"
                     style={{
-                      background:
-                        "linear-gradient(145deg, rgba(54,168,138,0.92), rgba(46,140,116,0.92))",
-                      boxShadow: "0 4px 14px rgba(54,168,138,0.25)",
+                      background: "#5b6550",
+                      boxShadow: "0 2px 8px rgba(91, 101, 80, 0.20)",
                     }}
                   >
                     <Icon className="h-5 w-5 text-white" />

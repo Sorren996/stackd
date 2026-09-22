@@ -1107,13 +1107,13 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             }}
             className={`w-8 h-8 flex items-center rounded-xl border transition-all relative hidden justify-center ${
             showFilter ?
-            "bg-teal-500/10 border-teal-500/30 text-teal-400" :
+            "border-[#5b6550] bg-[rgba(91,101,80,0.10)] text-[#5b6550]" :
             "border-white/5 bg-white/[0.03] text-white/40 hover:text-white/80 hover:bg-white/[0.08]"}`
             }>
             
             <SlidersHorizontal className="w-4 h-4" />
             {activeFilterCount < 3 &&
-            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-teal-400" />
+            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full" style={{ background: "#5b6550" }} />
             }
           </button>
         </div>
@@ -1136,7 +1136,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       <button
           type="button"
           onClick={scrollToLatestGlucose}
-          className="absolute right-2 top-0 z-30 flex backdrop-blur-sm h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-white/55 shadow-lg transition-colors hover:bg-white/[0.1] hover:text-white/85"
+          className="absolute right-2 top-0 z-30 flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-white/55 shadow-lg transition-colors hover:bg-white/[0.1] hover:text-white/85"
           aria-label="Scroll to latest glucose">
           <CornerUpRight className="h-4 w-4" />
         </button>
@@ -1255,12 +1255,12 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                     margin={{ top: GLUCOSE_MARGIN_TOP, right: 0, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="glucose_range_grad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#5ba88a" stopOpacity={0} />
-                  <stop offset={`${highPct}%`} stopColor="#5ba88a" stopOpacity={0} />
-                  <stop offset={`${highPct}%`} stopColor="#5ba88a" stopOpacity={0.07} />
-                  <stop offset={`${lowPct}%`} stopColor="#5ba88a" stopOpacity={0.07} />
-                  <stop offset={`${lowPct}%`} stopColor="#5ba88a" stopOpacity={0} />
-                  <stop offset="100%" stopColor="#5ba88a" stopOpacity={0} />
+                  <stop offset="0%" stopColor="#5b6550" stopOpacity={0} />
+                  <stop offset={`${highPct}%`} stopColor="#5b6550" stopOpacity={0} />
+                  <stop offset={`${highPct}%`} stopColor="#5b6550" stopOpacity={0.07} />
+                  <stop offset={`${lowPct}%`} stopColor="#5b6550" stopOpacity={0.07} />
+                  <stop offset={`${lowPct}%`} stopColor="#5b6550" stopOpacity={0} />
+                  <stop offset="100%" stopColor="#5b6550" stopOpacity={0} />
                 </linearGradient>
                 <linearGradient
                         id="glucose_line_grad"

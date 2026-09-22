@@ -89,7 +89,7 @@ export default function InsulinDoseRow({ dose, regimenStatus = null }) {
             <span
             className="h-1.5 w-1.5 rounded-full"
             style={{
-              background: isBasalActive ? color : "rgba(255,255,255,0.2)",
+              background: isBasalActive ? color : "#d8cec2",
               boxShadow: isBasalActive ? `0 0 5px ${color}80` : "none",
             }} />
             <span className="text-[10px] font-medium text-white/45">
@@ -119,7 +119,7 @@ export default function InsulinDoseRow({ dose, regimenStatus = null }) {
             </g>
           </svg> :
 
-        <div className="relative h-full overflow-hidden rounded-full" style={{ background: "rgba(255,255,255,0.05)" }}>
+        <div className="relative h-full overflow-hidden rounded-full" style={{ background: "rgba(63, 56, 48, 0.05)" }}>
             <div className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${markerPct}%`, background: `linear-gradient(90deg, ${color}20, ${color}40)` }} />
             <div className="absolute inset-y-0" style={{ left: `${markerPct}%`, right: 0, background: `linear-gradient(90deg, ${color}80, ${color}30)` }} />
           </div>
@@ -137,7 +137,7 @@ export default function InsulinDoseRow({ dose, regimenStatus = null }) {
             {takenAgoLabel ? `Taken ${takenAgoLabel}` : ""}
           </span> :
 
-        <span className="text-[10px] font-medium" style={{ color: isSettling ? "rgba(255,255,255,0.35)" : color }}>
+        <span className="text-[10px] font-medium" style={{ color: isSettling ? "#a89e8d" : color }}>
             {isSettling ? "Gently settling" : `~${formatMinutes(remainingMin)} remaining`}
           </span>
         }

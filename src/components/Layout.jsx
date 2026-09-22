@@ -141,10 +141,10 @@ export default function Layout() {
               onClick={handleRefresh}
               disabled={isRefreshing}
               aria-label="Refresh information"
-              className="stackd-top-control flex h-9 w-9 items-center justify-center rounded-full backdrop-blur-sm border transition-all"
+              className="stackd-top-control flex h-9 w-9 items-center justify-center rounded-full border transition-all"
               style={{
-                background: "rgba(255,255,255,0.05)",
-                borderColor: "rgba(255,255,255,0.05)",
+                background: "#fdf9f2",
+                borderColor: "#eadccf",
               }}
             >
               <motion.span

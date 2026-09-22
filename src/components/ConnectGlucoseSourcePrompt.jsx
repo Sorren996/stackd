@@ -23,18 +23,18 @@ export default function ConnectGlucoseSourcePrompt({ connection }) {
 
   const accent = needsAttention
     ? {
-        border: "rgba(217,169,56,0.28)",
-        bg: "linear-gradient(145deg, rgba(217,169,56,0.06), rgba(217,169,56,0.02))",
-        glow: "0 0 24px rgba(217,169,56,0.10), inset 0 0 28px rgba(217,169,56,0.06)",
-        text: "rgba(217,169,56,0.95)",
-        ctaBorder: "rgba(217,169,56,0.3)",
+        border: "#eadccf",
+        bg: "#fdf9f2",
+        glow: "0 2px 12px rgba(63, 56, 48, 0.06)",
+        text: "#af751b",
+        ctaBorder: "#eadccf",
       }
     : {
-        border: "rgba(91,168,138,0.22)",
-        bg: "linear-gradient(145deg, rgba(91,168,138,0.06), rgba(91,163,184,0.03))",
-        glow: "0 0 24px rgba(91,168,138,0.10), inset 0 0 28px rgba(91,168,138,0.05)",
-        text: "rgba(91,168,138,0.95)",
-        ctaBorder: "rgba(91,168,138,0.3)",
+        border: "#eadccf",
+        bg: "#fdf9f2",
+        glow: "0 2px 12px rgba(63, 56, 48, 0.06)",
+        text: "#5b6550",
+        ctaBorder: "#eadccf",
       };
 
   return (
@@ -45,8 +45,8 @@ export default function ConnectGlucoseSourcePrompt({ connection }) {
       className="overflow-hidden rounded-2xl border px-4 py-3.5"
       style={{
         borderColor: accent.border,
+        background: accent.bg,
         boxShadow: accent.glow,
-        backdropFilter: "blur(4px)",
       }}
     >
       <div className="flex items-start gap-3">

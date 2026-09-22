@@ -74,9 +74,9 @@ export default function Login() {
       </div>
 
       {isExisting &&
-      <div className="mb-4 rounded-2xl border border-teal-500/20 bg-teal-500/[0.06] p-4 text-sm text-white/80 leading-relaxed">
-          <p className="font-semibold text-white">It looks like you already have an account.</p>
-          <p className="mt-1 text-xs text-white/50">Log in below, or use <Link to="/forgot-password" className="text-primary font-medium hover:underline">forgot password</Link> to reset it.</p>
+      <div className="mb-4 rounded-2xl border p-4 text-sm leading-relaxed" style={{ borderColor: "#eadccf", background: "#fdf9f2" }}>
+          <p className="font-semibold">It looks like you already have an account.</p>
+          <p className="mt-1 text-xs text-muted-foreground">Log in below, or use <Link to="/forgot-password" className="text-primary font-medium hover:underline">forgot password</Link> to reset it.</p>
         </div>
       }
 

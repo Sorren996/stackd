@@ -18,10 +18,9 @@ export default function StaleReadingBanner({ visible }) {
           <div
             className="mt-3 overflow-hidden rounded-2xl border px-4 py-3"
             style={{
-              borderColor: "rgba(217,169,56,0.28)",
-              boxShadow:
-                "0 0 24px rgba(217,169,56,0.12), inset 0 0 28px rgba(217,169,56,0.08)",
-              backdropFilter: "blur(4px)",
+              borderColor: "#eadccf",
+              background: "#fdf9f2",
+              boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)",
             }}
           >
             <div className="flex items-start gap-3">
@@ -32,13 +31,13 @@ export default function StaleReadingBanner({ visible }) {
               >
                 <CloudOff
                   className="h-4 w-4"
-                  style={{ color: "rgba(217,169,56,0.85)" }}
+                  style={{ color: "#af751b" }}
                 />
               </motion.div>
               <div className="min-w-0 flex-1">
                 <p
                   className="text-xs font-semibold"
-                  style={{ color: "rgba(217,169,56,0.95)" }}
+                  style={{ color: "#af751b" }}
                 >
                   No recent updates from your glucose source
                 </p>
