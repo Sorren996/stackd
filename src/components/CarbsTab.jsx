@@ -473,7 +473,7 @@ Do not give insulin dosing advice.
       <div className={embedded ? "flex flex-col" : "flex min-h-0 flex-1 flex-col overflow-hidden"}>
         {CUSTOM_MODE_ENABLED && (
           <div className="px-5 pb-2 pt-4">
-            <div className="flex rounded-2xl border p-1" style={{ borderColor: "#eadccf", background: "#f7f1e8" }}>
+            <div className="flex rounded-2xl p-1" style={{ background: "#f7f1e8" }}>
               {[
                 ["estimate", "AI Estimate", Sparkles],
                 ["custom", "Custom", PenLine],
@@ -486,11 +486,9 @@ Do not give insulin dosing advice.
                     onClick={() => setMode(id)}
                     className="flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-medium"
                     style={{
-                      transition: "border-color 250ms ease-out, background 250ms ease-out, box-shadow 250ms ease-out, color 250ms ease-out",
-                      border: `1px solid ${selected ? "rgba(91,168,138,0.50)" : "transparent"}`,
-                      background: selected ? "linear-gradient(145deg, rgba(91,168,138,0.18), rgba(91,163,184,0.10))" : "transparent",
-                      boxShadow: selected ? "0 0 0 1px rgba(91,168,138,0.18), 0 0 16px rgba(91,168,138,0.16), inset 0 1px 1px rgba(255,255,255,0.10)" : "none",
-                      color: selected ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.45)",
+                      transition: "background 250ms ease-out, color 250ms ease-out",
+                      background: selected ? "#9c5228" : "transparent",
+                      color: selected ? "#f7f1e8" : "#8a7f70",
                     }}
                     aria-pressed={selected}
                   >
@@ -538,28 +536,21 @@ Do not give insulin dosing advice.
                   onChange={(e) => setMealText(e.target.value)}
                   placeholder="Describe your meal..."
                   rows={3}
-                  className="stackd-input mt-2 w-full resize-none rounded-2xl border px-4 py-3.5 text-sm text-white placeholder:text-white/40 focus:outline-none"
+                  className="mt-2 w-full resize-none rounded-2xl px-4 py-3.5 text-sm focus:outline-none"
                   style={{
-                    background: "linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))",
-                    borderColor: "rgba(255,255,255,0.12)",
-                    boxShadow: "inset 0 1px 1px rgba(255,255,255,0.06)",
-                    transition: "border-color 250ms ease-out, box-shadow 250ms ease-out",
+                    background: "#f7f1e8",
+                    color: "#3f3830",
+                    transition: "box-shadow 250ms ease-out",
                   }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.borderColor = "rgba(91,168,138,0.55)";
-                    e.currentTarget.style.boxShadow = "0 0 0 1px rgba(91,168,138,0.20), 0 0 18px rgba(91,168,138,0.16), inset 0 1px 1px rgba(255,255,255,0.08)";
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)";
-                    e.currentTarget.style.boxShadow = "inset 0 1px 1px rgba(255,255,255,0.06)";
-                  }}
+                  onFocus={(e) => { e.currentTarget.style.boxShadow = "0 0 0 2px #9c5228"; }}
+                  onBlur={(e) => { e.currentTarget.style.boxShadow = "none"; }}
                 />
               </div>
 
               <div>
                 {mealPhoto ? (
-                  <div className="overflow-hidden rounded-2xl border" style={{ borderColor: "rgba(255,255,255,0.12)" }}>
-                    <div className="relative aspect-[4/3] w-full bg-black/20">
+                  <div className="overflow-hidden rounded-2xl" style={{ background: "#f7f1e8" }}>
+                    <div className="relative aspect-[4/3] w-full">
                       <img src={mealPhoto} alt="Selected meal" className="h-full w-full object-cover" />
                       <button
                         type="button"
@@ -573,11 +564,10 @@ Do not give insulin dosing advice.
                   </div>
                 ) : (
                   <label
-                    className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-sm font-medium transition"
+                    className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-medium transition hover:opacity-70"
                     style={{
-                      borderColor: "rgba(255,255,255,0.12)",
-                      background: "rgba(255,255,255,0.03)",
-                      color: "rgba(255,255,255,0.55)",
+                      background: "#f7f1e8",
+                      color: "#6b6153",
                     }}
                   >
                     <Camera className="h-4 w-4" />
@@ -591,17 +581,10 @@ Do not give insulin dosing advice.
                 type="button"
                 onClick={handleEstimateMeal}
                 disabled={(!mealText.trim() && !mealPhotoFile) || isEstimatingMeal}
-                className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-semibold"
+                className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-semibold transition disabled:opacity-40"
                 style={{
-                  background: (!mealText.trim() && !mealPhotoFile) || isEstimatingMeal
-                    ? "rgba(255,255,255,0.04)"
-                    : "linear-gradient(145deg, rgba(91,168,138,0.92), rgba(70,140,116,0.88))",
-                  border: `1px solid ${(!mealText.trim() && !mealPhotoFile) || isEstimatingMeal ? "rgba(255,255,255,0.08)" : "rgba(120,210,180,0.30)"}`,
-                  boxShadow: (!mealText.trim() && !mealPhotoFile) || isEstimatingMeal
-                    ? "inset 0 1px 1px rgba(255,255,255,0.04)"
-                    : "0 8px 22px rgba(91,168,138,0.22), inset 0 1px 1px rgba(255,255,255,0.20)",
-                  color: (!mealText.trim() && !mealPhotoFile) || isEstimatingMeal ? "rgba(255,255,255,0.35)" : "#ffffff",
-                  transition: "background 250ms ease-out, box-shadow 250ms ease-out, color 250ms ease-out, border-color 250ms ease-out",
+                  background: "#9c5228",
+                  color: "#f7f1e8",
                 }}
               >
                 <EstimateButtonIcon className={`h-4 w-4 ${isEstimatingMeal ? "animate-spin" : ""}`} />
@@ -642,9 +625,9 @@ Do not give insulin dosing advice.
                     ))}
                   </div>
 
-                  <div className="flex items-center justify-between rounded-xl border px-3 py-2.5" style={{ borderColor: "rgba(255,255,255,0.10)", background: "rgba(255,255,255,0.03)" }}>
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-white/45">Absorption</span>
-                    <span className="text-sm font-semibold text-white/80">{ABSORPTION_CATEGORY[estimatedMeal.absorptionProfile] || "Medium"}</span>
+                  <div className="flex items-center justify-between rounded-xl px-3 py-2.5" style={{ background: "#f7f1e8" }}>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "#746959" }}>Absorption</span>
+                    <span className="text-sm font-semibold" style={{ color: "#3f3830" }}>{ABSORPTION_CATEGORY[estimatedMeal.absorptionProfile] || "Medium"}</span>
                   </div>
 
                   {estimatedMeal.assumptions?.length > 0 && (
@@ -654,8 +637,8 @@ Do not give insulin dosing advice.
               )}
 
               {estimatedMeal && (Number(estimatedMeal.protein) >= 30 || Number(estimatedMeal.fat) >= 20) && !isHighProteinFat && (
-                <div className="rounded-xl border border-amber-500/20 bg-amber-500/[0.06] px-3.5 py-2.5">
-                  <p className="text-[11px] leading-relaxed text-amber-200/70">
+                <div className="rounded-xl px-3.5 py-2.5" style={{ background: "rgba(138,90,18,0.08)" }}>
+                  <p className="text-[11px] leading-relaxed" style={{ color: "#8a5a12" }}>
                     This meal may contain substantial protein or fat. Review the monitoring option below.
                   </p>
                 </div>
@@ -670,7 +653,7 @@ Do not give insulin dosing advice.
                 </div>
 
                 {filteredFoods.length > 0 && (
-                  <div className="mt-2 overflow-hidden rounded-2xl border border-white/10 bg-[hsl(162,10%,12%)] shadow-xl">
+                  <div className="mt-2 overflow-hidden rounded-2xl border border-white/10 shadow-lg" style={{ background: "#fdf9f2" }}>
                     {filteredFoods.map((food) => {
                       const alreadySelected = !!selectedFoods.find((item) => item.food.name === food.name);
                       return (
@@ -679,11 +662,11 @@ Do not give insulin dosing advice.
                           type="button"
                           onClick={() => addFood(food)}
                           disabled={alreadySelected}
-                          className="flex w-full items-center justify-between border-b border-white/5 px-4 py-3 text-left transition-colors last:border-0 hover:bg-white/5 disabled:opacity-40"
+                          className="flex w-full items-center justify-between border-b border-white/5 px-4 py-3 text-left transition-colors last:border-0 hover:opacity-70 disabled:opacity-40"
                         >
                           <div>
-                            <p className="text-sm font-medium text-white">{food.name}</p>
-                            <p className="text-xs text-white/40">{food.carbs}g - GI {food.gi}</p>
+                            <p className="text-sm font-medium" style={{ color: "#3f3830" }}>{food.name}</p>
+                            <p className="text-xs" style={{ color: "#746959" }}>{food.carbs}g - GI {food.gi}</p>
                           </div>
                           <span
                             className="rounded-full px-2 py-0.5 text-xs font-bold"
@@ -713,14 +696,13 @@ Do not give insulin dosing advice.
                           type="button"
                           onClick={() => addFood(food)}
                           disabled={alreadySelected}
-                          className="flex flex-col items-start rounded-xl border px-3 py-2 text-left transition-all disabled:opacity-40"
+                          className="flex flex-col items-start rounded-xl px-3 py-2 text-left transition-all disabled:opacity-40"
                           style={{
-                            borderColor: alreadySelected ? `${PROFILE_COLORS[food.profile]}99` : "rgba(255,255,255,0.1)",
-                            backgroundColor: alreadySelected ? `${PROFILE_COLORS[food.profile]}22` : "transparent",
+                            backgroundColor: alreadySelected ? `${PROFILE_COLORS[food.profile]}22` : "#f7f1e8",
                           }}
                         >
-                          <span className="text-sm font-medium text-white">{food.name}</span>
-                          <span className="text-xs text-white/40">{food.carbs}g - {food.profile}</span>
+                          <span className="text-sm font-medium" style={{ color: "#3f3830" }}>{food.name}</span>
+                          <span className="text-xs" style={{ color: "#746959" }}>{food.carbs}g - {food.profile}</span>
                         </button>
                       );
                     })}
@@ -762,9 +744,9 @@ Do not give insulin dosing advice.
                     ))}
 
                     {selectedFoods.length > 1 && !isPending && (
-                      <div className="flex items-center justify-between rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-2.5">
-                        <span className="text-sm text-white/60">Total Carbs</span>
-                        <span className="text-lg font-bold text-amber-400">{Math.round(totalCarbs * 10) / 10}g</span>
+                      <div className="flex items-center justify-between rounded-2xl px-4 py-2.5" style={{ background: "rgba(138,90,18,0.08)" }}>
+                        <span className="text-sm" style={{ color: "#6b6153" }}>Total Carbs</span>
+                        <span className="text-lg font-bold" style={{ color: "#8a5a12" }}>{Math.round(totalCarbs * 10) / 10}g</span>
                       </div>
                     )}
                   </div>
@@ -803,8 +785,8 @@ Do not give insulin dosing advice.
               type="button"
               onClick={isCustomMode ? () => gateThenSubmit(handleSubmitCustom) : isEstimateMode ? () => gateThenSubmit(handleSubmitEstimate) : () => gateThenSubmit(handleSubmitManual)}
               disabled={isPending || isEstimatingMeal || isCheckingMemory || !canSubmitCarbs}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-base font-semibold text-white disabled:opacity-40"
-              style={{ background: "linear-gradient(145deg, rgba(217,119,6,0.9), rgba(180,83,9,0.85))", boxShadow: "0 8px 24px rgba(217,119,6,0.25), inset 0 1px 1px rgba(255,255,255,0.2)" }}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-base font-semibold disabled:opacity-40"
+              style={{ background: "#3f3830", color: "#f7f1e8", boxShadow: "0 4px 16px rgba(63, 56, 48, 0.15)" }}
             >
               {isPending || isCheckingMemory ? (
                 <>
