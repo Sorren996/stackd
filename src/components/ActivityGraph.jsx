@@ -39,9 +39,12 @@ const GLUCOSE_MARGIN_TOP = 62;
 const GLUCOSE_PLOT_HEIGHT = GLUCOSE_CHART_HEIGHT - GLUCOSE_MARGIN_TOP;
 const CARB_LANE_HEIGHT = 34;
 const INSULIN_CHART_HEIGHT = 112;
-const INSULIN_MARGIN_TOP = 24;
+const INSULIN_MARGIN_TOP = 36;
 const INSULIN_PLOT_HEIGHT = INSULIN_CHART_HEIGHT - INSULIN_MARGIN_TOP - X_AXIS_HEIGHT;
 const MAIN_CHART_HEIGHT = GLUCOSE_CHART_HEIGHT + X_AXIS_HEIGHT;
+const ROW_GAP = 12;
+const INSULIN_ROW_TOP = GLUCOSE_CHART_HEIGHT + ROW_GAP;
+const TWO_ROW_HEIGHT = INSULIN_ROW_TOP + INSULIN_CHART_HEIGHT + X_AXIS_HEIGHT;
 const GLUCOSE_MIN = 40;
 const GLUCOSE_MAX = 250;
 const CARB_PROFILE_COLORS = {
@@ -744,9 +747,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       const isBasal = isBasalInsulinType(dose.insulin_type);
       const refMax = isBasal ? maxBasalUnits : maxBolusUnits;
       const visualMax = isBasal ? 30 : 70;
-      const peakValue = peak.activity * (doseUnits / refMax) * visualMax;
-      const peakY = INSULIN_MARGIN_TOP + (75 - peakValue) / 75 * INSULIN_PLOT_HEIGHT;
-      peakInfoByKey[key] = { peakTime: peak.time, peakY };
+      peakInfoByKey[key] = { peakTime: peak.time, peakY: INSULIN_MARGIN_TOP };
     });
 
     return filteredDoses.
@@ -1113,7 +1114,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
         {/* Left: YOUR FLOW label + filter button */}
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-bold uppercase tracking-[0.16em]" style={{ color: "#746959" }}>Activity Graph</span>
           <div className="relative justify-start">
           <button
             onClick={(e) => {
@@ -1227,7 +1227,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               }
               scheduleCenterGlucoseUpdate(el.scrollLeft);
             }}>
-        <div className="relative" style={{ width: chartWidth, height: isCandlestick ? CANDLESTICK_TOTAL_HEIGHT : MAIN_CHART_HEIGHT }}>
+        <div className="relative" style={{ width: chartWidth, height: isCandlestick ? CANDLESTICK_TOTAL_HEIGHT : TWO_ROW_HEIGHT }}>
           {isCandlestick ?
               <CandlestickView
                 glucoseReadings={filteredGlucoseReadings}

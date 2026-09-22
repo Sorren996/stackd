@@ -1167,8 +1167,11 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
         )}
       </DashboardCard>
 
-      {/* 2. ACTIVITY GRAPH CARD */}
+      {/* 2. YOUR FLOW CARD */}
       <DashboardCard className="overflow-hidden p-0">
+        <div className="flex items-baseline justify-between px-5 pt-4">
+          <h1 className="hdr">Your <em>Flow</em></h1>
+        </div>
         <div className="relative pt-3 pb-4">
           {(() => {
             const status = isGlucoseStale ? null : centerGlucoseStatus?.status ?? classifyGlucose(glucoseValue, targetLow, targetHigh);
