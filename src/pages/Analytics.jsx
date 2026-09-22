@@ -3,6 +3,8 @@ import { base44 } from "@/api/base44Client";
 import { useEffect, useMemo, useState } from "react";
 import { subDays } from "date-fns";
 import { motion } from "framer-motion";
+import PageHeader from "@/components/editorial/PageHeader";
+import AnchorNumber from "@/components/editorial/AnchorNumber";
 import { Activity } from "lucide-react";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 import { filterReadingsForStats } from "@/lib/timeInRange";

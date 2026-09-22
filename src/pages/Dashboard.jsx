@@ -24,6 +24,7 @@ import { useDexcomRefresh } from "@/hooks/useDexcomRefresh";
 import DexcomSyncStatus from "@/components/DexcomSyncStatus";
 import ConnectGlucoseSourcePrompt from "@/components/ConnectGlucoseSourcePrompt";
 import SensorSessionBanner from "@/components/SensorSessionBanner";
+import PageHeader from "@/components/editorial/PageHeader";
 
 const FRESH_DATA_MS = 60 * 1000;
 const GRAPH_DATA_MS = 5 * 60 * 1000;
@@ -664,6 +665,8 @@ export default function Dashboard() {
         onSave={(payload) => updateLog.mutate(payload)}
         isSaving={updateLog.isPending}
       />
+
+      <PageHeader italicWord="day" />
 
       <SensorSessionBanner />
 

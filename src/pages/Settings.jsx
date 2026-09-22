@@ -6,6 +6,7 @@ import { Activity, User, Shield, LogOut, Loader2, HeartPulse, LineChart, LifeBuo
 import { toast } from "sonner";
 import { SettingsGroup, SettingsRow } from "@/components/settings/SettingsList";
 import SensorSessionCard from "@/components/settings/SensorSessionCard";
+import PageHeader from "@/components/editorial/PageHeader";
 
 function readGraphHeight() {
   const v = Number(window.localStorage.getItem("graph_height"));

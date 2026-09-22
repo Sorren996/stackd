@@ -2,6 +2,8 @@ import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
+import PageHeader from "@/components/editorial/PageHeader";
+import AnchorNumber from "@/components/editorial/AnchorNumber";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
@@ -438,7 +440,7 @@ export default function History() {
     }
   };
 
-  let headerTitle = "Your Journey";
+  let headerTitle = "Your Journal";
   let headerSub = "Reflecting on your last 9 months";
   if (level === "days" && currentMonth) {
     headerTitle = `${currentMonth.label} ${currentMonth.year}`;
@@ -471,8 +473,10 @@ export default function History() {
         isSaving={updateLog.isPending}
       />
 
-      <div className="flex items-center gap-3">
-        {level !== "month" && (
+      {level === "month" ? (
+        <PageHeader italicWord="journal" />
+      ) : (
+        <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={goBack}
@@ -482,11 +486,10 @@ export default function History() {
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
-        )}
-        <div className="min-w-0">
-          <h2 className="text-lg font-semibold text-white truncate">{headerTitle}</h2>
-          <p className="text-xs text-white/40">{headerSub}</p>
-        </div>
+          <div className="min-w-0">
+            <h2 className="text-lg font-semibold text-white truncate">{headerTitle}</h2>
+            <p className="text-xs text-white/40">{headerSub}</p>
+          </div>
         {level === "recap" && selectedDay && allDays.length > 1 && (
           <div className="ml-auto flex items-center gap-1.5">
             <button
@@ -520,6 +523,7 @@ export default function History() {
           </div>
         )}
       </div>
+      )}
 
       <AnimatePresence mode="wait" custom={direction}>
         <motion.div

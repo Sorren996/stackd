@@ -44,6 +44,8 @@ import { getLatestDexcomReading } from "@/lib/glucoseStaleness";
 import StaleReadingBanner from "@/components/StaleReadingBanner";
 import { isRescueCarbEntry } from "@/lib/rescueCarbDetection";
 import { GLUCOSE_STATUS_COLORS, classifyGlucose, readHighReference, FIXED_LOW_REFERENCE } from "@/lib/glucoseStatus";
+import AnchorNumber from "@/components/editorial/AnchorNumber";
+import HairlineSection from "@/components/editorial/HairlineSection";
 
 // Flip to false to instantly revert to the original dense dashboard layout.
 const CLEAN_LAYOUT = true;
@@ -1086,23 +1088,19 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
   return (
     <>
       <div className="relative -mx-4 px-4 pb-6 pt-2">
-        <div className="relative z-10 grid grid-cols-2 gap-3">
-          <ComfortZoneCard percentage={comfortZonePercentage} />
-          <CurrentGlucoseCard
-            latestGlucose={latestGlucose}
-            glucoseValue={glucoseValue}
-            glucoseColor={glucoseColor}
-            trend={trend}
-            rangeCardLabel={rangeCardLabel}
-            readingAgeLabel={
-            latestGlucose?.recorded_at ?
-            formatClockTime(new Date(latestGlucose.recorded_at).getTime()) :
-            null
-            }
-            onEdit={onEditGlucose}
-            isStale={isGlucoseStale} />
-          
-        </div>
+        <AnchorNumber
+          value={isGlucoseStale ? "—" : (glucoseValue != null ? Math.round(glucoseValue) : "—")}
+          unit="mg/dL"
+          caption={isGlucoseStale ? "Waiting for a fresh reading" : `${trend?.label || "Steady"} · updated ${(() => {
+            if (!latestGlucose?.recorded_at) return "just now";
+            const mins = Math.max(0, Math.round((nowMinute * MINUTE_MS - new Date(latestGlucose.recorded_at).getTime()) / 60000));
+            if (mins < 1) return "just now";
+            if (mins < 60) return `${mins}m ago`;
+            return `${Math.floor(mins / 60)}h ${mins % 60}m ago`;
+          })()}`}
+          dot
+          dotColor={isGlucoseStale ? "#a89e8d" : (inRange ? "#5b6550" : glucoseColor)}
+        />
 
         {isGlucoseStale ?
         <StaleReadingBanner visible={isGlucoseStale} /> :
@@ -1110,11 +1108,9 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
         <SupportiveGlucoseMessage insight={supportiveGlucoseInsight} trend={trend} TrendIcon={TrendIcon} />
         }
 
+        <div className="section-label mt-6">Your Flow</div>
         <div
-          className="stackd-graph-canvas relative overflow-hidden rounded-3xl pb-1 mt-8"
-          style={{
-            boxShadow: "none"
-          }}>
+          className="relative overflow-hidden pt-3">
           
           {(() => {
             // Use the scroll marker's status when available; fall back to the
@@ -1166,7 +1162,17 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
           </div>
         }
 
-        <p className={`text-legible mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-white ${CLEAN_LAYOUT ? "mt-6 opacity-70" : "mt-4"}`}>At a Glance</p>
+        <div className="section-label mt-6">Daily Balance</div>
+        <div className="pt-3 pb-2">
+          <AnchorNumber
+            value={comfortZonePercentage != null ? Math.round(comfortZonePercentage) : "—"}
+            unit="%"
+            caption={`of today spent in your comfort zone — ${targetLow}–${targetHigh} mg/dL`}
+          />
+        </div>
+
+        <div className="section-label mt-4">At a Glance</div>
+        <div className="pt-3">
         <RhythmSection
           mealInsight={mealInsight}
           highProteinFatStatus={highProteinFatStatus}
@@ -1183,6 +1189,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
             const dose = safeDoses.find((d) => d.id === id);
             if (dose) onDeleteDose({ type: "insulin", item: dose });
           } : null} />
+        </div>
       </div>
     </>);
 
