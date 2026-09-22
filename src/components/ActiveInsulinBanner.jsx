@@ -32,7 +32,9 @@ import {
   getCarbAbsorptionAt } from
 "@/lib/carbAbsorption";
 import { AnimatePresence, motion } from "framer-motion";
-import RhythmSection from "./RhythmSection";
+import InsulinOnBoardCard from "@/components/insulin/InsulinOnBoardCard";
+import MealReviewContent from "@/components/insulin/MealReviewContent";
+import DashboardCard from "@/components/dashboard/DashboardCard";
 import ComfortZoneCard from "./ComfortZoneCard";
 import CurrentGlucoseCard from "./graph/CurrentGlucoseCard";
 import { getSupportiveGlucoseMessage } from "@/lib/supportiveMessages";
@@ -1118,8 +1120,9 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
   }, []);
 
   return (
-    <>
-      <div className="relative -mx-4 px-4 pb-6 pt-2">
+    <div className="space-y-5">
+      {/* 1. YOUR DAY CARD — Current Glucose + Daily Balance */}
+      <DashboardCard className="p-5">
         <div className="section-label">Current Glucose</div>
         <AnchorNumber
           value={isGlucoseStale ? "—" : (glucoseValue != null ? Math.round(glucoseValue) : "—")}
@@ -1133,41 +1136,47 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
           })()}${dexcomConnected ? ` · Dexcom ${dexcomModel}` : ""}`}
           dot
           dotColor={isGlucoseStale ? "#a89e8d" : (inRange ? "#5b6550" : glucoseColor)}
+          trendIcon={!isGlucoseStale && glucoseValue != null ? <TrendIcon className="h-5 w-5" /> : null}
+          trendColor={glucoseColor}
         />
 
-        {isGlucoseStale ?
-        <StaleReadingBanner visible={isGlucoseStale} /> :
+        {isGlucoseStale ? (
+          <StaleReadingBanner visible={isGlucoseStale} />
+        ) : (
+          <SupportiveGlucoseMessage insight={supportiveGlucoseInsight} trend={trend} TrendIcon={TrendIcon} />
+        )}
 
-        <SupportiveGlucoseMessage insight={supportiveGlucoseInsight} trend={trend} TrendIcon={TrendIcon} />
-        }
+        {/* Internal hairline separator */}
+        <div className="my-5 h-px" style={{ background: "#eadccf" }} />
 
-        <div className="section-label mt-6">Activity Graph</div>
-        <div
-          className="relative overflow-hidden pt-3">
-          
+        <div className="section-label">Daily Balance</div>
+        <AnchorNumber
+          value={comfortZonePercentage != null ? Math.round(comfortZonePercentage) : "—"}
+          unit="%"
+          caption={`of today spent in your comfort zone — ${targetLow}–${targetHigh} mg/dL`}
+        />
+        {dailyTimeBreakdown && (
+          <div className="mt-2 flex justify-between text-xs px-1" style={{ color: "#746959" }}>
+            <span>{dailyTimeBreakdown.inRange} in range so far</span>
+            <span>{dailyTimeBreakdown.above} above · {dailyTimeBreakdown.below} below</span>
+          </div>
+        )}
+      </DashboardCard>
+
+      {/* 2. ACTIVITY GRAPH CARD */}
+      <DashboardCard className="overflow-hidden p-0">
+        <div className="relative pt-3 pb-4">
           {(() => {
-            // Use the scroll marker's status when available; fall back to the
-            // latest reading when the graph hasn't reported yet.
             const status = isGlucoseStale ? null : centerGlucoseStatus?.status ?? classifyGlucose(glucoseValue, targetLow, targetHigh);
             const isActive = !isGlucoseStale && (status === "high" || status === "low" || status === "in_range");
-            const glowColor = status === "high" ?
-            GLUCOSE_STATUS_COLORS.high :
-            status === "low" ?
-            GLUCOSE_STATUS_COLORS.low :
-            "#5b6550";
-            // 100% glow over target range, 150% when over the high/low reference line.
-            const overReference = isGlucoseStale ? false : centerGlucoseStatus?.overReference ?? (
-            glucoseValue != null && (glucoseValue > readHighReference() || glucoseValue < FIXED_LOW_REFERENCE));
-            // The color lives in a solid background-color (which the browser
-            // can interpolate) and the soft top-to-bottom fade is shaped by a
-            // static mask, so transitions between teal / amber / red cross-fade
-            // instead of snapping.
+            const glowColor = status === "high" ? GLUCOSE_STATUS_COLORS.high : status === "low" ? GLUCOSE_STATUS_COLORS.low : "#5b6550";
+            const overReference = isGlucoseStale ? false : centerGlucoseStatus?.overReference ?? (glucoseValue != null && (glucoseValue > readHighReference() || glucoseValue < FIXED_LOW_REFERENCE));
             const maskFade = "linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.7) 14%, rgba(0,0,0,0.35) 55%, transparent 100%)";
             const glowOpacity = isActive ? overReference ? 0.6 : 0.4 : 0;
             return (
               <div
                 aria-hidden="true"
-                className="pointer-events-none absolute inset-x-0 top-0 z-[1] rounded-3xl"
+                className="pointer-events-none absolute inset-x-0 top-0 z-[1] rounded-[24px]"
                 style={{
                   height: "50%",
                   opacity: glowOpacity,
@@ -1176,47 +1185,30 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
                   WebkitMaskImage: maskFade,
                   boxShadow: overReference ? `inset 0 30px 80px -30px ${glowColor}aa` : "none",
                   transition: "opacity 700ms ease-out, background-color 700ms ease-out, box-shadow 700ms ease-out"
-                }} />);
-
-
+                }}
+              />
+            );
           })()}
           {graphSlot}
         </div>
+      </DashboardCard>
 
-        {stackingAlertsEnabled && activeRapidCount > 1 &&
-        <div className="dashboard-stacking-alert mx-0 mt-4 flex w-full max-w-full min-w-0 items-start gap-3 overflow-hidden rounded-xl border p-4 pb-3" style={{ borderColor: "#eadccf", background: "#fdf9f2" }}>
-            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" style={{ color: "#af751b" }} />
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-white">Multiple Active Doses</p>
-              <p className="mt-0.5 text-sm opacity-80">
-                {activeRapidCount} rapid-acting doses are active at once. Keep a gentle eye on how you're feeling.
-              </p>
-            </div>
+      {/* Stacking alert — between cards */}
+      {stackingAlertsEnabled && activeRapidCount > 1 && (
+        <div className="flex w-full items-start gap-3 overflow-hidden rounded-[24px] p-5" style={{ background: "#fdf9f2", boxShadow: "0 8px 28px rgba(63,56,48,0.10)" }}>
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" style={{ color: "#8a5a12" }} />
+          <div className="min-w-0">
+            <p className="text-sm font-semibold" style={{ color: "#3f3830" }}>Multiple Active Doses</p>
+            <p className="mt-0.5 text-sm" style={{ color: "#6b6153" }}>
+              {activeRapidCount} rapid-acting doses are active at once. Keep a gentle eye on how you're feeling.
+            </p>
           </div>
-        }
-
-        <div className="section-label mt-6">Daily Balance</div>
-        <div className="pt-3 pb-2">
-          <AnchorNumber
-            value={comfortZonePercentage != null ? Math.round(comfortZonePercentage) : "—"}
-            unit="%"
-            caption={`of today spent in your comfort zone — ${targetLow}–${targetHigh} mg/dL`}
-          />
-          {dailyTimeBreakdown && (
-            <div className="mt-2 flex justify-between text-xs" style={{ color: "#746959" }}>
-              <span>{dailyTimeBreakdown.inRange} in range so far</span>
-              <span>{dailyTimeBreakdown.above} above · {dailyTimeBreakdown.below} below</span>
-            </div>
-          )}
         </div>
+      )}
 
-        <div className="section-label mt-4">At a Glance</div>
-        <div className="pt-3">
-        <RhythmSection
-          mealInsight={mealInsight}
-          highProteinFatStatus={highProteinFatStatus}
-          glucoseTrend={trend}
-          onResolveMeal={handleResolveMeal}
+      {/* 3. INSULIN ON BOARD CARD */}
+      <DashboardCard className="p-5">
+        <InsulinOnBoardCard
           totalUnits={activeUnits}
           breakdown={activeInsulinBreakdown}
           basalRegimenStatus={basalRegimenStatus}
@@ -1227,9 +1219,20 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
           onDeleteDose={onDeleteDose ? (id) => {
             const dose = safeDoses.find((d) => d.id === id);
             if (dose) onDeleteDose({ type: "insulin", item: dose });
-          } : null} />
-        </div>
-      </div>
-    </>);
+          } : null}
+        />
+      </DashboardCard>
+
+      {/* 4. MEAL REVIEW CARD */}
+      <DashboardCard className="p-5">
+        <MealReviewContent
+          mealInsight={mealInsight}
+          monitoringStatus={highProteinFatStatus}
+          glucoseTrend={trend}
+          onResolve={handleResolveMeal}
+        />
+      </DashboardCard>
+    </div>
+  );
 
 }

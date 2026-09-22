@@ -4,7 +4,7 @@
  *
  * Optional `dot` renders a small status dot before the caption.
  */
-export default function AnchorNumber({ value, unit, caption, dot, dotColor = "#5b6550", subcaption }) {
+export default function AnchorNumber({ value, unit, caption, dot, dotColor = "#5b6550", subcaption, trendIcon = null, trendColor = "#6b6153" }) {
   return (
     <div className="px-1 py-3">
       <div className="flex items-baseline gap-1.5">
@@ -14,6 +14,11 @@ export default function AnchorNumber({ value, unit, caption, dot, dotColor = "#5
         {unit && (
           <span className="text-sm font-medium" style={{ color: "#6b6153" }}>
             {unit}
+          </span>
+        )}
+        {trendIcon && (
+          <span className="self-center" style={{ color: trendColor, display: "inline-flex" }}>
+            {trendIcon}
           </span>
         )}
       </div>

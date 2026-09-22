@@ -664,8 +664,9 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       const existing = byType.get(label);
       if (existing) {
         existing.activeUnits += iob;
+        existing.totalUnits += units;
       } else {
-        byType.set(label, { label, color, activeUnits: iob });
+        byType.set(label, { label, color, activeUnits: iob, totalUnits: units });
       }
     });
     return Array.from(byType.values());
@@ -1425,7 +1426,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         </div>
       </div>
       </div>
-      <div className="flex items-center gap-4 px-3 mt-2">
+      <div className="flex items-center gap-4 px-3 mt-2 flex-wrap">
         <div className="flex items-center gap-1.5">
           <div className="h-[2px] w-4" style={{ background: "#3f3830" }} />
           <span className="text-[10px]" style={{ color: "#746959" }}>glucose</span>
@@ -1438,6 +1439,12 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           <div className="w-4 border-t-2 border-dotted" style={{ borderColor: "#af751b" }} />
           <span className="text-[10px]" style={{ color: "#746959" }}>projected</span>
         </div>
+        {activeDoseKeys.map((k) => (
+          <div key={k.label} className="flex items-center gap-1.5">
+            <div className="h-2 w-2 rounded-full" style={{ background: k.color }} />
+            <span className="text-[10px]" style={{ color: "#746959" }}>{k.label} · {k.totalUnits} u</span>
+          </div>
+        ))}
       </div>
       <div
           ref={monitoringLabelRef}
