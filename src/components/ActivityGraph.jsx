@@ -463,15 +463,13 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     const lo = Number(lowPct);
     const highRefPct = Number(((effectiveMax - highReference) / rangeTotal * 100).toFixed(1));
     const lowRefPct = Number(((effectiveMax - FIXED_LOW_REFERENCE) / rangeTotal * 100).toFixed(1));
-    const fadeIn = Math.min(Math.max(4, hi * 0.4), Math.max(4, hi - 3));
     const raw = [
-    { offset: 0, color: GLUCOSE_STATUS_COLORS.high, opacity: 0 },
-    { offset: fadeIn, color: GLUCOSE_STATUS_COLORS.high, opacity: 0.18 },
+    { offset: 0, color: GLUCOSE_STATUS_COLORS.high, opacity: 0.85 },
     { offset: highRefPct, color: GLUCOSE_STATUS_COLORS.high, opacity: 0.9 },
-    { offset: Math.max(0, hi - 3), color: GLUCOSE_STATUS_COLORS.high, opacity: 0.6 },
-    { offset: Math.min(100, hi + 3), color: gTheme.inRangeColor, opacity: 0.6 },
-    { offset: Math.max(0, lo - 3), color: gTheme.inRangeColor, opacity: 0.6 },
-    { offset: Math.min(100, lo + 3), color: GLUCOSE_STATUS_COLORS.low, opacity: 0.6 },
+    { offset: Math.max(0, hi - 3), color: GLUCOSE_STATUS_COLORS.high, opacity: 0.85 },
+    { offset: Math.min(100, hi + 3), color: gTheme.inRangeColor, opacity: 0.85 },
+    { offset: Math.max(0, lo - 3), color: gTheme.inRangeColor, opacity: 0.85 },
+    { offset: Math.min(100, lo + 3), color: GLUCOSE_STATUS_COLORS.low, opacity: 0.85 },
     { offset: lowRefPct, color: GLUCOSE_STATUS_COLORS.low, opacity: 0.9 },
     { offset: 100, color: GLUCOSE_STATUS_COLORS.low, opacity: 0.9 }];
 
@@ -1255,14 +1253,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                     data={chartData}
                     margin={{ top: GLUCOSE_MARGIN_TOP, right: 0, left: -20, bottom: 0 }}>
               <defs>
-                <linearGradient id="glucose_range_grad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#5b6550" stopOpacity={0} />
-                  <stop offset={`${highPct}%`} stopColor="#5b6550" stopOpacity={0} />
-                  <stop offset={`${highPct}%`} stopColor="#5b6550" stopOpacity={0.08} />
-                  <stop offset={`${lowPct}%`} stopColor="#5b6550" stopOpacity={0.08} />
-                  <stop offset={`${lowPct}%`} stopColor="#5b6550" stopOpacity={0} />
-                  <stop offset="100%" stopColor="#5b6550" stopOpacity={0} />
-                </linearGradient>
                 <linearGradient
                         id="glucose_line_grad"
                         gradientUnits="userSpaceOnUse"
@@ -1308,12 +1298,14 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                     <Area
                       yAxisId="glucose"
                       type="monotoneX"
-                      dataKey="bg"
+                      dataKey="glucose"
                       stroke="none"
-                      fill="url(#glucose_range_grad)"
+                      fill="#4d5742"
+                      fillOpacity={0.12}
                       isAnimationActive={false}
                       dot={false}
                       activeDot={false}
+                      connectNulls={true}
                       legendType="none" />
                 }
 
@@ -1356,7 +1348,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                       name="Glucose"
                       className="stackd-glucose-trend"
                       stroke="url(#glucose_line_grad)"
-                      strokeWidth={2.25}
+                      strokeWidth={2.75}
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       dot={false}

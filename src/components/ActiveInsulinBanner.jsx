@@ -1135,8 +1135,6 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
           value={isGlucoseStale ? "—" : (glucoseValue != null ? Math.round(glucoseValue) : "—")}
           unit="mg/dL"
           caption={isGlucoseStale ? "Waiting for a fresh reading" : (trend?.label || "Steady")}
-          dot
-          dotColor={isGlucoseStale ? "#a89e8d" : (inRange ? "#5b6550" : glucoseColor)}
           trendIcon={!isGlucoseStale && glucoseValue != null ? <TrendIcon size={30} strokeWidth={2.5} /> : null}
           trendColor={glucoseColor}
           subcaption={isGlucoseStale ? null : (
@@ -1160,7 +1158,6 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
         <AnchorNumber
           value={comfortZonePercentage != null ? Math.round(comfortZonePercentage) : "—"}
           unit="%"
-          caption={`of today spent in your comfort zone — ${targetLow}–${targetHigh} mg/dL`}
         />
         {dailyTimeBreakdown && (
           <div className="mt-2 flex justify-between text-xs px-1" style={{ color: "#746959" }}>
