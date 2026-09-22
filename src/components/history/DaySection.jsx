@@ -9,8 +9,9 @@ export default function DaySection({ icon: Icon, iconColor, label, children, col
     <div
       className="rounded-2xl border overflow-hidden"
       style={{
-        background: "linear-gradient(145deg, rgba(255,255,255,0.03), rgba(255,255,255,0.008))",
-        borderColor: "rgba(255,255,255,0.10)",
+        background: "#fdf9f2",
+        borderColor: "#eadccf",
+        boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)",
       }}
     >
       <button

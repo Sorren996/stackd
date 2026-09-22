@@ -15,10 +15,10 @@ const navItems = [
 ];
 
 const ALL_ACTIONS = [
-  { id: "glucose", label: "Glucose", Icon: Droplets, color: "91,168,138" },
+  { id: "glucose", label: "Glucose", Icon: Droplets, color: "91,101,80" },
   { id: "insulin", label: "Support", Icon: Syringe, color: "91,163,184" },
-  { id: "carbs", label: "Nourishment", Icon: Wheat, color: "212,160,86" },
-  { id: "both", label: "Meal + Support", Icon: Utensils, color: "45,212,191" },
+  { id: "carbs", label: "Nourishment", Icon: Wheat, color: "175,117,27" },
+  { id: "both", label: "Meal + Support", Icon: Utensils, color: "91,101,80" },
 ];
 
 const EASE = [0.22, 1, 0.36, 1];

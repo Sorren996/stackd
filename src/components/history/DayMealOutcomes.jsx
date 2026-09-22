@@ -20,10 +20,10 @@ export default function DayMealOutcomes({ meals, glucose, insulin, targetLow, ta
 
   return (
     <>
-      <DaySection icon={Utensils} iconColor="#f59e0b" label="Meal Outcomes" collapsible>
+      <DaySection icon={Utensils} iconColor="#af751b" label="Meal Outcomes" collapsible>
         <div className="space-y-2.5">
           {meals.map((meal) => {
-            const riseColor = meal.rise > 60 ? "#d4a056" : meal.rise < 0 ? "#5ba88a" : "rgba(255,255,255,0.7)";
+            const riseColor = meal.rise > 60 ? "#af751b" : meal.rise < 0 ? "#5b6550" : "#8a7f70";
             const risePct = Math.min(100, Math.max(3, Math.abs(meal.rise) / 1.5));
 
             return (
@@ -31,7 +31,7 @@ export default function DayMealOutcomes({ meals, glucose, insulin, targetLow, ta
                 key={meal.id}
                 onClick={() => setSelectedMeal(meal)}
                 className="block w-full rounded-xl border px-3.5 py-3 text-left transition hover:border-white/15"
-                style={{ background: "rgba(255,255,255,0.02)", borderColor: "rgba(255,255,255,0.08)" }}
+                style={{ background: "#fdf9f2", borderColor: "#eadccf" }}
               >
                 <div className="flex items-baseline justify-between gap-2">
                   <div className="min-w-0">
@@ -50,7 +50,7 @@ export default function DayMealOutcomes({ meals, glucose, insulin, targetLow, ta
                     </>
                   )}
                   {meal.highProteinFat && (
-                    <span className="text-purple-300/60">· higher protein/fat</span>
+                    <span style={{ color: "#8a6db8" }}>· higher protein/fat</span>
                   )}
                 </div>
 

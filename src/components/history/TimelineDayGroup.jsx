@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { ChevronRight } from "lucide-react";
-import { GLASS_SURFACE } from "@/lib/glassTheme";
+import { GLASS_FLOATING } from "@/lib/glassTheme";
 import { SPRING, SPRING_GENTLE } from "@/lib/motion";
 
 export default function TimelineDayGroup({ label, count, summary, isOpen, onToggle, children }) {
@@ -9,7 +9,7 @@ export default function TimelineDayGroup({ label, count, summary, isOpen, onTogg
       {/* Vertical timeline connector */}
       <div
         className="pointer-events-none absolute left-[7px] top-10 bottom-0 w-px"
-        style={{ background: "linear-gradient(to bottom, rgba(255,255,255,0.12), rgba(255,255,255,0.04))" }}
+        style={{ background: "linear-gradient(to bottom, #d8cec2, #eadccf)" }}
       />
 
       {/* Day waypoint */}
@@ -17,13 +17,13 @@ export default function TimelineDayGroup({ label, count, summary, isOpen, onTogg
         {/* Waypoint dot */}
         <div
           className="relative z-10 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2"
-          style={{ borderColor: "rgba(91,168,138,0.4)", background: "hsl(162,12%,9%)" }}
+          style={{ borderColor: "rgba(91,101,80,0.4)", background: "#fdf9f2" }}
         >
           <motion.div
             animate={{ scale: isOpen ? 1 : 0.5 }}
             transition={SPRING}
             className="h-1.5 w-1.5 rounded-full"
-            style={{ backgroundColor: "#5ba88a" }}
+            style={{ backgroundColor: "#5b6550" }}
           />
         </div>
 
@@ -31,8 +31,8 @@ export default function TimelineDayGroup({ label, count, summary, isOpen, onTogg
         <button
           type="button"
           onClick={onToggle}
-          className="flex flex-1 items-center justify-between gap-3 rounded-2xl border px-4 py-2.5 backdrop-blur-sm transition-colors hover:bg-white/[0.04]"
-          style={GLASS_SURFACE}
+          className="flex flex-1 items-center justify-between gap-3 rounded-2xl border px-4 py-2.5 transition-colors hover:bg-white/[0.04]"
+          style={GLASS_FLOATING}
         >
           <div className="min-w-0 text-left">
             <span className="text-sm font-semibold text-white">{label}</span>

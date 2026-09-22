@@ -41,7 +41,7 @@ export default function ZoneOfBalanceRing({ inRangePercent, abovePercent, belowP
       {/* Donut + percentage */}
       <div className="relative mt-3">
         <svg width="196" height="196" viewBox="0 0 196 196" style={{ transform: "rotate(-90deg)" }}>
-          <circle cx="98" cy="98" r={radius} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="16" />
+          <circle cx="98" cy="98" r={radius} fill="none" stroke="#eadccf" strokeWidth="16" />
           {belowPercent > 0 && (
             <motion.circle
               cx="98" cy="98" r={radius} fill="none"
@@ -62,7 +62,7 @@ export default function ZoneOfBalanceRing({ inRangePercent, abovePercent, belowP
               initial={{ strokeDashoffset: circumference }}
               animate={{ strokeDashoffset: inRangeOffset }}
               transition={{ duration: 1, delay: 0.15, ease: "easeOut" }}
-              style={{ filter: "drop-shadow(0 0 3px rgba(91,168,138,0.12))" }}
+              style={{ filter: "drop-shadow(0 0 3px rgba(91,101,80,0.12))" }}
             />
           )}
           {abovePercent > 0 && (

@@ -56,7 +56,7 @@ export default function ProfileSettings() {
     <div className="space-y-3">
       <h3 className="text-sm font-bold text-white uppercase tracking-wider px-1">Profile Settings</h3>
 
-      <div className="glass-card border rounded-3xl p-2">
+      <div className="glass-card border rounded-3xl p-2" style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}>
         {/* Name */}
         <div className="rounded-2xl px-3 py-3">
           <div className="flex items-center justify-between gap-3">
@@ -70,7 +70,8 @@ export default function ProfileSettings() {
                       type="text"
                       value={nameValue}
                       onChange={(e) => setNameValue(e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm font-semibold text-white outline-none focus:border-teal-500/40"
+                      className="w-full rounded-xl px-3 py-2 text-sm font-semibold text-white outline-none"
+                      style={{ background: "#f7f1e8", border: "1px solid #eadccf" }}
                       placeholder="Your name"
                       autoFocus
                     />
@@ -89,7 +90,8 @@ export default function ProfileSettings() {
                   setNameValue(user?.full_name || "");
                   setEditingName(true);
                 }}
-                className="shrink-0 flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/60 transition hover:text-white"
+                className="shrink-0 flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium text-white/60 transition hover:text-white"
+                style={{ background: "#f7f1e8", borderColor: "#eadccf" }}
               >
                 <Pencil className="w-3 h-3" />
                 Edit
@@ -103,7 +105,8 @@ export default function ProfileSettings() {
                     setNameValue(user?.full_name || "");
                   }}
                   disabled={isSavingName}
-                  className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium text-white/50 transition hover:text-white disabled:opacity-40"
+                  className="rounded-full border px-3 py-1.5 text-xs font-medium text-white/50 transition hover:text-white disabled:opacity-40"
+                  style={{ background: "#f7f1e8", borderColor: "#eadccf" }}
                 >
                   Cancel
                 </button>
@@ -111,8 +114,8 @@ export default function ProfileSettings() {
                   type="button"
                   onClick={handleSaveName}
                   disabled={isSavingName}
-                  className="flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold text-white transition active:scale-[0.98] disabled:opacity-40"
-                  style={{ background: "linear-gradient(145deg, rgba(91,168,138,0.85), rgba(91,163,184,0.72))" }}
+                  className="flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold transition active:scale-[0.98] disabled:opacity-40"
+                  style={{ background: "#3f3830", color: "#f7f1e8" }}
                 >
                   {isSavingName ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
                   Save
@@ -123,7 +126,7 @@ export default function ProfileSettings() {
         </div>
 
         {/* Email */}
-        <div className="border-t border-white/8 rounded-2xl px-3 py-3">
+        <div className="border-t rounded-2xl px-3 py-3" style={{ borderColor: "#eadccf" }}>
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               <Mail className="w-4 h-4 text-white/40 shrink-0" />
@@ -141,7 +144,7 @@ export default function ProfileSettings() {
         </div>
 
         {/* Password */}
-        <div className="border-t border-white/8 rounded-2xl px-3 py-3">
+        <div className="border-t rounded-2xl px-3 py-3" style={{ borderColor: "#eadccf" }}>
           {passwordStep === "idle" ? (
             <button
               type="button"
@@ -173,7 +176,7 @@ export default function ProfileSettings() {
           ) : (
             <div className="space-y-3">
               <div className="flex items-center gap-3">
-                <Lock className="w-4 h-4 text-[#5ba88a] shrink-0" />
+                <Lock className="w-4 h-4 shrink-0" style={{ color: "#5b6550" }} />
                 <div>
                   <p className="text-sm font-semibold text-white/90">Check your email</p>
                   <p className="text-[10px] text-white/40 leading-relaxed">
@@ -185,7 +188,8 @@ export default function ProfileSettings() {
                 type="button"
                 onClick={handleSendPasswordReset}
                 disabled={isSendingReset}
-                className="w-full rounded-xl border border-white/10 py-2.5 text-xs font-medium text-white/50 transition hover:text-white disabled:opacity-40"
+                className="w-full rounded-xl border py-2.5 text-xs font-medium text-white/50 transition hover:text-white disabled:opacity-40"
+                style={{ borderColor: "#eadccf", background: "#f7f1e8" }}
               >
                 {isSendingReset ? "Resending..." : "Resend reset link"}
               </button>

@@ -84,9 +84,9 @@ export default function PrivacyConsent() {
       {/* Privacy Notice */}
       <div className="space-y-3">
         <h3 className="text-sm font-bold text-white uppercase tracking-wider px-1">Privacy</h3>
-        <div className="glass-card border rounded-3xl p-4 space-y-3">
+        <div className="glass-card border rounded-3xl p-4 space-y-3" style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}>
           <div className="flex items-start gap-3">
-            <Shield className="w-4 h-4 text-teal-400 mt-0.5 shrink-0" />
+            <Shield className="w-4 h-4 mt-0.5 shrink-0" style={{ color: "#5b6550" }} />
             <div className="space-y-1.5">
               <p className="text-sm font-semibold text-white/90">Your data is private & secure</p>
               <p className="text-xs text-white/40 leading-relaxed">
@@ -110,18 +110,19 @@ export default function PrivacyConsent() {
           <button
             type="button"
             onClick={() => setShowDeleteConfirm(true)}
-            className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl border border-red-500/10 text-red-500/50 hover:bg-red-500/5 hover:text-red-400 transition-all text-sm font-medium"
+            className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl border text-sm font-medium transition-all"
+            style={{ borderColor: "rgba(201,112,96,0.15)", color: "rgba(201,112,96,0.6)" }}
           >
             <Trash2 className="w-4 h-4" />
             Delete Account
           </button>
         ) : (
-          <div className="bg-red-950/30 border border-red-500/20 rounded-3xl p-5 space-y-4">
+          <div className="border rounded-3xl p-5 space-y-4" style={{ background: "rgba(201,112,96,0.04)", borderColor: "rgba(201,112,96,0.20)" }}>
             <div className="flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+              <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" style={{ color: "#c97060" }} />
               <div>
-                <p className="text-sm font-bold text-red-300">This action cannot be undone</p>
-                <p className="text-xs text-red-400/70 mt-1 leading-relaxed">
+                <p className="text-sm font-bold" style={{ color: "#c97060" }}>This action cannot be undone</p>
+                <p className="text-xs mt-1 leading-relaxed" style={{ color: "#c97060", opacity: 0.7 }}>
                   All your data — glucose readings, insulin doses, carbohydrate logs, and account information — will be permanently and irreversibly deleted. There is no way to recover this data.
                 </p>
               </div>
@@ -130,7 +131,8 @@ export default function PrivacyConsent() {
               <button
                 type="button"
                 onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 text-sm py-3 rounded-2xl border border-white/10 text-white/60 hover:bg-white/5 transition-all text-sm font-medium"
+                className="flex-1 text-sm py-3 rounded-2xl border text-white/60 transition-all text-sm font-medium"
+                style={{ borderColor: "#eadccf", background: "#f7f1e8" }}
               >
                 Cancel
               </button>
@@ -138,7 +140,8 @@ export default function PrivacyConsent() {
                 type="button"
                 onClick={handleDeleteAccount}
                 disabled={isDeletingAccount}
-                className="flex-1 text-sm py-3 rounded-2xl bg-red-600/80 hover:bg-red-600 text-white transition-all font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
+                className="flex-1 text-sm py-3 rounded-2xl transition-all font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
+                style={{ background: "#c97060", color: "#f7f1e8" }}
               >
                 {isDeletingAccount ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                 {isDeletingAccount ? "Deleting..." : "Yes, Delete Everything"}

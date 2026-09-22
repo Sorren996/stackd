@@ -5,7 +5,7 @@ import { getInsulinProfile, getDoseTimingInfo, isBolusInsulinType, isBasalInsuli
 
 function Stat({ label, value, unit }) {
   return (
-    <div className="rounded-xl px-3 py-2" style={{ background: "rgba(255,255,255,0.02)" }}>
+    <div className="rounded-xl px-3 py-2" style={{ background: "#fdf9f2", border: "1px solid #eadccf" }}>
       <p className="text-[9px] uppercase tracking-wider text-white/35">{label}</p>
       <p className="text-sm font-bold text-white/90">
         {value}
@@ -26,7 +26,7 @@ function DoseBar({ dose, dayStart, dayEnd }) {
   return (
     <div className="flex items-center gap-2">
       <span className="w-12 shrink-0 text-[9px] text-white/35">{format(new Date(dose.time), "h:mm a")}</span>
-      <div className="relative h-4 flex-1 rounded-full" style={{ background: "rgba(255,255,255,0.03)" }}>
+      <div className="relative h-4 flex-1 rounded-full" style={{ background: "rgba(63, 56, 48, 0.06)" }}>
         <div
           className="absolute top-0 h-4 rounded-full"
           style={{
@@ -64,7 +64,7 @@ export default function DayInsulinActivity({ activity }) {
         )}
 
         {overlapCount > 0 && (
-          <p className="text-xs leading-relaxed text-amber-200/60">
+          <p className="text-xs leading-relaxed" style={{ color: "#af751b" }}>
             {overlapCount === 1
               ? "Multiple insulin doses overlapped during this period."
               : `${overlapCount} periods had overlapping insulin activity.`}

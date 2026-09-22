@@ -225,7 +225,7 @@ export default function Analytics() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
-        <div className="w-8 h-8 border-4 border-white/10 border-t-teal-400 rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 rounded-full animate-spin" style={{ borderColor: "#eadccf", borderTopColor: "#5b6550" }} />
       </div>
     );
   }
@@ -268,7 +268,7 @@ export default function Analytics() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.05 }}
       >
-        <div className="glass-card relative overflow-hidden rounded-3xl border p-5">
+        <div className="glass-card relative overflow-hidden rounded-3xl border p-5" style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}>
           {/* Ambient glow */}
           <div
             aria-hidden="true"
@@ -277,7 +277,7 @@ export default function Analytics() {
             <div
               className="h-48 w-48 rounded-full"
               style={{
-                background: "radial-gradient(circle, rgba(91,168,138,0.06) 0%, transparent 65%)",
+                background: "radial-gradient(circle, rgba(91,101,80,0.06) 0%, transparent 65%)",
                 filter: "blur(8px)",
               }}
             />
@@ -302,7 +302,7 @@ export default function Analytics() {
             />
 
             {/* Divider */}
-            <div className="my-3 h-px w-full" style={{ background: "linear-gradient(to right, transparent, rgba(255,255,255,0.05), transparent)" }} />
+            <div className="my-3 h-px w-full" style={{ background: "linear-gradient(to right, transparent, #eadccf, transparent)" }} />
 
             {/* Metrics */}
             <AtAGlanceMetrics
@@ -316,7 +316,7 @@ export default function Analytics() {
             />
 
             {/* Divider */}
-            <div className="my-3 h-px w-full" style={{ background: "linear-gradient(to right, transparent, rgba(255,255,255,0.05), transparent)" }} />
+            <div className="my-3 h-px w-full" style={{ background: "linear-gradient(to right, transparent, #eadccf, transparent)" }} />
 
             {/* Insight */}
             <RhythmInsight

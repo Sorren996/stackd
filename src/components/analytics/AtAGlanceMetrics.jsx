@@ -1,7 +1,7 @@
 import NotEnoughData from "@/components/analytics/NotEnoughData";
 
 const DIVIDER_STYLE = {
-  background: "linear-gradient(to right, transparent, rgba(255,255,255,0.05), transparent)",
+  background: "linear-gradient(to right, transparent, #eadccf, transparent)",
 };
 
 function MetricItem({ label, value, unit, comparison, isQuiet }) {

@@ -26,7 +26,7 @@ function EditableLog({ children, onEdit }) {
         onClick={onEdit}
         aria-label="Edit log"
         className="absolute right-12 top-4 flex h-7 w-7 items-center justify-center rounded-full border text-white/55 transition hover:text-white"
-        style={{ background: "linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))", borderColor: "rgba(255,255,255,0.12)" }}
+        style={{ background: "#fdf9f2", borderColor: "#eadccf" }}
       >
         <Pencil className="h-3.5 w-3.5" />
       </button>
@@ -35,9 +35,9 @@ function EditableLog({ children, onEdit }) {
 }
 
 const GROUPS = [
-  { key: "glucose", label: "Glucose", Icon: Droplets, color: "#5ba88a" },
+  { key: "glucose", label: "Glucose", Icon: Droplets, color: "#5b6550" },
   { key: "insulin", label: "Insulin", Icon: Syringe, color: "#5ba3b8" },
-  { key: "carbs", label: "Carbs", Icon: Wheat, color: "#f59e0b" },
+  { key: "carbs", label: "Carbs", Icon: Wheat, color: "#af751b" },
 ];
 
 function renderCard(item, groupKey, locked, onEdit, onDeleteDose, onDeleteGlucose, onDeleteCarb) {
@@ -134,9 +134,10 @@ export default function HistoryTimelineView({ logs, loading, dexcomConnected, on
               onClick={() => setFilter(f.key)}
               className={`shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition ${
                 active
-                  ? "border-teal-500/40 bg-teal-500/10 text-white"
+                  ? "text-white"
                   : "border-white/10 bg-white/[0.03] text-white/45 hover:text-white/75"
               }`}
+              style={active ? { background: "rgba(91,101,80,0.12)", borderColor: "rgba(91,101,80,0.35)" } : undefined}
             >
               {f.label}
             </button>

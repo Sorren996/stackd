@@ -12,12 +12,14 @@ const MIN_CENTS = 100;
 const MAX_CENTS = 250000;
 
 const GIFT_GRADIENT = {
-  background: "linear-gradient(145deg, rgba(217,119,6,0.92), rgba(180,83,9,0.86))",
-  boxShadow: "0 8px 24px rgba(217,119,6,0.28), inset 0 1px 1px rgba(255,255,255,0.22)",
+  background: "#af751b",
+  boxShadow: "0 6px 20px rgba(175,117,27,0.25)",
+  color: "#f7f1e8",
 };
 const MONTHLY_GRADIENT = {
-  background: "linear-gradient(145deg, rgba(20,184,166,0.92), rgba(15,118,110,0.86))",
-  boxShadow: "0 8px 24px rgba(20,184,166,0.32), inset 0 1px 1px rgba(255,255,255,0.22)",
+  background: "#5b6550",
+  boxShadow: "0 6px 20px rgba(91,101,80,0.25)",
+  color: "#f7f1e8",
 };
 
 function formatCents(cents) {
@@ -149,11 +151,11 @@ export default function SupportCreator() {
       </AnimatePresence>
 
       {/* Intro */}
-      <div className="relative overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.025] p-5 backdrop-blur-sm">
-        <div aria-hidden className="pointer-events-none absolute -right-6 -top-8 h-28 w-28 rounded-full bg-teal-500/10 blur-2xl" />
+      <div className="relative overflow-hidden rounded-2xl border p-5" style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}>
+        <div aria-hidden className="pointer-events-none absolute -right-6 -top-8 h-28 w-28 rounded-full blur-2xl" style={{ background: "rgba(91,101,80,0.10)" }} />
         <div className="relative flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-teal-400/25 bg-teal-500/10">
-            <Leaf className="h-5 w-5 text-teal-300" />
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border" style={{ borderColor: "rgba(91,101,80,0.25)", background: "rgba(91,101,80,0.08)" }}>
+            <Leaf className="h-5 w-5" style={{ color: "#5b6550" }} />
           </div>
           <div>
             <h2 className="text-base font-bold text-white">Support the Creator</h2>
@@ -166,7 +168,7 @@ export default function SupportCreator() {
       </div>
 
       {/* Tabs */}
-      <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-1" style={{ boxShadow: "inset 0 1px 1px rgba(255,255,255,0.06)" }}>
+      <div className="rounded-2xl border p-1" style={{ borderColor: "#eadccf", background: "#f7f1e8" }}>
         <div className="flex">
           {[
             { id: "gift", label: "One-time gift", Icon: Sparkles },
@@ -184,8 +186,8 @@ export default function SupportCreator() {
                 style={
                   active
                     ? {
-                        background: "linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.04))",
-                        boxShadow: "inset 0 1px 1px rgba(255,255,255,0.12), 0 2px 8px rgba(0,0,0,0.15)",
+                        background: "#3f3830",
+                        color: "#f7f1e8",
                       }
                     : undefined
                 }
@@ -211,12 +213,11 @@ export default function SupportCreator() {
                 key={cents}
                 type="button"
                 onClick={() => selectPreset(cents)}
-                className={`rounded-2xl border px-3 py-4 text-center transition-all ${
-                  active
-                    ? "border-teal-400/70 bg-teal-500/15"
-                    : "border-white/[0.08] bg-white/[0.02] hover:border-white/20"
-                }`}
-                style={active ? { boxShadow: "inset 0 0 0 1px rgba(45,212,191,0.35), 0 0 16px rgba(20,184,166,0.18)" } : undefined}
+                className="rounded-2xl border px-3 py-4 text-center transition-all"
+                style={active
+                  ? { borderColor: "rgba(91,101,80,0.50)", background: "rgba(91,101,80,0.12)", boxShadow: "0 0 16px rgba(91,101,80,0.15)" }
+                  : { borderColor: "#eadccf", background: "#fdf9f2" }
+                }
               >
                 <span className="block text-lg font-bold text-white">{formatCents(cents)}</span>
                 <span className="mt-0.5 block text-[10px] uppercase tracking-wider text-white/40">
@@ -240,7 +241,7 @@ export default function SupportCreator() {
           maxLength={6}
         />
         {customAmount.trim() !== "" && !customValid && (
-          <p className="mt-1.5 px-1 text-[11px] text-rose-300/80">Please enter an amount between $1 and $2,500.</p>
+          <p className="mt-1.5 px-1 text-[11px]" style={{ color: "#c97060" }}>Please enter an amount between $1 and $2,500.</p>
         )}
       </div>
 
@@ -271,9 +272,9 @@ export default function SupportCreator() {
 
       {/* Manage monthly support */}
       {hasCustomer && (
-        <div className="rounded-2xl border border-white/[0.07] bg-white/[0.025] p-4 backdrop-blur-sm">
+        <div className="rounded-2xl border p-4" style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}>
           <div className="flex items-center gap-2">
-            <Heart className="h-4 w-4 text-teal-300" />
+            <Heart className="h-4 w-4" style={{ color: "#5b6550" }} />
             <p className="text-sm font-semibold text-white">Managing your support</p>
           </div>
           <p className="mt-1 text-[12px] leading-relaxed text-white/50">
@@ -283,7 +284,8 @@ export default function SupportCreator() {
             type="button"
             onClick={handleManage}
             disabled={isOpeningPortal}
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-teal-400/30 bg-teal-500/10 py-3 text-sm font-semibold text-teal-100 transition hover:bg-teal-500/15 disabled:opacity-50"
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border py-3 text-sm font-semibold transition disabled:opacity-50"
+            style={{ borderColor: "rgba(91,101,80,0.30)", background: "rgba(91,101,80,0.08)", color: "#5b6550" }}
           >
             {isOpeningPortal ? (
               <>
@@ -307,13 +309,12 @@ export default function SupportCreator() {
             <Leaf className="h-3 w-3" />
             Your kindness
           </p>
-          <div className="overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.025] backdrop-blur-sm">
+          <div className="overflow-hidden rounded-2xl border" style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}>
             {supports.map((record, index) => (
               <div
                 key={record.id}
-                className={`flex items-center justify-between px-4 py-3 ${
-                  index !== supports.length - 1 ? "border-b border-white/[0.05]" : ""
-                }`}
+                className="flex items-center justify-between px-4 py-3"
+                style={index !== supports.length - 1 ? { borderBottom: "1px solid #eadccf" } : undefined}
               >
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-white/85">
@@ -325,7 +326,7 @@ export default function SupportCreator() {
                     {record.support_type === "monthly" && record.status === "active" ? " · active" : ""}
                   </p>
                 </div>
-                <Leaf className="h-4 w-4 shrink-0 text-teal-400/50" />
+                <Leaf className="h-4 w-4 shrink-0" style={{ color: "#5b6550", opacity: 0.5 }} />
               </div>
             ))}
           </div>
@@ -341,15 +342,17 @@ function VerifyPanel({ state, onClose }) {
   const config = {
     verifying: {
       Icon: Loader2,
-      iconClass: "animate-spin text-teal-300",
+      iconClass: "animate-spin",
       title: "Confirming your gift...",
+      iconColor: "#5b6550",
       body: "Just a moment while we settle your kindness into the canopy.",
       showClose: false,
     },
     success: {
       Icon: Leaf,
-      iconClass: "text-teal-300",
+      iconClass: "",
       title: "Thank you for nurturing Stackd",
+      iconColor: "#5b6550",
       body:
         contribution
           ? `Your ${contribution.support_type === "monthly" ? "monthly patronage" : "gift"} of ${formatCents(
@@ -360,35 +363,38 @@ function VerifyPanel({ state, onClose }) {
     },
     pending: {
       Icon: Hourglass,
-      iconClass: "text-amber-300",
+      iconClass: "",
       title: "Your gift is still settling",
+      iconColor: "#af751b",
       body: "It can take a moment for a payment to fully land. Check back shortly — your kindness will show up here once it does.",
       showClose: true,
     },
     canceled: {
       Icon: AlertCircle,
-      iconClass: "text-white/50",
+      iconClass: "",
       title: "No rush at all",
+      iconColor: "#8a7f70",
       body: "Your presence here is enough. You can send a little sunshine back whenever it feels right.",
       showClose: true,
     },
     error: {
       Icon: AlertCircle,
-      iconClass: "text-rose-300",
+      iconClass: "",
       title: "We could not confirm just yet",
+      iconColor: "#c97060",
       body: "Something did not go as expected confirming your support. Please try again in a moment.",
       showClose: true,
     },
   }[type] || {};
 
-  const { Icon, iconClass, title, body, showClose } = config;
+  const { Icon, iconClass, title, body, showClose, iconColor } = config;
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-teal-400/20 bg-white/[0.04] p-5 backdrop-blur-sm">
-      <div aria-hidden className="pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full bg-teal-500/15 blur-3xl" />
+    <div className="relative overflow-hidden rounded-2xl border p-5" style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}>
+      <div aria-hidden className="pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full blur-3xl" style={{ background: "rgba(91,101,80,0.10)" }} />
       <div className="relative flex items-start gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-teal-400/25 bg-teal-500/10">
-          {Icon && <Icon className={`h-5 w-5 ${iconClass}`} />}
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border" style={{ borderColor: "rgba(91,101,80,0.25)", background: "rgba(91,101,80,0.08)" }}>
+          {Icon && <Icon className={`h-5 w-5 ${iconClass}`} style={{ color: iconColor }} />}
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-bold text-white">{title}</p>

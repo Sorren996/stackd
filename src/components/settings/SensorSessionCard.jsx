@@ -14,8 +14,8 @@ import {
 import SensorDayTrail from "@/components/settings/SensorDayTrail";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const COLOR_FRESH = "#5ba88a";
-const COLOR_NEAR = "#d9a938";
+const COLOR_FRESH = "#5b6550";
+const COLOR_NEAR = "#af751b";
 
 function toLocalDatetimeInputValue(ms) {
   const d = new Date(ms);
@@ -84,8 +84,8 @@ export default function SensorSessionCard() {
           borderColor: "rgba(255,255,255,0.07)",
         }}
         transition={{ duration: 0.3, ease: "easeOut" }}
-        className="overflow-hidden rounded-2xl border bg-white/[0.025] backdrop-blur-sm"
-        style={{ borderColor: "rgba(255,255,255,0.07)" }}
+        className="overflow-hidden rounded-2xl border"
+        style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}
       >
         <button
           type="button"
@@ -145,7 +145,7 @@ export default function SensorSessionCard() {
         </button>
 
         {hasSession && (
-          <div className="flex items-center justify-between gap-3 border-t border-white/[0.05] px-3.5 py-2.5">
+          <div className="flex items-center justify-between gap-3 border-t px-3.5 py-2.5" style={{ borderColor: "#eadccf" }}>
             <div className="min-w-0">
               <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-white/30">Started</p>
               <p className="mt-0.5 truncate text-[11px] text-white/55">
@@ -169,7 +169,7 @@ export default function SensorSessionCard() {
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.25, ease: "easeInOut" }}
-              className="overflow-hidden border-t border-white/[0.05]"
+              className="overflow-hidden border-t" style={{ borderColor: "#eadccf" }}
             >
               {hasSession ? (
                 <div className="px-3.5 py-4">
@@ -177,7 +177,8 @@ export default function SensorSessionCard() {
                     type="button"
                     onClick={handleEndSession}
                     disabled={isSaving}
-                    className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-rose-400/25 bg-rose-500/10 py-2.5 text-sm font-semibold text-rose-200 transition hover:bg-rose-500/20 disabled:opacity-60"
+                    className="flex w-full items-center justify-center gap-1.5 rounded-xl border py-2.5 text-sm font-semibold transition disabled:opacity-60"
+                    style={{ borderColor: "rgba(201,112,96,0.25)", background: "rgba(201,112,96,0.08)", color: "#c97060" }}
                   >
                     {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
                     {isSaving ? "Ending..." : "End session"}
@@ -198,11 +199,11 @@ export default function SensorSessionCard() {
                             key={id}
                             type="button"
                             onClick={() => setDraftModel(id)}
-                            className={`flex w-full items-center gap-3 rounded-xl border px-3 py-2 transition ${
-                              selected
-                                ? "border-teal-500/40 bg-teal-500/10"
-                                : "border-white/[0.07] bg-white/[0.02] hover:bg-white/[0.05]"
-                            }`}
+                            className="flex w-full items-center gap-3 rounded-xl border px-3 py-2 transition"
+                            style={selected
+                              ? { borderColor: "rgba(91,101,80,0.40)", background: "rgba(91,101,80,0.10)" }
+                              : { borderColor: "#eadccf", background: "#f7f1e8" }
+                            }
                           >
                             <div className="flex h-9 w-9 shrink-0 items-center justify-center">
                               <img src={m.image} alt={m.label} className="h-full w-full object-contain" />
@@ -211,7 +212,7 @@ export default function SensorSessionCard() {
                               {m.label}
                             </span>
                             <span className="text-[11px] text-white/35">{m.durationDays} days</span>
-                            {selected && <Check className="h-4 w-4 shrink-0 text-teal-400" />}
+                            {selected && <Check className="h-4 w-4 shrink-0" style={{ color: "#5b6550" }} />}
                           </button>
                         );
                       })}
@@ -226,7 +227,8 @@ export default function SensorSessionCard() {
                       type="datetime-local"
                       value={draftStartedAt}
                       onChange={(e) => setDraftStartedAt(e.target.value)}
-                      className="w-full rounded-xl border border-white/[0.07] bg-white/[0.03] px-3 py-2.5 text-sm text-white outline-none transition focus:border-teal-500/40"
+                      className="w-full rounded-xl border px-3 py-2.5 text-sm text-white outline-none transition"
+                      style={{ background: "#f7f1e8", borderColor: "#eadccf" }}
                     />
                   </div>
 
@@ -234,7 +236,8 @@ export default function SensorSessionCard() {
                     <button
                       type="button"
                       onClick={() => setExpanded(false)}
-                      className="flex-1 rounded-xl border border-white/12 bg-white/[0.03] py-2.5 text-sm font-semibold text-white/70 transition hover:bg-white/[0.06]"
+                      className="flex-1 rounded-xl border py-2.5 text-sm font-semibold text-white/70 transition"
+                      style={{ background: "#f7f1e8", borderColor: "#eadccf" }}
                     >
                       Cancel
                     </button>
@@ -242,7 +245,8 @@ export default function SensorSessionCard() {
                       type="button"
                       onClick={handleSave}
                       disabled={isSaving}
-                      className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-teal-500/30 bg-teal-500/15 py-2.5 text-sm font-semibold text-teal-200 transition hover:bg-teal-500/25 disabled:opacity-60"
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border py-2.5 text-sm font-semibold transition disabled:opacity-60"
+                      style={{ borderColor: "rgba(91,101,80,0.30)", background: "rgba(91,101,80,0.12)", color: "#5b6550" }}
                     >
                       {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                       {isSaving ? "Saving..." : "Save session"}

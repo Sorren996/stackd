@@ -62,7 +62,7 @@ function InsightCard({ insight }) {
   const suggestion = getSuggestion(type, segment.label);
 
   return (
-    <div className="glass-card relative overflow-hidden rounded-2xl border p-4">
+    <div className="glass-card relative overflow-hidden rounded-2xl border p-4" style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}>
       <div
         aria-hidden="true"
         className="pointer-events-none absolute -inset-6 opacity-40"
@@ -97,7 +97,7 @@ export default function MomentsOfCare({ segments, hasEnough = true }) {
     return (
       <div>
         <p className="mb-3 px-1 text-[10px] font-bold uppercase tracking-[0.20em] text-white">Moments of Care</p>
-        <div className="glass-card relative overflow-hidden rounded-3xl border p-5">
+        <div className="glass-card relative overflow-hidden rounded-3xl border p-5" style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}>
           <NotEnoughData />
         </div>
       </div>
@@ -108,7 +108,7 @@ export default function MomentsOfCare({ segments, hasEnough = true }) {
 
   if (!valid.length) {
     return (
-      <div className="glass-card relative overflow-hidden rounded-3xl border p-6">
+      <div className="glass-card relative overflow-hidden rounded-3xl border p-6" style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}>
         <div className="text-center">
           <p className="text-[10px] font-bold uppercase tracking-[0.20em] text-white">Moments of Care</p>
           <p className="mt-3 text-sm leading-relaxed text-white/45">

@@ -13,7 +13,7 @@ export function SettingsGroup({ label, children }) {
           {label}
         </h2>
       )}
-      <div className="overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.025] backdrop-blur-sm">
+      <div className="overflow-hidden rounded-2xl border" style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}>
         {children}
       </div>
     </section>
@@ -26,18 +26,18 @@ export function SettingsGroup({ label, children }) {
  */
 export function SettingsRow({ to, onClick, icon: Icon, title, subtext, danger, last, iconClassName = "" }) {
   const content = (
-    <div className={`flex items-center gap-3 px-3.5 py-3 ${!last ? "border-b border-white/[0.05]" : ""}`}>
+    <div className={`flex items-center gap-3 px-3.5 py-3 ${!last ? "border-b" : ""}`} style={!last ? { borderColor: "#eadccf" } : undefined}>
       <div
-        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border ${
-          danger
-            ? "border-rose-400/20 bg-rose-500/10"
-            : "border-teal-500/20 bg-teal-500/10"
-        }`}
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border"
+        style={danger
+          ? { borderColor: "rgba(201,112,96,0.25)", background: "rgba(201,112,96,0.08)" }
+          : { borderColor: "rgba(91,101,80,0.20)", background: "rgba(91,101,80,0.08)" }
+        }
       >
-        {Icon && <Icon className={`h-4 w-4 ${danger ? "text-rose-300" : "text-teal-400"} ${iconClassName}`} />}
+        {Icon && <Icon className={`h-4 w-4 ${iconClassName}`} style={{ color: danger ? "#c97060" : "#5b6550" }} />}
       </div>
       <div className="min-w-0 flex-1">
-        <p className={`text-sm font-semibold ${danger ? "text-rose-200" : "text-white"}`}>{title}</p>
+        <p className={`text-sm font-semibold ${danger ? "" : "text-white"}`} style={danger ? { color: "#c97060" } : undefined}>{title}</p>
         {subtext && <p className="mt-0.5 truncate text-[11px] text-white/40">{subtext}</p>}
       </div>
       <ChevronRight className="h-4 w-4 shrink-0 text-white/25" />

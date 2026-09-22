@@ -9,7 +9,7 @@ export default function DayRecovery({ recovery }) {
   const { startTime, startValue, peakTime, peakValue, rise, recoveryTime, recoveryValue, recoveryMinutes } = recovery;
 
   return (
-    <DaySection icon={TrendingDown} iconColor="#d4a056" label="Recovery" collapsible>
+    <DaySection icon={TrendingDown} iconColor="#af751b" label="Recovery" collapsible>
       <div className="space-y-3">
         <div className="flex items-center justify-center gap-3 py-2">
           <div className="text-center">
@@ -18,7 +18,7 @@ export default function DayRecovery({ recovery }) {
           </div>
           <span className="text-white/30">↓</span>
           <div className="text-center">
-            <p className="text-2xl font-black" style={{ color: "#d4a056" }}>
+            <p className="text-2xl font-black" style={{ color: "#af751b" }}>
               {Math.round(peakValue)}
             </p>
             <p className="text-[9px] text-white/35">{format(new Date(peakTime), "h:mm a")}</p>

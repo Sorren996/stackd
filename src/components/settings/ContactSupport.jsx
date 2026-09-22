@@ -90,14 +90,14 @@ export default function ContactSupport() {
                 key={t.key}
                 type="button"
                 onClick={() => setTicketType(t.key)}
-                className={`w-full flex items-center gap-4 rounded-3xl border p-4 transition ${
-                  active
-                    ? "border-teal-500/30 bg-teal-500/10"
-                    : "border-white/10 bg-white/[0.02] hover:bg-white/[0.04]"
-                }`}
+                className="w-full flex items-center gap-4 rounded-3xl border p-4 transition"
+                style={active
+                  ? { borderColor: "rgba(91,101,80,0.30)", background: "rgba(91,101,80,0.10)" }
+                  : { borderColor: "#eadccf", background: "#fdf9f2", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }
+                }
               >
-                <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border ${active ? "border-teal-500/30 bg-teal-500/10" : "border-white/10 bg-white/5"}`}>
-                  <Icon className={`h-5 w-5 ${active ? "text-teal-400" : "text-white/50"}`} />
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border" style={active ? { borderColor: "rgba(91,101,80,0.30)", background: "rgba(91,101,80,0.10)" } : { borderColor: "#eadccf", background: "#f7f1e8" }}>
+                  <Icon className="h-5 w-5" style={{ color: active ? "#5b6550" : "#8a7f70" }} />
                 </div>
                 <div className="flex-1 text-left min-w-0">
                   <p className={`text-sm font-semibold ${active ? "text-white" : "text-white/80"}`}>{t.label}</p>
@@ -111,7 +111,7 @@ export default function ContactSupport() {
 
       {/* Form */}
       {ticketType && (
-        <div className="space-y-4 glass-card rounded-3xl border p-4">
+        <div className="space-y-4 glass-card rounded-3xl border p-4" style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}>
           <div>
             <label className="text-[10px] font-semibold uppercase tracking-wider text-white/40">Category</label>
             <div className="mt-2 flex flex-wrap gap-2">
@@ -120,11 +120,11 @@ export default function ContactSupport() {
                   key={c.key}
                   type="button"
                   onClick={() => setCategory(c.key)}
-                  className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
-                    category === c.key
-                      ? "border-teal-500/40 bg-teal-500/10 text-white"
-                      : "border-white/10 bg-white/[0.03] text-white/45 hover:text-white/75"
-                  }`}
+                  className="rounded-full border px-3 py-1.5 text-xs font-medium transition"
+                  style={category === c.key
+                    ? { borderColor: "rgba(91,101,80,0.40)", background: "rgba(91,101,80,0.12)", color: "#3f3830" }
+                    : { borderColor: "#eadccf", background: "#f7f1e8", color: "#8a7f70" }
+                  }
                 >
                   {c.label}
                 </button>
@@ -139,7 +139,8 @@ export default function ContactSupport() {
               onChange={(e) => setMessage(e.target.value)}
               rows={4}
               placeholder="Tell us what's happening or what you'd like to share..."
-              className="mt-2 w-full rounded-2xl border border-white/10 bg-white/[0.03] px-3.5 py-3 text-sm text-white placeholder:text-white/30 focus:border-teal-500/40 focus:outline-none resize-none"
+              className="mt-2 w-full rounded-2xl border px-3.5 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none resize-none"
+              style={{ background: "#f7f1e8", borderColor: "#eadccf" }}
             />
           </div>
 
@@ -147,11 +148,13 @@ export default function ContactSupport() {
             <button
               type="button"
               onClick={() => setIncludeDiagnostics((v) => !v)}
-              className={`mt-0.5 h-5 w-5 shrink-0 rounded-md border flex items-center justify-center transition ${
-                includeDiagnostics ? "border-teal-500/40 bg-teal-500/20" : "border-white/15 bg-white/5"
-              }`}
+              className="mt-0.5 h-5 w-5 shrink-0 rounded-md border flex items-center justify-center transition"
+              style={includeDiagnostics
+                ? { borderColor: "#5b6550", background: "rgba(91,101,80,0.20)" }
+                : { borderColor: "#eadccf", background: "#f7f1e8" }
+              }
             >
-              {includeDiagnostics && <span className="h-2.5 w-2.5 rounded-sm bg-teal-400" />}
+              {includeDiagnostics && <span className="h-2.5 w-2.5 rounded-sm" style={{ background: "#5b6550" }} />}
             </button>
             <div>
               <p className="text-xs font-medium text-white/70">Include diagnostic information</p>
@@ -165,7 +168,8 @@ export default function ContactSupport() {
             type="button"
             onClick={handleSubmit}
             disabled={submitting || !message.trim()}
-            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-teal-600/80 hover:bg-teal-600 text-white font-semibold text-sm transition disabled:opacity-40"
+            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-semibold text-sm transition disabled:opacity-40"
+            style={{ background: "#3f3830", color: "#f7f1e8" }}
           >
             {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
             {submitting ? "Sending..." : "Send"}
@@ -175,7 +179,7 @@ export default function ContactSupport() {
 
       {/* Privacy reassurance */}
       <div className="flex items-start gap-2.5 px-2">
-        <ShieldCheck className="h-3.5 w-3.5 text-teal-400/60 mt-0.5 shrink-0" />
+        <ShieldCheck className="h-3.5 w-3.5 mt-0.5 shrink-0" style={{ color: "#5b6550" }} />
         <p className="text-[10px] text-white/30 leading-relaxed">
           Your message is sent securely and associated with your account. We never receive your password or Dexcom credentials through this form.
         </p>

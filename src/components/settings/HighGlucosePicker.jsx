@@ -59,22 +59,23 @@ export default function HighGlucosePicker({ value, onChange }) {
     <div className="relative select-none" style={{ height: PICKER_HEIGHT }}>
       {/* Center highlight band */}
       <div
-        className="pointer-events-none absolute left-3 right-3 z-10 rounded-2xl border border-amber-400/25"
+        className="pointer-events-none absolute left-3 right-3 z-10 rounded-2xl border"
         style={{
           top: PADDING,
           height: ITEM_HEIGHT,
-          background: "linear-gradient(90deg, rgba(212,160,86,0.10), rgba(212,160,86,0.04), rgba(212,160,86,0.10))",
+          background: "linear-gradient(90deg, rgba(175,117,27,0.10), rgba(175,117,27,0.04), rgba(175,117,27,0.10))",
+          borderColor: "rgba(175,117,27,0.25)",
         }}
       />
       {/* Top fade mask */}
       <div
         className="pointer-events-none absolute inset-x-0 top-0 z-10"
-        style={{ height: PADDING, background: "linear-gradient(to bottom, rgba(21,29,30,0.94), transparent)" }}
+        style={{ height: PADDING, background: "linear-gradient(to bottom, #fdf9f2, transparent)" }}
       />
       {/* Bottom fade mask */}
       <div
         className="pointer-events-none absolute inset-x-0 bottom-0 z-10"
-        style={{ height: PADDING, background: "linear-gradient(to top, rgba(21,29,30,0.94), transparent)" }}
+        style={{ height: PADDING, background: "linear-gradient(to top, #fdf9f2, transparent)" }}
       />
 
       <div
@@ -98,7 +99,7 @@ export default function HighGlucosePicker({ value, onChange }) {
                 style={{
                   fontSize: isSelected ? 22 : 18,
                   fontWeight: isSelected ? 800 : 600,
-                  color: isSelected ? "#fde68a" : `rgba(255,255,255,${Math.max(0.14, 0.5 - distance * 0.12)})`,
+                  color: isSelected ? "#af751b" : `rgba(63,56,48,${Math.max(0.14, 0.5 - distance * 0.12)})`,
                   transform: `scale(${isSelected ? 1 : Math.max(0.82, 0.92 - distance * 0.05)})`,
                 }}
               >

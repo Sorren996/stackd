@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
-import { GLASS_SURFACE } from "@/lib/glassTheme";
+import { GLASS_FLOATING } from "@/lib/glassTheme";
 import { SPRING, SPRING_GENTLE } from "@/lib/motion";
 
 export default function TimelineWeekGroup({ label, dayCount, momentCount, summary, isOpen, onToggle, children }) {
@@ -10,8 +10,8 @@ export default function TimelineWeekGroup({ label, dayCount, momentCount, summar
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-center justify-between gap-3 rounded-2xl border px-4 py-3 backdrop-blur-sm transition-colors hover:bg-white/[0.04]"
-        style={GLASS_SURFACE}
+        className="flex w-full items-center justify-between gap-3 rounded-2xl border px-4 py-3 transition-colors hover:bg-white/[0.04]"
+        style={GLASS_FLOATING}
       >
         <div className="min-w-0 text-left">
           <span className="text-sm font-bold text-white">{label}</span>

@@ -22,9 +22,9 @@ function ChartTooltip({ active, payload }) {
   const data = payload[0]?.payload;
   if (!data || data.avg === null) return null;
   return (
-    <div className="rounded-xl border px-3 py-2" style={{ background: "hsl(162,12%,9%)", borderColor: "rgba(255,255,255,0.15)" }}>
+    <div className="rounded-xl border px-3 py-2" style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 8px 28px rgba(63,56,48,0.12)" }}>
       <p className="text-xs font-semibold text-white">{formatHourLabel(data.hour)}</p>
-      <p className="text-sm font-bold text-teal-300">{data.avg} mg/dL</p>
+      <p className="text-sm font-bold" style={{ color: "#5b6550" }}>{data.avg} mg/dL</p>
       {data.count > 0 && (
         <p className="text-[10px] text-white/40">{data.count} reading{data.count !== 1 ? "s" : ""}</p>
       )}
@@ -35,7 +35,7 @@ function ChartTooltip({ active, payload }) {
 export default function DailyPatternChart({ hourlyAverages, targetLow, targetHigh, hasEnough = true }) {
   if (!hasEnough) {
     return (
-      <div className="glass-card relative overflow-hidden rounded-3xl border p-5">
+      <div className="glass-card relative overflow-hidden rounded-3xl border p-5" style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}>
         <div className="relative z-10">
           <div className="flex flex-col">
             <p className="text-[10px] font-bold uppercase tracking-[0.20em] text-white">Daily Rhythm</p>
@@ -56,7 +56,7 @@ export default function DailyPatternChart({ hourlyAverages, targetLow, targetHig
   const insight = getRhythmInsight(hourlyAverages);
 
   return (
-    <div className="glass-card relative overflow-hidden rounded-3xl border p-5">
+    <div className="glass-card relative overflow-hidden rounded-3xl border p-5" style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}>
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 top-12 flex justify-center opacity-60"
@@ -85,13 +85,13 @@ export default function DailyPatternChart({ hourlyAverages, targetLow, targetHig
               <CartesianGrid
                 horizontal
                 vertical={false}
-                stroke="rgba(255,255,255,0.05)"
+                stroke="#eadccf"
                 strokeDasharray="3 5"
               />
-              <ReferenceArea y1={targetLow} y2={targetHigh} fill="rgba(91, 168, 139, 0.06)" />
+              <ReferenceArea y1={targetLow} y2={targetHigh} fill="rgba(91, 101, 80, 0.06)" />
               <XAxis
                 dataKey="hour"
-                tick={{ fontSize: 9, fill: "rgba(255,255,255,0.28)" }}
+                tick={{ fontSize: 9, fill: "#a89e8d" }}
                 axisLine={false}
                 tickLine={false}
                 interval={2}
@@ -99,7 +99,7 @@ export default function DailyPatternChart({ hourlyAverages, targetLow, targetHig
               />
               <YAxis
                 domain={[yMin, yMax]}
-                tick={{ fontSize: 9, fill: "rgba(255,255,255,0.22)" }}
+                tick={{ fontSize: 9, fill: "#a89e8d" }}
                 axisLine={false}
                 tickLine={false}
                 width={40}
@@ -115,7 +115,7 @@ export default function DailyPatternChart({ hourlyAverages, targetLow, targetHig
                 fill="url(#glucoseGradient)"
                 connectNulls
                 dot={false}
-                activeDot={{ r: 3.5, fill: LINE_COLOR, stroke: "rgba(255,255,255,0.6)", strokeWidth: 1 }}
+                activeDot={{ r: 3.5, fill: LINE_COLOR, stroke: "#fdf9f2", strokeWidth: 1 }}
                 style={{ filter: "drop-shadow(0 1px 4px rgba(91,163,184,0.35))" }}
               />
             </AreaChart>

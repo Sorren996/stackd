@@ -65,18 +65,20 @@ export default function DisplaySettings() {
                 type="button"
                 onClick={() => handleSelectHeight(opt.value)}
                 disabled={isSaving}
-                className={`w-full flex items-center gap-4 rounded-3xl border p-4 text-left transition active:scale-[0.99] ${
-                  selected ? "border-teal-500/40 bg-teal-500/10" : "glass-card border-white/10 hover:bg-white/[0.04]"
-                }`}
+                className="w-full flex items-center gap-4 rounded-3xl border p-4 text-left transition active:scale-[0.99]"
+                style={selected
+                  ? { background: "rgba(91,101,80,0.10)", borderColor: "rgba(91,101,80,0.40)" }
+                  : { background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }
+                }
               >
-                <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border ${selected ? "border-teal-500/30 bg-teal-500/15" : "border-teal-500/20 bg-teal-500/10"}`}>
-                  <LineChart className={`h-5 w-5 ${selected ? "text-teal-300" : "text-teal-400"}`} />
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border" style={selected ? { borderColor: "rgba(91,101,80,0.30)", background: "rgba(91,101,80,0.15)" } : { borderColor: "rgba(91,101,80,0.20)", background: "rgba(91,101,80,0.08)" }}>
+                  <LineChart className="h-5 w-5" style={{ color: "#5b6550" }} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-white">{opt.label}</p>
                   <p className="text-xs text-white/40 mt-0.5 leading-relaxed">{opt.desc}</p>
                 </div>
-                {selected && <Check className="h-5 w-5 text-teal-300 shrink-0" />}
+                {selected && <Check className="h-5 w-5 shrink-0" style={{ color: "#5b6550" }} />}
               </button>
             );
           })}
@@ -88,10 +90,10 @@ export default function DisplaySettings() {
           <Gauge className="h-4 w-4 text-amber-400/80" />
           <h3 className="text-sm font-bold text-white uppercase tracking-wider">High Glucose Line</h3>
         </div>
-        <div className="glass-card border rounded-3xl p-4">
+        <div className="glass-card border rounded-3xl p-4" style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}>
           <div className="flex items-baseline justify-between">
             <span className="text-xs text-white/45">Secondary reference shown on Your Flow</span>
-            <span className="text-2xl font-black text-amber-300">{currentHigh}<span className="ml-1 text-xs font-medium text-white/40">mg/dL</span></span>
+            <span className="text-2xl font-black" style={{ color: "#af751b" }}>{currentHigh}<span className="ml-1 text-xs font-medium text-white/40">mg/dL</span></span>
           </div>
           <div className="mt-4">
             <HighGlucosePicker value={currentHigh} onChange={handleSelectHigh} />
@@ -102,7 +104,7 @@ export default function DisplaySettings() {
         </div>
       </div>
 
-      <div className="glass-card border rounded-3xl p-4">
+      <div className="glass-card border rounded-3xl p-4" style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}>
         <p className="text-xs text-white/50 leading-relaxed">
           Graph height sets the normal upper limit of your glucose graph across every Your Flow view —
           3 hour, 6 hour, 12 hour, and 24 hour. Your lower boundary stays at 40 mg/dL. Whenever a
@@ -113,7 +115,7 @@ export default function DisplaySettings() {
 
       <div className="space-y-3">
         <div className="flex items-center gap-2 px-1">
-          <Droplets className="h-4 w-4 text-teal-400/80" />
+          <Droplets className="h-4 w-4" style={{ color: "#5b6550" }} />
           <h3 className="text-sm font-bold text-white uppercase tracking-wider">Manual Glucose Logging</h3>
         </div>
         <button
@@ -121,6 +123,7 @@ export default function DisplaySettings() {
           onClick={handleToggleManualGlucose}
           disabled={isSaving}
           className="glass-card border rounded-3xl p-4 w-full flex items-center justify-between gap-4 text-left transition active:scale-[0.99] hover:bg-white/[0.04]"
+          style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}
         >
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-white">Log glucose by hand</p>
@@ -132,14 +135,14 @@ export default function DisplaySettings() {
             className="relative h-7 w-12 shrink-0 rounded-full border transition-colors"
             style={{
               background: manualGlucoseEnabled
-                ? "linear-gradient(145deg, rgba(91,168,138,0.55), rgba(91,163,184,0.40))"
-                : "rgba(255,255,255,0.06)",
-              borderColor: manualGlucoseEnabled ? "rgba(91,168,138,0.50)" : "rgba(255,255,255,0.12)",
+                ? "#5b6550"
+                : "rgba(63, 56, 48, 0.10)",
+              borderColor: manualGlucoseEnabled ? "#5b6550" : "#eadccf",
             }}
           >
             <span
-              className="absolute top-1/2 h-5 w-5 -translate-y-1/2 rounded-full bg-white shadow-md transition-all"
-              style={{ left: manualGlucoseEnabled ? "calc(100% - 22px)" : "2px" }}
+              className="absolute top-1/2 h-5 w-5 -translate-y-1/2 rounded-full shadow-md transition-all"
+              style={{ left: manualGlucoseEnabled ? "calc(100% - 22px)" : "2px", background: manualGlucoseEnabled ? "#fdf9f2" : "#f7f1e8" }}
             />
           </span>
         </button>

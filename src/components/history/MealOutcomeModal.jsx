@@ -124,7 +124,7 @@ export default function MealOutcomeModal({ meal, glucose, insulin, targetLow, ta
   }, [data, targetLow, targetHigh, highRef]);
 
   const riseColor =
-    meal?.rise > 60 ? "#d4a056" : meal?.rise < 0 ? "#5ba88a" : "rgba(255,255,255,0.85)";
+    meal?.rise > 60 ? "#af751b" : meal?.rise < 0 ? "#5b6550" : "#8a7f70";
 
   return (
     <AnimatePresence>
@@ -138,7 +138,7 @@ export default function MealOutcomeModal({ meal, glucose, insulin, targetLow, ta
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="absolute inset-0 bg-black/75 backdrop-blur-sm"
+            className="absolute inset-0" style={{ background: "rgba(63, 56, 48, 0.25)" }}
           />
           <motion.div
             initial={{ opacity: 0, y: 30, scale: 0.97 }}
@@ -146,12 +146,11 @@ export default function MealOutcomeModal({ meal, glucose, insulin, targetLow, ta
             exit={{ opacity: 0, y: 30, scale: 0.97 }}
             transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
             onClick={(e) => e.stopPropagation()}
-            className="stackd-glass relative z-10 max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-3xl border p-5"
+            className="relative z-10 max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-3xl border p-5"
             style={{
-              background: "linear-gradient(165deg, rgba(18,28,23,0.97), rgba(10,16,13,0.97))",
-              borderColor: "rgba(255,255,255,0.16)",
-              boxShadow: "0 24px 80px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.12)",
-              backdropFilter: "blur(20px)",
+              background: "#fdf9f2",
+              borderColor: "#eadccf",
+              boxShadow: "0 8px 28px rgba(63, 56, 48, 0.12), 0 2px 8px rgba(63, 56, 48, 0.06)",
             }}
           >
             {/* Header */}
@@ -169,8 +168,8 @@ export default function MealOutcomeModal({ meal, glucose, insulin, targetLow, ta
                 aria-label="Close"
                 className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-white/60 transition hover:text-white"
                 style={{
-                  background: "linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))",
-                  borderColor: "rgba(255,255,255,0.14)",
+                  background: "#f7f1e8",
+                  borderColor: "#eadccf",
                 }}
               >
                 <X className="h-4 w-4" />
@@ -179,15 +178,15 @@ export default function MealOutcomeModal({ meal, glucose, insulin, targetLow, ta
 
             {/* Chart */}
             {data.length > 0 ? (
-              <div className="rounded-2xl border p-3" style={{ background: "rgba(255,255,255,0.02)", borderColor: "rgba(255,255,255,0.08)" }}>
+              <div className="rounded-2xl border p-3" style={{ background: "#f7f1e8", borderColor: "#eadccf" }}>
                 <p className="mb-1 px-1 text-[11px] font-semibold text-white/65">Glucose Response</p>
                 <p className="mb-2 px-1 text-[9px] text-white/30">Your glucose journey from 30 min before to 3 hours after this meal</p>
                 <ResponsiveContainer width="100%" height={200}>
                   <ComposedChart data={data} margin={{ top: 8, right: 14, left: 2, bottom: 4 }}>
                     <defs>
                       <linearGradient id="modalGlucoseGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#d4a056" stopOpacity={0.95} />
-                        <stop offset={`${((yMax - targetHigh) / (yMax - yMin)) * 100}%`} stopColor="#d4a056" stopOpacity={0.95} />
+                        <stop offset="0%" stopColor="#af751b" stopOpacity={0.95} />
+                        <stop offset={`${((yMax - targetHigh) / (yMax - yMin)) * 100}%`} stopColor="#af751b" stopOpacity={0.95} />
                         <stop offset={`${((yMax - targetHigh) / (yMax - yMin)) * 100}%`} stopColor={gTheme.inRangeColor} stopOpacity={0.9} />
                         <stop offset={`${((yMax - targetLow) / (yMax - yMin)) * 100}%`} stopColor={gTheme.inRangeColor} stopOpacity={0.9} />
                         <stop offset={`${((yMax - targetLow) / (yMax - yMin)) * 100}%`} stopColor={GLUCOSE_STATUS_COLORS.low} stopOpacity={0.9} />
@@ -230,10 +229,10 @@ export default function MealOutcomeModal({ meal, glucose, insulin, targetLow, ta
                       tickLine={false}
                       width={36}
                     />
-                    <ReferenceArea yAxisId="glucose" y1={targetLow} y2={targetHigh} fill="#5ba88a" fillOpacity={0.06} />
+                    <ReferenceArea yAxisId="glucose" y1={targetLow} y2={targetHigh} fill="#5b6550" fillOpacity={0.06} />
                     <ReferenceLine yAxisId="glucose" y={targetHigh} stroke={gTheme.refLineStroke} strokeDasharray="3 4" />
                     <ReferenceLine yAxisId="glucose" y={targetLow} stroke={gTheme.refLineStroke} strokeDasharray="3 4" />
-                    <ReferenceLine x={0} yAxisId="glucose" stroke="#f59e0b" strokeDasharray="2 3" strokeWidth={1} />
+                    <ReferenceLine x={0} yAxisId="glucose" stroke="#af751b" strokeDasharray="2 3" strokeWidth={1} />
                     <Area
                       yAxisId="iob"
                       type="monotone"
@@ -266,34 +265,34 @@ export default function MealOutcomeModal({ meal, glucose, insulin, targetLow, ta
                     <span className="text-[9px] text-white/40">Insulin active</span>
                   </span>
                   <span className="flex items-center gap-1.5">
-                    <span className="inline-block h-2 w-2 rounded-full" style={{ background: "#5ba88a" }} />
+                    <span className="inline-block h-2 w-2 rounded-full" style={{ background: "#5b6550" }} />
                     <span className="text-[9px] text-white/40">Comfort zone ({targetLow}–{targetHigh})</span>
                   </span>
                   <span className="flex items-center gap-1.5">
-                    <span className="inline-block h-2 w-2 rounded-full" style={{ background: "#f59e0b" }} />
+                    <span className="inline-block h-2 w-2 rounded-full" style={{ background: "#af751b" }} />
                     <span className="text-[9px] text-white/40">Meal time</span>
                   </span>
                 </div>
               </div>
             ) : (
-              <div className="flex h-[120px] items-center justify-center rounded-2xl border" style={{ background: "rgba(255,255,255,0.02)", borderColor: "rgba(255,255,255,0.08)" }}>
+              <div className="flex h-[120px] items-center justify-center rounded-2xl border" style={{ background: "#f7f1e8", borderColor: "#eadccf" }}>
                 <p className="text-xs text-white/35">Not enough glucose data to chart this meal</p>
               </div>
             )}
 
             {/* Summary stats */}
             <div className="mt-4 grid grid-cols-3 gap-2">
-              <div className="rounded-xl border px-3 py-2.5 text-center" style={{ background: "rgba(255,255,255,0.02)", borderColor: "rgba(255,255,255,0.08)" }}>
+              <div className="rounded-xl border px-3 py-2.5 text-center" style={{ background: "#fdf9f2", borderColor: "#eadccf" }}>
                 <p className="text-[9px] uppercase tracking-wider text-white/30">Before meal</p>
                 <p className="mt-0.5 text-sm font-bold text-white/80">{Math.round(meal.startingGlucose)}</p>
                 <p className="text-[8px] text-white/25">mg/dL</p>
               </div>
-              <div className="rounded-xl border px-3 py-2.5 text-center" style={{ background: "rgba(255,255,255,0.02)", borderColor: "rgba(255,255,255,0.08)" }}>
+              <div className="rounded-xl border px-3 py-2.5 text-center" style={{ background: "#fdf9f2", borderColor: "#eadccf" }}>
                 <p className="text-[9px] uppercase tracking-wider text-white/30">Peak</p>
                 <p className="mt-0.5 text-sm font-bold" style={{ color: riseColor }}>{Math.round(meal.peakGlucose)}</p>
                 <p className="text-[8px] text-white/25">mg/dL</p>
               </div>
-              <div className="rounded-xl border px-3 py-2.5 text-center" style={{ background: "rgba(255,255,255,0.02)", borderColor: "rgba(255,255,255,0.08)" }}>
+              <div className="rounded-xl border px-3 py-2.5 text-center" style={{ background: "#fdf9f2", borderColor: "#eadccf" }}>
                 <p className="text-[9px] uppercase tracking-wider text-white/30">Rise</p>
                 <p className="mt-0.5 text-sm font-bold" style={{ color: riseColor }}>
                   {meal.rise > 0 ? "+" : ""}{Math.round(meal.rise)}

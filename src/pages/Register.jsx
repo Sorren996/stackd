@@ -121,8 +121,9 @@ export default function Register() {
           </InputOTP>
         </div>
         <Button
-          className="w-full h-12 font-medium bg-[hsl(var(--chart-1))]"
+          className="w-full h-12 font-medium"
           onClick={handleVerify}
+          style={{ background: "#3f3830", color: "#f7f1e8" }}
           disabled={loading || otpCode.length < 6}>
           
           {loading ?
@@ -232,7 +233,7 @@ export default function Register() {
             
           </div>
         </div>
-        <Button type="submit" className="w-full h-12 font-medium bg-[hsl(var(--chart-1))]" disabled={loading}>
+        <Button type="submit" className="w-full h-12 font-medium" disabled={loading} style={{ background: "#3f3830", color: "#f7f1e8" }}>
           {loading ?
           <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />

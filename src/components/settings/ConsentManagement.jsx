@@ -70,12 +70,12 @@ export default function ConsentManagement() {
         <h3 className="text-sm font-bold text-white uppercase tracking-wider px-1">Legal & Consent</h3>
 
         {/* Status card */}
-        <div className="glass-card border rounded-3xl p-4 space-y-4">
+        <div className="glass-card border rounded-3xl p-4 space-y-4" style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}>
           <div className="flex items-center gap-3">
             {isComplete && bundleCurrent ? (
-              <CheckCircle2 className="w-5 h-5 shrink-0 text-[#5ba88a]" />
+              <CheckCircle2 className="w-5 h-5 shrink-0" style={{ color: "#5b6550" }} />
             ) : (
-              <XCircle className="w-5 h-5 shrink-0 text-amber-400" />
+              <XCircle className="w-5 h-5 shrink-0" style={{ color: "#af751b" }} />
             )}
             <div>
               <p className="text-sm font-semibold text-white/90">
@@ -90,7 +90,7 @@ export default function ConsentManagement() {
           </div>
 
           {latestAck?.accepted_at && (
-            <div className="space-y-1 border-t border-white/8 pt-3">
+            <div className="space-y-1 border-t pt-3" style={{ borderColor: "#eadccf" }}>
               <div className="flex justify-between">
                 <span className="text-xs text-white/35">Last accepted</span>
                 <span className="text-xs font-medium text-white/60">
@@ -103,7 +103,7 @@ export default function ConsentManagement() {
               </div>
               <div className="flex justify-between">
                 <span className="text-xs text-white/35">Health data consent</span>
-                <span className="text-xs font-medium" style={{ color: user?.health_data_consent_active ? "#5ba88a" : "#d4a056" }}>
+                <span className="text-xs font-medium" style={{ color: user?.health_data_consent_active ? "#5b6550" : "#af751b" }}>
                   {user?.health_data_consent_active ? "Active" : "Withdrawn"}
                 </span>
               </div>
@@ -112,7 +112,7 @@ export default function ConsentManagement() {
         </div>
 
         {/* Document links */}
-        <div className="glass-card border rounded-3xl p-2">
+        <div className="glass-card border rounded-3xl p-2" style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}>
           {Object.entries(LEGAL_DOCUMENTS).map(([key, doc]) => (
             <button
               key={key}
@@ -134,11 +134,11 @@ export default function ConsentManagement() {
 
         {/* Acknowledgment history */}
         {ackRecords.length > 0 && (
-          <div className="glass-card border rounded-3xl p-4 space-y-3">
+          <div className="glass-card border rounded-3xl p-4 space-y-3" style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}>
             <p className="text-xs font-bold text-white/50 uppercase tracking-wider">Acknowledgment History</p>
             <div className="space-y-2">
               {ackRecords.slice(0, 5).map((record) => (
-                <div key={record.id} className="flex items-center justify-between rounded-xl bg-white/[0.02] px-3 py-2">
+                <div key={record.id} className="flex items-center justify-between rounded-xl px-3 py-2" style={{ background: "#f7f1e8" }}>
                   <div>
                     <p className="text-xs font-medium text-white/70">
                       {record.consent_source.replace(/_/g, " ")}
@@ -149,7 +149,7 @@ export default function ConsentManagement() {
                   </div>
                   <div className="flex items-center gap-2">
                     {record.withdrawn_at && (
-                      <span className="text-[10px] font-medium text-amber-400/60">withdrawn</span>
+                      <span className="text-[10px] font-medium" style={{ color: "#af751b", opacity: 0.6 }}>withdrawn</span>
                     )}
                     <span className="text-[10px] text-white/30">v{record.acknowledgment_bundle_version}</span>
                   </div>
@@ -164,10 +164,11 @@ export default function ConsentManagement() {
           <button
             type="button"
             onClick={() => setShowWithdrawModal(true)}
-            className="w-full flex items-center justify-between rounded-2xl border border-amber-500/15 bg-amber-500/[0.03] px-4 py-3.5 transition hover:bg-amber-500/[0.06]"
+            className="w-full flex items-center justify-between rounded-2xl border px-4 py-3.5 transition"
+            style={{ borderColor: "rgba(175,117,27,0.15)", background: "rgba(175,117,27,0.03)" }}
           >
             <div className="flex items-center gap-3">
-              <Shield className="w-4 h-4 text-amber-400/70" />
+              <Shield className="w-4 h-4" style={{ color: "#af751b", opacity: 0.7 }} />
               <div className="text-left">
                 <p className="text-sm font-medium text-white/70">Withdraw Health Data Consent</p>
                 <p className="text-[10px] text-white/30">Revoke consent and review acknowledgments again</p>
@@ -186,7 +187,8 @@ export default function ConsentManagement() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[250] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+              className="fixed inset-0 z-[250] flex items-center justify-center p-4"
+              style={{ background: "rgba(63, 56, 48, 0.25)" }}
               onClick={() => !isWithdrawing && setShowWithdrawModal(false)}
             >
               <motion.div
@@ -194,12 +196,12 @@ export default function ConsentManagement() {
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.96, opacity: 0 }}
                 transition={{ type: "spring", stiffness: 400, damping: 32 }}
-                className="w-full max-w-md rounded-3xl border border-white/10 p-5"
-                style={{ background: "linear-gradient(165deg, rgba(18,28,23,0.97), rgba(10,16,13,0.98))", backdropFilter: "blur(20px)" }}
+                className="w-full max-w-md rounded-3xl border p-5"
+                style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 8px 28px rgba(63, 56, 48, 0.12)" }}
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="mb-4 flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 shrink-0 text-amber-400 mt-0.5" />
+                <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" style={{ color: "#af751b" }} />
                 <div>
                   <h3 className="text-base font-bold text-white">Withdraw Health Data Consent?</h3>
                   <p className="mt-1 text-xs text-white/50">
@@ -226,7 +228,8 @@ export default function ConsentManagement() {
                   type="button"
                   onClick={() => setShowWithdrawModal(false)}
                   disabled={isWithdrawing}
-                  className="flex-1 rounded-2xl border border-white/10 py-3 text-sm font-medium text-white/60 transition hover:bg-white/5 disabled:opacity-50"
+                  className="flex-1 rounded-2xl border py-3 text-sm font-medium text-white/60 transition disabled:opacity-50"
+                  style={{ borderColor: "#eadccf", background: "#f7f1e8" }}
                 >
                   Cancel
                 </button>
@@ -234,8 +237,8 @@ export default function ConsentManagement() {
                   type="button"
                   onClick={handleWithdraw}
                   disabled={isWithdrawing}
-                  className="flex-1 rounded-2xl py-3 text-sm font-semibold text-white transition active:scale-[0.98] disabled:opacity-50"
-                  style={{ background: "linear-gradient(145deg, rgba(212,160,86,0.85), rgba(201,112,96,0.75))" }}
+                  className="flex-1 rounded-2xl py-3 text-sm font-semibold transition active:scale-[0.98] disabled:opacity-50"
+                  style={{ background: "#af751b", color: "#f7f1e8" }}
                 >
                   {isWithdrawing ? (
                     <span className="flex items-center justify-center gap-2">

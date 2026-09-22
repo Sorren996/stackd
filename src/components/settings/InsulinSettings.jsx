@@ -35,12 +35,9 @@ const INSULIN_PLAN_HELP = {
 };
 
 const CANOPY_GLASS = {
-  background: "linear-gradient(155deg, rgba(22,48,50,0.55), rgba(11,26,28,0.62))",
-  border: "1px solid rgba(95,180,144,0.18)",
-  boxShadow:
-    "0 14px 40px rgba(0,0,0,0.28), inset 0 1px 1px rgba(161,209,185,0.08), inset 0 -1px 1px rgba(0,0,0,0.18)",
-  backdropFilter: "blur(8px)",
-  WebkitBackdropFilter: "blur(8px)",
+  background: "#fdf9f2",
+  border: "1px solid #eadccf",
+  boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)",
 };
 
 function SectionLabel({ icon: Icon, children }) {
@@ -48,9 +45,9 @@ function SectionLabel({ icon: Icon, children }) {
     <div className="flex items-center gap-2 px-1">
       <span
         className="flex h-5 w-5 items-center justify-center rounded-full"
-        style={{ background: "rgba(95,180,144,0.12)", border: "1px solid rgba(95,180,144,0.28)" }}
+        style={{ background: "rgba(91,101,80,0.12)", border: "1px solid rgba(91,101,80,0.28)" }}
       >
-        <Icon className="h-3 w-3 text-[#a1d1b9]" />
+        <Icon className="h-3 w-3" style={{ color: "#5b6550" }} />
       </span>
       <h3 className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/40">{children}</h3>
     </div>
@@ -93,11 +90,11 @@ function SettingHelpButton({ id, openHelp, setOpenHelp }) {
         event.stopPropagation();
         setOpenHelp(openHelp === id ? null : id);
       }}
-      className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition ${
-        openHelp === id
-          ? "border-[#5fb490]/45 bg-[#5fb490]/12 text-[#a1d1b9]"
-          : "border-white/10 bg-white/5 text-white/35 hover:text-[#a1d1b9]"
-      }`}
+      className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition"
+      style={openHelp === id
+        ? { borderColor: "rgba(91,101,80,0.45)", background: "rgba(91,101,80,0.12)", color: "#5b6550" }
+        : { borderColor: "#eadccf", background: "#fdf9f2", color: "#8a7f70" }
+      }
       aria-label={`${help.title} help`}
     >
       <Info className="h-3 w-3" />
@@ -124,7 +121,8 @@ function SettingsHelpOverlay({ openHelp, onClose }) {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.16 }}
-          className="fixed inset-0 z-[999] bg-black/45"
+          className="fixed inset-0 z-[999]"
+          style={{ background: "rgba(63, 56, 48, 0.25)" }}
           onClick={onClose}
         >
           <motion.div
@@ -133,7 +131,8 @@ function SettingsHelpOverlay({ openHelp, onClose }) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 30, scale: 0.95 }}
             transition={{ type: "spring", stiffness: 460, damping: 32, mass: 0.85 }}
-            className="fixed bottom-24 left-4 right-4 mx-auto w-auto max-w-sm rounded-2xl border border-white/10 bg-[hsl(162,10%,10%)] p-4 text-left shadow-2xl sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-24 sm:w-full sm:-translate-x-1/2"
+            className="fixed bottom-24 left-4 right-4 mx-auto w-auto max-w-sm rounded-2xl border p-4 text-left shadow-2xl sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-24 sm:w-full sm:-translate-x-1/2"
+            style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 8px 28px rgba(63, 56, 48, 0.12)" }}
             onClick={(event) => event.stopPropagation()}
           >
             <div className="mb-2 flex items-start justify-between gap-3">
@@ -141,7 +140,8 @@ function SettingsHelpOverlay({ openHelp, onClose }) {
               <button
                 type="button"
                 onClick={onClose}
-                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/5 text-white/35"
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-white/35"
+                style={{ background: "#f7f1e8", border: "1px solid #eadccf" }}
                 aria-label="Close help"
               >
                 x
@@ -190,7 +190,8 @@ function CustomInputTray({ open, onClose, title, children, anchorRef }) {
   return createPortal(
     <>
       <div
-        className="fixed inset-0 z-[1000] bg-black/25"
+        className="fixed inset-0 z-[1000]"
+        style={{ background: "rgba(63, 56, 48, 0.25)" }}
         onPointerDown={absorb}
         onPointerUp={absorb}
         onClick={(event) => {
@@ -199,7 +200,8 @@ function CustomInputTray({ open, onClose, title, children, anchorRef }) {
         }}
       />
       <div
-        className="fixed inset-x-0 bottom-0 z-[1001] min-h-[34dvh] rounded-t-3xl border border-white/10 bg-[hsl(162,10%,8%)] px-4 pb-[max(env(safe-area-inset-bottom),0.85rem)] pt-3 shadow-[0_-24px_60px_rgba(0,0,0,0.55)]"
+        className="fixed inset-x-0 bottom-0 z-[1001] min-h-[34dvh] rounded-t-3xl border px-4 pb-[max(env(safe-area-inset-bottom),0.85rem)] pt-3"
+        style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 -12px 40px rgba(63, 56, 48, 0.10)" }}
         onPointerDown={(event) => event.stopPropagation()}
         onClick={(event) => event.stopPropagation()}
       >
@@ -211,7 +213,8 @@ function CustomInputTray({ open, onClose, title, children, anchorRef }) {
               absorb(event);
               onClose();
             }}
-            className="rounded-full bg-white/10 px-4 py-1.5 text-sm font-semibold text-teal-200"
+            className="rounded-full px-4 py-1.5 text-sm font-semibold"
+            style={{ background: "#3f3830", color: "#f7f1e8" }}
           >
             Done
           </button>
@@ -240,12 +243,12 @@ function NumberPadField({ label, value, onChange, placeholder = "--", decimal = 
       ref={fieldRef}
       className={`rounded-2xl px-3 py-2 ${className}`}
       style={{
-        background: "linear-gradient(145deg, rgba(22,48,50,0.5), rgba(11,26,28,0.5))",
-        border: "1px solid rgba(95,180,144,0.16)",
+        background: "#fdf9f2",
+        border: "1px solid #eadccf",
       }}
     >
       <button type="button" onClick={() => setOpen((value) => !value)} className="flex min-h-10 w-full flex-col items-start justify-center gap-0.5 text-left">
-        <span className={`max-w-full truncate text-base font-bold leading-tight ${textValue ? "text-[#a1d1b9]" : "text-white/25"}`}>{textValue || placeholder}</span>
+        <span className={`max-w-full truncate text-base font-bold leading-tight ${textValue ? "" : "text-white/25"}`} style={textValue ? { color: "#5b6550" } : undefined}>{textValue || placeholder}</span>
       </button>
       <CustomInputTray open={open} onClose={() => setOpen(false)} title={label} anchorRef={fieldRef}>
         <div className="grid grid-cols-3 gap-2.5">
@@ -257,7 +260,8 @@ function NumberPadField({ label, value, onChange, placeholder = "--", decimal = 
                 event.stopPropagation();
                 press(key);
               }}
-              className="h-14 rounded-2xl border border-white/10 bg-white/[0.06] text-xl font-bold text-white/85 transition hover:bg-white/10 active:scale-[0.98]"
+              className="h-14 rounded-2xl border text-xl font-bold text-white/85 transition active:scale-[0.98]"
+              style={{ borderColor: "#eadccf", background: "#f7f1e8" }}
             >
               {key === "back" ? "Back" : key === "clear" ? "Clear" : key}
             </button>
@@ -480,11 +484,11 @@ export default function InsulinSettings() {
           <div className="rounded-3xl p-4 flex gap-4 items-stretch" style={CANOPY_GLASS}>
             <button
               onClick={handleSetRecommended}
-              className={`shrink-0 w-28 py-3 px-2 rounded-2xl border text-center transition-all flex flex-col items-center justify-center ${
-                isRecommended
-                  ? "bg-[#5fb490]/12 border-[#5fb490]/45 text-white"
-                  : "bg-white/[0.01] border-white/10 text-white/40 hover:bg-white/[0.03]"
-              }`}
+              className="shrink-0 w-28 py-3 px-2 rounded-2xl border text-center transition-all flex flex-col items-center justify-center"
+              style={isRecommended
+                ? { background: "rgba(91,101,80,0.12)", borderColor: "rgba(91,101,80,0.45)" }
+                : { background: "#f7f1e8", borderColor: "#eadccf" }
+              }
             >
               <div className="text-[10px] font-bold uppercase tracking-wider opacity-60">Recommended</div>
               <div className="text-base font-extrabold mt-1">70–180</div>
@@ -494,7 +498,7 @@ export default function InsulinSettings() {
             <div className="flex-1 flex flex-col justify-center space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-[10px] text-white/40 uppercase tracking-wider">Custom Range</span>
-                <span className="text-sm font-bold text-[#a1d1b9]">{targetLow}–{targetHigh} mg/dL</span>
+                <span className="text-sm font-bold" style={{ color: "#5b6550" }}>{targetLow}–{targetHigh} mg/dL</span>
               </div>
               <Slider
                 min={70}
@@ -518,7 +522,7 @@ export default function InsulinSettings() {
             <div className="flex items-center justify-between gap-4">
               <div className="space-y-0.5">
                 <Label className="text-sm font-semibold text-white/90 flex items-center gap-2">
-                  <Target className="w-4 h-4 text-[#5fb490]" />
+                  <Target className="w-4 h-4" style={{ color: "#5b6550" }} />
                   Insulin Stacking Warnings
                 </Label>
                 <p className="text-xs text-white/40">Alert when multiple rapid doses overlap</p>
@@ -532,7 +536,7 @@ export default function InsulinSettings() {
         <section className="space-y-2.5">
           <SectionLabel icon={Syringe}>Insulin Plan</SectionLabel>
           <div className="rounded-3xl p-4 space-y-5" style={CANOPY_GLASS}>
-            <div className="rounded-2xl border-l-2 border-[#5fb490]/45 bg-[#5fb490]/[0.05] px-3 py-2.5">
+            <div className="rounded-2xl border-l-2 px-3 py-2.5" style={{ borderColor: "rgba(91,101,80,0.45)", background: "rgba(91,101,80,0.05)" }}>
               <p className="text-[11px] leading-relaxed text-white/45">
                 Enter only insulin settings prescribed or confirmed by your licensed healthcare professional. This app does not provide medical advice, verify dosing accuracy, or replace clinical judgment. Incorrect values may result in serious hypoglycemia or hyperglycemia. Do not start, stop, or adjust insulin based solely on information provided by this app.
               </p>
@@ -604,7 +608,7 @@ export default function InsulinSettings() {
               </p>
             </div>
 
-            <div className="space-y-3 border-t border-[#5fb490]/12 pt-4">
+            <div className="space-y-3 border-t pt-4" style={{ borderColor: "rgba(91,101,80,0.12)" }}>
               <div className="flex min-h-6 items-center justify-between gap-2">
                 <Label className="text-sm font-semibold text-white/90">
                   My insulin library
@@ -617,7 +621,7 @@ export default function InsulinSettings() {
               <InsulinTypeSelector selectedTypes={insulinLibrary} onToggle={toggleInsulinLibrary} />
             </div>
 
-            <div className="space-y-3 border-t border-[#5fb490]/12 pt-4">
+            <div className="space-y-3 border-t pt-4" style={{ borderColor: "rgba(91,101,80,0.12)" }}>
               <div className="flex min-h-6 items-center justify-between gap-2">
                 <Label className="text-sm font-semibold text-white/90">
                   Meal/correction insulin types
@@ -634,7 +638,7 @@ export default function InsulinSettings() {
               />
             </div>
 
-            <div className="space-y-3 border-t border-[#5fb490]/12 pt-4">
+            <div className="space-y-3 border-t pt-4" style={{ borderColor: "rgba(91,101,80,0.12)" }}>
               <Label className="text-sm font-semibold text-white/90">Timing</Label>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">

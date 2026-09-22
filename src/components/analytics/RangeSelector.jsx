@@ -10,7 +10,7 @@ const RANGES = [
 
 export default function RangeSelector({ value, onChange }) {
   return (
-    <div className="flex items-center gap-0.5 rounded-lg border border-white/5 bg-white/[0.03] p-0.5">
+    <div className="flex items-center gap-0.5 rounded-lg border p-0.5" style={{ borderColor: "#eadccf", background: "#fdf9f2" }}>
       {RANGES.map((range) => (
         <button
           key={range.value}
@@ -23,7 +23,7 @@ export default function RangeSelector({ value, onChange }) {
             <motion.div
               layoutId="analytics-range-active"
               className="absolute inset-0 rounded-md"
-              style={{ background: "rgba(53,168,121,0.15)" }}
+              style={{ background: "rgba(91,101,80,0.15)" }}
               transition={{ type: "spring", stiffness: 380, damping: 30 }}
             />
           )}

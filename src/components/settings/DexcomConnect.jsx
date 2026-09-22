@@ -69,10 +69,10 @@ export default function DexcomConnect() {
 
   return (
     <div className="space-y-4">
-      <div className="glass-card rounded-3xl border p-5">
+      <div className="glass-card rounded-3xl border p-5" style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}>
         <div className="flex items-start gap-4">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-teal-500/20 bg-teal-500/10">
-            <HeartPulse className="h-5 w-5 text-teal-400" />
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border" style={{ borderColor: "rgba(91,101,80,0.20)", background: "rgba(91,101,80,0.08)" }}>
+            <HeartPulse className="h-5 w-5" style={{ color: "#5b6550" }} />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-white">Glucose Source</p>
@@ -90,9 +90,9 @@ export default function DexcomConnect() {
           ) : isConnected ? (
             <div className="space-y-4">
               {hasDexcomData ? (
-                <div className="flex items-center gap-2 rounded-2xl border border-teal-500/20 bg-teal-500/10 px-4 py-3">
-                  <Sparkles className="h-4 w-4 text-teal-300" />
-                  <p className="text-xs text-teal-200 font-medium">
+                <div className="flex items-center gap-2 rounded-2xl border px-4 py-3" style={{ borderColor: "rgba(91,101,80,0.20)", background: "rgba(91,101,80,0.08)" }}>
+                  <Sparkles className="h-4 w-4" style={{ color: "#5b6550" }} />
+                  <p className="text-xs font-medium" style={{ color: "#5b6550" }}>
                     Connected and flowing. Your glucose rhythm is syncing peacefully.
                   </p>
                 </div>
@@ -100,13 +100,13 @@ export default function DexcomConnect() {
                 <DexcomSyncStatus />
               )}
               {current?.last_sync_error && (
-                <div className="flex items-start gap-2 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3">
-                  <AlertCircle className="h-4 w-4 text-amber-300 shrink-0 mt-0.5" />
+                <div className="flex items-start gap-2 rounded-2xl border px-4 py-3" style={{ borderColor: "rgba(175,117,27,0.20)", background: "rgba(175,117,27,0.08)" }}>
+                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" style={{ color: "#af751b" }} />
                   <div className="min-w-0">
-                    <p className="text-xs text-amber-200 font-medium">
+                    <p className="text-xs font-medium" style={{ color: "#af751b" }}>
                       Last sync couldn't reach Dexcom
                     </p>
-                    <p className="text-[11px] text-amber-200/60 mt-0.5 leading-relaxed break-words">
+                    <p className="text-[11px] mt-0.5 leading-relaxed break-words" style={{ color: "#af751b", opacity: 0.6 }}>
                       {current.last_sync_error}
                     </p>
                   </div>
@@ -116,7 +116,8 @@ export default function DexcomConnect() {
                 type="button"
                 onClick={handleDisconnect}
                 disabled={disconnecting}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-white/10 text-white/60 hover:bg-white/5 hover:text-white/80 transition-all text-sm font-medium disabled:opacity-40"
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border text-white/60 hover:text-white/80 transition-all text-sm font-medium disabled:opacity-40"
+                style={{ borderColor: "#eadccf", background: "#f7f1e8" }}
               >
                 {disconnecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Unlink className="h-4 w-4" />}
                 {disconnecting ? "Disconnecting..." : "Disconnect"}
@@ -125,9 +126,9 @@ export default function DexcomConnect() {
           ) : (
             <div className="space-y-3">
               {hasError && (
-                <div className="flex items-start gap-2 rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-3">
-                  <AlertCircle className="h-4 w-4 text-rose-300 shrink-0 mt-0.5" />
-                  <p className="text-xs text-rose-200 font-medium leading-relaxed">
+                <div className="flex items-start gap-2 rounded-2xl border px-4 py-3" style={{ borderColor: "rgba(201,112,96,0.20)", background: "rgba(201,112,96,0.08)" }}>
+                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" style={{ color: "#c97060" }} />
+                  <p className="text-xs font-medium leading-relaxed" style={{ color: "#c97060" }}>
                     Your last sync couldn't reach Dexcom. Please re-enter your credentials to reconnect.
                   </p>
                 </div>
@@ -142,7 +143,8 @@ export default function DexcomConnect() {
                   placeholder="Your Dexcom account email"
                   autoCapitalize="none"
                   autoCorrect="off"
-                  className="w-full rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-teal-500/40"
+                  className="w-full rounded-2xl border px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none"
+                  style={{ background: "#f7f1e8", borderColor: "#eadccf" }}
                 />
               </div>
 
@@ -156,7 +158,8 @@ export default function DexcomConnect() {
                     placeholder="Your Dexcom account password"
                     autoCapitalize="none"
                     autoCorrect="off"
-                    className="w-full rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 pr-11 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-teal-500/40"
+                    className="w-full rounded-2xl border px-4 py-3 pr-11 text-sm text-white placeholder:text-white/30 focus:outline-none"
+                    style={{ background: "#f7f1e8", borderColor: "#eadccf" }}
                   />
                   <button
                     type="button"
@@ -172,7 +175,8 @@ export default function DexcomConnect() {
                 type="button"
                 onClick={handleConnect}
                 disabled={connecting || !username.trim() || !password}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-[hsl(var(--chart-1))] text-white font-medium text-sm hover:opacity-90 transition-all disabled:opacity-40"
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-medium text-sm hover:opacity-90 transition-all disabled:opacity-40"
+                style={{ background: "#3f3830", color: "#f7f1e8" }}
               >
                 {connecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <HeartPulse className="h-4 w-4" />}
                 {connecting ? "Connecting..." : "Connect your glucose source"}
