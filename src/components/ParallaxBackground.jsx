@@ -1,9 +1,7 @@
 import { useEffect, useRef } from "react";
-import { useIsLightTheme } from "@/lib/theme";
 
 export default function ParallaxBackground() {
   const ref = useRef(null);
-  const isLight = useIsLightTheme();
 
   useEffect(() => {
     const el = ref.current;
@@ -37,9 +35,7 @@ export default function ParallaxBackground() {
       aria-hidden="true"
       className="pointer-events-none fixed inset-0 -z-10"
       style={{
-        background: isLight
-          ? "#f7f1e8"
-          : "linear-gradient(to bottom, #0F241F 0%, #112232 30%, #112232 100%)",
+        background: "#f7f1e8",
         backgroundSize: "100% 300%",
         backgroundPosition: "50% 0%",
         backgroundRepeat: "no-repeat",

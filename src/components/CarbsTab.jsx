@@ -473,7 +473,7 @@ Do not give insulin dosing advice.
       <div className={embedded ? "flex flex-col" : "flex min-h-0 flex-1 flex-col overflow-hidden"}>
         {CUSTOM_MODE_ENABLED && (
           <div className="px-5 pb-2 pt-4">
-            <div className="flex rounded-2xl border p-1" style={{ borderColor: "rgba(255,255,255,0.10)", background: "rgba(255,255,255,0.03)", boxShadow: "inset 0 1px 1px rgba(255,255,255,0.06)" }}>
+            <div className="flex rounded-2xl border p-1" style={{ borderColor: "#eadccf", background: "#f7f1e8" }}>
               {[
                 ["estimate", "AI Estimate", Sparkles],
                 ["custom", "Custom", PenLine],

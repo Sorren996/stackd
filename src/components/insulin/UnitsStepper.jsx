@@ -2,13 +2,12 @@ import { Minus, Plus } from "lucide-react";
 
 const PRESETS = [5, 10, 15, 20];
 
-const TRANSITION = "border-color 250ms ease-out, background 250ms ease-out, box-shadow 250ms ease-out, color 250ms ease-out";
+const TRANSITION = "border-color 250ms ease-out, background 250ms ease-out, color 250ms ease-out";
 
 const ACTION_BTN_STYLE = {
-  borderColor: "rgba(255,255,255,0.12)",
-  background: "rgba(255,255,255,0.04)",
-  boxShadow: "inset 0 1px 1px rgba(255,255,255,0.05)",
-  color: "rgba(255,255,255,0.85)",
+  borderColor: "#eadccf",
+  background: "#fdf9f2",
+  color: "#3f3830",
   transition: "transform 120ms ease-out, opacity 120ms ease-out",
 };
 
@@ -16,10 +15,6 @@ const ACTION_BTN_STYLE = {
  * Touch-first unit selector for insulin logging.
  * A large central stepper gives ±1 unit precision; quick presets
  * below it act as shortcuts that set the dose exactly. No keyboard.
- *
- * The +/- buttons are neutral ACTION buttons — a subtle scale press
- * only, never a persistent glow. Only the dose value and the matching
- * preset carry a persistent selected state, transitioned smoothly.
  */
 export default function UnitsStepper({ value, onChange }) {
   const current = Number(value) || 0;
@@ -47,8 +42,8 @@ export default function UnitsStepper({ value, onChange }) {
         </button>
 
         <div className="flex min-w-[104px] items-baseline justify-center gap-1">
-          <span className="text-4xl font-black leading-none text-white">{current}</span>
-          <span className="text-sm font-medium text-white/45">U</span>
+          <span className="text-4xl font-black leading-none" style={{ color: "#3f3830" }}>{current}</span>
+          <span className="text-sm font-medium" style={{ color: "#a89e8d" }}>U</span>
         </div>
 
         <button
@@ -90,14 +85,9 @@ export default function UnitsStepper({ value, onChange }) {
                   height: 44,
                   minWidth: 56,
                   transition: TRANSITION,
-                  borderColor: isSelected ? "rgba(91,168,138,0.60)" : "rgba(255,255,255,0.10)",
-                  background: isSelected
-                    ? "linear-gradient(145deg, rgba(91,168,138,0.20), rgba(91,163,184,0.12))"
-                    : "rgba(255,255,255,0.03)",
-                  boxShadow: isSelected
-                    ? "0 0 0 1px rgba(91,168,138,0.25), 0 0 18px rgba(91,168,138,0.28), inset 0 1px 1px rgba(255,255,255,0.10)"
-                    : "inset 0 1px 1px rgba(255,255,255,0.04)",
-                  color: isSelected ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.62)",
+                  borderColor: isSelected ? "rgba(91,101,80,0.50)" : "#eadccf",
+                  background: isSelected ? "rgba(91,101,80,0.12)" : "#fdf9f2",
+                  color: isSelected ? "#3f3830" : "#8a7f70",
                 }}
                 aria-pressed={isSelected}
               >

@@ -1154,7 +1154,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
             GLUCOSE_STATUS_COLORS.high :
             status === "low" ?
             GLUCOSE_STATUS_COLORS.low :
-            "#2dd4bf";
+            "#5b6550";
             // 100% glow over target range, 150% when over the high/low reference line.
             const overReference = isGlucoseStale ? false : centerGlucoseStatus?.overReference ?? (
             glucoseValue != null && (glucoseValue > readHighReference() || glucoseValue < FIXED_LOW_REFERENCE));

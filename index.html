@@ -13,12 +13,8 @@
     <meta name="theme-color" content="#f7f1e8" />
     <script>
       (function () {
-        try {
-          var t = localStorage.getItem("stackd-theme");
-          document.documentElement.dataset.theme = t === "dark" ? "dark" : "light";
-        } catch (e) {
-          document.documentElement.dataset.theme = "light";
-        }
+        // Warm editorial light mode is the only theme.
+        document.documentElement.dataset.theme = "light";
       })();
     </script>
     <title>Stackd — Your Glucose Companion</title>

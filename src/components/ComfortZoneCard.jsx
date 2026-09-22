@@ -15,16 +15,17 @@ export default function ComfortZoneCard({ percentage }) {
   return (
     <motion.div
       whileTap={{ scale: 0.97 }}
-      className="metric-card stackd-card relative flex min-h-[112px] flex-col justify-between overflow-hidden rounded-2xl p-4">
+      className="relative flex min-h-[112px] flex-col justify-between overflow-hidden rounded-2xl p-4"
+      style={{ background: "transparent", border: "none", boxShadow: "none" }}>
 
       <div className="relative z-10 mb-1 flex items-start justify-between gap-2">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-white/35">Daily Balance</span>
+        <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "#a89e8d" }}>Daily Balance</span>
         
       </div>
 
       <div className="relative z-10 mt-1">
-        <span className="text-4xl font-black leading-none text-white">{displayValue}</span>
-        <p className="mt-1.5 text-[11px] text-white/35">Time in Comfort Zone</p>
+        <span className="text-4xl font-black leading-none" style={{ color: "#3f3830" }}>{displayValue}</span>
+        <p className="mt-1.5 text-[11px]" style={{ color: "#a89e8d" }}>Time in Comfort Zone</p>
       </div>
 
 

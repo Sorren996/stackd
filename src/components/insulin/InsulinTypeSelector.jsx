@@ -6,7 +6,7 @@ import { useEffect, useRef } from "react";
  * in isolation; the parent sheet never moves horizontally. Selection
  * transitions gently illuminate the chosen circle over ~250ms.
  */
-const TRANSITION = "border-color 250ms ease-out, background 250ms ease-out, box-shadow 250ms ease-out, color 250ms ease-out";
+const TRANSITION = "border-color 250ms ease-out, background 250ms ease-out, color 250ms ease-out";
 
 export default function InsulinTypeSelector({ value, onChange, options }) {
   const scrollRef = useRef(null);
@@ -31,7 +31,7 @@ export default function InsulinTypeSelector({ value, onChange, options }) {
     return (
       <div>
         <span className="stackd-section-label">Insulin Type</span>
-        <p className="mt-2 text-xs text-white/40">Add insulin types in Settings to log a dose.</p>
+        <p className="mt-2 text-xs" style={{ color: "#a89e8d" }}>Add insulin types in Settings to log a dose.</p>
       </div>
     );
   }
@@ -68,14 +68,9 @@ export default function InsulinTypeSelector({ value, onChange, options }) {
                   height: 88,
                   width: 88,
                   transition: TRANSITION,
-                  borderColor: isSelected ? "rgba(91,168,138,0.65)" : "rgba(255,255,255,0.10)",
-                  background: isSelected
-                    ? "linear-gradient(145deg, rgba(91,168,138,0.20), rgba(91,163,184,0.10))"
-                    : "rgba(255,255,255,0.03)",
-                  boxShadow: isSelected
-                    ? "0 0 0 1px rgba(91,168,138,0.30), 0 0 20px rgba(91,168,138,0.30), inset 0 1px 1px rgba(255,255,255,0.10)"
-                    : "inset 0 1px 1px rgba(255,255,255,0.04)",
-                  color: isSelected ? "rgba(255,255,255,0.97)" : "rgba(255,255,255,0.60)",
+                  borderColor: isSelected ? "rgba(91,101,80,0.50)" : "#eadccf",
+                  background: isSelected ? "rgba(91,101,80,0.12)" : "#fdf9f2",
+                  color: isSelected ? "#3f3830" : "#8a7f70",
                 }}
                 aria-pressed={isSelected}
               >

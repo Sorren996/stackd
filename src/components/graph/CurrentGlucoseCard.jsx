@@ -63,10 +63,11 @@ export default function CurrentGlucoseCard({
 
   return (
     <motion.div
-      className="metric-card stackd-card relative flex min-h-[112px] flex-col justify-between overflow-hidden rounded-2xl p-4">
+      className="relative flex min-h-[112px] flex-col justify-between overflow-hidden rounded-2xl p-4"
+      style={{ background: "transparent", border: "none", boxShadow: "none" }}>
 
       <div className="relative z-10 mb-1 flex items-start justify-between gap-2">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-white/35">
+        <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "#a89e8d" }}>
           Current Glucose
         </span>
         
@@ -74,17 +75,18 @@ export default function CurrentGlucoseCard({
 
       <div className="relative z-10 mt-1 flex items-end gap-1.5">
         {isStale ?
-        <span className="text-4xl font-black leading-none text-white/45">--</span> :
+        <span className="text-4xl font-black leading-none" style={{ color: "#a89e8d" }}>--</span> :
         glucoseValue != null ?
         <GlucoseTicker
           ref={tickerRef}
           initialValue={String(glucoseValue)}
-          className="text-4xl font-black leading-none text-white" /> :
+          className="text-4xl font-black leading-none"
+          style={{ color: "#3f3830" }} /> :
 
 
-        <span className="text-4xl font-black leading-none text-white">--</span>
+        <span className="text-4xl font-black leading-none" style={{ color: "#3f3830" }}>--</span>
         }
-        <span className="mb-1 text-[11px] font-medium text-white/40">mg/dL</span>
+        <span className="mb-1 text-[11px] font-medium" style={{ color: "#a89e8d" }}>mg/dL</span>
         {latestGlucose && !isStale &&
         <TrendIcon className="self-center h-6 w-6" style={{ color: "#3f3830" }} />
         }
@@ -92,10 +94,10 @@ export default function CurrentGlucoseCard({
 
       <div className="relative z-10 mt-1">
         {freshAgeLabel && !isStale &&
-        <p className="text-[11px] text-white/35">{freshAgeLabel}</p>
+        <p className="text-[11px]" style={{ color: "#a89e8d" }}>{freshAgeLabel}</p>
         }
         {isStale && staleAge &&
-        <p className="text-[11px] text-white/35">Last reading {staleAge}</p>
+        <p className="text-[11px]" style={{ color: "#a89e8d" }}>Last reading {staleAge}</p>
         }
 
 

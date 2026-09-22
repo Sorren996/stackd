@@ -8,13 +8,8 @@ import { useState, useEffect, useCallback } from "react";
 const THEME_KEY = "stackd-theme";
 
 function readInitialTheme() {
-  if (typeof window === "undefined") return "light";
-  try {
-    const stored = window.localStorage.getItem(THEME_KEY);
-    return stored === "dark" ? "dark" : "light";
-  } catch {
-    return "light";
-  }
+  // Warm editorial light mode is the only theme — always return "light".
+  return "light";
 }
 
 export function useTheme() {
@@ -31,15 +26,15 @@ export function useTheme() {
     window.dispatchEvent(new Event("stackd-theme-change"));
   }, [theme]);
 
-  const setTheme = useCallback((next) => {
-    setThemeState(next === "dark" ? "dark" : "light");
+  const setTheme = useCallback(() => {
+    setThemeState("light");
   }, []);
 
   const toggle = useCallback(() => {
-    setThemeState((current) => (current === "dark" ? "light" : "dark"));
+    setThemeState("light");
   }, []);
 
-  return { theme, setTheme, toggle, isLight: theme === "light" };
+  return { theme, setTheme, toggle, isLight: true };
 }
 
 // Reactive flag for components that must re-render when the theme changes

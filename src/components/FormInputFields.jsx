@@ -1,7 +1,7 @@
 const GLASS_SURFACE = {
-  background: "linear-gradient(145deg, rgba(255,255,255,0.05), rgba(255,255,255,0.012))",
-  borderColor: "rgba(255,255,255,0.14)",
-  boxShadow: "0 2px 10px rgba(0,0,0,0.12), inset 0 1px 1px rgba(255,255,255,0.1)"
+  background: "#fdf9f2",
+  borderColor: "#eadccf",
+  boxShadow: "none"
 };
 
 export function NumberPadField({ label, value, onChange, unit, placeholder = "--", decimal = true, maxLength = 6, large = false }) {
@@ -16,7 +16,7 @@ export function NumberPadField({ label, value, onChange, unit, placeholder = "--
   return (
     <div className={`stackd-input rounded-xl border p-3 ${large ? "px-6 py-6" : ""}`} style={GLASS_SURFACE}>
       <div className="flex items-center justify-between gap-3">
-        <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-white/55">{label}</span>
+        <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wider" style={{ color: "#8a7f70" }}>{label}</span>
         <div className="flex min-w-0 items-baseline gap-1">
           <input
             type="text"
@@ -25,9 +25,11 @@ export function NumberPadField({ label, value, onChange, unit, placeholder = "--
             onChange={handleChange}
             placeholder={placeholder}
             maxLength={maxLength}
-            className={`w-full min-w-0 bg-transparent text-right font-bold text-white placeholder:text-white/30 focus:outline-none ${large ? "text-5xl" : "text-base"}`} />
+            className={`w-full min-w-0 bg-transparent text-right font-bold focus:outline-none ${large ? "text-5xl" : "text-base"}`}
+            style={{ color: "#3f3830" }}
+          />
           
-          {unit && <span className="shrink-0 text-xs text-white/55">{unit}</span>}
+          {unit && <span className="shrink-0 text-xs" style={{ color: "#8a7f70" }}>{unit}</span>}
         </div>
       </div>
     </div>);
@@ -37,15 +39,15 @@ export function NumberPadField({ label, value, onChange, unit, placeholder = "--
 export function TextPadField({ label, value, onChange, placeholder, multiline = false }) {
   return (
     <div>
-      {label && <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-white/55">{label}</span>}
+      {label && <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider" style={{ color: "#8a7f70" }}>{label}</span>}
       {multiline ?
       <textarea
         value={value || ""}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={3}
-        className="stackd-input w-full resize-none rounded-2xl border px-4 py-3.5 text-sm text-white placeholder:text-white/50 focus:outline-none"
-        style={GLASS_SURFACE} /> :
+        className="w-full resize-none rounded-2xl border px-4 py-3.5 text-sm focus:outline-none"
+        style={{ ...GLASS_SURFACE, color: "#3f3830" }} /> :
 
 
       <input
@@ -53,8 +55,8 @@ export function TextPadField({ label, value, onChange, placeholder, multiline = 
         value={value || ""}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="stackd-input w-full rounded-2xl border px-4 py-3.5 text-left text-sm text-white placeholder:text-white/50 focus:outline-none"
-        style={GLASS_SURFACE} />
+        className="w-full rounded-2xl border px-4 py-3.5 text-left text-sm focus:outline-none"
+        style={{ ...GLASS_SURFACE, color: "#3f3830" }} />
 
       }
     </div>);
@@ -65,13 +67,14 @@ export function DateScrollField({ label, value, onChange, max }) {
   return (
     <div className="stackd-input rounded-2xl border p-3" style={GLASS_SURFACE}>
       <div className="flex items-center justify-between">
-        <span className="text-sm text-white/60">{label}</span>
+        <span className="text-sm" style={{ color: "#8a7f70" }}>{label}</span>
         <input
           type="date"
           value={value || ""}
           max={max}
           onChange={(e) => onChange(e.target.value)}
-          className="bg-transparent text-sm font-semibold text-white focus:outline-none" />
+          className="bg-transparent text-sm font-semibold focus:outline-none"
+          style={{ color: "#3f3830" }} />
         
       </div>
     </div>);
@@ -80,15 +83,16 @@ export function DateScrollField({ label, value, onChange, max }) {
 
 export function TimeScrollField({ label, value, onChange, max }) {
   return (
-    <div className="stackd-input rounded-2xl border p-3 my-3" style={GLASS_SURFACE}>
+    <div className="rounded-2xl border p-3 my-3" style={GLASS_SURFACE}>
       <div className="flex items-center justify-between">
-        <span className="text-sm text-white/60">{label}</span>
+        <span className="text-sm" style={{ color: "#8a7f70" }}>{label}</span>
         <input
           type="time"
           value={value || ""}
           max={max}
           onChange={(e) => onChange(e.target.value)}
-          className="bg-transparent text-sm font-semibold text-white focus:outline-none" />
+          className="bg-transparent text-sm font-semibold focus:outline-none"
+          style={{ color: "#3f3830" }} />
         
       </div>
     </div>);
@@ -99,15 +103,16 @@ export function SelectField({ label, value, onChange, options, placeholder = "Se
   return (
     <div className="stackd-input rounded-xl border p-3" style={GLASS_SURFACE}>
       <div className="flex items-center justify-between gap-3">
-        <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-white/55">{label}</span>
+        <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wider" style={{ color: "#8a7f70" }}>{label}</span>
         <select
           value={value || ""}
           onChange={(e) => onChange(e.target.value)}
-          className="min-w-0 flex-1 bg-transparent text-right text-sm font-semibold text-white focus:outline-none">
+          className="min-w-0 flex-1 bg-transparent text-right text-sm font-semibold focus:outline-none"
+          style={{ color: "#3f3830" }}>
           
           {!value && <option value="">{placeholder}</option>}
           {options.map((option) =>
-          <option key={option.value} value={option.value} className="bg-popover text-foreground">
+          <option key={option.value} value={option.value} style={{ background: "#fdf9f2", color: "#3f3830" }}>
               {option.label}
             </option>
           )}

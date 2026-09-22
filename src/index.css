@@ -55,41 +55,42 @@
     --sidebar-ring: 30 16% 22%;
   }
 
-  /* Dark mode retained as a fallback for the theme toggle.
-     The warm editorial theme is the default at :root. */
+  /* Dark mode mirrors :root — the warm editorial light theme is the only
+     theme. These values are identical to :root so even if a .dark class
+     is ever applied, the canvas stays warm sandstone. */
   .dark {
-    --background: 160 12% 7%;
-    --foreground: 160 8% 92%;
-    --card: 162 10% 11%;
-    --card-foreground: 160 8% 92%;
-    --popover: 162 12% 9%;
-    --popover-foreground: 160 8% 92%;
-    --primary: 162 38% 28%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 160 8% 16%;
-    --secondary-foreground: 160 8% 80%;
-    --muted: 160 8% 14%;
-    --muted-foreground: 160 6% 50%;
-    --accent: 162 42% 35%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 162 8% 18%;
-    --input: 162 8% 18%;
-    --ring: 162 38% 35%;
-    --chart-1: 162 50% 42%;
-    --chart-2: 195 55% 45%;
-    --chart-3: 258 45% 53%;
-    --chart-4: 38 75% 51%;
-    --chart-5: 337 33% 25%;
-    --sidebar-background: 160 12% 7%;
-    --sidebar-foreground: 160 8% 92%;
-    --sidebar-primary: 162 38% 28%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 160 8% 16%;
-    --sidebar-accent-foreground: 160 8% 80%;
-    --sidebar-border: 162 8% 18%;
-    --sidebar-ring: 162 38% 35%;
+    --background: 36 39% 94%;
+    --foreground: 30 16% 22%;
+    --card: 36 47% 97%;
+    --card-foreground: 30 16% 22%;
+    --popover: 36 47% 97%;
+    --popover-foreground: 30 16% 22%;
+    --primary: 30 16% 22%;
+    --primary-foreground: 36 39% 94%;
+    --secondary: 36 24% 90%;
+    --secondary-foreground: 30 10% 35%;
+    --muted: 36 20% 92%;
+    --muted-foreground: 30 8% 50%;
+    --accent: 88 8% 35%;
+    --accent-foreground: 36 39% 94%;
+    --destructive: 0 45% 50%;
+    --destructive-foreground: 36 39% 94%;
+    --border: 30 18% 87%;
+    --input: 30 18% 87%;
+    --ring: 30 16% 22%;
+    --chart-1: 88 8% 35%;
+    --chart-2: 30 16% 22%;
+    --chart-3: 32 76% 39%;
+    --chart-4: 30 8% 50%;
+    --chart-5: 0 30% 50%;
+    --sidebar-background: 36 39% 94%;
+    --sidebar-foreground: 30 16% 22%;
+    --sidebar-primary: 30 16% 22%;
+    --sidebar-primary-foreground: 36 39% 94%;
+    --sidebar-accent: 36 24% 90%;
+    --sidebar-accent-foreground: 30 16% 22%;
+    --sidebar-border: 30 18% 87%;
+    --sidebar-ring: 30 16% 22%;
   }
 }
 
@@ -201,6 +202,43 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  /* ── Approved mockup CSS templates ────────────────────────── */
+
+  /* Page header — "Your <em>day</em>" */
+  .hdr { font-size: 19px; font-weight: 600; color: var(--ink, #3f3830); letter-spacing: -.01em; }
+  .hdr em { font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-weight: 400; }
+  .hdr-date { font-size: 12px; color: var(--faint, #a89e8d); font-variant-numeric: tabular-nums; }
+
+  /* Anchor number — one per page, top */
+  .anchor { font-size: 44px; font-weight: 300; letter-spacing: -.03em; color: var(--ink, #3f3830); font-variant-numeric: tabular-nums; line-height: 1; }
+  .caption { font-size: 13px; color: var(--taupe, #8a7f70); }
+  .caption em { font-family: Georgia, 'Times New Roman', serif; font-style: italic; color: var(--ink, #3f3830); }
+
+  /* Section label + hairline rule */
+  .sec { font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: var(--faint, #a89e8d); margin-top: 24px; }
+  .rule { height: 1px; background: var(--hairline, #eadccf); margin-top: 10px; }
+
+  /* Ledger row */
+  .row { display: flex; align-items: baseline; font-size: 14px; color: var(--ink, #3f3830); padding: 11px 0 0; font-variant-numeric: tabular-nums; }
+  .row .time { color: var(--faint, #a89e8d); font-size: 12px; width: 56px; }
+  .row .leader { flex: 1; border-bottom: 1px dotted var(--dotted, #d8cec2); margin: 0 10px 3px; }
+  .row .val { color: var(--taupe, #8a7f70); font-size: 13px; }
+
+  /* Nav bar — floating pill */
+  .nav { margin: 34px 16px 0; background: var(--raised, #fdf9f2); border: 1px solid var(--hairline, #eadccf); border-radius: 28px; padding: 12px 8px 10px; display: flex; box-shadow: 0 12px 30px rgba(63,56,48,.10); }
+  .nav .tab { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+  .nav .tab .lb { font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; }
+  .nav .tab.on svg * { stroke: var(--ink, #3f3830); stroke-width: 2; }
+  .nav .tab.on .lb { color: var(--ink, #3f3830); font-weight: 600; }
+  .nav .tab.off svg * { stroke: var(--faint, #a89e8d); stroke-width: 1.5; }
+  .nav .tab.off .lb { color: var(--faint, #a89e8d); }
+
+  /* Floating overlays — dropdowns, pickers */
+  .overlay { position: absolute; background: var(--raised, #fdf9f2); border: 1px solid #e4d9c8; border-radius: 18px; box-shadow: 0 18px 40px rgba(63,56,48,.22); padding: 10px 6px; z-index: 10; }
+  .scrim { position: fixed; inset: 0; background: rgba(247,241,232,.45); }
+  .overlay .option { padding: 9px 14px; font-size: 13.5px; color: var(--ink, #3f3830); border-radius: 10px; }
+  .overlay .option.sel { background: #f0e8db; font-weight: 600; }
 
   /* ── Legacy glass utilities remapped to flat editorial ──
      These keep existing className references working without

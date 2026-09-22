@@ -7,7 +7,6 @@ import Dashboard from "../pages/Dashboard";
 import HistoryPage from "../pages/History";
 import SettingsPage from "../pages/Settings";
 import AnalyticsPage from "../pages/Analytics";
-import ThemeToggle from "./ThemeToggle";
 import UnifiedBottomNav from "./UnifiedBottomNav";
 import { useRealtimeLogSync } from "@/hooks/useRealtimeLogSync";
 import { useDexcomRefresh } from "@/hooks/useDexcomRefresh";
@@ -135,7 +134,6 @@ export default function Layout() {
           </button>
 
           <div className="flex items-center justify-self-end gap-2">
-            <ThemeToggle />
             <button
               type="button"
               onClick={handleRefresh}
