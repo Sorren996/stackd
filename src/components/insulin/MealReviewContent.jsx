@@ -2,6 +2,7 @@ import { useState } from "react";
 import { CheckCircle2, Clock, ChevronDown } from "lucide-react";
 import { getCarbAbsorptionAt } from "@/lib/carbAbsorption";
 import MealProjectionChart from "./MealProjectionChart";
+import MealEditOverlay from "./MealEditOverlay";
 
 const RESCUE_COLOR = "#8a6db8";
 const PALETTE = {
@@ -45,7 +46,6 @@ function mealLabel(mealTime) {
  */
 export default function MealReviewContent({ mealInsight, monitoringStatus, glucoseTrend, onResolve }) {
   const [showEditItems, setShowEditItems] = useState(false);
-  const [editRect, setEditRect] = useState(null);
 
   if (!mealInsight) return null;
 
@@ -224,11 +224,7 @@ export default function MealReviewContent({ mealInsight, monitoringStatus, gluco
         <div className="mt-4">
           <button
             type="button"
-            onClick={(e) => {
-              const rect = e.currentTarget.getBoundingClientRect();
-              setEditRect(rect);
-              setShowEditItems((v) => !v);
-            }}
+            onClick={() => setShowEditItems(true)}
             className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12px] font-medium transition hover:opacity-70"
             style={{ borderColor: PALETTE.hairline, color: PALETTE.ink, background: "#fdf9f2" }}
           >
@@ -238,43 +234,9 @@ export default function MealReviewContent({ mealInsight, monitoringStatus, gluco
         </div>
       )}
 
-      {/* Edit items floating overlay */}
-      {showEditItems && editRect && typeof document !== "undefined" && (
-        <>
-          <div
-            className="fixed inset-0 z-[199]"
-            onClick={() => setShowEditItems(false)}
-          />
-          <div
-            className="fixed z-[200] w-64 rounded-2xl border p-3"
-            style={{
-              background: "#fefaef",
-              borderColor: PALETTE.hairline,
-              boxShadow: "0 8px 28px rgba(63, 56, 48, 0.12)",
-              left: Math.min(editRect.left, window.innerWidth - 280),
-              bottom: window.innerHeight - editRect.top + 8,
-            }}
-          >
-            <div className="text-[10px] font-semibold uppercase tracking-[0.14em] mb-2" style={{ color: PALETTE.faint }}>
-              Items in this meal
-            </div>
-            <div className="space-y-0">
-              {carbEntries.map((entry, i) => (
-                <div key={entry.id || i} className="flex items-baseline gap-2 py-1.5">
-                  <span className="shrink-0 text-[13px]" style={{ color: PALETTE.ink }}>
-                    {entry.food_name || entry.name || "Food"}
-                  </span>
-                  <span className="flex-1 overflow-hidden">
-                    <span className="dotted-leader block" />
-                  </span>
-                  <span className="shrink-0 text-[13px]" style={{ color: PALETTE.muted }}>
-                    {Math.round(entry.carbs)} g
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </>
+      {/* Meal edit overlay — real edit form for all items in this meal */}
+      {showEditItems && (
+        <MealEditOverlay entries={carbEntries} onClose={() => setShowEditItems(false)} />
       )}
 
       {/* Mark as Resolved */}

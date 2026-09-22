@@ -19,7 +19,7 @@ import GlucoseTicker from "@/components/graph/GlucoseTicker";
 import TimeViewToggle from "@/components/graph/TimeViewToggle";
 import CandlestickView from "@/components/graph/CandlestickView";
 import ReferenceLabels from "@/components/graph/ReferenceLabels";
-import GraphLowerSection from "@/components/graph/GraphLowerSection";
+import MealEditOverlay from "@/components/insulin/MealEditOverlay";
 
 const STEP_MS = 3 * 60 * 1000;
 const HALF_HOUR_MS = 30 * 60 * 1000;
@@ -41,7 +41,7 @@ const CARB_LANE_HEIGHT = 34;
 const INSULIN_CHART_HEIGHT = 112;
 const INSULIN_MARGIN_TOP = 24;
 const INSULIN_PLOT_HEIGHT = INSULIN_CHART_HEIGHT - INSULIN_MARGIN_TOP - X_AXIS_HEIGHT;
-const TWO_PLANE_HEIGHT = GLUCOSE_CHART_HEIGHT + CARB_LANE_HEIGHT + INSULIN_CHART_HEIGHT;
+const MAIN_CHART_HEIGHT = GLUCOSE_CHART_HEIGHT + X_AXIS_HEIGHT;
 const GLUCOSE_MIN = 40;
 const GLUCOSE_MAX = 250;
 const CARB_PROFILE_COLORS = {
@@ -328,6 +328,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const [activeMarker, setActiveMarker] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [selectedDoseKey, setSelectedDoseKey] = useState(null);
+  const [editingMeal, setEditingMeal] = useState(null);
   const { connected: dexcomConnected } = useDexcomConnection();
   const gTheme = getGraphTheme(useIsLightTheme());
 
@@ -602,7 +603,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           const isBasal = isBasalInsulinType(dose.insulin_type);
           const visualMax = isBasal ? 30 : 70;
           const refMax = isBasal ? maxBasalUnits : maxBolusUnits;
-          point[key] = activity * (doseUnits / refMax) * visualMax;
+          const insulinNormalized = (activity * (doseUnits / refMax) * visualMax) / 75;
+          point[key] = effectiveMin + insulinNormalized * (effectiveMax - effectiveMin) * 0.15;
           point[`${key}_actual`] = activeUnits;
           point[`${key}_activity`] = activity;
           point[`${key}_total`] = doseUnits;
@@ -1211,7 +1213,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               }
               scheduleCenterGlucoseUpdate(el.scrollLeft);
             }}>
-        <div className="relative" style={{ width: chartWidth, height: isCandlestick ? CANDLESTICK_TOTAL_HEIGHT : TWO_PLANE_HEIGHT }}>
+        <div className="relative" style={{ width: chartWidth, height: isCandlestick ? CANDLESTICK_TOTAL_HEIGHT : MAIN_CHART_HEIGHT }}>
           {isCandlestick ?
               <CandlestickView
                 glucoseReadings={filteredGlucoseReadings}
@@ -1233,7 +1235,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           <div style={{ position: "absolute", top: 0, left: 0 }}>
             <ComposedChart
                     width={chartWidth}
-                    height={GLUCOSE_CHART_HEIGHT}
+                    height={GLUCOSE_CHART_HEIGHT + X_AXIS_HEIGHT}
                     data={chartData}
                     margin={{ top: GLUCOSE_MARGIN_TOP, right: 0, left: -20, bottom: 0 }}>
               <defs>
@@ -1278,11 +1280,11 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                 type="number"
                 domain={[domainStart, domainEnd]}
                 ticks={timeTicks}
-                tick={false}
-                      axisLine={false}
-                      tickLine={false}
-                      height={0}
-                      interval={0} />
+                tick={<TimeAxisTick />}
+                axisLine={false}
+                tickLine={false}
+                height={X_AXIS_HEIGHT}
+                interval={0} />
 
               <YAxis yAxisId="glucose" domain={[effectiveMin, effectiveMax]} allowDataOverflow hide />
 
@@ -1346,10 +1348,27 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                       connectNulls={true}
                       isAnimationActive={false} />
                 }
+              {filters.insulin && doseKeys.map((k) => (
+                <Line
+                  key={k.key}
+                  yAxisId="glucose"
+                  type="basis"
+                  dataKey={k.key}
+                  name={k.label}
+                  stroke={k.isBasal ? "#b8aea0" : "#8a7f70"}
+                  strokeWidth={1.5}
+                  strokeOpacity={0.35}
+                  fill="none"
+                  dot={false}
+                  activeDot={false}
+                  isAnimationActive={false}
+                  connectNulls={true}
+                />
+              ))}
             </ComposedChart>
           </div>
 
-          {/* Open-ring meal markers ON the glucose curve */}
+          {/* Tappable meal markers ON the glucose curve */}
           {filters.carbs && positionedCarbMarkers.map(({ entry, x }) => {
             const entryTime = new Date(entry.consumed_at).getTime();
             if (!Number.isFinite(entryTime) || entryTime < domainStart || entryTime > domainEnd) return null;
@@ -1359,61 +1378,58 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             const isRescue = entry.is_rescue_carb === true || entry.classification === "rescue_carbs";
             return (
               <div
-                key={`ring_${entry.id}`}
-                className="pointer-events-none absolute z-[8]"
+                key={`marker_${entry.id}`}
+                className="absolute z-[8] cursor-pointer"
                 style={{ left: x, top: ringY, transform: "translate(-50%, -50%)" }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const tappedTime = new Date(entry.consumed_at).getTime();
+                  const group = filteredCarbEntries.filter((ce) => {
+                    const t = new Date(ce.consumed_at).getTime();
+                    return Math.abs(t - tappedTime) <= 30 * 60 * 1000;
+                  });
+                  setEditingMeal(group);
+                }}
               >
                 <div
-                  className="rounded-full"
+                  className="rounded-full transition hover:scale-110"
                   style={{
-                    width: 10,
-                    height: 10,
+                    width: 12,
+                    height: 12,
                     border: `1.5px solid ${isRescue ? "#8a6db8" : "#3f3830"}`,
                     background: "#f7f1e8",
                   }}
                 />
+                <div
+                  className="absolute left-1/2 -translate-x-1/2 -translate-y-[160%] whitespace-nowrap rounded-full border px-1.5 py-0.5 text-[9px] font-semibold leading-none"
+                  style={{ color: "#3f3830", borderColor: "#eadccf", background: "#fdf9f2" }}
+                >
+                  {Math.round(entry.carbs)}g
+                </div>
               </div>
             );
           })}
 
-          <GraphLowerSection
-            chartData={chartData}
-            doseKeys={doseKeys}
-            positionedCarbMarkers={positionedCarbMarkers}
-            positionedDoseMarkers={positionedDoseMarkers}
-            domainStart={domainStart}
-            domainEnd={domainEnd}
-            chartWidth={chartWidth}
-            timeTicks={timeTicks}
-            glucoseChartHeight={GLUCOSE_CHART_HEIGHT}
-            carbLaneHeight={CARB_LANE_HEIGHT}
-            insulinChartHeight={INSULIN_CHART_HEIGHT}
-            insulinMarginTop={INSULIN_MARGIN_TOP}
-            xAxisHeight={X_AXIS_HEIGHT}
-            selectedDoseKey={selectedDoseKey}
-            onDoseTap={handleDoseTap}
-            onCarbTap={(entry, rect) => openMarker("carbs", entry, rect)}
-            showInsulin={filters.insulin}
-            showCarbs={filters.carbs}
-          />
+
           </>
               }
         </div>
       </div>
       </div>
-      {filters.insulin && activeDoseKeys.length > 0 && (
-        <div className="flex items-center gap-3 px-3 mt-1.5 overflow-x-auto no-scrollbar">
-          {activeDoseKeys.map((k) => (
-            <div key={k.label} className="flex items-center gap-1 shrink-0">
-              <span className="h-1.5 w-1.5 rounded-full" style={{ background: "#8a7f70" }} />
-              <span className="text-[9px] font-semibold" style={{ color: "#3f3830" }}>
-                {Math.round(k.activeUnits)}u
-              </span>
-              <span className="text-[9px]" style={{ color: "#a89e8d" }}>{k.label}</span>
-            </div>
-          ))}
+      <div className="flex items-center gap-4 px-3 mt-2">
+        <div className="flex items-center gap-1.5">
+          <div className="h-[2px] w-4" style={{ background: "#3f3830" }} />
+          <span className="text-[10px]" style={{ color: "#a89e8d" }}>glucose</span>
         </div>
-      )}
+        <div className="flex items-center gap-1.5">
+          <div className="h-2 w-2 rounded-full border-[1.5px]" style={{ borderColor: "#3f3830", background: "#f7f1e8" }} />
+          <span className="text-[10px]" style={{ color: "#a89e8d" }}>meals</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-4 border-t-2 border-dotted" style={{ borderColor: "#af751b" }} />
+          <span className="text-[10px]" style={{ color: "#a89e8d" }}>projected</span>
+        </div>
+      </div>
       <div
           ref={monitoringLabelRef}
           className="pointer-events-none mt-1 flex items-center justify-center gap-1.5"
@@ -1498,6 +1514,9 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         </InfoPopover>
       }
 
+      {editingMeal && (
+        <MealEditOverlay entries={editingMeal} onClose={() => setEditingMeal(null)} />
+      )}
     </div>);
 
 }
