@@ -704,26 +704,24 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   }, [mergedMonitoringIntervals, domainStart, totalMs, chartWidth]);
 
   const positionedCarbMarkers = useMemo(() => {
-    const laneLastX = [];
-    const laneCount = 2;
-    const minMarkerGap = 72;
+    const placed = [];
+    const minGap = 36;
 
     return carbEventMarkers.
     slice().
     sort((a, b) => a.time - b.time).
     map((marker) => {
-      const x = (marker.time - domainStart) / totalMs * chartWidth;
-      let lane = laneLastX.findIndex((lastX) => x - lastX >= minMarkerGap);
+      const trueX = (marker.time - domainStart) / totalMs * chartWidth;
+      let displayX = trueX;
 
-      if (lane === -1) {
-        lane = laneLastX.length < laneCount ? laneLastX.length : 0;
-        if (laneLastX.length >= laneCount) {
-          lane = laneLastX.indexOf(Math.min(...laneLastX));
+      for (const p of placed) {
+        if (Math.abs(displayX - p.displayX) < minGap) {
+          displayX = p.displayX + minGap;
         }
       }
 
-      laneLastX[lane] = x;
-      return { ...marker, x, lane };
+      placed.push({ displayX, trueX });
+      return { ...marker, x: displayX, trueX, displaced: Math.abs(displayX - trueX) > 2 };
     });
   }, [carbEventMarkers, domainStart, totalMs, chartWidth]);
 
@@ -743,11 +741,25 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       for (const p of curve) {
         if (p.activity > peak.activity) peak = p;
       }
-      const doseUnits = getDoseUnits(dose);
       const isBasal = isBasalInsulinType(dose.insulin_type);
-      const refMax = isBasal ? maxBasalUnits : maxBolusUnits;
-      const visualMax = isBasal ? 30 : 70;
-      peakInfoByKey[key] = { peakTime: peak.time, peakY: INSULIN_MARGIN_TOP };
+      const doseStart = new Date(dose.administered_at || dose.created_at || dose.created_date).getTime();
+      if (isBasal) {
+        // Basal curves have no distinct peak — place the label within 1 hour
+        // of the logging timestamp, with a leader to the curve at that point.
+        const targetTime = doseStart + 60 * 60 * 1000;
+        let closest = curve[0];
+        for (const p of curve) {
+          if (Math.abs(p.time - targetTime) < Math.abs(closest.time - targetTime)) closest = p;
+        }
+        const peakAct = curvePeakActivity[key] || 1;
+        const na = peakAct > 0 ? closest.activity / peakAct : 0;
+        peakInfoByKey[key] = {
+          peakTime: closest.time,
+          peakY: INSULIN_MARGIN_TOP + (1 - na) * INSULIN_PLOT_HEIGHT
+        };
+      } else {
+        peakInfoByKey[key] = { peakTime: peak.time, peakY: INSULIN_MARGIN_TOP };
+      }
     });
 
     return filteredDoses.
@@ -791,7 +803,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       return { dose, x, units, key, color, pillTop, peakY, isActive };
     }).
     filter(Boolean);
-  }, [filteredDoses, allCurvesMeta, maxBolusUnits, maxBasalUnits, domainStart, domainEnd, totalMs, chartWidth]);
+  }, [filteredDoses, allCurvesMeta, curvePeakActivity, maxBolusUnits, maxBasalUnits, domainStart, domainEnd, totalMs, chartWidth]);
 
   const getGlucoseY = (value) => {
     const clamped = Math.min(Math.max(value, effectiveMin), effectiveMax);
@@ -1246,10 +1258,11 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
 
               <>
+          {/* ── Glucose row (upper) ── */}
           <div style={{ position: "absolute", top: 0, left: 0 }}>
             <ComposedChart
                     width={chartWidth}
-                    height={GLUCOSE_CHART_HEIGHT + X_AXIS_HEIGHT}
+                    height={GLUCOSE_CHART_HEIGHT}
                     data={chartData}
                     margin={{ top: GLUCOSE_MARGIN_TOP, right: 0, left: -20, bottom: 0 }}>
               <defs>
@@ -1280,17 +1293,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                   stroke="none"
                 />
               )}
-
-              <XAxis
-                dataKey="time"
-                type="number"
-                domain={[domainStart, domainEnd]}
-                ticks={timeTicks}
-                tick={<TimeAxisTick />}
-                axisLine={false}
-                tickLine={false}
-                height={X_AXIS_HEIGHT}
-                interval={0} />
 
               <YAxis yAxisId="glucose" domain={[effectiveMin, effectiveMax]} allowDataOverflow hide />
 
@@ -1329,7 +1331,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                     strokeWidth={1}
                     strokeDasharray="6 5"
                   />
-                  {/* NOW needle — vertical ink line at current time */}
                   <ReferenceLine
                     x={Date.now()}
                     yAxisId="glucose"
@@ -1356,16 +1357,39 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                       connectNulls={true}
                       isAnimationActive={false} />
                 }
+            </ComposedChart>
+          </div>
+
+          {/* ── Insulin row (lower) — one shared timeline ── */}
+          <div style={{ position: "absolute", top: INSULIN_ROW_TOP, left: 0 }}>
+            <ComposedChart
+                    width={chartWidth}
+                    height={INSULIN_CHART_HEIGHT + X_AXIS_HEIGHT}
+                    data={chartData}
+                    margin={{ top: INSULIN_MARGIN_TOP, right: 0, left: -20, bottom: 0 }}>
+              <XAxis
+                dataKey="time"
+                type="number"
+                domain={[domainStart, domainEnd]}
+                ticks={timeTicks}
+                tick={<TimeAxisTick />}
+                axisLine={false}
+                tickLine={false}
+                height={X_AXIS_HEIGHT}
+                interval={0} />
+
+              <YAxis yAxisId="insulin" domain={[effectiveMin, effectiveMin + (effectiveMax - effectiveMin) * 0.18]} allowDataOverflow hide />
+
               {filters.insulin && doseKeys.map((k) => (
                 <Line
                   key={k.key}
-                  yAxisId="glucose"
+                  yAxisId="insulin"
                   type="basis"
                   dataKey={k.key}
                   name={k.label}
-                  stroke={k.isBasal ? "#a8b0a4" : gTheme.insulinCurveColor}
-                  strokeWidth={k.isBasal ? 1 : gTheme.insulinCurveWidth}
-                  strokeOpacity={k.isBasal ? gTheme.insulinCurveOpacity * 0.65 : gTheme.insulinCurveOpacity}
+                  stroke={k.color}
+                  strokeWidth={k.isBasal ? 1.5 : 2}
+                  strokeOpacity={k.isBasal ? 0.55 : 0.78}
                   fill="none"
                   dot={false}
                   activeDot={false}
@@ -1376,8 +1400,44 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             </ComposedChart>
           </div>
 
+          {/* Insulin unit labels with dotted leaders to curve peaks */}
+          {filters.insulin && positionedDoseMarkers.map((m) => {
+            const labelY = INSULIN_ROW_TOP + m.pillTop;
+            const peakYAbs = INSULIN_ROW_TOP + m.peakY;
+            const leaderHeight = Math.max(0, peakYAbs - labelY - 14);
+            const unitsLabel = m.units % 1 === 0 ? m.units : m.units.toFixed(1);
+            return (
+              <div
+                key={`label_${m.key}`}
+                className="absolute z-[9] cursor-pointer"
+                style={{ left: m.x, top: labelY, transform: "translateX(-50%)" }}
+                onClick={(e) => { e.stopPropagation(); handleDoseTap(m.dose, m.key, e.currentTarget.getBoundingClientRect()); }}
+              >
+                <span className="text-[10px] font-bold whitespace-nowrap px-1 rounded" style={{ color: m.color, background: "rgba(247,241,232,0.85)" }}>
+                  {unitsLabel}u
+                </span>
+                {leaderHeight > 0 && (
+                  <div
+                    className="absolute left-1/2 top-full"
+                    style={{ height: leaderHeight, borderLeft: `1px dotted ${m.color}80`, marginLeft: -0.5 }}
+                  />
+                )}
+              </div>
+            );
+          })}
+
+          {/* Invisible tap zones for insulin curves */}
+          {filters.insulin && positionedDoseMarkers.map((m) => (
+            <div
+              key={`hit_${m.key}`}
+              className="absolute z-[7] cursor-pointer"
+              style={{ left: m.x - 30, top: INSULIN_ROW_TOP + INSULIN_MARGIN_TOP, width: 60, height: INSULIN_PLOT_HEIGHT }}
+              onClick={(e) => { e.stopPropagation(); handleDoseTap(m.dose, m.key, e.currentTarget.getBoundingClientRect()); }}
+            />
+          ))}
+
           {/* Tappable meal markers ON the glucose curve */}
-          {filters.carbs && positionedCarbMarkers.map(({ entry, x }) => {
+          {filters.carbs && positionedCarbMarkers.map(({ entry, x, trueX, displaced }) => {
             const entryTime = new Date(entry.consumed_at).getTime();
             if (!Number.isFinite(entryTime) || entryTime < domainStart || entryTime > domainEnd) return null;
             const glucoseAt = getGlucoseAt(entryTime);
@@ -1385,29 +1445,42 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             const ringY = getGlucoseY(glucoseAt.plotValue);
             const isRescue = entry.is_rescue_carb === true || entry.classification === "rescue_carbs";
             return (
-              <div
-                key={`marker_${entry.id}`}
-                className="absolute z-[8] cursor-pointer"
-                style={{ left: x, top: ringY, transform: "translate(-50%, -50%)" }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const tappedTime = new Date(entry.consumed_at).getTime();
-                  const group = filteredCarbEntries.filter((ce) => {
-                    const t = new Date(ce.consumed_at).getTime();
-                    return Math.abs(t - tappedTime) <= 30 * 60 * 1000;
-                  });
-                  setEditingMeal(group);
-                }}
-              >
+              <div key={`marker_${entry.id}`}>
+                {displaced && (
+                  <div
+                    className="absolute z-[7] pointer-events-none"
+                    style={{
+                      left: Math.min(x, trueX),
+                      top: ringY,
+                      width: Math.abs(x - trueX),
+                      borderTop: "1px dotted #3f3830",
+                      opacity: 0.3,
+                    }}
+                  />
+                )}
                 <div
-                  className="rounded-full transition hover:scale-110"
-                  style={{
-                    width: 12,
-                    height: 12,
-                    border: `1.5px solid ${isRescue ? "#8a6db8" : "#3f3830"}`,
-                    background: "#f7f1e8",
+                  className="absolute z-[8] cursor-pointer"
+                  style={{ left: x, top: ringY, transform: "translate(-50%, -50%)" }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const tappedTime = new Date(entry.consumed_at).getTime();
+                    const group = filteredCarbEntries.filter((ce) => {
+                      const t = new Date(ce.consumed_at).getTime();
+                      return Math.abs(t - tappedTime) <= 30 * 60 * 1000;
+                    });
+                    setEditingMeal(group);
                   }}
-                />
+                >
+                  <div
+                    className="rounded-full transition hover:scale-110"
+                    style={{
+                      width: 12,
+                      height: 12,
+                      border: `1.5px solid ${isRescue ? "#8a6db8" : "#3f3830"}`,
+                      background: "#f7f1e8",
+                    }}
+                  />
+                </div>
               </div>
             );
           })}
