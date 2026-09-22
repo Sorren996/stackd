@@ -44,7 +44,8 @@ const INSULIN_PLOT_HEIGHT = INSULIN_CHART_HEIGHT - INSULIN_MARGIN_TOP - X_AXIS_H
 const MAIN_CHART_HEIGHT = GLUCOSE_CHART_HEIGHT + X_AXIS_HEIGHT;
 const ROW_GAP = 12;
 const INSULIN_ROW_TOP = GLUCOSE_CHART_HEIGHT + ROW_GAP;
-const TWO_ROW_HEIGHT = INSULIN_ROW_TOP + INSULIN_CHART_HEIGHT + X_AXIS_HEIGHT;
+const GRAPH_BOTTOM_INSET = 14;
+const TWO_ROW_HEIGHT = INSULIN_ROW_TOP + INSULIN_CHART_HEIGHT + X_AXIS_HEIGHT + GRAPH_BOTTOM_INSET;
 const GLUCOSE_MIN = 40;
 const GLUCOSE_MAX = 250;
 const CARB_PROFILE_COLORS = {
@@ -1364,9 +1365,9 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           <div style={{ position: "absolute", top: INSULIN_ROW_TOP, left: 0 }}>
             <ComposedChart
                     width={chartWidth}
-                    height={INSULIN_CHART_HEIGHT + X_AXIS_HEIGHT}
+                    height={INSULIN_CHART_HEIGHT + X_AXIS_HEIGHT + GRAPH_BOTTOM_INSET}
                     data={chartData}
-                    margin={{ top: INSULIN_MARGIN_TOP, right: 0, left: -20, bottom: 0 }}>
+                    margin={{ top: INSULIN_MARGIN_TOP, right: 0, left: -20, bottom: GRAPH_BOTTOM_INSET }}>
               <XAxis
                 dataKey="time"
                 type="number"
