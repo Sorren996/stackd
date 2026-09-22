@@ -9,6 +9,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { getDefaultInsulinLibrary } from "@/lib/userSettings";
 import InsulinTypeSelector from "@/components/settings/InsulinTypeSelector";
+import HairlineSection from "@/components/editorial/HairlineSection";
 import { toast } from "sonner";
 
 const INSULIN_PLAN_HELP = {
@@ -479,9 +480,8 @@ export default function InsulinSettings() {
 
       <div className="space-y-5">
         {/* Target Range Preference */}
-        <section className="space-y-2.5">
-          <SectionLabel icon={Target}>Target Range Preference</SectionLabel>
-          <div className="rounded-3xl p-4 flex gap-4 items-stretch" style={CANOPY_GLASS}>
+        <HairlineSection label="Target Range">
+          <div className="flex gap-4 items-stretch pt-3 pb-2">
             <button
               onClick={handleSetRecommended}
               className="shrink-0 w-28 py-3 px-2 rounded-2xl border text-center transition-all flex flex-col items-center justify-center"
@@ -513,29 +513,25 @@ export default function InsulinSettings() {
               </div>
             </div>
           </div>
-        </section>
+        </HairlineSection>
 
         {/* Alerts & Preferences */}
-        <section className="space-y-2.5">
-          <SectionLabel icon={Bell}>Alerts & Preferences</SectionLabel>
-          <div className="rounded-3xl p-4" style={CANOPY_GLASS}>
-            <div className="flex items-center justify-between gap-4">
-              <div className="space-y-0.5">
-                <Label className="text-sm font-semibold text-white/90 flex items-center gap-2">
-                  <Target className="w-4 h-4" style={{ color: "#5b6550" }} />
-                  Insulin Stacking Warnings
-                </Label>
-                <p className="text-xs text-white/40">Alert when multiple rapid doses overlap</p>
-              </div>
-              <Switch checked={stackingAlerts} onCheckedChange={handleStackingToggle} />
+        <HairlineSection label="Alerts">
+          <div className="flex items-center justify-between gap-4 pt-3 pb-2">
+            <div className="space-y-0.5">
+              <Label className="text-sm font-semibold text-white/90 flex items-center gap-2">
+                <Target className="w-4 h-4" style={{ color: "#5b6550" }} />
+                Insulin Stacking Warnings
+              </Label>
+              <p className="text-xs text-white/40">Alert when multiple rapid doses overlap</p>
             </div>
+            <Switch checked={stackingAlerts} onCheckedChange={handleStackingToggle} />
           </div>
-        </section>
+        </HairlineSection>
 
         {/* Insulin Plan */}
-        <section className="space-y-2.5">
-          <SectionLabel icon={Syringe}>Insulin Plan</SectionLabel>
-          <div className="rounded-3xl p-4 space-y-5" style={CANOPY_GLASS}>
+        <HairlineSection label="Insulin Plan">
+          <div className="space-y-5 pt-3 pb-2">
             <div className="rounded-2xl border-l-2 px-3 py-2.5" style={{ borderColor: "rgba(91,101,80,0.45)", background: "rgba(91,101,80,0.05)" }}>
               <p className="text-[11px] leading-relaxed text-white/45">
                 Enter only insulin settings prescribed or confirmed by your licensed healthcare professional. This app does not provide medical advice, verify dosing accuracy, or replace clinical judgment. Incorrect values may result in serious hypoglycemia or hyperglycemia. Do not start, stop, or adjust insulin based solely on information provided by this app.
@@ -706,7 +702,7 @@ export default function InsulinSettings() {
               </div>
             </div>
           </div>
-        </section>
+        </HairlineSection>
 
       </div>
     </>

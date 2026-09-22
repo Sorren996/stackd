@@ -137,22 +137,22 @@ export default function RequiredAcknowledgments() {
             <button
               type="button"
               onClick={() => setStep((s) => Math.max(0, s - 1))}
-              className="flex h-9 w-9 items-center justify-center rounded-full border text-white/60 transition hover:text-white"
-              style={{ background: "#fdf9f2", borderColor: "#eadccf" }}
+              className="flex h-8 w-8 items-center justify-center transition"
+              style={{ color: "#8a7f70" }}
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-5 w-5" />
             </button>
           )}
           {isFirstStep && <Leaf className="h-5 w-5" style={{ color: "#5b6550" }} />}
         </div>
-        <span className="text-xs font-semibold text-white/40">
+        <span className="text-xs font-semibold" style={{ color: "#a89e8d" }}>
           Step {step + 1} of {ACKNOWLEDGMENT_STEPS.length}
         </span>
         <button
           type="button"
           onClick={() => logout()}
-          className="flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium text-white/50 transition hover:text-white"
-          style={{ background: "#fdf9f2", borderColor: "#eadccf" }}
+          className="flex items-center gap-1.5 text-xs font-medium transition"
+          style={{ color: "#8a7f70" }}
         >
           <LogOut className="h-3.5 w-3.5" />
           Sign Out
@@ -190,11 +190,11 @@ export default function RequiredAcknowledgments() {
                   >
                     <Leaf className="h-10 w-10" style={{ color: "#5b6550" }} />
                   </div>
-                  <h1 className="mb-4 text-2xl font-bold text-white">Welcome to Stackd</h1>
-                  <p className="mb-3 text-sm leading-relaxed text-white/55">
+                  <h1 className="mb-4 text-2xl font-semibold" style={{ color: "#3f3830" }}>Welcome to <span className="font-serif-italic">Stackd</span></h1>
+                  <p className="mb-3 text-sm leading-relaxed" style={{ color: "#8a7f70" }}>
                     Before we begin your wellness journey together, we need to review a few important acknowledgments.
                   </p>
-                  <p className="text-sm leading-relaxed text-white/45">
+                  <p className="text-sm leading-relaxed" style={{ color: "#a89e8d" }}>
                     This helps ensure you understand how Stackd supports you and what it can and cannot do. Take your time — there's no rush.
                   </p>
                 </div>
@@ -202,7 +202,7 @@ export default function RequiredAcknowledgments() {
 
               {currentStepData.sections && (
                 <div className="space-y-4">
-                  <h2 className="text-lg font-bold text-white">{currentStepData.label}</h2>
+                  <h2 className="text-lg font-semibold" style={{ color: "#3f3830" }}>{currentStepData.label}</h2>
                   {currentStepData.sections.map((section) => (
                     <NoticeSection
                       key={section.checkboxId}
@@ -218,8 +218,8 @@ export default function RequiredAcknowledgments() {
 
               {currentStepData.key === "review" && (
                 <div className="space-y-5">
-                  <h2 className="text-lg font-bold text-white">Review & Accept</h2>
-                  <p className="text-sm leading-relaxed text-white/55">
+                  <h2 className="text-lg font-semibold" style={{ color: "#3f3830" }}>Review & <span className="font-serif-italic">Accept</span></h2>
+                  <p className="text-sm leading-relaxed" style={{ color: "#8a7f70" }}>
                     Please confirm that you have reviewed and accepted all of the following:
                   </p>
                   <div className="space-y-2">
@@ -242,7 +242,7 @@ export default function RequiredAcknowledgments() {
                           >
                             {checked && <Check className="h-3 w-3" strokeWidth={3} style={{ color: "#f7f1e8" }} />}
                           </div>
-                          <span className="text-xs font-medium text-white/70">{section.title}</span>
+                          <span className="text-xs font-medium" style={{ color: "#3f3830" }}>{section.title}</span>
                         </div>
                       );
                     })}

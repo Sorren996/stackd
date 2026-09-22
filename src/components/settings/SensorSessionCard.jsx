@@ -72,25 +72,23 @@ export default function SensorSessionCard() {
 
   return (
     <div className="space-y-2">
-      <h2 className="px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-white/35">
+      <h2 className="section-label px-1">
         Sensor Session
       </h2>
       <motion.div
         animate={expanded ? {
-          boxShadow: `0 0 0 1px ${color}55, 0 0 22px ${color}25`,
           borderColor: `${color}55`,
         } : {
-          boxShadow: "0 0 0 1px rgba(255,255,255,0.07), 0 0 0px transparent",
-          borderColor: "rgba(255,255,255,0.07)",
+          borderColor: "#eadccf",
         }}
         transition={{ duration: 0.3, ease: "easeOut" }}
         className="overflow-hidden rounded-2xl border"
-        style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}
+        style={{ background: "#fdf9f2", borderColor: "#eadccf" }}
       >
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
-          className="flex w-full items-stretch gap-3 px-3.5 py-3 text-left transition hover:bg-white/[0.03] active:scale-[0.995]"
+          className="flex w-full items-stretch gap-3 px-3.5 py-3 text-left transition hover:opacity-70 active:scale-[0.995]"
         >
           <div className="flex h-24 w-24 shrink-0 items-center justify-center">
             <img
@@ -103,10 +101,10 @@ export default function SensorSessionCard() {
           <div className="flex min-w-0 flex-1 flex-col justify-center">
             {hasSession ? (
               <>
-                <p className={`text-base font-bold leading-tight ${expired ? "text-amber-300/80" : "text-white/85"}`}>
+                <p className="text-base font-bold leading-tight" style={{ color: expired ? "#af751b" : "#3f3830" }}>
                   {remaining?.text}
                 </p>
-                <p className="mt-0.5 truncate text-[11px] text-white/40">
+                <p className="mt-0.5 truncate text-[11px]" style={{ color: "#a89e8d" }}>
                   {modelMeta?.label}
                 </p>
                 <div className="mt-2.5">
@@ -117,15 +115,15 @@ export default function SensorSessionCard() {
                   />
                 </div>
                 {remaining?.grace && (
-                  <p className="mt-1.5 text-[10px] leading-relaxed text-amber-200/70">
+                  <p className="mt-1.5 text-[10px] leading-relaxed" style={{ color: "#af751b" }}>
                     Grace period — sensor may still read. Have your next one ready.
                   </p>
                 )}
               </>
             ) : (
               <>
-                <p className="text-sm font-semibold text-white">Start your sensor session</p>
-                <p className="mt-0.5 truncate text-[11px] text-white/40">
+                <p className="text-sm font-semibold" style={{ color: "#3f3830" }}>Start your sensor session</p>
+                <p className="mt-0.5 truncate text-[11px]" style={{ color: "#a89e8d" }}>
                   Track how long your current sensor has left
                 </p>
               </>
@@ -139,7 +137,7 @@ export default function SensorSessionCard() {
               className="flex"
               style={{ transformOrigin: "50% 50%" }}
             >
-              <ChevronDown className="h-4 w-4 shrink-0 text-white/30" />
+              <ChevronDown className="h-4 w-4 shrink-0" style={{ color: "#a89e8d" }} />
             </motion.span>
           </span>
         </button>
@@ -147,14 +145,14 @@ export default function SensorSessionCard() {
         {hasSession && (
           <div className="flex items-center justify-between gap-3 border-t px-3.5 py-2.5" style={{ borderColor: "#eadccf" }}>
             <div className="min-w-0">
-              <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-white/30">Started</p>
-              <p className="mt-0.5 truncate text-[11px] text-white/55">
+              <p className="text-[9px] font-bold uppercase tracking-[0.18em]" style={{ color: "#a89e8d" }}>Started</p>
+              <p className="mt-0.5 truncate text-[11px]" style={{ color: "#8a7f70" }}>
                 {startedAt ? format(new Date(startedAt), "MMM d · h:mm a") : "—"}
               </p>
             </div>
             <div className="min-w-0 text-right">
-              <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-white/30">Expires</p>
-              <p className="mt-0.5 truncate text-[11px] text-white/55">
+              <p className="text-[9px] font-bold uppercase tracking-[0.18em]" style={{ color: "#a89e8d" }}>Expires</p>
+              <p className="mt-0.5 truncate text-[11px]" style={{ color: "#8a7f70" }}>
                 {endMs ? format(new Date(endMs), "MMM d · h:mm a") : "—"}
               </p>
             </div>
@@ -187,7 +185,7 @@ export default function SensorSessionCard() {
               ) : (
                 <div className="space-y-4 px-3.5 py-4">
                   <div>
-                    <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-white/35">
+                    <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: "#a89e8d" }}>
                       Dexcom model
                     </p>
                     <div className="space-y-1.5">
@@ -208,10 +206,10 @@ export default function SensorSessionCard() {
                             <div className="flex h-9 w-9 shrink-0 items-center justify-center">
                               <img src={m.image} alt={m.label} className="h-full w-full object-contain" />
                             </div>
-                            <span className={`flex-1 text-left text-sm font-medium ${selected ? "text-white" : "text-white/70"}`}>
+                            <span className="flex-1 text-left text-sm font-medium" style={{ color: selected ? "#3f3830" : "#8a7f70" }}>
                               {m.label}
                             </span>
-                            <span className="text-[11px] text-white/35">{m.durationDays} days</span>
+                            <span className="text-[11px]" style={{ color: "#a89e8d" }}>{m.durationDays} days</span>
                             {selected && <Check className="h-4 w-4 shrink-0" style={{ color: "#5b6550" }} />}
                           </button>
                         );
@@ -220,15 +218,15 @@ export default function SensorSessionCard() {
                   </div>
 
                   <div>
-                    <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-white/35">
+                    <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: "#a89e8d" }}>
                       Session start
                     </p>
                     <input
                       type="datetime-local"
                       value={draftStartedAt}
                       onChange={(e) => setDraftStartedAt(e.target.value)}
-                      className="w-full rounded-xl border px-3 py-2.5 text-sm text-white outline-none transition"
-                      style={{ background: "#f7f1e8", borderColor: "#eadccf" }}
+                      className="w-full rounded-xl border px-3 py-2.5 text-sm outline-none transition"
+                      style={{ background: "#f7f1e8", borderColor: "#eadccf", color: "#3f3830" }}
                     />
                   </div>
 
@@ -236,8 +234,8 @@ export default function SensorSessionCard() {
                     <button
                       type="button"
                       onClick={() => setExpanded(false)}
-                      className="flex-1 rounded-xl border py-2.5 text-sm font-semibold text-white/70 transition"
-                      style={{ background: "#f7f1e8", borderColor: "#eadccf" }}
+                      className="flex-1 rounded-xl border py-2.5 text-sm font-semibold transition"
+                      style={{ background: "#f7f1e8", borderColor: "#eadccf", color: "#8a7f70" }}
                     >
                       Cancel
                     </button>

@@ -7,7 +7,7 @@ import { Link } from "react-router-dom";
  *
  * Pass `to` for a navigable row (renders chevron), or `onClick` for an action.
  */
-export default function LedgerRow({ label, value, timestamp, to, onClick, danger = false }) {
+export default function LedgerRow({ label, value, timestamp, to, onClick, danger = false, actionLabel }) {
   const content = (
     <div className="flex items-baseline gap-2 py-2.5">
       {timestamp && (
@@ -29,7 +29,11 @@ export default function LedgerRow({ label, value, timestamp, to, onClick, danger
           {value}
         </span>
       )}
-      {to && (
+      {actionLabel ? (
+        <span className="shrink-0 text-xs font-semibold uppercase tracking-wider" style={{ color: danger ? "#c97060" : "#a89e8d" }}>
+          {actionLabel}
+        </span>
+      ) : (to || onClick) && (
         <span className="shrink-0 text-sm" style={{ color: "#a89e8d" }}>
           ›
         </span>

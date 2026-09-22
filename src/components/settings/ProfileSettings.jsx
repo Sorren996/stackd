@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
-import { User, Mail, Lock, Loader2, Check, ChevronRight, Pencil } from "lucide-react";
+import { Loader2, Check, ChevronRight, Pencil } from "lucide-react";
 import { toast } from "sonner";
+import HairlineSection from "@/components/editorial/HairlineSection";
+import LedgerRow from "@/components/editorial/LedgerRow";
 
 export default function ProfileSettings() {
   const { user, checkUserAuth } = useAuth();
@@ -53,157 +55,97 @@ export default function ProfileSettings() {
   };
 
   return (
-    <div className="space-y-3">
-      <h3 className="text-sm font-bold text-white uppercase tracking-wider px-1">Profile Settings</h3>
-
-      <div className="glass-card border rounded-3xl p-2" style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}>
-        {/* Name */}
-        <div className="rounded-2xl px-3 py-3">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <User className="w-4 h-4 text-white/40 shrink-0" />
-              <div className="min-w-0">
-                <p className="text-[10px] text-white/35 uppercase tracking-wider">Full Name</p>
-                {editingName ? (
-                  <div className="flex items-center gap-2 mt-1">
-                    <input
-                      type="text"
-                      value={nameValue}
-                      onChange={(e) => setNameValue(e.target.value)}
-                      className="w-full rounded-xl px-3 py-2 text-sm font-semibold text-white outline-none"
-                      style={{ background: "#f7f1e8", border: "1px solid #eadccf" }}
-                      placeholder="Your name"
-                      autoFocus
-                    />
-                  </div>
-                ) : (
-                  <p className="text-sm font-semibold text-white/90 truncate">
-                    {user?.full_name || "Not set"}
-                  </p>
-                )}
-              </div>
-            </div>
-            {!editingName ? (
+    <div className="space-y-6">
+      <HairlineSection label="Identity">
+        {editingName ? (
+          <div className="py-3 space-y-3">
+            <input
+              type="text"
+              value={nameValue}
+              onChange={(e) => setNameValue(e.target.value)}
+              className="w-full rounded-xl px-3 py-2 text-sm font-semibold outline-none"
+              style={{ background: "#f7f1e8", border: "1px solid #eadccf", color: "#3f3830" }}
+              placeholder="Your name"
+              autoFocus
+            />
+            <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => {
+                  setEditingName(false);
                   setNameValue(user?.full_name || "");
-                  setEditingName(true);
                 }}
-                className="shrink-0 flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium text-white/60 transition hover:text-white"
-                style={{ background: "#f7f1e8", borderColor: "#eadccf" }}
+                disabled={isSavingName}
+                className="text-xs font-medium transition disabled:opacity-40"
+                style={{ color: "#8a7f70" }}
               >
-                <Pencil className="w-3 h-3" />
-                Edit
+                Cancel
               </button>
-            ) : (
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditingName(false);
-                    setNameValue(user?.full_name || "");
-                  }}
-                  disabled={isSavingName}
-                  className="rounded-full border px-3 py-1.5 text-xs font-medium text-white/50 transition hover:text-white disabled:opacity-40"
-                  style={{ background: "#f7f1e8", borderColor: "#eadccf" }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSaveName}
-                  disabled={isSavingName}
-                  className="flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold transition active:scale-[0.98] disabled:opacity-40"
-                  style={{ background: "#3f3830", color: "#f7f1e8" }}
-                >
-                  {isSavingName ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
-                  Save
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Email */}
-        <div className="border-t rounded-2xl px-3 py-3" style={{ borderColor: "#eadccf" }}>
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <Mail className="w-4 h-4 text-white/40 shrink-0" />
-              <div className="min-w-0">
-                <p className="text-[10px] text-white/35 uppercase tracking-wider">Email Address</p>
-                <p className="text-sm font-semibold text-white/90 truncate">
-                  {user?.email || "Not available"}
-                </p>
-              </div>
+              <button
+                type="button"
+                onClick={handleSaveName}
+                disabled={isSavingName}
+                className="flex items-center gap-1 rounded-full px-4 py-1.5 text-xs font-semibold transition active:scale-[0.98] disabled:opacity-40"
+                style={{ background: "#3f3830", color: "#f7f1e8" }}
+              >
+                {isSavingName ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                Save
+              </button>
             </div>
           </div>
-          <p className="mt-2 text-[10px] text-white/30 leading-relaxed pl-7">
-            Your email was set during account creation and is used for secure sign-in and account recovery.
-          </p>
-        </div>
+        ) : (
+          <LedgerRow
+            label="Name"
+            value={user?.full_name || "Not set"}
+            actionLabel="Edit"
+            onClick={() => {
+              setNameValue(user?.full_name || "");
+              setEditingName(true);
+            }}
+          />
+        )}
+        <LedgerRow label="Email" value={user?.email || "Not available"} />
+      </HairlineSection>
 
-        {/* Password */}
-        <div className="border-t rounded-2xl px-3 py-3" style={{ borderColor: "#eadccf" }}>
-          {passwordStep === "idle" ? (
-            <button
-              type="button"
-              onClick={handleSendPasswordReset}
-              disabled={isSendingReset}
-              className="flex w-full items-center justify-between gap-3 text-left"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <Lock className="w-4 h-4 text-white/40 shrink-0" />
-                <div>
-                  <p className="text-sm font-semibold text-white/90">Password</p>
-                  <p className="text-[10px] text-white/30">Password ••••••••</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-1.5 shrink-0 text-xs font-medium text-white/50">
-                {isSendingReset ? (
-                  <>
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                    Sending...
-                  </>
-                ) : (
-                  <>
-                    Change
-                    <ChevronRight className="w-4 h-4 text-white/30" />
-                  </>
-                )}
-              </div>
-            </button>
-          ) : (
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <Lock className="w-4 h-4 shrink-0" style={{ color: "#5b6550" }} />
-                <div>
-                  <p className="text-sm font-semibold text-white/90">Check your email</p>
-                  <p className="text-[10px] text-white/40 leading-relaxed">
-                    We've sent a secure password reset link to {user?.email}. Follow the link in your email to set a new password.
-                  </p>
-                </div>
-              </div>
+      <HairlineSection label="Security">
+        {passwordStep === "idle" ? (
+          <LedgerRow
+            label="Password"
+            value="••••••••"
+            actionLabel={isSendingReset ? "Sending..." : "Change"}
+            onClick={handleSendPasswordReset}
+          />
+        ) : (
+          <div className="py-3 space-y-3">
+            <p className="text-xs leading-relaxed" style={{ color: "#8a7f70" }}>
+              We've sent a secure password reset link to {user?.email}. Follow the link in your email to set a new password.
+            </p>
+            <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={handleSendPasswordReset}
                 disabled={isSendingReset}
-                className="w-full rounded-xl border py-2.5 text-xs font-medium text-white/50 transition hover:text-white disabled:opacity-40"
-                style={{ borderColor: "#eadccf", background: "#f7f1e8" }}
+                className="text-xs font-medium transition disabled:opacity-40"
+                style={{ color: "#8a7f70" }}
               >
-                {isSendingReset ? "Resending..." : "Resend reset link"}
+                {isSendingReset ? "Resending..." : "Resend link"}
               </button>
               <button
                 type="button"
                 onClick={() => setPasswordStep("idle")}
-                className="w-full text-xs text-white/30 hover:text-white/50 transition"
+                className="text-xs font-medium transition"
+                style={{ color: "#a89e8d" }}
               >
                 Back
               </button>
             </div>
-          )}
-        </div>
-      </div>
+          </div>
+        )}
+      </HairlineSection>
+
+      <p className="px-1 text-xs" style={{ color: "#a89e8d" }}>
+        Your identity stays private — <span className="font-serif-italic">only you see these details.</span>
+      </p>
     </div>
   );
 }
