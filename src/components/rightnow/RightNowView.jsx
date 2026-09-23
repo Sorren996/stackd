@@ -30,9 +30,9 @@ export default function RightNowView({
   return (
     <div className="relative">
       {/* Eyebrow + title */}
-      <div className="px-1 pt-1 text-[hsl(var(--background))]">
-        <span className="section-label text-[hsl(var(--background))]">At a Glance</span>
-        <h1 className="hdr mt-2">Right <em>Now</em></h1>
+      <div className="px-1 pt-1">
+        <span className="section-label mt-2" style={{ color: "#d8cec2", borderBottomColor: "#d8cec255" }}>At a Glance</span>
+        <h1 className="hdr mt-2" style={{ color: "#f7f1e8" }}>Right <em style={{ color: "#eadccf" }}>Now</em></h1>
       </div>
 
       {/* Segmented control */}
