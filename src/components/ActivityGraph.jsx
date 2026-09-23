@@ -661,7 +661,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     units: getDoseUnits(dose),
     color: getInsulinProfile(dose.insulin_type)?.color || "#888",
     isBasal: isBasalInsulinType(dose.insulin_type),
-    isActive: getDoseIOB(dose, Date.now()) >= 0.5
+    isActive: getDoseIOB(dose, Date.now()) >= 0.5,
+    isSpent: getDoseIOB(dose, Date.now()) <= 0.01
   })),
   [filteredDoses]
   );
@@ -820,7 +821,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
       placed.push({ x, pillTop });
       const isActive = getDoseIOB(dose, Date.now()) >= 0.5;
-      return { dose, x, units, key, color, pillTop, peakY, isActive };
+      const isSpent = getDoseIOB(dose, Date.now()) <= 0.01;
+      return { dose, x, units, key, color, pillTop, peakY, isActive, isSpent };
     }).
     filter(Boolean);
   }, [filteredDoses, allCurvesMeta, curvePeakActivity, maxBolusUnits, maxBasalUnits, domainStart, domainEnd, totalMs, chartWidth, dynamicInsulinMarginTop]);
@@ -1144,7 +1146,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       {/* Controls row */}
       <div className="flex py-2 items-center mb-2 justify-between px-3 gap-2">
 
-        {/* Left: YOUR FLOW label + filter button */}
+        {/* Left: DAILY FLOW label + filter button */}
         <div className="flex items-center gap-2">
           <div className="relative justify-start">
           <button
@@ -1374,9 +1376,9 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                   type="basis"
                   dataKey={k.key}
                   name={k.label}
-                  stroke={k.color}
+                  stroke={k.isSpent ? "#b8aea0" : k.color}
                   strokeWidth={k.isBasal ? 1.5 : 2}
-                  strokeOpacity={k.isBasal ? 0.55 : 0.78}
+                  strokeOpacity={k.isSpent ? 0.4 : (k.isBasal ? 0.55 : 0.78)}
                   fill="none"
                   dot={false}
                   activeDot={false}
@@ -1393,6 +1395,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             const peakYAbs = INSULIN_ROW_TOP + m.peakY;
             const leaderHeight = Math.max(0, peakYAbs - labelY - 14);
             const unitsLabel = m.units % 1 === 0 ? m.units : m.units.toFixed(1);
+            const labelColor = m.isSpent ? "#b8aea0" : m.color;
             return (
               <div
                 key={`label_${m.key}`}
@@ -1400,13 +1403,13 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                 style={{ left: m.x, top: labelY, transform: "translateX(-50%)" }}
                 onClick={(e) => { e.stopPropagation(); handleDoseTap(m.dose, m.key, e.currentTarget.getBoundingClientRect()); }}
               >
-                <span className="text-[10px] font-bold whitespace-nowrap px-1 rounded" style={{ color: m.color, background: "rgba(247,241,232,0.85)" }}>
+                <span className="text-[10px] font-bold whitespace-nowrap px-1 rounded" style={{ color: labelColor, background: "rgba(247,241,232,0.85)" }}>
                   {unitsLabel}u
                 </span>
                 {leaderHeight > 0 && (
                   <div
                     className="absolute left-1/2 top-full"
-                    style={{ height: leaderHeight, borderLeft: `1px dotted ${m.color}80`, marginLeft: -0.5 }}
+                    style={{ height: leaderHeight, borderLeft: `1px dotted ${labelColor}80`, marginLeft: -0.5 }}
                   />
                 )}
               </div>

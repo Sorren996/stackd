@@ -150,7 +150,7 @@ export default function DoseForm({ open, onOpenChange, mode = "insulin" }) {
     () =>
       Object.entries(INSULIN_PROFILES)
         .filter(([name]) => insulinLibrary.includes(name))
-        .map(([name, profile]) => ({ value: name, label: name, description: profile.category })),
+        .map(([name, profile]) => ({ value: name, label: name, description: profile.category, color: profile.color })),
     [insulinLibrary]
   );
 

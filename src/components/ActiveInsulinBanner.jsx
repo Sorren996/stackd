@@ -1126,7 +1126,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
       <DashboardCard className="p-5">
         {/* Card header — "Your day" + current date/time */}
         <div className="flex items-baseline justify-between">
-          <h1 className="hdr">Your <em>day</em></h1>
+          <h1 className="hdr">Daily <em>View</em></h1>
           <span className="hdr-date">{format(new Date(nowMinute * MINUTE_MS), "EEE, MMM d · h:mm a")}</span>
         </div>
 
@@ -1170,7 +1170,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
       {/* 2. YOUR FLOW CARD */}
       <DashboardCard className="overflow-hidden p-0">
         <div className="flex items-baseline justify-between px-5 pt-4">
-          <h1 className="hdr">Your <em>Flow</em></h1>
+          <h1 className="hdr">Daily <em>Flow</em></h1>
         </div>
         <div className="relative pt-3 pb-5">
           {(() => {

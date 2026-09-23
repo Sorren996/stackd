@@ -63,16 +63,28 @@ export default function InsulinTypeSelector({ value, onChange, options }) {
                 ref={isSelected ? selectedRef : null}
                 type="button"
                 onClick={() => onChange(option.value)}
-                className="flex shrink-0 items-center justify-center rounded-full text-center"
+                className="flex shrink-0 flex-col items-center justify-center gap-1.5 rounded-full text-center"
                 style={{
                   height: 88,
                   width: 88,
                   transition: TRANSITION,
-                  background: isSelected ? "#9c5228" : "#fdf9f2",
-                  color: isSelected ? "#f7f1e8" : "#8a7f70",
+                  background: isSelected ? "#9c5228" : "#f0e8db",
+                  border: isSelected ? "1px solid #9c5228" : "1px solid #eadccf",
+                  color: isSelected ? "#f7f1e8" : "#6b6153",
                 }}
                 aria-pressed={isSelected}
               >
+                <span
+                  className="rounded-full"
+                  style={{
+                    width: 16,
+                    height: 16,
+                    background: option.color || "#5b6550",
+                    boxShadow: isSelected
+                      ? "0 0 0 2px rgba(247,241,232,0.85)"
+                      : "0 0 0 1px rgba(63,56,48,0.10)",
+                  }}
+                />
                 <span className="px-1.5 text-[11px] font-semibold leading-tight">
                   {option.label}
                 </span>
