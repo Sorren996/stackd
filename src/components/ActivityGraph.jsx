@@ -134,8 +134,8 @@ function sampleGlucosePathAtX(pathEl, targetX) {
   for (let i = 0; i < 26; i += 1) {
     const mid = (lo + hi) / 2;
     const point = pathEl.getPointAtLength(mid);
-    if (point.x < targetX) lo = mid;
-    else hi = mid;
+    if (point.x < targetX) lo = mid;else
+    hi = mid;
   }
   const point = pathEl.getPointAtLength((lo + hi) / 2);
   return { x: point.x, y: point.y };
@@ -446,7 +446,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const { effectiveMax, effectiveMin } = useMemo(() => {
     let visibleMax = -Infinity;
     let visibleMin = Infinity;
-    for (const r of (glucoseReadings || [])) {
+    for (const r of glucoseReadings || []) {
       const v = Number(getReadingValue(r));
       if (!Number.isFinite(v)) continue;
       if (v > visibleMax) visibleMax = v;
@@ -525,7 +525,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     return {
       time: new Date(entry.consumed_at).getTime(),
       entry,
-      color: isRescue ? "#a78bfa" : (CARB_PROFILE_COLORS[entry.absorption_profile] || PROFILE_COLORS[entry.absorption_profile] || "#f59e0b")
+      color: isRescue ? "#a78bfa" : CARB_PROFILE_COLORS[entry.absorption_profile] || PROFILE_COLORS[entry.absorption_profile] || "#f59e0b"
     };
   }).
   filter((marker) => Number.isFinite(marker.time) && marker.time >= domainStart && marker.time <= domainEnd),
@@ -922,9 +922,9 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     let lo = 0;
     let hi = filteredGlucoseReadings.length - 1;
     while (lo < hi) {
-      const mid = (lo + hi) >> 1;
-      if (filteredGlucoseReadings[mid].time < time) lo = mid + 1;
-      else hi = mid;
+      const mid = lo + hi >> 1;
+      if (filteredGlucoseReadings[mid].time < time) lo = mid + 1;else
+      hi = mid;
     }
     const a = filteredGlucoseReadings[lo - 1];
     const b = filteredGlucoseReadings[lo];
@@ -1007,9 +1007,9 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     // dispatches when the status (high / low / in-range) changes, so this
     // does NOT fire on every scroll frame — just on transitions.
     const glowStatus =
-      selectedValue > targetHigh ? "high"
-      : selectedValue < targetLow ? "low"
-      : "in_range";
+    selectedValue > targetHigh ? "high" :
+    selectedValue < targetLow ? "low" :
+    "in_range";
     const overReference = selectedValue > highReference || selectedValue < FIXED_LOW_REFERENCE;
     if (glowStatus !== prevGlowStatusRef.current || overReference !== prevOverReferenceRef.current) {
       prevGlowStatusRef.current = glowStatus;
@@ -1152,35 +1152,35 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       <div ref={monitoringA11yRef} className="sr-only" aria-live="polite" role="status" />
       {/* Controls — portaled into the Daily Flow header slot */}
       {(() => {
-        const controls = (
-          <div className="flex items-center gap-2">
+        const controls =
+        <div className="flex items-center gap-2">
             <button
-              onClick={(e) => {
-                const rect = e.currentTarget.getBoundingClientRect();
-                setFilterAnchorRect(rect);
-                setShowFilter((v) => !v);
-              }}
-              className={`w-8 h-8 flex items-center rounded-xl border transition-all relative hidden justify-center ${
-              showFilter ?
-              "border-[#5b6550] bg-[rgba(91,101,80,0.10)] text-[#5b6550]" :
-              "border-[#eadccf] bg-[#fdf9f2] text-[#a89e8d] hover:text-[#3f3830]"}`
-              }>
+            onClick={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              setFilterAnchorRect(rect);
+              setShowFilter((v) => !v);
+            }}
+            className={`w-8 h-8 flex items-center rounded-xl border transition-all relative hidden justify-center ${
+            showFilter ?
+            "border-[#5b6550] bg-[rgba(91,101,80,0.10)] text-[#5b6550]" :
+            "border-[#eadccf] bg-[#fdf9f2] text-[#a89e8d] hover:text-[#3f3830]"}`
+            }>
               <SlidersHorizontal className="w-4 h-4" />
               {activeFilterCount < 3 &&
-              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full" style={{ background: "#5b6550" }} />
-              }
+            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full" style={{ background: "#5b6550" }} />
+            }
             </button>
             <TimeViewToggle value={viewWindow} onChange={setViewWindow} />
             <AnimatePresence>
               {showFilter && filterAnchorRect &&
-              <>
+            <>
                   <div className="fixed inset-0 z-[199]" onClick={() => setShowFilter(false)} />
                   <FilterDropdown filters={filters} onChange={toggleFilter} anchorRect={filterAnchorRect} />
                 </>
-              }
+            }
             </AnimatePresence>
-          </div>
-        );
+          </div>;
+
         return controlsPortalEl ? createPortal(controls, controlsPortalEl) : controls;
       })()}
       <div className="relative">
@@ -1228,25 +1228,25 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       {filters.glucose && filteredGlucoseReadings.length > 0 &&
           (() => {
             const candlePlotH = CHART_HEIGHT - CHART_MARGIN_TOP - X_AXIS_HEIGHT;
-            const refToY = isCandlestick
-              ? (v) => {
-                  const c = Math.min(Math.max(v, effectiveMin), effectiveMax);
-                  return CHART_MARGIN_TOP + (effectiveMax - c) / (effectiveMax - effectiveMin) * candlePlotH;
-                }
-              : getGlucoseY;
+            const refToY = isCandlestick ?
+            (v) => {
+              const c = Math.min(Math.max(v, effectiveMin), effectiveMax);
+              return CHART_MARGIN_TOP + (effectiveMax - c) / (effectiveMax - effectiveMin) * candlePlotH;
+            } :
+            getGlucoseY;
             const refLabels = [
-              { id: "highRef", value: highReference, side: "right", color: GLUCOSE_STATUS_COLORS.high, anchor: "above", secondary: true, text: `High ${highReference}` },
-              { id: "lowRef", value: FIXED_LOW_REFERENCE, side: "right", color: GLUCOSE_STATUS_COLORS.low, anchor: "below", secondary: true, text: `${FIXED_LOW_REFERENCE}` },
-              { id: "tgtHigh", value: targetHigh, side: "right", color: gTheme.inRangeColor, anchor: "above", secondary: false, text: `${Math.round(targetHigh)}` },
-              { id: "tgtLow", value: targetLow, side: "right", color: gTheme.inRangeColor, anchor: "below", secondary: false, text: `${Math.round(targetLow)}` },
-            ];
+            { id: "highRef", value: highReference, side: "right", color: GLUCOSE_STATUS_COLORS.high, anchor: "above", secondary: true, text: `High ${highReference}` },
+            { id: "lowRef", value: FIXED_LOW_REFERENCE, side: "right", color: GLUCOSE_STATUS_COLORS.low, anchor: "below", secondary: true, text: `${FIXED_LOW_REFERENCE}` },
+            { id: "tgtHigh", value: targetHigh, side: "right", color: gTheme.inRangeColor, anchor: "above", secondary: false, text: `${Math.round(targetHigh)}` },
+            { id: "tgtLow", value: targetLow, side: "right", color: gTheme.inRangeColor, anchor: "below", secondary: false, text: `${Math.round(targetLow)}` }];
+
             return (
               <ReferenceLabels
                 labels={refLabels}
                 toY={refToY}
-                chartHeight={isCandlestick ? CHART_HEIGHT : GLUCOSE_CHART_HEIGHT}
-              />
-            );
+                chartHeight={isCandlestick ? CHART_HEIGHT : GLUCOSE_CHART_HEIGHT} />);
+
+
           })()}
       {/* monitoring gradient bands live inside the scrollable chart below */}
       <div
@@ -1262,7 +1262,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               }
               scheduleCenterGlucoseUpdate(el.scrollLeft);
             }}>
-        <div className="relative"           style={{ width: chartWidth, height: isCandlestick ? CANDLESTICK_TOTAL_HEIGHT : twoRowHeight }}>
+        <div className="relative" style={{ width: chartWidth, height: isCandlestick ? CANDLESTICK_TOTAL_HEIGHT : twoRowHeight }}>
           {isCandlestick ?
               <CandlestickView
                 glucoseReadings={filteredGlucoseReadings}
@@ -1287,17 +1287,17 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                     width={chartWidth}
                     height={GLUCOSE_CHART_HEIGHT}
                     data={chartData}
-                    margin={{ top: GLUCOSE_MARGIN_TOP, right: 0, left: -20, bottom: 0 }}>
-              {filters.glucose && (
-                <ReferenceArea
-                  yAxisId="glucose"
-                  x1={Date.now()}
-                  x2={domainEnd}
-                  fill="#af751b"
-                  fillOpacity={0.06}
-                  stroke="none"
-                />
-              )}
+                    margin={{ top: GLUCOSE_MARGIN_TOP, right: 0, left: -20, bottom: 0 }} className="opacity-100">
+              {filters.glucose &&
+                    <ReferenceArea
+                      yAxisId="glucose"
+                      x1={Date.now()}
+                      x2={domainEnd}
+                      fill="#af751b"
+                      fillOpacity={0.06}
+                      stroke="none" />
+
+                    }
 
               <YAxis yAxisId="glucose" domain={[effectiveMin, effectiveMax]} allowDataOverflow hide />
 
@@ -1306,28 +1306,28 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                   <ReferenceLine yAxisId="glucose" y={targetHigh} stroke={gTheme.refLineStroke} strokeWidth={1} strokeDasharray="3 4" />
                   <ReferenceLine yAxisId="glucose" y={targetLow} stroke={gTheme.refLineStroke} strokeWidth={1} strokeDasharray="3 4" />
                   <ReferenceLine
-                    yAxisId="glucose"
-                    y={highReference}
-                    stroke={GLUCOSE_STATUS_COLORS.high}
-                    strokeOpacity={0.30}
-                    strokeWidth={1}
-                    strokeDasharray="6 5"
-                  />
+                        yAxisId="glucose"
+                        y={highReference}
+                        stroke={GLUCOSE_STATUS_COLORS.high}
+                        strokeOpacity={0.30}
+                        strokeWidth={1}
+                        strokeDasharray="6 5" />
+                      
                   <ReferenceLine
-                    yAxisId="glucose"
-                    y={FIXED_LOW_REFERENCE}
-                    stroke={GLUCOSE_STATUS_COLORS.low}
-                    strokeOpacity={0.28}
-                    strokeWidth={1}
-                    strokeDasharray="6 5"
-                  />
+                        yAxisId="glucose"
+                        y={FIXED_LOW_REFERENCE}
+                        stroke={GLUCOSE_STATUS_COLORS.low}
+                        strokeOpacity={0.28}
+                        strokeWidth={1}
+                        strokeDasharray="6 5" />
+                      
                   <ReferenceLine
-                    x={Date.now()}
-                    yAxisId="glucose"
-                    stroke="#3f3830"
-                    strokeWidth={1}
-                    strokeOpacity={0.3}
-                  />
+                        x={Date.now()}
+                        yAxisId="glucose"
+                        stroke="#3f3830"
+                        strokeWidth={1}
+                        strokeOpacity={0.3} />
+                      
                 </>
                     }
 
@@ -1346,7 +1346,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                       activeDot={false}
                       connectNulls={true}
                       isAnimationActive={false} />
-                }
+                    }
             </ComposedChart>
           </div>
 
@@ -1358,123 +1358,123 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                     data={chartData}
                     margin={{ top: dynamicInsulinMarginTop, right: 0, left: -20, bottom: GRAPH_BOTTOM_INSET }}>
               <XAxis
-                dataKey="time"
-                type="number"
-                domain={[domainStart, domainEnd]}
-                ticks={timeTicks}
-                tick={<TimeAxisTick />}
-                axisLine={false}
-                tickLine={false}
-                height={X_AXIS_HEIGHT}
-                interval={0} />
+                      dataKey="time"
+                      type="number"
+                      domain={[domainStart, domainEnd]}
+                      ticks={timeTicks}
+                      tick={<TimeAxisTick />}
+                      axisLine={false}
+                      tickLine={false}
+                      height={X_AXIS_HEIGHT}
+                      interval={0} />
 
               <YAxis yAxisId="insulin" domain={[effectiveMin, effectiveMin + (effectiveMax - effectiveMin) * 0.18]} allowDataOverflow hide />
 
-              {filters.insulin && doseKeys.map((k) => (
-                <Line
-                  key={k.key}
-                  yAxisId="insulin"
-                  type="basis"
-                  dataKey={k.key}
-                  name={k.label}
-                  stroke={k.isSpent ? "#b8aea0" : k.color}
-                  strokeWidth={k.isBasal ? 1.5 : 2}
-                  strokeOpacity={k.isSpent ? 0.4 : (k.isBasal ? 0.55 : 0.78)}
-                  fill="none"
-                  dot={false}
-                  activeDot={false}
-                  isAnimationActive={false}
-                  connectNulls={true}
-                />
-              ))}
+              {filters.insulin && doseKeys.map((k) =>
+                    <Line
+                      key={k.key}
+                      yAxisId="insulin"
+                      type="basis"
+                      dataKey={k.key}
+                      name={k.label}
+                      stroke={k.isSpent ? "#b8aea0" : k.color}
+                      strokeWidth={k.isBasal ? 1.5 : 2}
+                      strokeOpacity={k.isSpent ? 0.4 : k.isBasal ? 0.55 : 0.78}
+                      fill="none"
+                      dot={false}
+                      activeDot={false}
+                      isAnimationActive={false}
+                      connectNulls={true} />
+
+                    )}
             </ComposedChart>
           </div>
 
           {/* Insulin unit labels with dotted leaders to curve peaks */}
           {filters.insulin && positionedDoseMarkers.map((m) => {
-            const labelY = INSULIN_ROW_TOP + m.pillTop;
-            const peakYAbs = INSULIN_ROW_TOP + m.peakY;
-            const leaderHeight = Math.max(0, peakYAbs - labelY - 14);
-            const unitsLabel = m.units % 1 === 0 ? m.units : m.units.toFixed(1);
-            const labelColor = m.isSpent ? "#b8aea0" : m.color;
-            return (
-              <div
-                key={`label_${m.key}`}
-                className="absolute z-[9] cursor-pointer"
-                style={{ left: m.x, top: labelY, transform: "translateX(-50%)" }}
-                onClick={(e) => { e.stopPropagation(); handleDoseTap(m.dose, m.key, e.currentTarget.getBoundingClientRect()); }}
-              >
+                  const labelY = INSULIN_ROW_TOP + m.pillTop;
+                  const peakYAbs = INSULIN_ROW_TOP + m.peakY;
+                  const leaderHeight = Math.max(0, peakYAbs - labelY - 14);
+                  const unitsLabel = m.units % 1 === 0 ? m.units : m.units.toFixed(1);
+                  const labelColor = m.isSpent ? "#b8aea0" : m.color;
+                  return (
+                    <div
+                      key={`label_${m.key}`}
+                      className="absolute z-[9] cursor-pointer"
+                      style={{ left: m.x, top: labelY, transform: "translateX(-50%)" }}
+                      onClick={(e) => {e.stopPropagation();handleDoseTap(m.dose, m.key, e.currentTarget.getBoundingClientRect());}}>
+                      
                 <span className="text-[10px] font-bold whitespace-nowrap px-1 rounded" style={{ color: labelColor, background: "rgba(247,241,232,0.85)" }}>
                   {unitsLabel}u
                 </span>
-                {leaderHeight > 0 && (
-                  <div
-                    className="absolute left-1/2 top-full"
-                    style={{ height: leaderHeight, borderLeft: `1px dotted ${labelColor}80`, marginLeft: -0.5 }}
-                  />
-                )}
-              </div>
-            );
-          })}
+                {leaderHeight > 0 &&
+                      <div
+                        className="absolute left-1/2 top-full"
+                        style={{ height: leaderHeight, borderLeft: `1px dotted ${labelColor}80`, marginLeft: -0.5 }} />
+
+                      }
+              </div>);
+
+                })}
 
           {/* Invisible tap zones for insulin curves */}
-          {filters.insulin && positionedDoseMarkers.map((m) => (
-            <div
-              key={`hit_${m.key}`}
-              className="absolute z-[7] cursor-pointer"
-              style={{ left: m.x - 30, top: INSULIN_ROW_TOP + dynamicInsulinMarginTop, width: 60, height: INSULIN_PLOT_HEIGHT }}
-              onClick={(e) => { e.stopPropagation(); handleDoseTap(m.dose, m.key, e.currentTarget.getBoundingClientRect()); }}
-            />
-          ))}
+          {filters.insulin && positionedDoseMarkers.map((m) =>
+                <div
+                  key={`hit_${m.key}`}
+                  className="absolute z-[7] cursor-pointer"
+                  style={{ left: m.x - 30, top: INSULIN_ROW_TOP + dynamicInsulinMarginTop, width: 60, height: INSULIN_PLOT_HEIGHT }}
+                  onClick={(e) => {e.stopPropagation();handleDoseTap(m.dose, m.key, e.currentTarget.getBoundingClientRect());}} />
+
+                )}
 
           {/* Tappable meal markers ON the glucose curve */}
           {filters.carbs && positionedCarbMarkers.map(({ entry, x, trueX, displaced }) => {
-            const entryTime = new Date(entry.consumed_at).getTime();
-            if (!Number.isFinite(entryTime) || entryTime < domainStart || entryTime > domainEnd) return null;
-            const glucoseAt = getGlucoseAt(entryTime);
-            if (!glucoseAt) return null;
-            const ringY = getGlucoseY(glucoseAt.plotValue);
-            const isRescue = entry.is_rescue_carb === true || entry.classification === "rescue_carbs";
-            return (
-              <div key={`marker_${entry.id}`}>
-                {displaced && (
-                  <div
-                    className="absolute z-[7] pointer-events-none"
-                    style={{
-                      left: Math.min(x, trueX),
-                      top: ringY,
-                      width: Math.abs(x - trueX),
-                      borderTop: "1px dotted #3f3830",
-                      opacity: 0.3,
-                    }}
-                  />
-                )}
+                  const entryTime = new Date(entry.consumed_at).getTime();
+                  if (!Number.isFinite(entryTime) || entryTime < domainStart || entryTime > domainEnd) return null;
+                  const glucoseAt = getGlucoseAt(entryTime);
+                  if (!glucoseAt) return null;
+                  const ringY = getGlucoseY(glucoseAt.plotValue);
+                  const isRescue = entry.is_rescue_carb === true || entry.classification === "rescue_carbs";
+                  return (
+                    <div key={`marker_${entry.id}`}>
+                {displaced &&
+                      <div
+                        className="absolute z-[7] pointer-events-none"
+                        style={{
+                          left: Math.min(x, trueX),
+                          top: ringY,
+                          width: Math.abs(x - trueX),
+                          borderTop: "1px dotted #3f3830",
+                          opacity: 0.3
+                        }} />
+
+                      }
                 <div
-                  className="absolute z-[8] cursor-pointer"
-                  style={{ left: x, top: ringY, transform: "translate(-50%, -50%)" }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const tappedTime = new Date(entry.consumed_at).getTime();
-                    const group = filteredCarbEntries.filter((ce) => {
-                      const t = new Date(ce.consumed_at).getTime();
-                      return Math.abs(t - tappedTime) <= 30 * 60 * 1000;
-                    });
-                    setEditingMeal(group);
-                  }}
-                >
+                        className="absolute z-[8] cursor-pointer"
+                        style={{ left: x, top: ringY, transform: "translate(-50%, -50%)" }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const tappedTime = new Date(entry.consumed_at).getTime();
+                          const group = filteredCarbEntries.filter((ce) => {
+                            const t = new Date(ce.consumed_at).getTime();
+                            return Math.abs(t - tappedTime) <= 30 * 60 * 1000;
+                          });
+                          setEditingMeal(group);
+                        }}>
+                        
                   <div
-                    className="rounded-full transition hover:scale-110"
-                    style={{
-                      width: 12,
-                      height: 12,
-                      border: `1.5px solid ${isRescue ? "#8a6db8" : "#3f3830"}`,
-                      background: "#f7f1e8",
-                    }}
-                  />
+                          className="rounded-full transition hover:scale-110"
+                          style={{
+                            width: 12,
+                            height: 12,
+                            border: `1.5px solid ${isRescue ? "#8a6db8" : "#3f3830"}`,
+                            background: "#f7f1e8"
+                          }} />
+                        
                 </div>
-              </div>
-            );
-          })}
+              </div>);
+
+                })}
 
 
           </>
@@ -1491,12 +1491,12 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           <div className="h-2 w-2 rounded-full border-[1.5px]" style={{ borderColor: "#3f3830", background: "#f7f1e8" }} />
           <span className="text-[10px]" style={{ color: "#746959" }}>meals</span>
         </div>
-        {activeDoseKeys.map((k) => (
+        {activeDoseKeys.map((k) =>
           <div key={k.label} className="flex items-center gap-1.5">
             <div className="h-2 w-2 rounded-full" style={{ background: k.color }} />
             <span className="text-[10px]" style={{ color: "#746959" }}>{k.label} · {k.totalUnits} u</span>
           </div>
-        ))}
+          )}
       </div>
       <div
           ref={monitoringLabelRef}
@@ -1582,9 +1582,9 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         </InfoPopover>
       }
 
-      {editingMeal && (
-        <MealEditOverlay entries={editingMeal} onClose={() => setEditingMeal(null)} />
-      )}
+      {editingMeal &&
+      <MealEditOverlay entries={editingMeal} onClose={() => setEditingMeal(null)} />
+      }
     </div>);
 
 }
