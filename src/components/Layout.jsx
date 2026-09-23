@@ -116,7 +116,7 @@ export default function Layout() {
         <div
           className="mx-auto grid h-14 max-w-6xl grid-cols-[1fr_auto_1fr] items-center px-4"
           style={{
-            background: "linear-gradient(to bottom, rgba(247,241,232,0.92), rgba(247,241,232,0.6), transparent)",
+            background: "linear-gradient(to bottom, rgba(76,103,112,0.92), rgba(76,103,112,0.6), transparent)",
           }}
         >
           <div />
