@@ -1487,10 +1487,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           <div className="h-2 w-2 rounded-full border-[1.5px]" style={{ borderColor: "#3f3830", background: "#f7f1e8" }} />
           <span className="text-[10px]" style={{ color: "#746959" }}>meals</span>
         </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-4 border-t-2 border-dotted" style={{ borderColor: "#af751b" }} />
-          <span className="text-[10px]" style={{ color: "#746959" }}>projected</span>
-        </div>
         {activeDoseKeys.map((k) => (
           <div key={k.label} className="flex items-center gap-1.5">
             <div className="h-2 w-2 rounded-full" style={{ background: k.color }} />
