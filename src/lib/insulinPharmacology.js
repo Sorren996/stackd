@@ -1,14 +1,15 @@
 // Stackd Insulin Activity Engine — single authoritative source of truth.
 //
 // Each commercially available insulin product has its OWN pharmacodynamic
-// profile (onset / peak / duration / shape), drawn from FDA prescribing
-// information and ADA Standards of Care. The activity model is a smooth,
-// nonlinear pharmacodynamic curve — a normalized gamma (Erlang) distribution
-// for peaked insulins (rapid / regular / NPH / premix bolus components) and a
-// broad plateau curve for near-peakless basal insulins. Premixed products are
-// decomposed into their components and summed. Every dose is modeled
-// independently, so overlapping doses (bolus stacking and basal accumulation)
-// emerge naturally from summing per-dose curves.
+// profile (onset / peak / duration), drawn from FDA prescribing information
+// and ADA Standards of Care. The activity model for peaked (bolus) insulins is
+// the published exponential insulin activity model (oref1 / Loop / AndroidAPS /
+// OpenAPS), credited to Dragan Maksimovic — the current standard replacing the
+// older bilinear/triangle model. Near-peakless basal insulins use a broad
+// plateau curve. Premixed products are decomposed into their components and
+// summed. Every dose is modeled independently, so overlapping doses (bolus
+// stacking and basal accumulation) emerge naturally from summing per-dose
+// curves.
 //
 // IMPORTANT: This is a population-level ESTIMATE, not a measurement. IOB
 // represents the estimated amount of a dose still contributing to insulin
@@ -364,39 +365,84 @@ function getProfileTiming(profile, units) {
   return { model, onset, peak, duration, shape };
 }
 
-// --- Gamma (Erlang) CDF / PDF for peaked insulins ---
-// Erlang CDF with integer shape k: F(t) = 1 - e^{-x} * Σ_{j=0}^{k-1} x^j / j!, x = t/θ.
-function erlangCDF(t, k, theta) {
-  if (t <= 0 || theta <= 0) return 0;
-  const x = t / theta;
-  let sum = 1;
-  let term = 1;
-  for (let j = 1; j <= k - 1; j += 1) {
-    term *= x / j;
-    sum += term;
-    if (!Number.isFinite(sum) || sum > 1e15) return 1;
+// ---------------------------------------------------------------------------
+// Exponential insulin activity model (oref1 / Loop / AndroidAPS / OpenAPS)
+// ---------------------------------------------------------------------------
+// The published exponential insulin activity model, credited to Dragan
+// Maksimovic, used by Loop, AndroidAPS, and OpenAPS (oref1). This is the
+// current standard, replacing the older bilinear / triangle model.
+//
+// Parameters (per insulin type, stored in each profile as peak/duration):
+//   tp  = time to peak activity (minutes)  →  profile.peak
+//   dia = duration of insulin action (min) →  profile.duration  (IOB → 0)
+//
+// Derived constants:
+//   tau = tp * (1 - tp/dia) / (1 - 2*tp/dia)
+//   a   = 2 * tau / dia
+//   S   = 1 / (1 - a + (1 + a) * exp(-dia/tau))
+//
+// Activity fraction per minute (integrates to 1 over [0, dia]):
+//   activityFraction(t) = (S / tau²) * t * (1 - t/dia) * exp(-t/tau)
+//
+// IOB fraction remaining (1.0 at t=0, decaying to 0 at t=dia):
+//   iobFraction(t) = 1 - S*(1-a)*((t²/(tau*dia*(1-a)) - t/tau - 1)*exp(-t/tau) + 1)
+//
+// For t <= 0: iobFraction = 1, activityFraction = 0.
+// For t >= dia: iobFraction = 0, activityFraction = 0.
+//
+// For a dose of `units`: IOB(t) = units * iobFraction(t),
+//                        activity(t) = units * activityFraction(t).
+
+const _expPeakCache = new Map();
+
+function exponentialParams(tp, dia) {
+  const safeTp = Math.max(1, Number(tp) || 75);
+  const safeDia = Math.max(safeTp + 2, Number(dia) || 300);
+  const tau = (safeTp * (1 - safeTp / safeDia)) / (1 - (2 * safeTp) / safeDia);
+  const a = (2 * tau) / safeDia;
+  const S = 1 / (1 - a + (1 + a) * Math.exp(-safeDia / tau));
+  return { tau, a, S, tp: safeTp, dia: safeDia };
+}
+
+export function exponentialActivityFraction(t, tp, dia) {
+  const { tau, S, dia: safeDia } = exponentialParams(tp, dia);
+  if (t <= 0 || t >= safeDia) return 0;
+  return (S / (tau * tau)) * t * (1 - t / safeDia) * Math.exp(-t / tau);
+}
+
+export function exponentialIOBFraction(t, tp, dia) {
+  const { tau, a, S, dia: safeDia } = exponentialParams(tp, dia);
+  if (t <= 0) return 1;
+  if (t >= safeDia) return 0;
+  return (
+    1 -
+    S *
+      (1 - a) *
+      (((t * t) / (tau * safeDia * (1 - a)) - t / tau - 1) * Math.exp(-t / tau) + 1)
+  );
+}
+
+// Peak activity fraction (cached per tp:dia pair) — used to normalize the
+// visual curve shape so peak ≈ 1.
+function exponentialPeak(tp, dia) {
+  const key = `${tp}:${dia}`;
+  const cached = _expPeakCache.get(key);
+  if (cached !== undefined) return cached;
+  let peak = 0;
+  for (let m = 1; m < dia; m += 1) {
+    const v = exponentialActivityFraction(m, tp, dia);
+    if (v > peak) peak = v;
   }
-  const cdf = 1 - Math.exp(-x) * sum;
-  return clamp(cdf, 0, 1);
+  _expPeakCache.set(key, peak);
+  return peak;
 }
 
-function erlangPDF(t, k, theta) {
-  if (t <= 0 || theta <= 0) return 0;
-  const x = t / theta;
-  // f(t) = x^(k-1) e^{-x} / (θ (k-1)!)  →  computed in log-space for stability.
-  let logTerm = (k - 1) * Math.log(x) - x - Math.log(theta);
-  for (let j = 2; j <= k - 1; j += 1) logTerm -= Math.log(j);
-  return Math.exp(logTerm);
-}
-
-// Relative activity (glucose-lowering effect shape), normalized so peak ≈ 1.
-function peakedActivityRel(t, peak, duration, shape) {
-  if (t <= 0 || t >= duration) return 0;
-  const k = shape;
-  const theta = peak > 0 ? peak / (k - 1) : (duration * 0.3) / (k - 1);
-  const peakPdf = erlangPDF(peak > 0 ? peak : (k - 1) * theta, k, theta);
-  if (peakPdf <= 0) return 0;
-  return clamp(erlangPDF(t, k, theta) / peakPdf, 0, 1);
+// Relative activity (0–1, peak-normalized) for the exponential model.
+function exponentialActivityRel(t, tp, dia) {
+  const raw = exponentialActivityFraction(t, tp, dia);
+  if (raw <= 0) return 0;
+  const peak = exponentialPeak(tp, dia);
+  return peak > 0 ? raw / peak : 0;
 }
 
 // Smoothstep easing (3t² - 2t³) — used to give basal insulin's onset and
@@ -429,7 +475,8 @@ export function getRelativeActivityAtMinute(minute, timing) {
   const duration = Math.max(onset + 1, Number(timing?.duration) || onset + 1);
   if (t <= 0 || t >= duration) return 0;
   if (model === "flat") return flatActivity(t, onset, duration);
-  return peakedActivityRel(t, timing?.peak, duration, Number(timing?.shape) || 4);
+  const tp = Number(timing?.peak) || duration * 0.25;
+  return exponentialActivityRel(t, tp, duration);
 }
 
 // Resolve a dose into its component (profile, units) pairs. Premixed insulins
@@ -446,11 +493,44 @@ function getDoseComponents(dose) {
   return [{ profile, units }];
 }
 
-// Build the per-component sampled curve (activity + area-based IOB).
+// Build the per-component sampled curve.
+//
+// Peaked (bolus) insulins use the exponential (oref1) model: IOB and activity
+// are computed in closed form from iobFraction(t) and activityFraction(t).
+//
+// Flat (basal) insulins keep the area-based plateau curve — basal insulin has
+// no meaningful activity peak in published pharmacokinetics, so it renders as
+// the steady background coverage band, not a peaked exponential.
 function buildSingleComponentCurve(profile, units, start, step) {
   if (!profile || !units || units <= 0) return [];
   const timing = getProfileTiming(profile, units);
   const spanMin = Math.max(step, timing.duration);
+
+  if (timing.model === "peaked") {
+    const tp = Number(timing.peak) || 75;
+    const dia = timing.duration;
+    const peak = exponentialPeak(tp, dia);
+    const points = [];
+    for (let minute = 0; minute <= spanMin; minute += step) {
+      const t = Math.min(minute, dia);
+      const iobFrac = exponentialIOBFraction(t, tp, dia);
+      const actFrac = exponentialActivityFraction(t, tp, dia);
+      points.push({
+        minute,
+        time: start + minute * MINUTE_MS,
+        activity: peak > 0 ? actFrac / peak : 0,
+        iobFraction: iobFrac,
+        activeUnits: Math.max(0, units * iobFrac),
+        activityUnitsPerMinute: units * actFrac,
+      });
+    }
+    if (!points.length || points[points.length - 1].activity !== 0) {
+      points.push({ minute: spanMin, time: start + spanMin * MINUTE_MS, activity: 0, iobFraction: 0, activeUnits: 0, activityUnitsPerMinute: 0 });
+    }
+    return points;
+  }
+
+  // Flat (basal): area-based plateau curve.
   const points = [];
   for (let minute = 0; minute <= spanMin; minute += step) {
     points.push({ minute, time: start + minute * MINUTE_MS, activity: getRelativeActivityAtMinute(minute, timing) });
