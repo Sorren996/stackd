@@ -83,21 +83,21 @@ export default function RightNowView({
       </div>
 
       {/* Floating copper add button */}
-      <div className="flex justify-center pb-2 pt-4 hidden">
-        <button
-          type="button"
-          onClick={onAddLog}
-          aria-label="Log a moment"
-          className="flex h-12 w-12 items-center justify-center rounded-full transition hover:opacity-90"
-          style={{
-            background: "#9c5228",
-            border: "1px solid #9c5228",
-            boxShadow: "0 6px 20px rgba(156,82,40,0.28)"
-          }}>
-          
-          <Plus className="h-5 w-5" style={{ color: "#f7f1e8" }} />
-        </button>
-      </div>
+      
+
+
+
+
+
+
+
+
+
+
+
+
+
+      
     </div>);
 
 }
