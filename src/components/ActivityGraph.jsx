@@ -1,4 +1,5 @@
 import { useMemo, useRef, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Area, XAxis, YAxis, Line, ComposedChart, ReferenceLine, ReferenceArea } from "recharts";
 import { generateActivityCurve, getDoseIOB, getDoseRelativeActivity, getInsulinProfile, isBasalInsulinType } from "@/lib/insulinPharmacology";
 import { PROFILE_COLORS } from "@/lib/carbAbsorption";
@@ -325,6 +326,12 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const [filterAnchorRect, setFilterAnchorRect] = useState(null);
   const [filters, setFilters] = useState({ glucose: true, insulin: true, carbs: true });
   const [viewWindow, setViewWindow] = useState(6);
+  const [controlsPortalEl, setControlsPortalEl] = useState(null);
+
+  useEffect(() => {
+    const el = document.getElementById("daily-flow-controls");
+    if (el) setControlsPortalEl(el);
+  }, []);
   const isCandlestick = viewWindow === 24;
   const [activeMarker, setActiveMarker] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -1143,45 +1150,39 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   return (
     <div ref={containerRef} className="relative overflow-visible">
       <div ref={monitoringA11yRef} className="sr-only" aria-live="polite" role="status" />
-      {/* Controls row */}
-      <div className="flex py-2 items-center mb-2 justify-between px-3 gap-2">
-
-        {/* Left: DAILY FLOW label + filter button */}
-        <div className="flex items-center gap-2">
-          <div className="relative justify-start">
-          <button
-            onClick={(e) => {
-              const rect = e.currentTarget.getBoundingClientRect();
-              setFilterAnchorRect(rect);
-              setShowFilter((v) => !v);
-            }}
-            className={`w-8 h-8 flex items-center rounded-xl border transition-all relative hidden justify-center ${
-            showFilter ?
-            "border-[#5b6550] bg-[rgba(91,101,80,0.10)] text-[#5b6550]" :
-            "border-[#eadccf] bg-[#fdf9f2] text-[#a89e8d] hover:text-[#3f3830]"}`
-            }>
-            
-            <SlidersHorizontal className="w-4 h-4" />
-            {activeFilterCount < 3 &&
-            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full" style={{ background: "#5b6550" }} />
-            }
-          </button>
-        </div>
-        </div>
-
-        {/* Right: Time view toggle */}
-        <TimeViewToggle value={viewWindow} onChange={setViewWindow} />
-
-        {/* Portal-style backdrop + dropdown rendered outside flow */}
-        <AnimatePresence>
-          {showFilter && filterAnchorRect &&
-          <>
-              <div className="fixed inset-0 z-[199]" onClick={() => setShowFilter(false)} />
-              <FilterDropdown filters={filters} onChange={toggleFilter} anchorRect={filterAnchorRect} />
-            </>
-          }
-        </AnimatePresence>
-      </div>
+      {/* Controls — portaled into the Daily Flow header slot */}
+      {(() => {
+        const controls = (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                setFilterAnchorRect(rect);
+                setShowFilter((v) => !v);
+              }}
+              className={`w-8 h-8 flex items-center rounded-xl border transition-all relative hidden justify-center ${
+              showFilter ?
+              "border-[#5b6550] bg-[rgba(91,101,80,0.10)] text-[#5b6550]" :
+              "border-[#eadccf] bg-[#fdf9f2] text-[#a89e8d] hover:text-[#3f3830]"}`
+              }>
+              <SlidersHorizontal className="w-4 h-4" />
+              {activeFilterCount < 3 &&
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full" style={{ background: "#5b6550" }} />
+              }
+            </button>
+            <TimeViewToggle value={viewWindow} onChange={setViewWindow} />
+            <AnimatePresence>
+              {showFilter && filterAnchorRect &&
+              <>
+                  <div className="fixed inset-0 z-[199]" onClick={() => setShowFilter(false)} />
+                  <FilterDropdown filters={filters} onChange={toggleFilter} anchorRect={filterAnchorRect} />
+                </>
+              }
+            </AnimatePresence>
+          </div>
+        );
+        return controlsPortalEl ? createPortal(controls, controlsPortalEl) : controls;
+      })()}
       <div className="relative">
       <button
           type="button"

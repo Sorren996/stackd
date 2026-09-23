@@ -1172,8 +1172,9 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
 
       {/* 2. YOUR FLOW CARD */}
       <DashboardCard className="overflow-hidden p-0">
-        <div className="flex items-baseline justify-between px-5 pt-4">
+        <div className="flex items-center justify-between px-5 pt-4">
           <h1 className="hdr">Daily <em>Flow</em></h1>
+          <div id="daily-flow-controls" className="flex items-center gap-2" />
         </div>
         <div className="relative pb-5 pt-3 my-3">
           {(() => {
