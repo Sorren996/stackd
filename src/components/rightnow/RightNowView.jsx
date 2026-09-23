@@ -83,7 +83,7 @@ export default function RightNowView({
       </div>
 
       {/* Floating copper add button */}
-      <div className="flex justify-center pb-2 pt-4">
+      <div className="flex justify-center pb-2 pt-4 hidden">
         <button
           type="button"
           onClick={onAddLog}
