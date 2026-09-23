@@ -295,7 +295,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
         rescueCarbs: 0,
         recentNormalCarbs: 0,
         activeInsulin: getTotalBolusIOB(doses, now),
-        latestGlucoseValue: Number.isFinite(Number(latestGlucose?.value)) ? Number(latestGlucose?.value) : null,
+        latestGlucoseValue: Number.isFinite(Number(latestGlucose?.value)) ? Number(latestGlucose?.value) : null
       }
     };
   }
@@ -603,13 +603,13 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
       hasCorrectiveInsulin,
       hasCorrectiveCarbs,
       mealStillUnderReview,
-      rescueCarbs: Math.round((Array.isArray(carbEntries) ? carbEntries : [])
-        .filter((entry) => {
-          if (entry.is_rescue_carb !== true && entry.classification !== "rescue_carbs" && !isRescueCarbEntry(entry, glucoseReadings, doses, insulinSettings.targetLow)) return false;
-          const eTime = getEntryTime(entry);
-          return Number.isFinite(eTime) && eTime >= mealTime && eTime <= mealTime + outcomeWindowMs;
-        })
-        .reduce((sum, entry) => sum + Number(entry.carbs || 0), 0)),
+      rescueCarbs: Math.round((Array.isArray(carbEntries) ? carbEntries : []).
+      filter((entry) => {
+        if (entry.is_rescue_carb !== true && entry.classification !== "rescue_carbs" && !isRescueCarbEntry(entry, glucoseReadings, doses, insulinSettings.targetLow)) return false;
+        const eTime = getEntryTime(entry);
+        return Number.isFinite(eTime) && eTime >= mealTime && eTime <= mealTime + outcomeWindowMs;
+      }).
+      reduce((sum, entry) => sum + Number(entry.carbs || 0), 0)),
       windowStart,
       windowEnd,
       reviewWindowEnd: mealTime + outcomeWindowMs
@@ -1111,7 +1111,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
     return {
       inRange: fmt(inR * intervalMin),
       above: fmt(above * intervalMin),
-      below: fmt(below * intervalMin),
+      below: fmt(below * intervalMin)
     };
   }, [safeGlucoseReadings, targetRange.low, targetRange.high, dexcomConnected]);
 
@@ -1135,39 +1135,39 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
 
         <div className="section-label mt-5">Current Glucose</div>
         <AnchorNumber
-          value={isGlucoseStale ? "—" : (glucoseValue != null ? Math.round(glucoseValue) : "—")}
+          value={isGlucoseStale ? "—" : glucoseValue != null ? Math.round(glucoseValue) : "—"}
           unit="mg/dL"
-          caption={isGlucoseStale ? "Waiting for a fresh reading" : (trend?.label || "Steady")}
+          caption={isGlucoseStale ? "Waiting for a fresh reading" : trend?.label || "Steady"}
           trendIcon={!isGlucoseStale && glucoseValue != null ? <TrendIcon size={30} strokeWidth={2.5} /> : null}
           trendColor={glucoseColor}
-          subcaption={isGlucoseStale ? null : (
-            <span className="font-serif-italic">updated {(() => {
+          subcaption={isGlucoseStale ? null :
+          <span className="font-serif-italic">updated {(() => {
               if (!latestGlucose?.recorded_at) return "just now";
               const mins = Math.max(0, Math.round((nowMinute * MINUTE_MS - new Date(latestGlucose.recorded_at).getTime()) / 60000));
               if (mins < 1) return "just now";
               if (mins < 60) return `${mins}m ago`;
               return `${Math.floor(mins / 60)}h ${mins % 60}m ago`;
             })()}</span>
-          )}
-        />
+          } />
+        
 
-        {isGlucoseStale ? (
-          <StaleReadingBanner visible={isGlucoseStale} />
-        ) : (
-          <SupportiveGlucoseMessage insight={supportiveGlucoseInsight} trend={trend} TrendIcon={TrendIcon} />
-        )}
+        {isGlucoseStale ?
+        <StaleReadingBanner visible={isGlucoseStale} /> :
+
+        <SupportiveGlucoseMessage insight={supportiveGlucoseInsight} trend={trend} TrendIcon={TrendIcon} />
+        }
 
         <div className="section-label mt-6">Daily Balance</div>
         <AnchorNumber
           value={comfortZonePercentage != null ? Math.round(comfortZonePercentage) : "—"}
-          unit="%"
-        />
-        {dailyTimeBreakdown && (
-          <div className="mt-2 flex justify-between text-xs px-1" style={{ color: "#746959" }}>
+          unit="%" />
+        
+        {dailyTimeBreakdown &&
+        <div className="mt-2 flex justify-between text-xs px-1" style={{ color: "#746959" }}>
             <span>{dailyTimeBreakdown.inRange} in range so far</span>
             <span>{dailyTimeBreakdown.above} above · {dailyTimeBreakdown.below} below</span>
           </div>
-        )}
+        }
       </DashboardCard>
 
       {/* 2. YOUR FLOW CARD */}
@@ -1175,7 +1175,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
         <div className="flex items-baseline justify-between px-5 pt-4">
           <h1 className="hdr">Daily <em>Flow</em></h1>
         </div>
-        <div className="relative pt-3 pb-5">
+        <div className="relative pb-5 pt-3 my-3">
           {(() => {
             const status = isGlucoseStale ? null : centerGlucoseStatus?.status ?? classifyGlucose(glucoseValue, targetLow, targetHigh);
             const isActive = !isGlucoseStale && (status === "high" || status === "low");
@@ -1195,9 +1195,9 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
                   WebkitMaskImage: maskFade,
                   boxShadow: overReference ? `inset 0 30px 80px -30px ${glowColor}aa` : "none",
                   transition: "opacity 700ms ease-out, background-color 700ms ease-out, box-shadow 700ms ease-out"
-                }}
-              />
-            );
+                }} />);
+
+
           })()}
           {graphSlot}
         </div>
@@ -1224,9 +1224,9 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
           if (typeof window !== "undefined") {
             window.dispatchEvent(new Event("stackd-open-log-menu"));
           }
-        }}
-      />
-    </div>
-  );
+        }} />
+      
+    </div>);
+
 
 }
