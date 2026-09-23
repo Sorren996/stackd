@@ -120,7 +120,16 @@ export default function UnifiedBottomNav() {
       }
     };
     window.addEventListener("stackd-open-log", handler);
-    return () => window.removeEventListener("stackd-open-log", handler);
+    const menuHandler = () => {
+      setExpanded(true);
+      const h = menuContentRef.current?.offsetHeight || 0;
+      animateMenu(h);
+    };
+    window.addEventListener("stackd-open-log-menu", menuHandler);
+    return () => {
+      window.removeEventListener("stackd-open-log", handler);
+      window.removeEventListener("stackd-open-log-menu", menuHandler);
+    };
   }, [animateMenu]);
 
   const handleFabClick = () => {

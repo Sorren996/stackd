@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  AlertTriangle,
   ArrowDown,
   ArrowDownRight,
   ArrowRight,
@@ -32,9 +31,8 @@ import {
   getCarbAbsorptionAt } from
 "@/lib/carbAbsorption";
 import { AnimatePresence, motion } from "framer-motion";
-import InsulinOnBoardCard from "@/components/insulin/InsulinOnBoardCard";
-import MealReviewContent from "@/components/insulin/MealReviewContent";
 import DashboardCard from "@/components/dashboard/DashboardCard";
+import RightNowView from "@/components/rightnow/RightNowView";
 import ComfortZoneCard from "./ComfortZoneCard";
 import CurrentGlucoseCard from "./graph/CurrentGlucoseCard";
 import { getSupportiveGlucoseMessage } from "@/lib/supportiveMessages";
@@ -863,10 +861,15 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
   const activeCorrectionUnits = useMemo(() => getTotalCorrectionIOB(mealCoverageDoses, Date.now()), [mealCoverageDoses, nowMinute]);
   const activeInsulinBreakdown = useMemo(() => {
     const now = Date.now();
+    const RECENT_SPENT_MS = 8 * 60 * 60 * 1000;
     return safeDoses.
     map((dose) => {
       const iob = getDoseIOB(dose, now);
-      if (iob < 0.5) return null;
+      const doseTime = getDoseTime(dose);
+      // Active doses (iob >= 0.5) plus recently-cleared doses (within 8h)
+      // so the at-a-glance view can show spent doses greyed rather than
+      // dropping them the moment they fall below 0.5u.
+      if (iob < 0.5 && !(Number.isFinite(doseTime) && now - doseTime < RECENT_SPENT_MS)) return null;
 
       const profile = getInsulinProfile(dose.insulin_type);
       const status = getDoseStatus(dose, now);
@@ -880,7 +883,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
         units: Number(dose.units) || 0,
         statusLabel: status.label,
         timingInfo: getDoseTimingInfo(dose, now),
-        time: getDoseTime(dose)
+        time: doseTime
       };
     }).
     filter(Boolean).
@@ -1200,45 +1203,29 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
         </div>
       </DashboardCard>
 
-      {/* Stacking alert — between cards */}
-      {stackingAlertsEnabled && activeRapidCount > 1 && (
-        <div className="flex w-full items-start gap-3 overflow-hidden rounded-[24px] p-5" style={{ background: "#fdf9f2", boxShadow: "0 8px 28px rgba(63,56,48,0.10)" }}>
-          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" style={{ color: "#8a5a12" }} />
-          <div className="min-w-0">
-            <p className="text-sm font-semibold" style={{ color: "#3f3830" }}>Multiple Active Doses</p>
-            <p className="mt-0.5 text-sm" style={{ color: "#6b6153" }}>
-              {activeRapidCount} rapid-acting doses are active at once. Keep a gentle eye on how you're feeling.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* 3. INSULIN ON BOARD CARD */}
-      <DashboardCard className="p-5">
-        <InsulinOnBoardCard
-          totalUnits={activeUnits}
-          breakdown={activeInsulinBreakdown}
-          basalRegimenStatus={basalRegimenStatus}
-          onEditDose={onEditDose ? (id) => {
-            const dose = safeDoses.find((d) => d.id === id);
-            if (dose) onEditDose({ type: "insulin", item: dose });
-          } : null}
-          onDeleteDose={onDeleteDose ? (id) => {
-            const dose = safeDoses.find((d) => d.id === id);
-            if (dose) onDeleteDose({ type: "insulin", item: dose });
-          } : null}
-        />
-      </DashboardCard>
-
-      {/* 4. MEAL REVIEW CARD */}
-      <DashboardCard className="p-5">
-        <MealReviewContent
-          mealInsight={mealInsight}
-          monitoringStatus={highProteinFatStatus}
-          glucoseTrend={trend}
-          onResolve={handleResolveMeal}
-        />
-      </DashboardCard>
+      {/* Right Now — at-a-glance combined IOB + Meal Review */}
+      <RightNowView
+        totalUnits={activeUnits}
+        breakdown={activeInsulinBreakdown}
+        basalRegimenStatus={basalRegimenStatus}
+        mealInsight={mealInsight}
+        monitoringStatus={highProteinFatStatus}
+        glucoseTrend={trend}
+        onEditDose={onEditDose ? (id) => {
+          const dose = safeDoses.find((d) => d.id === id);
+          if (dose) onEditDose({ type: "insulin", item: dose });
+        } : null}
+        onDeleteDose={onDeleteDose ? (id) => {
+          const dose = safeDoses.find((d) => d.id === id);
+          if (dose) onDeleteDose({ type: "insulin", item: dose });
+        } : null}
+        onResolve={handleResolveMeal}
+        onAddLog={() => {
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new Event("stackd-open-log-menu"));
+          }
+        }}
+      />
     </div>
   );
 
