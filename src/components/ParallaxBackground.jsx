@@ -35,7 +35,7 @@ export default function ParallaxBackground() {
       aria-hidden="true"
       className="pointer-events-none fixed inset-0 -z-10"
       style={{
-        background: "#f7f1e8",
+        background: "#4c6770",
         backgroundSize: "100% 300%",
         backgroundPosition: "50% 0%",
         backgroundRepeat: "no-repeat",
