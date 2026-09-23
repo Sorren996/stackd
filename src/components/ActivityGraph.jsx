@@ -1324,7 +1324,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                   <ReferenceLine
                         x={Date.now()}
                         yAxisId="glucose"
-                        stroke="#3f3830"
+                        stroke="#8a7b6bff"
                         strokeWidth={1}
                         strokeOpacity={0.3} />
                       
