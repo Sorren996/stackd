@@ -4,9 +4,9 @@ import IobAtAGlance from "./IobAtAGlance";
 import MealReviewAtAGlance from "./MealReviewAtAGlance";
 
 const TABS = [
-  { id: "iob", label: "Insulin on Board" },
-  { id: "meal", label: "Meal Review" },
-];
+{ id: "iob", label: "Insulin on Board" },
+{ id: "meal", label: "Meal Review" }];
+
 
 /**
  * "Right Now" — the at-a-glance combined view.
@@ -23,15 +23,15 @@ export default function RightNowView({
   onEditDose,
   onDeleteDose,
   onResolve,
-  onAddLog,
+  onAddLog
 }) {
   const [tab, setTab] = useState("iob");
 
   return (
     <div className="relative">
       {/* Eyebrow + title */}
-      <div className="px-1 pt-1">
-        <span className="section-label">At a Glance</span>
+      <div className="px-1 pt-1 text-[hsl(var(--background))]">
+        <span className="section-label text-[hsl(var(--background))]">At a Glance</span>
         <h1 className="hdr mt-2">Right <em>Now</em></h1>
       </div>
 
@@ -39,8 +39,8 @@ export default function RightNowView({
       <div className="mt-3 px-1">
         <div
           className="flex gap-1 rounded-full p-1"
-          style={{ background: "#f0e8db" }}
-        >
+          style={{ background: "#f0e8db" }}>
+          
           {TABS.map((t) => {
             const active = t.id === tab;
             return (
@@ -51,35 +51,35 @@ export default function RightNowView({
                 className="flex-1 rounded-full py-2 text-center text-[12px] font-semibold transition-all"
                 style={{
                   background: active ? "#3f3830" : "transparent",
-                  color: active ? "#f7f1e8" : "#6b6153",
+                  color: active ? "#f7f1e8" : "#6b6153"
                 }}
-                aria-pressed={active}
-              >
+                aria-pressed={active}>
+                
                 {t.label}
-              </button>
-            );
+              </button>);
+
           })}
         </div>
       </div>
 
       {/* Tab content */}
       <div className="mt-4">
-        {tab === "iob" ? (
-          <IobAtAGlance
-            totalUnits={totalUnits}
-            breakdown={breakdown}
-            basalRegimenStatus={basalRegimenStatus}
-            onEditDose={onEditDose}
-            onDeleteDose={onDeleteDose}
-          />
-        ) : (
-          <MealReviewAtAGlance
-            mealInsight={mealInsight}
-            monitoringStatus={monitoringStatus}
-            glucoseTrend={glucoseTrend}
-            onResolve={onResolve}
-          />
-        )}
+        {tab === "iob" ?
+        <IobAtAGlance
+          totalUnits={totalUnits}
+          breakdown={breakdown}
+          basalRegimenStatus={basalRegimenStatus}
+          onEditDose={onEditDose}
+          onDeleteDose={onDeleteDose} /> :
+
+
+        <MealReviewAtAGlance
+          mealInsight={mealInsight}
+          monitoringStatus={monitoringStatus}
+          glucoseTrend={glucoseTrend}
+          onResolve={onResolve} />
+
+        }
       </div>
 
       {/* Floating copper add button */}
@@ -92,12 +92,12 @@ export default function RightNowView({
           style={{
             background: "#9c5228",
             border: "1px solid #9c5228",
-            boxShadow: "0 6px 20px rgba(156,82,40,0.28)",
-          }}
-        >
+            boxShadow: "0 6px 20px rgba(156,82,40,0.28)"
+          }}>
+          
           <Plus className="h-5 w-5" style={{ color: "#f7f1e8" }} />
         </button>
       </div>
-    </div>
-  );
+    </div>);
+
 }
