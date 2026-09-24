@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { X, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import DeleteConfirmDialog from "./DeleteConfirmDialog";
 
 const PALETTE = {
   ink: "#3f3830",
@@ -22,6 +23,11 @@ const PALETTE = {
  *
  * Used from both the Activity Graph meal marker and the Meal Review
  * "Edit items" trigger — ensuring a single consistent edit path.
+ *
+ * Layout: each item shows the food name on its own full-width row, then a
+ * second row with the carbs input and a Remove button. Removing an item
+ * opens a small "Are you sure?" confirm popup; confirming deletes the
+ * CarbEntry record immediately (not deferred to Save).
  */
 export default function MealEditOverlay({ entries, onClose }) {
   const queryClient = useQueryClient();
@@ -34,6 +40,8 @@ export default function MealEditOverlay({ entries, onClose }) {
     }))
   );
   const [isSaving, setIsSaving] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const updateItem = (index, field, value) => {
     setItems((current) =>
@@ -53,8 +61,34 @@ export default function MealEditOverlay({ entries, onClose }) {
     ]);
   };
 
-  const removeItem = (index) => {
-    setItems((current) => current.filter((_, i) => i !== index));
+  const requestRemove = (index) => setPendingDelete(index);
+  const cancelRemove = () => setPendingDelete(null);
+
+  const confirmRemove = async () => {
+    const index = pendingDelete;
+    if (index == null) return;
+    const item = items[index];
+    setPendingDelete(null);
+
+    // Unsaved item (no record yet) — just drop it from local state.
+    if (!item?.id) {
+      setItems((current) => current.filter((_, i) => i !== index));
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      await base44.entities.CarbEntry.delete(item.id);
+      setItems((current) => current.filter((_, i) => i !== index));
+      queryClient.invalidateQueries({ queryKey: ["carb-entries"] });
+      queryClient.invalidateQueries({ queryKey: ["carb-entries", "graph"] });
+      queryClient.invalidateQueries({ queryKey: ["history-summary"] });
+      toast.success("Item removed");
+    } catch {
+      toast.error("Unable to remove item. Please try again.");
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const save = async () => {
@@ -68,14 +102,8 @@ export default function MealEditOverlay({ entries, onClose }) {
 
     setIsSaving(true);
     try {
-      const originalIds = (entries || []).map((e) => e.id).filter(Boolean);
-      const currentIds = validItems.filter((i) => i.id).map((i) => i.id);
-      const deletedIds = originalIds.filter((id) => !currentIds.includes(id));
-
-      for (const id of deletedIds) {
-        await base44.entities.CarbEntry.delete(id);
-      }
-
+      // Deletes are handled immediately at confirm-remove time, so Save only
+      // persists updates to existing records and creates new ones.
       for (const item of validItems.filter((i) => i.id)) {
         await base44.entities.CarbEntry.update(item.id, {
           food_name: item.food_name.trim(),
@@ -134,41 +162,50 @@ export default function MealEditOverlay({ entries, onClose }) {
 
         <div className="space-y-3">
           {items.map((item, index) => (
-            <div key={index} className="flex items-center gap-2">
+            <div
+              key={index}
+              className="rounded-2xl p-3"
+              style={{ background: PALETTE.canvas, border: `1px solid ${PALETTE.hairline}` }}
+            >
+              {/* Row 1 — food name, full width */}
               <input
                 type="text"
                 value={item.food_name}
                 onChange={(e) => updateItem(index, "food_name", e.target.value)}
                 placeholder="Food name"
-                className="flex-1 rounded-xl px-3 py-2.5 text-sm outline-none transition"
-                style={{ background: PALETTE.canvas, color: PALETTE.ink }}
+                className="w-full rounded-xl px-3 py-2.5 text-sm outline-none transition"
+                style={{ background: PALETTE.surface, color: PALETTE.ink }}
               />
-              <div className="relative w-24">
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  value={item.carbs}
-                  onChange={(e) => updateItem(index, "carbs", e.target.value)}
-                  placeholder="0"
-                  className="w-full rounded-xl px-3 py-2.5 pr-8 text-sm outline-none transition"
-                  style={{ background: PALETTE.canvas, color: PALETTE.ink }}
-                />
-                <span
-                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs"
-                  style={{ color: PALETTE.faint }}
+              {/* Row 2 — carbs input + remove button */}
+              <div className="mt-2 flex items-center gap-2">
+                <div className="relative flex-1">
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    value={item.carbs}
+                    onChange={(e) => updateItem(index, "carbs", e.target.value)}
+                    placeholder="0"
+                    className="w-full rounded-xl px-3 py-2.5 pr-8 text-sm outline-none transition"
+                    style={{ background: PALETTE.surface, color: PALETTE.ink }}
+                  />
+                  <span
+                    className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs"
+                    style={{ color: PALETTE.faint }}
+                  >
+                    g
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => requestRemove(index)}
+                  disabled={isDeleting}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition hover:opacity-70 disabled:opacity-40"
+                  style={{ background: PALETTE.surface, color: PALETTE.danger, border: `1px solid ${PALETTE.hairline}` }}
+                  aria-label="Remove item"
                 >
-                  g
-                </span>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => removeItem(index)}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition hover:opacity-70"
-                style={{ background: PALETTE.canvas, color: PALETTE.danger }}
-                aria-label="Remove item"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
             </div>
           ))}
 
@@ -193,6 +230,14 @@ export default function MealEditOverlay({ entries, onClose }) {
           </button>
         </div>
       </div>
+
+      {pendingDelete != null && (
+        <DeleteConfirmDialog
+          itemName={items[pendingDelete]?.food_name}
+          onCancel={cancelRemove}
+          onConfirm={confirmRemove}
+        />
+      )}
     </div>
   );
 }
