@@ -1200,16 +1200,16 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           <div
             className="absolute left-1/2 top-0 z-20 -translate-x-1/2 px-3 py-1 text-center pointer-events-none">
             
-          <div className="flex items-center justify-center gap-1.5 text-2xl font-black leading-none" style={{ color: "#f7f1e8" }}>
+          <div className="flex items-center justify-center gap-1.5 text-2xl font-black leading-none" style={{ color: "#c5b9a8ff" }}>
             {(onSelectLog || onDeleteLog) && !dexcomConnected &&
               <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border" style={{ borderColor: "#eadccf", background: "#fdf9f2", color: "#746959" }}>
                 <Info className="h-2.5 w-2.5" />
               </span>
               }
-            <GlucoseTicker ref={tickerRef} initialValue={formatGlucoseDisplay(glucoseLinePoints[glucoseLinePoints.length - 1].value)} /> <span className="text-xs font-medium" style={{ color: "#dbcebf" }}>mg/dL</span>
+            <GlucoseTicker ref={tickerRef} initialValue={formatGlucoseDisplay(glucoseLinePoints[glucoseLinePoints.length - 1].value)} /> <span className="text-xs font-medium" style={{ color: "#c5b9a8ff" }}>mg/dL</span>
           </div>
-          <div ref={tooltipTimeRef} className="mt-1 text-xs font-medium" style={{ color: "#dbcebf" }}>{format(new Date(glucoseLinePoints[glucoseLinePoints.length - 1].time), "h:mm a")}</div>
-          <div ref={tooltipDateRef} className="mt-0.5 text-[10px] font-medium" style={{ color: "#dbcebf" }}>{format(new Date(glucoseLinePoints[glucoseLinePoints.length - 1].time), "EEEE, MMM d")}</div>
+          <div ref={tooltipTimeRef} className="mt-1 text-xs font-medium" style={{ color: "#c5b9a8ff" }}>{format(new Date(glucoseLinePoints[glucoseLinePoints.length - 1].time), "h:mm a")}</div>
+          <div ref={tooltipDateRef} className="mt-0.5 text-[10px] font-medium" style={{ color: "#c5b9a8ff" }}>{format(new Date(glucoseLinePoints[glucoseLinePoints.length - 1].time), "EEEE, MMM d")}</div>
         </div>
           }
       {!isCandlestick && filters.glucose && glucoseLinePoints.length > 0 &&
