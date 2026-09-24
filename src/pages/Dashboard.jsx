@@ -724,7 +724,7 @@ export default function Dashboard() {
       )}
 
       <div className="flex w-full justify-center pt-8 pb-4">
-        <span className="text-[10px] font-medium tracking-wide text-white/20">
+        <span className="text-[10px] font-medium tracking-wide" style={{ color: "#b8aea0" }}>
           {getVersionString()}
         </span>
       </div>
