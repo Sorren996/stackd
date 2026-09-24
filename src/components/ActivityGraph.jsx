@@ -1532,21 +1532,27 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         </div>
       </div>
       </div>
-      <div className="flex items-center gap-4 px-3 mt-2 flex-wrap">
-        <div className="flex items-center gap-1.5">
-          <div className="h-[2px] w-4" style={{ background: "#5b6550" }} />
-          <span className="text-[10px]" style={{ color: "#746959" }}>glucose</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="h-2 w-2 rounded-full border-[1.5px]" style={{ borderColor: "#3f3830", background: "#f7f1e8" }} />
-          <span className="text-[10px]" style={{ color: "#746959" }}>meals</span>
-        </div>
-        {activeDoseKeys.map((k) =>
-          <div key={k.label} className="flex items-center gap-1.5">
-            <div className="h-2 w-2 rounded-full" style={{ background: k.color }} />
-            <span className="text-[10px]" style={{ color: "#746959" }}>{k.label} · {k.totalUnits} u</span>
+      <div className="px-3 mt-2 space-y-1.5">
+        <div className="flex items-center gap-4 flex-wrap">
+          <div className="flex items-center gap-1.5">
+            <div className="h-[2px] w-4" style={{ background: "#5b6550" }} />
+            <span className="text-[10px]" style={{ color: "#746959" }}>glucose</span>
           </div>
-          )}
+          <div className="flex items-center gap-1.5">
+            <div className="h-2 w-2 rounded-full border-[1.5px]" style={{ borderColor: "#3f3830", background: "#f7f1e8" }} />
+            <span className="text-[10px]" style={{ color: "#746959" }}>meals</span>
+          </div>
+        </div>
+        {activeDoseKeys.length > 0 && (
+          <div className="flex items-center gap-4 flex-wrap">
+            {activeDoseKeys.map((k) =>
+              <div key={k.label} className="flex items-center gap-1.5">
+                <div className="h-2 w-2 rounded-full" style={{ background: k.color }} />
+                <span className="text-[10px]" style={{ color: "#746959" }}>{k.label} {k.totalUnits} u</span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
       <div
           ref={monitoringLabelRef}
