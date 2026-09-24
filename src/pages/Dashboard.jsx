@@ -25,6 +25,7 @@ import DexcomSyncStatus from "@/components/DexcomSyncStatus";
 import ConnectGlucoseSourcePrompt from "@/components/ConnectGlucoseSourcePrompt";
 import SensorSessionBanner from "@/components/SensorSessionBanner";
 import PageHeader from "@/components/editorial/PageHeader";
+import AmbientInscription from "@/components/dashboard/AmbientInscription";
 
 const FRESH_DATA_MS = 60 * 1000;
 const GRAPH_DATA_MS = 5 * 60 * 1000;
@@ -723,7 +724,9 @@ export default function Dashboard() {
         </>
       )}
 
-      <div className="flex w-full justify-center pt-8 pb-4">
+      <AmbientInscription />
+
+      <div className="flex w-full justify-center pt-2 pb-4">
         <span className="text-[10px] font-medium tracking-wide" style={{ color: "#b8aea0" }}>
           {getVersionString()}
         </span>
