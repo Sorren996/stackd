@@ -1212,6 +1212,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
         mealInsight={mealInsight}
         monitoringStatus={highProteinFatStatus}
         glucoseTrend={trend}
+        glucoseReadings={safeGlucoseReadings}
         onEditDose={onEditDose ? (id) => {
           const dose = safeDoses.find((d) => d.id === id);
           if (dose) onEditDose({ type: "insulin", item: dose });

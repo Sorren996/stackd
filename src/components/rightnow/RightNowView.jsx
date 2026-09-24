@@ -23,7 +23,8 @@ export default function RightNowView({
   onEditDose,
   onDeleteDose,
   onResolve,
-  onAddLog
+  onAddLog,
+  glucoseReadings
 }) {
   const [tab, setTab] = useState("iob");
 
@@ -77,7 +78,8 @@ export default function RightNowView({
           mealInsight={mealInsight}
           monitoringStatus={monitoringStatus}
           glucoseTrend={glucoseTrend}
-          onResolve={onResolve} />
+          onResolve={onResolve}
+          glucoseReadings={glucoseReadings} />
 
         }
       </div>

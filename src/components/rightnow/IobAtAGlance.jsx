@@ -31,8 +31,16 @@ function formatRemaining(min) {
 // Plain-language status + color for a bolus dose, derived from the existing
 // exponential model's phase. Amber for early/absorbing, sage for declining.
 function bolusStatusLine(dose, now) {
-  const status = getDoseStatus(dose, now);
-  const timing = getDoseTimingInfo(dose, now);
+  // Breakdown doses use { type, units, time } — remap to the field names the
+  // pharmacology engine expects so the status reflects this dose's real phase
+  // (absorbing / peak / declining) instead of always reading as "expired".
+  const doseObj = {
+    insulin_type: dose.type,
+    units: dose.units,
+    administered_at: new Date(dose.time).toISOString(),
+  };
+  const status = getDoseStatus(doseObj, now);
+  const timing = getDoseTimingInfo(doseObj, now);
   if (status.phase === "expired" || status.iob <= 0.01) {
     return { label: "Fully cleared", color: PALETTE.grey, remaining: null };
   }
@@ -53,11 +61,11 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
   const now = Date.now();
 
   const bolusDoses = useMemo(
-    () => (breakdown || []).filter((d) => !isBasalInsulinType(d.type)),
+    () => (breakdown || []).filter((d) => !isBasalInsulinType(d.type) && d.iob > 0.01),
     [breakdown]
   );
   const basalDoses = useMemo(
-    () => (breakdown || []).filter((d) => isBasalInsulinType(d.type)),
+    () => (breakdown || []).filter((d) => isBasalInsulinType(d.type) && d.iob > 0.01),
     [breakdown]
   );
 
@@ -99,7 +107,6 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
         </div>
         <p className="mt-0.5 text-[12px]" style={{ color: PALETTE.faint }}>
           {activeBolusCount} active {activeBolusCount === 1 ? "dose" : "doses"}
-          {bolusDoses.length > activeBolusCount ? ` · ${bolusDoses.length - activeBolusCount} cleared` : ""}
         </p>
 
         {/* Hairline divider */}
