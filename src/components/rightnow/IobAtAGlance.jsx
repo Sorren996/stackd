@@ -146,7 +146,7 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
                       >
                         <MiniActivitySparkline dose={dose} now={now} />
                       </span>
-                      <span className="text-[11px] leading-tight" style={{ color: status.color }}>
+                      <span className="text-[11px] leading-tight" style={{ color: PALETTE.muted }}>
                         {status.label}
                       </span>
                     </span>
@@ -208,7 +208,7 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
                       <span style={{ color: dotColor }}>
                         <MiniActivitySparkline dose={dose} now={now} />
                       </span>
-                      <span className="text-[11px]" style={{ color: PALETTE.green }}>
+                      <span className="text-[11px]" style={{ color: PALETTE.muted }}>
                         Ongoing
                       </span>
                     </span>
