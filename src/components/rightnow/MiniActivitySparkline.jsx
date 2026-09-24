@@ -57,7 +57,8 @@ export default function MiniActivitySparkline({ dose, now = Date.now() }) {
   if (isBasal) {
     return (
       <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ display: "block" }}>
-        <rect x={1} y={H - 6} width={W - 2} height={4} rx={2} fill="#5b6550" opacity={0.18} />
+        <rect x={1} y={H / 2 - 2} width={W - 2} height={4} rx={2} fill="currentColor" opacity={0.4} />
+        {nowX > 0 && <circle cx={nowX} cy={H / 2} r={1.8} fill="currentColor" />}
       </svg>
     );
   }

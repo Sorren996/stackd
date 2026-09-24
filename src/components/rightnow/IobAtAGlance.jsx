@@ -14,6 +14,31 @@ const PALETTE = {
   card: "#fdf9f2",
 };
 
+// Dynamic basal status derived from real elapsed time vs that basal's
+// published duration — mirrors bolusStatusLine so each basal dose row
+// reflects its actual phase instead of a single static "Ongoing" label.
+function basalStatusLine(dose, now) {
+  const doseObj = {
+    insulin_type: dose.type,
+    units: dose.units,
+    administered_at: new Date(dose.time).toISOString(),
+  };
+  const status = getDoseStatus(doseObj, now);
+  const timing = getDoseTimingInfo(doseObj, now);
+  if (status.phase === "expired" || status.iob <= 0.01) {
+    return { label: "No longer contributing", remaining: null };
+  }
+  const remaining = formatRemaining(timing.remainingMin);
+  const map = {
+    waiting: { label: "Just started — absorbing gently" },
+    steady: { label: "Steady background coverage" },
+    declining: { label: "Coverage winding down" },
+    low_activity: { label: "Lingering gently" },
+  };
+  const entry = map[status.phase] || { label: status.label };
+  return { label: entry.label, remaining };
+}
+
 function formatClock(time) {
   if (!Number.isFinite(time)) return null;
   return new Date(time).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
@@ -71,7 +96,7 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
 
   const bolusUnits = bolusDoses.reduce((sum, d) => sum + d.iob, 0);
   const activeBolusCount = bolusDoses.filter((d) => d.iob > 0.01).length;
-  const basalUnits = basalDoses.reduce((sum, d) => sum + d.iob, 0);
+  const basalUnits = basalDoses.reduce((sum, d) => sum + (Number(d.units) || 0), 0);
   const hasBolus = bolusDoses.length > 0;
   const hasBasal = basalDoses.length > 0;
 
@@ -172,7 +197,7 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
           <div className="section-label">Basal / Background</div>
 
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="anchor" style={{ fontSize: 34 }}>{basalUnits.toFixed(1)}</span>
+            <span className="anchor" style={{ fontSize: 34 }}>{basalUnits % 1 === 0 ? basalUnits : basalUnits.toFixed(1)}</span>
             <span className="text-[15px] font-light" style={{ color: PALETTE.muted }}>u background</span>
           </div>
           <p className="mt-0.5 text-[12px]" style={{ color: PALETTE.faint }}>
@@ -185,6 +210,7 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
             {basalDoses.map((dose) => {
               const dotColor = dose.color;
               const textColor = PALETTE.ink;
+              const status = basalStatusLine(dose, now);
               return (
                 <button
                   key={dose.id}
@@ -193,20 +219,32 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
                   className="flex w-full items-center gap-2.5 text-left transition hover:opacity-70"
                 >
                   <span className="min-w-0 flex-1">
-                    <span className="text-[13px] font-semibold" style={{ color: textColor }}>
-                      {dose.shortName || dose.type?.split(" ")[0] || "Basal"}
+                    <span className="flex items-baseline gap-1.5">
+                      <span className="text-[13px] font-semibold" style={{ color: textColor }}>
+                        {dose.shortName || dose.type?.split(" ")[0] || "Basal"}
+                      </span>
+                      <span className="text-[11px]" style={{ color: PALETTE.muted }}>
+                        · {Number(dose.units) % 1 === 0 ? dose.units : dose.units.toFixed(1)}u dose
+                      </span>
                     </span>
                     <span className="mt-0.5 flex items-center gap-1.5">
                       <span style={{ color: dotColor }}>
                         <MiniActivitySparkline dose={dose} now={now} />
                       </span>
-                      <span className="text-[11px]" style={{ color: PALETTE.muted }}>
-                        Ongoing
+                      <span className="text-[11px] leading-tight" style={{ color: PALETTE.muted }}>
+                        {status.label}
                       </span>
                     </span>
                   </span>
-                  <span className="shrink-0 text-[13px] font-semibold tabular-nums" style={{ color: textColor }}>
-                    {dose.units.toFixed(1)}u
+                  <span className="shrink-0 text-right">
+                    <span className="block text-[13px] font-semibold tabular-nums" style={{ color: textColor }}>
+                      {dose.units.toFixed(1)}u
+                    </span>
+                    {status.remaining && (
+                      <span className="block text-[10px] tabular-nums" style={{ color: PALETTE.faint }}>
+                        {status.remaining}
+                      </span>
+                    )}
                   </span>
                 </button>
               );
