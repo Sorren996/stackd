@@ -10,13 +10,6 @@ const TABS = [
 
 const TAB_ORDER = TABS.map((t) => t.id);
 
-// Slide direction: content enters from the side the tab sits on.
-// IOB is the left tab → slides in from the left; Meal is the right tab → from the right.
-function slideDirection(newTab, prevTab) {
-  if (prevTab == null) return 0;
-  return TAB_ORDER.indexOf(newTab) > TAB_ORDER.indexOf(prevTab) ? 1 : -1;
-}
-
 /**
  * "Right Now" — the at-a-glance combined view.
  * Eyebrow + title, a two-tab segmented control with a sliding active
@@ -36,16 +29,8 @@ export default function RightNowView({
   glucoseReadings,
 }) {
   const [tab, setTab] = useState("iob");
-  const [prevTab, setPrevTab] = useState(null);
-
-  const selectTab = (id) => {
-    if (id === tab) return;
-    setPrevTab(tab);
-    setTab(id);
-  };
-
+  const selectTab = (id) => { if (id !== tab) setTab(id); };
   const activeIndex = TAB_ORDER.indexOf(tab);
-  const dir = slideDirection(tab, prevTab);
 
   return (
     <div className="relative">
@@ -87,17 +72,16 @@ export default function RightNowView({
         </div>
       </div>
 
-      {/* Tab content — slides in from the selected tab's side */}
-      <div className="mt-4 overflow-hidden">
-        <AnimatePresence mode="wait" custom={dir}>
-          <motion.div
-            key={tab}
-            custom={dir}
-            initial={{ x: dir > 0 ? 48 : dir < 0 ? -48 : 0, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: dir > 0 ? -48 : dir < 0 ? 48 : 0, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 360, damping: 34, opacity: { duration: 0.18 } }}
-          >
+      {/* Tab content */}
+      <div className="mt-4">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={tab}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+            >
             {tab === "iob" ? (
               <IobAtAGlance
                 totalUnits={totalUnits}
@@ -115,8 +99,8 @@ export default function RightNowView({
                 glucoseReadings={glucoseReadings}
               />
             )}
-          </motion.div>
-        </AnimatePresence>
+            </motion.div>
+          </AnimatePresence>
       </div>
     </div>
   );
