@@ -30,7 +30,7 @@ function basalStatusLine(dose, now) {
   }
   const remaining = formatRemaining(timing.remainingMin);
   const map = {
-    waiting: { label: "Just started — absorbing gently" },
+    waiting: { label: "Absorbing gently" },
     steady: { label: "Steady background coverage" },
     declining: { label: "Coverage winding down" },
     low_activity: { label: "Lingering gently" }
