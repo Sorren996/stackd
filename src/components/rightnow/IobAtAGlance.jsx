@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import DashboardCard from "@/components/dashboard/DashboardCard";
 import MiniActivitySparkline from "./MiniActivitySparkline";
-import { isBasalInsulinType, getDoseStatus, getDoseTimingInfo, generateActivityCurve } from "@/lib/insulinPharmacology";
+import { isBasalInsulinType, getDoseStatus, getDoseTimingInfo } from "@/lib/insulinPharmacology";
 
 const PALETTE = {
   ink: "#3f3830",
@@ -66,24 +66,6 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
   const basalUnits = basalDoses.reduce((sum, d) => sum + d.iob, 0);
   const hasBolus = bolusDoses.length > 0;
   const hasBasal = basalDoses.length > 0;
-
-  // Shared max across all bolus doses in this card so per-dose sparklines are
-  // dose-proportional — the same rule as the Daily Flow insulin row. A 40u
-  // dose sparkline peaks ~6.7× taller than a 6u dose of the same insulin.
-  const sharedSparkMax = useMemo(() => {
-    let maxPeak = 0;
-    for (const dose of bolusDoses) {
-      const curve = generateActivityCurve({
-        insulin_type: dose.type,
-        units: dose.units,
-        administered_at: new Date(dose.time).toISOString(),
-      }, 5);
-      for (const p of curve) {
-        if (p.activityUnitsPerMinute > maxPeak) maxPeak = p.activityUnitsPerMinute;
-      }
-    }
-    return maxPeak > 0 ? maxPeak : 1;
-  }, [bolusDoses]);
 
   // Gentle awareness: multiple rapid doses active at once
   const showStackingBanner = activeBolusCount > 1;
@@ -156,7 +138,7 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
                         className="shrink-0"
                         style={{ color: isSpent ? PALETTE.grey : status.color }}
                       >
-                        <MiniActivitySparkline dose={dose} now={now} sharedMax={sharedSparkMax} />
+                        <MiniActivitySparkline dose={dose} now={now} />
                       </span>
                       <span className="text-[11px] leading-tight" style={{ color: isSpent ? PALETTE.faint : status.color }}>
                         {status.label}
@@ -219,7 +201,7 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
                     </span>
                     <span className="mt-0.5 flex items-center gap-1.5">
                       <span style={{ color: isSpent ? PALETTE.grey : PALETTE.green }}>
-                        <MiniActivitySparkline dose={dose} now={now} sharedMax={sharedSparkMax} />
+                        <MiniActivitySparkline dose={dose} now={now} />
                       </span>
                       <span className="text-[11px]" style={{ color: isSpent ? PALETTE.faint : PALETTE.green }}>
                         {isSpent ? "Fully cleared" : "Ongoing"}
