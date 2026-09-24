@@ -251,9 +251,9 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
           })}
           </div>
 
-          <p className="mt-3 text-[11px] leading-relaxed hidden" style={{ color: PALETTE.faint }}>
-            Background — present all day, never counted as a spike.
-          </p>
+          
+
+        
         </DashboardCard>
       }
     </div>);
