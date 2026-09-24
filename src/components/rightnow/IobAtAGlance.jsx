@@ -1,6 +1,7 @@
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import DashboardCard from "@/components/dashboard/DashboardCard";
 import MiniActivitySparkline from "./MiniActivitySparkline";
+import SwipeableRow from "@/components/SwipeableRow";
 import { isBasalInsulinType, getDoseStatus, getDoseTimingInfo } from "@/lib/insulinPharmacology";
 
 const PALETTE = {
@@ -84,6 +85,26 @@ function bolusStatusLine(dose, now) {
 
 export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus, onEditDose, onDeleteDose }) {
   const now = Date.now();
+  const [openDoseId, setOpenDoseId] = useState(null);
+
+  // Close any revealed swipe actions when the IOB view unmounts or the
+  // underlying breakdown reference changes (new ingestion, refresh, etc.).
+  useEffect(() => {
+    return () => setOpenDoseId(null);
+  }, [breakdown]);
+
+  // "Tap anywhere else dismisses" — closes the open row when a pointerdown
+  // lands outside that row (lets the row's own buttons/content keep working).
+  useEffect(() => {
+    if (openDoseId == null) return;
+    const onPointerDown = (e) => {
+      const openRow = document.querySelector(`[data-row-id="${openDoseId}"]`);
+      if (openRow && openRow.contains(e.target)) return;
+      setOpenDoseId(null);
+    };
+    document.addEventListener("pointerdown", onPointerDown, true);
+    return () => document.removeEventListener("pointerdown", onPointerDown, true);
+  }, [openDoseId]);
 
   const bolusDoses = useMemo(
     () => (breakdown || []).filter((d) => !isBasalInsulinType(d.type) && d.iob > 0.01),
@@ -102,10 +123,6 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
 
   // Gentle awareness: multiple rapid doses active at once
   const showStackingBanner = activeBolusCount > 1;
-
-  const handleRowTap = (dose) => {
-    if (onEditDose) onEditDose(dose.id);
-  };
 
   return (
     <div className="space-y-3">
@@ -145,12 +162,17 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
             const dotColor = dose.color;
             const textColor = PALETTE.ink;
             return (
-              <button
+              <SwipeableRow
                 key={dose.id}
-                type="button"
-                onClick={() => handleRowTap(dose)}
-                className="flex w-full items-center gap-2.5 text-left transition hover:opacity-70">
-                
+                rowId={dose.id}
+                isOpen={openDoseId === dose.id}
+                onOpenChange={(o) => setOpenDoseId(o ? dose.id : null)}
+                onEdit={() => onEditDose?.(dose.id)}
+                onDelete={() => onDeleteDose?.(dose.id)}
+                editLabel="Edit"
+                deleteLabel="Delete"
+              >
+                <div className="flex w-full items-center gap-2.5 text-left">
                   <span className="min-w-0 flex-1">
                     <span className="flex items-baseline gap-1.5">
                       <span className="text-[13px] font-semibold truncate" style={{ color: textColor }}>
@@ -161,10 +183,7 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
                       </span>
                     </span>
                     <span className="mt-0.5 flex items-center gap-1.5">
-                      <span
-                      className="shrink-0"
-                      style={{ color: dotColor }}>
-                      
+                      <span className="shrink-0" style={{ color: dotColor }}>
                         <MiniActivitySparkline dose={dose} now={now} />
                       </span>
                       <span className="text-[11px] leading-tight" style={{ color: PALETTE.muted }}>
@@ -182,7 +201,8 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
                       </span>
                   }
                   </span>
-                </button>);
+                </div>
+              </SwipeableRow>);
 
           })}
           </div> :
@@ -212,12 +232,17 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
             const textColor = PALETTE.ink;
             const status = basalStatusLine(dose, now);
             return (
-              <button
+              <SwipeableRow
                 key={dose.id}
-                type="button"
-                onClick={() => handleRowTap(dose)}
-                className="flex w-full items-center gap-2.5 text-left transition hover:opacity-70">
-                
+                rowId={dose.id}
+                isOpen={openDoseId === dose.id}
+                onOpenChange={(o) => setOpenDoseId(o ? dose.id : null)}
+                onEdit={() => onEditDose?.(dose.id)}
+                onDelete={() => onDeleteDose?.(dose.id)}
+                editLabel="Edit"
+                deleteLabel="Delete"
+              >
+                <div className="flex w-full items-center gap-2.5 text-left">
                   <span className="min-w-0 flex-1">
                     <span className="flex items-baseline gap-1.5">
                       <span className="text-[13px] font-semibold" style={{ color: textColor }}>
@@ -246,7 +271,8 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
                       </span>
                   }
                   </span>
-                </button>);
+                </div>
+              </SwipeableRow>);
 
           })}
           </div>

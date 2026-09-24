@@ -1,7 +1,10 @@
-import { useState, useMemo } from "react";
-import { ChevronRight } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import DashboardCard from "@/components/dashboard/DashboardCard";
 import MealResponseCurve from "./MealResponseCurve";
+import SwipeableRow from "@/components/SwipeableRow";
+import { base44 } from "@/api/base44Client";
 import { generateMealGlucoseResponse, analyzeGlucoseResponse } from "@/lib/mealGlucoseResponse";
 import MealEditOverlay from "@/components/insulin/MealEditOverlay";
 import { getCarbAbsorptionAt } from "@/lib/carbAbsorption";
@@ -45,6 +48,9 @@ function formatCountdown(ms) {
 
 export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glucoseTrend, onResolve, glucoseReadings }) {
   const [showEdit, setShowEdit] = useState(false);
+  const [openEntryId, setOpenEntryId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+  const queryClient = useQueryClient();
   const now = Date.now();
 
   // Hooks must run unconditionally on every render, so compute them up front
@@ -64,6 +70,19 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
     () => analyzeGlucoseResponse(glucoseReadings, mealTime, targetLow, targetHigh, now),
     [glucoseReadings, mealTime, targetLow, targetHigh, now]
   );
+
+  // "Tap anywhere else dismisses" the revealed swipe actions. Declared
+  // before the early returns so the hook order stays stable every render.
+  useEffect(() => {
+    if (openEntryId == null) return;
+    const onPointerDown = (e) => {
+      const openRow = document.querySelector(`[data-row-id="${openEntryId}"]`);
+      if (openRow && openRow.contains(e.target)) return;
+      setOpenEntryId(null);
+    };
+    document.addEventListener("pointerdown", onPointerDown, true);
+    return () => document.removeEventListener("pointerdown", onPointerDown, true);
+  }, [openEntryId]);
 
   if (!mealInsight) return null;
 
@@ -149,6 +168,23 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
   // Slow-digesting banner
   const slowBanner = monitoringStatus?.isActive;
 
+  const handleDeleteEntry = async (entry) => {
+    if (!entry?.id || deletingId) return;
+    setDeletingId(entry.id);
+    try {
+      await base44.entities.CarbEntry.delete(entry.id);
+      queryClient.invalidateQueries({ queryKey: ["carb-entries"] });
+      queryClient.invalidateQueries({ queryKey: ["carb-entries", "graph"] });
+      queryClient.invalidateQueries({ queryKey: ["history-summary"] });
+      toast.success("Item removed");
+    } catch {
+      toast.error("Unable to remove item. Please try again.");
+    } finally {
+      setDeletingId(null);
+      setOpenEntryId(null);
+    }
+  };
+
   return (
     <div className="space-y-3">
       {/* 1. Gentle awareness banner for slow-digesting meals */}
@@ -176,7 +212,7 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
           {formatCountdown(windowRemaining)}
         </p>
 
-        {/* Meal items as ledger rows */}
+        {/* Meal items as ledger rows — swipe left to edit or remove */}
         <div className="mt-3 space-y-2">
           {carbEntries.map((entry) => {
             const name = entry.food_name || entry.name || "Food";
@@ -184,36 +220,36 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
               ? entry.absorption_profile.charAt(0).toUpperCase() + entry.absorption_profile.slice(1)
               : "";
             return (
-              <button
+              <SwipeableRow
                 key={entry.id || name}
-                type="button"
-                onClick={() => setShowEdit(true)}
-                className="flex w-full items-baseline gap-2 text-left transition hover:opacity-70"
+                rowId={entry.id}
+                isOpen={openEntryId === entry.id}
+                onOpenChange={(o) => setOpenEntryId(o ? entry.id : null)}
+                onEdit={() => setShowEdit(true)}
+                onDelete={() => handleDeleteEntry(entry)}
+                editLabel="Edit"
+                deleteLabel="Remove"
               >
-                <span className="min-w-0 flex-1">
-                  <span className="text-[13px] font-medium" style={{ color: PALETTE.ink }}>{name}</span>
-                  {detail && <span className="text-[11px]" style={{ color: PALETTE.faint }}> · {detail}</span>}
-                </span>
-                <span className="overflow-hidden">
-                  <span className="dotted-leader block" />
-                </span>
-                <span className="shrink-0 text-[13px] font-semibold tabular-nums" style={{ color: PALETTE.muted }}>
-                  {Math.round(entry.carbs)} g
-                </span>
-              </button>
+                <div className="flex w-full items-baseline gap-2 text-left">
+                  <span className="min-w-0 flex-1">
+                    <span className="text-[13px] font-medium" style={{ color: PALETTE.ink }}>{name}</span>
+                    {detail && <span className="text-[11px]" style={{ color: PALETTE.faint }}> · {detail}</span>}
+                  </span>
+                  <span className="overflow-hidden">
+                    <span className="dotted-leader block" />
+                  </span>
+                  <span className="shrink-0 text-[13px] font-semibold tabular-nums" style={{ color: PALETTE.muted }}>
+                    {Math.round(entry.carbs)} g
+                  </span>
+                </div>
+              </SwipeableRow>
             );
           })}
         </div>
 
-        <button
-          type="button"
-          onClick={() => setShowEdit(true)}
-          className="mt-3 inline-flex items-center gap-1 text-[11px] font-medium transition hover:opacity-70"
-          style={{ color: PALETTE.faint }}
-        >
-          tap an item to edit
-          <ChevronRight className="h-3 w-3" />
-        </button>
+        <p className="mt-3 text-[11px]" style={{ color: PALETTE.faint }}>
+          swipe an item to edit or remove
+        </p>
       </DashboardCard>
 
       {/* 3. Absorption card */}
