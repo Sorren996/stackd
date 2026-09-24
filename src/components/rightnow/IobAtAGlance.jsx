@@ -11,7 +11,7 @@ const PALETTE = {
   amber: "#8a5a12",
   grey: "#b8aea0",
   hairline: "#eadccf",
-  card: "#fdf9f2",
+  card: "#fdf9f2"
 };
 
 // Dynamic basal status derived from real elapsed time vs that basal's
@@ -21,7 +21,7 @@ function basalStatusLine(dose, now) {
   const doseObj = {
     insulin_type: dose.type,
     units: dose.units,
-    administered_at: new Date(dose.time).toISOString(),
+    administered_at: new Date(dose.time).toISOString()
   };
   const status = getDoseStatus(doseObj, now);
   const timing = getDoseTimingInfo(doseObj, now);
@@ -33,7 +33,7 @@ function basalStatusLine(dose, now) {
     waiting: { label: "Just started — absorbing gently" },
     steady: { label: "Steady background coverage" },
     declining: { label: "Coverage winding down" },
-    low_activity: { label: "Lingering gently" },
+    low_activity: { label: "Lingering gently" }
   };
   const entry = map[status.phase] || { label: status.label };
   return { label: entry.label, remaining };
@@ -62,7 +62,7 @@ function bolusStatusLine(dose, now) {
   const doseObj = {
     insulin_type: dose.type,
     units: dose.units,
-    administered_at: new Date(dose.time).toISOString(),
+    administered_at: new Date(dose.time).toISOString()
   };
   const status = getDoseStatus(doseObj, now);
   const timing = getDoseTimingInfo(doseObj, now);
@@ -76,7 +76,7 @@ function bolusStatusLine(dose, now) {
     near_peak: { label: "Near peak", color: PALETTE.amber },
     peak: { label: "Peak activity", color: PALETTE.amber },
     declining: { label: "Activity declining", color: PALETTE.green },
-    low_activity: { label: "Lingering gently", color: PALETTE.green },
+    low_activity: { label: "Lingering gently", color: PALETTE.green }
   };
   const entry = map[status.phase] || { label: status.label, color: PALETTE.muted };
   return { label: entry.label, color: entry.color, remaining };
@@ -110,8 +110,8 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
   return (
     <div className="space-y-3">
       {/* 1. Gentle awareness banner */}
-      {showStackingBanner && (
-        <DashboardCard className="px-4 py-3">
+      {showStackingBanner &&
+      <DashboardCard className="px-4 py-3">
           <p className="text-[13px] font-semibold leading-snug" style={{ color: PALETTE.ink }}>
             {activeBolusCount} rapid doses are active at once
           </p>
@@ -119,7 +119,7 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
             Notice how you feel — the curves below show where each one is.
           </p>
         </DashboardCard>
-      )}
+      }
 
       {/* 2. Rapid insulin card */}
       <DashboardCard className="p-4">
@@ -138,19 +138,19 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
         <div className="my-3" style={{ height: 1, background: PALETTE.hairline }} />
 
         {/* One row per dose */}
-        {hasBolus ? (
-          <div className="space-y-2.5">
+        {hasBolus ?
+        <div className="space-y-2.5">
             {bolusDoses.map((dose) => {
-              const status = bolusStatusLine(dose, now);
-              const dotColor = dose.color;
-              const textColor = PALETTE.ink;
-              return (
-                <button
-                  key={dose.id}
-                  type="button"
-                  onClick={() => handleRowTap(dose)}
-                  className="flex w-full items-center gap-2.5 text-left transition hover:opacity-70"
-                >
+            const status = bolusStatusLine(dose, now);
+            const dotColor = dose.color;
+            const textColor = PALETTE.ink;
+            return (
+              <button
+                key={dose.id}
+                type="button"
+                onClick={() => handleRowTap(dose)}
+                className="flex w-full items-center gap-2.5 text-left transition hover:opacity-70">
+                
                   <span className="min-w-0 flex-1">
                     <span className="flex items-baseline gap-1.5">
                       <span className="text-[13px] font-semibold truncate" style={{ color: textColor }}>
@@ -162,9 +162,9 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
                     </span>
                     <span className="mt-0.5 flex items-center gap-1.5">
                       <span
-                        className="shrink-0"
-                        style={{ color: dotColor }}
-                      >
+                      className="shrink-0"
+                      style={{ color: dotColor }}>
+                      
                         <MiniActivitySparkline dose={dose} now={now} />
                       </span>
                       <span className="text-[11px] leading-tight" style={{ color: PALETTE.muted }}>
@@ -176,24 +176,24 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
                     <span className="block text-[13px] font-semibold tabular-nums" style={{ color: textColor }}>
                       {dose.iob.toFixed(1)}u
                     </span>
-                    {status.remaining && (
-                      <span className="block text-[10px] tabular-nums" style={{ color: PALETTE.faint }}>
+                    {status.remaining &&
+                  <span className="block text-[10px] tabular-nums" style={{ color: PALETTE.faint }}>
                         {status.remaining}
                       </span>
-                    )}
+                  }
                   </span>
-                </button>
-              );
-            })}
-          </div>
-        ) : (
-          <p className="py-2 text-[12px]" style={{ color: PALETTE.muted }}>No rapid insulin on board.</p>
-        )}
+                </button>);
+
+          })}
+          </div> :
+
+        <p className="py-2 text-[12px]" style={{ color: PALETTE.muted }}>No rapid insulin on board.</p>
+        }
       </DashboardCard>
 
       {/* 4. Basal / background card */}
-      {hasBasal && (
-        <DashboardCard className="p-4">
+      {hasBasal &&
+      <DashboardCard className="p-4">
           <div className="section-label">Basal / Background</div>
 
           <div className="mt-3 flex items-baseline gap-2">
@@ -208,16 +208,16 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
 
           <div className="space-y-2.5">
             {basalDoses.map((dose) => {
-              const dotColor = dose.color;
-              const textColor = PALETTE.ink;
-              const status = basalStatusLine(dose, now);
-              return (
-                <button
-                  key={dose.id}
-                  type="button"
-                  onClick={() => handleRowTap(dose)}
-                  className="flex w-full items-center gap-2.5 text-left transition hover:opacity-70"
-                >
+            const dotColor = dose.color;
+            const textColor = PALETTE.ink;
+            const status = basalStatusLine(dose, now);
+            return (
+              <button
+                key={dose.id}
+                type="button"
+                onClick={() => handleRowTap(dose)}
+                className="flex w-full items-center gap-2.5 text-left transition hover:opacity-70">
+                
                   <span className="min-w-0 flex-1">
                     <span className="flex items-baseline gap-1.5">
                       <span className="text-[13px] font-semibold" style={{ color: textColor }}>
@@ -240,22 +240,22 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
                     <span className="block text-[13px] font-semibold tabular-nums" style={{ color: textColor }}>
                       {dose.units.toFixed(1)}u
                     </span>
-                    {status.remaining && (
-                      <span className="block text-[10px] tabular-nums" style={{ color: PALETTE.faint }}>
+                    {status.remaining &&
+                  <span className="block text-[10px] tabular-nums" style={{ color: PALETTE.faint }}>
                         {status.remaining}
                       </span>
-                    )}
+                  }
                   </span>
-                </button>
-              );
-            })}
+                </button>);
+
+          })}
           </div>
 
-          <p className="mt-3 text-[11px] leading-relaxed" style={{ color: PALETTE.faint }}>
+          <p className="mt-3 text-[11px] leading-relaxed hidden" style={{ color: PALETTE.faint }}>
             Background — present all day, never counted as a spike.
           </p>
         </DashboardCard>
-      )}
-    </div>
-  );
+      }
+    </div>);
+
 }
