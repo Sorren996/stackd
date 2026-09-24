@@ -9,7 +9,7 @@
  */
 
 const IMAGE_URL =
-  "https://base44.app/api/apps/6a1b93f234a8611ee1595134/files/mp/public/6a1b93f234a8611ee1595134/2129f587c_youre-doing-better-than-you-think.png";
+  "https://base44.app/api/apps/6a1b93f234a8611ee1595134/files/mp/public/6a1b93f234a8611ee1595134/b92a072ac_youre-doing-better-than-you-think-taupe.png";
 
 export default function AmbientInscription() {
   return (
