@@ -8,8 +8,8 @@
 
 export const GLUCOSE_STATUS_COLORS = {
   inRange: "#4d5742", // sage — in-range/positive (WCAG 6.8:1)
-  high: "#cf9339ff",   // mustard — above range (WCAG 5.3:1)
-  low: "#c2442eff",    // clay red — below range (WCAG 5.9:1)
+  high: "#d58814ff",   // mustard — above range (WCAG 5.3:1)
+  low: "#d33418ff",    // clay red — below range (WCAG 5.9:1)
 };
 
 // Configurable "High" glucose reference line.
