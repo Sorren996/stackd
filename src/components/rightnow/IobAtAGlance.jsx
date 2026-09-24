@@ -126,10 +126,6 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
                   onClick={() => handleRowTap(dose)}
                   className="flex w-full items-center gap-2.5 text-left transition hover:opacity-70"
                 >
-                  <span
-                    className="h-2.5 w-2.5 shrink-0 rounded-full"
-                    style={{ background: dotColor }}
-                  />
                   <span className="min-w-0 flex-1">
                     <span className="flex items-baseline gap-1.5">
                       <span className="text-[13px] font-semibold truncate" style={{ color: textColor }}>
@@ -196,10 +192,6 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
                   onClick={() => handleRowTap(dose)}
                   className="flex w-full items-center gap-2.5 text-left transition hover:opacity-70"
                 >
-                  <span
-                    className="h-2.5 w-2.5 shrink-0 rounded-full"
-                    style={{ background: dotColor }}
-                  />
                   <span className="min-w-0 flex-1">
                     <span className="text-[13px] font-semibold" style={{ color: textColor }}>
                       {dose.shortName || dose.type?.split(" ")[0] || "Basal"}
