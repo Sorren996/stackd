@@ -15,7 +15,8 @@ import RescueCarbCheckbox from "@/components/RescueCarbCheckbox";
 import { cancelSplitPlansForMeal, cleanupSplitPlansForDose } from "@/lib/splitDoseUtils";
 import { groupDaysByMonth, monthStats } from "@/lib/historyAggregations";
 import HistoryMonthView from "@/components/history/HistoryMonthView";
-import HistoryMonthDays from "@/components/history/HistoryMonthDays";
+import HistoryWeekList from "@/components/history/HistoryWeekList";
+import MonthHeatmap from "@/components/history/MonthHeatmap";
 import DayRecap from "@/components/history/DayRecap";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 
@@ -275,6 +276,7 @@ export default function History() {
   const [editingLog, setEditingLog] = useState(null);
   const [targetRange, setTargetRange] = useState(readTargetRange);
   const [direction, setDirection] = useState(1);
+  const [viewMode, setViewMode] = useState("list");
 
   useEffect(() => {
     const updateTargetRange = () => setTargetRange(readTargetRange());
@@ -332,6 +334,35 @@ export default function History() {
     },
     enabled: level === "recap" && !!selectedDay,
   });
+
+  const { data: monthReadings = [], isLoading: loadingMonthReadings } = useQuery({
+    queryKey: ["history-month-readings", selectedMonth],
+    queryFn: async () => {
+      if (!currentMonth || !currentMonth.days.length) return [];
+      const dates = currentMonth.days.map((d) => d.date).sort();
+      const start = new Date(`${dates[0]}T00:00:00`).toISOString();
+      const end = new Date(`${dates[dates.length - 1]}T23:59:59`).toISOString();
+      return base44.entities.GlucoseReading.filter(
+        { recorded_at: { $gte: start, $lte: end }, source: { $ne: "system" } },
+        "recorded_at",
+        8000
+      );
+    },
+    enabled: level === "days" && !!selectedMonth,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const readingsByDay = useMemo(() => {
+    const map = {};
+    (monthReadings || []).forEach((r) => {
+      const t = new Date(r.recorded_at);
+      if (Number.isNaN(t.getTime())) return;
+      const key = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
+      if (!map[key]) map[key] = [];
+      map[key].push({ time: t.getTime(), value: Number(r.value) });
+    });
+    return map;
+  }, [monthReadings]);
 
   const invalidateHistory = () => {
     queryClient.invalidateQueries({ queryKey: ["history-summary"] });
@@ -544,9 +575,42 @@ export default function History() {
           )}
 
           {level === "days" && currentMonth && (
-            <SectionCard label="Days">
-              <HistoryMonthDays days={monthDays} onSelectDay={handleSelectDay} />
-            </SectionCard>
+            <>
+              <div className="flex justify-center px-1">
+                <div className="inline-flex rounded-full p-1" style={{ background: "#f0e8db" }}>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode("list")}
+                    className="rounded-full px-4 py-1.5 text-xs font-semibold transition"
+                    style={{ background: viewMode === "list" ? "#3f3830" : "transparent", color: viewMode === "list" ? "#f7f1e8" : "#6b6153" }}
+                  >
+                    List
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode("calendar")}
+                    className="rounded-full px-4 py-1.5 text-xs font-semibold transition"
+                    style={{ background: viewMode === "calendar" ? "#3f3830" : "transparent", color: viewMode === "calendar" ? "#f7f1e8" : "#6b6153" }}
+                  >
+                    Calendar
+                  </button>
+                </div>
+              </div>
+
+              {viewMode === "list" ? (
+                <HistoryWeekList
+                  days={monthDays}
+                  readingsByDay={readingsByDay}
+                  targetLow={targetLow}
+                  targetHigh={targetHigh}
+                  onSelectDay={handleSelectDay}
+                />
+              ) : (
+                <SectionCard label={`${currentMonth.label} ${currentMonth.year}`}>
+                  <MonthHeatmap days={monthDays} onSelectDay={handleSelectDay} />
+                </SectionCard>
+              )}
+            </>
           )}
 
           {level === "recap" && selectedDay && (

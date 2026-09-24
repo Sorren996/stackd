@@ -9,7 +9,7 @@ import { Shield, AlertTriangle, Loader2, CheckCircle2, XCircle } from "lucide-re
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
-import HairlineSection from "@/components/editorial/HairlineSection";
+import SectionCard from "@/components/editorial/SectionCard";
 import LedgerRow from "@/components/editorial/LedgerRow";
 
 export default function ConsentManagement() {
@@ -69,7 +69,7 @@ export default function ConsentManagement() {
       <DocumentModal docKey={activeDoc} onClose={() => setActiveDoc(null)} />
 
       <div className="space-y-6">
-        <HairlineSection label="Legal & Consent">
+        <SectionCard label="Legal & Consent">
           <div className="pt-3 pb-2 space-y-3">
             <div className="flex items-center gap-3">
               {isComplete && bundleCurrent ? (
@@ -100,9 +100,9 @@ export default function ConsentManagement() {
               </div>
             )}
           </div>
-        </HairlineSection>
+        </SectionCard>
 
-        <HairlineSection label="Documents">
+        <SectionCard label="Documents">
           <div className="pt-1 pb-2">
             {Object.entries(LEGAL_DOCUMENTS).map(([key, doc]) => (
               <LedgerRow
@@ -113,10 +113,10 @@ export default function ConsentManagement() {
               />
             ))}
           </div>
-        </HairlineSection>
+        </SectionCard>
 
         {ackRecords.length > 0 && (
-          <HairlineSection label="Acknowledgment History">
+          <SectionCard label="Acknowledgment History">
             <div className="pt-1 pb-2">
               {ackRecords.slice(0, 5).map((record) => (
                 <LedgerRow
@@ -127,11 +127,11 @@ export default function ConsentManagement() {
                 />
               ))}
             </div>
-          </HairlineSection>
+          </SectionCard>
         )}
 
         {isComplete && (
-          <HairlineSection label="Withdraw">
+          <SectionCard label="Withdraw">
             <div className="pt-3 pb-2">
               <button
                 type="button"
@@ -146,7 +146,7 @@ export default function ConsentManagement() {
                 <span className="text-sm" style={{ color: "#746959" }}>›</span>
               </button>
             </div>
-          </HairlineSection>
+          </SectionCard>
         )}
 
         {isLoading && (

@@ -25,12 +25,12 @@ export default function LedgerRow({ label, value, timestamp, to, onClick, danger
         <span className="dotted-leader block" />
       </span>
       {value && (
-        <span className="shrink-0 text-sm" style={{ color: danger ? "#c97060" : "#8a7f70" }}>
+        <span className="shrink-0 text-sm" style={{ color: danger ? "#c97060" : "#6b6153" }}>
           {value}
         </span>
       )}
       {actionLabel ? (
-        <span className="shrink-0 text-xs font-semibold uppercase tracking-wider" style={{ color: danger ? "#c97060" : "#a89e8d" }}>
+        <span className="shrink-0 text-xs font-semibold uppercase tracking-wider" style={{ color: danger ? "#c97060" : "#746959" }}>
           {actionLabel}
         </span>
       ) : (to || onClick) && (

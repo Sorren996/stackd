@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, HeartPulse, Unlink, Sparkles, Lock, Eye, EyeOff, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import DexcomSyncStatus from "@/components/DexcomSyncStatus";
-import HairlineSection from "@/components/editorial/HairlineSection";
+import SectionCard from "@/components/editorial/SectionCard";
 
 export default function DexcomConnect() {
   const queryClient = useQueryClient();
@@ -70,7 +70,7 @@ export default function DexcomConnect() {
 
   return (
     <div className="space-y-4">
-      <HairlineSection label="Glucose Source">
+      <SectionCard label="Glucose Source">
         <div className="pt-3 pb-2">
           <p className="text-xs leading-relaxed mb-4" style={{ color: "#6b6153" }}>
             Connect your Dexcom account so your readings flow into Stackd gently and automatically — no manual logging required.
@@ -178,7 +178,7 @@ export default function DexcomConnect() {
             </div>
           )}
         </div>
-      </HairlineSection>
+      </SectionCard>
 
       <div className="flex items-start gap-2 px-1">
         <Lock className="h-3.5 w-3.5 shrink-0 mt-0.5" style={{ color: "#a89e8d" }} />

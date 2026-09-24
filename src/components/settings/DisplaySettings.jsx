@@ -7,7 +7,7 @@ import {
   HIGH_REFERENCE_STEP,
 } from "@/lib/glucoseStatus";
 import HighGlucosePicker from "@/components/settings/HighGlucosePicker";
-import HairlineSection from "@/components/editorial/HairlineSection";
+import SectionCard from "@/components/editorial/SectionCard";
 
 const HEIGHT_OPTIONS = [
   { value: 300, label: "300 mg/dL", desc: "A closer view of your in-range rhythm." },
@@ -55,7 +55,7 @@ export default function DisplaySettings() {
 
   return (
     <div className="space-y-6">
-      <HairlineSection label="Graph Height">
+      <SectionCard label="Graph Height">
         <div className="space-y-3 pt-3 pb-2">
           {HEIGHT_OPTIONS.map((opt) => {
             const selected = opt.value === currentHeight;
@@ -80,9 +80,9 @@ export default function DisplaySettings() {
             );
           })}
         </div>
-      </HairlineSection>
+      </SectionCard>
 
-      <HairlineSection label="High Glucose Line">
+      <SectionCard label="High Glucose Line">
         <div className="pt-3 pb-2">
           <div className="flex items-baseline justify-between">
             <span className="text-xs" style={{ color: "#6b6153" }}>Secondary reference on Your Flow</span>
@@ -95,13 +95,13 @@ export default function DisplaySettings() {
             Choose from {HIGH_REFERENCE_MIN}–{HIGH_REFERENCE_MAX} mg/dL in steps of {HIGH_REFERENCE_STEP}. This is a visual reference only — it never changes when glucose is considered high. Your target range stays separate.
           </p>
         </div>
-      </HairlineSection>
+      </SectionCard>
 
       <p className="px-1 text-[11px] leading-relaxed" style={{ color: "#746959" }}>
         Graph height sets the normal upper limit of your glucose graph across every Your Flow view. Whenever a real reading rises above or dips below your chosen scale, the graph gently expands to show the true value without changing your saved preference.
       </p>
 
-      <HairlineSection label="Manual Glucose">
+      <SectionCard label="Manual Glucose">
         <button
           type="button"
           onClick={handleToggleManualGlucose}
@@ -129,7 +129,7 @@ export default function DisplaySettings() {
             />
           </span>
         </button>
-      </HairlineSection>
+      </SectionCard>
 
       <p className="px-1 text-[10px] leading-relaxed" style={{ color: "#746959" }}>
         These are display preferences only. They never change, round, or hide your actual glucose readings.

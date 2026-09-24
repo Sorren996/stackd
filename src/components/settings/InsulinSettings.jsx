@@ -9,7 +9,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { getDefaultInsulinLibrary } from "@/lib/userSettings";
 import InsulinTypeSelector from "@/components/settings/InsulinTypeSelector";
-import HairlineSection from "@/components/editorial/HairlineSection";
+import SectionCard from "@/components/editorial/SectionCard";
 import { toast } from "sonner";
 
 const INSULIN_PLAN_HELP = {
@@ -480,7 +480,7 @@ export default function InsulinSettings() {
 
       <div className="space-y-5">
         {/* Target Range Preference */}
-        <HairlineSection label="Target Range">
+        <SectionCard label="Target Range">
           <div className="flex gap-4 items-stretch pt-3 pb-2">
             <button
               onClick={handleSetRecommended}
@@ -513,10 +513,10 @@ export default function InsulinSettings() {
               </div>
             </div>
           </div>
-        </HairlineSection>
+        </SectionCard>
 
         {/* Alerts & Preferences */}
-        <HairlineSection label="Alerts">
+        <SectionCard label="Alerts">
           <div className="flex items-center justify-between gap-4 pt-3 pb-2">
             <div className="space-y-0.5">
               <Label className="text-sm font-semibold text-white/90 flex items-center gap-2">
@@ -527,10 +527,10 @@ export default function InsulinSettings() {
             </div>
             <Switch checked={stackingAlerts} onCheckedChange={handleStackingToggle} />
           </div>
-        </HairlineSection>
+        </SectionCard>
 
         {/* Insulin Plan */}
-        <HairlineSection label="Insulin Plan">
+        <SectionCard label="Insulin Plan">
           <div className="space-y-5 pt-3 pb-2">
             <div className="rounded-2xl border-l-2 px-3 py-2.5" style={{ borderColor: "rgba(91,101,80,0.45)", background: "rgba(91,101,80,0.05)" }}>
               <p className="text-[11px] leading-relaxed text-white/45">
@@ -702,7 +702,7 @@ export default function InsulinSettings() {
               </div>
             </div>
           </div>
-        </HairlineSection>
+        </SectionCard>
 
       </div>
     </>

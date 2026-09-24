@@ -6,15 +6,15 @@ function Metric({ label, value, unit, accent }) {
     <div
       className="rounded-2xl border px-3.5 py-3"
       style={{
-        background: "#fdf9f2",
+        background: "#f7f1e8",
         borderColor: "#eadccf",
         boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)",
       }}
     >
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-white/35">{label}</p>
-      <p className="mt-0.5 text-base font-bold" style={{ color: accent || "rgba(255,255,255,0.92)" }}>
+      <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "#746959" }}>{label}</p>
+      <p className="mt-0.5 text-base font-bold" style={{ color: accent || "#3f3830" }}>
         {value}
-        {unit && <span className="ml-0.5 text-[10px] font-medium text-white/40">{unit}</span>}
+        {unit && <span className="ml-0.5 text-[10px] font-medium" style={{ color: "#746959" }}>{unit}</span>}
       </p>
     </div>
   );
@@ -82,8 +82,8 @@ export default function DaySummary({ metrics, daySummary, manualCount, hasCGM, t
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
         <Metric label="Highest" value={metrics.max} unit="mg/dL" accent={GLUCOSE_STATUS_COLORS.high} />
         <Metric label="Lowest" value={metrics.min} unit="mg/dL" accent={GLUCOSE_STATUS_COLORS.low} />
-        <Metric label="Above range" value={formatDuration(metrics.aboveMs)} />
-        <Metric label="Below range" value={formatDuration(metrics.belowMs)} />
+        <Metric label="Above range" value={formatDuration(metrics.aboveMs)} accent={GLUCOSE_STATUS_COLORS.high} />
+        <Metric label="Below range" value={formatDuration(metrics.belowMs)} accent={GLUCOSE_STATUS_COLORS.low} />
       </div>
       {manualCount > 0 && (
         <p className="text-[11px] font-medium text-white/40">

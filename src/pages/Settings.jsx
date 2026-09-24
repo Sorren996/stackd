@@ -4,7 +4,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 import { toast } from "sonner";
 import PageHeader from "@/components/editorial/PageHeader";
-import HairlineSection from "@/components/editorial/HairlineSection";
+import SectionCard from "@/components/editorial/SectionCard";
 import LedgerRow from "@/components/editorial/LedgerRow";
 import SensorSessionCard from "@/components/settings/SensorSessionCard";
 
@@ -45,7 +45,7 @@ export default function Settings() {
           className="inline-block h-2 w-2 rounded-full"
           style={{ background: dexcomConnected ? "#5b6550" : "#a89e8d" }}
         />
-        <span className="text-xs font-medium" style={{ color: "#6b6153" }}>
+        <span className="text-xs font-medium" style={{ color: "#eadccf" }}>
           {dexcomConnected
             ? `Dexcom ${connection?.cgm_model || "G7"} · connected · updating every 5 min`
             : "No glucose source connected"}
@@ -54,39 +54,39 @@ export default function Settings() {
 
       <SensorSessionCard />
 
-      <HairlineSection label="Insulin Plan">
+      <SectionCard label="Insulin Plan">
         <LedgerRow label="Insulin settings" value="Meal & correction" to="/settings/insulin" />
-      </HairlineSection>
+      </SectionCard>
 
-      <HairlineSection label="Glucose">
+      <SectionCard label="Glucose">
         <LedgerRow label="Dexcom connection" value={dexcomStatus} to="/settings/dexcom" />
-      </HairlineSection>
+      </SectionCard>
 
-      <HairlineSection label="App">
+      <SectionCard label="App">
         <LedgerRow label="Display" value={`Graph max: ${graphHeight}`} to="/settings/display" />
         <LedgerRow label="Add to Home Screen" value="Install" to="/install" />
         <LedgerRow label="Support the Creator" value="Optional gifts" to="/settings/support-creator" />
-      </HairlineSection>
+      </SectionCard>
 
-      <HairlineSection label="Privacy & Help">
+      <SectionCard label="Privacy & Help">
         <LedgerRow label="Privacy & Consent" value="Consent & controls" to="/settings/privacy-consent" />
         <LedgerRow label="Contact & Support" value="Help & feedback" to="/settings/contact-support" />
-      </HairlineSection>
+      </SectionCard>
 
       {user?.role === "admin" && (
-        <HairlineSection label="Admin">
+        <SectionCard label="Admin">
           <LedgerRow label="Support Inbox" value="Review requests" to="/settings/support-inbox" />
-        </HairlineSection>
+        </SectionCard>
       )}
 
-      <HairlineSection label="Account">
+      <SectionCard label="Account">
         <LedgerRow label="Profile" value={user?.email || "Name & email"} to="/settings/profile" />
         <LedgerRow
           label={isLoggingOut ? "Logging out..." : "Log Out"}
           onClick={handleLogout}
           danger
         />
-      </HairlineSection>
+      </SectionCard>
 
       <p className="px-1 pt-2 text-xs" style={{ color: "#a89e8d" }}>
         Your settings shape what every review shows —{" "}

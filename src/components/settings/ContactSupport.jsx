@@ -4,7 +4,7 @@ import { Loader2, LifeBuoy, Bug, MessageSquare, ShieldCheck } from "lucide-react
 import { toast } from "sonner";
 import { getAppVersion } from "@/lib/appVersion";
 import MySupportRequests from "@/components/settings/MySupportRequests";
-import HairlineSection from "@/components/editorial/HairlineSection";
+import SectionCard from "@/components/editorial/SectionCard";
 
 const TICKET_TYPES = [
   { key: "support", label: "Get Support", icon: LifeBuoy, desc: "Technical problems or account help." },
@@ -79,7 +79,7 @@ export default function ContactSupport() {
     <div className="space-y-6">
       <MySupportRequests />
 
-      <HairlineSection label="How can we help?">
+      <SectionCard label="How can we help?">
         <div className="space-y-2.5 pt-3 pb-2">
           {TICKET_TYPES.map((t) => {
             const Icon = t.icon;
@@ -106,10 +106,10 @@ export default function ContactSupport() {
             );
           })}
         </div>
-      </HairlineSection>
+      </SectionCard>
 
       {ticketType && (
-        <HairlineSection label="Your Message">
+        <SectionCard label="Your Message">
           <div className="space-y-4 pt-3 pb-2">
             <div>
               <label className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "#746959" }}>Category</label>
@@ -174,7 +174,7 @@ export default function ContactSupport() {
               {submitting ? "Sending..." : "Send"}
             </button>
           </div>
-        </HairlineSection>
+        </SectionCard>
       )}
 
       <div className="flex items-start gap-2.5 px-1">

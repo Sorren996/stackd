@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { Shield, Trash2, AlertTriangle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import ConsentManagement from "@/components/settings/ConsentManagement";
-import HairlineSection from "@/components/editorial/HairlineSection";
+import SectionCard from "@/components/editorial/SectionCard";
 import LedgerRow from "@/components/editorial/LedgerRow";
 
 export default function PrivacyConsent() {
@@ -48,7 +48,7 @@ export default function PrivacyConsent() {
     <div className="space-y-6">
       <ConsentManagement />
 
-      <HairlineSection label="Privacy">
+      <SectionCard label="Privacy">
         <div className="flex items-start gap-3 pt-3 pb-2">
           <Shield className="w-4 h-4 mt-0.5 shrink-0" style={{ color: "#5b6550" }} />
           <div className="space-y-2">
@@ -61,9 +61,9 @@ export default function PrivacyConsent() {
             </p>
           </div>
         </div>
-      </HairlineSection>
+      </SectionCard>
 
-      <HairlineSection label="Danger Zone">
+      <SectionCard label="Danger Zone">
         {!showDeleteConfirm ? (
           <div className="pt-3 pb-2">
             <LedgerRow
@@ -107,7 +107,7 @@ export default function PrivacyConsent() {
             </div>
           </div>
         )}
-      </HairlineSection>
+      </SectionCard>
     </div>
   );
 }
