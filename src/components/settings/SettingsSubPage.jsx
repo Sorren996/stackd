@@ -15,12 +15,12 @@ export default function SettingsSubPage({ title, italicWord, children }) {
           type="button"
           onClick={() => navigate("/settings")}
           className="flex h-8 w-8 shrink-0 items-center justify-center transition"
-          style={{ color: "#8a7f70" }}
+          style={{ color: "#eadccf" }}
           aria-label="Back to Settings"
         >
           <ChevronLeft className="h-5 w-5" />
         </button>
-        <h1 className="text-lg font-semibold" style={{ color: "#3f3830" }}>
+        <h1 className="text-lg font-semibold" style={{ color: "#f7f1e8" }}>
           {title} {italicWord && <span className="font-serif-italic" style={{ fontWeight: 400 }}>{italicWord}</span>}
         </h1>
       </div>

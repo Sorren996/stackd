@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { Loader2, Check, ChevronRight, Pencil } from "lucide-react";
 import { toast } from "sonner";
-import HairlineSection from "@/components/editorial/HairlineSection";
+import SectionCard from "@/components/editorial/SectionCard";
 import LedgerRow from "@/components/editorial/LedgerRow";
 
 export default function ProfileSettings() {
@@ -56,7 +56,7 @@ export default function ProfileSettings() {
 
   return (
     <div className="space-y-6">
-      <HairlineSection label="Identity">
+      <SectionCard label="Identity">
         {editingName ? (
           <div className="py-3 space-y-3">
             <input
@@ -105,9 +105,9 @@ export default function ProfileSettings() {
           />
         )}
         <LedgerRow label="Email" value={user?.email || "Not available"} />
-      </HairlineSection>
+      </SectionCard>
 
-      <HairlineSection label="Security">
+      <SectionCard label="Security">
         {passwordStep === "idle" ? (
           <LedgerRow
             label="Password"
@@ -141,11 +141,13 @@ export default function ProfileSettings() {
             </div>
           </div>
         )}
-      </HairlineSection>
+      </SectionCard>
 
-      <p className="px-1 text-xs" style={{ color: "#746959" }}>
-        Your identity stays private — <span className="font-serif-italic">only you see these details.</span>
-      </p>
+      <SectionCard>
+        <p className="text-xs" style={{ color: "#746959" }}>
+          Your identity stays private — <span className="font-serif-italic">only you see these details.</span>
+        </p>
+      </SectionCard>
     </div>
   );
 }

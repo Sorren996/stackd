@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import SectionCard from "@/components/editorial/SectionCard";
 import DaySummary from "./DaySummary";
 import DayRecapGraph from "./DayRecapGraph";
 import EnhancedDayInsights from "./EnhancedDayInsights";
@@ -91,24 +92,25 @@ export default function DayRecap({
 
   return (
     <div className="space-y-5">
-      {/* Day context line */}
-      {(carbTotal > 0 || insulinTotal > 0) && (
-        <p className="px-1 text-xs font-medium text-white/45">
-          {carbTotal > 0 && <>{Math.round(carbTotal)}g nourishment</>}
-          {carbTotal > 0 && insulinTotal > 0 && <span className="mx-1.5 text-white/20">·</span>}
-          {insulinTotal > 0 && <>{Math.round(insulinTotal * 10) / 10}u support</>}
-        </p>
-      )}
-
-      {/* Day summary */}
-      <DaySummary
-        metrics={metrics}
-        daySummary={daySummary}
-        manualCount={manualCount}
-        hasCGM={hasCGM}
-        targetLow={targetLow}
-        targetHigh={targetHigh}
-      />
+      <SectionCard label="Your Day">
+        {(carbTotal > 0 || insulinTotal > 0) && (
+          <p className="text-xs font-medium" style={{ color: "#746959" }}>
+            {carbTotal > 0 && <>{Math.round(carbTotal)}g nourishment</>}
+            {carbTotal > 0 && insulinTotal > 0 && <span className="mx-1.5" style={{ color: "#b8aea0" }}>·</span>}
+            {insulinTotal > 0 && <>{Math.round(insulinTotal * 10) / 10}u support</>}
+          </p>
+        )}
+        <div className="pt-1">
+          <DaySummary
+            metrics={metrics}
+            daySummary={daySummary}
+            manualCount={manualCount}
+            hasCGM={hasCGM}
+            targetLow={targetLow}
+            targetHigh={targetHigh}
+          />
+        </div>
+      </SectionCard>
 
       {/* Glucose graph — the centerpiece */}
       {metrics.hasData && (

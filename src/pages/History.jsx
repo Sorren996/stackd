@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import PageHeader from "@/components/editorial/PageHeader";
+import SectionCard from "@/components/editorial/SectionCard";
 import AnchorNumber from "@/components/editorial/AnchorNumber";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { format, parseISO } from "date-fns";
@@ -482,15 +483,15 @@ export default function History() {
             onClick={goBack}
             aria-label="Back"
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition"
-            style={{ color: "#6b6153" }}
+            style={{ color: "#eadccf" }}
           >
             <ChevronLeft className="h-5 w-5" />
           </button>
           <div className="min-w-0 flex-1">
-            <h2 className="text-lg font-semibold truncate" style={{ color: "#3f3830" }}>
+            <h2 className="text-lg font-semibold truncate" style={{ color: "#f7f1e8" }}>
               {headerTitle}
             </h2>
-            <p className="text-xs" style={{ color: "#746959" }}>{headerSub}</p>
+            <p className="text-xs" style={{ color: "#eadccf" }}>{headerSub}</p>
           </div>
         {level === "recap" && selectedDay && allDays.length > 1 && (
           <div className="ml-auto flex items-center gap-1.5">
@@ -504,7 +505,7 @@ export default function History() {
               disabled={!allDays.some((d) => d.date < selectedDay)}
               aria-label="Previous day"
               className="flex h-8 w-8 items-center justify-center rounded-full transition disabled:opacity-30"
-              style={{ color: "#6b6153" }}
+              style={{ color: "#eadccf" }}
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
@@ -518,7 +519,7 @@ export default function History() {
               disabled={!allDays.some((d) => d.date > selectedDay)}
               aria-label="Next day"
               className="flex h-8 w-8 items-center justify-center rounded-full transition disabled:opacity-30"
-              style={{ color: "#6b6153" }}
+              style={{ color: "#eadccf" }}
             >
               <ChevronRight className="h-5 w-5" />
             </button>
@@ -537,11 +538,15 @@ export default function History() {
           transition={{ duration: 0.28, ease: [0.4, 0, 0.2, 1] }}
         >
           {level === "month" && (
-            <HistoryMonthView months={months} onSelectMonth={handleSelectMonth} />
+            <SectionCard label="Months Tracked">
+              <HistoryMonthView months={months} onSelectMonth={handleSelectMonth} />
+            </SectionCard>
           )}
 
           {level === "days" && currentMonth && (
-            <HistoryMonthDays days={monthDays} onSelectDay={handleSelectDay} />
+            <SectionCard label="Days">
+              <HistoryMonthDays days={monthDays} onSelectDay={handleSelectDay} />
+            </SectionCard>
           )}
 
           {level === "recap" && selectedDay && (

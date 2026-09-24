@@ -8,11 +8,11 @@ import { format } from "date-fns";
 export default function PageHeader({ italicWord, date = new Date(), showDate = true, rightText }) {
   return (
     <div className="flex items-baseline justify-between px-1 pt-1 pb-3">
-      <h1 className="text-lg font-semibold tracking-tight" style={{ color: "#3f3830" }}>
+      <h1 className="text-lg font-semibold tracking-tight" style={{ color: "#f7f1e8" }}>
         Your <span className="font-serif-italic" style={{ fontWeight: 400 }}>{italicWord}</span>
       </h1>
       {showDate && (
-        <span className="text-xs font-medium" style={{ color: "#746959" }}>
+        <span className="text-xs font-medium" style={{ color: "#eadccf" }}>
           {rightText || format(date, "EEE, MMM d · h:mm aa")}
         </span>
       )}

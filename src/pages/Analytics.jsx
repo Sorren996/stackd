@@ -5,7 +5,7 @@ import { subDays, format } from "date-fns";
 import { motion } from "framer-motion";
 import PageHeader from "@/components/editorial/PageHeader";
 import AnchorNumber from "@/components/editorial/AnchorNumber";
-import HairlineSection from "@/components/editorial/HairlineSection";
+import SectionCard from "@/components/editorial/SectionCard";
 import LedgerRow from "@/components/editorial/LedgerRow";
 import { Activity } from "lucide-react";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
@@ -160,19 +160,24 @@ export default function Analytics() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
-        <div className="w-8 h-8 border-4 rounded-full animate-spin" style={{ borderColor: "#eadccf", borderTopColor: "#4d5742" }} />
+        <div className="w-8 h-8 border-4 rounded-full animate-spin" style={{ borderColor: "rgba(247,241,232,0.25)", borderTopColor: "#f7f1e8" }} />
       </div>
     );
   }
 
   if (!stats) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-center">
-        <Activity className="w-10 h-10 mb-3" style={{ color: "#746959" }} />
-        <h3 className="text-lg font-semibold" style={{ color: "#3f3830" }}>Your journey awaits</h3>
-        <p className="mt-1 max-w-[240px] text-sm" style={{ color: "#746959" }}>
-          Log a few glucose readings to begin revealing your body's gentle patterns.
-        </p>
+      <div className="mx-auto max-w-md space-y-6 pb-24 pt-2">
+        <PageHeader italicWord="rhythm" rightText={dateRangeText} />
+        <SectionCard>
+          <div className="flex flex-col items-center justify-center py-10 text-center">
+            <Activity className="w-10 h-10 mb-3" style={{ color: "#a89e8d" }} />
+            <h3 className="text-lg font-semibold" style={{ color: "#3f3830" }}>Your journey awaits</h3>
+            <p className="mt-1 max-w-[240px] text-sm" style={{ color: "#746959" }}>
+              Log a few glucose readings to begin revealing your body's gentle patterns.
+            </p>
+          </div>
+        </SectionCard>
       </div>
     );
   }
@@ -181,32 +186,29 @@ export default function Analytics() {
 
   return (
     <div className="mx-auto max-w-md space-y-6 pb-24 pt-2">
-      {/* Header */}
       <PageHeader italicWord="rhythm" rightText={dateRangeText} />
 
-      {/* Range selector */}
-      <div className="flex justify-center px-1">
-        <RangeSelector value={rangeDays} onChange={handleRangeChange} />
-      </div>
+      <SectionCard label="Comfort Zone">
+        <div className="flex justify-center">
+          <RangeSelector value={rangeDays} onChange={handleRangeChange} />
+        </div>
+        <div className="pt-4">
+          <AnchorNumber
+            value={`${Math.round(stats.inRangePercent)}%`}
+            caption={
+              <>
+                of the past {PERIOD_LONG[rangeDays] || `${rangeDays} days`} spent{" "}
+                <span className="font-serif-italic">in your comfort zone</span>
+                {hasEnough ? " — steady cadence" : " — still gathering"}
+              </>
+            }
+          />
+        </div>
+      </SectionCard>
 
-      {/* Anchor: Time in comfort zone */}
-      <div className="px-1">
-        <AnchorNumber
-          value={`${Math.round(stats.inRangePercent)}%`}
-          caption={
-            <>
-              of the past {PERIOD_LONG[rangeDays] || `${rangeDays} days`} spent{" "}
-              <span className="font-serif-italic">in your comfort zone</span>
-              {hasEnough ? " — steady cadence" : " — still gathering"}
-            </>
-          }
-        />
-      </div>
-
-      {/* Daily bar chart */}
       {stats.days.length > 0 && (
-        <HairlineSection label="Daily Balance">
-          <div className="flex items-end justify-between gap-2 pt-2 pb-3" style={{ height: 120 }}>
+        <SectionCard label="Daily Balance">
+          <div className="flex items-end justify-between gap-2 pt-1 pb-3" style={{ height: 120 }}>
             {stats.days.map((d, i) => (
               <div key={i} className="flex flex-1 flex-col items-center gap-1.5">
                 <span className="text-[10px] font-medium tabular-nums" style={{ color: "#8a7f70" }}>
@@ -247,30 +249,29 @@ export default function Analytics() {
               )}
             </div>
           )}
-        </HairlineSection>
+        </SectionCard>
       )}
 
-      {/* At a glance metrics */}
-      <HairlineSection label="At a Glance">
+      <SectionCard label="At a Glance">
         <LedgerRow label="Average glucose" value={`${Math.round(stats.averageGlucose)} mg/dL`} />
         {gmi !== null && <LedgerRow label="GMI" value={`${gmi.toFixed(1)}%`} />}
         <LedgerRow label="Time above range" value={`${stats.abovePercent.toFixed(0)}%`} />
         <LedgerRow label="Time below range" value={`${stats.belowPercent.toFixed(0)}%`} />
         <LedgerRow label="Readings" value={String(stats.total)} />
-      </HairlineSection>
+      </SectionCard>
 
-      {/* Daily pattern chart (existing component) */}
-      <DailyPatternChart
-        hourlyAverages={stats.hourlyAverages || []}
-        targetLow={targetRange.low}
-        targetHigh={targetRange.high}
-        hasEnough={hasEnough}
-      />
-
-      <p className="px-1 pt-2 text-xs" style={{ color: "#746959" }}>
-        Patterns describe the last {PERIOD_LONG[rangeDays] || `${rangeDays} days`} —{" "}
-        <span className="font-serif-italic">the rhythm is yours to read.</span>
-      </p>
+      <SectionCard>
+        <DailyPatternChart
+          hourlyAverages={stats.hourlyAverages || []}
+          targetLow={targetRange.low}
+          targetHigh={targetRange.high}
+          hasEnough={hasEnough}
+        />
+        <p className="px-1 pt-3 text-xs" style={{ color: "#746959" }}>
+          Patterns describe the last {PERIOD_LONG[rangeDays] || `${rangeDays} days`} —{" "}
+          <span className="font-serif-italic">the rhythm is yours to read.</span>
+        </p>
+      </SectionCard>
     </div>
   );
 }
