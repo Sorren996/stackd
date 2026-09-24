@@ -97,9 +97,11 @@ export default function DisplaySettings() {
         </div>
       </SectionCard>
 
-      <p className="px-1 text-[11px] leading-relaxed" style={{ color: "#746959" }}>
-        Graph height sets the normal upper limit of your glucose graph across every Your Flow view. Whenever a real reading rises above or dips below your chosen scale, the graph gently expands to show the true value without changing your saved preference.
-      </p>
+      <SectionCard>
+        <p className="text-[11px] leading-relaxed" style={{ color: "#746959" }}>
+          Graph height sets the normal upper limit of your glucose graph across every Your Flow view. Whenever a real reading rises above or dips below your chosen scale, the graph gently expands to show the true value without changing your saved preference.
+        </p>
+      </SectionCard>
 
       <SectionCard label="Manual Glucose">
         <button
@@ -131,9 +133,11 @@ export default function DisplaySettings() {
         </button>
       </SectionCard>
 
-      <p className="px-1 text-[10px] leading-relaxed" style={{ color: "#746959" }}>
-        These are display preferences only. They never change, round, or hide your actual glucose readings.
-      </p>
+      <SectionCard>
+        <p className="text-[10px] leading-relaxed" style={{ color: "#746959" }}>
+          These are display preferences only. They never change, round, or hide your actual glucose readings.
+        </p>
+      </SectionCard>
     </div>
   );
 }

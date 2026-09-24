@@ -6,7 +6,7 @@ import moment from "moment";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, Leaf, Sparkles, Heart, ExternalLink, X, AlertCircle, Hourglass } from "lucide-react";
 import { NumberPadField } from "@/components/FormInputFields";
-import HairlineSection from "@/components/editorial/HairlineSection";
+import SectionCard from "@/components/editorial/SectionCard";
 import LedgerRow from "@/components/editorial/LedgerRow";
 
 const PRESET_CENTS = [300, 500, 1000];
@@ -150,8 +150,8 @@ export default function SupportCreator() {
         )}
       </AnimatePresence>
 
-      <HairlineSection label="Support the Creator">
-        <div className="flex items-start gap-3 pt-3 pb-2">
+      <SectionCard>
+        <div className="flex items-start gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border" style={{ borderColor: "rgba(91,101,80,0.25)", background: "rgba(91,101,80,0.08)" }}>
             <Leaf className="h-5 w-5" style={{ color: "#5b6550" }} />
           </div>
@@ -161,7 +161,7 @@ export default function SupportCreator() {
             </p>
           </div>
         </div>
-      </HairlineSection>
+      </SectionCard>
 
       {/* Tabs */}
       <div className="rounded-2xl border p-1" style={{ borderColor: "#eadccf", background: "#f7f1e8" }}>
@@ -188,10 +188,7 @@ export default function SupportCreator() {
       </div>
 
       {/* Presets */}
-      <div>
-        <p className="mb-2 px-1 section-label">
-          {isMonthly ? "Choose your monthly patronage" : "Choose a gift amount"}
-        </p>
+      <SectionCard label={isMonthly ? "Choose your monthly patronage" : "Choose a gift amount"}>
         <div className="grid grid-cols-3 gap-2">
           {PRESET_CENTS.map((cents) => {
             const active = !customAmount && selectedPreset === cents;
@@ -214,11 +211,10 @@ export default function SupportCreator() {
             );
           })}
         </div>
-      </div>
+      </SectionCard>
 
       {/* Custom amount */}
-      <div>
-        <p className="mb-2 px-1 section-label">Or a custom amount</p>
+      <SectionCard label="Or a custom amount">
         <NumberPadField
           label={isMonthly ? "Custom monthly amount" : "Custom gift amount"}
           value={customAmount}
@@ -230,7 +226,7 @@ export default function SupportCreator() {
         {customAmount.trim() !== "" && !customValid && (
           <p className="mt-1.5 px-1 text-[11px]" style={{ color: "#c97060" }}>Please enter an amount between $1 and $2,500.</p>
         )}
-      </div>
+      </SectionCard>
 
       {/* Confirm */}
       <button
@@ -253,14 +249,16 @@ export default function SupportCreator() {
         )}
       </button>
 
-      <p className="px-1 text-center text-[11px] leading-relaxed" style={{ color: "#746959" }}>
-        Payments are handled securely by Stripe. You can manage or cancel monthly patronage anytime.
-      </p>
+      <SectionCard>
+        <p className="text-center text-[11px] leading-relaxed" style={{ color: "#746959" }}>
+          Payments are handled securely by Stripe. You can manage or cancel monthly patronage anytime.
+        </p>
+      </SectionCard>
 
       {/* Manage monthly support */}
       {hasCustomer && (
-        <HairlineSection label="Managing your support">
-          <div className="pt-3 pb-2 space-y-3">
+        <SectionCard label="Managing your support">
+          <div className="space-y-3">
             <p className="text-xs leading-relaxed" style={{ color: "#6b6153" }}>
               Update your card, view invoices, or cancel a monthly patronage through Stripe's secure billing portal.
             </p>
@@ -284,13 +282,13 @@ export default function SupportCreator() {
               )}
             </button>
           </div>
-        </HairlineSection>
+        </SectionCard>
       )}
 
       {/* History */}
       {supports.length > 0 && (
-        <HairlineSection label="Your kindness">
-          <div className="pt-1 pb-2">
+        <SectionCard label="Your kindness">
+          <div>
             {supports.map((record) => (
               <LedgerRow
                 key={record.id}
@@ -300,7 +298,7 @@ export default function SupportCreator() {
               />
             ))}
           </div>
-        </HairlineSection>
+        </SectionCard>
       )}
     </div>
   );

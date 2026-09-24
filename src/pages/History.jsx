@@ -344,8 +344,8 @@ export default function History() {
       const end = new Date(`${dates[dates.length - 1]}T23:59:59`).toISOString();
       return base44.entities.GlucoseReading.filter(
         { recorded_at: { $gte: start, $lte: end }, source: { $ne: "system" } },
-        "recorded_at",
-        8000
+        "-recorded_at",
+        10000
       );
     },
     enabled: level === "days" && !!selectedMonth,
@@ -576,7 +576,7 @@ export default function History() {
 
           {level === "days" && currentMonth && (
             <>
-              <div className="flex justify-center px-1">
+              <div className="flex justify-center px-1 mb-4">
                 <div className="inline-flex rounded-full p-1" style={{ background: "#f0e8db" }}>
                   <button
                     type="button"

@@ -227,7 +227,7 @@ function CustomInputTray({ open, onClose, title, children, anchorRef }) {
   );
 }
 
-function NumberPadField({ label, value, onChange, placeholder = "--", decimal = true, maxLength = 6, className = "" }) {
+function NumberPadField({ label, value, onChange, placeholder = "--", decimal = true, maxLength = 6, className = "", unit }) {
   const [open, setOpen] = useState(false);
   const fieldRef = useRef(null);
   const textValue = value === undefined || value === null ? "" : String(value);
@@ -242,14 +242,15 @@ function NumberPadField({ label, value, onChange, placeholder = "--", decimal = 
   return (
     <div
       ref={fieldRef}
-      className={`rounded-2xl px-3 py-2 ${className}`}
+      className={`rounded-2xl px-3.5 py-2.5 ${className}`}
       style={{
-        background: "#fdf9f2",
+        background: "#f7f1e8",
         border: "1px solid #eadccf",
       }}
     >
-      <button type="button" onClick={() => setOpen((value) => !value)} className="flex min-h-10 w-full flex-col items-start justify-center gap-0.5 text-left">
-        <span className={`max-w-full truncate text-base font-bold leading-tight ${textValue ? "" : "text-white/25"}`} style={textValue ? { color: "#4d5742" } : undefined}>{textValue || placeholder}</span>
+      <button type="button" onClick={() => setOpen((v) => !v)} className="flex min-h-12 w-full items-baseline gap-1.5 text-left">
+        <span className="text-xl font-bold tabular-nums leading-none" style={{ color: textValue ? "#3f3830" : "#b8aea0" }}>{textValue || placeholder}</span>
+        {unit && <span className="text-[10px] font-medium" style={{ color: "#746959" }}>{unit}</span>}
       </button>
       <CustomInputTray open={open} onClose={() => setOpen(false)} title={label} anchorRef={fieldRef}>
         <div className="grid grid-cols-3 gap-2.5">
@@ -490,14 +491,14 @@ export default function InsulinSettings() {
                 : { background: "#f7f1e8", borderColor: "#eadccf" }
               }
             >
-              <div className="text-[10px] font-bold uppercase tracking-wider opacity-60">Recommended</div>
-              <div className="text-base font-extrabold mt-1">70–180</div>
-              <div className="text-[9px] text-white/30 mt-0.5">mg/dL</div>
+              <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#746959" }}>Recommended</div>
+              <div className="text-base font-extrabold mt-1" style={{ color: "#3f3830" }}>70–180</div>
+              <div className="text-[9px] mt-0.5" style={{ color: "#746959" }}>mg/dL</div>
             </button>
 
             <div className="flex-1 flex flex-col justify-center space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-[10px] text-white/40 uppercase tracking-wider">Custom Range</span>
+                <span className="text-[10px] uppercase tracking-wider" style={{ color: "#746959" }}>Custom Range</span>
                 <span className="text-sm font-bold" style={{ color: "#4d5742" }}>{targetLow}–{targetHigh} mg/dL</span>
               </div>
               <Slider
@@ -507,7 +508,7 @@ export default function InsulinSettings() {
                 value={[targetLow, targetHigh]}
                 onValueChange={handleSliderChange}
                 className="cursor-pointer" />
-              <div className="flex justify-between text-[10px] text-white/20">
+              <div className="flex justify-between text-[10px]" style={{ color: "#b8aea0" }}>
                 <span>70</span>
                 <span>250</span>
               </div>
@@ -519,11 +520,11 @@ export default function InsulinSettings() {
         <SectionCard label="Alerts">
           <div className="flex items-center justify-between gap-4 pt-3 pb-2">
             <div className="space-y-0.5">
-              <Label className="text-sm font-semibold text-white/90 flex items-center gap-2">
-                <Target className="w-4 h-4" style={{ color: "#4d5742" }} />
+              <Label className="text-sm font-semibold flex items-center gap-2" style={{ color: "#3f3830" }}>
+                <Target className="w-4 h-4" style={{ color: "#5b6550" }} />
                 Insulin Stacking Warnings
               </Label>
-              <p className="text-xs text-white/40">Alert when multiple rapid doses overlap</p>
+              <p className="text-xs" style={{ color: "#746959" }}>Alert when multiple rapid doses overlap</p>
             </div>
             <Switch checked={stackingAlerts} onCheckedChange={handleStackingToggle} />
           </div>
@@ -532,15 +533,15 @@ export default function InsulinSettings() {
         {/* Insulin Plan */}
         <SectionCard label="Insulin Plan">
           <div className="space-y-5 pt-3 pb-2">
-            <div className="rounded-2xl border-l-2 px-3 py-2.5" style={{ borderColor: "rgba(91,101,80,0.45)", background: "rgba(91,101,80,0.05)" }}>
-              <p className="text-[11px] leading-relaxed text-white/45">
+            <div className="rounded-2xl px-4 py-3.5" style={{ background: "#f7f1e8", border: "1px solid #eadccf", borderLeft: "3px solid #9c5228" }}>
+              <p className="text-[11px] leading-relaxed" style={{ color: "#3f3830" }}>
                 Enter only insulin settings prescribed or confirmed by your licensed healthcare professional. This app does not provide medical advice, verify dosing accuracy, or replace clinical judgment. Incorrect values may result in serious hypoglycemia or hyperglycemia. Do not start, stop, or adjust insulin based solely on information provided by this app.
               </p>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="insulin-sensitivity" className="text-xs font-semibold text-white/80">
+                <Label htmlFor="insulin-sensitivity" className="text-xs font-semibold" style={{ color: "#3f3830" }}>
                   Insulin sensitivity
                 </Label>
                 <NumberPadField
@@ -553,15 +554,15 @@ export default function InsulinSettings() {
                   decimal={false}
                   maxLength={3}
                   className="w-full"
+                  unit="mg/dL / unit"
                 />
-                <p className="text-[10px] text-white/35">mg/dL per unit</p>
-                <p className="text-[10px] leading-tight text-white/30">
+                <p className="text-[10px] leading-tight" style={{ color: "#746959" }}>
                   How much 1 unit typically lowers your glucose.
                 </p>
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="correction-target" className="text-xs font-semibold text-white/80">
+                <Label htmlFor="correction-target" className="text-xs font-semibold" style={{ color: "#3f3830" }}>
                   Correction target
                 </Label>
                 <NumberPadField
@@ -574,44 +575,42 @@ export default function InsulinSettings() {
                   decimal={false}
                   maxLength={3}
                   className="w-full"
+                  unit="mg/dL"
                 />
-                <p className="text-[10px] text-white/35">mg/dL</p>
-                <p className="text-[10px] leading-tight text-white/30">
+                <p className="text-[10px] leading-tight" style={{ color: "#746959" }}>
                   Glucose baseline used when estimating correction insulin.
                 </p>
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="meal-insulin" className="text-xs font-semibold text-white/80">
+              <Label htmlFor="meal-insulin" className="text-xs font-semibold" style={{ color: "#3f3830" }}>
                 Meal insulin
               </Label>
-              <div className="flex items-center gap-3">
-                <NumberPadField
-                  label="Units"
-                  value={unitsPer5g}
-                  onChange={handleInsulinSettingValueChange(
-                    "meal_insulin_units_per_5g",
-                    setUnitsPer5g
-                  )}
-                  maxLength={5}
-                  className="w-28"
-                />
-                <span className="text-[10px] text-white/35">units per 5 g</span>
-              </div>
-              <p className="text-[10px] leading-tight text-white/30">
+              <NumberPadField
+                label="Units"
+                value={unitsPer5g}
+                onChange={handleInsulinSettingValueChange(
+                  "meal_insulin_units_per_5g",
+                  setUnitsPer5g
+                )}
+                maxLength={5}
+                className="w-32"
+                unit="units / 5g"
+              />
+              <p className="text-[10px] leading-tight" style={{ color: "#746959" }}>
                 Insulin units used to cover 5 grams of carbohydrates.
               </p>
             </div>
 
             <div className="space-y-3 border-t pt-4" style={{ borderColor: "rgba(91,101,80,0.12)" }}>
               <div className="flex min-h-6 items-center justify-between gap-2">
-                <Label className="text-sm font-semibold text-white/90">
+                <Label className="text-sm font-semibold" style={{ color: "#3f3830" }}>
                   My insulin library
                 </Label>
                 <SettingHelpButton id="library" openHelp={openHelp} setOpenHelp={setOpenHelp} />
               </div>
-              <p className="text-xs text-white/40">
+              <p className="text-xs" style={{ color: "#746959" }}>
                 Every insulin type you use. Only these appear when logging a dose.
               </p>
               <InsulinTypeSelector selectedTypes={insulinLibrary} onToggle={toggleInsulinLibrary} />
@@ -619,12 +618,12 @@ export default function InsulinSettings() {
 
             <div className="space-y-3 border-t pt-4" style={{ borderColor: "rgba(91,101,80,0.12)" }}>
               <div className="flex min-h-6 items-center justify-between gap-2">
-                <Label className="text-sm font-semibold text-white/90">
+                <Label className="text-sm font-semibold" style={{ color: "#3f3830" }}>
                   Meal/correction insulin types
                 </Label>
                 <SettingHelpButton id="types" openHelp={openHelp} setOpenHelp={setOpenHelp} />
               </div>
-              <p className="text-xs text-white/40">
+              <p className="text-xs" style={{ color: "#746959" }}>
                 The subset of your library used for meal coverage and corrections.
               </p>
               <InsulinTypeSelector
@@ -635,7 +634,7 @@ export default function InsulinSettings() {
             </div>
 
             <div className="space-y-3 border-t pt-4" style={{ borderColor: "rgba(91,101,80,0.12)" }}>
-              <Label className="text-sm font-semibold text-white/90">Timing</Label>
+              <Label className="text-sm font-semibold" style={{ color: "#3f3830" }}>Timing</Label>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <div className="flex min-h-6 items-center justify-between gap-2">
@@ -654,8 +653,8 @@ export default function InsulinSettings() {
                     decimal={false}
                     maxLength={3}
                     className="w-full"
+                    unit="min"
                   />
-                  <p className="text-[10px] text-white/35">min</p>
                 </div>
 
                 <div className="space-y-1.5">
@@ -675,8 +674,8 @@ export default function InsulinSettings() {
                     decimal={false}
                     maxLength={3}
                     className="w-full"
+                    unit="min"
                   />
-                  <p className="text-[10px] text-white/35">min</p>
                 </div>
 
                 <div className="space-y-1.5">
@@ -696,8 +695,8 @@ export default function InsulinSettings() {
                     decimal={false}
                     maxLength={3}
                     className="w-full"
+                    unit="min"
                   />
-                  <p className="text-[10px] text-white/35">min</p>
                 </div>
               </div>
             </div>

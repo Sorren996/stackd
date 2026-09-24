@@ -177,12 +177,14 @@ export default function ContactSupport() {
         </SectionCard>
       )}
 
-      <div className="flex items-start gap-2.5 px-1">
-        <ShieldCheck className="h-3.5 w-3.5 mt-0.5 shrink-0" style={{ color: "#4d5742" }} />
-        <p className="text-[10px] leading-relaxed" style={{ color: "#746959" }}>
-          Your message is sent securely and associated with your account. We never receive your password or Dexcom credentials through this form.
-        </p>
-      </div>
+      <SectionCard>
+        <div className="flex items-start gap-2.5">
+          <ShieldCheck className="h-3.5 w-3.5 mt-0.5 shrink-0" style={{ color: "#5b6550" }} />
+          <p className="text-[10px] leading-relaxed" style={{ color: "#746959" }}>
+            Your message is sent securely and associated with your account. We never receive your password or Dexcom credentials through this form.
+          </p>
+        </div>
+      </SectionCard>
     </div>
   );
 }
