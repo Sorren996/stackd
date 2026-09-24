@@ -226,7 +226,7 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
         </div>
 
         <div className="mt-3">
-          <MealResponseCurve response={mealResponse} now={now} />
+          <MealResponseCurve response={mealResponse} now={now} isComplete={absorptionPct >= 100 && gPerHour < 0.1} />
         </div>
 
         <p className="mt-1.5 text-[12px]" style={{ color: PALETTE.muted }}>

@@ -16,10 +16,10 @@ const INK = "#3f3830";
  * Solid copper up to "now", dashed after. Light fill under the solid portion.
  * Editorial palette only — no gradients or decorative elements.
  */
-export default function MealResponseCurve({ response, now = Date.now() }) {
-  const { solidPath, dashedPath, fillPath, nowX, nowY } = useMemo(() => {
+export default function MealResponseCurve({ response, now = Date.now(), isComplete = false }) {
+  const { solidPath, dashedPath, fillPath, nowX, nowY, endX } = useMemo(() => {
     const points = response?.points || [];
-    if (!points.length) return { solidPath: "", dashedPath: "", fillPath: "", nowX: 0, nowY: 0 };
+    if (!points.length) return { solidPath: "", dashedPath: "", fillPath: "", nowX: 0, nowY: 0, endX: 0 };
 
     const padX = 4;
     const padY = 6;
@@ -58,11 +58,45 @@ export default function MealResponseCurve({ response, now = Date.now() }) {
       }
     }
 
-    return { solidPath: solid, dashedPath: dashed, fillPath: fill, nowX: toX(nowClamped), nowY: toY(nowResp) };
+    return { solidPath: solid, dashedPath: dashed, fillPath: fill, nowX: toX(nowClamped), nowY: toY(nowResp), endX: toX(end) };
   }, [response, now]);
 
   if (!solidPath && !dashedPath) {
     return <div style={{ height: H }} />;
+  }
+
+  // When absorption is complete, render the entire curve as a solid
+  // historical line — no forward-implying dashed tail — with a small
+  // completion mark at the curve's end.
+  if (isComplete) {
+    const fullPts = (response?.points || []).map((p) => {
+      const padX = 4, padY = 6;
+      const start = response.points[0].time;
+      const end = response.points[response.points.length - 1].time;
+      const span = end - start;
+      const maxResp = Math.max(...response.points.map((pp) => pp.response), 1);
+      const x = padX + ((p.time - start) / span) * (W - padX * 2);
+      const y = H - padY - (p.response / maxResp) * (H - padY * 2);
+      return { x, y };
+    });
+    const fullPath = fullPts.length >= 2
+      ? fullPts.map((p, i) => `${i ? "L" : "M"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ")
+      : "";
+    const baseY = H - 6;
+    const fullFill = fullPts.length >= 2
+      ? `${fullPath} L ${fullPts[fullPts.length - 1].x.toFixed(1)} ${baseY.toFixed(1)} L ${fullPts[0].x.toFixed(1)} ${baseY.toFixed(1)} Z`
+      : "";
+
+    return (
+      <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ display: "block" }}>
+        <line x1={2} y1={H - 6} x2={W - 2} y2={H - 6} stroke={HAIRLINE} strokeWidth={0.75} />
+        {fullFill && <path d={fullFill} fill={COPPER_LIGHT} fillOpacity={0.08} stroke="none" />}
+        {fullPath && <path d={fullPath} fill="none" stroke={COPPER} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />}
+        {endX > 0 && (
+          <circle cx={endX} cy={H - 6} r={2.5} fill={COPPER} fillOpacity={0.5} />
+        )}
+      </svg>
+    );
   }
 
   return (

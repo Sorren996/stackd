@@ -117,9 +117,8 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
           <div className="space-y-2.5">
             {bolusDoses.map((dose) => {
               const status = bolusStatusLine(dose, now);
-              const isSpent = dose.iob <= 0.01;
-              const dotColor = isSpent ? PALETTE.grey : dose.color;
-              const textColor = isSpent ? PALETTE.faint : PALETTE.ink;
+              const dotColor = dose.color;
+              const textColor = PALETTE.ink;
               return (
                 <button
                   key={dose.id}
@@ -129,25 +128,25 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
                 >
                   <span
                     className="h-2.5 w-2.5 shrink-0 rounded-full"
-                    style={{ background: dotColor, opacity: isSpent ? 0.6 : 1 }}
+                    style={{ background: dotColor }}
                   />
                   <span className="min-w-0 flex-1">
                     <span className="flex items-baseline gap-1.5">
                       <span className="text-[13px] font-semibold truncate" style={{ color: textColor }}>
                         {dose.shortName || dose.type?.split(" ")[0] || "Insulin"}
                       </span>
-                      <span className="text-[11px]" style={{ color: isSpent ? PALETTE.faint : PALETTE.muted }}>
+                      <span className="text-[11px]" style={{ color: PALETTE.muted }}>
                         · {Number(dose.units) % 1 === 0 ? dose.units : dose.units.toFixed(1)}u dose
                       </span>
                     </span>
                     <span className="mt-0.5 flex items-center gap-1.5">
                       <span
                         className="shrink-0"
-                        style={{ color: isSpent ? PALETTE.grey : status.color }}
+                        style={{ color: dotColor }}
                       >
                         <MiniActivitySparkline dose={dose} now={now} />
                       </span>
-                      <span className="text-[11px] leading-tight" style={{ color: isSpent ? PALETTE.faint : status.color }}>
+                      <span className="text-[11px] leading-tight" style={{ color: status.color }}>
                         {status.label}
                       </span>
                     </span>
@@ -188,9 +187,8 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
 
           <div className="space-y-2.5">
             {basalDoses.map((dose) => {
-              const isSpent = dose.iob <= 0.01;
-              const dotColor = isSpent ? PALETTE.grey : dose.color;
-              const textColor = isSpent ? PALETTE.faint : PALETTE.ink;
+              const dotColor = dose.color;
+              const textColor = PALETTE.ink;
               return (
                 <button
                   key={dose.id}
@@ -200,18 +198,18 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
                 >
                   <span
                     className="h-2.5 w-2.5 shrink-0 rounded-full"
-                    style={{ background: dotColor, opacity: isSpent ? 0.6 : 1 }}
+                    style={{ background: dotColor }}
                   />
                   <span className="min-w-0 flex-1">
                     <span className="text-[13px] font-semibold" style={{ color: textColor }}>
                       {dose.shortName || dose.type?.split(" ")[0] || "Basal"}
                     </span>
                     <span className="mt-0.5 flex items-center gap-1.5">
-                      <span style={{ color: isSpent ? PALETTE.grey : PALETTE.green }}>
+                      <span style={{ color: dotColor }}>
                         <MiniActivitySparkline dose={dose} now={now} />
                       </span>
-                      <span className="text-[11px]" style={{ color: isSpent ? PALETTE.faint : PALETTE.green }}>
-                        {isSpent ? "Fully cleared" : "Ongoing"}
+                      <span className="text-[11px]" style={{ color: PALETTE.green }}>
+                        Ongoing
                       </span>
                     </span>
                   </span>
