@@ -71,7 +71,7 @@ function bolusStatusLine(dose, now) {
   }
   const remaining = formatRemaining(timing.remainingMin);
   const map = {
-    waiting: { label: "Absorbing — not yet active", color: PALETTE.amber },
+    waiting: { label: "Absorbing gently", color: PALETTE.amber },
     rising: { label: "Rising toward peak", color: PALETTE.amber },
     near_peak: { label: "Near peak", color: PALETTE.amber },
     peak: { label: "Peak activity", color: PALETTE.amber },
