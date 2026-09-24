@@ -568,6 +568,13 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const maxVisibleUnits = Math.max(maxBolusUnits, maxBasalUnits, 1);
   const insulinYMax = maxVisibleUnits / INSULIN_PEAK_FILL;
 
+  // Sub-linear amplitude compression: small doses get a proportionally
+  // taller curve so they stay visible next to large doses, while the
+  // largest dose still fills the same INSULIN_PEAK_FILL ceiling. A 3u
+  // dose next to a 40u max rises ~3x higher than pure linear scaling.
+  const AMPLITUDE_POWER = 0.6;
+  const dosePeakRatio = (units) => Math.pow(units / maxVisibleUnits, AMPLITUDE_POWER);
+
   // Insulin row uses peak-normalized activity (0–1) per curve so every dose
   // renders the published gentle rise → peak → long-tail shape at the same
   // display amplitude, regardless of dose size. Each curve is still computed
@@ -602,7 +609,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         // proportionally by dose units against the largest visible dose.
         const na = closest.activity || 0;
         const doseUnits = getDoseUnits(dose);
-        offset = (1 - na * doseUnits * INSULIN_PEAK_FILL / maxVisibleUnits) * INSULIN_PLOT_HEIGHT - pillHeight - pillGap;
+        offset = (1 - na * dosePeakRatio(doseUnits) * INSULIN_PEAK_FILL) * INSULIN_PLOT_HEIGHT - pillHeight - pillGap;
         peakTime = closest.time;
       } else {
         let peak = curve[0];
@@ -613,7 +620,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         // largest visible dose, so the pill sits just above the curve's
         // actual proportional peak.
         const doseUnits = getDoseUnits(dose);
-        offset = (1 - doseUnits * INSULIN_PEAK_FILL / maxVisibleUnits) * INSULIN_PLOT_HEIGHT - pillHeight - pillGap;
+        offset = (1 - dosePeakRatio(doseUnits) * INSULIN_PEAK_FILL) * INSULIN_PLOT_HEIGHT - pillHeight - pillGap;
         peakTime = peak.time;
       }
       if (peakTime < domainStart || peakTime > domainEnd) return;
@@ -655,7 +662,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           // taller than a 6u dose, both against insulinYMax. The curve SHAPE
           // (rise → peak → tail) still comes from the exponential model; real
           // units remain on _actual/_aupm for IOB sums and tooltips.
-          point[key] = activity * doseUnits;
+          point[key] = activity * dosePeakRatio(doseUnits) * maxVisibleUnits;
           point[`${key}_actual`] = activeUnits;
           point[`${key}_activity`] = activity;
           point[`${key}_aupm`] = aupm;
@@ -803,11 +810,11 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         const du = getDoseUnits(dose);
         peakInfoByKey[key] = {
           peakTime: closest.time,
-          peakY: dynamicInsulinMarginTop + (1 - na * du * INSULIN_PEAK_FILL / maxVisibleUnits) * INSULIN_PLOT_HEIGHT
+          peakY: dynamicInsulinMarginTop + (1 - na * dosePeakRatio(du) * INSULIN_PEAK_FILL) * INSULIN_PLOT_HEIGHT
         };
       } else {
         const du = getDoseUnits(dose);
-        peakInfoByKey[key] = { peakTime: peak.time, peakY: dynamicInsulinMarginTop + (1 - du * INSULIN_PEAK_FILL / maxVisibleUnits) * INSULIN_PLOT_HEIGHT };
+        peakInfoByKey[key] = { peakTime: peak.time, peakY: dynamicInsulinMarginTop + (1 - dosePeakRatio(du) * INSULIN_PEAK_FILL) * INSULIN_PLOT_HEIGHT };
       }
     });
 
