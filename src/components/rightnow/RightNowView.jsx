@@ -1,17 +1,26 @@
 import { useState } from "react";
-import { Plus } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import IobAtAGlance from "./IobAtAGlance";
 import MealReviewAtAGlance from "./MealReviewAtAGlance";
 
 const TABS = [
-{ id: "iob", label: "Insulin on Board" },
-{ id: "meal", label: "Meal Review" }];
+  { id: "iob", label: "Insulin on Board" },
+  { id: "meal", label: "Meal Review" },
+];
 
+const TAB_ORDER = TABS.map((t) => t.id);
+
+// Slide direction: content enters from the side the tab sits on.
+// IOB is the left tab → slides in from the left; Meal is the right tab → from the right.
+function slideDirection(newTab, prevTab) {
+  if (prevTab == null) return 0;
+  return TAB_ORDER.indexOf(newTab) > TAB_ORDER.indexOf(prevTab) ? 1 : -1;
+}
 
 /**
  * "Right Now" — the at-a-glance combined view.
- * Eyebrow + title, a two-tab segmented control, and a floating copper add
- * button. Tab content swaps below; the last tab is remembered.
+ * Eyebrow + title, a two-tab segmented control with a sliding active
+ * indicator, and tab content that slides in from the correct side.
  */
 export default function RightNowView({
   totalUnits,
@@ -24,82 +33,91 @@ export default function RightNowView({
   onDeleteDose,
   onResolve,
   onAddLog,
-  glucoseReadings
+  glucoseReadings,
 }) {
   const [tab, setTab] = useState("iob");
+  const [prevTab, setPrevTab] = useState(null);
+
+  const selectTab = (id) => {
+    if (id === tab) return;
+    setPrevTab(tab);
+    setTab(id);
+  };
+
+  const activeIndex = TAB_ORDER.indexOf(tab);
+  const dir = slideDirection(tab, prevTab);
 
   return (
     <div className="relative">
       {/* Eyebrow + title */}
       <div className="px-1 pt-1">
-        <span className="section-label mt-2" style={{ color: "#d8cec2", borderBottomColor: "#d8cec255" }}>At a Glance</span>
-        <h1 className="hdr mt-2" style={{ color: "#f7f1e8" }}>Right <em style={{ color: "#eadccf" }}>Now</em></h1>
+        <span className="section-label mt-2" style={{ color: "#d8cec2", borderBottomColor: "#d8cec255" }}>
+          At a Glance
+        </span>
+        <h1 className="hdr mt-2" style={{ color: "#f7f1e8" }}>
+          Right <em style={{ color: "#eadccf" }}>Now</em>
+        </h1>
       </div>
 
-      {/* Segmented control */}
+      {/* Segmented control — sliding active indicator */}
       <div className="mt-3 px-1">
-        <div
-          className="flex gap-1 rounded-full p-1"
-          style={{ background: "#f0e8db" }}>
-          
+        <div className="relative flex gap-1 rounded-full p-1" style={{ background: "#f0e8db" }}>
+          {/* Sliding espresso pill */}
+          <motion.div
+            className="absolute inset-y-1 rounded-full"
+            style={{ background: "#3f3830", width: "calc(50% - 4px)" }}
+            animate={{ left: activeIndex === 0 ? 4 : "calc(50% + 0px)" }}
+            transition={{ type: "spring", stiffness: 380, damping: 32 }}
+          />
           {TABS.map((t) => {
             const active = t.id === tab;
             return (
               <button
                 key={t.id}
                 type="button"
-                onClick={() => setTab(t.id)}
-                className="flex-1 rounded-full py-2 text-center text-[12px] font-semibold transition-all"
-                style={{
-                  background: active ? "#3f3830" : "transparent",
-                  color: active ? "#f7f1e8" : "#6b6153"
-                }}
-                aria-pressed={active}>
-                
+                onClick={() => selectTab(t.id)}
+                className="relative z-10 flex-1 rounded-full py-2 text-center text-[12px] font-semibold transition-colors"
+                style={{ color: active ? "#f7f1e8" : "#6b6153" }}
+                aria-pressed={active}
+              >
                 {t.label}
-              </button>);
-
+              </button>
+            );
           })}
         </div>
       </div>
 
-      {/* Tab content */}
-      <div className="mt-4">
-        {tab === "iob" ?
-        <IobAtAGlance
-          totalUnits={totalUnits}
-          breakdown={breakdown}
-          basalRegimenStatus={basalRegimenStatus}
-          onEditDose={onEditDose}
-          onDeleteDose={onDeleteDose} /> :
-
-
-        <MealReviewAtAGlance
-          mealInsight={mealInsight}
-          monitoringStatus={monitoringStatus}
-          glucoseTrend={glucoseTrend}
-          onResolve={onResolve}
-          glucoseReadings={glucoseReadings} />
-
-        }
+      {/* Tab content — slides in from the selected tab's side */}
+      <div className="mt-4 overflow-hidden">
+        <AnimatePresence mode="wait" custom={dir}>
+          <motion.div
+            key={tab}
+            custom={dir}
+            initial={{ x: dir > 0 ? 48 : dir < 0 ? -48 : 0, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: dir > 0 ? -48 : dir < 0 ? 48 : 0, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 360, damping: 34, opacity: { duration: 0.18 } }}
+          >
+            {tab === "iob" ? (
+              <IobAtAGlance
+                totalUnits={totalUnits}
+                breakdown={breakdown}
+                basalRegimenStatus={basalRegimenStatus}
+                onEditDose={onEditDose}
+                onDeleteDose={onDeleteDose}
+              />
+            ) : (
+              <MealReviewAtAGlance
+                mealInsight={mealInsight}
+                monitoringStatus={monitoringStatus}
+                glucoseTrend={glucoseTrend}
+                onResolve={onResolve}
+                glucoseReadings={glucoseReadings}
+              />
+            )}
+          </motion.div>
+        </AnimatePresence>
       </div>
-
-      {/* Floating copper add button */}
-      
-
-
-
-
-
-
-
-
-
-
-
-
-
-      
-    </div>);
-
+    </div>
+  );
 }
