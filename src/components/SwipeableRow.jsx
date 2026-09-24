@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, useMotionValue, animate } from "framer-motion";
 import { Pencil, Trash2 } from "lucide-react";
+import DeleteConfirmDialog from "@/components/insulin/DeleteConfirmDialog";
 
 // iOS-style swipe-left action wrapper (Mail pattern). The row content is
 // opaque and slides left; two action buttons sit behind the trailing edge
@@ -19,9 +20,9 @@ const DELETE_W = 64;
 const GAP = 6;
 const PAD = 6;
 const ACTION_WIDTH = EDIT_W + DELETE_W + GAP + PAD; // 140
-const OPEN_THRESHOLD = ACTION_WIDTH * 0.45;
-const FULL_SWIPE_THRESHOLD = ACTION_WIDTH * 1.6;
-const DRAG_LIMIT = ACTION_WIDTH * 2.5;
+const OPEN_THRESHOLD = ACTION_WIDTH * 0.5;
+const FULL_SWIPE_THRESHOLD = ACTION_WIDTH * 2.2;
+const DRAG_LIMIT = ACTION_WIDTH * 2.8;
 
 const EDIT_BG = "#746959"; // warm taupe-grey, ~4.7:1 on sandstone text
 const DELETE_BG = "#9c3f2e"; // error red
@@ -35,10 +36,12 @@ export default function SwipeableRow({
   onOpenChange,
   rowId,
   editLabel = "Edit",
-  deleteLabel = "Delete",
+  deleteLabel = "Remove",
+  itemLabel,
 }) {
   const x = useMotionValue(0);
   const [open, setOpen] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const openRef = useRef(false);
   const draggingRef = useRef(false);
   const justDraggedRef = useRef(false);
@@ -72,10 +75,11 @@ export default function SwipeableRow({
   const handleDragEnd = (_, info) => {
     draggingRef.current = false;
     justDraggedRef.current = true;
-    // Full / fast swipe past the destructive threshold -> auto-delete.
-    if (info.offset.x < -FULL_SWIPE_THRESHOLD || info.velocity.x < -750) {
+    // Full / fast swipe past the destructive threshold -> open confirmation.
+    // Never deletes directly; the user must confirm in the dialog.
+    if (info.offset.x < -FULL_SWIPE_THRESHOLD || info.velocity.x < -900) {
       apply(false);
-      onDelete?.();
+      setConfirming(true);
       return;
     }
     if (openRef.current && info.offset.x > OPEN_THRESHOLD) {
@@ -96,7 +100,12 @@ export default function SwipeableRow({
     onEdit?.();
   };
   const handleDelete = () => {
+    // Revealed-button path also routes through the confirmation dialog.
     apply(false);
+    setConfirming(true);
+  };
+  const confirmDelete = () => {
+    setConfirming(false);
     onDelete?.();
   };
 
@@ -153,6 +162,18 @@ export default function SwipeableRow({
       >
         {children}
       </motion.div>
+
+      {confirming && (
+        <DeleteConfirmDialog
+          itemName={itemLabel}
+          title="Remove this entry?"
+          message="This will permanently remove it from your log."
+          confirmLabel="Remove"
+          cancelLabel="Cancel"
+          onCancel={() => setConfirming(false)}
+          onConfirm={confirmDelete}
+        />
+      )}
     </div>
   );
 }

@@ -229,6 +229,7 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
                 onDelete={() => handleDeleteEntry(entry)}
                 editLabel="Edit"
                 deleteLabel="Remove"
+                itemLabel={name}
               >
                 <div className="flex w-full items-baseline gap-2 text-left">
                   <span className="min-w-0 flex-1">

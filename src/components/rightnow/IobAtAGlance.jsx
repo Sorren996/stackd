@@ -170,7 +170,8 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
                 onEdit={() => onEditDose?.(dose.id)}
                 onDelete={() => onDeleteDose?.(dose.id)}
                 editLabel="Edit"
-                deleteLabel="Delete"
+                deleteLabel="Remove"
+                itemLabel={`${dose.shortName || dose.type?.split(" ")[0] || "Insulin"} · ${Number(dose.units) % 1 === 0 ? dose.units : dose.units.toFixed(1)}u`}
               >
                 <div className="flex w-full items-center gap-2.5 text-left">
                   <span className="min-w-0 flex-1">
@@ -240,7 +241,8 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
                 onEdit={() => onEditDose?.(dose.id)}
                 onDelete={() => onDeleteDose?.(dose.id)}
                 editLabel="Edit"
-                deleteLabel="Delete"
+                deleteLabel="Remove"
+                itemLabel={`${dose.shortName || dose.type?.split(" ")[0] || "Basal"} · ${Number(dose.units) % 1 === 0 ? dose.units : dose.units.toFixed(1)}u`}
               >
                 <div className="flex w-full items-center gap-2.5 text-left">
                   <span className="min-w-0 flex-1">

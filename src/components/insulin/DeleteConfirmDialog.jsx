@@ -17,7 +17,15 @@ const PALETTE = {
  * Editorial-overlay style matching the app's warm palette. Portal-rendered
  * so it layers above the MealEditOverlay regardless of scroll position.
  */
-export default function DeleteConfirmDialog({ itemName, onCancel, onConfirm }) {
+export default function DeleteConfirmDialog({
+  itemName,
+  title = "Remove this item?",
+  message = "This will permanently remove it from your meal log.",
+  confirmLabel = "Yes, remove",
+  cancelLabel = "Keep it",
+  onCancel,
+  onConfirm,
+}) {
   return createPortal(
     <AnimatePresence>
       <motion.div
@@ -49,7 +57,7 @@ export default function DeleteConfirmDialog({ itemName, onCancel, onConfirm }) {
             <AlertTriangle className="h-5 w-5" style={{ color: PALETTE.danger }} />
           </div>
           <h3 className="text-base font-semibold" style={{ color: PALETTE.ink }}>
-            Remove this item?
+            {title}
           </h3>
           {itemName && (
             <p className="mt-1 text-[13px]" style={{ color: PALETTE.muted }}>
@@ -57,7 +65,7 @@ export default function DeleteConfirmDialog({ itemName, onCancel, onConfirm }) {
             </p>
           )}
           <p className="mt-2 text-[12px] leading-relaxed" style={{ color: PALETTE.faint }}>
-            This will permanently remove it from your meal log.
+            {message}
           </p>
           <div className="mt-4 flex gap-2">
             <button
@@ -66,7 +74,7 @@ export default function DeleteConfirmDialog({ itemName, onCancel, onConfirm }) {
               className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition hover:opacity-70"
               style={{ background: PALETTE.canvas, color: PALETTE.ink, border: `1px solid ${PALETTE.hairline}` }}
             >
-              Keep it
+              {cancelLabel}
             </button>
             <button
               type="button"
@@ -74,7 +82,7 @@ export default function DeleteConfirmDialog({ itemName, onCancel, onConfirm }) {
               className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition hover:opacity-70"
               style={{ background: PALETTE.danger, color: "#f7f1e8" }}
             >
-              Yes, remove
+              {confirmLabel}
             </button>
           </div>
         </motion.div>
