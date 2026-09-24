@@ -47,8 +47,8 @@ export default function ProblemVisual() {
         className="flex justify-center"
       >
         <div className="flex flex-col items-center gap-1">
-          <div className="h-8 w-px bg-white/15" />
-          <div className="h-2 w-2 rounded-full bg-white/20" />
+          <div className="h-8 w-px" style={{ background: "#d8cec2" }} />
+          <div className="h-2 w-2 rounded-full" style={{ background: "#a89e8d" }} />
         </div>
       </motion.div>
 

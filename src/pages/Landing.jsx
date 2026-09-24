@@ -19,7 +19,7 @@ export default function Landing() {
   }, []);
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen" style={{ background: "#f7f1e8" }}>
       <LandingNav />
       <LandingHero />
 
@@ -214,7 +214,8 @@ export default function Landing() {
           </p>
           <Link
             to="/register"
-            className="stackd-btn-primary mt-8 inline-flex items-center gap-2 rounded-full px-8 py-3.5 text-sm font-semibold text-white transition-transform active:scale-95"
+            className="mt-8 inline-flex items-center gap-2 rounded-full px-8 py-3.5 text-sm font-semibold transition-transform active:scale-95"
+            style={{ background: "#9c5228", color: "#f7f1e8" }}
           >
             Try Stackd
             <ArrowRight className="h-4 w-4" />

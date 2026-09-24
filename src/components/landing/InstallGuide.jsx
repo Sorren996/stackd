@@ -44,7 +44,7 @@ export default function InstallGuide() {
           viewport={{ once: true, margin: "-80px" }}
           transition={{ duration: 0.5 }}
           className="text-center text-2xl font-bold tracking-tight md:text-4xl"
-          style={{ color: "#f7f1e8" }}
+          style={{ color: "#3f3830" }}
         >
           Keep Stackd close.
         </motion.h2>
@@ -55,7 +55,7 @@ export default function InstallGuide() {
           viewport={{ once: true, margin: "-80px" }}
           transition={{ duration: 0.5, delay: 0.1 }}
           className="mx-auto mt-5 max-w-2xl text-center text-sm leading-relaxed md:text-base"
-          style={{ color: "#eadccf" }}
+          style={{ color: "#6b6153" }}
         >
           {INTRO}
         </motion.p>

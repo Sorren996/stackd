@@ -29,7 +29,7 @@ export default function LandingNav() {
             alt="Stackd logo"
             className="h-8 w-8 rounded-lg object-contain"
           />
-          <span className="text-xl font-bold tracking-tight text-white">
+          <span className="text-xl font-bold tracking-tight" style={{ color: "#3f3830" }}>
             Stackd
           </span>
         </a>
@@ -39,7 +39,7 @@ export default function LandingNav() {
             <a
               key={link.href}
               href={link.href}
-              className="text-sm font-medium text-white/55 transition-colors hover:text-white"
+              className="text-sm font-medium transition-colors hover:opacity-70" style={{ color: "#6b6153" }}
             >
               {link.label}
             </a>
@@ -49,13 +49,15 @@ export default function LandingNav() {
         <div className="flex items-center gap-3">
           <Link
             to="/register"
-            className="stackd-btn-primary rounded-full px-5 py-2 text-sm font-semibold text-white transition-transform active:scale-95"
+            className="rounded-full px-5 py-2 text-sm font-semibold transition-transform active:scale-95"
+            style={{ background: "#9c5228", color: "#f7f1e8" }}
           >
             Try Stackd
           </Link>
           <button
             onClick={() => setOpen(!open)}
-            className="text-white/60 transition-colors hover:text-white md:hidden"
+            className="transition-colors hover:opacity-70 md:hidden"
+            style={{ color: "#6b6153" }}
             aria-label="Toggle menu"
           >
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -74,7 +76,8 @@ export default function LandingNav() {
                 key={link.href}
                 href={link.href}
                 onClick={() => setOpen(false)}
-                className="rounded-lg px-3 py-2.5 text-sm font-medium text-white/60 transition-colors hover:bg-white/5 hover:text-white"
+                className="rounded-lg px-3 py-2.5 text-sm font-medium transition-colors hover:bg-black/[0.04]"
+                style={{ color: "#6b6153" }}
               >
                 {link.label}
               </a>

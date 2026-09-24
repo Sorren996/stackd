@@ -21,7 +21,8 @@ export default function LandingHero() {
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
-              className="text-4xl font-bold leading-tight tracking-tight text-white md:text-5xl lg:text-6xl"
+              className="text-4xl font-bold leading-tight tracking-tight md:text-5xl lg:text-6xl"
+              style={{ color: "#3f3830" }}
             >
               Dose with clarity.
             </motion.h1>
@@ -30,7 +31,8 @@ export default function LandingHero() {
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
-              className="mx-auto mt-5 max-w-md text-base leading-relaxed text-white/60 md:text-lg lg:mx-0"
+              className="mx-auto mt-5 max-w-md text-base leading-relaxed md:text-lg lg:mx-0"
+              style={{ color: "#6b6153" }}
             >
               Everything you need to review before a dose, in one guided flow.
             </motion.p>
@@ -43,14 +45,16 @@ export default function LandingHero() {
             >
               <Link
                 to="/register"
-                className="stackd-btn-primary inline-flex items-center justify-center gap-2 rounded-full px-8 py-3.5 text-sm font-semibold text-white transition-transform active:scale-95"
+                className="inline-flex items-center justify-center gap-2 rounded-full px-8 py-3.5 text-sm font-semibold transition-transform active:scale-95"
+                style={{ background: "#9c5228", color: "#f7f1e8" }}
               >
                 Try Stackd
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <a
                 href="#how-it-works"
-                className="inline-flex items-center justify-center rounded-full border border-white/15 bg-white/5 px-8 py-3.5 text-sm font-semibold text-white/80 transition-colors hover:bg-white/10"
+                className="inline-flex items-center justify-center rounded-full px-8 py-3.5 text-sm font-semibold transition-colors hover:bg-black/[0.04]"
+                style={{ color: "#3f3830" }}
               >
                 See how it works
               </a>

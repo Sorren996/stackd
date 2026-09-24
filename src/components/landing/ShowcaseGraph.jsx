@@ -22,7 +22,7 @@ export default function ShowcaseGraph({ height = 150, showInsulin = true, classN
         {showInsulin && (
           <path
             d="M 107 120 Q 120 105 133 90 Q 160 75 187 70 Q 213 75 240 85 Q 267 95 293 105 Q 307 112 320 113 L 320 120 L 107 120 Z"
-            fill="#38bdf8"
+            fill="#9c5228"
             opacity="0.08"
           />
         )}
@@ -32,7 +32,7 @@ export default function ShowcaseGraph({ height = 150, showInsulin = true, classN
           <path
             d="M 107 120 Q 120 105 133 90 Q 160 75 187 70 Q 213 75 240 85 Q 267 95 293 105 Q 307 112 320 113"
             fill="none"
-            stroke="#38bdf8"
+            stroke="#9c5228"
             strokeWidth="1.5"
             opacity="0.35"
             vectorEffect="non-scaling-stroke"
@@ -43,7 +43,7 @@ export default function ShowcaseGraph({ height = 150, showInsulin = true, classN
         <path
           d="M 0 90 Q 27 88 53 83 Q 80 73 107 57 Q 133 48 160 50 Q 187 60 213 70 Q 240 75 267 72 Q 293 73 320 72"
           fill="none"
-          stroke="#3f3830"
+          stroke="#5b6550"
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -58,8 +58,8 @@ export default function ShowcaseGraph({ height = 150, showInsulin = true, classN
           right: "2px",
           top: "51%",
           transform: "translateY(-50%)",
-          background: "#3f3830",
-          boxShadow: "0 0 8px rgba(63, 56, 48, 0.3)",
+          background: "#5b6550",
+          boxShadow: "0 0 8px rgba(91, 101, 80, 0.3)",
         }}
       />
     </div>

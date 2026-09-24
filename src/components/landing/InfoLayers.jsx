@@ -46,8 +46,8 @@ const LAYERS = [
     desc: "Context that may affect glucose after eating",
     visual: () => (
       <div className="flex items-center gap-2">
-        <span className="h-1.5 w-1.5 rounded-full" style={{ background: "#5f8cf5" }} />
-        <span className="text-sm font-semibold text-white/70">Reviewing</span>
+        <span className="h-1.5 w-1.5 rounded-full" style={{ background: "#9c5228" }} />
+        <span className="text-sm font-semibold" style={{ color: "#9c5228" }}>Reviewing</span>
       </div>
     ),
   },

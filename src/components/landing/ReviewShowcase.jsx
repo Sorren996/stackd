@@ -66,7 +66,7 @@ const SCREENS = [
             shortName: "NovoLog",
             units: 4,
             iob: 3,
-            color: "#38bdf8",
+            color: "#9c5228",
             statusLabel: "Near peak",
             timingInfo: { progress: 0.25, remainingMin: 210 },
             time: DOSE_TIME,
