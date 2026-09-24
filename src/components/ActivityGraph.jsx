@@ -1200,7 +1200,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           <div
             className="absolute left-1/2 top-0 z-20 -translate-x-1/2 px-3 py-1 text-center pointer-events-none">
             
-          <div className="flex items-center justify-center gap-1.5 text-2xl font-black leading-none" style={{ color: "#c5b9a8ff" }}>
+          <div className="flex items-center justify-center gap-1.5 text-2xl font-black leading-none" style={{ color: "#9f7d4eff" }}>
             {(onSelectLog || onDeleteLog) && !dexcomConnected &&
               <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border" style={{ borderColor: "#eadccf", background: "#fdf9f2", color: "#746959" }}>
                 <Info className="h-2.5 w-2.5" />
