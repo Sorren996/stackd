@@ -43,7 +43,8 @@ export default function InstallGuide() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-80px" }}
           transition={{ duration: 0.5 }}
-          className="text-center text-2xl font-bold tracking-tight text-white md:text-4xl"
+          className="text-center text-2xl font-bold tracking-tight md:text-4xl"
+          style={{ color: "#f7f1e8" }}
         >
           Keep Stackd close.
         </motion.h2>
@@ -53,7 +54,8 @@ export default function InstallGuide() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-80px" }}
           transition={{ duration: 0.5, delay: 0.1 }}
-          className="mx-auto mt-5 max-w-2xl text-center text-sm leading-relaxed text-white/55 md:text-base"
+          className="mx-auto mt-5 max-w-2xl text-center text-sm leading-relaxed md:text-base"
+          style={{ color: "#eadccf" }}
         >
           {INTRO}
         </motion.p>
@@ -72,7 +74,7 @@ export default function InstallGuide() {
                 border: "1px solid #eadccf",
               }}
             >
-              <h3 className="text-sm font-semibold text-white">{step.caption}</h3>
+              <h3 className="text-sm font-semibold" style={{ color: "#3f3830" }}>{step.caption}</h3>
               <div
                 className="mt-4 flex items-center justify-center overflow-hidden rounded-xl"
                 style={{
@@ -87,7 +89,7 @@ export default function InstallGuide() {
                   className="h-full w-full object-contain"
                 />
               </div>
-              <p className="mt-3 text-sm leading-relaxed text-white/55">
+              <p className="mt-3 text-sm leading-relaxed" style={{ color: "#6b6153" }}>
                 {step.description}
               </p>
             </motion.div>

@@ -64,21 +64,21 @@ export default function SensorDayTrail({ totalDays, remainingDays, expired }) {
                 {isFuture && (
                   <span
                     className="block rounded-full"
-                    style={{ width: 6, height: 6, border: `1px solid rgba(255,255,255,0.18)` }}
+                    style={{ width: 6, height: 6, border: `1px solid #c8beb0` }}
                   />
                 )}
               </div>
               {i < total - 1 && (
                 <span
                   className="h-px flex-1"
-                  style={{ background: isPast ? `${color}55` : "rgba(255,255,255,0.08)" }}
+                  style={{ background: isPast ? `${color}55` : "#eadccf" }}
                 />
               )}
             </Fragment>
           );
         })}
       </div>
-      <p className="mt-1.5 text-center text-[10px] font-medium text-white/40">
+      <p className="mt-1.5 text-center text-[10px] font-medium" style={{ color: "#746959" }}>
         Day {dayNumber} of {total}
       </p>
     </div>

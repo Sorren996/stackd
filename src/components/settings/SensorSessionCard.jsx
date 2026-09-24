@@ -72,7 +72,10 @@ export default function SensorSessionCard() {
 
   return (
     <div className="space-y-2">
-      <h2 className="section-label px-1">
+      <h2
+        className="px-1 text-[10px] font-bold uppercase tracking-[0.18em]"
+        style={{ color: "#eadccf", paddingBottom: "6px", borderBottom: "1px solid rgba(234,220,207,0.3)" }}
+      >
         Sensor Session
       </h2>
       <motion.div
@@ -145,13 +148,13 @@ export default function SensorSessionCard() {
         {hasSession && (
           <div className="flex items-center justify-between gap-3 border-t px-3.5 py-2.5" style={{ borderColor: "#eadccf" }}>
             <div className="min-w-0">
-              <p className="text-[9px] font-bold uppercase tracking-[0.18em]" style={{ color: "#746959" }}>Started</p>
+              <p className="text-[9px] font-bold uppercase tracking-[0.18em]" style={{ color: "#6b6153" }}>Started</p>
               <p className="mt-0.5 truncate text-[11px]" style={{ color: "#6b6153" }}>
                 {startedAt ? format(new Date(startedAt), "MMM d · h:mm a") : "—"}
               </p>
             </div>
             <div className="min-w-0 text-right">
-              <p className="text-[9px] font-bold uppercase tracking-[0.18em]" style={{ color: "#746959" }}>Expires</p>
+              <p className="text-[9px] font-bold uppercase tracking-[0.18em]" style={{ color: "#6b6153" }}>Expires</p>
               <p className="mt-0.5 truncate text-[11px]" style={{ color: "#6b6153" }}>
                 {endMs ? format(new Date(endMs), "MMM d · h:mm a") : "—"}
               </p>
@@ -206,7 +209,7 @@ export default function SensorSessionCard() {
                             <div className="flex h-9 w-9 shrink-0 items-center justify-center">
                               <img src={m.image} alt={m.label} className="h-full w-full object-contain" />
                             </div>
-                            <span className="flex-1 text-left text-sm font-medium" style={{ color: selected ? "#3f3830" : "#8a7f70" }}>
+                            <span className="flex-1 text-left text-sm font-medium" style={{ color: selected ? "#3f3830" : "#6b6153" }}>
                               {m.label}
                             </span>
                             <span className="text-[11px]" style={{ color: "#746959" }}>{m.durationDays} days</span>
@@ -235,7 +238,7 @@ export default function SensorSessionCard() {
                       type="button"
                       onClick={() => setExpanded(false)}
                       className="flex-1 rounded-xl border py-2.5 text-sm font-semibold transition"
-                      style={{ background: "#f7f1e8", borderColor: "#eadccf", color: "#8a7f70" }}
+                      style={{ background: "#f7f1e8", borderColor: "#eadccf", color: "#6b6153" }}
                     >
                       Cancel
                     </button>
