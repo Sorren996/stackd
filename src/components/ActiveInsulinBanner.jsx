@@ -1176,7 +1176,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
           <h1 className="hdr">Daily <em>Flow</em></h1>
           <div id="daily-flow-controls" className="flex items-center gap-2" />
         </div>
-        <div className="relative pb-5 pt-3 my-3">
+        <div className="relative pt-3 my-3">
           {(() => {
             const status = isGlucoseStale ? null : centerGlucoseStatus?.status ?? classifyGlucose(glucoseValue, targetLow, targetHigh);
             const isActive = !isGlucoseStale && (status === "high" || status === "low");
