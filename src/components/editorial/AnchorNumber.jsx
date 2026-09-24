@@ -6,9 +6,9 @@
  */
 export default function AnchorNumber({ value, unit, caption, dot, dotColor = "#5b6550", subcaption, trendIcon = null, trendColor = "#6b6153" }) {
   return (
-    <div className="px-1 py-3">
+    <div className="py-3 px-1">
       <div className="flex items-baseline gap-1.5">
-        <span className="anchor-number mr-1" style={{ color: "#3f3830" }}>
+        <span className="anchor-number" style={{ color: "#3f3830" }}>
           {value}
         </span>
         {unit &&
