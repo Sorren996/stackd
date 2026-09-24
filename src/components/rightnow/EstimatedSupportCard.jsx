@@ -30,13 +30,19 @@ export default function EstimatedSupportCard({ details }) {
 
   if (!hasPlan) return null;
 
+  // Rescue carbs are never part of the meal carb total used for estimates —
+  // the meal grouping already filters them out, so d.meal.carbs is safe.
   const carbs = d.meal?.carbs ?? 0;
   const mealUnits = Number.isFinite(d.expectedMealUnits) ? d.expectedMealUnits : 0;
   const correctionUnits = Number.isFinite(d.correctionUnitsNeeded) && d.correctionUnitsNeeded > 0
     ? d.correctionUnitsNeeded
     : 0;
   const totalUnits = Number.isFinite(d.grossDoseEstimate) ? d.grossDoseEstimate : 0;
-  const loggedUnits = Number.isFinite(d.loggedTotalUnits) ? d.loggedTotalUnits : 0;
+
+  // Use insulin currently active on board (IOB), not what was originally
+  // logged. IOB decays over time, so this reflects the support still
+  // working in your body right now.
+  const activeIob = Number.isFinite(d.bolusIOB) && d.bolusIOB > 0 ? d.bolusIOB : 0;
 
   const gramsPerUnit = 5 / d.mealInsulinUnitsPer5g;
   const ratioLabel = `1 : ${Math.round(gramsPerUnit)}`;
@@ -44,7 +50,8 @@ export default function EstimatedSupportCard({ details }) {
   const targetLabel = Math.round(d.correctionTargetGlucose);
 
   const showCorrection = correctionUnits > 0.01;
-  const remaining = Math.max(0, totalUnits - loggedUnits);
+  // What's still gently needed = full preview minus insulin already active.
+  const remaining = Math.max(0, totalUnits - activeIob);
 
   return (
     <DashboardCard className="p-4">
@@ -83,17 +90,17 @@ export default function EstimatedSupportCard({ details }) {
             </span>
           </div>
         )}
-        {loggedUnits > 0.01 && (
+        {activeIob > 0.01 && (
           <div className="flex items-baseline justify-between">
-            <span className="text-[11px]" style={{ color: PALETTE.faint }}>Already logged</span>
+            <span className="text-[11px]" style={{ color: PALETTE.faint }}>Active on board</span>
             <span className="text-[13px] font-semibold tabular-nums" style={{ color: PALETTE.sage }}>
-              {loggedUnits.toFixed(1)} u
+              {activeIob.toFixed(1)} u
             </span>
           </div>
         )}
-        {loggedUnits > 0.01 && remaining > 0.01 && (
+        {activeIob > 0.01 && remaining > 0.01 && (
           <div className="flex items-baseline justify-between">
-            <span className="text-[11px]" style={{ color: PALETTE.faint }}>Still in preview</span>
+            <span className="text-[11px]" style={{ color: PALETTE.faint }}>Still gently needed</span>
             <span className="text-[13px] font-semibold tabular-nums" style={{ color: PALETTE.ink }}>
               {remaining.toFixed(1)} u
             </span>
