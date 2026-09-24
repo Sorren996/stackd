@@ -8,38 +8,38 @@ export default function AnchorNumber({ value, unit, caption, dot, dotColor = "#5
   return (
     <div className="px-1 py-3">
       <div className="flex items-baseline gap-1.5">
-        <span className="anchor-number" style={{ color: "#3f3830" }}>
+        <span className="anchor-number mr-1" style={{ color: "#3f3830" }}>
           {value}
         </span>
-        {unit && (
-          <span className="text-sm font-medium" style={{ color: "#6b6153" }}>
+        {unit &&
+        <span className="text-sm font-medium" style={{ color: "#6b6153" }}>
             {unit}
           </span>
-        )}
-        {trendIcon && (
-          <span className="self-center" style={{ color: trendColor, display: "inline-flex" }}>
+        }
+        {trendIcon &&
+        <span className="self-center" style={{ color: trendColor, display: "inline-flex" }}>
             {trendIcon}
           </span>
-        )}
+        }
       </div>
-      {caption && (
-        <div className="mt-1.5 flex items-center gap-1.5">
-          {dot && (
-            <span
-              className="inline-block h-2 w-2 rounded-full"
-              style={{ background: dotColor }}
-            />
-          )}
+      {caption &&
+      <div className="mt-1.5 flex items-center gap-1.5">
+          {dot &&
+        <span
+          className="inline-block h-2 w-2 rounded-full"
+          style={{ background: dotColor }} />
+
+        }
           <span className="text-sm font-medium" style={{ color: "#6b6153" }}>
             {caption}
           </span>
         </div>
-      )}
-      {subcaption && (
-        <p className="mt-1 text-xs" style={{ color: "#746959" }}>
+      }
+      {subcaption &&
+      <p className="mt-1 text-xs" style={{ color: "#746959" }}>
           {subcaption}
         </p>
-      )}
-    </div>
-  );
+      }
+    </div>);
+
 }
