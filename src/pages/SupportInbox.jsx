@@ -7,7 +7,7 @@ import { ChevronLeft, ChevronDown, ChevronUp, LifeBuoy, Bug, MessageSquare, Load
 import { format } from "date-fns";
 import { toast } from "sonner";
 import PageHeader from "@/components/editorial/PageHeader";
-import HairlineSection from "@/components/editorial/HairlineSection";
+import SectionCard from "@/components/editorial/SectionCard";
 
 const TICKET_TYPE_META = {
   support: { icon: LifeBuoy, label: "Support", color: "#5b6550" },
@@ -19,7 +19,7 @@ const STATUS_META = {
   open: { label: "Open", color: "#5b6550" },
   in_progress: { label: "In Progress", color: "#af751b" },
   resolved: { label: "Resolved", color: "#5b6550" },
-  closed: { label: "Closed", color: "#8a7f70" },
+  closed: { label: "Closed", color: "#6b6153" },
 };
 
 const STATUS_FLOW = ["open", "in_progress", "resolved", "closed"];
@@ -68,11 +68,15 @@ export default function SupportInbox() {
 
   if (user?.role !== "admin") {
     return (
-      <div className="mx-auto max-w-md space-y-4 pt-8 text-center">
-        <p className="text-sm" style={{ color: "#8a7f70" }}>This area is reserved for administrators.</p>
-        <Link to="/settings" className="inline-flex items-center gap-1 text-sm" style={{ color: "#5b6550" }}>
-          <ChevronLeft className="h-4 w-4" /> Back to Settings
-        </Link>
+      <div className="mx-auto max-w-md space-y-4 pt-8">
+        <SectionCard>
+          <div className="text-center space-y-3 py-4">
+            <p className="text-sm" style={{ color: "#6b6153" }}>This area is reserved for administrators.</p>
+            <Link to="/settings" className="inline-flex items-center gap-1 text-sm" style={{ color: "#5b6550" }}>
+              <ChevronLeft className="h-4 w-4" /> Back to Settings
+            </Link>
+          </div>
+        </SectionCard>
       </div>
     );
   }
@@ -90,14 +94,16 @@ export default function SupportInbox() {
       <PageHeader italicWord="inbox" rightText={`${tickets.length} ${tickets.length === 1 ? "submission" : "submissions"}`} />
 
       {tickets.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <LifeBuoy className="h-8 w-8 mb-3" style={{ color: "#a89e8d" }} />
-          <p className="text-sm" style={{ color: "#8a7f70" }}>No support submissions yet.</p>
-          <p className="text-xs mt-1" style={{ color: "#a89e8d" }}>When someone reaches out, their message will appear here.</p>
-        </div>
+        <SectionCard>
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <LifeBuoy className="h-8 w-8 mb-3" style={{ color: "#746959" }} />
+            <p className="text-sm" style={{ color: "#6b6153" }}>No support submissions yet.</p>
+            <p className="text-xs mt-1" style={{ color: "#746959" }}>When someone reaches out, their message will appear here.</p>
+          </div>
+        </SectionCard>
       ) : (
-        <HairlineSection label="Submissions">
-          <div className="pt-1 pb-2">
+        <SectionCard label="Submissions">
+          <div>
             {tickets.map((ticket) => {
               const typeMeta = TICKET_TYPE_META[ticket.ticket_type] || TICKET_TYPE_META.support;
               const statusMeta = STATUS_META[ticket.status] || STATUS_META.open;
@@ -116,7 +122,7 @@ export default function SupportInbox() {
                     <span className="shrink-0 text-sm font-medium" style={{ color: "#3f3830" }}>
                       {typeMeta.label}
                     </span>
-                    <span className="shrink-0 text-[10px]" style={{ color: "#a89e8d" }}>
+                    <span className="shrink-0 text-[10px]" style={{ color: "#746959" }}>
                       {ticket.category?.replace(/_/g, " ")}
                     </span>
                     <span className="flex-1 overflow-hidden">
@@ -125,20 +131,20 @@ export default function SupportInbox() {
                     <span className="shrink-0 text-xs font-semibold" style={{ color: statusMeta.color }}>
                       {statusMeta.label}
                     </span>
-                    <span className="shrink-0 text-[10px]" style={{ color: "#a89e8d" }}>
+                    <span className="shrink-0 text-[10px]" style={{ color: "#746959" }}>
                       {format(new Date(ticket.created_date), "MMM d")}
                     </span>
                     <span className="shrink-0">
-                      {isExpanded ? <ChevronUp className="h-4 w-4" style={{ color: "#a89e8d" }} /> : <ChevronDown className="h-4 w-4" style={{ color: "#a89e8d" }} />}
+                      {isExpanded ? <ChevronUp className="h-4 w-4" style={{ color: "#746959" }} /> : <ChevronDown className="h-4 w-4" style={{ color: "#746959" }} />}
                     </span>
                   </button>
 
                   {isExpanded && (
                     <div className="pb-4 space-y-3">
                       <div>
-                        <p className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: "#a89e8d" }}>Message</p>
+                        <p className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: "#746959" }}>Message</p>
                         <p className="text-sm whitespace-pre-wrap leading-relaxed" style={{ color: "#3f3830" }}>{ticket.message}</p>
-                        <p className="mt-1 text-[10px]" style={{ color: "#a89e8d" }}>
+                        <p className="mt-1 text-[10px]" style={{ color: "#746959" }}>
                           {format(new Date(ticket.created_date), "MMM d · h:mm a")}
                           {ticket.include_diagnostics ? " · diagnostics included" : ""}
                         </p>
@@ -146,8 +152,8 @@ export default function SupportInbox() {
 
                       {ticket.diagnostic_metadata && Object.keys(ticket.diagnostic_metadata).length > 0 && (
                         <div>
-                          <p className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: "#a89e8d" }}>Diagnostics (shared with consent)</p>
-                          <pre className="text-[10px] rounded-xl p-3 overflow-x-auto whitespace-pre-wrap" style={{ background: "#fdf9f2", border: "1px solid #eadccf", color: "#8a7f70" }}>{JSON.stringify(ticket.diagnostic_metadata, null, 2)}</pre>
+                          <p className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: "#746959" }}>Diagnostics (shared with consent)</p>
+                          <pre className="text-[10px] rounded-xl p-3 overflow-x-auto whitespace-pre-wrap" style={{ background: "#f7f1e8", border: "1px solid #eadccf", color: "#6b6153" }}>{JSON.stringify(ticket.diagnostic_metadata, null, 2)}</pre>
                         </div>
                       )}
 
@@ -196,7 +202,7 @@ export default function SupportInbox() {
               );
             })}
           </div>
-        </HairlineSection>
+        </SectionCard>
       )}
     </div>
   );

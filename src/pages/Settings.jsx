@@ -40,17 +40,19 @@ export default function Settings() {
       <PageHeader italicWord="profile" rightText="synced just now" />
 
       {/* Connection status line */}
-      <div className="flex items-center gap-2 px-1">
-        <span
-          className="inline-block h-2 w-2 rounded-full"
-          style={{ background: dexcomConnected ? "#5b6550" : "#a89e8d" }}
-        />
-        <span className="text-xs font-medium" style={{ color: "#eadccf" }}>
-          {dexcomConnected
-            ? `Dexcom ${connection?.cgm_model || "G7"} · connected · updating every 5 min`
-            : "No glucose source connected"}
-        </span>
-      </div>
+      <SectionCard>
+        <div className="flex items-center gap-2">
+          <span
+            className="inline-block h-2 w-2 rounded-full"
+            style={{ background: dexcomConnected ? "#5b6550" : "#b8aea0" }}
+          />
+          <span className="text-xs font-medium" style={{ color: "#6b6153" }}>
+            {dexcomConnected
+              ? `Dexcom ${connection?.cgm_model || "G7"} · connected · updating every 5 min`
+              : "No glucose source connected"}
+          </span>
+        </div>
+      </SectionCard>
 
       <SensorSessionCard />
 
@@ -88,10 +90,12 @@ export default function Settings() {
         />
       </SectionCard>
 
-      <p className="px-1 pt-2 text-xs" style={{ color: "#a89e8d" }}>
-        Your settings shape what every review shows —{" "}
-        <span className="font-serif-italic">changes apply to logs going forward.</span>
-      </p>
+      <SectionCard>
+        <p className="text-xs leading-relaxed" style={{ color: "#746959" }}>
+          Your settings shape what every review shows —{" "}
+          <span className="font-serif-italic">changes apply to logs going forward.</span>
+        </p>
+      </SectionCard>
     </div>
   );
 }

@@ -104,7 +104,7 @@ export default function SensorSessionCard() {
                 <p className="text-base font-bold leading-tight" style={{ color: expired ? "#af751b" : "#3f3830" }}>
                   {remaining?.text}
                 </p>
-                <p className="mt-0.5 truncate text-[11px]" style={{ color: "#a89e8d" }}>
+                <p className="mt-0.5 truncate text-[11px]" style={{ color: "#746959" }}>
                   {modelMeta?.label}
                 </p>
                 <div className="mt-2.5">
@@ -123,7 +123,7 @@ export default function SensorSessionCard() {
             ) : (
               <>
                 <p className="text-sm font-semibold" style={{ color: "#3f3830" }}>Start your sensor session</p>
-                <p className="mt-0.5 truncate text-[11px]" style={{ color: "#a89e8d" }}>
+                <p className="mt-0.5 truncate text-[11px]" style={{ color: "#746959" }}>
                   Track how long your current sensor has left
                 </p>
               </>
@@ -137,7 +137,7 @@ export default function SensorSessionCard() {
               className="flex"
               style={{ transformOrigin: "50% 50%" }}
             >
-              <ChevronDown className="h-4 w-4 shrink-0" style={{ color: "#a89e8d" }} />
+              <ChevronDown className="h-4 w-4 shrink-0" style={{ color: "#746959" }} />
             </motion.span>
           </span>
         </button>
@@ -145,14 +145,14 @@ export default function SensorSessionCard() {
         {hasSession && (
           <div className="flex items-center justify-between gap-3 border-t px-3.5 py-2.5" style={{ borderColor: "#eadccf" }}>
             <div className="min-w-0">
-              <p className="text-[9px] font-bold uppercase tracking-[0.18em]" style={{ color: "#a89e8d" }}>Started</p>
-              <p className="mt-0.5 truncate text-[11px]" style={{ color: "#8a7f70" }}>
+              <p className="text-[9px] font-bold uppercase tracking-[0.18em]" style={{ color: "#746959" }}>Started</p>
+              <p className="mt-0.5 truncate text-[11px]" style={{ color: "#6b6153" }}>
                 {startedAt ? format(new Date(startedAt), "MMM d · h:mm a") : "—"}
               </p>
             </div>
             <div className="min-w-0 text-right">
-              <p className="text-[9px] font-bold uppercase tracking-[0.18em]" style={{ color: "#a89e8d" }}>Expires</p>
-              <p className="mt-0.5 truncate text-[11px]" style={{ color: "#8a7f70" }}>
+              <p className="text-[9px] font-bold uppercase tracking-[0.18em]" style={{ color: "#746959" }}>Expires</p>
+              <p className="mt-0.5 truncate text-[11px]" style={{ color: "#6b6153" }}>
                 {endMs ? format(new Date(endMs), "MMM d · h:mm a") : "—"}
               </p>
             </div>
@@ -185,7 +185,7 @@ export default function SensorSessionCard() {
               ) : (
                 <div className="space-y-4 px-3.5 py-4">
                   <div>
-                    <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: "#a89e8d" }}>
+                    <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: "#746959" }}>
                       Dexcom model
                     </p>
                     <div className="space-y-1.5">
@@ -209,7 +209,7 @@ export default function SensorSessionCard() {
                             <span className="flex-1 text-left text-sm font-medium" style={{ color: selected ? "#3f3830" : "#8a7f70" }}>
                               {m.label}
                             </span>
-                            <span className="text-[11px]" style={{ color: "#a89e8d" }}>{m.durationDays} days</span>
+                            <span className="text-[11px]" style={{ color: "#746959" }}>{m.durationDays} days</span>
                             {selected && <Check className="h-4 w-4 shrink-0" style={{ color: "#5b6550" }} />}
                           </button>
                         );
@@ -218,7 +218,7 @@ export default function SensorSessionCard() {
                   </div>
 
                   <div>
-                    <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: "#a89e8d" }}>
+                    <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: "#746959" }}>
                       Session start
                     </p>
                     <input

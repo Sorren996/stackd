@@ -53,10 +53,10 @@ export default function PrivacyConsent() {
           <Shield className="w-4 h-4 mt-0.5 shrink-0" style={{ color: "#5b6550" }} />
           <div className="space-y-2">
             <p className="text-sm font-semibold" style={{ color: "#3f3830" }}>Your data is private & secure</p>
-            <p className="text-xs leading-relaxed" style={{ color: "#8a7f70" }}>
+            <p className="text-xs leading-relaxed" style={{ color: "#6b6153" }}>
               All health data logged in Stackd — including glucose readings, insulin doses, and carbohydrate entries — is stored securely and is only accessible by you. We do not share, sell, or transmit your personal health information to any third parties.
             </p>
-            <p className="text-xs leading-relaxed" style={{ color: "#8a7f70" }}>
+            <p className="text-xs leading-relaxed" style={{ color: "#6b6153" }}>
               Data is encrypted in transit and at rest. You can export or delete your data at any time from this settings page.
             </p>
           </div>
@@ -90,7 +90,7 @@ export default function PrivacyConsent() {
                 type="button"
                 onClick={() => setShowDeleteConfirm(false)}
                 className="flex-1 text-sm py-3 rounded-2xl border transition-all font-medium"
-                style={{ borderColor: "#eadccf", background: "#f7f1e8", color: "#8a7f70" }}
+                style={{ borderColor: "#eadccf", background: "#f7f1e8", color: "#6b6153" }}
               >
                 Cancel
               </button>

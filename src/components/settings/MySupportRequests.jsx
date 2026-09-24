@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { LifeBuoy, Bug, MessageSquare, ChevronDown, ChevronUp, Loader2, CheckCircle2, Clock, CircleDot } from "lucide-react";
 import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
-import HairlineSection from "@/components/editorial/HairlineSection";
+import SectionCard from "@/components/editorial/SectionCard";
 
 const TICKET_TYPE_META = {
   support: { icon: LifeBuoy, label: "Support", color: "#5b6550" },
@@ -50,7 +50,7 @@ export default function MySupportRequests() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-6">
-        <Loader2 className="h-4 w-4 animate-spin" style={{ color: "#a89e8d" }} />
+        <Loader2 className="h-4 w-4 animate-spin" style={{ color: "#746959" }} />
       </div>
     );
   }
@@ -58,8 +58,8 @@ export default function MySupportRequests() {
   if (!tickets.length) return null;
 
   return (
-    <HairlineSection label="Your Requests">
-      <div className="pt-1 pb-2">
+    <SectionCard label="Your Requests">
+      <div>
         {tickets.map((ticket) => {
           const typeMeta = TICKET_TYPE_META[ticket.ticket_type] || TICKET_TYPE_META.support;
           const statusMeta = STATUS_META[ticket.status] || STATUS_META.open;
@@ -90,7 +90,7 @@ export default function MySupportRequests() {
                   </span>
                 )}
                 <span className="shrink-0">
-                  {isExpanded ? <ChevronUp className="h-4 w-4" style={{ color: "#a89e8d" }} /> : <ChevronDown className="h-4 w-4" style={{ color: "#a89e8d" }} />}
+                  {isExpanded ? <ChevronUp className="h-4 w-4" style={{ color: "#746959" }} /> : <ChevronDown className="h-4 w-4" style={{ color: "#746959" }} />}
                 </span>
               </button>
 
@@ -104,17 +104,17 @@ export default function MySupportRequests() {
                     className="overflow-hidden"
                   >
                     <div className="pb-4 space-y-3">
-                      <p className="text-[10px]" style={{ color: "#a89e8d" }}>
+                      <p className="text-[10px]" style={{ color: "#746959" }}>
                         {format(new Date(ticket.created_date), "MMM d · h:mm a")}
                       </p>
 
                       <div className="flex items-start gap-2">
                         <StatusIcon className="h-3.5 w-3.5 shrink-0 mt-0.5" style={{ color: statusMeta.color, opacity: 0.6 }} />
-                        <p className="text-[11px] leading-relaxed" style={{ color: "#8a7f70" }}>{statusMeta.blurb}</p>
+                        <p className="text-[11px] leading-relaxed" style={{ color: "#6b6153" }}>{statusMeta.blurb}</p>
                       </div>
 
                       <div>
-                        <p className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: "#a89e8d" }}>Your message</p>
+                        <p className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: "#746959" }}>Your message</p>
                         <p className="text-sm whitespace-pre-wrap leading-relaxed" style={{ color: "#3f3830" }}>{ticket.message}</p>
                       </div>
 
@@ -125,7 +125,7 @@ export default function MySupportRequests() {
                           </p>
                           <p className="text-sm whitespace-pre-wrap leading-relaxed" style={{ color: "#3f3830" }}>{ticket.admin_response}</p>
                           {ticket.resolved_at && (
-                            <p className="mt-2 text-[10px]" style={{ color: "#a89e8d" }}>
+                            <p className="mt-2 text-[10px]" style={{ color: "#746959" }}>
                               {format(new Date(ticket.resolved_at), "MMM d · h:mm a")}
                             </p>
                           )}
@@ -133,7 +133,7 @@ export default function MySupportRequests() {
                       )}
 
                       {!hasResponse && ticket.status === "open" && (
-                        <p className="text-[11px] leading-relaxed" style={{ color: "#a89e8d" }}>
+                        <p className="text-[11px] leading-relaxed" style={{ color: "#746959" }}>
                           We'll respond here as soon as we can. Thank you for your patience.
                         </p>
                       )}
@@ -145,6 +145,6 @@ export default function MySupportRequests() {
           );
         })}
       </div>
-    </HairlineSection>
+    </SectionCard>
   );
 }
