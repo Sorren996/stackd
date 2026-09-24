@@ -1,4 +1,7 @@
 const RESCUE_COLOR = "#a78bfa";
+const INK = "#3f3830";
+const TAUPE = "#6b6153";
+const HAIRLINE = "#eadccf";
 
 export const RESCUE_CARB_COLOR = RESCUE_COLOR;
 
@@ -7,8 +10,8 @@ export default function RescueCarbCheckbox({ checked, onChange }) {
     <div
       className="rounded-2xl border p-4 transition-colors"
       style={{
-        borderColor: checked ? `${RESCUE_COLOR}40` : "rgba(255,255,255,0.10)",
-        background: checked ? `${RESCUE_COLOR}0a` : "rgba(255,255,255,0.03)",
+        borderColor: checked ? `${RESCUE_COLOR}66` : HAIRLINE,
+        background: checked ? `${RESCUE_COLOR}0d` : "transparent",
       }}
     >
       <div className="flex items-center gap-3">
@@ -24,13 +27,13 @@ export default function RescueCarbCheckbox({ checked, onChange }) {
         <label
           htmlFor="rescue-carb"
           className="cursor-pointer text-sm font-medium transition-colors"
-          style={{ color: checked ? RESCUE_COLOR : "rgba(255,255,255,0.75)" }}
+          style={{ color: INK }}
         >
           Rescue carb
         </label>
       </div>
       {checked && (
-        <p className="mt-2 pl-7 text-[11px] leading-relaxed" style={{ color: `${RESCUE_COLOR}99` }}>
+        <p className="mt-2 pl-7 text-[11px] leading-relaxed" style={{ color: TAUPE }}>
           Treats or prevents a low. Not included in insulin calculations.
         </p>
       )}
