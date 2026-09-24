@@ -1549,7 +1549,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         <div className="space-y-1.5">
               <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "#746959" }}>Glucose</span>
               <div className="flex items-baseline gap-1.5">
-                <span className="text-3xl font-black" style={{ color: "#3f3830" }}>{activeMarker.item.value}</span>
+                <span className="text-3xl font-black" style={{ color: "#d0c0aeff" }}>{activeMarker.item.value}</span>
                 <span className="text-xs" style={{ color: "#6b6153" }}>mg/dL</span>
               </div>
               <p className="text-[11px]" style={{ color: "#746959" }}>{activeMarker.item.source === "dexcom" ? "CGM" : activeMarker.item.source === "system" ? "System" : "Manual"} · {format(new Date(activeMarker.item.recorded_at), "h:mm a · MMM d")}</p>
