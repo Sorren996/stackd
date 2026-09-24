@@ -7,6 +7,7 @@ import SwipeableRow from "@/components/SwipeableRow";
 import { base44 } from "@/api/base44Client";
 import { generateMealGlucoseResponse, analyzeGlucoseResponse } from "@/lib/mealGlucoseResponse";
 import MealEditOverlay from "@/components/insulin/MealEditOverlay";
+import EstimatedSupportCard from "./EstimatedSupportCard";
 import { getCarbAbsorptionAt } from "@/lib/carbAbsorption";
 
 const PALETTE = {
@@ -252,6 +253,9 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
           swipe an item to edit or remove
         </p>
       </DashboardCard>
+
+      {/* 2b. Estimated support card */}
+      <EstimatedSupportCard details={d} />
 
       {/* 3. Absorption card */}
       <DashboardCard className="p-4">
