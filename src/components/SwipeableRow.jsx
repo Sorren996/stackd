@@ -149,7 +149,7 @@ export default function SwipeableRow({
         }
         onMouseEnter={supportsHover ? () => apply(true) : undefined}
         onMouseLeave={supportsHover ? () => { if (openRef.current) apply(false); } : undefined}
-        className="relative z-10"
+        className="relative z-10 pr-6"
       >
         {children}
       </motion.div>
