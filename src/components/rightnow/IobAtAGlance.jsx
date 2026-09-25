@@ -15,6 +15,14 @@ const PALETTE = {
   card: "#fdf9f2"
 };
 
+// Safe unit formatter — guards against missing/undefined unit values so a
+// single malformed dose can never throw and blank the whole card.
+function fmtUnits(u) {
+  const n = Number(u);
+  if (!Number.isFinite(n)) return "0";
+  return n % 1 === 0 ? n : n.toFixed(1);
+}
+
 // Dynamic basal status derived from real elapsed time vs that basal's
 // published duration — mirrors bolusStatusLine so each basal dose row
 // reflects its actual phase instead of a single static "Ongoing" label.
@@ -171,7 +179,7 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
                 onDelete={() => onDeleteDose?.(dose.id)}
                 editLabel="Edit"
                 deleteLabel="Remove"
-                itemLabel={`${dose.shortName || dose.type?.split(" ")[0] || "Insulin"} · ${Number(dose.units) % 1 === 0 ? dose.units : dose.units.toFixed(1)}u`}
+                itemLabel={`${dose.shortName || dose.type?.split(" ")[0] || "Insulin"}, ${fmtUnits(dose.units)}u`}
               >
                 <div className="flex w-full items-center gap-2.5 text-left">
                   <span className="min-w-0 flex-1">
@@ -180,7 +188,7 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
                         {dose.shortName || dose.type?.split(" ")[0] || "Insulin"}
                       </span>
                       <span className="text-[11px]" style={{ color: PALETTE.muted }}>
-                        · {Number(dose.units) % 1 === 0 ? dose.units : dose.units.toFixed(1)}u dose
+                        {fmtUnits(dose.units)}u dose
                       </span>
                     </span>
                     <span className="mt-0.5 flex items-center gap-1.5">
@@ -194,7 +202,7 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
                   </span>
                   <span className="shrink-0 text-right">
                     <span className="block text-[13px] font-semibold tabular-nums" style={{ color: textColor }}>
-                      {dose.iob.toFixed(1)}u
+                      {fmtUnits(dose.iob)}u
                     </span>
                     {status.remaining &&
                   <span className="block text-[10px] tabular-nums" style={{ color: PALETTE.faint }}>
@@ -242,7 +250,7 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
                 onDelete={() => onDeleteDose?.(dose.id)}
                 editLabel="Edit"
                 deleteLabel="Remove"
-                itemLabel={`${dose.shortName || dose.type?.split(" ")[0] || "Basal"} · ${Number(dose.units) % 1 === 0 ? dose.units : dose.units.toFixed(1)}u`}
+                itemLabel={`${dose.shortName || dose.type?.split(" ")[0] || "Basal"}, ${fmtUnits(dose.units)}u`}
               >
                 <div className="flex w-full items-center gap-2.5 text-left">
                   <span className="min-w-0 flex-1">
@@ -251,7 +259,7 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
                         {dose.shortName || dose.type?.split(" ")[0] || "Basal"}
                       </span>
                       <span className="text-[11px]" style={{ color: PALETTE.muted }}>
-                        · {Number(dose.units) % 1 === 0 ? dose.units : dose.units.toFixed(1)}u dose
+                        {fmtUnits(dose.units)}u dose
                       </span>
                     </span>
                     <span className="mt-0.5 flex items-center gap-1.5">
@@ -265,7 +273,7 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
                   </span>
                   <span className="shrink-0 text-right">
                     <span className="block text-[13px] font-semibold tabular-nums" style={{ color: textColor }}>
-                      {dose.units.toFixed(1)}u
+                      {fmtUnits(dose.units)}u
                     </span>
                     {status.remaining &&
                   <span className="block text-[10px] tabular-nums" style={{ color: PALETTE.faint }}>

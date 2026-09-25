@@ -454,7 +454,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
   let value = `${activeIOB.toFixed(1)}u`;
   let status = "Active support";
   let color = "#4d5742";
-  let sub = `${Math.round(mealGroup.carbs)}g carbs · ${loggedTotalUnits.toFixed(1)}u logged`;
+  let sub = `${Math.round(mealGroup.carbs)}g carbs, ${loggedTotalUnits.toFixed(1)}u logged`;
 
   // --- Descriptive status (describes, never prescribes) ---
   // The expected total is a point-in-time snapshot. Active IOB is the live
@@ -1120,7 +1120,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
         {/* Card header — "Your day" + current date/time */}
         <div className="flex items-baseline justify-between">
           <h1 className="hdr">Daily <em>View</em></h1>
-          <span className="hdr-date">{format(new Date(nowMinute * MINUTE_MS), "EEE, MMM d · h:mm a")}</span>
+          <span className="hdr-date">{format(new Date(nowMinute * MINUTE_MS), "EEE, MMM d, h:mm a")}</span>
         </div>
 
         <div className="section-label mt-5">Current Glucose</div>
@@ -1155,7 +1155,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
         {dailyTimeBreakdown &&
         <div className="mt-2 flex justify-between text-xs px-1" style={{ color: "#746959" }}>
             <span>{dailyTimeBreakdown.inRange} in range so far</span>
-            <span>{dailyTimeBreakdown.above} above · {dailyTimeBreakdown.below} below</span>
+            <span>{dailyTimeBreakdown.above} above, {dailyTimeBreakdown.below} below</span>
           </div>
         }
       </DashboardCard>

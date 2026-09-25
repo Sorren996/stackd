@@ -63,7 +63,7 @@ export default function HistoryWeekList({ days, readingsByDay = {}, targetLow, t
                   tir != null && avg != null && `${avg} avg`,
                   carbs > 0 && `${carbs}g`,
                   insulin > 0 && `${insulin}u`,
-                ].filter(Boolean).join(" · ");
+                ].filter(Boolean).join(", ");
 
                 const outOfRange = tir != null && tir < 50;
                 const stripeColor = outOfRange ? "#d58814ff" : null;

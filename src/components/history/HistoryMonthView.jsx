@@ -24,7 +24,7 @@ export default function HistoryMonthView({ months, onSelectMonth }) {
         ).length;
 
         const subline = stats.glucoseCount
-          ? `${glucoseDays}d · ${stats.inRangePct}% in range`
+          ? `${glucoseDays}d, ${stats.inRangePct}% in range`
           : trackedDays
             ? `${trackedDays}d tracked`
             : "No moments yet";

@@ -94,7 +94,7 @@ function EventPopover({ event, onClose }) {
             <div className="space-y-1">
               <p className="text-[11px] text-white/55">
                 {Math.round(payload.carbs)}g carbs
-                {payload.profile ? ` · ${payload.profile}` : ""}
+                {payload.profile ? `, ${payload.profile}` : ""}
               </p>
               {payload.highPF && (
                 <p className="text-[10px] font-medium" style={{ color: "#8a6db8" }}>Higher protein / fat</p>

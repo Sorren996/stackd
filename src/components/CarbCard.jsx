@@ -38,7 +38,7 @@ export default function CarbCard({ entry, onDelete, locked = false }) {
 
       <div className="flex-1 min-w-0 pt-0.5">
         <p className="text-sm font-semibold text-white/85">{entry.food_name} enjoyed</p>
-        <p className="text-xs text-white/35 mt-0.5">{timeAgo} · {format(new Date(entry.consumed_at), "h:mm a")}</p>
+        <p className="text-xs text-white/35 mt-0.5">{timeAgo}, {format(new Date(entry.consumed_at), "h:mm a")}</p>
         <p className="text-xs mt-1.5 font-medium" style={{ color }}>
           {entry.carbs}g {profileLabel}
         </p>

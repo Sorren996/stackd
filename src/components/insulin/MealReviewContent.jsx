@@ -113,7 +113,7 @@ export default function MealReviewContent({ mealInsight, monitoringStatus, gluco
   const foodList = carbEntries
     .map((e) => e?.food_name || e?.name)
     .filter(Boolean)
-    .join(" · ");
+    .join(", ");
 
   const nowTime = formatClock(Date.now());
   const loggedTime = formatClock(mealTime);
@@ -136,7 +136,7 @@ export default function MealReviewContent({ mealInsight, monitoringStatus, gluco
       {/* Meal metadata */}
       <div className="mt-1">
         <span className="text-[10.5px] font-semibold uppercase tracking-[0.14em]" style={{ color: PALETTE.faint }}>
-          {mealName} · LOGGED {loggedTime}
+          {mealName}, LOGGED {loggedTime}
         </span>
       </div>
       {foodList && (
@@ -166,7 +166,7 @@ export default function MealReviewContent({ mealInsight, monitoringStatus, gluco
         <div className="mt-4 flex items-center gap-2">
           <span className="h-2 w-2 rounded-full" style={{ background: PALETTE.green }} />
           <span className="text-[14px]" style={{ color: PALETTE.ink }}>
-            {Math.round(glucoseNow)} mg/dL · {trendLabel}
+            {Math.round(glucoseNow)} mg/dL, {trendLabel}
           </span>
         </div>
       )}

@@ -332,7 +332,7 @@ export default function MealBalanceTooltip({ mealInsight, open, onClose, monitor
           <div className="mt-1 divide-y" style={{ borderColor: "#eadccf" }}>
             <EstimateRow
               label="Meal estimate"
-              sublabel={ratioText ? `Based on ${carbs}g · your saved ratio · ${ratioText}` : `Based on ${carbs}g and your saved meal ratio`}
+              sublabel={ratioText ? `Based on ${carbs}g, your saved ratio, ${ratioText}` : `Based on ${carbs}g and your saved meal ratio`}
               value={`${fmtUnits(expectedMealUnits)}u`}
               icon={Calculator}
               iconColor={PALETTE.green}

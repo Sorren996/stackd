@@ -25,12 +25,12 @@ export default function HistoryMonthDays({ days, onSelectDay }) {
         const insulin = Math.round(day.insulin.total);
 
         const summary = hasGlucose
-          ? `${avg} mg/dL · ${tir}% in range`
+          ? `${avg} mg/dL, ${tir}% in range`
           : "No glucose data";
         const extras = [
           carbs > 0 && `${carbs}g`,
           insulin > 0 && `${insulin}u`,
-        ].filter(Boolean).join(" · ");
+        ].filter(Boolean).join(", ");
 
         return (
           <button
@@ -46,7 +46,7 @@ export default function HistoryMonthDays({ days, onSelectDay }) {
               <span className="dotted-leader block" />
             </span>
             <span className="shrink-0 text-xs" style={{ color: "#8a7f70" }}>
-              {summary}{extras && ` · ${extras}`}
+              {summary}{extras && `, ${extras}`}
             </span>
             <ChevronRight className="h-4 w-4 shrink-0" style={{ color: "#a89e8d" }} />
           </button>

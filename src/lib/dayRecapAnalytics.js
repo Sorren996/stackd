@@ -296,7 +296,7 @@ export function buildDayTimeline(glucose, carbs, insulin, metrics, recovery, tar
       type: isRescue ? "rescue" : "meal",
       time,
       label: c.food_name || c.name || (isRescue ? "Rescue carb" : "Meal"),
-      detail: `${Math.round(Number(c.carbs) || 0)}g${isRescue ? " rescue" : " carbs"}${insulinUnits > 0 ? ` · ${insulinUnits}u support` : ""}`,
+      detail: `${Math.round(Number(c.carbs) || 0)}g${isRescue ? " rescue" : " carbs"}${insulinUnits > 0 ? `, ${insulinUnits}u support` : ""}`,
     });
   });
 

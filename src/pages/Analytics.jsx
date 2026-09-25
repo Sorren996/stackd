@@ -154,7 +154,7 @@ export default function Analytics() {
   const dateRangeText = useMemo(() => {
     const end = new Date();
     const start = subDays(end, rangeDays);
-    return `Past ${PERIOD_LONG[rangeDays] || `${rangeDays} days`} · ${format(start, "MMM d")}–${format(end, "MMM d")}`;
+    return `Past ${PERIOD_LONG[rangeDays] || `${rangeDays} days`}, ${format(start, "MMM d")}–${format(end, "MMM d")}`;
   }, [rangeDays]);
 
   if (isLoading) {
@@ -235,7 +235,7 @@ export default function Analytics() {
                 <span>
                   Best day{" "}
                   <span className="font-semibold" style={{ color: "#3f3830" }}>
-                    {format(new Date(stats.bestDay.date), "EEEE")} · {stats.bestDay.tir}%
+                    {format(new Date(stats.bestDay.date), "EEEE")}, {stats.bestDay.tir}%
                   </span>
                 </span>
               )}
@@ -243,7 +243,7 @@ export default function Analytics() {
                 <span>
                   Hardest{" "}
                   <span className="font-semibold" style={{ color: "#3f3830" }}>
-                    {format(new Date(stats.hardestDay.date), "EEEE")} · {stats.hardestDay.tir}%
+                    {format(new Date(stats.hardestDay.date), "EEEE")}, {stats.hardestDay.tir}%
                   </span>
                 </span>
               )}

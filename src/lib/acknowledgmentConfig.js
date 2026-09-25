@@ -120,7 +120,7 @@ export const LEGAL_DOCUMENTS = {
     version: ACKNOWLEDGMENT_VERSIONS.terms_version,
     content: `[PLACEHOLDER — Replace with attorney-reviewed language before production launch.]
 
-Last updated: July 4, 2026 · Version ${ACKNOWLEDGMENT_VERSIONS.terms_version}
+Last updated: July 4, 2026 (Version ${ACKNOWLEDGMENT_VERSIONS.terms_version})
 
 1. Acceptance of Terms
 By creating an account and using Stackd ("the Service"), you agree to be bound by these Terms of Use. If you do not agree, do not use the Service.
@@ -160,7 +160,7 @@ For questions about these Terms, please contact Stackd support.`,
     version: ACKNOWLEDGMENT_VERSIONS.privacy_notice_version,
     content: `[PLACEHOLDER — Replace with attorney-reviewed language before production launch.]
 
-Last updated: July 4, 2026 · Version ${ACKNOWLEDGMENT_VERSIONS.privacy_notice_version}
+Last updated: July 4, 2026 (Version ${ACKNOWLEDGMENT_VERSIONS.privacy_notice_version})
 
 1. Information We Collect
 Stackd collects and processes health information you choose to enter, including:

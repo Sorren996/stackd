@@ -398,7 +398,7 @@ export default function CombinedLogSheet({ open, onOpenChange }) {
                             Expected meal insulin
                           </p>
                           <p className="mt-0.5 text-[10px] leading-relaxed" style={{ color: "#6b6153" }}>
-                            Based on {Math.round(liveCarbs)}g · your saved ratio · 1u per {mealPlan.gramsPerUnit.toFixed(1)}g
+                            Based on {Math.round(liveCarbs)}g, your saved ratio, 1u per {mealPlan.gramsPerUnit.toFixed(1)}g
                           </p>
                         </div>
                         <span className="shrink-0 text-lg font-bold" style={{ color: "#3f3830" }}>
@@ -447,7 +447,7 @@ export default function CombinedLogSheet({ open, onOpenChange }) {
                 <div className="mb-2 px-1">
                   {Object.entries(insulinTotals).map(([type, units]) => (
                     <p key={type} className="text-xs" style={{ color: "#746959" }}>
-                      {type.split(" ")[0]} · {units % 1 === 0 ? units : units.toFixed(1)}u
+                      {type.split(" ")[0]}, {units % 1 === 0 ? units : units.toFixed(1)}u
                     </p>
                   ))}
                 </div>

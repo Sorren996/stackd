@@ -158,8 +158,8 @@ export default function MealOutcomeModal({ meal, glucose, insulin, targetLow, ta
               <div className="min-w-0">
                 <p className="text-sm font-bold text-white">{meal.name}</p>
                 <p className="mt-0.5 text-[11px] text-white/40">
-                  {format(new Date(meal.time), "h:mm a")} · {Math.round(meal.carbs)}g carbs
-                  {meal.insulinUnits != null && ` · ${meal.insulinUnits}u support`}
+                  {format(new Date(meal.time), "h:mm a")}, {Math.round(meal.carbs)}g carbs
+                  {meal.insulinUnits != null && `, ${meal.insulinUnits}u support`}
                 </p>
               </div>
               <button
@@ -315,7 +315,7 @@ export default function MealOutcomeModal({ meal, glucose, insulin, targetLow, ta
                           <span className="text-white/55">{d.insulin_type}</span>
                         </span>
                         <span className="text-white/35">
-                          {format(new Date(d.administered_at), "h:mm a")} · {Number(d.units).toFixed(1)}u
+                          {format(new Date(d.administered_at), "h:mm a")}, {Number(d.units).toFixed(1)}u
                         </span>
                       </div>
                     );

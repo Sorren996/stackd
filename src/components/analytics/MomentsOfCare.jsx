@@ -74,13 +74,13 @@ function InsightCard({ insight }) {
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: `${color}` }}>{title}</p>
-          <p className="mt-0.5 text-[13px] font-semibold text-white/90">{segment.label} · {period}</p>
+          <p className="mt-0.5 text-[13px] font-semibold text-white/90">{segment.label}, {period}</p>
           <p className="mt-2 text-[13px] leading-snug text-white/60">{OBSERVATIONS[type]}</p>
           <p className="mt-2 text-[11px] text-white/35">
             <span className="font-semibold text-white/70">{segment.count}</span> readings
-            {" · "}
+            {", "}
             {segment.avg !== null && (<><span className="font-semibold text-white/70">{segment.avg}</span> mg/dL avg</>)}
-            {" · "}
+            {", "}
             <span className="font-semibold text-white/70">{Math.round(segment.inRangePct)}%</span> in range
           </p>
           <p className="mt-2 text-[11px] leading-relaxed text-white/40">

@@ -45,12 +45,11 @@ export default function DayMealOutcomes({ meals, glucose, insulin, targetLow, ta
                   <span>{Math.round(meal.carbs)}g carbs</span>
                   {meal.insulinUnits != null && (
                     <>
-                      <span className="text-white/20">·</span>
                       <span>{meal.insulinUnits}u support</span>
                     </>
                   )}
                   {meal.highProteinFat && (
-                    <span style={{ color: "#8a6db8" }}>· higher protein/fat</span>
+                    <span style={{ color: "#8a6db8" }}>higher protein/fat</span>
                   )}
                 </div>
 

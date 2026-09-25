@@ -180,7 +180,7 @@ export default function MealMemoryModal({ open, match, currentMeal, onContinue, 
                   <div className="mb-3 flex items-center gap-2">
                     <Clock className="h-3.5 w-3.5 text-white/45" />
                     <p className="text-xs font-semibold text-white/70">
-                      {analysis.meal_name_original} · {analysis.meal_time ? format(new Date(analysis.meal_time), "EEE, MMM d · h:mm a") : "Past meal"}
+                      {analysis.meal_name_original}, {analysis.meal_time ? format(new Date(analysis.meal_time), "EEE, MMM d, h:mm a") : "Past meal"}
                     </p>
                   </div>
 
@@ -192,7 +192,7 @@ export default function MealMemoryModal({ open, match, currentMeal, onContinue, 
                       label="Starting glucose"
                       value={
                         Number.isFinite(analysis.starting_glucose)
-                          ? `${Math.round(analysis.starting_glucose)} mg/dL · ${analysis.starting_trend || "steady"}`
+                          ? `${Math.round(analysis.starting_glucose)} mg/dL, ${analysis.starting_trend || "steady"}`
                           : "Not available"
                       }
                     />
@@ -200,7 +200,7 @@ export default function MealMemoryModal({ open, match, currentMeal, onContinue, 
                       label="Peak glucose"
                       value={
                         Number.isFinite(analysis.peak_glucose)
-                          ? `${Math.round(analysis.peak_glucose)} mg/dL${peakDelayLabel ? ` · ${peakDelayLabel}` : ""}`
+                          ? `${Math.round(analysis.peak_glucose)} mg/dL${peakDelayLabel ? `, ${peakDelayLabel}` : ""}`
                           : "Not available"
                       }
                     />
@@ -215,7 +215,7 @@ export default function MealMemoryModal({ open, match, currentMeal, onContinue, 
                     <DetailRow label="Time in range" value={`${analysis.time_in_user_range ?? 0}%`} />
                     <DetailRow
                       label="Initial insulin"
-                      value={analysis.initial_insulin_units > 0 ? `${formatUnits(analysis.initial_insulin_units)} · ${analysis.initial_insulin_type || ""}` : "None logged"}
+                      value={analysis.initial_insulin_units > 0 ? `${formatUnits(analysis.initial_insulin_units)}, ${analysis.initial_insulin_type || ""}` : "None logged"}
                     />
                     <DetailRow
                       label="Additional insulin"

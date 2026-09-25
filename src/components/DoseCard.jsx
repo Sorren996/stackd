@@ -68,7 +68,7 @@ export default function DoseCard({ dose, onDelete, onEdit, locked = false }) {
         </p>
 
         <p className="mt-0.5 text-xs text-white/35">
-          {timeAgo} · {format(new Date(dose.administered_at), "h:mm a")}
+          {timeAgo}, {format(new Date(dose.administered_at), "h:mm a")}
         </p>
 
         <p

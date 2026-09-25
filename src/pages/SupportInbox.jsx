@@ -145,8 +145,8 @@ export default function SupportInbox() {
                         <p className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: "#746959" }}>Message</p>
                         <p className="text-sm whitespace-pre-wrap leading-relaxed" style={{ color: "#3f3830" }}>{ticket.message}</p>
                         <p className="mt-1 text-[10px]" style={{ color: "#746959" }}>
-                          {format(new Date(ticket.created_date), "MMM d · h:mm a")}
-                          {ticket.include_diagnostics ? " · diagnostics included" : ""}
+                          {format(new Date(ticket.created_date), "MMM d, h:mm a")}
+                          {ticket.include_diagnostics ? ", diagnostics included" : ""}
                         </p>
                       </div>
 

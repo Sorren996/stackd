@@ -379,7 +379,7 @@ export default function SplitPlanReview() {
               message={`${additionalInsulin.length} dose${additionalInsulin.length > 1 ? "s" : ""} logged after the first portion. Review your active insulin before deciding on the remaining portion.`}
               color="#af751b"
               items={additionalInsulin.map((d) => ({
-                label: `${d.insulin_type} · ${d.units}u`,
+                label: `${d.insulin_type}, ${d.units}u`,
                 time: formatClockTime(d.administered_at),
               }))}
             />
@@ -405,7 +405,7 @@ export default function SplitPlanReview() {
               {carbsAfterMeal.slice(0, 3).map((c) => (
                 <div key={c.id} className="flex items-center justify-between py-1 text-xs">
                   <span className="text-white/60">{c.food_name || c.name}</span>
-                  <span className="text-white/40">{c.carbs}g · {formatClockTime(c.consumed_at)}</span>
+                  <span className="text-white/40">{c.carbs}g, {formatClockTime(c.consumed_at)}</span>
                 </div>
               ))}
             </div>
@@ -502,7 +502,7 @@ function SafetyMessage({ title, message, color, glucoseValue, glucoseTime, actio
       <p className="text-sm font-semibold" style={{ color }}>{title}</p>
       <p className="mt-1 text-xs leading-relaxed text-white/45">{message}</p>
       {glucoseValue && (
-        <p className="mt-2 text-xs text-white/50">Last reading: {glucoseValue} mg/dL · {glucoseTime}</p>
+        <p className="mt-2 text-xs text-white/50">Last reading: {glucoseValue} mg/dL, {glucoseTime}</p>
       )}
       {actionLabel && onAction && (
         <button type="button" onClick={onAction} className="mt-3 rounded-xl border px-3 py-2 text-xs font-semibold text-white/70" style={{ borderColor: "#eadccf", background: "#fdf9f2" }}>

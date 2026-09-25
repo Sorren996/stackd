@@ -55,7 +55,7 @@ export default function EstimatedSupportCard({ details }) {
     correctionLine = { label: "Correction", value: "—", note: "no reading" };
   } else if (correctionUnits > 0.01) {
     correctionLine = {
-      label: `Correction · start ${startingGlucose} / target ${targetLabel}`,
+      label: `Correction, start ${startingGlucose} / target ${targetLabel}`,
       value: `+${correctionUnits.toFixed(1)}`,
       note: null,
     };
@@ -69,7 +69,7 @@ export default function EstimatedSupportCard({ details }) {
 
       <div className="mt-3 flex items-baseline gap-2">
         <span className="anchor" style={{ fontSize: 34 }}>{activeNow.toFixed(1)}</span>
-        <span className="text-[15px] font-light" style={{ color: PALETTE.muted }}>u · active now</span>
+        <span className="text-[15px] font-light" style={{ color: PALETTE.muted }}>u, active now</span>
       </div>
 
       <p className="mt-2 text-[12px] leading-relaxed" style={{ color: PALETTE.faint }}>
@@ -79,7 +79,7 @@ export default function EstimatedSupportCard({ details }) {
       <div className="mt-3 space-y-1.5">
         <div className="flex items-baseline justify-between">
           <span className="text-[11px]" style={{ color: PALETTE.faint }}>
-            Food · {Math.round(carbs)}g · {ratioLabel}
+            Food, {Math.round(carbs)}g, {ratioLabel}
           </span>
           <span className="text-[13px] font-semibold tabular-nums" style={{ color: PALETTE.muted }}>
             +{foodUnits.toFixed(1)} u
@@ -91,7 +91,7 @@ export default function EstimatedSupportCard({ details }) {
             {correctionLine.label}
           </span>
           <span className="text-[13px] font-semibold tabular-nums" style={{ color: PALETTE.muted }}>
-            {correctionLine.value} u{correctionLine.note ? ` · ${correctionLine.note}` : ""}
+            {correctionLine.value} u{correctionLine.note ? `, ${correctionLine.note}` : ""}
           </span>
         </div>
 
@@ -114,7 +114,7 @@ export default function EstimatedSupportCard({ details }) {
           Your plan
         </span>
         <span className="text-[11px] tabular-nums" style={{ color: PALETTE.muted }}>
-          I:C {ratioLabel} · ISF 1:{isfLabel} · target {targetLabel}
+          I:C {ratioLabel}, ISF 1:{isfLabel}, target {targetLabel}
         </span>
       </div>
     </DashboardCard>

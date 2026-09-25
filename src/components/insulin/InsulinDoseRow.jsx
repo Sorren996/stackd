@@ -82,7 +82,7 @@ export default function InsulinDoseRow({ dose, regimenStatus = null }) {
         <div className="flex min-w-0 items-center gap-1.5">
           <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
           <span className="truncate text-xs font-semibold text-white/85">{shortName}</span>
-          <span className="shrink-0 text-[10px] text-white/40">· {formattedUnits}u dose</span>
+          <span className="shrink-0 text-[10px] text-white/40">{formattedUnits}u dose</span>
         </div>
         {isBasal ?
         <span className="flex shrink-0 items-center gap-1.5">

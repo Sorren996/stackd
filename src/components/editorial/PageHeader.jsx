@@ -3,7 +3,7 @@ import { format } from "date-fns";
 /**
  * Editorial page header: "Your <italic-serif word>" with date/time on the right.
  * The italic word is Georgia italic per the design system.
- * Date format: "Mon, Sep 21 · 6:53 PM"
+ * Date format: "Mon, Sep 21, 6:53 PM"
  */
 export default function PageHeader({ italicWord, date = new Date(), showDate = true, rightText }) {
   return (
@@ -13,7 +13,7 @@ export default function PageHeader({ italicWord, date = new Date(), showDate = t
       </h1>
       {showDate && (
         <span className="text-xs font-medium" style={{ color: "#eadccf" }}>
-          {rightText || format(date, "EEE, MMM d · h:mm aa")}
+          {rightText || format(date, "EEE, MMM d, h:mm aa")}
         </span>
       )}
     </div>

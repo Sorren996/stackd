@@ -32,7 +32,7 @@ export default function Settings() {
   };
 
   const dexcomStatus = dexcomConnected
-    ? `${connection?.cgm_model || "G7"} · connected`
+    ? `${connection?.cgm_model || "G7"}, connected`
     : "not connected";
 
   return (
@@ -48,7 +48,7 @@ export default function Settings() {
           />
           <span className="text-xs font-medium" style={{ color: "#6b6153" }}>
             {dexcomConnected
-              ? `Dexcom ${connection?.cgm_model || "G7"} · connected · updating every 5 min`
+              ? `Dexcom ${connection?.cgm_model || "G7"}, connected, updating every 5 min`
               : "No glucose source connected"}
           </span>
         </div>

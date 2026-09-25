@@ -140,7 +140,7 @@ export default function IobDecayChart({ bolusDoses, basalDoses, now = Date.now()
       {/* Flat basal band */}
       <rect x={padX} y={model.basalBandY} width={W - padX * 2} height={basalBandH} fill="#5b6550" opacity={0.10} rx={2} />
       <line x1={padX} y1={model.basalBandY + basalBandH + 1} x2={W - padX} y2={model.basalBandY + basalBandH + 1} stroke="#eadccf" strokeWidth={0.5} />
-      <text x={padX + 2} y={model.basalBandY + basalBandH - 1} fill="#746959" fontSize={7} fontWeight={600} letterSpacing="0.12em">BASAL · STEADY BACKGROUND</text>
+      <text x={padX + 2} y={model.basalBandY + basalBandH - 1} fill="#746959" fontSize={7} fontWeight={600} letterSpacing="0.12em">BASAL, STEADY BACKGROUND</text>
 
       {/* X-axis tick labels */}
       {model.xLabels.map((l, i) => (

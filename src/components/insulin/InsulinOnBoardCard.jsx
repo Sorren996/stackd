@@ -92,7 +92,7 @@ export default function InsulinOnBoardCard({ totalUnits, breakdown, basalRegimen
       <div className="mt-1 flex items-center gap-2">
         <span className="h-2 w-2 rounded-full" style={{ background: PALETTE.green }} />
         <span className="text-[13px]" style={{ color: PALETTE.ink }}>
-          {hasBasal ? "Bolus only · basal runs underneath, never counts" : "Bolus on board"}
+          {hasBasal ? "Bolus only, basal runs underneath, never counts" : "Bolus on board"}
         </span>
       </div>
 

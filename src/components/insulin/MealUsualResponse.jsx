@@ -118,7 +118,7 @@ export default function MealUsualResponse({ carbs, mealName, currentPeak }) {
 
       {delta !== null && (
         <p className="text-[10px] leading-relaxed" style={{ color: PALETTE.muted }}>
-          This meal peaked at {Math.round(currentPeak)} mg/dL · {delta > 0 ? "+" : ""}
+          This meal peaked at {Math.round(currentPeak)} mg/dL, {delta > 0 ? "+" : ""}
           {Math.round(delta)} vs your average
         </p>
       )}

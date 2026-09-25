@@ -105,7 +105,7 @@ export default function MySupportRequests() {
                   >
                     <div className="pb-4 space-y-3">
                       <p className="text-[10px]" style={{ color: "#746959" }}>
-                        {format(new Date(ticket.created_date), "MMM d · h:mm a")}
+                        {format(new Date(ticket.created_date), "MMM d, h:mm a")}
                       </p>
 
                       <div className="flex items-start gap-2">
@@ -126,7 +126,7 @@ export default function MySupportRequests() {
                           <p className="text-sm whitespace-pre-wrap leading-relaxed" style={{ color: "#3f3830" }}>{ticket.admin_response}</p>
                           {ticket.resolved_at && (
                             <p className="mt-2 text-[10px]" style={{ color: "#746959" }}>
-                              {format(new Date(ticket.resolved_at), "MMM d · h:mm a")}
+                              {format(new Date(ticket.resolved_at), "MMM d, h:mm a")}
                             </p>
                           )}
                         </div>

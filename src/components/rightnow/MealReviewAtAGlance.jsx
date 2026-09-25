@@ -93,7 +93,21 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
     return () => document.removeEventListener("pointerdown", onPointerDown, true);
   }, [openEntryId]);
 
-  if (!mealInsight) return null;
+  // Guard against a missing payload so the card never renders blank. The
+  // parent computes this upstream; if it is not ready yet, show a calm
+  // placeholder instead of an empty area.
+  if (!mealInsight) {
+    return (
+      <DashboardCard className="p-4 space-y-1">
+        <p className="text-[14px] font-semibold" style={{ color: PALETTE.ink }}>
+          Meal review is gathering
+        </p>
+        <p className="text-[12px] leading-relaxed" style={{ color: PALETTE.muted }}>
+          Once your most recent nourishment and support are in, the review opens here.
+        </p>
+      </DashboardCard>
+    );
+  }
 
   // No active meal
   if (!d || d.noActiveMeal) {
@@ -226,7 +240,7 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
 
         <div className="mt-3 flex items-baseline gap-2">
           <span className="anchor" style={{ fontSize: 34 }}>{Math.round(totalCarbs)}</span>
-          <span className="text-[15px] font-light" style={{ color: PALETTE.muted }}>g · Nourishment in review</span>
+          <span className="text-[15px] font-light" style={{ color: PALETTE.muted }}>g of nourishment in review</span>
         </div>
 
         <p className="mt-2 text-[12px]" style={{ color: PALETTE.faint }}>
@@ -255,7 +269,7 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
                 <div className="flex w-full items-baseline gap-2 text-left">
                   <span className="min-w-0 flex-1">
                     <span className="text-[13px] font-medium" style={{ color: PALETTE.ink }}>{name}</span>
-                    {detail && <span className="text-[11px]" style={{ color: PALETTE.faint }}> · {detail}</span>}
+                    {detail && <span className="text-[11px]" style={{ color: PALETTE.faint }}>, {detail}</span>}
                   </span>
                   <span className="overflow-hidden">
                     <span className="dotted-leader block" />
@@ -283,7 +297,7 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
 
         <div className="mt-3 flex items-baseline gap-2">
           <span className="anchor" style={{ fontSize: 34 }}>{Math.round(absorptionPct)}</span>
-          <span className="text-[15px] font-light" style={{ color: PALETTE.muted }}>% processed · {gPerHour.toFixed(1)} g/hour</span>
+          <span className="text-[15px] font-light" style={{ color: PALETTE.muted }}>% processed, {gPerHour.toFixed(1)} g/hour</span>
         </div>
 
         <div className="mt-3">
@@ -381,7 +395,6 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
         {/* Automatic misalignment tracker (Dexcom-gated) */}
         <AlignmentTracker
           dexcomConnected={dexcomConnected}
-          outcomeAssessment={d.outcomeAssessment}
           onConnectDexcom={handleConnectDexcom}
         />
 

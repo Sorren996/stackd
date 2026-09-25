@@ -10,15 +10,16 @@ import React from "react";
  * is fine.
  *
  * Wrapping each card in its own boundary means a stumble in one card is
- * contained: that card shows a gentle inline fallback, while its siblings
- * keep rendering normally. The fallback resets when the wrapped content
- * changes (e.g. switching tabs remounts the boundary via its key), so the
- * card recovers on the next interaction.
+ * contained: that card shows a gentle inline fallback with a retry, while its
+ * siblings keep rendering normally. The boundary also resets itself when the
+ * wrapped content changes (e.g. switching tabs remounts it via the tab key),
+ * so it recovers on the next interaction without any user action.
  */
 export default class CardErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
     this.state = { hasError: false };
+    this.handleRetry = this.handleRetry.bind(this);
   }
 
   static getDerivedStateFromError() {
@@ -37,6 +38,10 @@ export default class CardErrorBoundary extends React.Component {
     }
   }
 
+  handleRetry() {
+    this.setState({ hasError: false });
+  }
+
   render() {
     if (this.state.hasError) {
       return (
@@ -51,9 +56,16 @@ export default class CardErrorBoundary extends React.Component {
             One moment while this settles
           </p>
           <p className="mt-1 text-[12px] leading-relaxed" style={{ color: "#746959" }}>
-            This card needed a brief pause. The rest of your view is still here —
-            try again in a moment.
+            This card needed a brief pause. The rest of your view is still here.
           </p>
+          <button
+            type="button"
+            onClick={this.handleRetry}
+            className="mt-3 rounded-full px-3.5 py-1.5 text-[12px] font-semibold transition hover:opacity-80"
+            style={{ background: "#3f3830", color: "#f7f1e8" }}
+          >
+            Try again
+          </button>
         </div>
       );
     }

@@ -98,7 +98,7 @@ export default function LiveGlucoseOverlay({
     <div className="mt-3">
       <div className="mb-1.5 flex items-baseline justify-between">
         <span className="text-[10px] uppercase tracking-wider" style={{ color: PALETTE.faint }}>
-          Live glucose · this window
+          Live glucose in this window
         </span>
         <span className="text-[10px] tabular-nums" style={{ color: PALETTE.faint }}>
           {windowReadings.length} readings

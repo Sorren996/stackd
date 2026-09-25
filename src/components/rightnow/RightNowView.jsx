@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import IobAtAGlance from "./IobAtAGlance";
 import MealReviewAtAGlance from "./MealReviewAtAGlance";
 import CardErrorBoundary from "@/components/CardErrorBoundary";
@@ -73,16 +73,15 @@ export default function RightNowView({
         </div>
       </div>
 
-      {/* Tab content */}
+      {/* Tab content: a simple keyed fade with no exit phase, so switching
+          tabs can never leave the area blank waiting on an animation. */}
       <div className="mt-4">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={tab}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
-            >
+          <motion.div
+            key={tab}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.15 }}
+          >
             {tab === "iob" ? (
               <CardErrorBoundary>
                 <IobAtAGlance
@@ -104,8 +103,7 @@ export default function RightNowView({
                 />
               </CardErrorBoundary>
             )}
-            </motion.div>
-          </AnimatePresence>
+          </motion.div>
       </div>
     </div>
   );

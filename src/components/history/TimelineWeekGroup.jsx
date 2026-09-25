@@ -19,7 +19,7 @@ export default function TimelineWeekGroup({ label, dayCount, momentCount, summar
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs text-white/40">
-            {dayCount} {dayCount === 1 ? "day" : "days"} · {momentCount} {momentCount === 1 ? "moment" : "moments"}
+            {dayCount} {dayCount === 1 ? "day" : "days"}, {momentCount} {momentCount === 1 ? "moment" : "moments"}
           </span>
           <motion.div animate={{ rotate: isOpen ? 180 : 0 }} transition={SPRING}>
             <ChevronDown className="h-4 w-4 text-white/50" />

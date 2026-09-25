@@ -479,7 +479,7 @@ export default function History() {
     const s = monthStats(currentMonth);
     const tracked = currentMonth.days.filter((d) => d.glucose.count > 0).length;
     headerSub = s.glucoseCount
-      ? `${tracked} day${tracked === 1 ? "" : "s"} tracked · ${s.inRangePct}% in range`
+      ? `${tracked} day${tracked === 1 ? "" : "s"} tracked, ${s.inRangePct}% in range`
       : tracked
         ? `${tracked} day${tracked === 1 ? "" : "s"} tracked`
         : "No moments yet";

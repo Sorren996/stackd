@@ -1585,7 +1585,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                     <span className="text-xs" style={{ color: "#6b6153" }}>g {isRescue ? "rescue" : "carbs"}</span>
                   </div>
                   <p className="text-xs" style={{ color: "#3f3830" }}>{activeMarker.item.food_name || activeMarker.item.name || "Food"}</p>
-                  <p className="text-[11px]" style={{ color: "#746959" }}>{format(new Date(activeMarker.item.consumed_at), "h:mm a · MMM d")}</p>
+                  <p className="text-[11px]" style={{ color: "#746959" }}>{format(new Date(activeMarker.item.consumed_at), "h:mm a, MMM d")}</p>
                 </>;
           })()}
             </div>
@@ -1604,7 +1604,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             <p className="text-[11px]" style={{ color: "#5b6550" }}>{Math.round(iob)}u estimated active</p> :
             <p className="text-[11px]" style={{ color: "#746959" }}>Support complete</p>;
           })()}
-              <p className="text-[11px]" style={{ color: "#746959" }}>{format(new Date(activeMarker.item.administered_at), "h:mm a · MMM d")}</p>
+              <p className="text-[11px]" style={{ color: "#746959" }}>{format(new Date(activeMarker.item.administered_at), "h:mm a, MMM d")}</p>
 
             </div>
         }
@@ -1615,7 +1615,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                 <span className="text-3xl font-black" style={{ color: "#d0c0aeff" }}>{activeMarker.item.value}</span>
                 <span className="text-xs" style={{ color: "#6b6153" }}>mg/dL</span>
               </div>
-              <p className="text-[11px]" style={{ color: "#746959" }}>{activeMarker.item.source === "dexcom" ? "CGM" : activeMarker.item.source === "system" ? "System" : "Manual"} · {format(new Date(activeMarker.item.recorded_at), "h:mm a · MMM d")}</p>
+              <p className="text-[11px]" style={{ color: "#746959" }}>{activeMarker.item.source === "dexcom" ? "CGM" : activeMarker.item.source === "system" ? "System" : "Manual"}, {format(new Date(activeMarker.item.recorded_at), "h:mm a, MMM d")}</p>
 
             </div>
         }

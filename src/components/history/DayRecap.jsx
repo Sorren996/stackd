@@ -96,7 +96,7 @@ export default function DayRecap({
         {(carbTotal > 0 || insulinTotal > 0) && (
           <p className="text-xs font-medium" style={{ color: "#746959" }}>
             {carbTotal > 0 && <>{Math.round(carbTotal)}g nourishment</>}
-            {carbTotal > 0 && insulinTotal > 0 && <span className="mx-1.5" style={{ color: "#b8aea0" }}>·</span>}
+            {carbTotal > 0 && insulinTotal > 0 && <span className="mx-1.5" style={{ color: "#b8aea0" }}>,</span>}
             {insulinTotal > 0 && <>{Math.round(insulinTotal * 10) / 10}u support</>}
           </p>
         )}

@@ -32,7 +32,7 @@ const SCREENS = [
         />
         <div className="flex items-center gap-2 px-1">
           <span className="text-[11px] font-semibold text-white/55">Flat</span>
-          <span className="text-[11px] text-white/30">· steady, in range</span>
+          <span className="text-[11px] text-white/30">steady, in range</span>
         </div>
       </div>
     ),

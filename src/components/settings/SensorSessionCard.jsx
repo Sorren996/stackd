@@ -150,13 +150,13 @@ export default function SensorSessionCard() {
             <div className="min-w-0">
               <p className="text-[9px] font-bold uppercase tracking-[0.18em]" style={{ color: "#6b6153" }}>Started</p>
               <p className="mt-0.5 truncate text-[11px]" style={{ color: "#6b6153" }}>
-                {startedAt ? format(new Date(startedAt), "MMM d · h:mm a") : "—"}
+                {startedAt ? format(new Date(startedAt), "MMM d, h:mm a") : "—"}
               </p>
             </div>
             <div className="min-w-0 text-right">
               <p className="text-[9px] font-bold uppercase tracking-[0.18em]" style={{ color: "#6b6153" }}>Expires</p>
               <p className="mt-0.5 truncate text-[11px]" style={{ color: "#6b6153" }}>
-                {endMs ? format(new Date(endMs), "MMM d · h:mm a") : "—"}
+                {endMs ? format(new Date(endMs), "MMM d, h:mm a") : "—"}
               </p>
             </div>
           </div>

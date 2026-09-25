@@ -276,8 +276,8 @@ export function getBasalCoverageCurve(doses, startTime, endTime, stepMinutes = 1
  * Per-dose contribution details for the expanded basal view. Returns each
  * basal dose with plain-language context: whether it's today's dose or a
  * previous dose still contributing, time since injection, and modeled
- * relative activity. The UI uses this to show "Today's dose · 30U · 9:00 PM"
- * and "Previous dose · still contributing" without exposing PK jargon.
+ * relative activity. The UI uses this to show "Today's dose, 30U, 9:00 PM"
+ * and "Previous dose, still contributing" without exposing PK jargon.
  */
 export function getBasalDoseContributions(doses, atTime = Date.now()) {
   const basalDoses = (Array.isArray(doses) ? doses : [])
@@ -319,7 +319,7 @@ export function getBasalDoseContributions(doses, atTime = Date.now()) {
 
 /**
  * Per-dose contribution label for an individual basal dose row. Uses plain
- * language: "Still contributing", "Today's dose", "Previous dose · still
+ * language: "Still contributing", "Today's dose", "Previous dose, still
  * contributing", "No longer contributing" — never "pharmacodynamic activity
  * = X%". The percentage is available via the regimen status for users who
  * want the modeled number, but the row label stays conversational.
@@ -332,7 +332,7 @@ export function getBasalDoseContributionLabel(dose, regimenStatus, atTime = Date
 
   if (regimenStatus.state === "minimal") return "No longer contributing";
   if (regimenStatus.state === "building") return "Building toward steady coverage";
-  if (regimenStatus.state === "declining") return "Previous dose · still contributing";
+  if (regimenStatus.state === "declining") return "Previous dose, still contributing";
 
   // For stabilizing / steady / active states, distinguish today's dose
   // from previous doses that are still overlapping.
@@ -343,5 +343,5 @@ export function getBasalDoseContributionLabel(dose, regimenStatus, atTime = Date
 
   if (isMostRecent && isToday) return "Today's dose";
   if (isMostRecent) return "Latest dose";
-  return "Previous dose · still contributing";
+  return "Previous dose, still contributing";
 }

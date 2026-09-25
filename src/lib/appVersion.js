@@ -12,5 +12,5 @@ export function getAppVersion() {
 }
 
 export function getVersionString() {
-  return `Stackd v${getAppVersion()} • Build ${APP_BUILD}`;
+  return `Stackd v${getAppVersion()} (Build ${APP_BUILD})`;
 }
