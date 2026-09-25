@@ -396,7 +396,33 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
   const loggedMealUnits = sumDoseUnits(pairedDoses, (dose) => dose.meal_units ?? dose.units);
   const loggedCorrectionUnits = sumDoseUnits(pairedDoses, (dose) => dose.correction_units ?? 0);
   const loggedTotalUnits = loggedMealUnits + loggedCorrectionUnits;
-  // Fixed at meal time â€” based on what was logged, not decaying IOB
+  // Active insulin now (biexponential IOB, summed per bolus). This is the live
+  // number the review reports. It is never interpreted as a shortfall as it
+  // decays. The expected total is a point-in-time snapshot reference.
+  const activeIOB = bolusIOB;
+  // Sorted glucose readings within the meal window, used for recent slope and
+  // misalignment / falling-too-fast detection.
+  const windowReadingsSorted = (Array.isArray(glucoseReadings) ? glucoseReadings : []).
+  map((reading) => ({ time: new Date(reading.recorded_at).getTime(), value: Number(reading.value) })).
+  filter((reading) =>
+  Number.isFinite(reading.time) &&
+  Number.isFinite(reading.value) &&
+  reading.time >= mealTime &&
+  reading.time <= now).
+  sort((a, b) => a.time - b.time);
+  // Recent glucose slope over the last ~30 min of readings.
+  let recentSlopeMgDlPerMin = null;
+  if (windowReadingsSorted.length >= 2) {
+    const tail = windowReadingsSorted.slice(-4);
+    if (tail.length >= 2) {
+      const first = tail[0];
+      const last = tail[tail.length - 1];
+      const dtMin = (last.time - first.time) / MINUTE_MS;
+      if (dtMin > 0) recentSlopeMgDlPerMin = (last.value - first.value) / dtMin;
+    }
+  }
+  const minutesSinceMeal = Math.round((now - mealTime) / MINUTE_MS);
+  // Kept for backward compatibility but no longer drive prescriptive status.
   const estimatedAdditionalUnits = Math.max(0, grossDoseEstimate - loggedTotalUnits);
   const ratio = grossDoseEstimate > 0 ? loggedTotalUnits / grossDoseEstimate : null;
   const mealRatio = expectedMealUnits > 0 ? loggedMealUnits / expectedMealUnits : null;
@@ -425,136 +451,96 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
   filter(Boolean).
   sort((a, b) => b.iob - a.iob);
 
-  let value = `${estimatedAdditionalUnits.toFixed(1)}u`;
-  let status = "Rhythm preview";
+  let value = `${activeIOB.toFixed(1)}u`;
+  let status = "Active support";
   let color = "#4d5742";
   let sub = `${Math.round(mealGroup.carbs)}g carbs · ${loggedTotalUnits.toFixed(1)}u logged`;
 
-  // --- Point-in-time assessment (fixed at meal time, does not change as IOB decays) ---
+  // --- Descriptive status (describes, never prescribes) ---
+  // The expected total is a point-in-time snapshot. Active IOB is the live
+  // number. Falling active insulin is never treated as a shortfall or a
+  // reason to dose more. The review reports what was taken, what is active,
+  // and what glucose is doing.
   if (ratio === null) {
     value = "Review";
-    status = "Not enough data to preview your rhythm";
+    status = "Not enough data yet.";
     color = "#8a5a12";
   } else if (correctionGlucoseLow) {
     value = "Review";
-    status = "Glucose is below range - take care first";
-    color = GLUCOSE_STATUS_COLORS.low;
-  } else if (ratio < 0.75) {
-    value = `${estimatedAdditionalUnits.toFixed(1)}u`;
-    status = "Below your historical rhythm";
+    status = "Glucose was below range at the time. Take care first.";
     color = "#9c3f2e";
-  } else if (ratio > 1.25) {
-    value = "Above rhythm";
-    status = `${coverageGapAbs.toFixed(1)}u above your historical rhythm`;
-    color = "#8a5a12";
-  } else if (!correctionGlucoseAvailable) {
-    value = `${expectedMealUnits.toFixed(1)}u`;
-    status = "Rhythm preview - glucose unavailable";
-    color = "#8a5a12";
   } else {
-    value = "In rhythm";
-    status = "Matches your historical rhythm";
+    value = `${activeIOB.toFixed(1)}u`;
+    status = `${activeIOB.toFixed(1)}u active now. ${grossDoseEstimate.toFixed(1)}u was the reference at the time.`;
     color = "#4d5742";
   }
 
-  // --- Continuous monitoring (evolves as glucose readings come in) ---
-  // Priority is given to the CURRENT glucose state over historical dip/peak data,
-  // so the card always reflects where you are now, not just where you've been.
+  // --- Continuous monitoring (descriptive, never prescriptive) ---
   let outcomeAssessment = null;
 
   if (mealStillUnderReview && ratio !== null && !correctionGlucoseLow) {
-    const hadDip = lowOutcome && lowOutcome.value < insulinSettings.targetLow;
-    const hadSpike = peakOutcome && peakOutcome.value > insulinSettings.targetHigh + 20;
+    const glucoseDelta = Number.isFinite(latestGlucoseValue) && Number.isFinite(glucoseValue)
+    ? latestGlucoseValue - glucoseValue : null;
 
-    if (latestIsAfterMeal && latestInRange) {
-      // Currently in range — always show a positive recovery message
-      const startPart = correctionGlucoseAvailable ?
-      `You began at ${Math.round(glucoseValue)} mg/dL` :
-      "You began this meal";
-      const nowPart = `and you're now at ${Math.round(latestGlucoseValue)} mg/dL in your comfortable range`;
-
-      if (hadDip) {
-        outcomeAssessment = {
-          label: "Settled nicely",
-          message: `${startPart}, dipped to ${Math.round(lowOutcome.value)} mg/dL along the way, ${nowPart}. Well done finding your footing again.`,
-          color: "#4d5742"
-        };
-      } else if (hadSpike) {
-        outcomeAssessment = {
-          label: "Settled nicely",
-          message: `${startPart}, rose to ${Math.round(peakOutcome.value)} mg/dL after eating, ${nowPart}. Nice work staying with it.`,
-          color: "#4d5742"
-        };
-      } else {
-        outcomeAssessment = {
-          label: "Tracking beautifully",
-          message: `${startPart} ${nowPart}. Your support is aligning beautifully with this meal.`,
-          color: "#4d5742"
-        };
-      }
-      value = outcomeAssessment.label;
-      status = "Back in a comfortable range";
+    // Falling-too-fast caution (a watch, not a command).
+    if (recentSlopeMgDlPerMin != null && recentSlopeMgDlPerMin <= -2 && minutesSinceMeal >= 30) {
+      outcomeAssessment = {
+        label: "Falling steadily",
+        message: `Glucose is dropping about ${Math.abs(recentSlopeMgDlPerMin).toFixed(1)} mg/dL each minute. Worth watching closely as it settles.`,
+        color: "#9c3f2e"
+      };
+      value = "Falling steadily";
+      status = outcomeAssessment.message;
+      color = "#9c3f2e";
+    }
+    // Misalignment heads-up after roughly 1 to 2 hours. Does not suggest dosing.
+    else if (minutesSinceMeal >= 60 && minutesSinceMeal <= 150
+    && glucoseDelta != null && glucoseDelta > 40
+    && recentSlopeMgDlPerMin != null && recentSlopeMgDlPerMin > 0.5) {
+      outcomeAssessment = {
+        label: "Not aligning yet",
+        message: "Dose may not be aligning entirely. Worth paying attention to the outcome.",
+        color: "#8a5a12"
+      };
+      value = "Not aligning yet";
+      status = outcomeAssessment.message;
+      color = "#8a5a12";
+    }
+    // In range now.
+    else if (latestIsAfterMeal && latestInRange) {
+      const startPart = correctionGlucoseAvailable
+      ? `Started at ${Math.round(glucoseValue)} mg/dL`
+      : "Started this meal";
+      outcomeAssessment = {
+        label: "In range",
+        message: `${startPart}, now at ${Math.round(latestGlucoseValue)} mg/dL. ${activeIOB.toFixed(1)}u still active.`,
+        color: "#4d5742"
+      };
+      value = "In range";
+      status = outcomeAssessment.message;
       color = "#4d5742";
-    } else if (latestIsAfterMeal && latestLow) {
-      // Currently below range
-      if (hadDip && hasCorrectiveCarbs) {
-        outcomeAssessment = {
-          label: "Rising gently",
-          message: "Nourishment added. We're keeping a supportive eye on the trend as you gently rise back to your comfortable range.",
-          color: "#4d5742"
-        };
-        value = "Realigning";
-        status = "Nourishment added, rising back";
-        color = "#4d5742";
-      } else if (hadDip) {
-        outcomeAssessment = {
-          label: "Worth a closer look",
-          message: "It looks like you've provided a bit more support than this moment needed. Please enjoy a gentle carb source and stay close to the trend while your body settles back.",
-          color: GLUCOSE_STATUS_COLORS.low
-        };
-        value = "Take care";
-        status = "Glucose dipped below range";
-        color = GLUCOSE_STATUS_COLORS.low;
-      } else {
-        outcomeAssessment = {
-          label: "Below range",
-          message: "Glucose has dipped below your comfortable range. Consider a gentle carb source and follow your established plan.",
-          color: GLUCOSE_STATUS_COLORS.low
-        };
-        value = "Take care";
-        status = "Below comfort zone";
-        color = GLUCOSE_STATUS_COLORS.low;
-      }
-    } else if (latestIsAfterMeal && latestHigh) {
-      // Currently above range
-      if (hadSpike && hasCorrectiveInsulin) {
-        outcomeAssessment = {
-          label: "Finding its balance",
-          message: "You added a little extra support, and your body is working through it now. We're watching closely as things gently return to a comfortable flow.",
-          color: "#4d5742"
-        };
-        value = "Realigning";
-        status = "Support added, settling back";
-        color = "#4d5742";
-      } else if (hadSpike) {
-        outcomeAssessment = {
-          label: "Still settling",
-          message: "Glucose is climbing a little higher than we'd like. Let's give it some gentle time to see how your body finds its balance before adding more support.",
-          color: "#8a5a12"
-        };
-        value = "Still settling";
-        status = "Glucose trending above range";
-        color = "#8a5a12";
-      } else {
-        outcomeAssessment = {
-          label: "Above range",
-          message: "Glucose is a little above your comfortable range. Give it some gentle time to settle before adding more support.",
-          color: "#8a5a12"
-        };
-        value = "Still settling";
-        status = "Above comfort zone";
-        color = "#8a5a12";
-      }
+    }
+    // Below range now.
+    else if (latestIsAfterMeal && latestLow) {
+      outcomeAssessment = {
+        label: "Below range",
+        message: `Glucose is at ${Math.round(latestGlucoseValue)} mg/dL, below your range. ${activeIOB.toFixed(1)}u still active.`,
+        color: "#9c3f2e"
+      };
+      value = "Below range";
+      status = outcomeAssessment.message;
+      color = "#9c3f2e";
+    }
+    // Above range now.
+    else if (latestIsAfterMeal && latestHigh) {
+      outcomeAssessment = {
+        label: "Above range",
+        message: `Glucose is at ${Math.round(latestGlucoseValue)} mg/dL, above your range. ${activeIOB.toFixed(1)}u still active.`,
+        color: "#8a5a12"
+      };
+      value = "Above range";
+      status = outcomeAssessment.message;
+      color = "#8a5a12";
     }
   }
 
@@ -583,6 +569,9 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
       glucoseMinutesFromMeal,
       grossDoseEstimate,
       bolusIOB,
+      activeIOB,
+      recentSlopeMgDlPerMin,
+      minutesSinceMeal,
       bolusIOBBreakdown,
       estimatedAdditionalUnits,
       expectedTotalUnits: grossDoseEstimate,

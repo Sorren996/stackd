@@ -91,7 +91,7 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
   if (!d || d.noActiveMeal) {
     return (
       <DashboardCard className="p-4">
-        <p className="text-[13px]" style={{ color: PALETTE.muted }}>No meal to review yet — log nourishment to open a window.</p>
+        <p className="text-[13px]" style={{ color: PALETTE.muted }}>No meal to review yet. Log nourishment to open a window.</p>
       </DashboardCard>
     );
   }
@@ -141,27 +141,27 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
     ? Math.round((now - mealResponse.peakTime) / 60000)
     : null;
   const absorptionCaption = predictedPeakMinAgo != null
-    ? (absorptionPct >= 80 ? "gliding down" : `Peaked ${predictedPeakMinAgo}m ago`)
-    : (mealResponse.hasDelayedRise ? "Rising — a lingering wave may follow" : "Absorption underway");
+    ? (absorptionPct >= 80 ? "Settling" : `Peaked ${predictedPeakMinAgo}m ago.`)
+    : (mealResponse.hasDelayedRise ? "Rising. A lingering wave may follow." : "Absorption underway.");
 
   // Glucose response descriptive line — incorporates second-rise detection
-  let glucoseLine = "A steady journey so far.";
+  let glucoseLine = "Steady so far.";
   if (Number.isFinite(glucoseNow) && Number.isFinite(glucoseAtStart)) {
     const delta = Math.round(glucoseNow - glucoseAtStart);
     if (glucoseAnalysis.secondRise) {
-      glucoseLine = "A second gentle climb appeared — your body is working through the lingering energy from this meal.";
+      glucoseLine = "A second gentle climb appeared. The lingering energy from this meal is still working through.";
     } else if (Number.isFinite(peakOutcome) && peakOutcome > glucoseAtStart + 15) {
       const rise = Math.round(peakOutcome - glucoseAtStart);
-      glucoseLine = `Rose ${rise} points, then settled back`;
+      glucoseLine = `Rose ${rise} points, then settled back.`;
     } else if (delta > 15) {
-      glucoseLine = `Climbing gently — up ${delta} points so far`;
+      glucoseLine = `Climbing gently, up ${delta} points so far.`;
     } else if (delta < -15) {
-      glucoseLine = `A steady descent — down ${Math.abs(delta)} points`;
+      glucoseLine = `A steady descent, down ${Math.abs(delta)} points.`;
     } else if (Math.abs(delta) <= 15) {
       if (mealResponse.hasDelayedRise) {
-        glucoseLine = "A steady journey — no second climb so far, keeping a gentle eye out for a delayed wave.";
+        glucoseLine = "Steady so far. Watching for a possible delayed wave.";
       } else {
-        glucoseLine = "A steady journey — no second climb so far.";
+        glucoseLine = "Steady so far.";
       }
     }
   }
@@ -195,7 +195,19 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
             This meal digests slowly
           </p>
           <p className="mt-0.5 text-[12px] leading-relaxed" style={{ color: PALETTE.muted }}>
-            Fat and protein stretch the window — glucose may arrive in a gentle, lingering wave.
+            Fat and protein stretch the window. Glucose may arrive in a gentle, lingering wave.
+          </p>
+        </DashboardCard>
+      )}
+
+      {/* Outcome notice — descriptive, never prescriptive */}
+      {d.outcomeAssessment && (
+        <DashboardCard className="px-4 py-3">
+          <p className="text-[13px] font-semibold leading-snug" style={{ color: d.outcomeAssessment.color }}>
+            {d.outcomeAssessment.label}
+          </p>
+          <p className="mt-0.5 text-[12px] leading-relaxed" style={{ color: PALETTE.muted }}>
+            {d.outcomeAssessment.message}
           </p>
         </DashboardCard>
       )}
