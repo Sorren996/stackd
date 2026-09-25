@@ -1140,7 +1140,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
           unit="mg/dL"
           caption={isGlucoseStale ? "Waiting for a fresh reading" : trend?.label || "Steady"}
           trendIcon={!isGlucoseStale && glucoseValue != null ? <TrendIcon size={30} strokeWidth={2.5} /> : null}
-          trendColor={glucoseColor}
+          trendColor="#3f3830"
           subcaption={isGlucoseStale ? null :
           <span className="font-serif-italic">updated {(() => {
               if (!latestGlucose?.recorded_at) return "just now";
@@ -1178,29 +1178,6 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
           <div id="daily-flow-controls" className="flex items-center gap-2" />
         </div>
         <div className="relative pt-3 my-3">
-          {(() => {
-            const status = isGlucoseStale ? null : centerGlucoseStatus?.status ?? classifyGlucose(glucoseValue, targetLow, targetHigh);
-            const isActive = !isGlucoseStale && (status === "high" || status === "low");
-            const glowColor = status === "high" ? GLUCOSE_STATUS_COLORS.high : status === "low" ? GLUCOSE_STATUS_COLORS.low : "#5b6550";
-            const overReference = isGlucoseStale ? false : centerGlucoseStatus?.overReference ?? (glucoseValue != null && (glucoseValue > readHighReference() || glucoseValue < FIXED_LOW_REFERENCE));
-            const maskFade = "linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.7) 14%, rgba(0,0,0,0.35) 55%, transparent 100%)";
-            const glowOpacity = isActive ? overReference ? 0.6 : 0.4 : 0;
-            return (
-              <div
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-x-0 top-0 z-[1] rounded-[24px]"
-                style={{
-                  height: "50%",
-                  opacity: glowOpacity,
-                  backgroundColor: glowColor,
-                  maskImage: maskFade,
-                  WebkitMaskImage: maskFade,
-                  boxShadow: overReference ? `inset 0 30px 80px -30px ${glowColor}aa` : "none",
-                  transition: "opacity 700ms ease-out, background-color 700ms ease-out, box-shadow 700ms ease-out"
-                }} />);
-
-
-          })()}
           <CardErrorBoundary>{graphSlot}</CardErrorBoundary>
         </div>
       </DashboardCard>
