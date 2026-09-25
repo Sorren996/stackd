@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import DashboardCard from "@/components/dashboard/DashboardCard";
 import MealResponseCurve from "./MealResponseCurve";
@@ -8,6 +9,9 @@ import { base44 } from "@/api/base44Client";
 import { generateMealGlucoseResponse, analyzeGlucoseResponse } from "@/lib/mealGlucoseResponse";
 import MealEditOverlay from "@/components/insulin/MealEditOverlay";
 import EstimatedSupportCard from "./EstimatedSupportCard";
+import LiveGlucoseOverlay from "./LiveGlucoseOverlay";
+import AlignmentTracker from "./AlignmentTracker";
+import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 import { getCarbAbsorptionAt } from "@/lib/carbAbsorption";
 
 const PALETTE = {
@@ -52,7 +56,11 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
   const [openEntryId, setOpenEntryId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const { connected: dexcomConnected } = useDexcomConnection();
   const now = Date.now();
+
+  const handleConnectDexcom = () => navigate("/settings/dexcom");
 
   // Hooks must run unconditionally on every render, so compute them up front
   // with safe fallbacks derived from whatever is available before the early
@@ -315,6 +323,18 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
           </span>
         </div>
 
+        {/* Live glucose overlay (Dexcom-gated) */}
+        <LiveGlucoseOverlay
+          dexcomConnected={dexcomConnected}
+          glucoseReadings={glucoseReadings}
+          mealTime={mealTime}
+          reviewWindowEnd={reviewWindowEnd}
+          now={now}
+          targetLow={targetLow}
+          targetHigh={targetHigh}
+          onConnectDexcom={handleConnectDexcom}
+        />
+
         {/* Enhanced metrics — plain text, no decorative chrome */}
         <div className="mt-3 space-y-1.5">
           {glucoseAnalysis.timeToPeakMin != null && (
@@ -357,6 +377,13 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
             </div>
           )}
         </div>
+
+        {/* Automatic misalignment tracker (Dexcom-gated) */}
+        <AlignmentTracker
+          dexcomConnected={dexcomConnected}
+          outcomeAssessment={d.outcomeAssessment}
+          onConnectDexcom={handleConnectDexcom}
+        />
 
         {d.mealStillUnderReview && onResolve && (
           <button
