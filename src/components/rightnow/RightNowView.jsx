@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import IobAtAGlance from "./IobAtAGlance";
 import MealReviewAtAGlance from "./MealReviewAtAGlance";
+import CardErrorBoundary from "@/components/CardErrorBoundary";
 
 const TABS = [
   { id: "iob", label: "Insulin on Board" },
@@ -83,21 +84,25 @@ export default function RightNowView({
               transition={{ duration: 0.15 }}
             >
             {tab === "iob" ? (
-              <IobAtAGlance
-                totalUnits={totalUnits}
-                breakdown={breakdown}
-                basalRegimenStatus={basalRegimenStatus}
-                onEditDose={onEditDose}
-                onDeleteDose={onDeleteDose}
-              />
+              <CardErrorBoundary>
+                <IobAtAGlance
+                  totalUnits={totalUnits}
+                  breakdown={breakdown}
+                  basalRegimenStatus={basalRegimenStatus}
+                  onEditDose={onEditDose}
+                  onDeleteDose={onDeleteDose}
+                />
+              </CardErrorBoundary>
             ) : (
-              <MealReviewAtAGlance
-                mealInsight={mealInsight}
-                monitoringStatus={monitoringStatus}
-                glucoseTrend={glucoseTrend}
-                onResolve={onResolve}
-                glucoseReadings={glucoseReadings}
-              />
+              <CardErrorBoundary>
+                <MealReviewAtAGlance
+                  mealInsight={mealInsight}
+                  monitoringStatus={monitoringStatus}
+                  glucoseTrend={glucoseTrend}
+                  onResolve={onResolve}
+                  glucoseReadings={glucoseReadings}
+                />
+              </CardErrorBoundary>
             )}
             </motion.div>
           </AnimatePresence>

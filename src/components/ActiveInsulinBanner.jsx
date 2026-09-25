@@ -46,6 +46,7 @@ import { isRescueCarbEntry } from "@/lib/rescueCarbDetection";
 import { GLUCOSE_STATUS_COLORS, classifyGlucose, readHighReference, FIXED_LOW_REFERENCE } from "@/lib/glucoseStatus";
 import AnchorNumber from "@/components/editorial/AnchorNumber";
 import HairlineSection from "@/components/editorial/HairlineSection";
+import CardErrorBoundary from "@/components/CardErrorBoundary";
 import { format } from "date-fns";
 
 // Flip to false to instantly revert to the original dense dashboard layout.
@@ -1200,7 +1201,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
 
 
           })()}
-          {graphSlot}
+          <CardErrorBoundary>{graphSlot}</CardErrorBoundary>
         </div>
       </DashboardCard>
 

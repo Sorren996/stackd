@@ -10,23 +10,23 @@ const PALETTE = {
 };
 
 /**
- * Estimated Support — a gentle, wellness-worded preview of the support
+ * Estimated Support — a gentle, wellness-worded SNAPSHOT of the support
  * this meal might invite, based on the user's own insulin plan.
  *
- * Calculation (netted, not just displayed alongside):
- *   carbs to cover  = meal-group carbs (rescue carbs already excluded
- *                     during meal grouping in ActiveInsulinBanner)
- *   food insulin    = carbs ÷ (5 / meal_insulin_units_per_5g)
- *   correction      = max(0, (current glucose − correction target) ÷ ISF)
- *                     only when current glucose is above target
- *   active on board = current IOB from meal-coverage doses (decays over time)
- *   total estimate  = max(0, food + correction − IOB)
+ * This is a snapshot, fixed at the moment insulin is logged — it does NOT
+ * recompute as insulin activity decays. As insulin winds down over time the
+ * number here stays put; it never climbs to suggest "more is now needed."
+ *
+ * Snapshot math (all values fixed, from the meal-alignment calculation in
+ * ActiveInsulinBanner):
+ *   food insulin       = meal carbs ÷ (5 / meal_insulin_units_per_5g)
+ *   correction insulin = max(0, (glucose at meal − correction target) ÷ ISF)
+ *                        only when glucose at meal was above target
+ *   support committed  = insulin already logged for this meal (fixed)
+ *   estimated total    = max(0, food + correction − support committed)
  *
  * Rescue carbs are never part of the carb total — they only surface as a
  * note so the user can see they were gently set aside.
- *
- * Values come from the meal-alignment calculation in ActiveInsulinBanner
- * (expectedMealUnits, bolusIOB, latestGlucoseValue, rescueCarbs, etc.).
  */
 export default function EstimatedSupportCard({ details }) {
   if (!details) return null;
@@ -42,24 +42,25 @@ export default function EstimatedSupportCard({ details }) {
   // 1. Carbs to cover — meal-group total, rescue carbs already excluded.
   const carbs = d.meal?.carbs ?? 0;
 
-  // 2. Food insulin.
+  // 2. Food insulin (fixed).
   const foodUnits = Number.isFinite(d.expectedMealUnits) ? d.expectedMealUnits : 0;
 
-  // 3. Correction insulin — uses the most recent glucose reading.
-  const currentGlucose = Number.isFinite(d.latestGlucoseValue)
-    ? d.latestGlucoseValue
-    : (Number.isFinite(d.correctionGlucoseValue) ? d.correctionGlucoseValue : d.windowEndGlucoseValue);
+  // 3. Correction insulin — snapshot using glucose at meal time.
   const correctionTarget = d.correctionTargetGlucose;
   const isf = d.insulinSensitivityMgDlPerUnit;
-  const glucoseAvailable = Number.isFinite(currentGlucose);
-  const aboveTarget = glucoseAvailable && Number.isFinite(correctionTarget) && currentGlucose > correctionTarget;
-  const correctionUnits = aboveTarget ? Math.max(0, (currentGlucose - correctionTarget) / isf) : 0;
+  const correctionAvailable = Number.isFinite(d.correctionGlucoseValue);
+  const correctionUnits = Number.isFinite(d.correctionUnitsNeeded) && d.correctionUnitsNeeded > 0
+    ? d.correctionUnitsNeeded
+    : 0;
+  const startingGlucose = Number.isFinite(d.correctionGlucoseValue) ? Math.round(d.correctionGlucoseValue) : null;
 
-  // 4. Active insulin on board (decaying IOB from meal-coverage doses).
-  const iob = Number.isFinite(d.bolusIOB) && d.bolusIOB > 0 ? d.bolusIOB : 0;
+  // 4. Support already committed for this meal — fixed snapshot, not decaying IOB.
+  const committedUnits = Number.isFinite(d.loggedTotalUnits) && d.loggedTotalUnits > 0
+    ? d.loggedTotalUnits
+    : 0;
 
-  // 5. Total estimate — IOB is subtracted, never negative.
-  const total = Math.max(0, foodUnits + correctionUnits - iob);
+  // 5. Estimated total — fixed snapshot, never negative.
+  const total = Math.max(0, foodUnits + correctionUnits - committedUnits);
 
   // Plan reference labels
   const gramsPerUnit = Number.isFinite(d.gramsPerUnit) ? d.gramsPerUnit : 5 / d.mealInsulinUnitsPer5g;
@@ -72,11 +73,11 @@ export default function EstimatedSupportCard({ details }) {
 
   // Correction line content
   let correctionLine;
-  if (!glucoseAvailable) {
+  if (!correctionAvailable) {
     correctionLine = { label: "Correction", value: "—", note: "no reading" };
-  } else if (aboveTarget && correctionUnits > 0.01) {
+  } else if (correctionUnits > 0.01) {
     correctionLine = {
-      label: `Correction · ${Math.round(currentGlucose)} / target ${targetLabel}`,
+      label: `Correction · starting ${startingGlucose} / target ${targetLabel}`,
       value: `+${correctionUnits.toFixed(1)}`,
       note: null,
     };
@@ -94,10 +95,10 @@ export default function EstimatedSupportCard({ details }) {
       </div>
 
       <p className="mt-2 text-[12px] leading-relaxed" style={{ color: PALETTE.faint }}>
-        Based on your plan — <span className="font-serif-italic" style={{ color: PALETTE.ink }}>a starting point, not an instruction.</span>
+        A snapshot of this meal — <span className="font-serif-italic" style={{ color: PALETTE.ink }}>a starting point, not an instruction.</span>
       </p>
 
-      {/* Breakdown — each component and its contribution */}
+      {/* Breakdown — each component and its contribution (all fixed) */}
       <div className="mt-3 space-y-1.5">
         <div className="flex items-baseline justify-between">
           <span className="text-[11px]" style={{ color: PALETTE.faint }}>
@@ -117,11 +118,11 @@ export default function EstimatedSupportCard({ details }) {
           </span>
         </div>
 
-        {iob > 0.01 && (
+        {committedUnits > 0.01 && (
           <div className="flex items-baseline justify-between">
-            <span className="text-[11px]" style={{ color: PALETTE.faint }}>Active on board</span>
+            <span className="text-[11px]" style={{ color: PALETTE.faint }}>Support committed</span>
             <span className="text-[13px] font-semibold tabular-nums" style={{ color: PALETTE.muted }}>
-              −{iob.toFixed(1)} u
+              −{committedUnits.toFixed(1)} u
             </span>
           </div>
         )}
