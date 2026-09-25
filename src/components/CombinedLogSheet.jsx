@@ -406,7 +406,7 @@ export default function CombinedLogSheet({ open, onOpenChange }) {
                         </span>
                       </div>
                       <p className="mt-2 text-[10px] leading-relaxed" style={{ color: "#746959" }}>
-                        An estimate based on your saved settings and previous meal patterns — not a dosing instruction. Use it as a reference and follow your individual plan and how your body responds.
+                        An estimate based on your saved settings and previous meal patterns, not a dosing instruction. Use it as a reference and follow your individual plan and how your body responds.
                       </p>
                     </div>
                   ) : (

@@ -43,7 +43,7 @@ export default function StaleReadingBanner({ visible }) {
                 </p>
                 <p className="mt-0.5 text-[11px] leading-relaxed text-white/55">
                   Check your Dexcom app for connectivity and follow their guidance
-                  — we'll reconnect automatically the moment fresh readings
+                  , and we'll reconnect automatically the moment fresh readings
                   arrive.
                 </p>
               </div>

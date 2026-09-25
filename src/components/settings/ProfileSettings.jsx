@@ -145,7 +145,7 @@ export default function ProfileSettings() {
 
       <SectionCard>
         <p className="text-xs" style={{ color: "#746959" }}>
-          Your identity stays private — <span className="font-serif-italic">only you see these details.</span>
+          Your identity stays private. <span className="font-serif-italic">Only you see these details.</span>
         </p>
       </SectionCard>
     </div>

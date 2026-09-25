@@ -76,7 +76,7 @@ export default function InsulinOnBoardCard({ totalUnits, breakdown, basalRegimen
               Active insulin and remaining time are estimates based on the insulin profile and time since the dose. Actual insulin action can vary between people and between doses.
             </p>
             <p className="mt-2 text-[10px] leading-relaxed" style={{ color: PALETTE.muted }}>
-              Basal coverage is modeled separately from bolus insulin — it represents estimated background activity from your basal doses, not the same as bolus IOB.
+              Basal coverage is modeled separately from bolus insulin. It represents estimated background activity from your basal doses, not the same as bolus IOB.
             </p>
           </InfoPopover>
         }
@@ -165,7 +165,7 @@ export default function InsulinOnBoardCard({ totalUnits, breakdown, basalRegimen
             </div>
           ))}
           <p className="mt-0.5 text-[11px]" style={{ color: PALETTE.faint }}>
-            runs flat — never stacks
+            runs flat, never stacks
           </p>
           <button
             type="button"
@@ -215,7 +215,7 @@ export default function InsulinOnBoardCard({ totalUnits, breakdown, basalRegimen
         <div className="flex items-baseline gap-2 py-1.5">
           <span className="shrink-0 text-[12px] font-semibold" style={{ color: PALETTE.ink }}>Flat band</span>
           <span className="flex-1 overflow-hidden"><span className="dotted-leader block" /></span>
-          <span className="shrink-0 text-[12px]" style={{ color: PALETTE.muted }}>basal — present all day, never counted</span>
+          <span className="shrink-0 text-[12px]" style={{ color: PALETTE.muted }}>basal, present all day, never counted</span>
         </div>
       </div>
 

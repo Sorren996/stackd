@@ -11,7 +11,7 @@ const SCATTERED = [
   { text: "45g carbs", rotate: -1 },
   { text: "1:10 IC ratio", rotate: 4 },
   { text: "Last dose 3h ago", rotate: -2 },
-  { text: "Target 80–180", rotate: 1 },
+  { text: "Target 80-180", rotate: 1 },
 ];
 
 export default function ProblemVisual() {

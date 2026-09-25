@@ -63,7 +63,7 @@ export default function ContactSupport() {
         diagnostic_metadata: diagnosticMetadata,
         status: "open",
       });
-      toast.success("Thank you — we received your message and will reach out soon.");
+      toast.success("Thank you, we received your message and will reach out soon.");
       setTicketType(null);
       setCategory("account");
       setMessage("");

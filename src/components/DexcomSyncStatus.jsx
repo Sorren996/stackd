@@ -25,19 +25,19 @@ const TROUBLESHOOTING_TIPS = [
     Icon: Wifi,
     title: "Verify cloud sharing is active",
     description:
-      "Open your Dexcom app and look for the cloud upload icon — readings need to reach the cloud first.",
+      "Open your Dexcom app and look for the cloud upload icon. Readings need to reach the cloud first.",
   },
   {
     Icon: Clock,
     title: "New sensor warm-up",
     description:
-      "If you just started a sensor, it needs 15–30 minutes before readings begin flowing.",
+      "If you just started a sensor, it needs 15 to 30 minutes before readings begin flowing.",
   },
   {
     Icon: RefreshCw,
     title: "Give it a gentle nudge",
     description:
-      "Open your Dexcom app to refresh the connection — sometimes the cloud needs a little encouragement.",
+      "Open your Dexcom app to refresh the connection. Sometimes the cloud needs a little encouragement.",
   },
   {
     Icon: CloudOff,
@@ -97,7 +97,7 @@ export default function DexcomSyncStatus() {
           <p className="mt-0.5 text-[11px] leading-relaxed text-white/40">
             {isOverdue
               ? "It's been over 3 hours. Let's make sure everything is set up correctly."
-              : "This usually takes 1–3 hours as your readings gently flow in from the cloud."}
+              : "This usually takes 1 to 3 hours as your readings gently flow in from the cloud."}
           </p>
           <div className="mt-1.5 flex items-center gap-1.5">
             <Clock className="h-2.5 w-2.5 text-white/25" />

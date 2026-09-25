@@ -267,7 +267,7 @@ export default function MealMemoryModal({ open, match, currentMeal, onContinue, 
               disabled={feedbackSent}
               className="w-full py-2 text-[11px] font-medium text-white/40 transition hover:text-white/70"
             >
-              {feedbackSent ? "Thanks — we'll remember that" : "Not the same meal"}
+              {feedbackSent ? "Thanks, we'll remember that" : "Not the same meal"}
             </button>
           </div>
         </motion.div>

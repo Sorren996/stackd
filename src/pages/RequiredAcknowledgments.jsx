@@ -195,7 +195,7 @@ export default function RequiredAcknowledgments() {
                     Before we begin your wellness journey together, we need to review a few important acknowledgments.
                   </p>
                   <p className="text-sm leading-relaxed" style={{ color: "#746959" }}>
-                    This helps ensure you understand how Stackd supports you and what it can and cannot do. Take your time — there's no rush.
+                    This helps ensure you understand how Stackd supports you and what it can and cannot do. Take your time, there's no rush.
                   </p>
                 </div>
               )}

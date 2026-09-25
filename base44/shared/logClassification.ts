@@ -98,7 +98,7 @@ export function classifyCarbDeterministic(ctx: ClassificationContext): Classific
   if (carbs <= 15 && quickSugar && (glucoseLow || glucoseTrendingDown)) {
     return {
       classification: "rescue_carbs",
-      reasoning: "Quick-sugar nourishment while your glucose was dipping — a gentle lift to bring things back toward comfortable.",
+      reasoning: "Quick-sugar nourishment while your glucose was dipping, a gentle lift to bring things back toward comfortable.",
       confident: true,
     };
   }
@@ -117,7 +117,7 @@ export function classifyCarbDeterministic(ctx: ClassificationContext): Classific
   if (carbs < 30 && carbs > 0 && !quickSugar) {
     return {
       classification: "snack",
-      reasoning: "A lighter bite between meals — a small moment of nourishment.",
+      reasoning: "A lighter bite between meals, a small moment of nourishment.",
       confident: true,
     };
   }
@@ -149,7 +149,7 @@ export function classifyInsulinDeterministic(ctx: ClassificationContext): Classi
   if (hasNearbyFood) {
     return {
       classification: "meal",
-      reasoning: "Support timed alongside a food occasion — a thoughtful pairing.",
+      reasoning: "Support timed alongside a food occasion, a thoughtful pairing.",
       confident: true,
     };
   }
@@ -158,7 +158,7 @@ export function classifyInsulinDeterministic(ctx: ClassificationContext): Classi
   if (glucoseVeryHigh && !hasNearbyFood) {
     return {
       classification: "rescue_insulin",
-      reasoning: "An unplanned dose when glucose was well above your comfortable range — a gentle nudge back toward balance.",
+      reasoning: "An unplanned dose when glucose was well above your comfortable range, a gentle nudge back toward balance.",
       confident: true,
     };
   }

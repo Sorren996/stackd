@@ -8,10 +8,10 @@ const ELEVATED_THRESHOLD = 20;
 const LOW_THRESHOLD = 15;
 
 const PERIOD_FORMAT = {
-  "12am – 6am": "12 AM–6 AM",
-  "6am – 12pm": "6 AM–12 PM",
-  "12pm – 6pm": "12 PM–6 PM",
-  "6pm – 12am": "6 PM–12 AM",
+  "12am - 6am": "12 AM to 6 AM",
+  "6am - 12pm": "6 AM to 12 PM",
+  "12pm - 6pm": "12 PM to 6 PM",
+  "6pm - 12am": "6 PM to 12 AM",
 };
 
 function getTimeBucket(label) {

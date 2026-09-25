@@ -459,7 +459,7 @@ export default function Dashboard() {
         if (result?.status === "error") {
           const reason = String(result?.error || "");
           if (!/rate limit/i.test(reason)) {
-            toast.error(`Refresh unsuccessful — ${reason || "Unknown error"}`);
+            toast.error(`Refresh unsuccessful: ${reason || "Unknown error"}`);
           }
         }
       } catch {

@@ -403,11 +403,11 @@ export default function CandlestickView({
             <div className="fixed z-[200]" style={{ left, top: openBelow ? activeTooltip.rect.bottom + 8 : top, transform: openBelow ? "none" : "translateY(-100%)" }}>
               <div className="stackd-popover rounded-2xl border p-3" style={{ width: tipW, background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 8px 28px rgba(63, 56, 48, 0.12), 0 2px 8px rgba(63, 56, 48, 0.06)" }}>
               <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/45">Hourly glucose</p>
-              <p className="mt-0.5 text-[11px] font-medium text-white/55">{format(hourStart, "h a")} – {format(hourEnd, "h a")}</p>
+              <p className="mt-0.5 text-[11px] font-medium text-white/55">{format(hourStart, "h a")} to {format(hourEnd, "h a")}</p>
               <div className="mt-2 flex items-end justify-between">
                 <div>
                   <p className="text-[10px] text-white/40">Range</p>
-                  <p className="text-base font-bold text-white">{Math.round(activeTooltip.low)}–{Math.round(activeTooltip.high)}<span className="ml-1 text-[10px] font-normal text-white/40">mg/dL</span></p>
+                  <p className="text-base font-bold text-white">{Math.round(activeTooltip.low)} to {Math.round(activeTooltip.high)}<span className="ml-1 text-[10px] font-normal text-white/40">mg/dL</span></p>
                 </div>
                 <div className="text-right">
                   <p className="text-[10px] text-white/40">Average</p>

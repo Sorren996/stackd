@@ -18,7 +18,7 @@ function getInsight(inRangePercent, periodLong) {
     return {
       icon: TrendingUp,
       title: "Building consistency",
-      message: `More time in range than out — ${pct}% over the last ${periodLong}.`,
+      message: `More time in range than out, ${pct}% over the last ${periodLong}.`,
       color: WELLNESS_COLORS.above,
     };
   }

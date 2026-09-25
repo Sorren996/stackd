@@ -352,7 +352,7 @@ export default function InsulinSettings() {
     localStorage.setItem("target_range_low", "70");
     localStorage.setItem("target_range_high", "180");
     dispatchTargetRangeUpdated();
-    toast.success("Set to recommended range (70–180 mg/dL)");
+    toast.success("Set to recommended range (70 to 180 mg/dL)");
   };
 
   const handleSliderChange = ([low, high]) => {
@@ -486,14 +486,14 @@ export default function InsulinSettings() {
                 }
               >
                 <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#746959" }}>Recommended</div>
-                <div className="text-base font-extrabold mt-1" style={{ color: "#3f3830" }}>70–180</div>
+                <div className="text-base font-extrabold mt-1" style={{ color: "#3f3830" }}>70 to 180</div>
                 <div className="text-[9px] mt-0.5" style={{ color: "#746959" }}>mg/dL</div>
               </button>
 
               <div className="flex-1 flex flex-col justify-center space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-[10px] uppercase tracking-wider" style={{ color: "#746959" }}>Custom Range</span>
-                  <span className="text-sm font-bold" style={{ color: "#5b6550" }}>{targetLow}–{targetHigh} mg/dL</span>
+                  <span className="text-sm font-bold" style={{ color: "#5b6550" }}>{targetLow} to {targetHigh} mg/dL</span>
                 </div>
                 <Slider
                   min={70}

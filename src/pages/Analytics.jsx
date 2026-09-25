@@ -154,7 +154,7 @@ export default function Analytics() {
   const dateRangeText = useMemo(() => {
     const end = new Date();
     const start = subDays(end, rangeDays);
-    return `Past ${PERIOD_LONG[rangeDays] || `${rangeDays} days`}, ${format(start, "MMM d")}–${format(end, "MMM d")}`;
+    return `Past ${PERIOD_LONG[rangeDays] || `${rangeDays} days`}, ${format(start, "MMM d")} to ${format(end, "MMM d")}`;
   }, [rangeDays]);
 
   if (isLoading) {
@@ -199,7 +199,7 @@ export default function Analytics() {
               <>
                 of the past {PERIOD_LONG[rangeDays] || `${rangeDays} days`} spent{" "}
                 <span className="font-serif-italic">in your comfort zone</span>
-                {hasEnough ? " — steady cadence" : " — still gathering"}
+                {hasEnough ? ", steady cadence" : ", still gathering"}
               </>
             }
           />
@@ -268,7 +268,7 @@ export default function Analytics() {
           hasEnough={hasEnough}
         />
         <p className="px-1 pt-3 text-xs" style={{ color: "#746959" }}>
-          Patterns describe the last {PERIOD_LONG[rangeDays] || `${rangeDays} days`} —{" "}
+          Patterns describe the last {PERIOD_LONG[rangeDays] || `${rangeDays} days`},{" "}
           <span className="font-serif-italic">the rhythm is yours to read.</span>
         </p>
       </SectionCard>

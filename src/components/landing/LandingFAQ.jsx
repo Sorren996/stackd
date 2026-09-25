@@ -5,7 +5,7 @@ import { ChevronDown } from "lucide-react";
 const FAQS = [
   {
     q: "Does Stackd work with Dexcom?",
-    a: "Yes. Stackd connects to your Dexcom Share account so your recent readings and trends flow in automatically. Setup is a one-time connection — you enter your Dexcom Share credentials and Stackd handles the rest.",
+    a: "Yes. Stackd connects to your Dexcom Share account so your recent readings and trends flow in automatically. Setup is a one-time connection. You enter your Dexcom Share credentials and Stackd handles the rest.",
   },
   {
     q: "Do I need a CGM?",
@@ -13,7 +13,7 @@ const FAQS = [
   },
   {
     q: "How does Stackd handle manual glucose entries?",
-    a: "Manual entries are treated the same way as Dexcom readings — they appear on your glucose graph, factor into your trend, and are included in your review. If a Dexcom reading arrives near the same time as a manual entry, the manual one is gently replaced so you don't see duplicates.",
+    a: "Manual entries are treated the same way as Dexcom readings. They appear on your glucose graph, factor into your trend, and are included in your review. If a Dexcom reading arrives near the same time as a manual entry, the manual one is gently replaced so you don't see duplicates.",
   },
   {
     q: "What does Stackd track?",
@@ -21,7 +21,7 @@ const FAQS = [
   },
   {
     q: "Does Stackd calculate my insulin dose?",
-    a: "No. Stackd is a review and organization tool — it does not calculate, recommend, or suggest insulin doses. It brings the relevant information together so you can review it in one place and make your own decision. The dose always stays with you.",
+    a: "No. Stackd is a review and organization tool. It does not calculate, recommend, or suggest insulin doses. It brings the relevant information together so you can review it in one place and make your own decision. The dose always stays with you.",
   },
   {
     q: "Is Stackd a replacement for medical advice?",
@@ -29,7 +29,7 @@ const FAQS = [
   },
   {
     q: "How is my data handled?",
-    a: "Your readings, settings, and dose logs belong to you. They're stored securely and tied to your account — only you can see your own data. Stackd doesn't sell your data. Your Dexcom credentials are stored securely and used only to fetch your readings.",
+    a: "Your readings, settings, and dose logs belong to you. They're stored securely and tied to your account. Only you can see your own data. Stackd doesn't sell your data. Your Dexcom credentials are stored securely and used only to fetch your readings.",
   },
 ];
 

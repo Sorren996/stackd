@@ -4,7 +4,7 @@
  */
 
 export const SUPPORTIVE_ERRORS = {
-  save: "We couldn't quite catch that moment. A deep breath — and let's try again?",
+  save: "We couldn't quite catch that moment. A deep breath, and let's try again?",
   load: "The connection feels a bit quiet right now. Please check your rhythm and try again.",
   network: "The path seems a little turbulent. Let's pause and try once more.",
   delete: "We had trouble letting that go. Please try again in a moment.",

@@ -141,7 +141,7 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
             {activeBolusCount} rapid doses are active at once
           </p>
           <p className="mt-0.5 text-[12px] leading-relaxed" style={{ color: PALETTE.muted }}>
-            Notice how you feel — the curves below show where each one is.
+            Notice how you feel. The curves below show where each one is.
           </p>
         </DashboardCard>
       }

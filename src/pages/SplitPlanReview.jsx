@@ -180,7 +180,7 @@ export default function SplitPlanReview() {
         insulin_type: plan.insulin_type,
         units: amount,
         administered_at: administeredAt.toISOString(),
-        notes: "Follow-up portion — split dose plan",
+        notes: "Follow-up portion (split dose plan)",
       });
 
       const isModified = Math.abs(amount - plan.follow_up_planned_units) > 0.01;
@@ -199,7 +199,7 @@ export default function SplitPlanReview() {
       queryClient.invalidateQueries({ queryKey: ["insulin-doses", "graph"] });
       queryClient.invalidateQueries({ queryKey: ["split-plan", planId] });
       queryClient.invalidateQueries({ queryKey: ["split-plans"] });
-      toast.success(data.isModified ? "Follow-up logged — plan modified" : "Follow-up logged — plan completed");
+      toast.success(data.isModified ? "Follow-up logged, plan modified" : "Follow-up logged, plan completed");
       setShowLogSheet(false);
       setIsSubmitting(false);
     },

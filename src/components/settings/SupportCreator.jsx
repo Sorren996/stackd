@@ -157,7 +157,7 @@ export default function SupportCreator() {
           </div>
           <div>
             <p className="text-sm leading-relaxed" style={{ color: "#6b6153" }}>
-              Stackd is made with care, one leaf at a time. If it brings you a little calm, you can send a little sunshine back — a one-time gift or ongoing monthly patronage. Always optional, always appreciated.
+              Stackd is made with care, one leaf at a time. If it brings you a little calm, you can send a little sunshine back, a one-time gift or ongoing monthly patronage. Always optional, always appreciated.
             </p>
           </div>
         </div>
@@ -334,7 +334,7 @@ function VerifyPanel({ state, onClose }) {
       iconClass: "",
       title: "Your gift is still settling",
       iconColor: "#af751b",
-      body: "It can take a moment for a payment to fully land. Check back shortly — your kindness will show up here once it does.",
+      body: "It can take a moment for a payment to fully land. Check back shortly. Your kindness will show up here once it does.",
       showClose: true,
     },
     canceled: {

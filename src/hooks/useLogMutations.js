@@ -37,7 +37,7 @@ export function useCreateDoses() {
       queryClient.setQueryData(["insulin-doses", "graph"], (current = []) => prependUnique(savedDoses, current.filter((dose) => !optimisticIds.has(dose.id))));
       queryClient.invalidateQueries({ queryKey: ["insulin-doses"] });
       queryClient.invalidateQueries({ queryKey: ["insulin-doses", "graph"] });
-      toast.success("Support logged — tracking its gentle activity");
+      toast.success("Support logged, tracking its gentle activity");
     },
     onError: (_error, _variables, context) => {
       queryClient.setQueryData(["insulin-doses"], context?.previousDoses ?? []);
@@ -122,7 +122,7 @@ export function useCreateCarbs() {
                 insulin_type: variables.splitPlan.insulinType,
                 units: variables.splitPlan.firstPlannedUnits,
                 administered_at: savedEntries[0].consumed_at,
-                notes: "First portion — split dose plan",
+                notes: "First portion (split dose plan)",
               });
               firstDoseId = dose.id;
               queryClient.setQueryData(["insulin-doses"], (current = []) => prependUnique([dose], current));

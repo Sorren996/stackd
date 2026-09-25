@@ -197,12 +197,12 @@ export default function MealReviewContent({ mealInsight, monitoringStatus, gluco
           const absorbedStr = absorption.absorbed;
           const remainingStr = absorption.remaining;
           if (absorption.pct >= 90) {
-            return <>Absorption nearly complete — <em className="font-serif-italic" style={{ color: PALETTE.ink }}>settling</em> toward your range.</>;
+            return <>Absorption nearly complete, <em className="font-serif-italic" style={{ color: PALETTE.ink }}>settling</em> toward your range.</>;
           }
           if (absorption.pct >= 50) {
-            return <>{absorbedStr} g absorbed, {remainingStr} g still in play — <em className="font-serif-italic" style={{ color: PALETTE.ink }}>finding its balance</em>.</>;
+            return <>{absorbedStr} g absorbed, {remainingStr} g still in play, <em className="font-serif-italic" style={{ color: PALETTE.ink }}>finding its balance</em>.</>;
           }
-          return <>Absorption underway — <em className="font-serif-italic" style={{ color: PALETTE.ink }}>gently rising</em> as carbs take effect.</>;
+          return <>Absorption underway, <em className="font-serif-italic" style={{ color: PALETTE.ink }}>gently rising</em> as carbs take effect.</>;
         })()}
       </p>
 
@@ -211,7 +211,7 @@ export default function MealReviewContent({ mealInsight, monitoringStatus, gluco
         <div className="mt-3 flex items-start gap-1.5">
           <Clock className="h-3.5 w-3.5 shrink-0" style={{ color: PALETTE.amber }} />
           <p className="text-[11px] leading-relaxed" style={{ color: PALETTE.muted }}>
-            Delayed meal response possible — monitoring through{" "}
+            Delayed meal response possible, monitoring through{" "}
             <span className="font-semibold" style={{ color: PALETTE.amber }}>
               {new Date(monitoringStatus.endTime).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
             </span>

@@ -33,7 +33,7 @@ export default function HistoryWeekList({ days, readingsByDay = {}, targetLow, t
       {weeks.map((week) => {
         const stats = weekStats(week);
         const weekEnd = addDays(week.weekStart, 6);
-        const headerLabel = `${format(week.weekStart, "MMM d")} – ${format(weekEnd, "MMM d")}`;
+        const headerLabel = `${format(week.weekStart, "MMM d")} to ${format(weekEnd, "MMM d")}`;
 
         return (
           <SectionCard key={week.key} label={headerLabel}>
@@ -43,7 +43,7 @@ export default function HistoryWeekList({ days, readingsByDay = {}, targetLow, t
               </span>
               <span className="flex items-baseline gap-1">
                 <span className="text-base font-bold tabular-nums" style={{ color: stats.inRangePct != null ? "#3f3830" : "#b8aea0" }}>
-                  {stats.inRangePct != null ? `${stats.inRangePct}%` : "—"}
+                  {stats.inRangePct != null ? `${stats.inRangePct}%` : "-"}
                 </span>
                 <span className="text-[10px] font-medium" style={{ color: "#746959" }}>in range</span>
               </span>
@@ -58,7 +58,7 @@ export default function HistoryWeekList({ days, readingsByDay = {}, targetLow, t
                 const insulin = Math.round(day.insulin?.total || 0);
                 const readings = readingsByDay[day.date] || [];
 
-                const hero = tir != null ? `${tir}%` : avg != null ? `${avg}` : "—";
+                const hero = tir != null ? `${tir}%` : avg != null ? `${avg}` : "-";
                 const secondary = [
                   tir != null && avg != null && `${avg} avg`,
                   carbs > 0 && `${carbs}g`,

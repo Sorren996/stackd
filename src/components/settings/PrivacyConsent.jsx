@@ -54,7 +54,7 @@ export default function PrivacyConsent() {
           <div className="space-y-2">
             <p className="text-sm font-semibold" style={{ color: "#3f3830" }}>Your data is private & secure</p>
             <p className="text-xs leading-relaxed" style={{ color: "#6b6153" }}>
-              All health data logged in Stackd — including glucose readings, insulin doses, and carbohydrate entries — is stored securely and is only accessible by you. We do not share, sell, or transmit your personal health information to any third parties.
+              All health data logged in Stackd, including glucose readings, insulin doses, and carbohydrate entries, is stored securely and is only accessible by you. We do not share, sell, or transmit your personal health information to any third parties.
             </p>
             <p className="text-xs leading-relaxed" style={{ color: "#6b6153" }}>
               Data is encrypted in transit and at rest. You can export or delete your data at any time from this settings page.
@@ -81,7 +81,7 @@ export default function PrivacyConsent() {
               <div>
                 <p className="text-sm font-bold" style={{ color: "#c97060" }}>This action cannot be undone</p>
                 <p className="text-xs mt-1 leading-relaxed" style={{ color: "#c97060", opacity: 0.7 }}>
-                  All your data — glucose readings, insulin doses, carbohydrate logs, and account information — will be permanently and irreversibly deleted. There is no way to recover this data.
+                  All your data, including glucose readings, insulin doses, carbohydrate logs, and account information, will be permanently and irreversibly deleted. There is no way to recover this data.
                 </p>
               </div>
             </div>

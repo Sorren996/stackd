@@ -107,7 +107,7 @@ export default function Landing() {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="mx-auto mt-5 max-w-lg text-center text-sm leading-relaxed text-white/55 md:text-base"
           >
-            Stackd brings five layers of information into one review — so you
+            Stackd brings five layers of information into one review, so you
             see the full picture without opening multiple apps or relying on
             memory.
           </motion.p>

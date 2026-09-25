@@ -236,7 +236,7 @@ export async function loadUserSettings() {
 export async function saveUserSettings(settingsData) {
   const { valid, sanitized } = validateSettings(settingsData);
   if (!valid) {
-    throw new Error("Please check your entries — some values need adjustment before saving.");
+    throw new Error("Please check your entries. Some values need adjustment before saving.");
   }
 
   const existing = await loadUserSettings();

@@ -34,7 +34,7 @@
       "items": {
         "type": "string"
       },
-      "description": "Insulin types used for meals or corrections \u2014 the subset of the library used by the meal balance card."
+      "description": "Insulin types used for meals or corrections, the subset of the library used by the meal balance card."
     },
     "meal_prebolus_window_minutes": {
       "type": "number",
@@ -82,7 +82,7 @@
     "high_glucose_reference": {
       "type": "number",
       "default": 250,
-      "description": "Configurable secondary High glucose reference line shown on the Your Flow graph (mg/dL). Independent of the target range. Selectable from 140\u2013400 in steps of 10. Defaults to 250."
+      "description": "Configurable secondary High glucose reference line shown on the Your Flow graph (mg/dL). Independent of the target range. Selectable from 140 to 400 in steps of 10. Defaults to 250."
     },
     "cgm_model": {
       "type": "string",

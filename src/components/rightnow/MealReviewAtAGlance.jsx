@@ -34,7 +34,7 @@ function formatClock(time) {
 }
 
 function formatDuration(min) {
-  if (!Number.isFinite(min) || min <= 0) return "—";
+  if (!Number.isFinite(min) || min <= 0) return "-";
   const m = Math.round(min);
   if (m < 60) return `${m}m`;
   const h = Math.floor(m / 60);
@@ -316,7 +316,7 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
         <div className="mt-3 flex items-baseline justify-between">
           <div className="flex items-baseline gap-2">
             <span className="anchor" style={{ fontSize: 30 }}>
-              {Number.isFinite(glucoseNow) ? Math.round(glucoseNow) : "—"}
+              {Number.isFinite(glucoseNow) ? Math.round(glucoseNow) : "-"}
             </span>
             <span className="text-[12px]" style={{ color: PALETTE.muted }}>mg/dL now</span>
             {trendArrow && <span style={{ color: PALETTE.muted }}>{trendArrow}</span>}

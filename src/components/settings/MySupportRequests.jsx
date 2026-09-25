@@ -29,7 +29,7 @@ const STATUS_META = {
     label: "Resolved",
     icon: CheckCircle2,
     color: "#5b6550",
-    blurb: "We've addressed this — check the response below.",
+    blurb: "We've addressed this. Check the response below.",
   },
   closed: {
     label: "Closed",

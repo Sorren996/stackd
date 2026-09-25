@@ -92,7 +92,7 @@ export default function DisplaySettings() {
             <HighGlucosePicker value={currentHigh} onChange={handleSelectHigh} />
           </div>
           <p className="mt-3 text-[11px] leading-relaxed" style={{ color: "#746959" }}>
-            Choose from {HIGH_REFERENCE_MIN}–{HIGH_REFERENCE_MAX} mg/dL in steps of {HIGH_REFERENCE_STEP}. This is a visual reference only — it never changes when glucose is considered high. Your target range stays separate.
+            Choose from {HIGH_REFERENCE_MIN} to {HIGH_REFERENCE_MAX} mg/dL in steps of {HIGH_REFERENCE_STEP}. This is a visual reference only. It never changes when glucose is considered high. Your target range stays separate.
           </p>
         </div>
       </SectionCard>

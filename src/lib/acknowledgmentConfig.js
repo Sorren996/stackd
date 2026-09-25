@@ -118,51 +118,51 @@ export const LEGAL_DOCUMENTS = {
   terms: {
     title: "Terms of Use",
     version: ACKNOWLEDGMENT_VERSIONS.terms_version,
-    content: `[PLACEHOLDER — Replace with attorney-reviewed language before production launch.]
+    content: `[PLACEHOLDER: Replace with attorney-reviewed language before production launch.]
 
 Last updated: July 4, 2026 (Version ${ACKNOWLEDGMENT_VERSIONS.terms_version})
 
-1. Acceptance of Terms
+1: Acceptance of Terms
 By creating an account and using Stackd ("the Service"), you agree to be bound by these Terms of Use. If you do not agree, do not use the Service.
 
-2. Description of Service
+2: Description of Service
 Stackd is a wellness-focused application that helps users record and visualize information related to glucose, carbohydrates, and insulin use. The Service does not provide medical advice, diagnosis, or treatment.
 
-3. No Medical Advice
+3: No Medical Advice
 Stackd is not a medical device and does not provide medical advice. Always consult a qualified healthcare professional regarding treatment decisions. Do not start, stop, or change insulin, medication, carbohydrate treatment, or other medical care solely because of information displayed by Stackd.
 
-4. Emergency Disclaimer
+4: Emergency Disclaimer
 Stackd is not an emergency service and does not continuously monitor your condition. If you experience a medical emergency, seek immediate medical assistance.
 
-5. User Responsibilities
+5: User Responsibilities
 You are responsible for the accuracy of information you enter. You are responsible for verifying that any insulin settings are appropriate for you, as established with your healthcare professional.
 
-6. Insulin Estimates
+6: Insulin Estimates
 Insulin activity, insulin-on-board, and related values are estimates. Actual insulin action can vary. Incorrect or incomplete entries may produce inaccurate estimates.
 
-7. Data and Privacy
+7: Data and Privacy
 Your use of the Service is also governed by the Stackd Privacy Notice. Health data you enter is processed for the purpose of providing the Service's features.
 
-8. Notification Limitations
+8: Notification Limitations
 Stackd notifications are supplemental reminders only and may not be delivered. Never rely on Stackd as your sole safety system.
 
-9. Limitation of Liability
+9: Limitation of Liability
 Stackd is provided "as is" without warranties of any kind. To the fullest extent permitted by law, Stackd shall not be liable for any damages arising from your use of the Service.
 
-10. Changes to Terms
+10: Changes to Terms
 We may update these Terms from time to time. Material changes will require you to re-acknowledge before continued use.
 
-11. Contact
+11: Contact
 For questions about these Terms, please contact Stackd support.`,
   },
   privacy: {
     title: "Privacy Notice",
     version: ACKNOWLEDGMENT_VERSIONS.privacy_notice_version,
-    content: `[PLACEHOLDER — Replace with attorney-reviewed language before production launch.]
+    content: `[PLACEHOLDER: Replace with attorney-reviewed language before production launch.]
 
 Last updated: July 4, 2026 (Version ${ACKNOWLEDGMENT_VERSIONS.privacy_notice_version})
 
-1. Information We Collect
+1: Information We Collect
 Stackd collects and processes health information you choose to enter, including:
   - Glucose values
   - Insulin doses and timing
@@ -175,28 +175,28 @@ Stackd collects and processes health information you choose to enter, including:
 
 We also collect technical metadata such as device type, locale, and timezone when you complete acknowledgment requirements.
 
-2. How We Use Your Information
+2: How We Use Your Information
 Your health information is used to provide the Service's features, including displaying glucose trends, insulin activity estimates, and meal balance insights.
 
-3. Data Storage and Security
+3: Data Storage and Security
 Your data is encrypted in transit and at rest. Only you can access your health records. We do not share, sell, or transmit your personal health information to third parties.
 
-4. Data Retention
+4: Data Retention
 Your health data remains stored as long as your account is active. You can export or delete your data at any time from Settings.
 
-5. Consent and Withdrawal
+5: Consent and Withdrawal
 Your consent to health data processing is required to use the Service. You may withdraw consent at any time, which will restrict access to health-related features. Withdrawing consent does not automatically delete your existing data.
 
-6. Acknowledgment Records
+6: Acknowledgment Records
 We maintain immutable records of your acknowledgment acceptances, including the versions of documents you agreed to and when you agreed to them. These records are retained for compliance purposes.
 
-7. No Marketing or Third-Party Sharing
+7: No Marketing or Third-Party Sharing
 We do not use your health data for marketing, research, or advertising purposes. We do not share your health data with third parties.
 
-8. Changes to This Notice
+8: Changes to This Notice
 We may update this Privacy Notice from time to time. Material changes will require you to re-acknowledge before continued use.
 
-9. Contact
+9: Contact
 For questions about this Privacy Notice, please contact Stackd support.`,
   },
 };

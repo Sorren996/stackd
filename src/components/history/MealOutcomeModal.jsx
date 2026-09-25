@@ -266,7 +266,7 @@ export default function MealOutcomeModal({ meal, glucose, insulin, targetLow, ta
                   </span>
                   <span className="flex items-center gap-1.5">
                     <span className="inline-block h-2 w-2 rounded-full" style={{ background: "#5b6550" }} />
-                    <span className="text-[9px] text-white/40">Comfort zone ({targetLow}–{targetHigh})</span>
+                    <span className="text-[9px] text-white/40">Comfort zone ({targetLow} to {targetHigh})</span>
                   </span>
                   <span className="flex items-center gap-1.5">
                     <span className="inline-block h-2 w-2 rounded-full" style={{ background: "#af751b" }} />

@@ -57,7 +57,7 @@ export const INSULIN_PROFILES = {
     display_name: "Fiasp", generic_name: "faster-acting insulin aspart", concentration: "U-100",
     category: "Rapid-Acting", model: "peaked", onset: 4, peak: 45, duration: 300, shape: 3,
     color: "#d4926a", profile_version: "1.0", source_last_reviewed: "2026-09",
-    sources: [{ name: "Fiasp FDA Prescribing Information", date: "2017" }, { name: "FDA Clinical Pharmacology Review — faster aspart", date: "2017" }],
+    sources: [{ name: "Fiasp FDA Prescribing Information", date: "2017" }, { name: "FDA Clinical Pharmacology Review, faster aspart", date: "2017" }],
   },
   "Lyumjev": {
     display_name: "Lyumjev", generic_name: "insulin lispro-aabc", concentration: "U-100",
@@ -77,7 +77,7 @@ export const INSULIN_PROFILES = {
     display_name: "Regular", generic_name: "regular human insulin", concentration: "U-100",
     category: "Short-Acting", model: "peaked", onset: 30, peak: 150, duration: 480, shape: 5,
     color: "#b88a3a", profile_version: "1.0", source_last_reviewed: "2026-09",
-    sources: [{ name: "Humulin R FDA Prescribing Information", date: "2023" }, { name: "ADA Standards of Care — insulin pharmacology", date: "2024" }],
+    sources: [{ name: "Humulin R FDA Prescribing Information", date: "2023" }, { name: "ADA Standards of Care, insulin pharmacology", date: "2024" }],
   },
 
   // ----- Concentrated regular -----
@@ -85,7 +85,7 @@ export const INSULIN_PROFILES = {
     display_name: "Humulin R U-500", generic_name: "regular human insulin (concentrated)", concentration: "U-500",
     category: "Short-Acting", model: "peaked", onset: 30, peak: 240, duration: 960, shape: 4,
     color: "#a07a30", profile_version: "1.0", source_last_reviewed: "2026-09",
-    sources: [{ name: "Humulin R U-500 FDA Prescribing Information", date: "2022" }, { name: "ADA Standards of Care — U-500 pharmacokinetics", date: "2024" }],
+    sources: [{ name: "Humulin R U-500 FDA Prescribing Information", date: "2022" }, { name: "ADA Standards of Care, U-500 pharmacokinetics", date: "2024" }],
     notes: "Delayed, blunted, prolonged peak and longer duration vs U-100 regular.",
   },
 
@@ -143,7 +143,7 @@ export const INSULIN_PROFILES = {
     category: "Ultra-Long-Acting", model: "flat", onset: 120, peak: null, duration: 1680, shape: 12,
     color: "#7a6e9e", profile_version: "1.0", source_last_reviewed: "2026-09",
     dosing_interval_minutes: 1440, days_to_steady_state: 5,
-    sources: [{ name: "Toujeo FDA Prescribing Information", date: "2023" }, { name: "ADA Standards of Care — U-300 longer duration than U-100", date: "2024" }],
+    sources: [{ name: "Toujeo FDA Prescribing Information", date: "2023" }, { name: "ADA Standards of Care, U-300 longer duration than U-100", date: "2024" }],
     notes: "Flatter and more prolonged than U-100 glargine.",
   },
   "Levemir": {
@@ -152,7 +152,7 @@ export const INSULIN_PROFILES = {
     color: "#6a82a0", profile_version: "1.0", source_last_reviewed: "2026-09",
     dosing_interval_minutes: 1440, days_to_steady_state: 3,
     sources: [{ name: "Levemir FDA Prescribing Information", date: "2023" }],
-    notes: "Relatively flat, ~14–24h depending on dose.",
+    notes: "Relatively flat, ~14 to 24h depending on dose.",
   },
 
   // ----- Ultra-long basal -----
@@ -743,7 +743,7 @@ export function getDoseStatus(dose, atTime = Date.now()) {
   }
 
   const peak = timing.peak || timing.duration * 0.4;
-  if (elapsed < timing.onset) return { phase: "waiting", label: "Absorbing — not yet active", activity, iob };
+  if (elapsed < timing.onset) return { phase: "waiting", label: "Absorbing, not yet active", activity, iob };
   if (elapsed < peak * 0.85) return { phase: "rising", label: "Rising toward peak", activity, iob };
   if (elapsed < peak) return { phase: "near_peak", label: "Near peak activity", activity, iob };
   if (Math.abs(elapsed - peak) <= 15) return { phase: "peak", label: "Peak activity", activity, iob };

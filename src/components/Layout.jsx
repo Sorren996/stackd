@@ -185,7 +185,7 @@ export default function Layout() {
               className="whitespace-nowrap text-xs font-semibold"
               style={{ color: refreshAlert.type === "success" ? "#4d5742" : "#8a5a12" }}
             >
-              {refreshAlert.type === "success" ? "Refreshed with the latest" : "Refresh unsuccessful — please try again"}
+              {refreshAlert.type === "success" ? "Refreshed with the latest" : "Refresh unsuccessful. Please try again"}
             </span>
           </motion.div>
         )}

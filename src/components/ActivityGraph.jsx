@@ -112,7 +112,7 @@ function formatGlucoseDisplay(value) {
 }
 
 function formatReadingTime(time) {
-  if (!Number.isFinite(time)) return "—";
+  if (!Number.isFinite(time)) return "-";
   return format(new Date(time), "h:mm a");
 }
 

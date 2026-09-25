@@ -1125,7 +1125,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
 
         <div className="section-label mt-5">Current Glucose</div>
         <AnchorNumber
-          value={isGlucoseStale ? "—" : glucoseValue != null ? Math.round(glucoseValue) : "—"}
+          value={isGlucoseStale ? "-" : glucoseValue != null ? Math.round(glucoseValue) : "-"}
           unit="mg/dL"
           caption={isGlucoseStale ? "Waiting for a fresh reading" : trend?.label || "Steady"}
           trendIcon={!isGlucoseStale && glucoseValue != null ? <TrendIcon size={30} strokeWidth={2.5} /> : null}
@@ -1149,7 +1149,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
 
         <div className="section-label mt-6">Daily Balance</div>
         <AnchorNumber
-          value={comfortZonePercentage != null ? Math.round(comfortZonePercentage) : "—"}
+          value={comfortZonePercentage != null ? Math.round(comfortZonePercentage) : "-"}
           unit="%" />
         
         {dailyTimeBreakdown &&

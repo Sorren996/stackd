@@ -46,7 +46,7 @@ export default function DexcomConnect() {
         password: password,
       });
       queryClient.invalidateQueries(["dexcom-connection"]);
-      toast.success("Connected — your glucose readings will begin flowing in gently.");
+      toast.success("Connected. Your glucose readings will begin flowing in gently.");
       setUsername("");
       setPassword("");
     } catch (err) {
@@ -73,7 +73,7 @@ export default function DexcomConnect() {
       <SectionCard label="Glucose Source">
         <div className="pt-3 pb-2">
           <p className="text-xs leading-relaxed mb-4" style={{ color: "#6b6153" }}>
-            Connect your Dexcom account so your readings flow into Stackd gently and automatically — no manual logging required.
+            Connect your Dexcom account so your readings flow into Stackd gently and automatically, no manual logging required.
           </p>
 
           {isLoading ? (

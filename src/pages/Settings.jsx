@@ -92,8 +92,8 @@ export default function Settings() {
 
       <SectionCard>
         <p className="text-xs leading-relaxed" style={{ color: "#746959" }}>
-          Your settings shape what every review shows —{" "}
-          <span className="font-serif-italic">changes apply to logs going forward.</span>
+          Your settings shape what every review shows.{" "}
+          <span className="font-serif-italic">Changes apply to logs going forward.</span>
         </p>
       </SectionCard>
     </div>

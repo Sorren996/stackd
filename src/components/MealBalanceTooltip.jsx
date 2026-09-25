@@ -193,13 +193,13 @@ export default function MealBalanceTooltip({ mealInsight, open, onClose, monitor
             <ExpandableRow icon={BookOpen} label="About Meal Balance">
               <div className="space-y-2 text-[11px] leading-relaxed" style={{ color: PALETTE.muted }}>
                 <p>
-                  <span className="font-semibold text-white/55">Nourishment</span> — your carbs are compared to your saved meal ratio to estimate the support your meal typically calls for.
+                  <span className="font-semibold text-white/55">Nourishment</span>: your carbs are compared to your saved meal ratio to estimate the support your meal typically calls for.
                 </p>
                 <p>
-                  <span className="font-semibold text-white/55">Glucose adjustment</span> — if a reading near your meal is above your range, a little extra support is previewed based on your sensitivity.
+                  <span className="font-semibold text-white/55">Glucose adjustment</span>: if a reading near your meal is above your range, a little extra support is previewed based on your sensitivity.
                 </p>
                 <p>
-                  <span className="font-semibold text-white/55">Support logged</span> — the insulin you already logged is compared to that preview so you can see how things line up.
+                  <span className="font-semibold text-white/55">Support logged</span>: the insulin you already logged is compared to that preview so you can see how things line up.
                 </p>
                 <p className="pt-1 text-[10px]" style={{ color: PALETTE.muted, opacity: 0.6 }}>
                   Meal Balance is reflective and descriptive. It does not recommend dosing or replace your established treatment plan.
@@ -319,7 +319,7 @@ export default function MealBalanceTooltip({ mealInsight, open, onClose, monitor
             <SummaryCell label="Logged" value={`${fmtUnits(loggedUnits)}u`} />
             <SummaryCell
               label="Peak"
-              value={Number.isFinite(peakOutcome) ? Math.round(peakOutcome) : "—"}
+              value={Number.isFinite(peakOutcome) ? Math.round(peakOutcome) : "-"}
               sub={peakAfterMs !== null ? `${formatElapsed(peakAfterMs)} after` : null}
             />
           </div>
@@ -443,13 +443,13 @@ export default function MealBalanceTooltip({ mealInsight, open, onClose, monitor
             <ExpandableRow icon={BookOpen} label="About Meal Balance">
               <div className="space-y-2 text-[11px] leading-relaxed" style={{ color: PALETTE.muted }}>
                 <p>
-                  <span className="font-semibold text-white/55">Nourishment</span> — your carbs are compared to your saved meal ratio to estimate the support your meal typically calls for.
+                  <span className="font-semibold text-white/55">Nourishment</span>: your carbs are compared to your saved meal ratio to estimate the support your meal typically calls for.
                 </p>
                 <p>
-                  <span className="font-semibold text-white/55">Glucose adjustment</span> — if a reading near your meal is above your range, a little extra support is previewed based on your sensitivity.
+                  <span className="font-semibold text-white/55">Glucose adjustment</span>: if a reading near your meal is above your range, a little extra support is previewed based on your sensitivity.
                 </p>
                 <p>
-                  <span className="font-semibold text-white/55">Support logged</span> — the insulin you already logged is compared to that preview so you can see how things line up.
+                  <span className="font-semibold text-white/55">Support logged</span>: the insulin you already logged is compared to that preview so you can see how things line up.
                 </p>
                 <p className="pt-1 text-[10px]" style={{ color: PALETTE.muted, opacity: 0.6 }}>
                   Meal Balance is reflective and descriptive. It does not recommend dosing or replace your established treatment plan.

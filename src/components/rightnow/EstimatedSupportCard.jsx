@@ -52,7 +52,7 @@ export default function EstimatedSupportCard({ details }) {
 
   let correctionLine;
   if (!correctionAvailable) {
-    correctionLine = { label: "Correction", value: "—", note: "no reading" };
+    correctionLine = { label: "Correction", value: "-", note: "no reading" };
   } else if (correctionUnits > 0.01) {
     correctionLine = {
       label: `Correction, start ${startingGlucose} / target ${targetLabel}`,

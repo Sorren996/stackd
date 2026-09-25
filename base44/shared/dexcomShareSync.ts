@@ -208,7 +208,7 @@ export async function syncShareForConnection(
         step: "readings",
         httpStatus: readingsRes.status,
         retrying: "session_expired_reauth",
-        message: "Session expired — re-authenticating and retrying once",
+        message: "Session expired, re-authenticating and retrying once",
       }));
       try {
         const newSessionId = await getShareSessionId(username, password);

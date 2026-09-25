@@ -16,7 +16,7 @@ export default function ConnectGlucoseSourcePrompt({ connection }) {
     : "Bring your glucose story to life";
   const body = needsAttention
     ? "Let's reconnect your Dexcom account so your readings can flow in gently again."
-    : "Connect your Dexcom account and your readings will flow in gently and automatically — no manual logging needed.";
+    : "Connect your Dexcom account and your readings will flow in gently and automatically, no manual logging needed.";
   const cta = needsAttention
     ? "Reconnect your glucose source"
     : "Connect your glucose source";
