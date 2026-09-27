@@ -105,7 +105,7 @@ export default function Analytics() {
         const inRange = values.filter((v) => v >= low && v <= high).length;
         return {
           date,
-          dayLabel: DAY_LABELS[new Date(date).getDay()],
+          dayLabel: DAY_LABELS[new Date(date + "T00:00:00").getDay()],
           tir: Math.round((inRange / values.length) * 100),
           count: values.length,
         };
@@ -229,22 +229,25 @@ export default function Analytics() {
               </div>
             ))}
           </div>
-          {(stats.bestDay || stats.hardestDay) && (
+          {stats.bestDay && (
             <div className="flex justify-between pt-2 text-xs" style={{ color: "#8a7f70" }}>
-              {stats.bestDay && (
-                <span>
-                  Best day{" "}
-                  <span className="font-semibold" style={{ color: "#3f3830" }}>
-                    {format(new Date(stats.bestDay.date), "EEEE")}, {stats.bestDay.tir}%
-                  </span>
+              <span>
+                Best day{" "}
+                <span className="font-semibold" style={{ color: "#3f3830" }}>
+                  {format(new Date(stats.bestDay.date + "T00:00:00"), "EEEE")}, {stats.bestDay.tir}%
                 </span>
-              )}
-              {stats.hardestDay && (
+              </span>
+              {stats.days.length >= 2 && stats.hardestDay && stats.hardestDay.date !== stats.bestDay.date ? (
                 <span>
                   Hardest{" "}
                   <span className="font-semibold" style={{ color: "#3f3830" }}>
-                    {format(new Date(stats.hardestDay.date), "EEEE")}, {stats.hardestDay.tir}%
+                    {format(new Date(stats.hardestDay.date + "T00:00:00"), "EEEE")}, {stats.hardestDay.tir}%
                   </span>
+                </span>
+              ) : (
+                <span>
+                  Hardest day{" "}
+                  <span className="font-semibold" style={{ color: "#3f3830" }}>not enough days yet</span>
                 </span>
               )}
             </div>

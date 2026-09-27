@@ -389,7 +389,7 @@ export default function InsulinSettings() {
                 <SettingHelpButton id="library" openHelp={openHelp} setOpenHelp={setOpenHelp} />
               </div>
               <p className="text-xs" style={{ color: "#746959" }}>
-                Every insulin type you use. Only these appear when logging a dose.
+                Check off the insulin types you use. Only the ones you check appear when logging a dose.
               </p>
               <InsulinTypeSelector selectedTypes={insulinLibrary} onToggle={toggleInsulinLibrary} />
             </div>

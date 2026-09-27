@@ -376,6 +376,11 @@ export default function DoseForm({ open, onOpenChange, mode = "insulin" }) {
       setGlucoseNotes("");
       setGlucoseTime(new Date().toTimeString().slice(0, 5));
       setGlucoseDate(getTodayDateValue());
+      // Descriptive acknowledgment for high values — describes, never prescribes.
+      const targetHigh = Number(window.localStorage.getItem("target_range_high") || 180);
+      if (Number.isFinite(value) && value > targetHigh) {
+        toast("That's above your comfort zone.");
+      }
     });
   };
 

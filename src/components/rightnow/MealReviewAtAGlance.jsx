@@ -1,17 +1,14 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import DashboardCard from "@/components/dashboard/DashboardCard";
 import MealResponseCurve from "./MealResponseCurve";
+import MealGlucoseTrace from "./MealGlucoseTrace";
 import SwipeableRow from "@/components/SwipeableRow";
 import { base44 } from "@/api/base44Client";
 import { generateMealGlucoseResponse, analyzeGlucoseResponse } from "@/lib/mealGlucoseResponse";
 import MealEditOverlay from "@/components/insulin/MealEditOverlay";
 import EstimatedSupportCard from "./EstimatedSupportCard";
-import LiveGlucoseOverlay from "./LiveGlucoseOverlay";
-import AlignmentTracker from "./AlignmentTracker";
-import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 import { getCarbAbsorptionAt } from "@/lib/carbAbsorption";
 
 const PALETTE = {
@@ -51,16 +48,21 @@ function formatCountdown(ms) {
   return `${h}h ${r}m remaining in window`;
 }
 
+function mealChipFor(time) {
+  const hour = new Date(time).getHours();
+  if (hour < 10) return "Breakfast";
+  if (hour < 14) return "Lunch";
+  if (hour < 17) return "Snack";
+  if (hour < 21) return "Dinner";
+  return "Evening";
+}
+
 export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glucoseTrend, onResolve, glucoseReadings }) {
   const [showEdit, setShowEdit] = useState(false);
   const [openEntryId, setOpenEntryId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
-  const { connected: dexcomConnected } = useDexcomConnection();
   const now = Date.now();
-
-  const handleConnectDexcom = () => navigate("/settings/dexcom");
 
   // Hooks must run unconditionally on every render, so compute them up front
   // with safe fallbacks derived from whatever is available before the early
@@ -80,8 +82,6 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
     [glucoseReadings, mealTime, targetLow, targetHigh, now]
   );
 
-  // "Tap anywhere else dismisses" the revealed swipe actions. Declared
-  // before the early returns so the hook order stays stable every render.
   useEffect(() => {
     if (openEntryId == null) return;
     const onPointerDown = (e) => {
@@ -93,9 +93,6 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
     return () => document.removeEventListener("pointerdown", onPointerDown, true);
   }, [openEntryId]);
 
-  // Guard against a missing payload so the card never renders blank. The
-  // parent computes this upstream; if it is not ready yet, show a calm
-  // placeholder instead of an empty area.
   if (!mealInsight) {
     return (
       <DashboardCard className="p-4 space-y-1">
@@ -109,7 +106,6 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
     );
   }
 
-  // No active meal
   if (!d || d.noActiveMeal) {
     return (
       <DashboardCard className="p-4">
@@ -118,7 +114,6 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
     );
   }
 
-  // Setup needed
   if (!d.meal) {
     return (
       <DashboardCard className="p-4 space-y-1">
@@ -132,8 +127,9 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
 
   const reviewWindowEnd = d.reviewWindowEnd || (mealTime + 4 * 3600 * 1000);
   const windowRemaining = reviewWindowEnd - now;
+  const minutesSinceMeal = (now - mealTime) / 60000;
 
-  // Absorption
+  // Absorption — only meaningful once the meal has had time to begin digesting.
   let totalAbsorbed = 0;
   let totalRemaining = 0;
   let rateGPerMin = 0;
@@ -150,14 +146,16 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
   const totalCarbs = totalAbsorbed + totalRemaining;
   const absorptionPct = totalCarbs > 0 ? Math.min(100, (totalAbsorbed / totalCarbs) * 100) : 0;
   const gPerHour = rateGPerMin * 60;
+  const tooEarlyToRead = minutesSinceMeal < 15;
+
+  // Bolus support for this meal (basal excluded upstream).
+  const bolusSupport = Number.isFinite(d.loggedTotalUnits) ? d.loggedTotalUnits : null;
 
   // Glucose response
   const glucoseNow = Number.isFinite(d.latestGlucoseValue) ? d.latestGlucoseValue : d.windowEndGlucoseValue;
   const glucoseAtStart = d.glucoseValue;
   const peakOutcome = d.peakOutcome;
-  const peakOutcomeTime = d.peakOutcomeTime;
   const trendArrow = glucoseTrend?.icon ? TREND_ARROW[glucoseTrend.icon] : null;
-  const trendLabel = glucoseTrend?.label || "steady";
 
   const predictedPeakMinAgo = mealResponse.peakTime && mealResponse.peakTime <= now
     ? Math.round((now - mealResponse.peakTime) / 60000)
@@ -166,7 +164,7 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
     ? (absorptionPct >= 80 ? "Settling" : `Peaked ${predictedPeakMinAgo}m ago.`)
     : (mealResponse.hasDelayedRise ? "Rising. A lingering wave may follow." : "Absorption underway.");
 
-  // Glucose response descriptive line — incorporates second-rise detection
+  // Glucose response descriptive line
   let glucoseLine = "Steady so far.";
   if (Number.isFinite(glucoseNow) && Number.isFinite(glucoseAtStart)) {
     const delta = Math.round(glucoseNow - glucoseAtStart);
@@ -188,8 +186,19 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
     }
   }
 
-  // Slow-digesting banner
+  // Outcome labels — when the post-meal max never exceeded the pre-meal value,
+  // label as End / Change instead of Peak / Rise so the stats never contradict.
+  const rose = Number.isFinite(peakOutcome) && Number.isFinite(glucoseAtStart)
+    ? Math.round(peakOutcome - glucoseAtStart)
+    : null;
+  const didRise = rose != null && rose > 0;
+  const outcomeValue = Number.isFinite(peakOutcome) ? Math.round(peakOutcome)
+    : Number.isFinite(glucoseNow) ? Math.round(glucoseNow)
+    : null;
+  const changeValue = (didRise ? "+" : "") + (rose != null ? rose : (Number.isFinite(glucoseNow) && Number.isFinite(glucoseAtStart) ? Math.round(glucoseNow - glucoseAtStart) : ""));
+
   const slowBanner = monitoringStatus?.isActive;
+  const mealName = d.meal?.food_name || d.meal?.name || "Meal";
 
   const handleDeleteEntry = async (entry) => {
     if (!entry?.id || deletingId) return;
@@ -210,7 +219,7 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
 
   return (
     <div className="space-y-3">
-      {/* 1. Gentle awareness banner for slow-digesting meals */}
+      {/* Gentle awareness banner for slow-digesting meals */}
       {slowBanner && (
         <DashboardCard className="px-4 py-3">
           <p className="text-[13px] font-semibold leading-snug" style={{ color: PALETTE.ink }}>
@@ -222,192 +231,202 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
         </DashboardCard>
       )}
 
-      {/* Outcome notice — descriptive, never prescriptive */}
-      {d.outcomeAssessment && (
-        <DashboardCard className="px-4 py-3">
-          <p className="text-[13px] font-semibold leading-snug" style={{ color: d.outcomeAssessment.color }}>
-            {d.outcomeAssessment.label}
-          </p>
-          <p className="mt-0.5 text-[12px] leading-relaxed" style={{ color: PALETTE.muted }}>
-            {d.outcomeAssessment.message}
-          </p>
-        </DashboardCard>
-      )}
-
-      {/* 2. The meal card */}
+      {/* The meal card — identity, inputs, outcome, insight, actions */}
       <DashboardCard className="p-4">
-        <div className="section-label">The Meal</div>
-
-        <div className="mt-3 flex items-baseline gap-2">
-          <span className="anchor" style={{ fontSize: 34 }}>{Math.round(totalCarbs)}</span>
-          <span className="text-[15px] font-light" style={{ color: PALETTE.muted }}>g of nourishment in review</span>
-        </div>
-
-        <p className="mt-2 text-[12px]" style={{ color: PALETTE.faint }}>
-          {formatCountdown(windowRemaining)}
-        </p>
-
-        {/* Meal items as ledger rows — swipe left to edit or remove */}
-        <div className="mt-3 space-y-2">
-          {carbEntries.map((entry) => {
-            const name = entry.food_name || entry.name || "Food";
-            const detail = entry.absorption_profile
-              ? entry.absorption_profile.charAt(0).toUpperCase() + entry.absorption_profile.slice(1)
-              : "";
-            return (
-              <SwipeableRow
-                key={entry.id || name}
-                rowId={entry.id}
-                isOpen={openEntryId === entry.id}
-                onOpenChange={(o) => setOpenEntryId(o ? entry.id : null)}
-                onEdit={() => setShowEdit(true)}
-                onDelete={() => handleDeleteEntry(entry)}
-                editLabel="Edit"
-                deleteLabel="Remove"
-                itemLabel={name}
-              >
-                <div className="flex w-full items-baseline gap-2 text-left">
-                  <span className="min-w-0 flex-1">
-                    <span className="text-[13px] font-medium" style={{ color: PALETTE.ink }}>{name}</span>
-                    {detail && <span className="text-[11px]" style={{ color: PALETTE.faint }}>, {detail}</span>}
-                  </span>
-                  <span className="overflow-hidden">
-                    <span className="dotted-leader block" />
-                  </span>
-                  <span className="shrink-0 text-[13px] font-semibold tabular-nums" style={{ color: PALETTE.muted }}>
-                    {Math.round(entry.carbs)} g
-                  </span>
-                </div>
-              </SwipeableRow>
-            );
-          })}
-        </div>
-
-        <p className="mt-3 text-[11px]" style={{ color: PALETTE.faint }}>
-          swipe an item to edit or remove
-        </p>
-      </DashboardCard>
-
-      {/* 2b. Estimated support card */}
-      <EstimatedSupportCard details={d} />
-
-      {/* 3. Absorption card */}
-      <DashboardCard className="p-4">
-        <div className="section-label">Absorption</div>
-
-        <div className="mt-3 flex items-baseline gap-2">
-          <span className="anchor" style={{ fontSize: 34 }}>{Math.round(absorptionPct)}</span>
-          <span className="text-[15px] font-light" style={{ color: PALETTE.muted }}>% processed, {gPerHour.toFixed(1)} g/hour</span>
-        </div>
-
-        <div className="mt-3">
-          <MealResponseCurve response={mealResponse} now={now} isComplete={absorptionPct >= 100 && gPerHour < 0.1} />
-        </div>
-
-        <p className="mt-1.5 text-[12px]" style={{ color: PALETTE.muted }}>
-          {absorptionCaption}
-        </p>
-      </DashboardCard>
-
-      {/* 4. Glucose response card */}
-      <DashboardCard className="p-4">
-        <div className="section-label">Glucose Response</div>
-
-        <div className="mt-3 flex items-baseline justify-between">
-          <div className="flex items-baseline gap-2">
-            <span className="anchor" style={{ fontSize: 30 }}>
-              {Number.isFinite(glucoseNow) ? Math.round(glucoseNow) : "-"}
+        {/* 1. IDENTITY */}
+        <div className="flex items-baseline justify-between gap-2">
+          <div className="min-w-0 flex items-baseline gap-2">
+            <span className="text-[15px] font-semibold truncate" style={{ color: PALETTE.ink }}>{mealName}</span>
+            <span className="shrink-0 rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider" style={{ background: "rgba(175,117,27,0.10)", color: PALETTE.amber }}>
+              {mealChipFor(mealTime)}
             </span>
-            <span className="text-[12px]" style={{ color: PALETTE.muted }}>mg/dL now</span>
-            {trendArrow && <span style={{ color: PALETTE.muted }}>{trendArrow}</span>}
           </div>
-          {Number.isFinite(peakOutcome) && (
-            <div className="text-right">
-              <span className="text-[12px]" style={{ color: PALETTE.faint }}>peak so far</span>
-              <span className="ml-1.5 text-[15px] font-semibold tabular-nums" style={{ color: PALETTE.ink }}>
-                {Math.round(peakOutcome)}
-              </span>
-            </div>
-          )}
+          <span className="shrink-0 text-[11px] tabular-nums" style={{ color: PALETTE.faint }}>{formatClock(mealTime)}</span>
         </div>
 
-        <div className="mt-3">
-          <span className="text-[12px] leading-relaxed" style={{ color: PALETTE.ink }}>
+        {/* 2. INPUTS */}
+        <div className="mt-3 flex items-baseline gap-5">
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-[22px] font-light tabular-nums" style={{ color: PALETTE.ink }}>{Math.round(totalCarbs)}</span>
+            <span className="text-[12px]" style={{ color: PALETTE.muted }}>g carbs</span>
+          </div>
+          {bolusSupport != null && bolusSupport > 0 && (
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-[22px] font-light tabular-nums" style={{ color: PALETTE.ink }}>{bolusSupport % 1 === 0 ? bolusSupport : bolusSupport.toFixed(1)}</span>
+              <span className="text-[12px]" style={{ color: PALETTE.muted }}>u support</span>
+            </div>
+          )}
+          <span className="ml-auto text-[11px]" style={{ color: PALETTE.faint }}>{formatCountdown(windowRemaining)}</span>
+        </div>
+
+        {/* 3. OUTCOME — the hero */}
+        <div className="mt-4">
+          <div className="section-label">Glucose Response</div>
+
+          <div className="mt-2 flex items-baseline justify-between gap-2">
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-[10px] uppercase tracking-wider" style={{ color: PALETTE.faint }}>Before</span>
+              <span className="text-[18px] font-semibold tabular-nums" style={{ color: PALETTE.ink }}>
+                {Number.isFinite(glucoseAtStart) ? Math.round(glucoseAtStart) : "-"}
+              </span>
+            </div>
+            {outcomeValue != null && (
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-[10px] uppercase tracking-wider" style={{ color: PALETTE.faint }}>{didRise ? "Peak" : "End"}</span>
+                <span className="text-[18px] font-semibold tabular-nums" style={{ color: PALETTE.ink }}>{outcomeValue}</span>
+              </div>
+            )}
+            {changeValue !== "" && (
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-[10px] uppercase tracking-wider" style={{ color: PALETTE.faint }}>{didRise ? "Rise" : "Change"}</span>
+                <span className="text-[15px] font-semibold tabular-nums" style={{ color: didRise ? PALETTE.amber : PALETTE.green }}>{changeValue}</span>
+              </div>
+            )}
+          </div>
+
+          <MealGlucoseTrace
+            glucoseReadings={glucoseReadings}
+            mealTime={mealTime}
+            reviewWindowEnd={reviewWindowEnd}
+            now={now}
+            targetLow={targetLow}
+            targetHigh={targetHigh}
+          />
+
+          <p className="mt-2 text-[12px] leading-relaxed" style={{ color: PALETTE.ink }}>
             {glucoseLine}
-          </span>
+          </p>
+
+          {/* Outcome assessment — descriptive, never prescriptive */}
+          {d.outcomeAssessment && (
+            <div className="mt-2 rounded-[12px] px-3 py-2" style={{ background: "#f7f1e8" }}>
+              <p className="text-[12px] font-semibold leading-snug" style={{ color: d.outcomeAssessment.color }}>
+                {d.outcomeAssessment.label}
+              </p>
+              <p className="mt-0.5 text-[12px] leading-relaxed" style={{ color: PALETTE.muted }}>
+                {d.outcomeAssessment.message}
+              </p>
+            </div>
+          )}
+
+          {/* Enhanced metrics */}
+          <div className="mt-3 space-y-1.5">
+            {glucoseAnalysis.timeToPeakMin != null && (
+              <div className="flex items-baseline justify-between">
+                <span className="text-[11px]" style={{ color: PALETTE.faint }}>Time to peak</span>
+                <span className="text-[12px] font-semibold tabular-nums" style={{ color: PALETTE.muted }}>
+                  {glucoseAnalysis.timeToPeakMin} min
+                </span>
+              </div>
+            )}
+            {glucoseAnalysis.deltaFromBaseline != null && (
+              <div className="flex items-baseline justify-between">
+                <span className="text-[11px]" style={{ color: PALETTE.faint }}>Rise from pre-meal</span>
+                <span className="text-[12px] font-semibold tabular-nums" style={{ color: PALETTE.muted }}>
+                  {glucoseAnalysis.deltaFromBaseline > 0 ? "+" : ""}{glucoseAnalysis.deltaFromBaseline} mg/dL
+                </span>
+              </div>
+            )}
+            {glucoseAnalysis.timeInRangePct != null && (
+              <div className="flex items-baseline justify-between">
+                <span className="text-[11px]" style={{ color: PALETTE.faint }}>Time in range</span>
+                <span className="text-[12px] font-semibold tabular-nums" style={{ color: PALETTE.muted }}>
+                  {glucoseAnalysis.timeInRangePct}%
+                </span>
+              </div>
+            )}
+            {glucoseAnalysis.backInRangeMin != null ? (
+              <div className="flex items-baseline justify-between">
+                <span className="text-[11px]" style={{ color: PALETTE.faint }}>Back to range after</span>
+                <span className="text-[12px] font-semibold tabular-nums" style={{ color: PALETTE.muted }}>
+                  {formatDuration(glucoseAnalysis.backInRangeMin)}
+                </span>
+              </div>
+            ) : glucoseAnalysis.elevatedDurationMin > 0 && (
+              <div className="flex items-baseline justify-between">
+                <span className="text-[11px]" style={{ color: PALETTE.faint }}>Still elevated</span>
+                <span className="text-[12px] font-semibold tabular-nums" style={{ color: PALETTE.muted }}>
+                  {formatDuration(glucoseAnalysis.elevatedDurationMin)}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Live glucose overlay (Dexcom-gated) */}
-        <LiveGlucoseOverlay
-          dexcomConnected={dexcomConnected}
-          glucoseReadings={glucoseReadings}
-          mealTime={mealTime}
-          reviewWindowEnd={reviewWindowEnd}
-          now={now}
-          targetLow={targetLow}
-          targetHigh={targetHigh}
-          onConnectDexcom={handleConnectDexcom}
-        />
-
-        {/* Enhanced metrics — plain text, no decorative chrome */}
-        <div className="mt-3 space-y-1.5">
-          {glucoseAnalysis.timeToPeakMin != null && (
-            <div className="flex items-baseline justify-between">
-              <span className="text-[11px]" style={{ color: PALETTE.faint }}>Time to peak</span>
-              <span className="text-[12px] font-semibold tabular-nums" style={{ color: PALETTE.muted }}>
-                {glucoseAnalysis.timeToPeakMin} min
-              </span>
-            </div>
-          )}
-          {glucoseAnalysis.deltaFromBaseline != null && (
-            <div className="flex items-baseline justify-between">
-              <span className="text-[11px]" style={{ color: PALETTE.faint }}>Rise from pre-meal</span>
-              <span className="text-[12px] font-semibold tabular-nums" style={{ color: PALETTE.muted }}>
-                {glucoseAnalysis.deltaFromBaseline > 0 ? "+" : ""}{glucoseAnalysis.deltaFromBaseline} mg/dL
-              </span>
-            </div>
-          )}
-          {glucoseAnalysis.timeInRangePct != null && (
-            <div className="flex items-baseline justify-between">
-              <span className="text-[11px]" style={{ color: PALETTE.faint }}>Time in range</span>
-              <span className="text-[12px] font-semibold tabular-nums" style={{ color: PALETTE.muted }}>
-                {glucoseAnalysis.timeInRangePct}%
-              </span>
-            </div>
-          )}
-          {glucoseAnalysis.backInRangeMin != null ? (
-            <div className="flex items-baseline justify-between">
-              <span className="text-[11px]" style={{ color: PALETTE.faint }}>Back to range after</span>
-              <span className="text-[12px] font-semibold tabular-nums" style={{ color: PALETTE.muted }}>
-                {formatDuration(glucoseAnalysis.backInRangeMin)}
-              </span>
-            </div>
-          ) : glucoseAnalysis.elevatedDurationMin > 0 && (
-            <div className="flex items-baseline justify-between">
-              <span className="text-[11px]" style={{ color: PALETTE.faint }}>Still elevated</span>
-              <span className="text-[12px] font-semibold tabular-nums" style={{ color: PALETTE.muted }}>
-                {formatDuration(glucoseAnalysis.elevatedDurationMin)}
-              </span>
-            </div>
+        {/* 4. INSIGHT — absorption (only once meaningful) + active support */}
+        <div className="mt-4">
+          <div className="section-label">Absorption</div>
+          {tooEarlyToRead ? (
+            <p className="mt-2 text-[13px]" style={{ color: PALETTE.muted }}>Too early to read</p>
+          ) : (
+            <>
+              <div className="mt-2 flex items-baseline gap-2">
+                <span className="text-[22px] font-light tabular-nums" style={{ color: PALETTE.ink }}>{Math.round(absorptionPct)}</span>
+                <span className="text-[13px] font-light" style={{ color: PALETTE.muted }}>% processed, {gPerHour.toFixed(1)} g/hour</span>
+              </div>
+              <div className="mt-2">
+                <MealResponseCurve response={mealResponse} now={now} isComplete={absorptionPct >= 100 && gPerHour < 0.1} />
+              </div>
+              <p className="mt-1.5 text-[12px]" style={{ color: PALETTE.muted }}>
+                {absorptionCaption}
+              </p>
+            </>
           )}
         </div>
 
-        {/* Automatic misalignment tracker (Dexcom-gated) */}
-        <AlignmentTracker
-          dexcomConnected={dexcomConnected}
-          onConnectDexcom={handleConnectDexcom}
-        />
+        <div className="mt-4">
+          <EstimatedSupportCard details={d} />
+        </div>
 
-        {d.mealStillUnderReview && onResolve && (
-          <button
-            type="button"
-            onClick={onResolve}
-            className="mt-3 text-[12px] font-semibold transition hover:opacity-70"
-            style={{ color: PALETTE.green }}
-          >
-            Mark as resolved
-          </button>
-        )}
+        {/* 5. ACTIONS — swipe to edit or remove */}
+        <div className="mt-4">
+          <div className="section-label">Items</div>
+          <div className="mt-2 space-y-2">
+            {carbEntries.map((entry) => {
+              const name = entry.food_name || entry.name || "Food";
+              const detail = entry.absorption_profile
+                ? entry.absorption_profile.charAt(0).toUpperCase() + entry.absorption_profile.slice(1)
+                : "";
+              return (
+                <SwipeableRow
+                  key={entry.id || name}
+                  rowId={entry.id}
+                  isOpen={openEntryId === entry.id}
+                  onOpenChange={(o) => setOpenEntryId(o ? entry.id : null)}
+                  onEdit={() => setShowEdit(true)}
+                  onDelete={() => handleDeleteEntry(entry)}
+                  editLabel="Edit"
+                  deleteLabel="Remove"
+                  itemLabel={name}
+                >
+                  <div className="flex w-full items-baseline gap-2 text-left">
+                    <span className="min-w-0 flex-1">
+                      <span className="text-[13px] font-medium" style={{ color: PALETTE.ink }}>{name}</span>
+                      {detail && <span className="text-[11px]" style={{ color: PALETTE.faint }}>, {detail}</span>}
+                    </span>
+                    <span className="overflow-hidden">
+                      <span className="dotted-leader block" />
+                    </span>
+                    <span className="shrink-0 text-[13px] font-semibold tabular-nums" style={{ color: PALETTE.muted }}>
+                      {Math.round(entry.carbs)} g
+                    </span>
+                  </div>
+                </SwipeableRow>
+              );
+            })}
+          </div>
+
+          {d.mealStillUnderReview && onResolve && (
+            <button
+              type="button"
+              onClick={onResolve}
+              className="mt-3 text-[12px] font-semibold transition hover:opacity-70"
+              style={{ color: PALETTE.green }}
+            >
+              Mark as resolved
+            </button>
+          )}
+        </div>
       </DashboardCard>
 
       {showEdit && (

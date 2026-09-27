@@ -57,7 +57,7 @@ export default function PrivacyConsent() {
               All health data logged in Stackd, including glucose readings, insulin doses, and carbohydrate entries, is stored securely and is only accessible by you. We do not share, sell, or transmit your personal health information to any third parties.
             </p>
             <p className="text-xs leading-relaxed" style={{ color: "#6b6153" }}>
-              Data is encrypted in transit and at rest. You can export or delete your data at any time from this settings page.
+              Data is encrypted in transit and at rest. You can delete your data at any time from this settings page.
             </p>
           </div>
         </div>

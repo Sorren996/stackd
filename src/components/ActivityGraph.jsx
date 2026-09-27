@@ -511,6 +511,10 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   [filters.glucose, sortedGlucoseReadings, domainStart, domainEnd]
   );
 
+  // Quiet hint when the visible window has almost no readings (e.g. the 24h
+  // Daily Flow view with a tiny data sliver). Matches the Rhythm empty-state tone.
+  const showSparseHint = filters.glucose && filteredGlucoseReadings.length < 3;
+
   const allCurvesMeta = useMemo(() =>
   filteredDoses.map((dose, index) => ({
     dose,
@@ -1219,6 +1223,11 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           ref={graphViewportRef}
           className="relative overflow-hidden"
           style={{ width: "100%" }}>
+      {showSparseHint && (
+        <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center">
+          <span className="text-[12px]" style={{ color: "#746959" }}>Not much logged in this window yet</span>
+        </div>
+      )}
       {!isCandlestick && filters.glucose && glucoseLinePoints.length > 0 &&
           <div
             className="absolute left-1/2 top-0 z-20 -translate-x-1/2 px-3 py-1 text-center pointer-events-none">

@@ -57,7 +57,7 @@ export default function Settings() {
       <SensorSessionCard />
 
       <SectionCard label="Insulin Plan">
-        <LedgerRow label="Insulin settings" value="Meal & correction" to="/settings/insulin" />
+        <LedgerRow label="Insulin plan" value="Settings & meal types" to="/settings/insulin" />
       </SectionCard>
 
       <SectionCard label="Glucose">

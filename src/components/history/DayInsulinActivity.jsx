@@ -56,12 +56,16 @@ export default function DayInsulinActivity({ activity }) {
           {basalUnits > 0 && <Stat label="Basal" value={basalUnits} unit="u" />}
         </div>
 
-        {peakTime && highActivityStart && highActivityEnd && (
-          <p className="text-xs leading-relaxed text-white/50">
-            Highest insulin activity occurred between {format(new Date(highActivityStart), "h:mm a")} and{" "}
-            {format(new Date(highActivityEnd), "h:mm a")}.
-          </p>
-        )}
+        {peakTime && highActivityStart && highActivityEnd && (() => {
+          const isProjection = highActivityEnd > Date.now();
+          return (
+            <p className="text-xs leading-relaxed text-white/50">
+              {isProjection
+                ? `Insulin activity is expected to peak between ${format(new Date(highActivityStart), "h:mm a")} and ${format(new Date(highActivityEnd), "h:mm a")}.`
+                : `Highest insulin activity occurred between ${format(new Date(highActivityStart), "h:mm a")} and ${format(new Date(highActivityEnd), "h:mm a")}.`}
+            </p>
+          );
+        })()}
 
         {overlapCount > 0 && (
           <p className="text-xs leading-relaxed" style={{ color: "#af751b" }}>

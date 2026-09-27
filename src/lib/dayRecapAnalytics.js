@@ -9,6 +9,7 @@ import {
 } from "@/lib/insulinPharmacology";
 import { aggregateStats } from "@/lib/historyAggregations";
 import { hasDelayedRise } from "@/lib/mealMonitoring";
+import { getGlucoseBeforeMeal } from "@/lib/glucoseBeforeMeal";
 
 const HOUR_MS = 60 * 60 * 1000;
 const MIN_MS = 60 * 1000;
@@ -36,8 +37,10 @@ export function computeMealOutcomes(carbs, insulin, glucose) {
       const mealTime = new Date(carb.consumed_at).getTime();
       if (!Number.isFinite(mealTime)) return null;
 
-      // Glucose at meal time — closest reading within 20 min before to 5 min after
-      const startingReading = findReadingInWindow(readings, mealTime - 20 * MIN_MS, mealTime + 5 * MIN_MS);
+      // Glucose at meal time — shared helper: closest reading at or before the
+      // meal, within 30 min before. Same helper as the dashboard meal review
+      // so the "before meal" value always agrees between surfaces.
+      const startingReading = getGlucoseBeforeMeal(readings, mealTime);
       if (!startingReading) return null;
 
       // Peak glucose in the 3h window after the meal
@@ -54,10 +57,11 @@ export function computeMealOutcomes(carbs, insulin, glucose) {
       const at1h = findReadingInWindow(readings, mealTime + 50 * MIN_MS, mealTime + 75 * MIN_MS);
       const at2h = findReadingInWindow(readings, mealTime + 110 * MIN_MS, mealTime + 135 * MIN_MS);
 
-      // Associated insulin doses within ±30 min of meal
+      // Associated insulin doses within ±30 min of meal — bolus only, so a
+      // basal dose logged near the meal never inflates the "support" total.
       const associatedInsulin = (insulin || []).filter((d) => {
         const dt = new Date(d.administered_at).getTime();
-        return Number.isFinite(dt) && Math.abs(dt - mealTime) <= 30 * MIN_MS;
+        return Number.isFinite(dt) && Math.abs(dt - mealTime) <= 30 * MIN_MS && isBolusInsulinType(d.insulin_type);
       });
 
       const insulinUnits = associatedInsulin.reduce((s, d) => s + (Number(d.units) || 0), 0);

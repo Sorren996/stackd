@@ -16,7 +16,10 @@ function tirColor(tir) {
 
 /**
  * MonthHeatmap — Oura-style calendar grid where each day cell is tinted by
- * time-in-range. Tappable cells open the day recap. Untracked days are faint.
+ * time-in-range. The grid is built from the 1st of the month (not from the
+ * first tracked day), so every day of the month is visible with leading
+ * padding before day 1. Tappable cells open the day recap. Today is
+ * highlighted with a copper ring. Untracked days are faint.
  */
 export default function MonthHeatmap({ days, onSelectDay }) {
   if (!days.length) {
@@ -26,17 +29,31 @@ export default function MonthHeatmap({ days, onSelectDay }) {
   const byDate = {};
   days.forEach((d) => { byDate[d.date] = d; });
 
+  // Derive the month/year from the first tracked day, then build the grid
+  // from the 1st of that month so days 1 through end-of-month are all shown.
   const sorted = [...days].sort((a, b) => a.date.localeCompare(b.date));
-  const first = parseISO(sorted[0].date);
-  const last = parseISO(sorted[sorted.length - 1].date);
-  const gridStart = startOfWeek(first, { weekStartsOn: 1 });
-  const endLimit = addDays(last, 7);
+  const refDate = parseISO(sorted[0].date);
+  const year = refDate.getFullYear();
+  const month = refDate.getMonth();
+
+  const firstOfMonth = new Date(year, month, 1);
+  const lastOfMonth = new Date(year, month + 1, 0);
+  const gridStart = startOfWeek(firstOfMonth, { weekStartsOn: 1 });
+  const endLimit = addDays(lastOfMonth, 7);
+
+  const todayKey = format(new Date(), "yyyy-MM-dd");
 
   const cells = [];
   let cur = new Date(gridStart);
   while (cur <= endLimit) {
     const key = format(cur, "yyyy-MM-dd");
-    cells.push({ date: key, day: byDate[key] || null, inMonth: isSameMonth(cur, last) || isSameMonth(cur, first), dateObj: new Date(cur) });
+    cells.push({
+      date: key,
+      day: byDate[key] || null,
+      inMonth: isSameMonth(cur, firstOfMonth),
+      dateObj: new Date(cur),
+      isToday: key === todayKey,
+    });
     cur = addDays(cur, 1);
   }
   while (cells.length % 7 !== 0) cells.pop();
@@ -65,11 +82,12 @@ export default function MonthHeatmap({ days, onSelectDay }) {
                   type="button"
                   disabled={!tracked}
                   onClick={() => tracked && onSelectDay(cell.date)}
-                  className="flex aspect-square items-center justify-center rounded-lg text-[9px] font-semibold transition active:scale-[0.96]"
+                  className="relative flex aspect-square items-center justify-center rounded-lg text-[9px] font-semibold transition active:scale-[0.96]"
                   style={{
                     background: color || (cell.inMonth ? "rgba(63,56,48,0.04)" : "transparent"),
                     color: tracked && tir != null ? "#fdf9f2" : "#746959",
                     opacity: tracked ? (tir != null ? 0.88 : 0.5) : cell.inMonth ? 0.55 : 0.25,
+                    boxShadow: cell.isToday ? "inset 0 0 0 1.5px #9c5228" : undefined,
                   }}
                 >
                   {dayNum}

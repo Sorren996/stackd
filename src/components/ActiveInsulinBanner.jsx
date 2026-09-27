@@ -25,6 +25,7 @@ import {
   isBasalInsulinType } from
 "@/lib/insulinPharmacology";
 import { getBasalRegimenStatus } from "@/lib/basalActivityModel";
+import { getGlucoseBeforeMeal } from "@/lib/glucoseBeforeMeal";
 import {
   generateCarbCurve,
   getActiveCarbsNow,
@@ -212,7 +213,7 @@ function buildMealEventGroups(carbEntries, doses, insulinSettings = {}, glucoseR
   filter((event) => Number.isFinite(event.time) && Number.isFinite(event.carbs) && event.carbs > 0);
 
   const doseEvents = (Array.isArray(doses) ? doses : []).
-  filter((dose) => isMealCoverageInsulin(dose, insulinSettings)).
+  filter((dose) => isMealCoverageInsulin(dose, insulinSettings) && !isBasalInsulinType(dose.insulin_type)).
   map((dose) => ({
     type: "dose",
     time: getDoseTime(dose),
@@ -307,9 +308,9 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
   const windowEnd = mealGroup.end;
   const pairedDoses = mealGroup.doses;
   const mealCoverageDoses = (Array.isArray(doses) ? doses : []).filter((dose) => isMealCoverageInsulin(dose, insulinSettings));
-  const glucoseAtMeal = getClosestGlucose(glucoseReadings, mealTime) ?? latestGlucose ?? null;
+  const glucoseAtMeal = getGlucoseBeforeMeal(glucoseReadings, mealTime);
   const glucoseValue = Number(glucoseAtMeal?.value);
-  const glucoseTime = new Date(glucoseAtMeal?.recorded_at).getTime();
+  const glucoseTime = Number.isFinite(glucoseAtMeal?.time) ? glucoseAtMeal.time : NaN;
   const glucoseMinutesFromMeal = Number.isFinite(glucoseTime) ?
   Math.round(Math.abs(glucoseTime - mealTime) / MINUTE_MS) :
   null;

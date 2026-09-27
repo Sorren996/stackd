@@ -288,12 +288,12 @@ export default function MealOutcomeModal({ meal, glucose, insulin, targetLow, ta
                 <p className="text-[8px] text-white/25">mg/dL</p>
               </div>
               <div className="rounded-xl border px-3 py-2.5 text-center" style={{ background: "#fdf9f2", borderColor: "#eadccf" }}>
-                <p className="text-[9px] uppercase tracking-wider text-white/30">Peak</p>
+                <p className="text-[9px] uppercase tracking-wider text-white/30">{meal.rise > 0 ? "Peak" : "End"}</p>
                 <p className="mt-0.5 text-sm font-bold" style={{ color: riseColor }}>{Math.round(meal.peakGlucose)}</p>
                 <p className="text-[8px] text-white/25">mg/dL</p>
               </div>
               <div className="rounded-xl border px-3 py-2.5 text-center" style={{ background: "#fdf9f2", borderColor: "#eadccf" }}>
-                <p className="text-[9px] uppercase tracking-wider text-white/30">Rise</p>
+                <p className="text-[9px] uppercase tracking-wider text-white/30">{meal.rise > 0 ? "Rise" : "Change"}</p>
                 <p className="mt-0.5 text-sm font-bold" style={{ color: riseColor }}>
                   {meal.rise > 0 ? "+" : ""}{Math.round(meal.rise)}
                 </p>

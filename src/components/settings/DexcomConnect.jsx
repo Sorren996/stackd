@@ -41,17 +41,19 @@ export default function DexcomConnect() {
     }
     setConnecting(true);
     try {
-      await base44.functions.invoke("connectDexcomShare", {
+      const res = await base44.functions.invoke("connectDexcomShare", {
         username: username.trim(),
         password: password,
       });
+      if (res?.data?.error) throw new Error(res.data.error);
       queryClient.invalidateQueries(["dexcom-connection"]);
       toast.success("Connected. Your glucose readings will begin flowing in gently.");
       setUsername("");
       setPassword("");
     } catch (err) {
-      const msg = err?.response?.data?.error || err?.message || "We couldn't connect. Please check your credentials.";
+      const msg = err?.response?.data?.error || err?.data?.error || err?.message || "Couldn't connect. Check your username and password.";
       toast.error(msg);
+    } finally {
       setConnecting(false);
     }
   };
