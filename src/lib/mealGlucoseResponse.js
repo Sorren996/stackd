@@ -2,12 +2,12 @@
  * Predicted postprandial glucose response model.
  *
  * Models the shape of glucose rise after a meal based on each carb entry's
- * absorption profile, glycemic index, and high-protein/fat flag — using
+ * absorption profile, glycemic index, and delayed-rise detection — using
  * published research on macronutrient effects on postprandial glucose:
  *
  * - Simple/sugar (fast profile, high GI): sharp rise, peak ~30–60 min
  * - Complex/starchy (slow profile, low GI): gradual rise, peak ~60–120 min
- * - Fat/protein (is_high_protein_fat_meal): blunts the early rise ~35% and
+ * - Fat/protein (delayed rise): blunts the early rise ~35% and
  *   produces a delayed secondary rise centered ~3.5 h post-meal
  *
  * Also provides analysis of ACTUAL glucose readings within a meal window
@@ -15,6 +15,8 @@
  *
  * This is an informational wellness model, not a clinical prediction.
  */
+
+import { hasDelayedRise } from "@/lib/mealMonitoring";
 
 const MINUTE_MS = 60 * 1000;
 
@@ -44,7 +46,7 @@ const CHARACTER_PARAMS = {
 function getEntryCharacter(entry) {
   const profile = entry.absorption_profile || "medium";
   const gi = Number(entry.glycemic_index) || 0;
-  if (entry.is_high_protein_fat_meal === true) return "high_fat_protein";
+  if (hasDelayedRise(entry)) return "high_fat_protein";
   if (profile === "fast" || gi >= 70) return "simple";
   if (profile === "slow" || (gi > 0 && gi < 50)) return "complex";
   return "moderate";

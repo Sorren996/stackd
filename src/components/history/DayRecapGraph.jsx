@@ -13,6 +13,7 @@ import {
 import { format } from "date-fns";
 import { GLUCOSE_STATUS_COLORS } from "@/lib/glucoseStatus";
 import { getInsulinProfile } from "@/lib/insulinPharmacology";
+import { hasDelayedRise } from "@/lib/mealMonitoring";
 import { useIsLightTheme } from "@/lib/theme";
 import { getGraphTheme } from "@/lib/graphTheme";
 import { minutesOfDay, getGlucoseAt, findReadingNear } from "@/lib/dayRecapMetrics";
@@ -220,7 +221,7 @@ export default function DayRecapGraph({ glucose, carbs, insulin, targetLow, targ
         name: c.food_name || c.name || "Food",
         carbs: Number(c.carbs) || 0,
         profile: c.absorption_profile || c.profile,
-        highPF: c.is_high_protein_fat_meal,
+        highPF: hasDelayedRise(c),
         notes: c.notes,
         time: c.consumed_at,
         dotColor: "#af751b",

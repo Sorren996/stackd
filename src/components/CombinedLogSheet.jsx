@@ -70,7 +70,8 @@ function normalizeCarbEntryForSave(entry) {
     serving_amount: entry.serving_amount ?? 1,
     consumed_at: entry.consumed_at || new Date().toISOString(),
     is_custom: entry.is_custom === true,
-    is_high_protein_fat_meal: entry.is_high_protein_fat_meal === true,
+    fat_grams: Number(entry.fat_grams) || 0,
+    protein_grams: Number(entry.protein_grams) || 0,
     is_rescue_carb: entry.is_rescue_carb === true,
   };
 }

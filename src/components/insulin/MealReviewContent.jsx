@@ -211,10 +211,11 @@ export default function MealReviewContent({ mealInsight, monitoringStatus, gluco
         <div className="mt-3 flex items-start gap-1.5">
           <Clock className="h-3.5 w-3.5 shrink-0" style={{ color: PALETTE.amber }} />
           <p className="text-[11px] leading-relaxed" style={{ color: PALETTE.muted }}>
-            Delayed meal response possible, monitoring through{" "}
+            This meal is high in fat and protein, so glucose may rise more slowly at first, then climb later (3 to 8 hours after eating). Monitoring through{" "}
             <span className="font-semibold" style={{ color: PALETTE.amber }}>
               {new Date(monitoringStatus.endTime).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
             </span>
+            .
           </p>
         </div>
       )}

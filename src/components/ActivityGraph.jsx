@@ -4,8 +4,9 @@ import { Area, XAxis, YAxis, Line, ComposedChart, ReferenceLine, ReferenceArea }
 import { generateActivityCurve, getDoseIOB, getDoseRelativeActivity, getInsulinProfile, isBasalInsulinType } from "@/lib/insulinPharmacology";
 import { PROFILE_COLORS } from "@/lib/carbAbsorption";
 import { format } from "date-fns";
-import { AlertTriangle, CornerUpRight, SlidersHorizontal, Check, Wheat, Pencil, Trash2, Info } from "lucide-react";
-import { HIGH_PROTEIN_FAT_MONITORING_HOURS, mergeMonitoringIntervals } from "@/lib/mealMonitoring";
+import { CornerUpRight, SlidersHorizontal, Check, Wheat, Pencil, Trash2, Info } from "lucide-react";
+import { HIGH_PROTEIN_FAT_MONITORING_HOURS, mergeMonitoringIntervals, hasDelayedRise } from "@/lib/mealMonitoring";
+import DelayedRiseCautionCard from "@/components/graph/DelayedRiseCautionCard";
 import { GLUCOSE_STATUS_COLORS, readHighReference, FIXED_LOW_REFERENCE } from "@/lib/glucoseStatus";
 import { motion, AnimatePresence } from "framer-motion";
 import InfoPopover from "@/components/graph/InfoPopover";
@@ -394,7 +395,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const containerRef = useRef(null);
   const graphViewportRef = useRef(null);
   const monitoringGradientRef = useRef(null);
-  const monitoringLabelRef = useRef(null);
   const monitoringA11yRef = useRef(null);
   const prevMonitoringActiveRef = useRef(false);
   const monitoringBandRefs = useRef([]);
@@ -739,7 +739,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const mergedMonitoringIntervals = useMemo(() => {
     const MS = HIGH_PROTEIN_FAT_MONITORING_HOURS * 60 * 60 * 1000;
     const intervals = (Array.isArray(carbEntries) ? carbEntries : []).
-    filter((e) => e.is_high_protein_fat_meal === true && e.consumed_at).
+    filter((e) => hasDelayedRise(e) && e.consumed_at).
     map((e) => {const s = new Date(e.consumed_at).getTime();return Number.isFinite(s) ? { start: s, end: s + MS } : null;}).
     filter(Boolean);
     return mergeMonitoringIntervals(intervals);
@@ -1094,11 +1094,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       el.style.WebkitMaskComposite = "source-in";
     });
 
-    const lEl = monitoringLabelRef.current;
-    if (lEl) {
-      lEl.style.opacity = anyActive ? "1" : "0";
-      lEl.style.transform = anyActive ? "translateY(0)" : "translateY(4px)";
-    }
     if (anyActive !== prevMonitoringActiveRef.current) {
       prevMonitoringActiveRef.current = anyActive;
       const a = monitoringA11yRef.current;
@@ -1561,15 +1556,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           </div>
         )}
       </div>
-      <div
-          ref={monitoringLabelRef}
-          className="pointer-events-none mt-2 flex items-center justify-center gap-1.5 px-3"
-          style={{ opacity: 0, transform: "translateY(4px)", transition: "opacity 350ms ease-in-out, transform 350ms ease-in-out", minHeight: 16, display: isCandlestick ? "none" : undefined }}
-          aria-hidden="true">
-          
-        <AlertTriangle className="h-3 w-3" style={{ color: "#8a5a12" }} />
-        <span className="text-[10px] font-medium" style={{ color: "#8a5a12" }}>Delayed glucose response possible, watch for extended highs and lows</span>
-      </div>
+      <DelayedRiseCautionCard carbEntries={carbEntries} now={Date.now()} />
       </div>
 
       {activeMarker &&

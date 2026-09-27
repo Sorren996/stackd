@@ -29,7 +29,6 @@ export interface ClassificationContext {
   carbs?: number;
   insulinType?: string;
   units?: number;
-  isHighProteinFat?: boolean;
   foodName?: string;
   glucoseReadings: { value: number; recorded_at: string }[];
   nearbyCarbs: { id: string; food_name: string; carbs: number; consumed_at: string }[];

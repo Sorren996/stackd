@@ -10,7 +10,6 @@ import { format, parseISO } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
 import { DateScrollField, TimeScrollField, NumberPadField, TextPadField, SelectField } from "@/components/FormInputFields";
-import HighProteinFatCheckbox from "@/components/HighProteinFatCheckbox";
 import RescueCarbCheckbox from "@/components/RescueCarbCheckbox";
 import { cancelSplitPlansForMeal, cleanupSplitPlansForDose } from "@/lib/splitDoseUtils";
 import { groupDaysByMonth, monthStats } from "@/lib/historyAggregations";
@@ -89,7 +88,8 @@ function getEditInitialForm(log) {
     food_name: log.item.food_name || log.item.name || "",
     carbs: String(log.item.carbs ?? ""),
     absorption_profile: log.item.absorption_profile || log.item.profile || "medium",
-    is_high_protein_fat_meal: log.item.is_high_protein_fat_meal || false,
+    fat_grams: log.item.fat_grams ?? "",
+    protein_grams: log.item.protein_grams ?? "",
     is_rescue_carb: log.item.is_rescue_carb === true || log.item.classification === "rescue_carbs",
     date: toDateValue(log.item.consumed_at),
     time: toTimeValue(log.item.consumed_at),
@@ -187,7 +187,8 @@ function EditLogSheet({ log, onClose, onSave, isSaving }) {
         profile: form.absorption_profile || "medium",
         consumed_at: consumedAt,
         notes: form.notes || undefined,
-        is_high_protein_fat_meal: form.is_high_protein_fat_meal || false,
+        fat_grams: Number(form.fat_grams) || 0,
+        protein_grams: Number(form.protein_grams) || 0,
         is_rescue_carb: form.is_rescue_carb || false,
       },
     });
@@ -244,10 +245,10 @@ function EditLogSheet({ log, onClose, onSave, isSaving }) {
                   options={absorptionProfileOptions}
                 />
               </div>
-              <HighProteinFatCheckbox
-                checked={form.is_high_protein_fat_meal}
-                onChange={(checked) => updateField("is_high_protein_fat_meal", checked)}
-              />
+              <div className="grid grid-cols-2 gap-2">
+                <NumberPadField label="Protein" value={form.protein_grams} onChange={(value) => updateField("protein_grams", value)} unit="g" />
+                <NumberPadField label="Fat" value={form.fat_grams} onChange={(value) => updateField("fat_grams", value)} unit="g" />
+              </div>
               <RescueCarbCheckbox
                 checked={form.is_rescue_carb}
                 onChange={(checked) => updateField("is_rescue_carb", checked)}

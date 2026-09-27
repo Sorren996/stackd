@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.41';
 import { computeMealResponse, DEFAULT_SETTINGS } from '../../shared/mealResponseAnalysis.ts';
+import { hasDelayedRise } from '../../shared/delayedRiseDetection.ts';
 
 // Scheduled Meal Memory analysis pipeline (no user context — service role).
 // Scans CarbEntry records that are at least 4 hours old and either have no
@@ -82,7 +83,7 @@ Deno.serve(async (req) => {
         const mealTime = new Date(meal.consumed_at).getTime();
         if (!Number.isFinite(mealTime)) { skipped++; continue; }
 
-        const windowEnd = mealTime + (meal.is_high_protein_fat_meal ? 6 : 4) * HOUR_MS;
+        const windowEnd = mealTime + (hasDelayedRise(meal) ? 8 : 4) * HOUR_MS;
         const fetchStart = new Date(mealTime - 2 * HOUR_MS).toISOString();
         const fetchEnd = new Date(windowEnd + 2 * HOUR_MS).toISOString();
 

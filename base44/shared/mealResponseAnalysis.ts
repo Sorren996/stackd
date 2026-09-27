@@ -4,6 +4,7 @@
 // (no frontend imports) so it runs in the backend runtime.
 
 import { buildMealFingerprint } from "./mealFingerprint.ts";
+import { hasDelayedRise } from "./delayedRiseDetection.ts";
 
 const MINUTE_MS = 60 * 1000;
 
@@ -114,8 +115,8 @@ export function computeMealResponse(
   const mealTime = timeOf(meal, "consumed_at");
   if (!Number.isFinite(mealTime)) return null;
 
-  const highProteinFat = Boolean(meal.is_high_protein_fat_meal);
-  const windowHours = highProteinFat ? 6 : 4;
+  const highProteinFat = hasDelayedRise(meal);
+  const windowHours = highProteinFat ? 8 : 4;
   const windowEnd = mealTime + windowHours * 60 * MINUTE_MS;
   const windowStart = mealTime - 30 * MINUTE_MS;
   const carbs = Number(meal.carbs) || 0;

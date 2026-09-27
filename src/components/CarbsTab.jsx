@@ -3,7 +3,7 @@ import { FOOD_DATABASE } from "@/lib/carbAbsorption";
 import { base44 } from "@/api/base44Client";
 import { InvokeLLM, UploadFile } from "@/api/integrations";
 import { Camera, Check, Clock, Loader2, PenLine, Sparkles, X } from "lucide-react";
-import HighProteinFatCheckbox from "@/components/HighProteinFatCheckbox";
+import { hasDelayedRise } from "@/lib/mealMonitoring";
 import RescueCarbCheckbox from "@/components/RescueCarbCheckbox";
 import { toast } from "sonner";
 import { DateScrollField, TimeScrollField, NumberPadField, TextPadField } from "@/components/FormInputFields";
@@ -75,8 +75,9 @@ function CarbsTab({ open, onSubmit, isPending, onDirtyChange, embedded, external
   const [recentFoods, setRecentFoods] = useState([]);
   const [carbTime, setCarbTime] = useState(() => new Date().toTimeString().slice(0, 5));
   const [carbDate, setCarbDate] = useState(getTodayDateValue);
-  const [isHighProteinFat, setIsHighProteinFat] = useState(false);
   const [isRescueCarb, setIsRescueCarb] = useState(false);
+  const [customProtein, setCustomProtein] = useState("");
+  const [customFat, setCustomFat] = useState("");
   const [memoryMatch, setMemoryMatch] = useState(null);
   const [memoryCurrent, setMemoryCurrent] = useState(null);
   const [memoryPending, setMemoryPending] = useState(null);
@@ -89,7 +90,7 @@ function CarbsTab({ open, onSubmit, isPending, onDirtyChange, embedded, external
 
   useEffect(() => {
     onDirtyChange?.(
-      Boolean(mealText || mealPhotoFile || estimatedMeal || customFoodName || customCarbs || selectedFoods.length > 0)
+      Boolean(mealText || mealPhotoFile || estimatedMeal || customFoodName || customCarbs || customProtein || customFat || selectedFoods.length > 0)
     );
   }, [mealText, mealPhotoFile, estimatedMeal, customFoodName, customCarbs, selectedFoods, onDirtyChange]);
 
@@ -162,6 +163,9 @@ function CarbsTab({ open, onSubmit, isPending, onDirtyChange, embedded, external
         ? selectedFoods[0].food.name
         : selectedFoods.map((f) => f.food.name).join(" ");
   const gateCarbs = isEstimateMode ? Number(estimatedMeal?.carbs) : isCustomMode ? Number(customCarbs) : totalCarbs;
+  const currentFat = isEstimateMode ? Number(estimatedMeal?.fat) : isCustomMode ? Number(customFat) : 0;
+  const currentProtein = isEstimateMode ? Number(estimatedMeal?.protein) : isCustomMode ? Number(customProtein) : 0;
+  const currentMealQualifies = hasDelayedRise({ fat_grams: currentFat, protein_grams: currentProtein, carbs: gateCarbs });
 
   // Surface the live carb total + meal name to the parent sheet so it can show
   // a dynamic "Expected meal insulin" estimate alongside the insulin input.
@@ -178,7 +182,7 @@ function CarbsTab({ open, onSubmit, isPending, onDirtyChange, embedded, external
 
     setIsCheckingMemory(true);
     try {
-      const result = await findMealMemory({ mealName: name, carbs, highProteinFat: isHighProteinFat, mealTime: Date.now() });
+      const result = await findMealMemory({ mealName: name, carbs, highProteinFat: currentMealQualifies, mealTime: Date.now() });
       if (result?.found && result.best) {
         setMemoryMatch(result.best);
         setMemoryCurrent({ mealName: name, carbs, fingerprint: result.currentFingerprint, normalized_name: result.currentFingerprint?.normalized_name || name });
@@ -373,11 +377,11 @@ Do not give insulin dosing advice.
         absorption_profile: absorptionProfile,
         consumed_at: consumedAt,
         is_custom: true,
-        is_high_protein_fat_meal: isHighProteinFat,
+        fat_grams: Number(estimatedMeal.fat) || 0,
+        protein_grams: Number(estimatedMeal.protein) || 0,
         is_rescue_carb: isRescueCarb,
       },
     ], splitPlan);
-    setIsHighProteinFat(false);
     setIsRescueCarb(false);
   };
 
@@ -403,15 +407,17 @@ Do not give insulin dosing advice.
         absorption_profile: profile,
         consumed_at: consumedAt,
         is_custom: true,
-        is_high_protein_fat_meal: isHighProteinFat,
+        fat_grams: Number(customFat) || 0,
+        protein_grams: Number(customProtein) || 0,
         is_rescue_carb: isRescueCarb,
       },
     ], splitPlan);
 
-    setIsHighProteinFat(false);
     setIsRescueCarb(false);
     setCustomFoodName("");
     setCustomCarbs("");
+    setCustomProtein("");
+    setCustomFat("");
   };
 
   const addFood = (food) => {
@@ -451,12 +457,12 @@ Do not give insulin dosing advice.
         serving_amount: 1,
         consumed_at: consumedAt,
         is_custom: false,
-        is_high_protein_fat_meal: isHighProteinFat,
+        fat_grams: 0,
+        protein_grams: 0,
         is_rescue_carb: isRescueCarb,
       })),
       splitPlan
     );
-    setIsHighProteinFat(false);
     setIsRescueCarb(false);
   };
 
@@ -524,6 +530,32 @@ Do not give insulin dosing advice.
                     placeholder="0"
                     maxLength={5}
                   />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <span className="stackd-section-label">Protein</span>
+                  <div className="mt-2">
+                    <NumberPadField
+                      value={customProtein}
+                      onChange={setCustomProtein}
+                      unit="g"
+                      placeholder="0"
+                      maxLength={5}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <span className="stackd-section-label">Fat</span>
+                  <div className="mt-2">
+                    <NumberPadField
+                      value={customFat}
+                      onChange={setCustomFat}
+                      unit="g"
+                      placeholder="0"
+                      maxLength={5}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -636,13 +668,7 @@ Do not give insulin dosing advice.
                 </div>
               )}
 
-              {estimatedMeal && (Number(estimatedMeal.protein) >= 30 || Number(estimatedMeal.fat) >= 20) && !isHighProteinFat && (
-                <div className="rounded-xl px-3.5 py-2.5" style={{ background: "rgba(138,90,18,0.08)" }}>
-                  <p className="text-[11px] leading-relaxed" style={{ color: "#8a5a12" }}>
-                    This meal may contain substantial protein or fat. Review the monitoring option below.
-                  </p>
-                </div>
-              )}
+
             </div>
           ) : (
             <div className="space-y-5">
@@ -765,12 +791,19 @@ Do not give insulin dosing advice.
             </div>
           )}
 
+          {currentMealQualifies && (
+            <div className="mt-4 rounded-xl px-3.5 py-2.5" style={{ background: "rgba(138,90,18,0.08)" }}>
+              <p className="text-[11px] leading-relaxed" style={{ color: "#8a5a12" }}>
+                Extended monitoring will be added based on the fat and protein in this meal.
+              </p>
+            </div>
+          )}
+
           <div className="mt-4 space-y-3">
-            <HighProteinFatCheckbox checked={isHighProteinFat} onChange={setIsHighProteinFat} />
             <RescueCarbCheckbox checked={isRescueCarb} onChange={setIsRescueCarb} />
           </div>
 
-          {isHighProteinFat && (
+          {currentMealQualifies && (
             <SplitDosePlanner
               mealName={currentMealName}
               expectedDose={expectedDose}

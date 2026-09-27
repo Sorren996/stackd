@@ -103,7 +103,7 @@ export default async function(req: Request): Promise<Response> {
       .filter((d: any) => d.minutes_from_log !== null);
 
     const logEntry = isCarb
-      ? { type: 'food', food_name: data.food_name, carbs: data.carbs, is_high_protein_fat_meal: data.is_high_protein_fat_meal }
+      ? { type: 'food', food_name: data.food_name, carbs: data.carbs }
       : { type: 'insulin', insulin_type: data.insulin_type, units: data.units };
 
     const classes = isCarb ? VALID_CARB_CLASSES : VALID_INSULIN_CLASSES;
@@ -116,7 +116,6 @@ export default async function(req: Request): Promise<Response> {
       carbs: isCarb ? Number(data.carbs) || 0 : undefined,
       insulinType: isInsulin ? data.insulin_type : undefined,
       units: isInsulin ? Number(data.units) || 0 : undefined,
-      isHighProteinFat: isCarb ? data.is_high_protein_fat_meal : undefined,
       foodName: isCarb ? data.food_name : undefined,
       glucoseReadings: glucoseReadings.map((r: any) => ({ value: r.value, recorded_at: r.recorded_at })),
       nearbyCarbs: userCarbs.filter((c: any) => c.id !== entityId).slice(0, 8).map((c: any) => ({ id: c.id, food_name: c.food_name, carbs: c.carbs, consumed_at: c.consumed_at })),

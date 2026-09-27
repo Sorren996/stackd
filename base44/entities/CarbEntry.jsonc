@@ -15,6 +15,14 @@
       "type": "number",
       "description": "Total carbohydrates in grams"
     },
+    "fat_grams": {
+      "type": "number",
+      "description": "Fat grams captured at logging time. Used with protein_grams to auto-detect delayed-rise (high fat/protein) meals for extended monitoring."
+    },
+    "protein_grams": {
+      "type": "number",
+      "description": "Protein grams captured at logging time. Used with fat_grams to auto-detect delayed-rise (high fat/protein) meals for extended monitoring."
+    },
     "serving_amount": {
       "type": "number",
       "default": 1,
@@ -37,11 +45,6 @@
       "type": "string",
       "format": "date-time",
       "description": "When the food was consumed"
-    },
-    "is_high_protein_fat_meal": {
-      "type": "boolean",
-      "default": false,
-      "description": "Whether this meal was flagged as high protein or high fat for monitoring purposes"
     },
     "is_rescue_carb": {
       "type": "boolean",

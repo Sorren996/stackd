@@ -8,6 +8,7 @@ import {
   isBasalInsulinType,
 } from "@/lib/insulinPharmacology";
 import { aggregateStats } from "@/lib/historyAggregations";
+import { hasDelayedRise } from "@/lib/mealMonitoring";
 
 const HOUR_MS = 60 * 60 * 1000;
 const MIN_MS = 60 * 1000;
@@ -74,7 +75,7 @@ export function computeMealOutcomes(carbs, insulin, glucose) {
         glucoseAt1h: at1h?.value ?? null,
         glucoseAt2h: at2h?.value ?? null,
         rise: peak.value - startingReading.value,
-        highProteinFat: carb.is_high_protein_fat_meal === true,
+        highProteinFat: hasDelayedRise(carb),
       };
     })
     .filter(Boolean)
