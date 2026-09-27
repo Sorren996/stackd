@@ -1563,12 +1563,12 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       </div>
       <div
           ref={monitoringLabelRef}
-          className="pointer-events-none mt-1 flex items-center justify-center gap-1.5"
+          className="pointer-events-none mt-2 flex items-center justify-center gap-1.5 px-3"
           style={{ opacity: 0, transform: "translateY(4px)", transition: "opacity 350ms ease-in-out, transform 350ms ease-in-out", minHeight: 16, display: isCandlestick ? "none" : undefined }}
           aria-hidden="true">
           
         <AlertTriangle className="h-3 w-3" style={{ color: "#8a5a12" }} />
-        <span className="text-[9px] font-medium" style={{ color: "#8a5a12" }}>Delayed glucose response possible. Monitor for extended high's and low's.</span>
+        <span className="text-[10px] font-medium" style={{ color: "#8a5a12" }}>Delayed glucose response possible, watch for extended highs and lows</span>
       </div>
       </div>
 

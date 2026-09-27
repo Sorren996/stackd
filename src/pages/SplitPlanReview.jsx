@@ -258,7 +258,7 @@ export default function SplitPlanReview() {
   if (planLoading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <Activity className="h-8 w-8 animate-pulse text-white/30" />
+        <Activity className="h-8 w-8 animate-pulse" style={{ color: "#eadccf" }} />
       </div>
     );
   }
@@ -266,8 +266,8 @@ export default function SplitPlanReview() {
   if (!plan) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 text-center">
-        <p className="text-sm text-white/45">This plan could not be found.</p>
-        <button onClick={() => navigate("/")} className="mt-4 text-sm underline" style={{ color: "#5b6550" }}>
+        <p className="text-sm" style={{ color: "#eadccf" }}>This plan could not be found.</p>
+        <button onClick={() => navigate("/")} className="mt-4 text-sm underline" style={{ color: "#f7f1e8" }}>
           Return to your flow
         </button>
       </div>
@@ -290,8 +290,8 @@ export default function SplitPlanReview() {
           <ChevronLeft className="h-5 w-5" />
         </button>
         <div>
-          <h1 className="text-lg font-bold text-white">Meal Plan Review</h1>
-          <p className="text-xs text-white/40">{STATUS_LABELS[planStatus]}</p>
+          <h1 className="text-lg font-bold" style={{ color: "#f7f1e8" }}>Meal Plan Review</h1>
+          <p className="text-xs" style={{ color: "#eadccf" }}>{STATUS_LABELS[planStatus]}</p>
         </div>
       </div>
 
@@ -315,10 +315,10 @@ export default function SplitPlanReview() {
       {/* Safety states */}
       {!isTerminal && (
         <>
-          <p className="px-1 text-[10px] font-bold uppercase tracking-[0.18em] text-white/40">
+          <p className="px-1 text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: "#eadccf" }}>
             Time to review your meal plan
           </p>
-          <p className="-mt-2 px-1 text-xs leading-relaxed text-white/45">
+          <p className="-mt-2 px-1 text-xs leading-relaxed" style={{ color: "#d8cec2" }}>
             Review your current glucose, direction, recent insulin, and active insulin before deciding whether to log a follow-up portion.
           </p>
 
@@ -393,8 +393,8 @@ export default function SplitPlanReview() {
             </div>
             {hpfStatus.isActive && (
               <div className="mt-2 flex items-center gap-1.5 border-t pt-2" style={{ borderColor: "#eadccf" }}>
-                <AlertTriangle className="h-3 w-3" style={{ color: "#af751b", opacity: 0.8 }} />
-                <span className="text-[11px]" style={{ color: "#af751b", opacity: 0.7 }}>High protein/fat window still active</span>
+                <AlertTriangle className="h-3 w-3" style={{ color: "#8a5a12" }} />
+                <span className="text-[11px]" style={{ color: "#8a5a12" }}>High protein/fat window still active</span>
               </div>
             )}
           </div>
@@ -434,7 +434,8 @@ export default function SplitPlanReview() {
             <button
               type="button"
               onClick={() => navigate("/")}
-              className="w-full py-2 text-sm font-medium text-white/40 transition hover:text-white/60"
+              className="w-full py-2 text-sm font-medium transition hover:opacity-70"
+              style={{ color: "#eadccf" }}
             >
               Close
             </button>
@@ -513,20 +514,27 @@ function SafetyMessage({ title, message, color, glucoseValue, glucoseTime, actio
   );
 }
 
+const CAUTION_TITLE_COLORS = {
+  "#8a7f70": "#6b6153",
+  "#c97060": "#9c3f2e",
+  "#af751b": "#8a5a12",
+};
+
 function CautionCard({ title, message, color, items }) {
+  const titleColor = CAUTION_TITLE_COLORS[color] || "#3f3830";
   return (
-    <div className="rounded-2xl border p-4" style={{ borderColor: `${color}30`, background: `${color}0d` }}>
+    <div className="rounded-2xl border p-4" style={{ borderColor: "#eadccf", background: "#fdf9f2", borderLeft: `4px solid ${color}` }}>
       <div className="flex items-start gap-2.5">
         <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" style={{ color }} />
         <div className="min-w-0">
-          <p className="text-sm font-semibold" style={{ color }}>{title}</p>
-          <p className="mt-1 text-xs leading-relaxed text-white/50">{message}</p>
+          <p className="text-sm font-semibold" style={{ color: titleColor }}>{title}</p>
+          <p className="mt-1 text-xs leading-relaxed" style={{ color: "#6b6153" }}>{message}</p>
           {items && (
             <div className="mt-2 space-y-1">
               {items.map((item, i) => (
                 <div key={i} className="flex items-center justify-between text-xs">
-                  <span className="text-white/60">{item.label}</span>
-                  <span className="text-white/35">{item.time}</span>
+                  <span style={{ color: "#6b6153" }}>{item.label}</span>
+                  <span style={{ color: "#746959" }}>{item.time}</span>
                 </div>
               ))}
             </div>
