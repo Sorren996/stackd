@@ -45,16 +45,9 @@ export default function RightNowView({
         </h1>
       </div>
 
-      {/* Segmented control — sliding active indicator */}
+      {/* Tab switcher — copper underline on active tab */}
       <div className="mt-3 px-1">
-        <div className="relative flex gap-1 rounded-full p-1" style={{ background: "#f0e8db" }}>
-          {/* Sliding espresso pill */}
-          <motion.div
-            className="absolute inset-y-1 rounded-full"
-            style={{ background: "#3f3830", width: "calc(50% - 4px)" }}
-            animate={{ left: activeIndex === 0 ? 4 : "calc(50% + 0px)" }}
-            transition={{ type: "spring", stiffness: 380, damping: 32 }}
-          />
+        <div className="flex gap-6 border-b" style={{ borderColor: "#eadccf" }}>
           {TABS.map((t) => {
             const active = t.id === tab;
             return (
@@ -62,11 +55,19 @@ export default function RightNowView({
                 key={t.id}
                 type="button"
                 onClick={() => selectTab(t.id)}
-                className="relative z-10 flex-1 rounded-full py-2 text-center text-[12px] font-semibold transition-colors"
-                style={{ color: active ? "#f7f1e8" : "#6b6153" }}
+                className="relative pb-2 text-center text-[12px] font-semibold transition-colors"
+                style={{ color: active ? "#3f3830" : "#746959" }}
                 aria-pressed={active}
               >
                 {t.label}
+                {active &&
+                <motion.div
+                  layoutId="tab-underline"
+                  className="absolute bottom-[-1px] left-0 right-0 h-[2px]"
+                  style={{ background: "#9c5228" }}
+                  transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                />
+                }
               </button>
             );
           })}

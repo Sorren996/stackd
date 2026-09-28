@@ -1,5 +1,6 @@
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { Check, Loader2, Gauge, Droplets } from "lucide-react";
+import { getGlucoseUnits, setGlucoseUnits, formatGlucose, glucoseUnitLabel } from "@/lib/glucoseUnits";
 import {
   HIGH_REFERENCE_DEFAULT,
   HIGH_REFERENCE_MIN,
@@ -10,13 +11,19 @@ import HighGlucosePicker from "@/components/settings/HighGlucosePicker";
 import SectionCard from "@/components/editorial/SectionCard";
 
 const HEIGHT_OPTIONS = [
-  { value: 300, label: "300 mg/dL", desc: "A closer view of your in-range rhythm." },
-  { value: 400, label: "400 mg/dL", desc: "More headroom for highs while keeping your range centered." },
+  { value: 300, label: `300 ${glucoseUnitLabel()}`, desc: "A closer view of your in-range rhythm." },
+  { value: 400, label: `400 ${glucoseUnitLabel()}`, desc: "More headroom for highs while keeping your range centered." },
+];
+
+const UNIT_OPTIONS = [
+  { value: "mg/dL", label: "mg/dL", desc: "Standard unit used in the United States." },
+  { value: "mmol/L", label: "mmol/L", desc: "International standard. Values show with one decimal." },
 ];
 
 export default function DisplaySettings() {
   const { settings, isLoading, save, isSaving } = useUserSettings();
   const currentHeight = settings?.graph_height === 300 ? 300 : 400;
+  const currentUnits = settings?.glucose_units || getGlucoseUnits();
   const currentHigh = Number.isFinite(settings?.high_glucose_reference)
     ? Math.max(HIGH_REFERENCE_MIN, Math.min(HIGH_REFERENCE_MAX, Math.round(settings.high_glucose_reference / HIGH_REFERENCE_STEP) * HIGH_REFERENCE_STEP))
     : HIGH_REFERENCE_DEFAULT;
@@ -38,6 +45,12 @@ export default function DisplaySettings() {
     save({ graph_height: value });
   };
 
+  const handleSelectUnits = (value) => {
+    if (value === currentUnits || isSaving) return;
+    setGlucoseUnits(value);
+    save({ glucose_units: value });
+  };
+
   const handleSelectHigh = (value) => {
     if (value === currentHigh || isSaving) return;
     localStorage.setItem("high_glucose_reference", String(value));
@@ -55,6 +68,33 @@ export default function DisplaySettings() {
 
   return (
     <div className="space-y-6">
+      <SectionCard label="Glucose Units">
+        <div className="space-y-3 pt-3 pb-2">
+          {UNIT_OPTIONS.map((opt) => {
+            const selected = opt.value === currentUnits;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => handleSelectUnits(opt.value)}
+                disabled={isSaving}
+                className="w-full flex items-center gap-4 rounded-2xl border p-4 text-left transition active:scale-[0.99]"
+                style={selected
+                  ? { background: "rgba(91,101,80,0.10)", borderColor: "rgba(91,101,80,0.40)" }
+                  : { background: "#fdf9f2", borderColor: "#eadccf" }
+                }
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold" style={{ color: "#3f3830" }}>{opt.label}</p>
+                  <p className="text-xs mt-0.5 leading-relaxed" style={{ color: "#746959" }}>{opt.desc}</p>
+                </div>
+                {selected && <Check className="h-5 w-5 shrink-0" style={{ color: "#4d5742" }} />}
+              </button>
+            );
+          })}
+        </div>
+      </SectionCard>
+
       <SectionCard label="Graph Height">
         <div className="space-y-3 pt-3 pb-2">
           {HEIGHT_OPTIONS.map((opt) => {
@@ -86,7 +126,7 @@ export default function DisplaySettings() {
         <div className="pt-3 pb-2">
           <div className="flex items-baseline justify-between">
             <span className="text-xs" style={{ color: "#6b6153" }}>Secondary reference on Your Flow</span>
-            <span className="text-2xl font-bold" style={{ color: "#8a5a12" }}>{currentHigh}<span className="ml-1 text-xs font-medium" style={{ color: "#746959" }}>mg/dL</span></span>
+            <span className="text-2xl font-bold tabular-nums" style={{ color: "#8a5a12" }}>{formatGlucose(currentHigh)}<span className="ml-1 text-xs font-medium" style={{ color: "#746959" }}>{glucoseUnitLabel()}</span></span>
           </div>
           <div className="mt-4">
             <HighGlucosePicker value={currentHigh} onChange={handleSelectHigh} />

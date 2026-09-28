@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import DashboardCard from "@/components/dashboard/DashboardCard";
 import MiniActivitySparkline from "./MiniActivitySparkline";
 import SwipeableRow from "@/components/SwipeableRow";
@@ -149,12 +150,17 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
       {/* 1. Gentle awareness banner */}
       {showStackingBanner &&
       <DashboardCard className="px-4 py-3">
-          <p className="text-[13px] font-semibold leading-snug" style={{ color: PALETTE.ink }}>
-            {activeBolusCount} rapid doses are active at once
-          </p>
-          <p className="mt-0.5 text-[12px] leading-relaxed" style={{ color: PALETTE.muted }}>
-            Notice how you feel. The curves below show where each one is.
-          </p>
+          <div className="flex items-start gap-2">
+            <span className="mt-0.5 shrink-0 text-[14px]" style={{ color: PALETTE.amber }}>⚠</span>
+            <div>
+              <p className="text-[13px] font-semibold leading-snug" style={{ color: PALETTE.ink }}>
+                {activeBolusCount} rapid doses are active at once
+              </p>
+              <p className="mt-0.5 text-[12px] leading-relaxed" style={{ color: PALETTE.muted }}>
+                Notice how you feel. The curves below show where each one is.
+              </p>
+            </div>
+          </div>
         </DashboardCard>
       }
 
@@ -217,19 +223,19 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
                       {fmtIob(dose.iob)}
                     </span>
                     {status.remaining &&
-                  <span className="block text-[10px] tabular-nums" style={{ color: PALETTE.faint }}>
-                        clears in {status.remaining}
+                    <span className="block text-[10px] tabular-nums" style={{ color: PALETTE.faint }}>
+                        clears in <motion.span key={status.remaining} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>{status.remaining}</motion.span>
                       </span>
-                  }
-                  </span>
-                </div>
-              </SwipeableRow>);
+                    }
+                    </span>
+                    </div>
+                    </SwipeableRow>);
 
-          })}
-          </div> :
+                    })}
+                    </div> :
 
-        <p className="py-2 text-[12px]" style={{ color: PALETTE.muted }}>No rapid insulin on board.</p>
-        }
+                    <p className="py-2 text-[12px]" style={{ color: PALETTE.muted }}>No rapid insulin on board.</p>
+                    }
       </DashboardCard>
 
       {/* 4. Basal / background card */}
@@ -289,14 +295,14 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
                     </span>
                     {status.remaining &&
                   <span className="block text-[10px] tabular-nums" style={{ color: PALETTE.faint }}>
-                        clears in {status.remaining}
-                      </span>
-                  }
-                  </span>
-                </div>
-              </SwipeableRow>);
+                        clears in <motion.span key={status.remaining} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>{status.remaining}</motion.span>
+                        </span>
+                        }
+                        </span>
+                        </div>
+                        </SwipeableRow>);
 
-          })}
+                        })}
           </div>
 
           

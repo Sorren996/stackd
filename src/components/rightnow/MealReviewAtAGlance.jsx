@@ -11,6 +11,7 @@ import MealEditOverlay from "@/components/insulin/MealEditOverlay";
 import EstimatedSupportCard from "./EstimatedSupportCard";
 import { getCarbAbsorptionAt, getMealWindowMinutes, getMealPeakMinutes } from "@/lib/carbAbsorption";
 import { getMealSlotLabel } from "@/lib/mealSlot";
+import { formatGlucose, formatGlucoseDelta, formatGlucoseAbsDelta, glucoseUnitLabel, glucoseDeltaUnit, getGlucoseUnits } from "@/lib/glucoseUnits";
 
 const PALETTE = {
   ink: "#3f3830",
@@ -169,17 +170,17 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
     if (glucoseAnalysis.secondRise) {
       glucoseLine = "A second gentle climb appeared. The lingering energy from this meal is still working through.";
     } else if (Number.isFinite(peakOutcome) && peakOutcome > glucoseAtStart + 15) {
-      const rise = Math.round(peakOutcome - glucoseAtStart);
+      const riseRaw = peakOutcome - glucoseAtStart;
       // Only say "settled back" when glucose has actually dropped meaningfully
       // below the peak. Otherwise describe the rise neutrally.
       const droppedBelowPeak = Number.isFinite(glucoseNow) && glucoseNow < peakOutcome - 15;
       glucoseLine = droppedBelowPeak ?
-      `Rose ${rise} points, then settled back.` :
-      `Rose ${rise} points so far, still near the peak.`;
+      `Rose ${formatGlucoseAbsDelta(riseRaw)} ${glucoseDeltaUnit()}, then settled back.` :
+      `Rose ${formatGlucoseAbsDelta(riseRaw)} ${glucoseDeltaUnit()} so far, still near the peak.`;
     } else if (delta > 15) {
-      glucoseLine = `Climbing gently, up ${delta} points so far.`;
+      glucoseLine = `Climbing gently, up ${formatGlucoseAbsDelta(delta)} ${glucoseDeltaUnit()} so far.`;
     } else if (delta < -15) {
-      glucoseLine = `A steady descent, down ${Math.abs(delta)} points.`;
+      glucoseLine = `A steady descent, down ${formatGlucoseAbsDelta(delta)} ${glucoseDeltaUnit()}.`;
     } else if (Math.abs(delta) <= 15) {
       if (mealResponse.hasDelayedRise) {
         glucoseLine = "Steady so far. Watching for a possible delayed wave.";
@@ -191,14 +192,14 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
 
   // Outcome labels — when the post-meal max never exceeded the pre-meal value,
   // label as End / Change instead of Peak / Rise so the stats never contradict.
-  const rose = Number.isFinite(peakOutcome) && Number.isFinite(glucoseAtStart) ?
-  Math.round(peakOutcome - glucoseAtStart) :
+  const rawRose = Number.isFinite(peakOutcome) && Number.isFinite(glucoseAtStart) ?
+  peakOutcome - glucoseAtStart :
   null;
-  const didRise = rose != null && rose > 0;
-  const outcomeValue = Number.isFinite(peakOutcome) ? Math.round(peakOutcome) :
-  Number.isFinite(glucoseNow) ? Math.round(glucoseNow) :
+  const didRise = rawRose != null && rawRose > 0;
+  const outcomeValue = Number.isFinite(peakOutcome) ? formatGlucose(peakOutcome) :
+  Number.isFinite(glucoseNow) ? formatGlucose(glucoseNow) :
   null;
-  const changeValue = (didRise ? "+" : "") + (rose != null ? rose : Number.isFinite(glucoseNow) && Number.isFinite(glucoseAtStart) ? Math.round(glucoseNow - glucoseAtStart) : "");
+  const changeValue = rawRose != null ? formatGlucoseDelta(rawRose) : (Number.isFinite(glucoseNow) && Number.isFinite(glucoseAtStart) ? formatGlucoseDelta(glucoseNow - glucoseAtStart) : "");
 
   const mealName = d.meal?.food_name || d.meal?.name || "Meal";
   const combinedFoodName = carbEntries.map((e) => e?.food_name || e?.name || "").filter(Boolean).join(", ") || mealName;
@@ -268,7 +269,7 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
             <div className="flex items-baseline gap-1.5">
               <span className="text-[10px] uppercase tracking-wider" style={{ color: PALETTE.faint }}>Before</span>
               <span className="text-[18px] font-semibold tabular-nums" style={{ color: PALETTE.ink }}>
-                {Number.isFinite(glucoseAtStart) ? Math.round(glucoseAtStart) : "-"}
+                {Number.isFinite(glucoseAtStart) ? formatGlucose(glucoseAtStart) : "-"}
               </span>
             </div>
             {outcomeValue != null &&
@@ -310,47 +311,38 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
             </div>
           }
 
-          {/* Enhanced metrics */}
-          <div className="mt-3 space-y-1.5">
-            {glucoseAnalysis.timeToPeakMin != null &&
-            <div className="flex items-baseline justify-between">
-                <span className="text-[11px]" style={{ color: PALETTE.faint }}>Time to peak</span>
-                <span className="text-[12px] font-semibold tabular-nums" style={{ color: PALETTE.muted }}>
-                  {glucoseAnalysis.timeToPeakMin} min
-                </span>
-              </div>
-            }
-            {glucoseAnalysis.deltaFromBaseline != null &&
-            <div className="flex items-baseline justify-between">
-                <span className="text-[11px]" style={{ color: PALETTE.faint }}>Rise from pre-meal</span>
-                <span className="text-[12px] font-semibold tabular-nums" style={{ color: PALETTE.muted }}>
-                  {glucoseAnalysis.deltaFromBaseline > 0 ? "+" : ""}{glucoseAnalysis.deltaFromBaseline} mg/dL
-                </span>
-              </div>
-            }
-            {glucoseAnalysis.timeInRangePct != null &&
-            <div className="flex items-baseline justify-between">
-                <span className="text-[11px]" style={{ color: PALETTE.faint }}>Time in range</span>
-                <span className="text-[12px] font-semibold tabular-nums" style={{ color: PALETTE.muted }}>
-                  {glucoseAnalysis.timeInRangePct}%
-                </span>
-              </div>
-            }
-            {glucoseAnalysis.backInRangeMin != null ?
-            <div className="flex items-baseline justify-between">
-                <span className="text-[11px]" style={{ color: PALETTE.faint }}>Back to range after</span>
-                <span className="text-[12px] font-semibold tabular-nums" style={{ color: PALETTE.muted }}>
-                  {formatDuration(glucoseAnalysis.backInRangeMin)}
-                </span>
-              </div> :
-            glucoseAnalysis.elevatedDurationMin > 0 &&
-            <div className="flex items-baseline justify-between">
-                <span className="text-[11px]" style={{ color: PALETTE.faint }}>Still elevated</span>
-                <span className="text-[12px] font-semibold tabular-nums" style={{ color: PALETTE.muted }}>
-                  {formatDuration(glucoseAnalysis.elevatedDurationMin)}
-                </span>
-              </div>
-            }
+          {/* Enhanced metrics — 2x2 grid of stat tiles */}
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <div>
+              <span className="block text-[9px] uppercase tracking-wider" style={{ color: PALETTE.faint }}>Time to peak</span>
+              <span className="text-[16px] font-semibold tabular-nums" style={{ color: PALETTE.ink }}>
+                {glucoseAnalysis.timeToPeakMin != null ? formatDuration(glucoseAnalysis.timeToPeakMin) : "-"}
+              </span>
+            </div>
+            <div>
+              <span className="block text-[9px] uppercase tracking-wider" style={{ color: PALETTE.faint }}>Rise from pre-meal</span>
+              <span className="text-[16px] font-semibold tabular-nums" style={{ color: PALETTE.ink }}>
+                {glucoseAnalysis.deltaFromBaseline != null ? `${formatGlucoseDelta(glucoseAnalysis.deltaFromBaseline)} ${glucoseUnitLabel()}` : "-"}
+              </span>
+            </div>
+            <div>
+              <span className="block text-[9px] uppercase tracking-wider" style={{ color: PALETTE.faint }}>Time in range</span>
+              <span className="text-[16px] font-semibold tabular-nums" style={{ color: PALETTE.ink }}>
+                {glucoseAnalysis.timeInRangePct != null ? `${glucoseAnalysis.timeInRangePct}%` : "-"}
+              </span>
+            </div>
+            <div>
+              <span className="block text-[9px] uppercase tracking-wider leading-tight" style={{ color: PALETTE.faint }}>
+                {glucoseAnalysis.backInRangeMin != null ? "Back to range" : "Still elevated"}
+              </span>
+              <span className="text-[16px] font-semibold tabular-nums" style={{ color: PALETTE.ink }}>
+                {glucoseAnalysis.backInRangeMin != null
+                  ? formatDuration(glucoseAnalysis.backInRangeMin)
+                  : glucoseAnalysis.elevatedDurationMin > 0
+                    ? formatDuration(glucoseAnalysis.elevatedDurationMin)
+                    : "-"}
+              </span>
+            </div>
           </div>
         </div>
 

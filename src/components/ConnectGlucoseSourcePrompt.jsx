@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { HeartPulse, ChevronRight, AlertCircle } from "lucide-react";
+import { Radio, ChevronRight, AlertCircle } from "lucide-react";
 
 // Warm, non-blocking invitation to connect a glucose source. Shows on the
 // Dashboard when no Dexcom connection is active — whether the user has never
@@ -54,7 +54,7 @@ export default function ConnectGlucoseSourcePrompt({ connection }) {
           {needsAttention ? (
             <AlertCircle className="h-4 w-4" style={{ color: accent.text }} />
           ) : (
-            <HeartPulse className="h-4 w-4" style={{ color: accent.text }} />
+            <Radio className="h-4 w-4" style={{ color: accent.text }} />
           )}
         </div>
         <div className="min-w-0 flex-1">

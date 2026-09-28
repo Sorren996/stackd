@@ -12,7 +12,6 @@ import { getDoseStatus, getInsulinCategory, INSULIN_PROFILES } from "@/lib/insul
 import { Activity, AlertTriangle, X, Pencil } from "lucide-react";
 import RescueCarbCheckbox from "@/components/RescueCarbCheckbox";
 import { toast } from "sonner";
-import { getVersionString } from "@/lib/appVersion";
 import { DateScrollField, TimeScrollField, NumberPadField, TextPadField, SelectField } from "@/components/FormInputFields";
 import InsulinTypeSelector from "@/components/insulin/InsulinTypeSelector";
 import UnitsStepper from "@/components/insulin/UnitsStepper";
@@ -670,11 +669,8 @@ export default function Dashboard() {
 
       <SensorSessionBanner />
 
-      <div className="mb-4 space-y-3">
+      <div className="mb-4">
         <DexcomSyncStatus />
-        {!dexcomConnected && !dexcomLoading && (
-          <ConnectGlucoseSourcePrompt connection={dexcomConnection} />
-        )}
       </div>
 
       {shouldShowEmptyState ? (
@@ -693,6 +689,9 @@ export default function Dashboard() {
               latestGlucose={latestGlucose}
               glucoseReadings={heroGlucoseReadings}
               carbEntries={recentCarbs}
+              connectBanner={!dexcomConnected && !dexcomLoading ? (
+                <ConnectGlucoseSourcePrompt connection={dexcomConnection} />
+              ) : null}
               graphSlot={
                 showGraph ? (
                   <ActivityGraph
@@ -726,12 +725,6 @@ export default function Dashboard() {
       )}
 
       <AmbientInscription />
-
-      <div className="flex w-full justify-center pt-2 pb-4">
-        <span className="text-[10px] font-medium tracking-wide" style={{ color: "#b8aea0" }}>
-          {getVersionString()}
-        </span>
-      </div>
     </div>
   );
 }

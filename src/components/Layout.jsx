@@ -126,11 +126,13 @@ export default function Layout() {
             aria-label="Stackd home"
             className="relative flex items-center justify-center rounded-full transition-all"
           >
+            {isDashboardRoute &&
             <motion.img
               src="https://media.base44.com/images/public/6a1b93f234a8611ee1595134/9cd3c84cf_stackdappiconver3tran.png"
               alt="Stackd Logo"
               className="relative z-10 h-9 w-auto object-contain"
             />
+            }
           </button>
 
           <div className="flex items-center justify-self-end gap-2">
@@ -192,7 +194,7 @@ export default function Layout() {
       </AnimatePresence>
 
       <main
-        className="relative mx-auto w-full max-w-6xl px-4 overflow-visible pb-36"
+        className="relative mx-auto w-full max-w-6xl px-4 overflow-visible pb-44"
         style={{ paddingTop: "3.5rem" }}
       >
         <div className="min-w-0 w-full">

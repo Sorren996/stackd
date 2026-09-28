@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { Loader2, Check, ChevronRight, Pencil } from "lucide-react";
+import { getVersionString } from "@/lib/appVersion";
 import { toast } from "sonner";
 import SectionCard from "@/components/editorial/SectionCard";
 import LedgerRow from "@/components/editorial/LedgerRow";
@@ -148,6 +149,12 @@ export default function ProfileSettings() {
           Your identity stays private. <span className="font-serif-italic">Only you see these details.</span>
         </p>
       </SectionCard>
+
+      <div className="flex justify-center pt-4 pb-2">
+        <span className="text-[10px] font-medium tracking-wide" style={{ color: "#b8aea0" }}>
+          {getVersionString()}
+        </span>
+      </div>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { GLUCOSE_STATUS_COLORS } from "@/lib/glucoseStatus";
 import { formatDuration } from "@/lib/dayRecapMetrics";
+import { formatGlucose, glucoseUnitLabel } from "@/lib/glucoseUnits";
 
 function Metric({ label, value, unit, accent }) {
   return (
@@ -42,8 +43,8 @@ export default function DaySummary({ metrics, daySummary, manualCount, hasCGM, t
     return (
       <div className="space-y-3">
         <div className="flex flex-wrap items-baseline gap-2">
-          <span className="text-4xl font-black text-white">{metrics.avg}</span>
-          <span className="text-xs font-medium text-white/40">mg/dL</span>
+          <span className="text-4xl font-black text-white">{formatGlucose(metrics.avg)}</span>
+          <span className="text-xs font-medium text-white/40">{glucoseUnitLabel()}</span>
           <span
             className="ml-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold text-white/55"
             style={{ background: "#f7f1e8", borderColor: "#eadccf" }}
@@ -52,8 +53,8 @@ export default function DaySummary({ metrics, daySummary, manualCount, hasCGM, t
           </span>
         </div>
         <div className="grid grid-cols-2 gap-2.5">
-          <Metric label="Highest" value={metrics.max} unit="mg/dL" accent={GLUCOSE_STATUS_COLORS.high} />
-          <Metric label="Lowest" value={metrics.min} unit="mg/dL" accent={GLUCOSE_STATUS_COLORS.low} />
+          <Metric label="Highest" value={formatGlucose(metrics.max)} unit={glucoseUnitLabel()} accent={GLUCOSE_STATUS_COLORS.high} />
+          <Metric label="Lowest" value={formatGlucose(metrics.min)} unit={glucoseUnitLabel()} accent={GLUCOSE_STATUS_COLORS.low} />
         </div>
       </div>
     );
@@ -71,8 +72,8 @@ export default function DaySummary({ metrics, daySummary, manualCount, hasCGM, t
     <div className="space-y-3">
       <div className="flex items-end justify-between gap-3">
         <div>
-          <span className="text-4xl font-black text-white">{avg}</span>
-          <p className="text-[10px] font-medium text-white/40">mg/dL average</p>
+          <span className="text-4xl font-black text-white">{formatGlucose(avg)}</span>
+          <p className="text-[10px] font-medium text-white/40">{glucoseUnitLabel()} average</p>
         </div>
         <div className="text-right">
           <span className="text-4xl font-black" style={{ color: "#5b6550" }}>{tir}%</span>
@@ -80,8 +81,8 @@ export default function DaySummary({ metrics, daySummary, manualCount, hasCGM, t
         </div>
       </div>
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-        <Metric label="Highest" value={metrics.max} unit="mg/dL" accent={GLUCOSE_STATUS_COLORS.high} />
-        <Metric label="Lowest" value={metrics.min} unit="mg/dL" accent={GLUCOSE_STATUS_COLORS.low} />
+        <Metric label="Highest" value={formatGlucose(metrics.max)} unit={glucoseUnitLabel()} accent={GLUCOSE_STATUS_COLORS.high} />
+        <Metric label="Lowest" value={formatGlucose(metrics.min)} unit={glucoseUnitLabel()} accent={GLUCOSE_STATUS_COLORS.low} />
         <Metric label="Above range" value={formatDuration(metrics.aboveMs)} accent={GLUCOSE_STATUS_COLORS.high} />
         <Metric label="Below range" value={formatDuration(metrics.belowMs)} accent={GLUCOSE_STATUS_COLORS.low} />
       </div>

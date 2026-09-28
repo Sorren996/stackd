@@ -14,6 +14,7 @@ import DailyPatternChart from "@/components/analytics/DailyPatternChart";
 import RangeSelector from "@/components/analytics/RangeSelector";
 import { fetchAllGlucoseReadings } from "@/lib/fetchAllGlucose";
 import { evaluateSufficiency } from "@/lib/dataSufficiency";
+import { formatGlucose, glucoseUnitLabel } from "@/lib/glucoseUnits";
 
 const ANALYTICS_RANGE_KEY = "analytics_range_days";
 const DEFAULT_RANGE_DAYS = 30;
@@ -185,7 +186,7 @@ export default function Analytics() {
   const hasEnough = stats.sufficiency?.hasEnough ?? false;
 
   return (
-    <div className="mx-auto max-w-md space-y-6 pb-24 pt-2">
+    <div className="mx-auto max-w-md space-y-6 pb-44 pt-2">
       <PageHeader italicWord="rhythm" rightText={dateRangeText} />
 
       <SectionCard label="Comfort Zone">
@@ -208,7 +209,16 @@ export default function Analytics() {
 
       {stats.days.length > 0 && (
         <SectionCard label="Daily Balance">
-          <div className="flex items-end justify-between gap-2 pt-1 pb-3" style={{ height: 120 }}>
+          {stats.days.length < 3 ? (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <p className="text-sm font-semibold" style={{ color: "#3f3830" }}>Not enough data yet</p>
+              <p className="mt-1 max-w-[220px] text-xs leading-relaxed" style={{ color: "#746959" }}>
+                Keep logging to reveal how your days compare side by side.
+              </p>
+            </div>
+          ) : (
+            <>
+            <div className="flex items-end justify-between gap-2 pt-1 pb-3" style={{ height: 120 }}>
             {stats.days.map((d, i) => (
               <div key={i} className="flex flex-1 flex-col items-center gap-1.5">
                 <span className="text-[10px] font-medium tabular-nums" style={{ color: "#8a7f70" }}>
@@ -252,11 +262,13 @@ export default function Analytics() {
               )}
             </div>
           )}
+            </>
+          )}
         </SectionCard>
       )}
 
       <SectionCard label="At a Glance">
-        <LedgerRow label="Average glucose" value={`${Math.round(stats.averageGlucose)} mg/dL`} />
+        <LedgerRow label="Average glucose" value={`${formatGlucose(stats.averageGlucose)} ${glucoseUnitLabel()}`} />
         {gmi !== null && <LedgerRow label="GMI" value={`${gmi.toFixed(1)}%`} />}
         <LedgerRow label="Time above range" value={`${stats.abovePercent.toFixed(0)}%`} />
         <LedgerRow label="Time below range" value={`${stats.belowPercent.toFixed(0)}%`} />

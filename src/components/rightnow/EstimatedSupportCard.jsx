@@ -3,6 +3,7 @@ import { ChevronDown } from "lucide-react";
 import DashboardCard from "@/components/dashboard/DashboardCard";
 import MiniActivitySparkline from "./MiniActivitySparkline";
 import { getDoseTimingInfo, isBasalInsulinType } from "@/lib/insulinPharmacology";
+import { formatGlucose, glucoseUnitLabel } from "@/lib/glucoseUnits";
 
 const PALETTE = {
   ink: "#3f3830",
@@ -63,11 +64,12 @@ export default function EstimatedSupportCard({ details }) {
   const gramsPerUnit = Number.isFinite(d.gramsPerUnit) ? d.gramsPerUnit : 5 / d.mealInsulinUnitsPer5g;
   const ratioLabel = `1:${gramsPerUnit.toFixed(1)}`;
   const isfLabel = Math.round(d.insulinSensitivityMgDlPerUnit);
-  const targetLabel = Math.round(d.correctionTargetGlucose);
+  const targetLabel = formatGlucose(d.correctionTargetGlucose);
+  const unitLabel = glucoseUnitLabel();
 
   // ---- Correction line ----
   const correctionAvailable = Number.isFinite(d.correctionGlucoseValue);
-  const startingGlucose = correctionAvailable ? Math.round(d.correctionGlucoseValue) : null;
+  const startingGlucose = correctionAvailable ? formatGlucose(d.correctionGlucoseValue) : null;
   const targetLow = d.targetLow ?? 70;
   const targetHigh = d.targetHigh ?? 180;
 
@@ -77,7 +79,7 @@ export default function EstimatedSupportCard({ details }) {
     correctionLabel = "Correction, no reading";
     correctionValue = "-";
   } else if (correctionUnits > 0.01) {
-    correctionLabel = `Correction, start ${startingGlucose} / target ${targetLabel}`;
+    correctionLabel = `Correction, start ${startingGlucose} / target ${targetLabel} ${unitLabel}`;
     correctionValue = `${correctionUnits.toFixed(1)}u`;
   } else {
     const inRange = startingGlucose >= targetLow && startingGlucose <= targetHigh;
@@ -291,7 +293,7 @@ export default function EstimatedSupportCard({ details }) {
           Your plan
         </span>
         <span className="text-[11px] tabular-nums" style={{ color: PALETTE.muted }}>
-          I:C {ratioLabel}, ISF 1:{isfLabel}, target {targetLabel}
+          I:C {ratioLabel}, ISF 1:{isfLabel}, target {targetLabel} {unitLabel}
         </span>
       </div>
     </DashboardCard>

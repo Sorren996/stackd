@@ -1,5 +1,6 @@
 import { BarChart3 } from "lucide-react";
 import DaySection from "./DaySection";
+import { formatGlucose, glucoseUnitLabel } from "@/lib/glucoseUnits";
 
 export default function DayComparison({ comparison }) {
   if (!comparison) return null;
@@ -24,7 +25,7 @@ export default function DayComparison({ comparison }) {
               <p className="text-lg font-bold" style={{ color: "#5b6550" }}>{todayTir}%</p>
             ) : (
               <p className="text-lg font-bold text-white/80">
-                {todayAvg} <span className="text-[10px]">mg/dL</span>
+                {formatGlucose(todayAvg)} <span className="text-[10px]">{glucoseUnitLabel()}</span>
               </p>
             )}
             <p className="text-[9px] text-white/30">{hasTir ? "comfort zone" : "average"}</p>
@@ -38,7 +39,7 @@ export default function DayComparison({ comparison }) {
               <p className="text-lg font-bold text-white/60">{avgTir}%</p>
             ) : (
               <p className="text-lg font-bold text-white/60">
-                {avgAvg} <span className="text-[10px]">mg/dL</span>
+                {formatGlucose(avgAvg)} <span className="text-[10px]">{glucoseUnitLabel()}</span>
               </p>
             )}
             <p className="text-[9px] text-white/30">{hasTir ? "comfort zone" : "average"}</p>

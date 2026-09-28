@@ -17,6 +17,7 @@ import { useIsLightTheme } from "@/lib/theme";
 import { getGraphTheme } from "@/lib/graphTheme";
 import { useGlucoseStaleness } from "@/hooks/useGlucoseStaleness";
 import { getLatestDexcomReading, formatReadingAge } from "@/lib/glucoseStaleness";
+import { formatGlucose, glucoseUnitLabel, getGlucoseUnits } from "@/lib/glucoseUnits";
 import GlucoseTicker from "@/components/graph/GlucoseTicker";
 import TimeViewToggle from "@/components/graph/TimeViewToggle";
 import CandlestickView from "@/components/graph/CandlestickView";
@@ -109,7 +110,7 @@ function getDoseKey(dose, index = 0) {
 }
 
 function formatGlucoseDisplay(value) {
-  return Math.round(value);
+  return formatGlucose(value);
 }
 
 function formatReadingTime(time) {
@@ -205,27 +206,17 @@ function interpolateMonotoneSegment(segment, x) {
 
 function TimeAxisTick({ x, y, payload }) {
   const date = new Date(payload.value);
-  const minute = date.getMinutes();
-
-  if (minute === 30) {
-    return <circle cx={x} cy={y + 6} r={1} fill="rgba(168,158,141,0.25)" />;
-  }
-
-  if (minute === 0) {
-    return (
-      <text
-        x={x}
-        y={y + 11}
-        textAnchor="middle"
-        fill="#746959"
-        fontSize={9}
-        fontWeight={500}>
-        {format(date, "h a")}
-      </text>);
-
-  }
-
-  return null;
+  return (
+    <text
+      x={x}
+      y={y + 11}
+      textAnchor="middle"
+      fill="#746959"
+      fontSize={9}
+      fontWeight={500}>
+      {format(date, "h a")}
+    </text>
+  );
 }
 
 function getCarbGrams(entry) {
@@ -402,6 +393,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const [targetRange, setTargetRange] = useState(readTargetRange);
   const [graphHeight, setGraphHeight] = useState(readGraphHeight);
   const [highReference, setHighReference] = useState(readHighReference);
+  const [glucoseUnits, setGlucoseUnitsState] = useState(getGlucoseUnits());
 
   useEffect(() => {
     const target = graphViewportRef.current || containerRef.current;
@@ -423,6 +415,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       setTargetRange(readTargetRange());
       setGraphHeight(readGraphHeight());
       setHighReference(readHighReference());
+      setGlucoseUnitsState(getGlucoseUnits());
     };
 
     window.addEventListener("target-range-updated", updateSettings);
@@ -1161,13 +1154,16 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     return () => {
       if (scrollFrameRef.current) cancelAnimationFrame(scrollFrameRef.current);
     };
-  }, [maxScrollLeft, latestGlucoseBucket, filters.glucose, glucoseLinePoints.length, positionedMonitoringIntervals, isGlucoseStale]);
+  }, [maxScrollLeft, latestGlucoseBucket, filters.glucose, glucoseLinePoints.length, positionedMonitoringIntervals, isGlucoseStale, glucoseUnits]);
 
   if (!doses.length && !glucoseReadings.length && !carbEntries.length) return null;
 
+  // Range-driven tick count: 3h/6h → 1h interval, 12h → 2h, 24h → 4h.
+  // Prevents hundreds of duplicate hour labels from flooding the DOM.
+  const tickIntervalMs = viewWindow <= 6 ? HOUR_MS : viewWindow <= 12 ? 2 * HOUR_MS : 4 * HOUR_MS;
   const timeTicks = [];
-  const firstTick = Math.ceil(domainStart / HALF_HOUR_MS) * HALF_HOUR_MS;
-  for (let tick = firstTick; tick <= domainEnd; tick += HALF_HOUR_MS) {
+  const firstTick = Math.ceil(domainStart / tickIntervalMs) * tickIntervalMs;
+  for (let tick = firstTick; tick <= domainEnd; tick += tickIntervalMs) {
     timeTicks.push(tick);
   }
 
@@ -1238,7 +1234,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                 <Info className="h-2.5 w-2.5" />
               </span>
               }
-            <GlucoseTicker ref={tickerRef} initialValue={formatGlucoseDisplay(glucoseLinePoints[glucoseLinePoints.length - 1].value)} /> <span className="text-xs font-medium" style={{ color: "#9f7d4eff" }}>mg/dL</span>
+            <GlucoseTicker ref={tickerRef} initialValue={formatGlucoseDisplay(glucoseLinePoints[glucoseLinePoints.length - 1].value)} /> <span className="text-xs font-medium" style={{ color: "#9f7d4eff" }}>{glucoseUnitLabel()}</span>
           </div>
           <div ref={tooltipTimeRef} className="mt-1 text-xs font-medium" style={{ color: "#9f7d4eff" }}>{format(new Date(glucoseLinePoints[glucoseLinePoints.length - 1].time), "h:mm a")}</div>
           <div ref={tooltipDateRef} className="mt-0.5 text-[10px] font-medium" style={{ color: "#9f7d4eff" }}>{format(new Date(glucoseLinePoints[glucoseLinePoints.length - 1].time), "EEEE, MMM d")}</div>
@@ -1267,10 +1263,10 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             } :
             getGlucoseY;
             const refLabels = [
-            { id: "highRef", value: highReference, side: "right", color: GLUCOSE_STATUS_COLORS.high, anchor: "above", secondary: true, text: `High ${highReference}` },
-            { id: "lowRef", value: FIXED_LOW_REFERENCE, side: "right", color: GLUCOSE_STATUS_COLORS.low, anchor: "below", secondary: true, text: `${FIXED_LOW_REFERENCE}` },
-            { id: "tgtHigh", value: targetHigh, side: "right", color: gTheme.inRangeColor, anchor: "above", secondary: false, text: `${Math.round(targetHigh)}` },
-            { id: "tgtLow", value: targetLow, side: "right", color: gTheme.inRangeColor, anchor: "below", secondary: false, text: `${Math.round(targetLow)}` }];
+            { id: "highRef", value: highReference, side: "right", color: GLUCOSE_STATUS_COLORS.high, anchor: "above", secondary: true, text: `High ${formatGlucose(highReference)}` },
+            { id: "lowRef", value: FIXED_LOW_REFERENCE, side: "right", color: GLUCOSE_STATUS_COLORS.low, anchor: "below", secondary: true, text: `${formatGlucose(FIXED_LOW_REFERENCE)}` },
+            { id: "tgtHigh", value: targetHigh, side: "right", color: gTheme.inRangeColor, anchor: "above", secondary: false, text: `${formatGlucose(targetHigh)}` },
+            { id: "tgtLow", value: targetLow, side: "right", color: gTheme.inRangeColor, anchor: "below", secondary: false, text: `${formatGlucose(targetLow)}` }];
 
             return (
               <ReferenceLabels
@@ -1544,15 +1540,30 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       </div>
       </div>
       <div className="px-3 mt-2 space-y-1.5">
-        <div className="flex items-center gap-4 flex-wrap">
-          <div className="flex items-center gap-1.5">
-            <div className="h-[2px] w-4" style={{ background: "#5b6550" }} />
-            <span className="text-[10px]" style={{ color: "#746959" }}>glucose</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="h-2 w-2 rounded-full border-[1.5px]" style={{ borderColor: "#3f3830", background: "#f7f1e8" }} />
-            <span className="text-[10px]" style={{ color: "#746959" }}>meals</span>
-          </div>
+        <div className="flex items-center gap-0.5 rounded-lg border p-0.5" style={{ borderColor: "#eadccf", background: "#fdf9f2" }}>
+          <button
+            onClick={() => toggleFilter("glucose")}
+            className="relative flex items-center gap-1.5 rounded-md px-2.5 py-1 transition-colors"
+            style={{ background: filters.glucose ? "rgba(91,101,80,0.12)" : "transparent" }}
+          >
+            <div className="h-[2px] w-3" style={{ background: filters.glucose ? "#5b6550" : "#b8aea0" }} />
+            <span className="text-[10px] font-semibold" style={{ color: filters.glucose ? "#3f3830" : "#b8aea0" }}>Glucose</span>
+          </button>
+          <button
+            onClick={() => toggleFilter("carbs")}
+            className="relative flex items-center gap-1.5 rounded-md px-2.5 py-1 transition-colors"
+            style={{ background: filters.carbs ? "rgba(91,101,80,0.12)" : "transparent" }}
+          >
+            <div className="h-2 w-2 rounded-full border-[1.5px]" style={{ borderColor: filters.carbs ? "#3f3830" : "#b8aea0", background: "#f7f1e8" }} />
+            <span className="text-[10px] font-semibold" style={{ color: filters.carbs ? "#3f3830" : "#b8aea0" }}>Meals</span>
+          </button>
+          <button
+            onClick={() => toggleFilter("insulin")}
+            className="relative flex items-center gap-1.5 rounded-md px-2.5 py-1 transition-colors"
+            style={{ background: filters.insulin ? "rgba(91,101,80,0.12)" : "transparent" }}
+          >
+            <span className="text-[10px] font-semibold" style={{ color: filters.insulin ? "#3f3830" : "#b8aea0" }}>Insulin</span>
+          </button>
         </div>
         {activeDoseKeys.length > 0 && (
           <div className="flex items-center gap-4 flex-wrap">
@@ -1608,8 +1619,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         <div className="space-y-1.5">
               <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "#746959" }}>Glucose</span>
               <div className="flex items-baseline gap-1.5">
-                <span className="text-3xl font-black" style={{ color: "#d0c0aeff" }}>{activeMarker.item.value}</span>
-                <span className="text-xs" style={{ color: "#6b6153" }}>mg/dL</span>
+                <span className="text-3xl font-black tabular-nums" style={{ color: "#d0c0aeff" }}>{formatGlucose(activeMarker.item.value)}</span>
+                <span className="text-xs" style={{ color: "#6b6153" }}>{glucoseUnitLabel()}</span>
               </div>
               <p className="text-[11px]" style={{ color: "#746959" }}>{activeMarker.item.source === "dexcom" ? "CGM" : activeMarker.item.source === "system" ? "System" : "Manual"}, {format(new Date(activeMarker.item.recorded_at), "h:mm a, MMM d")}</p>
 

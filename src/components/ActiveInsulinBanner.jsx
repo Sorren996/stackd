@@ -50,6 +50,7 @@ import AnchorNumber from "@/components/editorial/AnchorNumber";
 import HairlineSection from "@/components/editorial/HairlineSection";
 import CardErrorBoundary from "@/components/CardErrorBoundary";
 import { format } from "date-fns";
+import { formatGlucose, glucoseUnitLabel, isMmolMode, formatGlucoseAbsDelta, glucoseDeltaUnit } from "@/lib/glucoseUnits";
 
 // Flip to false to instantly revert to the original dense dashboard layout.
 const CLEAN_LAYOUT = true;
@@ -494,7 +495,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
     if (recentSlopeMgDlPerMin != null && recentSlopeMgDlPerMin <= -2 && minutesSinceMeal >= 30) {
       outcomeAssessment = {
         label: "Falling steadily",
-        message: `Glucose is dropping about ${Math.abs(recentSlopeMgDlPerMin).toFixed(1)} mg/dL each minute. Worth watching closely as it settles.`,
+        message: `Glucose is dropping about ${formatGlucoseAbsDelta(recentSlopeMgDlPerMin)} ${glucoseUnitLabel()} each minute. Worth watching closely as it settles.`,
         color: "#9c3f2e"
       };
       value = "Falling steadily";
@@ -517,11 +518,11 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
     // In range now.
     else if (latestIsAfterMeal && latestInRange) {
       const startPart = correctionGlucoseAvailable
-      ? `Started at ${Math.round(glucoseValue)} mg/dL`
+      ? `Started at ${formatGlucose(glucoseValue)} ${glucoseUnitLabel()}`
       : "Started this meal";
       outcomeAssessment = {
         label: "In range",
-        message: `${startPart}, now at ${Math.round(latestGlucoseValue)} mg/dL. ${activeIOB.toFixed(1)}u still active.`,
+        message: `${startPart}, now at ${formatGlucose(latestGlucoseValue)} ${glucoseUnitLabel()}. ${activeIOB.toFixed(1)}u still active.`,
         color: "#4d5742"
       };
       value = "In range";
@@ -532,7 +533,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
     else if (latestIsAfterMeal && latestLow) {
       outcomeAssessment = {
         label: "Below range",
-        message: `Glucose is at ${Math.round(latestGlucoseValue)} mg/dL, below your range. ${activeIOB.toFixed(1)}u still active.`,
+        message: `Glucose is at ${formatGlucose(latestGlucoseValue)} ${glucoseUnitLabel()}, below your range. ${activeIOB.toFixed(1)}u still active.`,
         color: "#9c3f2e"
       };
       value = "Below range";
@@ -543,7 +544,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
     else if (latestIsAfterMeal && latestHigh) {
       outcomeAssessment = {
         label: "Above range",
-        message: `Glucose is at ${Math.round(latestGlucoseValue)} mg/dL, above your range. ${activeIOB.toFixed(1)}u still active.`,
+        message: `Glucose is at ${formatGlucose(latestGlucoseValue)} ${glucoseUnitLabel()}, above your range. ${activeIOB.toFixed(1)}u still active.`,
         color: "#8a5a12"
       };
       value = "Above range";
@@ -799,7 +800,7 @@ function SupportiveGlucoseMessage({ insight, trend, TrendIcon }) {
 
 }
 
-export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucoseReadings = [], carbEntries = [], graphSlot = null, onEditGlucose = null, onEditDose = null, onDeleteDose = null }) {
+export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucoseReadings = [], carbEntries = [], graphSlot = null, onEditGlucose = null, onEditDose = null, onDeleteDose = null, connectBanner = null }) {
   const [insulinSettings, setInsulinSettings] = useState(readInsulinSettings);
   const [targetRange, setTargetRange] = useState(readTargetRange);
   const [centerGlucoseStatus, setCenterGlucoseStatus] = useState(null);
@@ -1103,7 +1104,9 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
     const below = readingsToday.filter((r) => r.value < targetRange.low).length;
     const fmt = (m) => {
       if (m < 60) return `${m}m`;
-      return `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, "0")}m`;
+      const h = Math.floor(m / 60);
+      const r = m % 60;
+      return r ? `${h}h ${r}m` : `${h}h`;
     };
     return {
       inRange: fmt(inR * intervalMin),
@@ -1120,20 +1123,34 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
     }
   }, []);
 
+  // Check if today's data is still gathering (less than 3 hours of readings)
+  const todayReadingsSpanMs = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const readingsToday = filterReadingsForStats(
+      safeGlucoseReadings.filter((reading) => new Date(reading.recorded_at) >= today),
+      dexcomConnected
+    );
+    if (readingsToday.length < 2) return 0;
+    const times = readingsToday.map((r) => new Date(r.recorded_at).getTime());
+    return Math.max(...times) - Math.min(...times);
+  }, [safeGlucoseReadings, dexcomConnected]);
+  const isGathering = todayReadingsSpanMs < 3 * 60 * 60 * 1000;
+
   return (
     <div className="space-y-5">
       {/* 1. YOUR DAY CARD — Header + Current Glucose + Daily Balance */}
       <DashboardCard className="p-5">
         {/* Card header — "Your day" + current date/time */}
         <div className="flex items-baseline justify-between">
-          <h1 className="hdr">Daily <em>View</em></h1>
+          <h1 className="hdr">Today</h1>
           <span className="hdr-date">{format(new Date(nowMinute * MINUTE_MS), "EEE, MMM d, h:mm a")}</span>
         </div>
 
         <div className="section-label mt-5">Current Glucose</div>
         <AnchorNumber
-          value={isGlucoseStale ? "-" : glucoseValue != null ? Math.round(glucoseValue) : "-"}
-          unit="mg/dL"
+          value={isGlucoseStale ? "-" : glucoseValue != null ? formatGlucose(glucoseValue) : "-"}
+          unit={glucoseUnitLabel()}
           caption={isGlucoseStale ? "Waiting for a fresh reading" : rangeCardLabel}
           trendIcon={!isGlucoseStale && glucoseValue != null ? <TrendIcon size={30} strokeWidth={2.5} /> : null}
           trendColor={isGlucoseStale ? "#3f3830" : (inRange ? "#3f3830" : glucoseColor)}
@@ -1157,7 +1174,9 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
         <div className="section-label mt-6">Daily Balance</div>
         <AnchorNumber
           value={comfortZonePercentage != null ? Math.round(comfortZonePercentage) : "-"}
-          unit="%" />
+          unit="%"
+          gathering={isGathering}
+          caption={isGathering ? "Still gathering today" : null} />
         
         {dailyTimeBreakdown &&
         <div className="mt-2 flex justify-between text-xs px-1" style={{ color: "#746959" }}>
@@ -1177,6 +1196,11 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
           <CardErrorBoundary>{graphSlot}</CardErrorBoundary>
         </div>
       </DashboardCard>
+
+      {/* Connect prompt — below the Daily Flow graph */}
+      {connectBanner &&
+      <div className="pt-1">{connectBanner}</div>
+      }
 
       {/* Right Now — at-a-glance combined IOB + Meal Review */}
       <RightNowView

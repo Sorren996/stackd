@@ -4,11 +4,11 @@
  *
  * Optional `dot` renders a small status dot before the caption.
  */
-export default function AnchorNumber({ value, unit, caption, dot, dotColor = "#5b6550", subcaption, trendIcon = null, trendColor = "#6b6153" }) {
+export default function AnchorNumber({ value, unit, caption, dot, dotColor = "#5b6550", subcaption, trendIcon = null, trendColor = "#6b6153", gathering = false }) {
   return (
     <div className="py-3 px-1">
       <div className="flex items-baseline gap-1.5">
-        <span className="anchor-number" style={{ color: "#3f3830" }}>
+        <span className="anchor-number" style={{ color: "#3f3830", ...(gathering ? { fontSize: 28, fontWeight: 400, opacity: 0.65 } : {}) }}>
           {value}
         </span>
         {unit &&

@@ -16,6 +16,7 @@ function DigitSlot({ digit, direction }) {
         position: "relative",
         verticalAlign: "top",
         lineHeight: "1",
+        fontVariantNumeric: "tabular-nums",
       }}
     >
       {/* Reserve correct width */}

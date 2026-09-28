@@ -1,6 +1,7 @@
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis, Tooltip, ReferenceArea } from "recharts";
 import { ArrowUp } from "lucide-react";
 import NotEnoughData from "@/components/analytics/NotEnoughData";
+import { formatGlucose, glucoseUnitLabel } from "@/lib/glucoseUnits";
 
 const LINE_COLOR = "#3f3830";
 
@@ -24,7 +25,7 @@ function ChartTooltip({ active, payload }) {
   return (
     <div className="rounded-xl border px-3 py-2" style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 8px 28px rgba(63,56,48,0.12)" }}>
       <p className="text-xs font-semibold" style={{ color: "#3f3830" }}>{formatHourLabel(data.hour)}</p>
-      <p className="text-sm font-bold" style={{ color: "#5b6550" }}>{data.avg} mg/dL</p>
+      <p className="text-sm font-bold" style={{ color: "#5b6550" }}>{formatGlucose(data.avg)} {glucoseUnitLabel()}</p>
       {data.count > 0 && (
         <p className="text-[10px]" style={{ color: "#a89e8d" }}>{data.count} reading{data.count !== 1 ? "s" : ""}</p>
       )}
