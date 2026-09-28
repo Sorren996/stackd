@@ -115,7 +115,7 @@ export function generateMealGlucoseResponse(carbEntries, mealTime, now = Date.no
  * Returns time-to-peak, delta from baseline, time-in-range %, elevated
  * duration, time back to range, and second-rise detection.
  */
-export function analyzeGlucoseResponse(readings, mealTime, targetLow, targetHigh, now = Date.now()) {
+export function analyzeGlucoseResponse(readings, mealTime, targetLow, targetHigh, now = Date.now(), baselineGlucose = null) {
   const windowReadings = (Array.isArray(readings) ? readings : [])
     .map((r) => ({ time: new Date(r.recorded_at).getTime(), value: Number(r.value) }))
     .filter((r) => Number.isFinite(r.time) && Number.isFinite(r.value) && r.time >= mealTime && r.time <= now)
@@ -132,7 +132,9 @@ export function analyzeGlucoseResponse(readings, mealTime, targetLow, targetHigh
     };
   }
 
-  const baseline = windowReadings[0].value;
+  // Use the shared before-meal baseline when provided so the "Rise from
+  // pre-meal" stat always matches the RISE stat in the card header.
+  const baseline = Number.isFinite(baselineGlucose) ? baselineGlucose : windowReadings[0].value;
 
   let peak = windowReadings[0];
   for (const r of windowReadings) {
@@ -162,7 +164,14 @@ export function analyzeGlucoseResponse(readings, mealTime, targetLow, targetHigh
   }
 
   const timeInRangePct = totalDurationMin > 0 ? Math.round((inRangeMin / totalDurationMin) * 100) : null;
-  const elevatedDurationMin = Math.round(aboveRangeMin);
+  // If the last reading is still above range, extend the elevated duration to
+  // `now` so the "Still elevated" timer counts up in real time instead of
+  // freezing at the last reading-to-reading gap.
+  const lastReading = windowReadings[windowReadings.length - 1];
+  const lastIsAbove = lastReading && lastReading.value > targetHigh;
+  const elevatedDurationMin = lastIsAbove && firstAboveTime
+    ? Math.round((now - firstAboveTime) / MINUTE_MS)
+    : Math.round(aboveRangeMin);
   const backInRangeMin = backInRangeTime
     ? Math.round((backInRangeTime - (firstAboveTime || mealTime)) / MINUTE_MS)
     : null;

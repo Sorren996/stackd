@@ -44,13 +44,14 @@ function buildChartData(meal, glucose, insulin) {
     .filter((r) => Number.isFinite(r.time) && Number.isFinite(r.value))
     .sort((a, b) => a.time - b.time);
 
+  // Bolus only — basal never appears in meal support contexts.
   const associatedDoses = (insulin || []).filter((d) => {
     const dt = new Date(d.administered_at).getTime();
-    return Number.isFinite(dt) && Math.abs(dt - mealTime) <= 30 * MIN_MS;
+    return Number.isFinite(dt) && Math.abs(dt - mealTime) <= 30 * MIN_MS && !isBasalInsulinType(d.insulin_type);
   });
 
   const curves = associatedDoses
-    .map((d) => (isBasalInsulinType(d.insulin_type) ? null : generateActivityCurve(d)))
+    .map((d) => generateActivityCurve(d))
     .filter(Boolean);
 
   const data = [];
@@ -112,14 +113,18 @@ export default function MealOutcomeModal({ meal, glucose, insulin, targetLow, ta
     [targetLow, targetHigh, highRef]
   );
 
-  const { yMin, yMax, maxIOB } = useMemo(() => {
-    if (!data.length) return { yMin: FIXED_LOW_REFERENCE, yMax: highRef, maxIOB: 1 };
+  const { yMin, yMax, maxIOB, iobTicks } = useMemo(() => {
+    if (!data.length) return { yMin: FIXED_LOW_REFERENCE, yMax: highRef, maxIOB: 1, iobTicks: [0, 20, 40] };
     const vals = data.map((d) => d.glucose).filter((v) => v != null);
     const iobs = data.map((d) => d.iob);
+    const rawMax = Math.max(1, ...iobs);
+    // Round the IOB axis top up to the next multiple of 20 for clean ticks.
+    const iobTop = Math.max(20, Math.ceil(rawMax * 1.3 / 20) * 20);
     return {
       yMin: FIXED_LOW_REFERENCE,
       yMax: Math.min(400, Math.max(highRef, ...(vals.length ? vals : [highRef]))),
-      maxIOB: Math.max(1, ...iobs),
+      maxIOB: rawMax,
+      iobTicks: iobTop <= 20 ? [0, 20] : [0, iobTop / 2, iobTop],
     };
   }, [data, targetLow, targetHigh, highRef]);
 
@@ -222,9 +227,11 @@ export default function MealOutcomeModal({ meal, glucose, insulin, targetLow, ta
                     <YAxis
                       yAxisId="iob"
                       orientation="right"
-                      domain={[0, maxIOB * 1.3]}
+                      domain={[0, 'auto']}
+                      ticks={iobTicks}
                       tick={{ fontSize: 9, fill: "rgba(91,163,184,0.6)" }}
-                      tickFormatter={(v) => (v % 1 === 0 ? String(v) : v.toFixed(1))}
+                      tickFormatter={(v) => Math.round(v)}
+                      allowDecimals={false}
                       axisLine={false}
                       tickLine={false}
                       width={36}

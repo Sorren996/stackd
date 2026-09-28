@@ -38,7 +38,7 @@ import RightNowView from "@/components/rightnow/RightNowView";
 import ComfortZoneCard from "./ComfortZoneCard";
 import CurrentGlucoseCard from "./graph/CurrentGlucoseCard";
 import { getSupportiveGlucoseMessage } from "@/lib/supportiveMessages";
-import { computeTimeInRange, filterReadingsForStats, computeTimeInRangeFromReadings } from "@/lib/timeInRange";
+import { filterReadingsForStats, computeTimeInRangeFromReadings } from "@/lib/timeInRange";
 import { computeGlucoseTrend, mapDexcomTrend } from "@/lib/glucoseTrend";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 import { useGlucoseStaleness } from "@/hooks/useGlucoseStaleness";
@@ -391,7 +391,10 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
   const correctionGlucoseLow =
   correctionGlucoseAvailable && correctionGlucoseValue < insulinSettings.targetLow;
   const gramsPerUnit = 5 / insulinSettings.mealInsulinUnitsPer5g;
-  const expectedMealUnits = mealGroup.carbs / gramsPerUnit;
+  // Round the carb ratio to one decimal for BOTH display and calculation so
+  // the user can always verify the math by hand: displayed ratio → displayed units.
+  const gramsPerUnitDisplayed = Math.round(gramsPerUnit * 10) / 10;
+  const expectedMealUnits = mealGroup.carbs / gramsPerUnitDisplayed;
   const correctionUnitsNeeded =
   correctionGlucoseAvailable && correctionGlucoseValue > insulinSettings.targetHigh ?
   Math.max(0, (correctionGlucoseValue - insulinSettings.correctionTargetGlucose) / insulinSettings.insulinSensitivityMgDlPerUnit) :
@@ -561,7 +564,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
         time: mealTime
       },
       mealGroup,
-      gramsPerUnit,
+      gramsPerUnit: gramsPerUnitDisplayed,
       expectedMealUnits,
       correctionUnitsNeeded,
       correctionGlucoseAvailable,
@@ -1004,10 +1007,9 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
       safeGlucoseReadings.filter((reading) => new Date(reading.recorded_at) >= today),
       dexcomConnected
     );
-    if (dexcomConnected) {
-      return computeTimeInRangeFromReadings(readingsToday, insulinSettings.targetLow, insulinSettings.targetHigh);
-    }
-    return computeTimeInRange(readingsToday, insulinSettings.targetLow, insulinSettings.targetHigh);
+    // Always use point-count TIR so the headline matches the subtext
+    // breakdown and the Rhythm/Journal pages, which all use the same method.
+    return computeTimeInRangeFromReadings(readingsToday, insulinSettings.targetLow, insulinSettings.targetHigh);
   }, [safeGlucoseReadings, insulinSettings.targetLow, insulinSettings.targetHigh, dexcomConnected]);
 
   const trend = useMemo(() => {
@@ -1132,9 +1134,9 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
         <AnchorNumber
           value={isGlucoseStale ? "-" : glucoseValue != null ? Math.round(glucoseValue) : "-"}
           unit="mg/dL"
-          caption={isGlucoseStale ? "Waiting for a fresh reading" : trend?.label || "Steady"}
+          caption={isGlucoseStale ? "Waiting for a fresh reading" : rangeCardLabel}
           trendIcon={!isGlucoseStale && glucoseValue != null ? <TrendIcon size={30} strokeWidth={2.5} /> : null}
-          trendColor="#3f3830"
+          trendColor={isGlucoseStale ? "#3f3830" : (inRange ? "#3f3830" : glucoseColor)}
           subcaption={isGlucoseStale ? null :
           <span className="font-serif-italic">updated {(() => {
               if (!latestGlucose?.recorded_at) return "just now";

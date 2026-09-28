@@ -78,8 +78,8 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
     [carbEntries, mealTime, now]
   );
   const glucoseAnalysis = useMemo(
-    () => analyzeGlucoseResponse(glucoseReadings, mealTime, targetLow, targetHigh, now),
-    [glucoseReadings, mealTime, targetLow, targetHigh, now]
+    () => analyzeGlucoseResponse(glucoseReadings, mealTime, targetLow, targetHigh, now, d?.glucoseValue),
+    [glucoseReadings, mealTime, targetLow, targetHigh, now, d?.glucoseValue]
   );
 
   useEffect(() => {
@@ -176,7 +176,12 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
       glucoseLine = "A second gentle climb appeared. The lingering energy from this meal is still working through.";
     } else if (Number.isFinite(peakOutcome) && peakOutcome > glucoseAtStart + 15) {
       const rise = Math.round(peakOutcome - glucoseAtStart);
-      glucoseLine = `Rose ${rise} points, then settled back.`;
+      // Only say "settled back" when glucose has actually dropped meaningfully
+      // below the peak. Otherwise describe the rise neutrally.
+      const droppedBelowPeak = Number.isFinite(glucoseNow) && glucoseNow < peakOutcome - 15;
+      glucoseLine = droppedBelowPeak
+        ? `Rose ${rise} points, then settled back.`
+        : `Rose ${rise} points so far, still near the peak.`;
     } else if (delta > 15) {
       glucoseLine = `Climbing gently, up ${delta} points so far.`;
     } else if (delta < -15) {
@@ -201,7 +206,6 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
     : null;
   const changeValue = (didRise ? "+" : "") + (rose != null ? rose : (Number.isFinite(glucoseNow) && Number.isFinite(glucoseAtStart) ? Math.round(glucoseNow - glucoseAtStart) : ""));
 
-  const slowBanner = monitoringStatus?.isActive;
   const mealName = d.meal?.food_name || d.meal?.name || "Meal";
 
   const handleDeleteEntry = async (entry) => {
@@ -223,18 +227,6 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
 
   return (
     <div className="space-y-3">
-      {/* Gentle awareness banner for slow-digesting meals */}
-      {slowBanner && (
-        <DashboardCard className="px-4 py-3">
-          <p className="text-[13px] font-semibold leading-snug" style={{ color: PALETTE.ink }}>
-            This meal digests slowly
-          </p>
-          <p className="mt-0.5 text-[12px] leading-relaxed" style={{ color: PALETTE.muted }}>
-            Fat and protein stretch the window. Glucose may arrive in a gentle, lingering wave.
-          </p>
-        </DashboardCard>
-      )}
-
       {/* The meal card — identity, inputs, outcome, insight, actions */}
       <DashboardCard className="p-4">
         {/* 1. IDENTITY */}
@@ -372,7 +364,7 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
                 {Math.round(totalAbsorbed)} of {Math.round(totalCarbs)} g absorbed
               </p>
               <div className="mt-2">
-                <AbsorptionProgressCurve entries={carbEntries} mealTime={mealTime} now={now} />
+                <AbsorptionProgressCurve entries={carbEntries} mealTime={mealTime} now={now} peakTime={absorptionPeakTime} />
               </div>
               <p className="mt-1.5 text-[12px]" style={{ color: PALETTE.muted }}>
                 {absorptionCaption}

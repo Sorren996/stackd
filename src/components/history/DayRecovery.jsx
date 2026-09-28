@@ -16,7 +16,7 @@ export default function DayRecovery({ recovery }) {
             <p className="text-2xl font-black text-white/80">{Math.round(startValue)}</p>
             <p className="text-[9px] text-white/35">{format(new Date(startTime), "h:mm a")}</p>
           </div>
-          <span className="text-white/30">↓</span>
+          <span className="text-white/30">↑</span>
           <div className="text-center">
             <p className="text-2xl font-black" style={{ color: "#af751b" }}>
               {Math.round(peakValue)}

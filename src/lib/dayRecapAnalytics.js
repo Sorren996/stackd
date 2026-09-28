@@ -148,6 +148,22 @@ export function computeInsulinActivity(insulin, dayStartMs, dayEndMs) {
     }
   }
 
+  // Realistic peak window — based on each dose's pharmacodynamic peak time
+  // (dose time + profile peak), not the full active span. For rapid-acting
+  // insulin with peak ~60-90 min, this produces a tight window like
+  // 7:35-8:25 PM instead of the entire 5-hour active period.
+  let peakWindowStart = null;
+  let peakWindowEnd = null;
+  if (bolusDoses.length > 0) {
+    const dosePeaks = bolusDoses.map((d) => {
+      const profile = getInsulinProfile(d.insulin_type);
+      const peakMin = profile?.peak || 75;
+      return d.time + peakMin * MIN_MS;
+    });
+    peakWindowStart = Math.min(...dosePeaks) - 15 * MIN_MS;
+    peakWindowEnd = Math.max(...dosePeaks) + 15 * MIN_MS;
+  }
+
   // Detect overlapping bolus doses (within 90 min)
   const overlaps = [];
   for (let i = 0; i < bolusDoses.length; i++) {
@@ -170,6 +186,8 @@ export function computeInsulinActivity(insulin, dayStartMs, dayEndMs) {
     peakCount,
     highActivityStart,
     highActivityEnd,
+    peakWindowStart,
+    peakWindowEnd,
     overlapCount: overlaps.length,
   };
 }
@@ -294,7 +312,7 @@ export function buildDayTimeline(glucose, carbs, insulin, metrics, recovery, tar
     const isRescue = c.is_rescue_carb === true || c.classification === "rescue_carbs";
     const associatedInsulin = (insulin || []).filter((d) => {
       const dt = new Date(d.administered_at).getTime();
-      return Number.isFinite(dt) && Math.abs(dt - time) <= 30 * MIN_MS;
+      return Number.isFinite(dt) && Math.abs(dt - time) <= 30 * MIN_MS && isBolusInsulinType(d.insulin_type);
     });
     const insulinUnits = associatedInsulin.reduce((s, d) => s + (Number(d.units) || 0), 0);
     events.push({

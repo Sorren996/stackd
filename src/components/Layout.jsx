@@ -192,7 +192,7 @@ export default function Layout() {
       </AnimatePresence>
 
       <main
-        className="relative mx-auto w-full max-w-6xl px-4 overflow-visible pb-28"
+        className="relative mx-auto w-full max-w-6xl px-4 overflow-visible pb-36"
         style={{ paddingTop: "3.5rem" }}
       >
         <div className="min-w-0 w-full">

@@ -43,9 +43,11 @@ export default function EstimatedSupportCard({ details }) {
   const startingGlucose = Number.isFinite(d.correctionGlucoseValue) ? Math.round(d.correctionGlucoseValue) : null;
   const expectedTotal = foodUnits + correctionUnits;
   const activeNow = Number.isFinite(d.activeIOB) ? d.activeIOB : (Number.isFinite(d.bolusIOB) ? d.bolusIOB : 0);
+  const loggedTotal = Number.isFinite(d.loggedTotalUnits) ? d.loggedTotalUnits : null;
+  const supportGap = loggedTotal != null ? loggedTotal - expectedTotal : null;
 
   const gramsPerUnit = Number.isFinite(d.gramsPerUnit) ? d.gramsPerUnit : 5 / d.mealInsulinUnitsPer5g;
-  const ratioLabel = `1:${Math.round(gramsPerUnit)}`;
+  const ratioLabel = `1:${gramsPerUnit.toFixed(1)}`;
   const isfLabel = Math.round(isf);
   const targetLabel = Math.round(correctionTarget);
   const rescueGrams = Number.isFinite(d.rescueCarbs) && d.rescueCarbs > 0 ? Math.round(d.rescueCarbs) : 0;
@@ -72,10 +74,6 @@ export default function EstimatedSupportCard({ details }) {
         <span className="text-[15px] font-light" style={{ color: PALETTE.muted }}>u, active now</span>
       </div>
 
-      <p className="mt-2 text-[12px] leading-relaxed" style={{ color: PALETTE.faint }}>
-        {expectedTotal.toFixed(1)}u was the reference at the time.
-      </p>
-
       <div className="mt-3 space-y-1.5">
         <div className="flex items-baseline justify-between">
           <span className="text-[11px]" style={{ color: PALETTE.faint }}>
@@ -94,6 +92,33 @@ export default function EstimatedSupportCard({ details }) {
             {correctionLine.value} u{correctionLine.note ? `, ${correctionLine.note}` : ""}
           </span>
         </div>
+
+        <div className="flex items-baseline justify-between">
+          <span className="text-[11px]" style={{ color: PALETTE.faint }}>Reference total</span>
+          <span className="text-[13px] font-semibold tabular-nums" style={{ color: PALETTE.muted }}>
+            {expectedTotal.toFixed(1)} u
+          </span>
+        </div>
+
+        {loggedTotal != null && (
+          <div className="flex items-baseline justify-between">
+            <span className="text-[11px]" style={{ color: PALETTE.faint }}>Logged total</span>
+            <span className="text-[13px] font-semibold tabular-nums" style={{ color: PALETTE.ink }}>
+              {loggedTotal.toFixed(1)} u
+            </span>
+          </div>
+        )}
+
+        {supportGap != null && Math.abs(supportGap) >= 0.05 && (
+          <div className="flex items-baseline justify-between">
+            <span className="text-[11px]" style={{ color: PALETTE.faint }}>
+              {supportGap > 0 ? "Extra support" : "Under reference"}
+            </span>
+            <span className="text-[13px] font-semibold tabular-nums" style={{ color: supportGap > 0 ? PALETTE.amber : PALETTE.green }}>
+              {supportGap > 0 ? "+" : ""}{supportGap.toFixed(1)} u
+            </span>
+          </div>
+        )}
 
         <div className="flex items-baseline justify-between">
           <span className="text-[11px]" style={{ color: PALETTE.faint }}>Active now</span>

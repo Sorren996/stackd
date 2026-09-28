@@ -45,7 +45,7 @@ function DoseBar({ dose, dayStart, dayEnd }) {
 export default function DayInsulinActivity({ activity }) {
   if (!activity || !activity.doses?.length) return null;
 
-  const { doses, totalUnits, bolusUnits, basalUnits, peakTime, highActivityStart, highActivityEnd, overlapCount, dayStart, dayEnd } = activity;
+  const { doses, totalUnits, bolusUnits, basalUnits, peakTime, highActivityStart, highActivityEnd, peakWindowStart, peakWindowEnd, overlapCount, dayStart, dayEnd } = activity;
 
   return (
     <DaySection icon={Activity} iconColor="#5ba3b8" label="Insulin Activity" collapsible>
@@ -56,13 +56,13 @@ export default function DayInsulinActivity({ activity }) {
           {basalUnits > 0 && <Stat label="Basal" value={basalUnits} unit="u" />}
         </div>
 
-        {peakTime && highActivityStart && highActivityEnd && (() => {
-          const isProjection = highActivityEnd > Date.now();
+        {peakWindowStart && peakWindowEnd && (() => {
+          const isProjection = peakWindowEnd > Date.now();
           return (
             <p className="text-xs leading-relaxed text-white/50">
               {isProjection
-                ? `Insulin activity is expected to peak between ${format(new Date(highActivityStart), "h:mm a")} and ${format(new Date(highActivityEnd), "h:mm a")}.`
-                : `Highest insulin activity occurred between ${format(new Date(highActivityStart), "h:mm a")} and ${format(new Date(highActivityEnd), "h:mm a")}.`}
+                ? `Insulin activity is expected to peak between ${format(new Date(peakWindowStart), "h:mm a")} and ${format(new Date(peakWindowEnd), "h:mm a")}.`
+                : `Insulin activity peaked between ${format(new Date(peakWindowStart), "h:mm a")} and ${format(new Date(peakWindowEnd), "h:mm a")}.`}
             </p>
           );
         })()}

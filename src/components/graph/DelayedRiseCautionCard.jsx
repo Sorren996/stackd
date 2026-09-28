@@ -36,8 +36,8 @@ export default function DelayedRiseCautionCard({ carbEntries, now = Date.now() }
             <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: "#8a5a12" }} />
             <p className="text-[11px] leading-relaxed" style={{ color: "#8a5a12" }}>
               {multiple
-                ? "Recent meals are high in fat and protein. Glucose may rise more slowly at first, then climb later (3 to 8 hours after eating)."
-                : "This meal is high in fat and protein. Glucose may rise more slowly at first, then climb later (3 to 8 hours after eating)."}
+                ? "Recent meals digest slowly. Fat and protein stretch the window, so glucose may arrive in a gentle, lingering wave (3 to 8 hours after eating)."
+                : "This meal digests slowly. Fat and protein stretch the window, so glucose may arrive in a gentle, lingering wave (3 to 8 hours after eating)."}
             </p>
           </div>
         </motion.div>

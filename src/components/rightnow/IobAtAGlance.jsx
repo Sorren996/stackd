@@ -123,7 +123,9 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
     [breakdown]
   );
 
-  const bolusUnits = bolusDoses.reduce((sum, d) => sum + d.iob, 0);
+  // Sum rounded dose IOB values so the headline always matches the sum of
+  // the displayed (one-decimal) per-dose values — no rounding discrepancy.
+  const bolusUnits = bolusDoses.reduce((sum, d) => sum + (Math.round(d.iob * 10) / 10), 0);
   const activeBolusCount = bolusDoses.filter((d) => d.iob > 0.01).length;
   const basalUnits = basalDoses.reduce((sum, d) => sum + (Number(d.units) || 0), 0);
   const hasBolus = bolusDoses.length > 0;
@@ -206,7 +208,7 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
                     </span>
                     {status.remaining &&
                   <span className="block text-[10px] tabular-nums" style={{ color: PALETTE.faint }}>
-                        {status.remaining}
+                        clears in {status.remaining}
                       </span>
                   }
                   </span>
@@ -277,7 +279,7 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
                     </span>
                     {status.remaining &&
                   <span className="block text-[10px] tabular-nums" style={{ color: PALETTE.faint }}>
-                        {status.remaining}
+                        clears in {status.remaining}
                       </span>
                   }
                   </span>

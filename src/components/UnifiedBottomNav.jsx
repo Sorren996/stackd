@@ -267,13 +267,22 @@ export default function UnifiedBottomNav() {
                 <Link
                   key={item.path}
                   to={item.path}
-                  className="relative flex min-w-0 flex-col items-center justify-center gap-1 text-center transition-colors"
-                  style={{ color: isActive ? "#9c5228" : "#746959" }}
+                  className="relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-2xl text-center transition-colors"
+                  style={{
+                    color: isActive ? "#9c5228" : "#746959",
+                    background: isActive ? "rgba(156,82,40,0.10)" : "transparent",
+                  }}
                   aria-label={item.label}
                 >
+                  {isActive && (
+                    <span
+                      className="absolute bottom-0.5 h-0.5 w-5 rounded-full"
+                      style={{ background: "#9c5228" }}
+                    />
+                  )}
                   <Icon
                     className="h-5 w-5"
-                    strokeWidth={isActive ? 2 : 1.5}
+                    strokeWidth={isActive ? 2.25 : 1.5}
                     style={{ color: isActive ? "#9c5228" : "#746959" }}
                   />
                   <span
