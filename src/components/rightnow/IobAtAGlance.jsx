@@ -23,6 +23,16 @@ function fmtUnits(u) {
   return n % 1 === 0 ? n : n.toFixed(1);
 }
 
+// Compact IOB display: once remaining insulin drops below 1.0u, show "<1u"
+// instead of a false-precision decimal like "0.5u". At or above 1.0u, keep
+// the one-decimal format. Includes the "u" suffix.
+function fmtIob(u) {
+  const n = Number(u);
+  if (!Number.isFinite(n) || n < 0.01) return "0u";
+  if (n < 1.0) return "<1u";
+  return `${n % 1 === 0 ? n : n.toFixed(1)}u`;
+}
+
 // Dynamic basal status derived from real elapsed time vs that basal's
 // published duration — mirrors bolusStatusLine so each basal dose row
 // reflects its actual phase instead of a single static "Ongoing" label.
@@ -204,7 +214,7 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
                   </span>
                   <span className="shrink-0 text-right">
                     <span className="block text-[13px] font-semibold tabular-nums" style={{ color: textColor }}>
-                      {fmtUnits(dose.iob)}u
+                      {fmtIob(dose.iob)}
                     </span>
                     {status.remaining &&
                   <span className="block text-[10px] tabular-nums" style={{ color: PALETTE.faint }}>
@@ -275,7 +285,7 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
                   </span>
                   <span className="shrink-0 text-right">
                     <span className="block text-[13px] font-semibold tabular-nums" style={{ color: textColor }}>
-                      {fmtUnits(dose.units)}u
+                      {fmtIob(dose.units)}
                     </span>
                     {status.remaining &&
                   <span className="block text-[10px] tabular-nums" style={{ color: PALETTE.faint }}>

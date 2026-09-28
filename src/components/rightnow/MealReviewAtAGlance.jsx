@@ -39,13 +39,13 @@ function formatDuration(min) {
   return r ? `${h}h ${r}m` : `${h}h`;
 }
 
-function formatCountdown(ms) {
-  if (!Number.isFinite(ms) || ms <= 0) return "Window closed";
+function formatCountdownValue(ms) {
+  if (!Number.isFinite(ms) || ms <= 0) return "Closed";
   const m = Math.round(ms / 60000);
-  if (m < 60) return `${m}m remaining in window`;
+  if (m < 60) return `${m}m`;
   const h = Math.floor(m / 60);
   const r = m % 60;
-  return `${h}h ${r}m remaining in window`;
+  return r ? `${h}h ${r}m` : `${h}h`;
 }
 
 function mealChipFor(time) {
@@ -240,19 +240,22 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
           <span className="shrink-0 text-[11px] tabular-nums" style={{ color: PALETTE.faint }}>{formatClock(mealTime)}</span>
         </div>
 
-        {/* 2. INPUTS */}
-        <div className="mt-3 flex items-baseline gap-5">
-          <div className="flex items-baseline gap-1.5">
-            <span className="text-[22px] font-light tabular-nums" style={{ color: PALETTE.ink }}>{Math.round(totalCarbs)}</span>
-            <span className="text-[12px]" style={{ color: PALETTE.muted }}>g carbs</span>
+        {/* 2. INPUTS — label-first stat tiles (small muted label above bold value) */}
+        <div className="mt-3 flex items-end gap-5">
+          <div>
+            <span className="block text-[9px] uppercase tracking-wider" style={{ color: PALETTE.faint }}>Carbs</span>
+            <span className="text-[22px] font-semibold tabular-nums leading-tight" style={{ color: PALETTE.ink }}>{Math.round(totalCarbs)}g</span>
           </div>
           {bolusSupport != null && bolusSupport > 0 && (
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-[22px] font-light tabular-nums" style={{ color: PALETTE.ink }}>{bolusSupport % 1 === 0 ? bolusSupport : bolusSupport.toFixed(1)}</span>
-              <span className="text-[12px]" style={{ color: PALETTE.muted }}>u support</span>
+            <div>
+              <span className="block text-[9px] uppercase tracking-wider" style={{ color: PALETTE.faint }}>Support</span>
+              <span className="text-[22px] font-semibold tabular-nums leading-tight" style={{ color: PALETTE.ink }}>{bolusSupport % 1 === 0 ? bolusSupport : bolusSupport.toFixed(1)}u</span>
             </div>
           )}
-          <span className="ml-auto text-[11px]" style={{ color: PALETTE.faint }}>{formatCountdown(windowRemaining)}</span>
+          <div className="ml-auto text-right">
+            <span className="block text-[9px] uppercase tracking-wider leading-tight" style={{ color: PALETTE.faint }}>Remaining in window</span>
+            <span className="text-[22px] font-semibold tabular-nums leading-tight" style={{ color: PALETTE.ink }}>{formatCountdownValue(windowRemaining)}</span>
+          </div>
         </div>
 
         {/* 3. OUTCOME — the hero */}

@@ -2,7 +2,8 @@ import { useMemo } from "react";
 import { generateCarbCurve } from "@/lib/carbAbsorption";
 
 const W = 260;
-const H = 76;
+const H = 94;
+const TOP_PAD = 18; // reserved space above the curve so the peak label is never clipped
 const COPPER = "#9c5228";
 const COPPER_LIGHT = "#9c5228";
 const HAIRLINE = "#eadccf";
@@ -21,11 +22,12 @@ function formatPeakLabel(peakMin) {
  *
  * Solid copper up to "now", dashed after. Light fill under the solid portion
  * shows cumulative progress. The peak is marked with a dashed vertical line
- * and a "Peak ~Xh" label, distinct from the "% absorbed" progress shown
- * separately. At 100 % the entire curve renders solid with a completion mark.
+ * and a "Peak ~Xh" label positioned with a fixed pixel offset above the peak
+ * point so it stays legible at any peak height. At 100% the entire curve
+ * renders solid with a completion mark.
  */
 export default function AbsorptionProgressCurve({ entries, mealTime, now = Date.now(), peakTime: peakTimeProp }) {
-  const { solidPath, dashedPath, fillPath, nowX, nowY, peakX, peakLabel, endX, isComplete } = useMemo(() => {
+  const { solidPath, dashedPath, fillPath, nowX, nowY, peakX, peakY, peakLabel, endX, isComplete } = useMemo(() => {
     const curves = (Array.isArray(entries) ? entries : [])
       .map((entry) => {
         if (!entry || !Number.isFinite(entry.carbs)) return null;
@@ -36,12 +38,12 @@ export default function AbsorptionProgressCurve({ entries, mealTime, now = Date.
       })
       .filter(Boolean);
 
-    if (!curves.length) return { solidPath: "", dashedPath: "", fillPath: "", nowX: 0, nowY: 0, peakX: 0, peakLabel: "", endX: 0, isComplete: false };
+    if (!curves.length) return { solidPath: "", dashedPath: "", fillPath: "", nowX: 0, nowY: 0, peakX: 0, peakY: 0, peakLabel: "", endX: 0, isComplete: false };
 
     const start = mealTime;
     let end = start;
     curves.forEach((c) => { if (c.length) end = Math.max(end, c[c.length - 1].time); });
-    if (end <= start) return { solidPath: "", dashedPath: "", fillPath: "", nowX: 0, nowY: 0, peakX: 0, peakLabel: "", endX: 0, isComplete: false };
+    if (end <= start) return { solidPath: "", dashedPath: "", fillPath: "", nowX: 0, nowY: 0, peakX: 0, peakY: 0, peakLabel: "", endX: 0, isComplete: false };
 
     const span = end - start;
     const STEP = 3 * 60 * 1000;
@@ -62,7 +64,9 @@ export default function AbsorptionProgressCurve({ entries, mealTime, now = Date.
 
     const maxRate = Math.max(...samples.map((s) => s.rate), 0.0001);
     const toX = (t) => 4 + ((t - start) / span) * (W - 8);
-    const toY = (r) => H - 8 - (r / maxRate) * (H - 16);
+    // Map rate to y within the curve area [TOP_PAD + 8, H - 8] so the top
+    // padding is reserved for the peak label and never overlaps the curve.
+    const toY = (r) => H - 8 - (r / maxRate) * (H - 16 - TOP_PAD);
 
     // Use the parent-provided peak time when available so the chart's peak
     // marker always matches the "Peak ~Xh" text shown elsewhere in the card.
@@ -79,6 +83,18 @@ export default function AbsorptionProgressCurve({ entries, mealTime, now = Date.
       peakT = samples[peakIdx].t;
       peakMin = (peakT - start) / 60000;
     }
+
+    // Compute the y-coordinate of the peak point so the label can be
+    // positioned with a fixed pixel offset above it.
+    let peakRate = 0;
+    for (let i = 0; i < samples.length - 1; i++) {
+      if (samples[i].t <= peakT && samples[i + 1].t >= peakT) {
+        const r = (peakT - samples[i].t) / (samples[i + 1].t - samples[i].t || 1);
+        peakRate = samples[i].rate + (samples[i + 1].rate - samples[i].rate) * r;
+        break;
+      }
+    }
+    const peakYVal = toY(peakRate);
 
     // Now position
     const nowClamped = Math.min(now, end);
@@ -115,6 +131,7 @@ export default function AbsorptionProgressCurve({ entries, mealTime, now = Date.
       nowX: toX(nowClamped),
       nowY: toY(nowResp),
       peakX: toX(peakT),
+      peakY: peakYVal,
       peakLabel: formatPeakLabel(peakMin),
       endX: toX(end),
       isComplete: nowClamped >= end,
@@ -126,6 +143,10 @@ export default function AbsorptionProgressCurve({ entries, mealTime, now = Date.
   }
 
   const baseY = H - 8;
+  const curveTop = TOP_PAD + 8;
+  // Fixed 16px pixel offset above the peak point, clamped so it never
+  // goes above the container edge.
+  const labelTop = Math.max(0, peakY - 16);
 
   if (isComplete) {
     const fullPath = solidPath || dashedPath;
@@ -135,11 +156,11 @@ export default function AbsorptionProgressCurve({ entries, mealTime, now = Date.
           <line x1={2} y1={baseY} x2={W - 2} y2={baseY} stroke={HAIRLINE} strokeWidth={0.75} />
           {fullPath && <path d={`${fullPath} L ${endX.toFixed(1)} ${baseY.toFixed(1)} L 4 ${baseY.toFixed(1)} Z`} fill={COPPER_LIGHT} fillOpacity={0.08} stroke="none" />}
           {fullPath && <path d={fullPath} fill="none" stroke={COPPER} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />}
-          {peakX > 0 && <line x1={peakX} y1={10} x2={peakX} y2={baseY} stroke={INK} strokeWidth={0.5} strokeOpacity={0.2} strokeDasharray="2 3" />}
+          {peakX > 0 && <line x1={peakX} y1={curveTop} x2={peakX} y2={baseY} stroke={INK} strokeWidth={0.5} strokeOpacity={0.2} strokeDasharray="2 3" />}
           {endX > 0 && <circle cx={endX} cy={baseY} r={2.5} fill={COPPER} fillOpacity={0.5} />}
         </svg>
         {peakX > 0 && (
-          <span className="absolute text-[8px] font-medium whitespace-nowrap" style={{ left: `${(peakX / W) * 100}%`, top: 0, transform: "translateX(-50%)", color: FAINT }}>
+          <span className="absolute text-[8px] font-medium whitespace-nowrap" style={{ left: `${(peakX / W) * 100}%`, top: `${labelTop}px`, transform: "translateX(-50%)", color: FAINT }}>
             {peakLabel}
           </span>
         )}
@@ -154,16 +175,16 @@ export default function AbsorptionProgressCurve({ entries, mealTime, now = Date.
         {fillPath && <path d={fillPath} fill={COPPER_LIGHT} fillOpacity={0.08} stroke="none" />}
         {solidPath && <path d={solidPath} fill="none" stroke={COPPER} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />}
         {dashedPath && <path d={dashedPath} fill="none" stroke={COPPER} strokeWidth={1.5} strokeOpacity={0.4} strokeDasharray="3 5" strokeLinecap="round" />}
-        {peakX > 0 && <line x1={peakX} y1={10} x2={peakX} y2={baseY} stroke={INK} strokeWidth={0.5} strokeOpacity={0.2} strokeDasharray="2 3" />}
+        {peakX > 0 && <line x1={peakX} y1={curveTop} x2={peakX} y2={baseY} stroke={INK} strokeWidth={0.5} strokeOpacity={0.2} strokeDasharray="2 3" />}
         {nowX > 0 && (
           <>
-            <line x1={nowX} y1={6} x2={nowX} y2={baseY} stroke={INK} strokeWidth={0.75} strokeOpacity={0.3} />
+            <line x1={nowX} y1={curveTop - 2} x2={nowX} y2={baseY} stroke={INK} strokeWidth={0.75} strokeOpacity={0.3} />
             <circle cx={nowX} cy={nowY} r={3} fill={COPPER} />
           </>
         )}
       </svg>
       {peakX > 0 && (
-        <span className="absolute text-[8px] font-medium whitespace-nowrap" style={{ left: `${(peakX / W) * 100}%`, top: 0, transform: "translateX(-50%)", color: FAINT }}>
+        <span className="absolute text-[8px] font-medium whitespace-nowrap" style={{ left: `${(peakX / W) * 100}%`, top: `${labelTop}px`, transform: "translateX(-50%)", color: FAINT }}>
           {peakLabel}
         </span>
       )}

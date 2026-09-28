@@ -260,7 +260,7 @@ export default function EstimatedSupportCard({ details }) {
                       {shortName}, {fmtUnits(dose.units)}u dose
                     </span>
                     <span className="block text-[11px]" style={{ color: PALETTE.muted }}>
-                      {fmtUnits(dose.iob)}u left
+                      {dose.iob < 1.0 ? "Less than 1u left" : `${fmtUnits(dose.iob)}u left`}
                     </span>
                   </div>
                   {remaining && (
