@@ -10,6 +10,7 @@ import {
 import { aggregateStats } from "@/lib/historyAggregations";
 import { hasDelayedRise } from "@/lib/mealMonitoring";
 import { getGlucoseBeforeMeal } from "@/lib/glucoseBeforeMeal";
+import { formatGlucose, formatGlucoseDelta, formatGlucoseAbsDelta, glucoseUnitLabel, glucoseDeltaUnit } from "@/lib/glucoseUnits";
 
 const HOUR_MS = 60 * 60 * 1000;
 const MIN_MS = 60 * 1000;
@@ -346,7 +347,7 @@ export function buildDayTimeline(glucose, carbs, insulin, metrics, recovery, tar
       type: "peak",
       time: metrics.peakTime,
       label: "Glucose peak",
-      detail: `${Math.round(metrics.max)} mg/dL`,
+      detail: `${formatGlucose(metrics.max)} ${glucoseUnitLabel()}`,
     });
   }
 
@@ -356,7 +357,7 @@ export function buildDayTimeline(glucose, carbs, insulin, metrics, recovery, tar
       type: "low",
       time: metrics.lowTime,
       label: "Glucose low",
-      detail: `${Math.round(metrics.min)} mg/dL`,
+      detail: `${formatGlucose(metrics.min)} ${glucoseUnitLabel()}`,
     });
   }
 
@@ -366,7 +367,7 @@ export function buildDayTimeline(glucose, carbs, insulin, metrics, recovery, tar
       type: "rise",
       time: metrics.steepestRiseTime,
       label: "Glucose rising",
-      detail: `+${metrics.steepestRise} mg/dL`,
+      detail: `${formatGlucoseDelta(metrics.steepestRise)} ${glucoseDeltaUnit()}`,
     });
   }
 
@@ -386,7 +387,7 @@ export function buildDayTimeline(glucose, carbs, insulin, metrics, recovery, tar
         type: "fall",
         time: steepestFallTime,
         label: "Glucose easing",
-        detail: `−${steepestFall} mg/dL`,
+        detail: `−${formatGlucoseAbsDelta(steepestFall)} ${glucoseDeltaUnit()}`,
       });
     }
   }
@@ -397,7 +398,7 @@ export function buildDayTimeline(glucose, carbs, insulin, metrics, recovery, tar
       type: "recovery",
       time: recovery.recoveryTime,
       label: "Recovery",
-      detail: `${Math.round(recovery.recoveryValue)} mg/dL`,
+      detail: `${formatGlucose(recovery.recoveryValue)} ${glucoseUnitLabel()}`,
     });
   }
 
@@ -449,9 +450,9 @@ export function computeEnhancedInsights(metrics, carbs, insulin, glucose, target
     });
     if (precedingCarb) {
       const name = precedingCarb.food_name || precedingCarb.name || "a meal";
-      insights.push(`Your largest glucose excursion (+${metrics.steepestRise} mg/dL) occurred after ${name}.`);
+      insights.push(`Your largest glucose excursion (${formatGlucoseDelta(metrics.steepestRise)} ${glucoseDeltaUnit()}) occurred after ${name}.`);
     } else {
-      insights.push(`Your largest glucose excursion was +${metrics.steepestRise} mg/dL.`);
+      insights.push(`Your largest glucose excursion was ${formatGlucoseDelta(metrics.steepestRise)} ${glucoseDeltaUnit()}.`);
     }
   }
 

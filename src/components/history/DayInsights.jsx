@@ -1,6 +1,7 @@
 import { format } from "date-fns";
 import { Sparkles } from "lucide-react";
 import { formatDuration } from "@/lib/dayRecapMetrics";
+import { formatGlucoseAbsDelta, glucoseDeltaUnit } from "@/lib/glucoseUnits";
 
 // Observational, wellness-toned notes derived only from reliable day data.
 // Never dosing advice — just "what stood out".
@@ -32,7 +33,7 @@ export default function DayInsights({ metrics, carbs }) {
       );
     } else {
       insights.push(
-        `Your steepest rise (${metrics.steepestRise} mg/dL) happened around ${format(
+        `Your steepest rise (${formatGlucoseAbsDelta(metrics.steepestRise)} ${glucoseDeltaUnit()}) happened around ${format(
           metrics.steepestRiseTime,
           "h:mm a"
         )}.`

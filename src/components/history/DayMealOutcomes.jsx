@@ -4,6 +4,7 @@ import { Utensils } from "lucide-react";
 import DaySection from "./DaySection";
 import MealOutcomeModal from "./MealOutcomeModal";
 import { getMealSlotLabel } from "@/lib/mealSlot";
+import { formatGlucose, formatGlucoseAbsDelta, glucoseUnitLabel } from "@/lib/glucoseUnits";
 
 export default function DayMealOutcomes({ meals, glucose, insulin, targetLow, targetHigh }) {
   const [selectedMeal, setSelectedMeal] = useState(null);
@@ -46,15 +47,15 @@ export default function DayMealOutcomes({ meals, glucose, insulin, targetLow, ta
                 </div>
 
                 <div className="mt-2 flex items-center gap-2">
-                  <span className="text-sm font-bold text-white/80">{Math.round(meal.startingGlucose)}</span>
+                  <span className="text-sm font-bold text-white/80">{formatGlucose(meal.startingGlucose)}</span>
                   <span className="text-white/30">→</span>
                   <span className="text-sm font-bold" style={{ color: riseColor }}>
-                    {Math.round(meal.peakGlucose)}
+                    {formatGlucose(meal.peakGlucose)}
                   </span>
-                  <span className="text-[10px] text-white/35">mg/dL</span>
+                  <span className="text-[10px] text-white/35">{glucoseUnitLabel()}</span>
                   <span className="ml-auto text-sm font-bold" style={{ color: riseColor }}>
                     {meal.rise > 0 ? "+" : ""}
-                    {Math.round(meal.rise)}
+                    {formatGlucoseAbsDelta(meal.rise)}
                   </span>
                 </div>
 

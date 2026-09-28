@@ -7,6 +7,7 @@ import { generateActivityCurve, getInsulinProfile, isBasalInsulinType } from "@/
 import { GLUCOSE_STATUS_COLORS, FIXED_LOW_REFERENCE } from "@/lib/glucoseStatus";
 import { useIsLightTheme } from "@/lib/theme";
 import { getGraphTheme } from "@/lib/graphTheme";
+import { formatGlucose, glucoseUnitLabel } from "@/lib/glucoseUnits";
 
 const HOUR_MS = 60 * 60 * 1000;
 const STEP_MS = 15 * 60 * 1000;
@@ -407,11 +408,11 @@ export default function CandlestickView({
               <div className="mt-2 flex items-end justify-between">
                 <div>
                   <p className="text-[10px] text-white/40">Range</p>
-                  <p className="text-base font-bold text-white">{Math.round(activeTooltip.low)} to {Math.round(activeTooltip.high)}<span className="ml-1 text-[10px] font-normal text-white/40">mg/dL</span></p>
+                  <p className="text-base font-bold text-white">{formatGlucose(activeTooltip.low)} to {formatGlucose(activeTooltip.high)}<span className="ml-1 text-[10px] font-normal text-white/40">{glucoseUnitLabel()}</span></p>
                 </div>
                 <div className="text-right">
                   <p className="text-[10px] text-white/40">Average</p>
-                  <p className="text-base font-bold" style={{ color: avgDotColor(activeTooltip.avg, targetLow, targetHigh, gTheme.inRangeColor) }}>{Math.round(activeTooltip.avg)}</p>
+                  <p className="text-base font-bold" style={{ color: avgDotColor(activeTooltip.avg, targetLow, targetHigh, gTheme.inRangeColor) }}>{formatGlucose(activeTooltip.avg)}</p>
                 </div>
               </div>
               {activeTooltip.tir != null && (

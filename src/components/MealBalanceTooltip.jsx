@@ -2,6 +2,7 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { BookOpen, Calculator, Check, CheckCircle2, ChevronDown, Clock, Droplet, Info, Plus, Shield, Sprout, X } from "lucide-react";
 import MealUsualResponse from "@/components/insulin/MealUsualResponse";
+import { formatGlucose, formatGlucoseAbsDelta, glucoseUnitLabel, glucoseDeltaUnit } from "@/lib/glucoseUnits";
 
 const PALETTE = {
   green: "#5b6550",
@@ -282,8 +283,8 @@ export default function MealBalanceTooltip({ mealInsight, open, onClose, monitor
               <div className="mt-2 flex items-end justify-between gap-2">
                 <div className="min-w-0">
                   <p className="flex items-baseline gap-1.5">
-                    <span className="text-3xl font-black leading-none text-white">{Math.round(glucoseNow)}</span>
-                    <span className="text-[11px] font-medium text-white/40">mg/dL</span>
+                    <span className="text-3xl font-black leading-none text-white">{formatGlucose(glucoseNow)}</span>
+                    <span className="text-[11px] font-medium text-white/40">{glucoseUnitLabel()}</span>
                     {trendArrow && (
                       <span className="ml-0.5 text-lg font-bold" style={{ color: glucoseTrend?.color || PALETTE.muted }}>
                         {trendArrow}
@@ -294,8 +295,8 @@ export default function MealBalanceTooltip({ mealInsight, open, onClose, monitor
                 <div className="shrink-0 text-right">
                   {glucoseChange !== null && (
                     <p className="text-[13px] font-bold" style={{ color: changeColor }}>
-                      {glucoseChange > 0 ? "+" : ""}{Math.round(glucoseChange)}
-                      <span className="ml-0.5 text-[10px] font-medium" style={{ color: PALETTE.muted }}>mg/dL</span>
+                      {glucoseChange > 0 ? "+" : ""}{formatGlucoseAbsDelta(glucoseChange)}
+                      <span className="ml-0.5 text-[10px] font-medium" style={{ color: PALETTE.muted }}>{glucoseDeltaUnit()}</span>
                     </p>
                   )}
                   {elapsedMs !== null && (
@@ -319,7 +320,7 @@ export default function MealBalanceTooltip({ mealInsight, open, onClose, monitor
             <SummaryCell label="Logged" value={`${fmtUnits(loggedUnits)}u`} />
             <SummaryCell
               label="Peak"
-              value={Number.isFinite(peakOutcome) ? Math.round(peakOutcome) : "-"}
+              value={Number.isFinite(peakOutcome) ? formatGlucose(peakOutcome) : "-"}
               sub={peakAfterMs !== null ? `${formatElapsed(peakAfterMs)} after` : null}
             />
           </div>

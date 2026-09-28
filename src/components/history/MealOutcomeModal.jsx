@@ -16,6 +16,7 @@ import { getInsulinProfile, generateActivityCurve, isBasalInsulinType } from "@/
 import { GLUCOSE_STATUS_COLORS, readHighReference, FIXED_LOW_REFERENCE } from "@/lib/glucoseStatus";
 import { useIsLightTheme } from "@/lib/theme";
 import { getGraphTheme } from "@/lib/graphTheme";
+import { formatGlucose, formatGlucoseAbsDelta, glucoseUnitLabel, glucoseDeltaUnit } from "@/lib/glucoseUnits";
 
 const MIN_MS = 60 * 1000;
 const HOUR_MS = 60 * MIN_MS;
@@ -218,7 +219,7 @@ export default function MealOutcomeModal({ meal, glucose, insulin, targetLow, ta
                       domain={[yMin, yMax]}
                       ticks={glucoseTicks}
                       tick={{ fontSize: 9, fill: gTheme.tickFill }}
-                      tickFormatter={(v) => Math.round(v)}
+                      tickFormatter={(v) => formatGlucose(v)}
                       allowDecimals={false}
                       axisLine={false}
                       tickLine={false}
@@ -265,7 +266,7 @@ export default function MealOutcomeModal({ meal, glucose, insulin, targetLow, ta
                 <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 px-1">
                   <span className="flex items-center gap-1.5">
                     <span className="inline-block h-2 w-2 rounded-full" style={{ background: gTheme.inRangeColor }} />
-                    <span className="text-[9px] text-white/40">Glucose (mg/dL)</span>
+                    <span className="text-[9px] text-white/40">Glucose ({glucoseUnitLabel()})</span>
                   </span>
                   <span className="flex items-center gap-1.5">
                     <span className="inline-block h-2 w-2 rounded-full" style={{ background: "#5ba3b8" }} />
@@ -273,7 +274,7 @@ export default function MealOutcomeModal({ meal, glucose, insulin, targetLow, ta
                   </span>
                   <span className="flex items-center gap-1.5">
                     <span className="inline-block h-2 w-2 rounded-full" style={{ background: "#5b6550" }} />
-                    <span className="text-[9px] text-white/40">Comfort zone ({targetLow} to {targetHigh})</span>
+                    <span className="text-[9px] text-white/40">Comfort zone ({formatGlucose(targetLow)} to {formatGlucose(targetHigh)})</span>
                   </span>
                   <span className="flex items-center gap-1.5">
                     <span className="inline-block h-2 w-2 rounded-full" style={{ background: "#af751b" }} />
@@ -291,20 +292,20 @@ export default function MealOutcomeModal({ meal, glucose, insulin, targetLow, ta
             <div className="mt-4 grid grid-cols-3 gap-2">
               <div className="rounded-xl border px-3 py-2.5 text-center" style={{ background: "#fdf9f2", borderColor: "#eadccf" }}>
                 <p className="text-[9px] uppercase tracking-wider text-white/30">Before meal</p>
-                <p className="mt-0.5 text-sm font-bold text-white/80">{Math.round(meal.startingGlucose)}</p>
-                <p className="text-[8px] text-white/25">mg/dL</p>
+                <p className="mt-0.5 text-sm font-bold text-white/80">{formatGlucose(meal.startingGlucose)}</p>
+                <p className="text-[8px] text-white/25">{glucoseUnitLabel()}</p>
               </div>
               <div className="rounded-xl border px-3 py-2.5 text-center" style={{ background: "#fdf9f2", borderColor: "#eadccf" }}>
                 <p className="text-[9px] uppercase tracking-wider text-white/30">{meal.rise > 0 ? "Peak" : "End"}</p>
-                <p className="mt-0.5 text-sm font-bold" style={{ color: riseColor }}>{Math.round(meal.peakGlucose)}</p>
-                <p className="text-[8px] text-white/25">mg/dL</p>
+                <p className="mt-0.5 text-sm font-bold" style={{ color: riseColor }}>{formatGlucose(meal.peakGlucose)}</p>
+                <p className="text-[8px] text-white/25">{glucoseUnitLabel()}</p>
               </div>
               <div className="rounded-xl border px-3 py-2.5 text-center" style={{ background: "#fdf9f2", borderColor: "#eadccf" }}>
                 <p className="text-[9px] uppercase tracking-wider text-white/30">{meal.rise > 0 ? "Rise" : "Change"}</p>
                 <p className="mt-0.5 text-sm font-bold" style={{ color: riseColor }}>
-                  {meal.rise > 0 ? "+" : ""}{Math.round(meal.rise)}
+                  {meal.rise > 0 ? "+" : ""}{formatGlucoseAbsDelta(meal.rise)}
                 </p>
-                <p className="text-[8px] text-white/25">mg/dL</p>
+                <p className="text-[8px] text-white/25">{glucoseDeltaUnit()}</p>
               </div>
             </div>
 

@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Heart, ArrowUp, ArrowDown } from "lucide-react";
 import { WELLNESS_COLORS } from "@/lib/glassTheme";
 import NotEnoughData from "@/components/analytics/NotEnoughData";
+import { formatGlucose, glucoseUnitLabel } from "@/lib/glucoseUnits";
 
 const MIN_READINGS = 3;
 const ELEVATED_THRESHOLD = 20;
@@ -79,7 +80,7 @@ function InsightCard({ insight }) {
           <p className="mt-2 text-[11px] text-white/35">
             <span className="font-semibold text-white/70">{segment.count}</span> readings
             {", "}
-            {segment.avg !== null && (<><span className="font-semibold text-white/70">{segment.avg}</span> mg/dL avg</>)}
+            {segment.avg !== null && (<><span className="font-semibold text-white/70">{formatGlucose(segment.avg)}</span> {glucoseUnitLabel()} avg</>)}
             {", "}
             <span className="font-semibold text-white/70">{Math.round(segment.inRangePct)}%</span> in range
           </p>

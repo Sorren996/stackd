@@ -104,6 +104,19 @@ export function glucoseDeltaUnit() {
   return isMmolMode() ? "mmol/L" : "points";
 }
 
+/**
+ * Convert a display-unit value entered by the user to mg/dL for storage.
+ *  - mg/dL mode: returns the integer value as-is.
+ *  - mmol/L mode: returns value × 18, rounded to the nearest integer.
+ * Returns null for invalid input.
+ */
+export function parseGlucoseInput(displayValue) {
+  const n = Number(displayValue);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  if (!isMmolMode()) return Math.round(n);
+  return Math.round(n * 18);
+}
+
 /** Hook helper: subscribe to glucose-units-updated events.
  *  Returns a cleanup function. */
 export function onGlucoseUnitsChange(callback) {

@@ -17,6 +17,7 @@ import { hasDelayedRise } from "@/lib/mealMonitoring";
 import { useIsLightTheme } from "@/lib/theme";
 import { getGraphTheme } from "@/lib/graphTheme";
 import { minutesOfDay, getGlucoseAt, findReadingNear } from "@/lib/dayRecapMetrics";
+import { formatGlucose, formatGlucoseAbsDelta, glucoseUnitLabel, glucoseDeltaUnit } from "@/lib/glucoseUnits";
 
 const HOUR = 60;
 const DAY_MIN = 24 * 60;
@@ -101,13 +102,13 @@ function EventPopover({ event, onClose }) {
                 <p className="text-[10px] font-medium" style={{ color: "#8a6db8" }}>Higher protein / fat</p>
               )}
               {payload.glucoseAt != null && (
-                <p className="text-[10px] text-white/45">{Math.round(payload.glucoseAt)} mg/dL at meal</p>
+                <p className="text-[10px] text-white/45">{formatGlucose(payload.glucoseAt)} {glucoseUnitLabel()} at meal</p>
               )}
               {payload.glucoseAt60 != null && (
-                <p className="text-[10px] text-white/45">60 min later → {Math.round(payload.glucoseAt60)} mg/dL</p>
+                <p className="text-[10px] text-white/45">60 min later → {formatGlucose(payload.glucoseAt60)} {glucoseUnitLabel()}</p>
               )}
               {payload.glucoseAt120 != null && (
-                <p className="text-[10px] text-white/45">120 min later → {Math.round(payload.glucoseAt120)} mg/dL</p>
+                <p className="text-[10px] text-white/45">120 min later → {formatGlucose(payload.glucoseAt120)} {glucoseUnitLabel()}</p>
               )}
               {payload.rise != null && (
                 <p
@@ -115,7 +116,7 @@ function EventPopover({ event, onClose }) {
                   style={{ color: payload.rise > 30 ? "#af751b" : payload.rise < 0 ? "#5b6550" : "#8a7f70" }}
                 >
                   Glucose {payload.rise > 0 ? "rose" : "changed"} {payload.rise > 0 ? "+" : ""}
-                  {Math.round(payload.rise)} mg/dL over the following hour
+                  {formatGlucoseAbsDelta(payload.rise)} {glucoseDeltaUnit()} over the following hour
                 </p>
               )}
               {payload.notes && <p className="text-[10px] text-white/35">{payload.notes}</p>}
@@ -124,10 +125,10 @@ function EventPopover({ event, onClose }) {
             <div className="space-y-1">
               <p className="text-[11px] text-white/55">{Math.round(payload.units * 10) / 10} units</p>
               {payload.glucoseAt != null && (
-                <p className="text-[10px] text-white/45">{Math.round(payload.glucoseAt)} mg/dL at dose</p>
+                <p className="text-[10px] text-white/45">{formatGlucose(payload.glucoseAt)} {glucoseUnitLabel()} at dose</p>
               )}
               {payload.glucoseAt60 != null && (
-                <p className="text-[10px] text-white/45">60 min later → {Math.round(payload.glucoseAt60)} mg/dL</p>
+                <p className="text-[10px] text-white/45">60 min later → {formatGlucose(payload.glucoseAt60)} {glucoseUnitLabel()}</p>
               )}
               {payload.change != null && (
                 <p
@@ -135,7 +136,7 @@ function EventPopover({ event, onClose }) {
                   style={{ color: payload.change < -10 ? "#5b6550" : payload.change > 10 ? "#af751b" : "#8a7f70" }}
                 >
                   Glucose {payload.change > 0 ? "rose" : "eased"} {payload.change > 0 ? "+" : ""}
-                  {Math.round(payload.change)} mg/dL over the following hour
+                  {formatGlucoseAbsDelta(payload.change)} {glucoseDeltaUnit()} over the following hour
                 </p>
               )}
               {payload.notes && <p className="text-[10px] text-white/35">{payload.notes}</p>}
@@ -304,7 +305,7 @@ export default function DayRecapGraph({ glucose, carbs, insulin, targetLow, targ
             stroke={gTheme.refLineStroke}
             strokeDasharray="3 4"
             label={{
-              value: `${Math.round(targetHigh)}`,
+              value: `${formatGlucose(targetHigh)}`,
               position: "right",
               fill: gTheme.tickFill,
               fontSize: 9,
@@ -316,7 +317,7 @@ export default function DayRecapGraph({ glucose, carbs, insulin, targetLow, targ
             stroke={gTheme.refLineStroke}
             strokeDasharray="3 4"
             label={{
-              value: `${Math.round(targetLow)}`,
+              value: `${formatGlucose(targetLow)}`,
               position: "right",
               fill: gTheme.tickFill,
               fontSize: 9,

@@ -5,6 +5,7 @@ import { base44 } from "@/api/base44Client";
 import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
 import { useCreateDoses, useCreateGlucose, useCreateCarbs } from "@/hooks/useLogMutations";
 import { getDefaultInsulinLibrary } from "@/lib/userSettings";
+import { getGlucoseUnits, glucoseUnitLabel, parseGlucoseInput } from "@/lib/glucoseUnits";
 import { X, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AnimatePresence, motion } from "framer-motion";
@@ -136,6 +137,17 @@ export default function DoseForm({ open, onOpenChange, mode = "insulin" }) {
   const [carbsDirty, setCarbsDirty] = useState(false);
 
   const [insulinLibrary, setInsulinLibrary] = useState(readInsulinLibrary);
+  const [glucoseUnits, setGlucoseUnits] = useState(getGlucoseUnits());
+
+  useEffect(() => {
+    const refresh = () => setGlucoseUnits(getGlucoseUnits());
+    window.addEventListener("glucose-units-updated", refresh);
+    window.addEventListener("storage", refresh);
+    return () => {
+      window.removeEventListener("glucose-units-updated", refresh);
+      window.removeEventListener("storage", refresh);
+    };
+  }, []);
 
   useEffect(() => {
     const refresh = () => setInsulinLibrary(readInsulinLibrary());
@@ -350,7 +362,7 @@ export default function DoseForm({ open, onOpenChange, mode = "insulin" }) {
 
     navigator.vibrate?.(20);
 
-    const value = Number(glucoseValue);
+    const value = parseGlucoseInput(glucoseValue);
     if (!Number.isFinite(value) || value <= 0) return;
 
     const recordedAt = buildTimestampNoFuture(glucoseDate, glucoseTime);
@@ -513,10 +525,16 @@ export default function DoseForm({ open, onOpenChange, mode = "insulin" }) {
                       <NumberPadField
                         label="Glucose"
                         value={glucoseValue}
-                        onChange={(value) => setGlucoseValue(value.replace(/\D/g, "").slice(0, 3))}
-                        unit="mg/dL"
-                        decimal={false}
-                        maxLength={3}
+                        onChange={(value) => {
+                          if (glucoseUnits === "mmol/L") {
+                            setGlucoseValue(value.replace(/[^\d.]/g, "").slice(0, 4));
+                          } else {
+                            setGlucoseValue(value.replace(/\D/g, "").slice(0, 3));
+                          }
+                        }}
+                        unit={glucoseUnitLabel()}
+                        decimal={glucoseUnits === "mmol/L"}
+                        maxLength={glucoseUnits === "mmol/L" ? 4 : 3}
                         large
                       />
                       <div className="mt-4 space-y-3">
@@ -533,7 +551,7 @@ export default function DoseForm({ open, onOpenChange, mode = "insulin" }) {
                         className="w-full rounded-2xl py-4 text-base font-semibold transition disabled:opacity-40"
                         style={{ background: "#3f3830", color: "#f7f1e8", boxShadow: "0 4px 16px rgba(63, 56, 48, 0.15)" }}
                       >
-                        {loggingTab === "glucose" || createGlucose.isPending ? "Logging..." : `Log ${glucoseValue || "--"} mg/dL`}
+                        {loggingTab === "glucose" || createGlucose.isPending ? "Logging..." : `Log ${glucoseValue || "--"} ${glucoseUnitLabel()}`}
                       </button>
                     </div>
                   </>

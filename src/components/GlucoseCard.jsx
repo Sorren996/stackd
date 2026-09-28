@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { motion } from "framer-motion";
 import { getGlucoseColor, getGlucoseStatusLabel } from "@/lib/glucoseStatus";
+import { formatGlucose, glucoseUnitLabel } from "@/lib/glucoseUnits";
 
 function readTargetRange() {
   if (typeof window === "undefined") return { low: 70, high: 180 };
@@ -53,7 +54,7 @@ export default function GlucoseCard({ reading, onDelete, locked = false }) {
         <p className="text-sm font-semibold text-white/85">{eventLabel}</p>
         <p className="text-xs text-white/70 mt-0.5">{timeAgo}, {format(new Date(reading.recorded_at), "h:mm a")}</p>
         <p className="text-xs mt-1.5 font-semibold" style={{ color }}>
-          {value} mg/dL, {statusLabel}
+          {formatGlucose(value)} {glucoseUnitLabel()}, {statusLabel}
         </p>
         {reading.notes && <p className="text-xs text-white/30 mt-1 italic">{reading.notes}</p>}
         {locked && (
@@ -74,7 +75,7 @@ export default function GlucoseCard({ reading, onDelete, locked = false }) {
           <AlertDialogHeader>
             <AlertDialogTitle className="text-[hsl(var(--popover))]">Remove this check-in?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will gently remove the {value} mg/dL reading from your history.
+              This will gently remove the {formatGlucose(value)} {glucoseUnitLabel()} reading from your history.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

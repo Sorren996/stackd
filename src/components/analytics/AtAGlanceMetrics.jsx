@@ -1,4 +1,5 @@
 import NotEnoughData from "@/components/analytics/NotEnoughData";
+import { formatGlucose, glucoseUnitLabel } from "@/lib/glucoseUnits";
 
 const DIVIDER_STYLE = {
   background: "linear-gradient(to right, transparent, #eadccf, transparent)",
@@ -32,8 +33,8 @@ export default function AtAGlanceMetrics({ averageGlucose, gmi, targetLow, targe
     <div>
       <MetricItem
         label="Average glucose"
-        value={Number.isFinite(averageGlucose) ? Math.round(averageGlucose) : null}
-        unit="mg/dL"
+        value={Number.isFinite(averageGlucose) ? formatGlucose(averageGlucose) : null}
+        unit={glucoseUnitLabel()}
         comparison={comparisons?.averageGlucose}
       />
       <div className="h-px w-full" style={DIVIDER_STYLE} />
@@ -46,8 +47,8 @@ export default function AtAGlanceMetrics({ averageGlucose, gmi, targetLow, targe
       <div className="h-px w-full" style={DIVIDER_STYLE} />
       <MetricItem
         label="Target range"
-        value={`${targetLow}\u2013${targetHigh}`}
-        unit="mg/dL"
+        value={`${formatGlucose(targetLow)}\u2013${formatGlucose(targetHigh)}`}
+        unit={glucoseUnitLabel()}
         isQuiet
       />
     </div>

@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { buildMealMemorySummary, buildAggregateSummary } from "@/lib/mealMemorySummary";
 import { submitMatchFeedback, confoundingLabels, OUTCOME_LABELS } from "@/lib/mealMemory";
 import { useIsLightTheme } from "@/lib/theme";
+import { formatGlucose, glucoseUnitLabel } from "@/lib/glucoseUnits";
 
 const TREND_ICON = { rising: TrendingUp, falling: TrendingDown, steady: Minus, unknown: Minus };
 
@@ -192,7 +193,7 @@ export default function MealMemoryModal({ open, match, currentMeal, onContinue, 
                       label="Starting glucose"
                       value={
                         Number.isFinite(analysis.starting_glucose)
-                          ? `${Math.round(analysis.starting_glucose)} mg/dL, ${analysis.starting_trend || "steady"}`
+                          ? `${formatGlucose(analysis.starting_glucose)} ${glucoseUnitLabel()}, ${analysis.starting_trend || "steady"}`
                           : "Not available"
                       }
                     />
@@ -200,17 +201,17 @@ export default function MealMemoryModal({ open, match, currentMeal, onContinue, 
                       label="Peak glucose"
                       value={
                         Number.isFinite(analysis.peak_glucose)
-                          ? `${Math.round(analysis.peak_glucose)} mg/dL${peakDelayLabel ? `, ${peakDelayLabel}` : ""}`
+                          ? `${formatGlucose(analysis.peak_glucose)} ${glucoseUnitLabel()}${peakDelayLabel ? `, ${peakDelayLabel}` : ""}`
                           : "Not available"
                       }
                     />
                     <DetailRow
                       label="Lowest glucose"
-                      value={Number.isFinite(analysis.lowest_glucose) ? `${Math.round(analysis.lowest_glucose)} mg/dL` : "Not available"}
+                      value={Number.isFinite(analysis.lowest_glucose) ? `${formatGlucose(analysis.lowest_glucose)} ${glucoseUnitLabel()}` : "Not available"}
                     />
                     <DetailRow
                       label="Glucose at 4h"
-                      value={Number.isFinite(analysis.glucose_at_4_hours) ? `${Math.round(analysis.glucose_at_4_hours)} mg/dL` : "Not available"}
+                      value={Number.isFinite(analysis.glucose_at_4_hours) ? `${formatGlucose(analysis.glucose_at_4_hours)} ${glucoseUnitLabel()}` : "Not available"}
                     />
                     <DetailRow label="Time in range" value={`${analysis.time_in_user_range ?? 0}%`} />
                     <DetailRow
