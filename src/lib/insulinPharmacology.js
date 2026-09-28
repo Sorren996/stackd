@@ -17,6 +17,26 @@
 
 const MINUTE_MS = 60 * 1000;
 
+import {
+  getDoseTierDIA,
+  getDoseTierPeak,
+  betaIOBFraction,
+  betaActivityRate,
+  betaActivityNormalized,
+} from "./iobModel";
+
+// Detects rapid-acting SC analogs (aspart / lispro / glulisine and their
+// faster-acting variants) — the insulins that use the finite-DIA beta curve.
+// Afrezza (inhaled, duration 180) is excluded; it has a distinct PK profile.
+function isRapidActingAnalogProfile(profile) {
+  return (
+    profile &&
+    profile.category === "Rapid-Acting" &&
+    profile.model === "peaked" &&
+    Number(profile.duration) === 300
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Insulin profile database
 // ---------------------------------------------------------------------------
@@ -359,10 +379,15 @@ function getDoseTime(dose) {
 function getProfileTiming(profile, units) {
   const model = profile?.model || "peaked";
   const onset = Math.max(0, Number(profile?.onset) || 0);
-  const duration = Math.max(onset + 1, Number(profile?.duration) || 240);
-  const peak = Number(profile?.peak) || null;
+  let duration = Math.max(onset + 1, Number(profile?.duration) || 240);
+  let peak = Number(profile?.peak) || null;
   const shape = Math.max(2, Math.round(Number(profile?.shape) || 4));
-  return { model, onset, peak, duration, shape };
+  // Rapid-acting SC analogs: dose-tiered finite-DIA beta curve.
+  if (isRapidActingAnalogProfile(profile)) {
+    duration = getDoseTierDIA(units);
+    peak = getDoseTierPeak(units);
+  }
+  return { model, onset, peak, duration, shape, useBeta: isRapidActingAnalogProfile(profile) };
 }
 
 // ---------------------------------------------------------------------------
@@ -475,6 +500,7 @@ export function getRelativeActivityAtMinute(minute, timing) {
   const duration = Math.max(onset + 1, Number(timing?.duration) || onset + 1);
   if (t <= 0 || t >= duration) return 0;
   if (model === "flat") return flatActivity(t, onset, duration);
+  if (timing?.useBeta) return betaActivityNormalized(t, duration);
   const tp = Number(timing?.peak) || duration * 0.25;
   return exponentialActivityRel(t, tp, duration);
 }
@@ -505,6 +531,33 @@ function buildSingleComponentCurve(profile, units, start, step) {
   if (!profile || !units || units <= 0) return [];
   const timing = getProfileTiming(profile, units);
   const spanMin = Math.max(step, timing.duration);
+
+  // Rapid-acting analogs: finite-DIA beta curve (IOB → 0.0 exactly at DIA).
+  if (timing.useBeta) {
+    const dia = timing.duration;
+    const points = [];
+    for (let minute = 0; minute <= dia; minute += step) {
+      const t = Math.min(minute, dia);
+      const iobFrac = betaIOBFraction(t, dia);
+      points.push({
+        minute,
+        time: start + minute * MINUTE_MS,
+        activity: betaActivityNormalized(t, dia),
+        iobFraction: iobFrac,
+        activeUnits: Math.max(0, units * iobFrac),
+        activityUnitsPerMinute: betaActivityRate(t, dia, units),
+      });
+    }
+    // Guarantee exact zero termination at DIA (no asymptotic residue).
+    const last = points[points.length - 1];
+    if (last) {
+      last.iobFraction = 0;
+      last.activeUnits = 0;
+      last.activityUnitsPerMinute = 0;
+      last.activity = 0;
+    }
+    return points;
+  }
 
   if (timing.model === "peaked") {
     const tp = Number(timing.peak) || 75;
@@ -731,7 +784,14 @@ export function getDoseStatus(dose, atTime = Date.now()) {
   const activity = getRelativeActivityAtMinute(elapsed, timing);
   const iob = getDoseIOB(dose, atTime);
 
-  if (elapsed >= timing.duration || iob <= 0.01) {
+  // Beta-curve doses expire exactly at DIA (IOB = 0.0). The legacy
+  // iob <= 0.01 threshold is kept only for the asymptotic exponential model,
+  // where it trims the never-zero tail. For beta, using it would prematurely
+  // mark a dose expired well before its finite DIA.
+  const isExpired = timing.useBeta
+    ? elapsed >= timing.duration
+    : elapsed >= timing.duration || iob <= 0.01;
+  if (isExpired) {
     return { phase: "expired", label: "No longer active", activity: 0, iob: 0 };
   }
 

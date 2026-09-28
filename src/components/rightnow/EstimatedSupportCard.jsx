@@ -4,6 +4,7 @@ import DashboardCard from "@/components/dashboard/DashboardCard";
 import MiniActivitySparkline from "./MiniActivitySparkline";
 import { getDoseTimingInfo, isBasalInsulinType } from "@/lib/insulinPharmacology";
 import { formatGlucose, glucoseUnitLabel } from "@/lib/glucoseUnits";
+import { formatIOBValue } from "@/lib/iobModel";
 
 const PALETTE = {
   ink: "#3f3830",
@@ -261,8 +262,8 @@ export default function EstimatedSupportCard({ details }) {
                     <span className="text-[13px] font-semibold" style={{ color: PALETTE.ink }}>
                       {shortName}, {fmtUnits(dose.units)}u dose
                     </span>
-                    <span className="block text-[11px]" style={{ color: PALETTE.muted }}>
-                      {dose.iob < 1.0 ? "Less than 1u left" : `${fmtUnits(dose.iob)}u left`}
+                    <span className="block text-[11px] tabular-nums" style={{ color: PALETTE.muted }}>
+                      {formatIOBValue(dose.iob)}u left
                     </span>
                   </div>
                   {remaining && (

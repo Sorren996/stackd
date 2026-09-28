@@ -4,6 +4,7 @@ import DashboardCard from "@/components/dashboard/DashboardCard";
 import MiniActivitySparkline from "./MiniActivitySparkline";
 import SwipeableRow from "@/components/SwipeableRow";
 import { isBasalInsulinType, getDoseStatus, getDoseTimingInfo } from "@/lib/insulinPharmacology";
+import { formatIOBValue } from "@/lib/iobModel";
 
 const PALETTE = {
   ink: "#3f3830",
@@ -24,14 +25,11 @@ function fmtUnits(u) {
   return n % 1 === 0 ? n : n.toFixed(1);
 }
 
-// Compact IOB display: once remaining insulin drops below 1.0u, show "<1u"
-// instead of a false-precision decimal like "0.5u". At or above 1.0u, keep
-// the one-decimal format. Includes the "u" suffix.
+// IOB display: real number with 1 decimal at ≥0.5u, 2 decimals below 0.5u
+// (tail reads 0.42 → 0.08 → 0.01 → 0.00). Never "<1u" — the finite-DIA beta
+// curve reaches exactly 0.00, so the ghost tail is retired.
 function fmtIob(u) {
-  const n = Number(u);
-  if (!Number.isFinite(n) || n < 0.01) return "0u";
-  if (n < 1.0) return "<1u";
-  return `${n % 1 === 0 ? n : n.toFixed(1)}u`;
+  return `${formatIOBValue(u)}u`;
 }
 
 // Dynamic basal status derived from real elapsed time vs that basal's
@@ -126,11 +124,11 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
   }, [openDoseId]);
 
   const bolusDoses = useMemo(
-    () => (breakdown || []).filter((d) => !isBasalInsulinType(d.type) && d.iob > 0.01),
+    () => (breakdown || []).filter((d) => !isBasalInsulinType(d.type) && !(d.timingInfo?.isExpired)),
     [breakdown]
   );
   const basalDoses = useMemo(
-    () => (breakdown || []).filter((d) => isBasalInsulinType(d.type) && d.iob > 0.01),
+    () => (breakdown || []).filter((d) => isBasalInsulinType(d.type) && !(d.timingInfo?.isExpired)),
     [breakdown]
   );
 
