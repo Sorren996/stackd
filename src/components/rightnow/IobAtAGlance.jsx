@@ -124,11 +124,11 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
   }, [openDoseId]);
 
   const bolusDoses = useMemo(
-    () => (breakdown || []).filter((d) => !isBasalInsulinType(d.type) && !(d.timingInfo?.isExpired)),
+    () => (breakdown || []).filter((d) => !isBasalInsulinType(d.type) && d.iob > 0.01),
     [breakdown]
   );
   const basalDoses = useMemo(
-    () => (breakdown || []).filter((d) => isBasalInsulinType(d.type) && !(d.timingInfo?.isExpired)),
+    () => (breakdown || []).filter((d) => isBasalInsulinType(d.type) && d.iob > 0.01),
     [breakdown]
   );
 

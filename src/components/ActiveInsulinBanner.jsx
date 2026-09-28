@@ -860,15 +860,13 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
   const activeCorrectionUnits = useMemo(() => getTotalCorrectionIOB(mealCoverageDoses, Date.now()), [mealCoverageDoses, nowMinute]);
   const activeInsulinBreakdown = useMemo(() => {
     const now = Date.now();
-    const RECENT_SPENT_MS = 8 * 60 * 60 * 1000;
     return safeDoses.
     map((dose) => {
       const iob = getDoseIOB(dose, now);
       const doseTime = getDoseTime(dose);
-      // Active doses (iob >= 0.5) plus recently-cleared doses (within 8h)
-      // so the at-a-glance view can show spent doses greyed rather than
-      // dropping them the moment they fall below 0.5u.
-      if (iob < 0.5 && !(Number.isFinite(doseTime) && now - doseTime < RECENT_SPENT_MS)) return null;
+      // Fully-cleared doses (0u IOB) are removed immediately — they no
+      // longer appear in the IOB card, meal review, or timeline.
+      if (iob <= 0.01) return null;
 
       const profile = getInsulinProfile(dose.insulin_type);
       const status = getDoseStatus(dose, now);
