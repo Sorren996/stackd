@@ -6,7 +6,7 @@ const PALETTE = {
   faint: "#746959",
   sage: "#5b6550",
   copper: "#9c5228",
-  hairline: "#eadccf",
+  hairline: "#eadccf"
 };
 
 /**
@@ -19,10 +19,10 @@ const PALETTE = {
 export default function MealGlucoseTrace({ glucoseReadings, mealTime, reviewWindowEnd, now, targetLow = 70, targetHigh = 180 }) {
   const windowReadings = useMemo(() => {
     const end = Math.min(now, reviewWindowEnd);
-    return (Array.isArray(glucoseReadings) ? glucoseReadings : [])
-      .map((r) => ({ time: new Date(r.recorded_at).getTime(), value: Number(r.value) }))
-      .filter((r) => Number.isFinite(r.time) && Number.isFinite(r.value) && r.time >= mealTime && r.time <= end)
-      .sort((a, b) => a.time - b.time);
+    return (Array.isArray(glucoseReadings) ? glucoseReadings : []).
+    map((r) => ({ time: new Date(r.recorded_at).getTime(), value: Number(r.value) })).
+    filter((r) => Number.isFinite(r.time) && Number.isFinite(r.value) && r.time >= mealTime && r.time <= end).
+    sort((a, b) => a.time - b.time);
   }, [glucoseReadings, mealTime, reviewWindowEnd, now]);
 
   if (windowReadings.length < 2) {
@@ -31,8 +31,8 @@ export default function MealGlucoseTrace({ glucoseReadings, mealTime, reviewWind
         <span className="text-[12px]" style={{ color: PALETTE.faint }}>
           {windowReadings.length === 0 ? "No glucose logged around this meal" : "Waiting for more readings"}
         </span>
-      </div>
-    );
+      </div>);
+
   }
 
   const width = 280;
@@ -52,15 +52,15 @@ export default function MealGlucoseTrace({ glucoseReadings, mealTime, reviewWind
   vMax += vPad;
   const vSpan = Math.max(1, vMax - vMin);
 
-  const x = (t) => padX + ((t - start) / timeSpan) * (width - padX * 2);
+  const x = (t) => padX + (t - start) / timeSpan * (width - padX * 2);
   const y = (v) => padY + (1 - (v - vMin) / vSpan) * (height - padY * 2);
 
   const rangeYTop = y(targetHigh);
   const rangeYBottom = y(targetLow);
 
-  const path = windowReadings
-    .map((r, i) => `${i ? "L" : "M"} ${x(r.time).toFixed(1)} ${y(r.value).toFixed(1)}`)
-    .join(" ");
+  const path = windowReadings.
+  map((r, i) => `${i ? "L" : "M"} ${x(r.time).toFixed(1)} ${y(r.value).toFixed(1)}`).
+  join(" ");
 
   return (
     <div className="mt-3">
@@ -68,7 +68,7 @@ export default function MealGlucoseTrace({ glucoseReadings, mealTime, reviewWind
         <span className="text-[10px] uppercase tracking-wider" style={{ color: PALETTE.faint }}>
           Glucose in this window
         </span>
-        <span className="text-[10px] tabular-nums" style={{ color: PALETTE.faint }}>
+        <span className="text-[10px] tabular-nums hidden" style={{ color: PALETTE.faint }}>
           {windowReadings.length} readings
         </span>
       </div>
@@ -79,16 +79,16 @@ export default function MealGlucoseTrace({ glucoseReadings, mealTime, reviewWind
           width={width - padX * 2}
           height={Math.abs(rangeYBottom - rangeYTop)}
           fill={PALETTE.sage}
-          fillOpacity={0.07}
-        />
+          fillOpacity={0.07} />
+        
         <path d={path} fill="none" stroke={PALETTE.sage} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" />
         <circle
           cx={x(windowReadings[windowReadings.length - 1].time)}
           cy={y(windowReadings[windowReadings.length - 1].value)}
           r={2.5}
-          fill={PALETTE.sage}
-        />
+          fill={PALETTE.sage} />
+        
       </svg>
-    </div>
-  );
+    </div>);
+
 }
