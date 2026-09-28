@@ -68,9 +68,9 @@ export default function MealGlucoseTrace({ glucoseReadings, mealTime, reviewWind
         <span className="text-[10px] uppercase tracking-wider" style={{ color: PALETTE.faint }}>
           Glucose in this window
         </span>
-        <span className="text-[10px] tabular-nums hidden" style={{ color: PALETTE.faint }}>
-          {windowReadings.length} readings
-        </span>
+        
+
+        
       </div>
       <svg viewBox={`0 0 ${width} ${height}`} width="100%" height={height} preserveAspectRatio="none">
         <rect
