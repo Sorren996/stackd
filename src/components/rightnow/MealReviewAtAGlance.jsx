@@ -235,7 +235,7 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
         <div className="flex items-baseline justify-between gap-2">
           <div className="min-w-0 flex items-baseline gap-2">
             <span className="text-[15px] font-semibold truncate" style={{ color: PALETTE.ink }}>{mealName}</span>
-            <span className="shrink-0 rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-left" style={{ background: "rgba(175,117,27,0.10)", color: PALETTE.amber }}>
+            <span className="shrink-0 rounded-full text-[9px] font-semibold uppercase tracking-wider text-left pr-2 pl-2" style={{ background: "rgba(175,117,27,0.10)", color: PALETTE.amber }}>
               {slotLabel}
             </span>
           </div>
