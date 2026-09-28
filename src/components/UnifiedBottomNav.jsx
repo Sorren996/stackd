@@ -192,10 +192,16 @@ export default function UnifiedBottomNav() {
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.2 }}
-        className="fixed inset-x-0 bottom-0 flex justify-center"
-        style={{ paddingBottom: "env(safe-area-inset-bottom)", zIndex: expanded ? 50 : 30 }}
+        className="fixed inset-x-0 bottom-0"
+        style={{
+          paddingBottom: "env(safe-area-inset-bottom)",
+          background: "#fdf9f2",
+          borderTop: "1px solid #eadccf",
+          boxShadow: "0 -4px 20px rgba(63,56,48,0.06)",
+          zIndex: expanded ? 50 : 30,
+        }}
       >
-        <div className="relative mx-4" style={{ width: "min(calc(100vw - 2rem), 26rem)" }}>
+        <div className="relative w-full">
           {/* ── Menu content — expands upward from the nav pill ── */}
           <div
             style={{
@@ -210,7 +216,7 @@ export default function UnifiedBottomNav() {
               justifyContent: "flex-end",
             }}
           >
-            <div ref={menuContentRef}>
+            <div ref={menuContentRef} style={{ maxWidth: "26rem", margin: "0 auto", padding: "0 1rem" }}>
               {/* Picker-style floating overlay */}
               <div
                 className="overflow-hidden rounded-3xl"
@@ -247,15 +253,11 @@ export default function UnifiedBottomNav() {
             </div>
           </div>
 
-          {/* ── Nav pill — simple floating pill, no glass shape ── */}
+          {/* ── Nav bar — full width, flush to bottom edge ── */}
           <div
             className="grid grid-cols-4 gap-1 px-2 py-2.5"
             style={{
               height: NAV_HEIGHT,
-              background: "#fdf9f2",
-              border: "1px solid #eadccf",
-              borderRadius: "28px",
-              boxShadow: "0 4px 20px rgba(63,56,48,0.10)",
               position: "relative",
               zIndex: 50,
             }}
