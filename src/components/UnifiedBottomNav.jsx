@@ -195,7 +195,7 @@ export default function UnifiedBottomNav() {
         className="fixed inset-x-0 bottom-0 flex justify-center"
         style={{ paddingBottom: "env(safe-area-inset-bottom)", zIndex: expanded ? 50 : 30 }}
       >
-        <div className="relative mx-4 mb-4" style={{ width: "min(calc(100vw - 2rem), 26rem)" }}>
+        <div className="relative mx-4" style={{ width: "min(calc(100vw - 2rem), 26rem)" }}>
           {/* ── Menu content — expands upward from the nav pill ── */}
           <div
             style={{
@@ -270,7 +270,6 @@ export default function UnifiedBottomNav() {
                   className="relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-2xl text-center transition-colors"
                   style={{
                     color: isActive ? "#9c5228" : "#746959",
-                    background: isActive ? "rgba(156,82,40,0.10)" : "transparent",
                   }}
                   aria-label={item.label}
                 >
