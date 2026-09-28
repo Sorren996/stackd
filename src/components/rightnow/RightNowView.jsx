@@ -45,9 +45,9 @@ export default function RightNowView({
         </h1>
       </div>
 
-      {/* Tab switcher — copper underline on active tab */}
+      {/* Tab switcher — pill segmented control with copper active state */}
       <div className="mt-3 px-1">
-        <div className="flex gap-6 border-b" style={{ borderColor: "#eadccf" }}>
+        <div className="inline-flex w-full rounded-full p-1" style={{ background: "#f0e8db" }}>
           {TABS.map((t) => {
             const active = t.id === tab;
             return (
@@ -55,19 +55,14 @@ export default function RightNowView({
                 key={t.id}
                 type="button"
                 onClick={() => selectTab(t.id)}
-                className="relative pb-2 text-center text-[12px] font-semibold transition-colors"
-                style={{ color: active ? "#3f3830" : "#746959" }}
+                className="relative flex-1 rounded-full px-4 py-2 text-center text-[12px] font-semibold transition-colors"
+                style={{
+                  background: active ? "#9c5228" : "transparent",
+                  color: active ? "#f7f1e8" : "#6b6153",
+                }}
                 aria-pressed={active}
               >
                 {t.label}
-                {active &&
-                <motion.div
-                  layoutId="tab-underline"
-                  className="absolute bottom-[-1px] left-0 right-0 h-[2px]"
-                  style={{ background: "#9c5228" }}
-                  transition={{ type: "spring", stiffness: 380, damping: 32 }}
-                />
-                }
               </button>
             );
           })}

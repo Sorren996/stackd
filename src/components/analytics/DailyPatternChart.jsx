@@ -86,6 +86,7 @@ export default function DailyPatternChart({ hourlyAverages, targetLow, targetHig
               <YAxis
                 domain={[yMin, yMax]}
                 tick={{ fontSize: 9, fill: "#a89e8d" }}
+                tickFormatter={(v) => formatGlucose(v)}
                 axisLine={false}
                 tickLine={false}
                 width={40}

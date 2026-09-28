@@ -1,6 +1,6 @@
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { Check, Loader2, Gauge, Droplets } from "lucide-react";
-import { getGlucoseUnits, setGlucoseUnits, formatGlucose, glucoseUnitLabel } from "@/lib/glucoseUnits";
+import { getGlucoseUnits, setGlucoseUnits, formatGlucose, formatGlucoseAbsDelta, glucoseUnitLabel } from "@/lib/glucoseUnits";
 import {
   HIGH_REFERENCE_DEFAULT,
   HIGH_REFERENCE_MIN,
@@ -9,11 +9,6 @@ import {
 } from "@/lib/glucoseStatus";
 import HighGlucosePicker from "@/components/settings/HighGlucosePicker";
 import SectionCard from "@/components/editorial/SectionCard";
-
-const HEIGHT_OPTIONS = [
-  { value: 300, label: `300 ${glucoseUnitLabel()}`, desc: "A closer view of your in-range rhythm." },
-  { value: 400, label: `400 ${glucoseUnitLabel()}`, desc: "More headroom for highs while keeping your range centered." },
-];
 
 const UNIT_OPTIONS = [
   { value: "mg/dL", label: "mg/dL", desc: "Standard unit used in the United States." },
@@ -24,6 +19,11 @@ export default function DisplaySettings() {
   const { settings, isLoading, save, isSaving } = useUserSettings();
   const currentHeight = settings?.graph_height === 300 ? 300 : 400;
   const currentUnits = settings?.glucose_units || getGlucoseUnits();
+
+  const HEIGHT_OPTIONS = [
+    { value: 300, label: `${formatGlucose(300)} ${glucoseUnitLabel()}`, desc: "A closer view of your in-range rhythm." },
+    { value: 400, label: `${formatGlucose(400)} ${glucoseUnitLabel()}`, desc: "More headroom for highs while keeping your range centered." },
+  ];
   const currentHigh = Number.isFinite(settings?.high_glucose_reference)
     ? Math.max(HIGH_REFERENCE_MIN, Math.min(HIGH_REFERENCE_MAX, Math.round(settings.high_glucose_reference / HIGH_REFERENCE_STEP) * HIGH_REFERENCE_STEP))
     : HIGH_REFERENCE_DEFAULT;
@@ -132,7 +132,7 @@ export default function DisplaySettings() {
             <HighGlucosePicker value={currentHigh} onChange={handleSelectHigh} />
           </div>
           <p className="mt-3 text-[11px] leading-relaxed" style={{ color: "#746959" }}>
-            Choose from {HIGH_REFERENCE_MIN} to {HIGH_REFERENCE_MAX} mg/dL in steps of {HIGH_REFERENCE_STEP}. This is a visual reference only. It never changes when glucose is considered high. Your target range stays separate.
+            Choose from {formatGlucose(HIGH_REFERENCE_MIN)} to {formatGlucose(HIGH_REFERENCE_MAX)} {glucoseUnitLabel()} in steps of {formatGlucoseAbsDelta(HIGH_REFERENCE_STEP)}. This is a visual reference only. It never changes when glucose is considered high. Your target range stays separate.
           </p>
         </div>
       </SectionCard>

@@ -2,6 +2,7 @@ import { format, addDays, parseISO } from "date-fns";
 import SectionCard from "@/components/editorial/SectionCard";
 import DaySparkline from "./DaySparkline";
 import { groupDaysByWeek, weekStats } from "@/lib/historyAggregations";
+import { formatGlucose, glucoseUnitLabel } from "@/lib/glucoseUnits";
 
 function dayAvg(day) {
   return day.glucose?.count ? Math.round(day.glucose.sum / day.glucose.count) : null;
@@ -39,7 +40,7 @@ export default function HistoryWeekList({ days, readingsByDay = {}, targetLow, t
           <SectionCard key={week.key} label={headerLabel}>
             <div className="flex items-baseline justify-between pb-2">
               <span className="text-[11px] font-medium" style={{ color: "#746959" }}>
-                {stats.glucoseAvg != null ? `${stats.glucoseAvg} mg/dL avg` : "Still gathering"}
+                {stats.glucoseAvg != null ? `${formatGlucose(stats.glucoseAvg)} ${glucoseUnitLabel()} avg` : "Still gathering"}
               </span>
               <span className="flex items-baseline gap-1">
                 <span className="text-base font-bold tabular-nums" style={{ color: stats.inRangePct != null ? "#3f3830" : "#b8aea0" }}>
@@ -60,7 +61,7 @@ export default function HistoryWeekList({ days, readingsByDay = {}, targetLow, t
 
                 const hero = tir != null ? `${tir}%` : avg != null ? `${avg}` : "-";
                 const secondary = [
-                  tir != null && avg != null && `${avg} avg`,
+                  tir != null && avg != null && `${formatGlucose(avg)} avg`,
                   carbs > 0 && `${carbs}g`,
                   insulin > 0 && `${insulin}u`,
                 ].filter(Boolean).join(", ");

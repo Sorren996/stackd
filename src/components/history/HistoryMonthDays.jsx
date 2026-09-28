@@ -1,5 +1,6 @@
 import { format, parseISO } from "date-fns";
 import { ChevronRight } from "lucide-react";
+import { formatGlucose, glucoseUnitLabel } from "@/lib/glucoseUnits";
 
 function dayAvg(day) {
   return day.glucose.count ? Math.round(day.glucose.sum / day.glucose.count) : null;
@@ -25,7 +26,7 @@ export default function HistoryMonthDays({ days, onSelectDay }) {
         const insulin = Math.round(day.insulin.total);
 
         const summary = hasGlucose
-          ? `${avg} mg/dL, ${tir}% in range`
+          ? `${formatGlucose(avg)} ${glucoseUnitLabel()}, ${tir}% in range`
           : "No glucose data";
         const extras = [
           carbs > 0 && `${carbs}g`,

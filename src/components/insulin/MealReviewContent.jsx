@@ -4,6 +4,7 @@ import { getCarbAbsorptionAt } from "@/lib/carbAbsorption";
 import { getMealSlotLabel } from "@/lib/mealSlot";
 import MealProjectionChart from "./MealProjectionChart";
 import MealEditOverlay from "./MealEditOverlay";
+import { formatGlucose, glucoseUnitLabel } from "@/lib/glucoseUnits";
 
 const RESCUE_COLOR = "#8a6db8";
 const PALETTE = {
@@ -168,7 +169,7 @@ export default function MealReviewContent({ mealInsight, monitoringStatus, gluco
         <div className="mt-4 flex items-center gap-2">
           <span className="h-2 w-2 rounded-full" style={{ background: PALETTE.green }} />
           <span className="text-[14px]" style={{ color: PALETTE.ink }}>
-            {Math.round(glucoseNow)} mg/dL, {trendLabel}
+            {formatGlucose(glucoseNow)} {glucoseUnitLabel()}, {trendLabel}
           </span>
         </div>
       )}

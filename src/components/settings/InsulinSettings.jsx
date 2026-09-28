@@ -14,6 +14,7 @@ import NumberPadField from "@/components/settings/insulin/NumberPadField";
 import DoseMathTile from "@/components/settings/insulin/DoseMathTile";
 import AdvancedSection from "@/components/settings/insulin/AdvancedSection";
 import { toast } from "sonner";
+import { isMmolMode, formatGlucose, glucoseUnitLabel, onGlucoseUnitsChange } from "@/lib/glucoseUnits";
 
 const INSULIN_PLAN_HELP = {
   review: {
@@ -163,9 +164,30 @@ function SettingsHelpOverlay({ openHelp, onClose }) {
   );
 }
 
+// Convert a stored mg/dL string to the user's display unit string.
+// Empty string passes through (no value entered yet).
+function toDisplayGlucose(mgdlStr) {
+  if (!mgdlStr || mgdlStr === "") return "";
+  const n = Number(mgdlStr);
+  if (!Number.isFinite(n)) return "";
+  if (!isMmolMode()) return mgdlStr;
+  return (Math.round((n / 18) * 10) / 10).toString();
+}
+
+// Convert a display-unit string entered by the user back to mg/dL for storage.
+function fromDisplayGlucose(displayStr) {
+  if (!displayStr || displayStr === "") return "";
+  if (!isMmolMode()) return displayStr;
+  const n = Number(displayStr);
+  if (!Number.isFinite(n)) return "";
+  return String(Math.round(n * 18));
+}
+
 export default function InsulinSettings() {
   const { settings: serverSettings, save: saveSettings } = useUserSettings();
   const [openHelp, setOpenHelp] = useState(null);
+  const [, setUnitsTick] = useState(0);
+  useEffect(() => onGlucoseUnitsChange(() => setUnitsTick((t) => t + 1)), []);
 
   const [stackingAlerts, setStackingAlerts] = useState(() => {
     const saved = localStorage.getItem("stacking_alerts_enabled");
@@ -352,7 +374,7 @@ export default function InsulinSettings() {
     localStorage.setItem("target_range_low", "70");
     localStorage.setItem("target_range_high", "180");
     dispatchTargetRangeUpdated();
-    toast.success("Set to recommended range (70 to 180 mg/dL)");
+    toast.success(`Set to recommended range (${formatGlucose(70)} to ${formatGlucose(180)} ${glucoseUnitLabel()})`);
   };
 
   const handleSliderChange = ([low, high]) => {
@@ -428,14 +450,18 @@ export default function InsulinSettings() {
               <DoseMathTile
                 plainLabel="How much one unit lowers your glucose"
                 technicalLabel="Insulin sensitivity"
-                value={insulinSensitivity}
-                unit="mg/dL / unit"
+                value={toDisplayGlucose(insulinSensitivity)}
+                unit={`${glucoseUnitLabel()} / unit`}
                 helper="A higher number means each unit works harder for you."
                 padTitle="Insulin sensitivity"
-                onChange={handleInsulinSettingValueChange(
-                  "insulin_sensitivity_mgdl_per_unit",
-                  setInsulinSensitivity
-                )}
+                decimal={isMmolMode()}
+                maxLength={5}
+                onChange={(v) =>
+                  handleInsulinSettingValueChange(
+                    "insulin_sensitivity_mgdl_per_unit",
+                    setInsulinSensitivity
+                  )(fromDisplayGlucose(v))
+                }
               />
 
               <div className="border-t pt-5" style={{ borderColor: "#eadccf" }}>
@@ -459,14 +485,18 @@ export default function InsulinSettings() {
                 <DoseMathTile
                   plainLabel="Glucose target for corrections"
                   technicalLabel="Correction target"
-                  value={correctionTargetGlucose}
-                  unit="mg/dL"
+                  value={toDisplayGlucose(correctionTargetGlucose)}
+                  unit={glucoseUnitLabel()}
                   helper="The baseline used when estimating a correction dose."
                   padTitle="Correction target"
-                  onChange={handleInsulinSettingValueChange(
-                    "correction_target_glucose",
-                    setCorrectionTargetGlucose
-                  )}
+                  decimal={isMmolMode()}
+                  maxLength={5}
+                  onChange={(v) =>
+                    handleInsulinSettingValueChange(
+                      "correction_target_glucose",
+                      setCorrectionTargetGlucose
+                    )(fromDisplayGlucose(v))
+                  }
                 />
               </div>
             </div>
@@ -486,14 +516,14 @@ export default function InsulinSettings() {
                 }
               >
                 <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#746959" }}>Recommended</div>
-                <div className="text-base font-extrabold mt-1" style={{ color: "#3f3830" }}>70 to 180</div>
-                <div className="text-[9px] mt-0.5" style={{ color: "#746959" }}>mg/dL</div>
+                <div className="text-base font-extrabold mt-1" style={{ color: "#3f3830" }}>{formatGlucose(70)} to {formatGlucose(180)}</div>
+                <div className="text-[9px] mt-0.5" style={{ color: "#746959" }}>{glucoseUnitLabel()}</div>
               </button>
 
               <div className="flex-1 flex flex-col justify-center space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-[10px] uppercase tracking-wider" style={{ color: "#746959" }}>Custom Range</span>
-                  <span className="text-sm font-bold" style={{ color: "#5b6550" }}>{targetLow} to {targetHigh} mg/dL</span>
+                  <span className="text-sm font-bold" style={{ color: "#5b6550" }}>{formatGlucose(targetLow)} to {formatGlucose(targetHigh)} {glucoseUnitLabel()}</span>
                 </div>
                 <Slider
                   min={70}
@@ -503,8 +533,8 @@ export default function InsulinSettings() {
                   onValueChange={handleSliderChange}
                   className="cursor-pointer" />
                 <div className="flex justify-between text-[10px]" style={{ color: "#746959" }}>
-                  <span>70</span>
-                  <span>250</span>
+                  <span>{formatGlucose(70)}</span>
+                  <span>{formatGlucose(250)}</span>
                 </div>
               </div>
             </div>

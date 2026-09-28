@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { getHighReferenceOptions } from "@/lib/glucoseStatus";
+import { formatGlucose } from "@/lib/glucoseUnits";
 
 const ITEM_HEIGHT = 40;
 const VISIBLE_ITEMS = 5;
@@ -103,7 +104,7 @@ export default function HighGlucosePicker({ value, onChange }) {
                   transform: `scale(${isSelected ? 1 : Math.max(0.82, 0.92 - distance * 0.05)})`,
                 }}
               >
-                {v}
+                {formatGlucose(v)}
               </span>
             </div>
           );

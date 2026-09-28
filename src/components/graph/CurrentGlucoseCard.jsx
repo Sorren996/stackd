@@ -3,6 +3,7 @@ import { ArrowUp, ArrowUpRight, ArrowRight, ArrowDownRight, ArrowDown, ChevronsU
 import { motion } from "framer-motion";
 import GlucoseTicker from "./GlucoseTicker";
 import { formatReadingAge } from "@/lib/glucoseStaleness";
+import { formatGlucose, glucoseUnitLabel, onGlucoseUnitsChange } from "@/lib/glucoseUnits";
 
 const TREND_ICONS = {
   "double_up": ChevronsUp,
@@ -33,6 +34,8 @@ export default function CurrentGlucoseCard({
   isStale = false
 }) {
   const tickerRef = useRef(null);
+  const [, setUnitsTick] = useState(0);
+  useEffect(() => onGlucoseUnitsChange(() => setUnitsTick((t) => t + 1)), []);
   const TrendIcon = TREND_ICONS[trend?.icon] || ArrowRight;
 
   const displayColor = isStale ? STALE_COLOR : glucoseColor;
@@ -57,7 +60,7 @@ export default function CurrentGlucoseCard({
 
   useEffect(() => {
     if (tickerRef.current && glucoseValue != null && !isStale) {
-      tickerRef.current.setValue(String(glucoseValue), true);
+      tickerRef.current.setValue(formatGlucose(glucoseValue), true);
     }
   }, [glucoseValue, isStale]);
 
@@ -79,14 +82,14 @@ export default function CurrentGlucoseCard({
         glucoseValue != null ?
         <GlucoseTicker
           ref={tickerRef}
-          initialValue={String(glucoseValue)}
+          initialValue={formatGlucose(glucoseValue)}
           className="text-4xl font-black leading-none"
           style={{ color: "#3f3830" }} /> :
 
 
         <span className="text-4xl font-black leading-none" style={{ color: "#3f3830" }}>--</span>
         }
-        <span className="mb-1 text-[11px] font-medium" style={{ color: "#746959" }}>mg/dL</span>
+        <span className="mb-1 text-[11px] font-medium" style={{ color: "#746959" }}>{glucoseUnitLabel()}</span>
         {latestGlucose && !isStale &&
         <TrendIcon className="self-center h-6 w-6" style={{ color: "#3f3830" }} />
         }
