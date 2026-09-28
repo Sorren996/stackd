@@ -479,7 +479,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
     color = "#9c3f2e";
   } else {
     value = `${activeIOB.toFixed(1)}u`;
-    status = `${activeIOB.toFixed(1)}u active now. ${grossDoseEstimate.toFixed(1)}u was the reference at the time.`;
+    status = `${activeIOB.toFixed(1)}u active now. Your plan suggested ${grossDoseEstimate.toFixed(1)}u.`;
     color = "#4d5742";
   }
 
