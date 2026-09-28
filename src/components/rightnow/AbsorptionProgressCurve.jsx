@@ -144,9 +144,9 @@ export default function AbsorptionProgressCurve({ entries, mealTime, now = Date.
 
   const baseY = H - 8;
   const curveTop = TOP_PAD + 8;
-  // Fixed 16px pixel offset above the peak point, clamped so it never
-  // goes above the container edge.
-  const labelTop = Math.max(0, peakY - 16);
+  // Place the label in the reserved top padding, above the curve area and
+  // the vertical peak line, so it never overlaps either at any peak height.
+  const labelTop = 2;
 
   if (isComplete) {
     const fullPath = solidPath || dashedPath;

@@ -135,7 +135,9 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
   // Sum rounded dose IOB values so the headline always matches the sum of
   // the displayed (one-decimal) per-dose values — no rounding discrepancy.
   const bolusUnits = bolusDoses.reduce((sum, d) => sum + (Math.round(d.iob * 10) / 10), 0);
-  const activeBolusCount = bolusDoses.length;
+  // Only doses with meaningful IOB count as "active" — fully-cleared doses
+  // (0.00u) stay listed for context but don't inflate the active count.
+  const activeBolusCount = bolusDoses.filter((d) => d.iob > 0.01).length;
   const basalUnits = basalDoses.reduce((sum, d) => sum + (Number(d.units) || 0), 0);
   const hasBolus = bolusDoses.length > 0;
   const hasBasal = basalDoses.length > 0;
