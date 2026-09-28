@@ -314,120 +314,147 @@ export const FOOD_DATABASE = [
 
 ];
 
-export function getCarbAbsorptionAt(entry, targetTime = Date.now()) {
-  if (entry.is_custom || !entry.absorption_profile) {
-    return { absorbedGrams: 0, remainingGrams: 0, absorptionRateGPerMin: 0 };
-  }
+// ── Macro-aware absorption model ──────────────────────────────
+// FPU (fat-protein units): 1 FPU ≈ 100 kcal from fat+protein.
+//   FPU = (fat_g * 9 + protein_g * 4) / 100, floored at 0.
+// Window: 2 h base (carb-only) + 0.7 h per FPU, capped at 6 h.
+// Peak: ~40 % of window for high-FPU meals, ~35 % for carb-only,
+//   never before 30 min.
+// Curve: gamma-shaped rate (fast rise to peak, long gradual tail),
+//   matching published tracer glucose-rate-of-appearance curves.
+// % processed = cumulative grams absorbed ÷ total carb grams,
+//   computed as the area under the rate curve from meal time to
+//   now — NOT peak position. At the peak this lands well below
+//   100 %; 100 % only at the tail end of the window.
 
-  const profile = ABSORPTION_PROFILES[entry.absorption_profile];
-  if (!profile) {
-    return { absorbedGrams: 0, remainingGrams: 0, absorptionRateGPerMin: 0 };
+const ABSORPTION_SHAPE_EXP = 3.0;
+
+function gammaRate(elapsedMin, peakMin, shapeExp) {
+  if (elapsedMin <= 0 || peakMin <= 0) return 0;
+  const ratio = elapsedMin / peakMin;
+  if (ratio > 8) return 0;
+  return Math.pow(ratio, shapeExp) * Math.exp(shapeExp * (1 - ratio));
+}
+
+export function computeFPU(fatGrams, proteinGrams) {
+  const fat = Number(fatGrams) || 0;
+  const protein = Number(proteinGrams) || 0;
+  if (!Number.isFinite(fat) || !Number.isFinite(protein)) return 0;
+  return Math.max(0, (fat * 9 + protein * 4) / 100);
+}
+
+export function getMealWindowMinutes(fatGrams, proteinGrams) {
+  const fpu = computeFPU(fatGrams, proteinGrams);
+  const baseHours = 2;
+  const hoursPerFPU = 0.7;
+  const maxHours = 6;
+  return Math.min(maxHours, baseHours + fpu * hoursPerFPU) * 60;
+}
+
+export function getMealPeakMinutes(fatGrams, proteinGrams, windowMin) {
+  const fpu = computeFPU(fatGrams, proteinGrams);
+  const peakFraction = fpu >= 1 ? 0.40 : 0.35;
+  const win = windowMin || getMealWindowMinutes(fatGrams, proteinGrams);
+  return Math.max(30, Math.round(win * peakFraction));
+}
+
+export function getAbsorptionModel(entry) {
+  const fat = Number(entry?.fat_grams ?? 0) || 0;
+  const protein = Number(entry?.protein_grams ?? 0) || 0;
+  const carbs = Number(entry?.carbs ?? 0) || 0;
+  const windowMin = getMealWindowMinutes(fat, protein);
+  const peakMin = getMealPeakMinutes(fat, protein, windowMin);
+  return { carbs, fat, protein, windowMin, peakMin, fpu: computeFPU(fat, protein) };
+}
+
+function integrateGamma(toMin, peakMin, shapeExp, step = 2) {
+  if (toMin <= 0) return 0;
+  let area = 0;
+  for (let t = 0; t < toMin; t += step) {
+    const r1 = gammaRate(t, peakMin, shapeExp);
+    const r2 = gammaRate(t + step, peakMin, shapeExp);
+    area += (r1 + r2) / 2 * step;
+  }
+  return area;
+}
+
+export function getCarbAbsorptionAt(entry, targetTime = Date.now()) {
+  if (!entry || !Number.isFinite(entry.carbs) || entry.carbs <= 0) {
+    return { absorbedGrams: 0, remainingGrams: 0, absorptionRateGPerMin: 0, percentAbsorbed: 0, peakMin: 0, windowMin: 0 };
   }
 
   const mealTime = new Date(entry.consumed_at).getTime();
+  if (!Number.isFinite(mealTime)) {
+    return { absorbedGrams: 0, remainingGrams: entry.carbs, absorptionRateGPerMin: 0, percentAbsorbed: 0, peakMin: 0, windowMin: 0 };
+  }
+
+  const model = getAbsorptionModel(entry);
   const elapsedMin = (targetTime - mealTime) / 60000;
-  const { onsetMin, peakMin, durationMin } = profile;
 
-  if (elapsedMin <= onsetMin) {
-    return {
-      absorbedGrams: 0,
-      remainingGrams: entry.carbs,
-      absorptionRateGPerMin: 0,
-    };
+  if (elapsedMin <= 0) {
+    return { absorbedGrams: 0, remainingGrams: entry.carbs, absorptionRateGPerMin: 0, percentAbsorbed: 0, peakMin: model.peakMin, windowMin: model.windowMin };
   }
 
-  if (elapsedMin >= durationMin) {
-    return {
-      absorbedGrams: entry.carbs,
-      remainingGrams: 0,
-      absorptionRateGPerMin: 0,
-    };
+  if (elapsedMin >= model.windowMin) {
+    return { absorbedGrams: entry.carbs, remainingGrams: 0, absorptionRateGPerMin: 0, percentAbsorbed: 100, peakMin: model.peakMin, windowMin: model.windowMin };
   }
 
-const activeElapsed = elapsedMin - onsetMin;
-const riseDuration = peakMin - onsetMin;
-const plateauDuration = Math.min(
-  profile.plateauMin ?? 0,
-  durationMin - peakMin
-);
-const taperDuration = durationMin - peakMin - plateauDuration;
+  const totalArea = integrateGamma(model.windowMin, model.peakMin, ABSORPTION_SHAPE_EXP);
+  if (totalArea <= 0) {
+    return { absorbedGrams: 0, remainingGrams: entry.carbs, absorptionRateGPerMin: 0, percentAbsorbed: 0, peakMin: model.peakMin, windowMin: model.windowMin };
+  }
 
-const riseExponent = profile.riseExponent ?? 1.5;
-const taperExponent = profile.taperExponent ?? 0.6;
+  const elapsedArea = integrateGamma(elapsedMin, model.peakMin, ABSORPTION_SHAPE_EXP);
+  const fraction = Math.max(0, Math.min(1, elapsedArea / totalArea));
+  const absorbedGrams = entry.carbs * fraction;
+  const ratePerMin = (gammaRate(elapsedMin, model.peakMin, ABSORPTION_SHAPE_EXP) / totalArea) * entry.carbs;
 
-const riseArea = riseDuration / (riseExponent + 1);
-const plateauArea = plateauDuration;
-const taperArea = taperDuration / (taperExponent + 1);
-const totalArea = riseArea + plateauArea + taperArea;
-
-let relativeRate;
-let absorbedArea;
-
-if (activeElapsed <= riseDuration) {
-  const progress = activeElapsed / riseDuration;
-
-  relativeRate = progress ** riseExponent;
-  absorbedArea = riseArea * progress ** (riseExponent + 1);
-} else if (activeElapsed <= riseDuration + plateauDuration) {
-  relativeRate = 1;
-  absorbedArea = riseArea + (activeElapsed - riseDuration);
-} else {
-  const afterPlateau = activeElapsed - riseDuration - plateauDuration;
-  const progress = afterPlateau / taperDuration;
-
-  relativeRate = (1 - progress) ** taperExponent;
-  absorbedArea =
-    riseArea +
-    plateauArea +
-    taperArea * (1 - (1 - progress) ** (taperExponent + 1));
-}
-
-const safeFraction = Math.max(0, Math.min(1, absorbedArea / totalArea));
-const absorbedGrams = entry.carbs * safeFraction;
-
-return {
-  absorbedGrams,
-  remainingGrams: entry.carbs - absorbedGrams,
-  absorptionRateGPerMin: Math.max(
-    0,
-    (entry.carbs * relativeRate) / ((durationMin - onsetMin) * totalArea)
-  ),
-  relativeRate,
-};
+  return {
+    absorbedGrams,
+    remainingGrams: entry.carbs - absorbedGrams,
+    absorptionRateGPerMin: Math.max(0, ratePerMin),
+    percentAbsorbed: fraction * 100,
+    peakMin: model.peakMin,
+    windowMin: model.windowMin,
+  };
 }
 
 export function generateCarbCurve(entry) {
-  if (entry.is_custom || !entry.absorption_profile) return [];
+  if (!entry || !Number.isFinite(entry.carbs) || entry.carbs <= 0 || !entry.consumed_at) return [];
 
-  const profile = ABSORPTION_PROFILES[entry.absorption_profile];
-  if (!profile) return [];
-
+  const model = getAbsorptionModel(entry);
   const start = new Date(entry.consumed_at).getTime();
-  const end = start + profile.durationMin * 60000;
-  const step = 3 * 60000;
+  const end = start + model.windowMin * 60000;
+  const stepMin = 3;
+  const stepMs = stepMin * 60000;
+  const totalArea = integrateGamma(model.windowMin, model.peakMin, ABSORPTION_SHAPE_EXP);
+  if (totalArea <= 0) return [];
+
+  const peakRate = gammaRate(model.peakMin, model.peakMin, ABSORPTION_SHAPE_EXP);
   const result = [];
-for (let time = start; time <= end; time += step) {
-  const absorption = getCarbAbsorptionAt(entry, time);
-  const activeDuration = profile.durationMin - profile.onsetMin;
-  const peakRateGPerMin = entry.carbs * (2 / activeDuration);
+  let cumulativeArea = 0;
 
-  const activity = peakRateGPerMin > 0
-    ? absorption.absorptionRateGPerMin / peakRateGPerMin
-    : 0;
+  for (let time = start, minOffset = 0; time <= end; time += stepMs, minOffset += stepMin) {
+    for (let t = Math.max(0, minOffset - stepMin); t < minOffset; t += 1) {
+      const r1 = gammaRate(t, model.peakMin, ABSORPTION_SHAPE_EXP);
+      const r2 = gammaRate(t + 1, model.peakMin, ABSORPTION_SHAPE_EXP);
+      cumulativeArea += (r1 + r2) / 2;
+    }
 
-  result.push({
-    time,
-    activity: absorption.relativeRate,
-    absorbedFraction: entry.carbs > 0
-      ? absorption.absorbedGrams / entry.carbs
-      : 0,
-    remainingFraction: entry.carbs > 0
-      ? absorption.remainingGrams / entry.carbs
-      : 0,
-    ...absorption,
-  });
-}
+    const fraction = Math.max(0, Math.min(1, cumulativeArea / totalArea));
+    const absorbedGrams = entry.carbs * fraction;
+    const rate = gammaRate(minOffset, model.peakMin, ABSORPTION_SHAPE_EXP);
 
+    result.push({
+      time,
+      activity: peakRate > 0 ? rate / peakRate : 0,
+      absorbedFraction: fraction,
+      remainingFraction: 1 - fraction,
+      absorbedGrams,
+      remainingGrams: entry.carbs - absorbedGrams,
+      absorptionRateGPerMin: (rate / totalArea) * entry.carbs,
+    });
+  }
   return result;
 }
 

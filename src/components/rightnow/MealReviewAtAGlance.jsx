@@ -2,14 +2,14 @@ import { useState, useMemo, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import DashboardCard from "@/components/dashboard/DashboardCard";
-import MealResponseCurve from "./MealResponseCurve";
+import AbsorptionProgressCurve from "./AbsorptionProgressCurve";
 import MealGlucoseTrace from "./MealGlucoseTrace";
 import SwipeableRow from "@/components/SwipeableRow";
 import { base44 } from "@/api/base44Client";
 import { generateMealGlucoseResponse, analyzeGlucoseResponse } from "@/lib/mealGlucoseResponse";
 import MealEditOverlay from "@/components/insulin/MealEditOverlay";
 import EstimatedSupportCard from "./EstimatedSupportCard";
-import { getCarbAbsorptionAt } from "@/lib/carbAbsorption";
+import { getCarbAbsorptionAt, getMealWindowMinutes, getMealPeakMinutes } from "@/lib/carbAbsorption";
 
 const PALETTE = {
   ink: "#3f3830",
@@ -125,7 +125,11 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
     );
   }
 
-  const reviewWindowEnd = d.reviewWindowEnd || (mealTime + 4 * 3600 * 1000);
+  const mealFatGrams = carbEntries.reduce((s, e) => s + Number(e.fat_grams || 0), 0);
+  const mealProteinGrams = carbEntries.reduce((s, e) => s + Number(e.protein_grams || 0), 0);
+  const dynamicWindowMin = getMealWindowMinutes(mealFatGrams, mealProteinGrams);
+  const dynamicWindowMs = dynamicWindowMin * 60 * 1000;
+  const reviewWindowEnd = d.reviewWindowEnd || (mealTime + dynamicWindowMs);
   const windowRemaining = reviewWindowEnd - now;
   const minutesSinceMeal = (now - mealTime) / 60000;
 
@@ -157,12 +161,12 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
   const peakOutcome = d.peakOutcome;
   const trendArrow = glucoseTrend?.icon ? TREND_ARROW[glucoseTrend.icon] : null;
 
-  const predictedPeakMinAgo = mealResponse.peakTime && mealResponse.peakTime <= now
-    ? Math.round((now - mealResponse.peakTime) / 60000)
-    : null;
-  const absorptionCaption = predictedPeakMinAgo != null
-    ? (absorptionPct >= 80 ? "Settling" : `Peaked ${predictedPeakMinAgo}m ago.`)
-    : (mealResponse.hasDelayedRise ? "Rising. A lingering wave may follow." : "Absorption underway.");
+  const absorptionPeakTime = mealTime + getMealPeakMinutes(mealFatGrams, mealProteinGrams, dynamicWindowMin) * 60000;
+  const peakPassed = absorptionPeakTime <= now;
+  const peakMinAgo = peakPassed ? Math.round((now - absorptionPeakTime) / 60000) : null;
+  const absorptionCaption = peakPassed
+    ? (absorptionPct >= 85 ? "Nearly complete" : `Absorption peaked ${peakMinAgo}m ago`)
+    : (absorptionPct < 5 ? "Just starting to absorb" : "Rising toward peak");
 
   // Glucose response descriptive line
   let glucoseLine = "Steady so far.";
@@ -364,8 +368,11 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
                 <span className="text-[22px] font-light tabular-nums" style={{ color: PALETTE.ink }}>{Math.round(absorptionPct)}</span>
                 <span className="text-[13px] font-light" style={{ color: PALETTE.muted }}>% processed, {gPerHour.toFixed(1)} g/hour</span>
               </div>
+              <p className="text-[11px]" style={{ color: PALETTE.faint }}>
+                {Math.round(totalAbsorbed)} of {Math.round(totalCarbs)} g absorbed
+              </p>
               <div className="mt-2">
-                <MealResponseCurve response={mealResponse} now={now} isComplete={absorptionPct >= 100 && gPerHour < 0.1} />
+                <AbsorptionProgressCurve entries={carbEntries} mealTime={mealTime} now={now} />
               </div>
               <p className="mt-1.5 text-[12px]" style={{ color: PALETTE.muted }}>
                 {absorptionCaption}

@@ -29,7 +29,8 @@ import { getGlucoseBeforeMeal } from "@/lib/glucoseBeforeMeal";
 import {
   generateCarbCurve,
   getActiveCarbsNow,
-  getCarbAbsorptionAt } from
+  getCarbAbsorptionAt,
+  getMealWindowMinutes } from
 "@/lib/carbAbsorption";
 import { AnimatePresence, motion } from "framer-motion";
 import DashboardCard from "@/components/dashboard/DashboardCard";
@@ -280,11 +281,11 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
   const groups = buildMealEventGroups(carbEntries, doses, insulinSettings, glucoseReadings, insulinSettings.targetLow).sort((a, b) => b.mealTime - a.mealTime);
 
   const now = Date.now();
-  const outcomeWindowMs = insulinSettings.outcomeWindowMinutes * MINUTE_MS;
+  const maxOutcomeWindowMs = Math.max(insulinSettings.outcomeWindowMinutes * MINUTE_MS, 6 * 3600 * 1000);
   // Only meals still inside the user's configured review window are tracked.
   // Once the window ends the review resets to "no meal to review yet".
   // Rescue carbs never open a meal review on their own, regardless of volume.
-  const mealGroup = groups.find((group) => now - group.mealTime <= outcomeWindowMs);
+  const mealGroup = groups.find((group) => now - group.mealTime <= maxOutcomeWindowMs);
 
   if (!mealGroup) {
     return {
@@ -303,6 +304,9 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
   }
 
   const mealTime = mealGroup.mealTime;
+  const mealFatGrams = (mealGroup.carbEntries || []).reduce((s, e) => s + Number(e.fat_grams || 0), 0);
+  const mealProteinGrams = (mealGroup.carbEntries || []).reduce((s, e) => s + Number(e.protein_grams || 0), 0);
+  const outcomeWindowMs = getMealWindowMinutes(mealFatGrams, mealProteinGrams) * MINUTE_MS;
   const mealStillUnderReview = true;
   const windowStart = mealGroup.start;
   const windowEnd = mealGroup.end;
