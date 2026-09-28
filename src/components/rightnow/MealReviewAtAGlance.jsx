@@ -420,16 +420,16 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
             })}
           </div>
 
-          {d.mealStillUnderReview && onResolve &&
-          <button
-            type="button"
-            onClick={onResolve}
-            className="mt-3 text-[12px] font-semibold transition hover:opacity-70 hidden"
-            style={{ color: PALETTE.green }}>
-            
-              Mark as resolved
-            </button>
-          }
+          
+
+
+
+
+
+
+
+
+          
         </div>
       </DashboardCard>
 
