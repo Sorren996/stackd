@@ -24,6 +24,7 @@ import {
   isBolusInsulinType,
   isBasalInsulinType } from
 "@/lib/insulinPharmacology";
+import { IOB_FLOOR } from "@/lib/iobModel";
 import { getBasalRegimenStatus } from "@/lib/basalActivityModel";
 import { getGlucoseBeforeMeal } from "@/lib/glucoseBeforeMeal";
 import {
@@ -443,7 +444,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
   const bolusIOBBreakdown = mealCoverageDoses.
   map((dose) => {
     const iob = getDoseIOB(dose, now);
-    if (iob <= 0.01 || !isBolusInsulinType(dose.insulin_type)) return null;
+    if (iob <= IOB_FLOOR || !isBolusInsulinType(dose.insulin_type)) return null;
     const profile = INSULIN_PROFILES[dose.insulin_type];
     const status = getDoseStatus(dose, now);
     return {
@@ -864,9 +865,9 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
     map((dose) => {
       const iob = getDoseIOB(dose, now);
       const doseTime = getDoseTime(dose);
-      // Fully-cleared doses (0u IOB) are removed immediately — they no
-      // longer appear in the IOB card, meal review, or timeline.
-      if (iob <= 0.01) return null;
+      // Fully-cleared doses (IOB at or below floor) are removed immediately —
+      // they no longer appear in the IOB card, meal review, or timeline.
+      if (iob <= IOB_FLOOR) return null;
 
       const profile = getInsulinProfile(dose.insulin_type);
       const status = getDoseStatus(dose, now);
@@ -1069,14 +1070,13 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
   typeof window !== "undefined" && window.localStorage.getItem("stacking_alerts_enabled") !== "false";
 
   // Counts rapid/short-acting doses that still hold meaningful insulin on
-  // board. Uses the same 0.5u IOB threshold as the IOB card's breakdown so the
-  // alert never reports more active doses than the card actually shows — a
-  // dose lingering in its tail with < 0.5u no longer counts as "stacking".
+  // board (IOB above the 0.49u floor). A dose at or below the floor is fully
+  // cleared and no longer counts as "stacking".
   const activeRapidCount = useMemo(() => {
     const now = Date.now();
     return safeDoses.filter((dose) => {
       if (!["Rapid-Acting", "Short-Acting"].includes(getInsulinCategory(dose.insulin_type))) return false;
-      return getDoseIOB(dose, now) >= 0.5;
+      return getDoseIOB(dose, now) > IOB_FLOOR;
     }).length;
   }, [safeDoses, nowMinute]);
 

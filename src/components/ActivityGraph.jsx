@@ -2,6 +2,7 @@ import { useMemo, useRef, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Area, XAxis, YAxis, Line, ComposedChart, ReferenceLine, ReferenceArea } from "recharts";
 import { generateActivityCurve, getDoseIOB, getDoseRelativeActivity, getInsulinProfile, isBasalInsulinType } from "@/lib/insulinPharmacology";
+import { IOB_FLOOR } from "@/lib/iobModel";
 import { PROFILE_COLORS } from "@/lib/carbAbsorption";
 import { format } from "date-fns";
 import { CornerUpRight, SlidersHorizontal, Check, Wheat, Pencil, Trash2, Info } from "lucide-react";
@@ -691,8 +692,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         units: getDoseUnits(dose),
         color: getInsulinProfile(dose.insulin_type)?.color || "#888",
         isBasal: isBasalInsulinType(dose.insulin_type),
-        isActive: getDoseIOB(dose, Date.now()) >= 0.5,
-        isSpent: getDoseIOB(dose, Date.now()) <= 0.01,
+        isActive: getDoseIOB(dose, Date.now()) > IOB_FLOOR,
+        isSpent: getDoseIOB(dose, Date.now()) <= IOB_FLOOR,
         opacity
       };
     });
@@ -710,7 +711,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     allCurvesMeta.forEach(({ dose, curve }) => {
       if (!curve.length) return;
       const iob = getDoseIOB(dose, now);
-      if (iob < 0.5) return;
+      if (iob <= IOB_FLOOR) return;
       const label = String(dose.insulin_type || "Insulin").split(" ")[0];
       const color = getInsulinProfile(dose.insulin_type)?.color || "#888";
       const units = getDoseUnits(dose);
@@ -852,8 +853,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       pillTop = Math.max(pillTop, 0);
 
       placed.push({ x, pillTop });
-      const isActive = getDoseIOB(dose, Date.now()) >= 0.5;
-      const isSpent = getDoseIOB(dose, Date.now()) <= 0.01;
+      const isActive = getDoseIOB(dose, Date.now()) > IOB_FLOOR;
+      const isSpent = getDoseIOB(dose, Date.now()) <= IOB_FLOOR;
       return { dose, x, units, key, color, pillTop, peakY, isActive, isSpent };
     }).
     filter(Boolean);

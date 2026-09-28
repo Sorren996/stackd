@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { getDoseIOB, getInsulinProfile } from "@/lib/insulinPharmacology";
+import { IOB_FLOOR } from "@/lib/iobModel";
 
 const STEP_MS = 5 * 60 * 1000;
 
@@ -48,10 +49,17 @@ export default function IobDecayChart({ bolusDoses, basalDoses, now = Date.now()
     const baseY = padTop + plotH;
 
     const totalXY = timeSteps.map((t, i) => ({ x: toX(t), y: toY(totalIOB[i]) }));
+
+    // Clip trailing floored points from the total IOB line — keep one 0
+    // point for clean termination, no dangling flat-zero segment.
+    let lastActiveTotal = totalIOB.length - 1;
+    while (lastActiveTotal > 0 && totalIOB[lastActiveTotal] <= IOB_FLOOR) lastActiveTotal--;
+    const totalClipEnd = Math.min(lastActiveTotal + 2, totalXY.length);
+
     const nowIdx = timeSteps.findIndex((t) => t >= now);
-    const splitIdx = nowIdx === -1 ? timeSteps.length - 1 : nowIdx;
-    const solidPts = totalXY.slice(0, splitIdx + 1);
-    const dashedPts = totalXY.slice(splitIdx);
+    const splitIdx = nowIdx === -1 ? totalClipEnd - 1 : Math.min(nowIdx, totalClipEnd - 1);
+    const solidPts = totalXY.slice(0, Math.min(splitIdx + 1, totalClipEnd));
+    const dashedPts = totalXY.slice(splitIdx, totalClipEnd);
     const totalSolid = solidPts.length >= 2 ? solidPts.map((p, i) => `${i ? "L" : "M"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ") : "";
     const totalDashed = dashedPts.length >= 2 ? dashedPts.map((p, i) => `${i ? "L" : "M"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ") : "";
 
@@ -64,11 +72,15 @@ export default function IobDecayChart({ bolusDoses, basalDoses, now = Date.now()
       const color = getInsulinProfile(d.type)?.color || "#3f3830";
       const opacity = Math.max(0.32, 0.9 - sameTypeIdx * 0.22);
       const xy = timeSteps
-        .map((t, j) => ({ x: toX(t), y: toY(perDoseIOB[i][j]) }))
+        .map((t, j) => ({ x: toX(t), y: toY(perDoseIOB[i][j]), iob: perDoseIOB[i][j] }))
         .filter((p) => Number.isFinite(p.y) && p.y < H - padBottom);
-      const strokePath = xy.length >= 2 ? xy.map((p, k) => `${k ? "L" : "M"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ") : "";
-      const fillPath = xy.length >= 2
-        ? `${strokePath} L ${xy[xy.length - 1].x.toFixed(1)} ${baseY.toFixed(1)} L ${xy[0].x.toFixed(1)} ${baseY.toFixed(1)} Z`
+      // Clip trailing floored points — keep one 0 point for clean termination.
+      let lastActive = xy.length - 1;
+      while (lastActive > 0 && xy[lastActive].iob <= IOB_FLOOR) lastActive--;
+      const clipped = xy.slice(0, Math.min(lastActive + 2, xy.length));
+      const strokePath = clipped.length >= 2 ? clipped.map((p, k) => `${k ? "L" : "M"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ") : "";
+      const fillPath = clipped.length >= 2
+        ? `${strokePath} L ${clipped[clipped.length - 1].x.toFixed(1)} ${baseY.toFixed(1)} L ${clipped[0].x.toFixed(1)} ${baseY.toFixed(1)} Z`
         : "";
       return { idx: i, key: `iobdose_${i}`, color, opacity, strokePath, fillPath };
     });

@@ -21,6 +21,10 @@
 
 const MINUTE_MS = 60 * 1000;
 
+// IOB floor: once remaining IOB declines to this level, treat as 0.00 (fully
+// cleared). Applied everywhere insulin is calculated or displayed.
+export const IOB_FLOOR = 0.49;
+
 // Peak coefficient of x²(1-x)^4 — occurs at x = 1/3 (i.e. t = DIA/3).
 // 105 * (1/9) * (16/81) = 1680/729 ≈ 2.3045. Used to peak-normalize the
 // activity curve for chart rendering (0–1 scale, peak at DIA/3).
@@ -44,6 +48,25 @@ export function getDoseTierDIA(units) {
 
 export function getDoseTierPeak(units) {
   return Math.round(getDoseTierDIA(units) / 3);
+}
+
+/**
+ * Elapsed time (minutes) at which a dose's raw IOB declines to IOB_FLOOR.
+ * The curve is clipped at this point — no sub-floor tail. Returns 0 for
+ doses at or below the floor (immediately cleared).
+ */
+export function getFloorTimeMinutes(doseUnits, diaMinutes) {
+  const d = Math.max(0, Number(doseUnits) || 0);
+  const dia = Math.max(1, Number(diaMinutes) || 210);
+  if (d <= IOB_FLOOR) return 0;
+  const targetFrac = IOB_FLOOR / d;
+  let lo = 0, hi = dia;
+  for (let i = 0; i < 60; i++) {
+    const mid = (lo + hi) / 2;
+    if (betaIOBFraction(mid, dia) > targetFrac) lo = mid;
+    else hi = mid;
+  }
+  return Math.min(dia, (lo + hi) / 2);
 }
 
 // ---------------------------------------------------------------------------
@@ -101,7 +124,8 @@ export function betaActivityNormalized(tMinutes, diaMinutes) {
  * IOB in real units at elapsed time t.
  */
 export function getBetaIOB(doseUnits, tMinutes, diaMinutes) {
-  return Math.max(0, Number(doseUnits) || 0) * betaIOBFraction(tMinutes, diaMinutes);
+  const raw = Math.max(0, Number(doseUnits) || 0) * betaIOBFraction(tMinutes, diaMinutes);
+  return raw <= IOB_FLOOR ? 0 : raw;
 }
 
 // ---------------------------------------------------------------------------
@@ -116,7 +140,6 @@ export function getBetaIOB(doseUnits, tMinutes, diaMinutes) {
 export function formatIOBValue(units) {
   const n = Number(units);
   if (!Number.isFinite(n) || n <= 0.005) return "0.00";
-  if (n < 0.5) return n.toFixed(2);
   return n.toFixed(1);
 }
 
@@ -134,8 +157,9 @@ export function formatIOB(units) {
  */
 export function getClearanceMinutes(doseUnits, elapsedMinutes) {
   const dia = getDoseTierDIA(doseUnits);
+  const floorTime = getFloorTimeMinutes(doseUnits, dia);
   const elapsed = Math.max(0, Number(elapsedMinutes) || 0);
-  return Math.max(0, dia - elapsed);
+  return Math.max(0, floorTime - elapsed);
 }
 
 /**
@@ -165,7 +189,7 @@ export function runIOBValidation() {
   const dia = getDoseTierDIA(dose); // 240 for 6u
   const step = 5;
 
-  // 1. IOB(0) = dose
+  // 1. IOB(0) = dose (above floor)
   pass("IOB(0) = dose", Math.abs(getBetaIOB(dose, 0, dia) - dose) < 1e-9);
 
   // 2. IOB(DIA) = 0.0 exactly
@@ -181,24 +205,23 @@ export function runIOBValidation() {
   }
   pass("Monotonic decreasing", monotonic);
 
-  // 4. Reconciliation: cumulative activity + IOB(t) = dose
-  // Fine 1-min trapezoidal integration so the numerical sum is accurate
-  // enough to verify the exact analytical identity ∫activity + IOB = D.
-  let reconciles = true;
-  let cumActivity = 0;
-  const fineStep = 1;
-  for (let t = 0; t <= dia; t += fineStep) {
-    if (t > 0) {
-      const rPrev = betaActivityRate(t - fineStep, dia, dose);
-      const rCur = betaActivityRate(t, dia, dose);
-      cumActivity += ((rPrev + rCur) / 2) * fineStep;
-    }
-    const iob = getBetaIOB(dose, t, dia);
-    if (Math.abs(iob + cumActivity - dose) > 0.01) { reconciles = false; break; }
+  // 4. Floor rule: getBetaIOB returns 0 for all raw values ≤ IOB_FLOOR
+  let floorOK = true;
+  for (let t = 0; t <= dia; t += 1) {
+    const raw = dose * betaIOBFraction(t, dia);
+    const floored = getBetaIOB(dose, t, dia);
+    if (raw <= IOB_FLOOR && floored !== 0) { floorOK = false; break; }
+    if (raw > IOB_FLOOR && Math.abs(floored - raw) > 1e-9) { floorOK = false; break; }
   }
-  pass("IOB + cumulative activity = dose", reconciles);
+  pass("Floor: raw ≤ 0.49 → 0, raw > 0.49 → raw", floorOK);
 
-  // 5. Multi-dose stack sums (per-dose IOB sum = total IOB)
+  // 5. Floor time: IOB at floor time = IOB_FLOOR (raw), 0 (floored)
+  const floorTime = getFloorTimeMinutes(dose, dia);
+  const rawAtFloor = dose * betaIOBFraction(floorTime, dia);
+  pass("Floor time: raw IOB ≈ 0.49", Math.abs(rawAtFloor - IOB_FLOOR) < 0.01);
+  pass("Floor time: floored IOB = 0", getBetaIOB(dose, floorTime, dia) === 0);
+
+  // 6. Multi-dose stack sums (per-dose IOB sum = total IOB)
   const d1 = { units: 4, dia: getDoseTierDIA(4) };
   const d2 = { units: 20, dia: getDoseTierDIA(20) };
   let stacks = true;
@@ -209,14 +232,18 @@ export function runIOBValidation() {
   }
   pass("Multi-dose stack sums", stacks);
 
-  // 6. Clearance countdown = DIA − elapsed
+  // 7. Clearance countdown = floorTime − elapsed
   let clearance = true;
   for (const elapsed of [0, 30, 120, 200, dia]) {
-    const expected = Math.max(0, dia - elapsed);
+    const expected = Math.max(0, floorTime - elapsed);
     const actual = getClearanceMinutes(dose, elapsed);
     if (Math.abs(actual - expected) > 1e-9) { clearance = false; break; }
   }
-  pass("Clearance = DIA − elapsed", clearance);
+  pass("Clearance = floorTime − elapsed", clearance);
+
+  // 8. formatIOBValue: no 2-decimal sub-floor values
+  const fmtOK = formatIOBValue(0) === "0.00" && formatIOBValue(0.3) === "0.3" && formatIOBValue(0.6) === "0.6" && formatIOBValue(1.5) === "1.5";
+  pass("formatIOBValue: 1 decimal, no 2-decimal tail", fmtOK);
 
   const allPassed = checks.every((c) => c.passed);
   return { passed: allPassed, checks };

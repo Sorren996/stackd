@@ -4,7 +4,7 @@ import DashboardCard from "@/components/dashboard/DashboardCard";
 import MiniActivitySparkline from "./MiniActivitySparkline";
 import SwipeableRow from "@/components/SwipeableRow";
 import { isBasalInsulinType, getDoseStatus, getDoseTimingInfo } from "@/lib/insulinPharmacology";
-import { formatIOBValue } from "@/lib/iobModel";
+import { formatIOBValue, IOB_FLOOR } from "@/lib/iobModel";
 
 const PALETTE = {
   ink: "#3f3830",
@@ -43,7 +43,7 @@ function basalStatusLine(dose, now) {
   };
   const status = getDoseStatus(doseObj, now);
   const timing = getDoseTimingInfo(doseObj, now);
-  if (status.phase === "expired" || status.iob <= 0.01) {
+  if (status.phase === "expired" || status.iob <= IOB_FLOOR) {
     return { label: "No longer contributing", remaining: null };
   }
   const remaining = formatRemaining(timing.remainingMin);
@@ -84,7 +84,7 @@ function bolusStatusLine(dose, now) {
   };
   const status = getDoseStatus(doseObj, now);
   const timing = getDoseTimingInfo(doseObj, now);
-  if (status.phase === "expired" || status.iob <= 0.01) {
+  if (status.phase === "expired" || status.iob <= IOB_FLOOR) {
     return { label: "Fully cleared", color: PALETTE.grey, remaining: null };
   }
   const remaining = formatRemaining(timing.remainingMin);
@@ -124,11 +124,11 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
   }, [openDoseId]);
 
   const bolusDoses = useMemo(
-    () => (breakdown || []).filter((d) => !isBasalInsulinType(d.type) && d.iob > 0.01),
+    () => (breakdown || []).filter((d) => !isBasalInsulinType(d.type) && d.iob > IOB_FLOOR),
     [breakdown]
   );
   const basalDoses = useMemo(
-    () => (breakdown || []).filter((d) => isBasalInsulinType(d.type) && d.iob > 0.01),
+    () => (breakdown || []).filter((d) => isBasalInsulinType(d.type) && d.iob > IOB_FLOOR),
     [breakdown]
   );
 
@@ -137,7 +137,7 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
   const bolusUnits = bolusDoses.reduce((sum, d) => sum + (Math.round(d.iob * 10) / 10), 0);
   // Only doses with meaningful IOB count as "active" — fully-cleared doses
   // (0.00u) stay listed for context but don't inflate the active count.
-  const activeBolusCount = bolusDoses.filter((d) => d.iob > 0.01).length;
+  const activeBolusCount = bolusDoses.filter((d) => d.iob > IOB_FLOOR).length;
   const basalUnits = basalDoses.reduce((sum, d) => sum + (Number(d.units) || 0), 0);
   const hasBolus = bolusDoses.length > 0;
   const hasBasal = basalDoses.length > 0;

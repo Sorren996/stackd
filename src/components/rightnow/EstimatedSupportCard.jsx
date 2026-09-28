@@ -4,7 +4,7 @@ import DashboardCard from "@/components/dashboard/DashboardCard";
 import MiniActivitySparkline from "./MiniActivitySparkline";
 import { getDoseTimingInfo, isBasalInsulinType } from "@/lib/insulinPharmacology";
 import { formatGlucose, glucoseUnitLabel } from "@/lib/glucoseUnits";
-import { formatIOBValue } from "@/lib/iobModel";
+import { formatIOBValue, IOB_FLOOR } from "@/lib/iobModel";
 
 const PALETTE = {
   ink: "#3f3830",
@@ -127,7 +127,7 @@ export default function EstimatedSupportCard({ details }) {
   // ---- Active doses ----
   const now = Date.now();
   const activeDoses = (d.bolusIOBBreakdown || []).filter(
-    (dose) => !isBasalInsulinType(dose.type) && dose.iob > 0.01
+    (dose) => !isBasalInsulinType(dose.type) && dose.iob > IOB_FLOOR
   );
 
   // ---- Rescue carbs ----
