@@ -10,6 +10,7 @@ import { generateMealGlucoseResponse, analyzeGlucoseResponse } from "@/lib/mealG
 import MealEditOverlay from "@/components/insulin/MealEditOverlay";
 import EstimatedSupportCard from "./EstimatedSupportCard";
 import { getCarbAbsorptionAt, getMealWindowMinutes, getMealPeakMinutes } from "@/lib/carbAbsorption";
+import { getMealSlotLabel } from "@/lib/mealSlot";
 
 const PALETTE = {
   ink: "#3f3830",
@@ -48,14 +49,7 @@ function formatCountdownValue(ms) {
   return r ? `${h}h ${r}m` : `${h}h`;
 }
 
-function mealChipFor(time) {
-  const hour = new Date(time).getHours();
-  if (hour < 10) return "Breakfast";
-  if (hour < 14) return "Lunch";
-  if (hour < 17) return "Snack";
-  if (hour < 21) return "Dinner";
-  return "Evening";
-}
+
 
 export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glucoseTrend, onResolve, glucoseReadings }) {
   const [showEdit, setShowEdit] = useState(false);
@@ -207,6 +201,14 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
   const changeValue = (didRise ? "+" : "") + (rose != null ? rose : (Number.isFinite(glucoseNow) && Number.isFinite(glucoseAtStart) ? Math.round(glucoseNow - glucoseAtStart) : ""));
 
   const mealName = d.meal?.food_name || d.meal?.name || "Meal";
+  const combinedFoodName = carbEntries.map((e) => e?.food_name || e?.name || "").filter(Boolean).join(", ") || mealName;
+  const slotLabel = getMealSlotLabel({
+    time: mealTime,
+    carbs: totalCarbs,
+    fatGrams: mealFatGrams,
+    proteinGrams: mealProteinGrams,
+    foodName: combinedFoodName,
+  });
 
   const handleDeleteEntry = async (entry) => {
     if (!entry?.id || deletingId) return;
@@ -234,7 +236,7 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
           <div className="min-w-0 flex items-baseline gap-2">
             <span className="text-[15px] font-semibold truncate" style={{ color: PALETTE.ink }}>{mealName}</span>
             <span className="shrink-0 rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider" style={{ background: "rgba(175,117,27,0.10)", color: PALETTE.amber }}>
-              {mealChipFor(mealTime)}
+              {slotLabel}
             </span>
           </div>
           <span className="shrink-0 text-[11px] tabular-nums" style={{ color: PALETTE.faint }}>{formatClock(mealTime)}</span>

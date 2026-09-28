@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { CheckCircle2, Clock, ChevronDown } from "lucide-react";
 import { getCarbAbsorptionAt } from "@/lib/carbAbsorption";
+import { getMealSlotLabel } from "@/lib/mealSlot";
 import MealProjectionChart from "./MealProjectionChart";
 import MealEditOverlay from "./MealEditOverlay";
 
@@ -29,14 +30,7 @@ function formatClock(time) {
   return new Date(time).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 }
 
-function mealLabel(mealTime) {
-  if (!Number.isFinite(mealTime)) return "Meal";
-  const h = new Date(mealTime).getHours();
-  if (h < 10) return "Breakfast";
-  if (h < 14) return "Lunch";
-  if (h < 17) return "Snack";
-  return "Dinner";
-}
+
 
 /**
  * Meal Review — editorial layout matching the approved mock.
@@ -117,7 +111,15 @@ export default function MealReviewContent({ mealInsight, monitoringStatus, gluco
 
   const nowTime = formatClock(Date.now());
   const loggedTime = formatClock(mealTime);
-  const mealName = mealLabel(mealTime);
+  const mealFatGrams = carbEntries.reduce((s, e) => s + Number(e?.fat_grams || 0), 0);
+  const mealProteinGrams = carbEntries.reduce((s, e) => s + Number(e?.protein_grams || 0), 0);
+  const slotLabel = getMealSlotLabel({
+    time: mealTime,
+    carbs: mealCarbs,
+    fatGrams: mealFatGrams,
+    proteinGrams: mealProteinGrams,
+    foodName: foodList,
+  });
 
   return (
     <div className="px-1 pt-2 pb-6">
@@ -136,7 +138,7 @@ export default function MealReviewContent({ mealInsight, monitoringStatus, gluco
       {/* Meal metadata */}
       <div className="mt-1">
         <span className="text-[10.5px] font-semibold uppercase tracking-[0.14em]" style={{ color: PALETTE.faint }}>
-          {mealName}, LOGGED {loggedTime}
+          {slotLabel}, LOGGED {loggedTime}
         </span>
       </div>
       {foodList && (

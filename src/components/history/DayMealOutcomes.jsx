@@ -3,15 +3,7 @@ import { format } from "date-fns";
 import { Utensils } from "lucide-react";
 import DaySection from "./DaySection";
 import MealOutcomeModal from "./MealOutcomeModal";
-
-function getMealLabel(time) {
-  const hour = new Date(time).getHours();
-  if (hour < 10) return "Breakfast";
-  if (hour < 14) return "Lunch";
-  if (hour < 17) return "Snack";
-  if (hour < 21) return "Dinner";
-  return "Evening";
-}
+import { getMealSlotLabel } from "@/lib/mealSlot";
 
 export default function DayMealOutcomes({ meals, glucose, insulin, targetLow, targetHigh }) {
   const [selectedMeal, setSelectedMeal] = useState(null);
@@ -35,8 +27,8 @@ export default function DayMealOutcomes({ meals, glucose, insulin, targetLow, ta
               >
                 <div className="flex items-baseline justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-white/90">{getMealLabel(meal.time)}</p>
-                    <p className="truncate text-[10px] text-white/40">{meal.name}</p>
+                    <p className="truncate text-sm font-semibold text-white/90">{meal.name}</p>
+                    <p className="text-[10px] text-white/40">{getMealSlotLabel({ time: meal.time, carbs: meal.carbs, fatGrams: meal.fat_grams, proteinGrams: meal.protein_grams, foodName: meal.name })}</p>
                   </div>
                   <span className="shrink-0 text-[10px] text-white/35">{format(new Date(meal.time), "h:mm a")}</span>
                 </div>
