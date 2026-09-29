@@ -123,13 +123,24 @@
     -webkit-tap-highlight-color: transparent;
   }
 
-  button, [role="button"], a, select, [contenteditable="true"] {
+  /* Readable text — paragraphs, policies, journal logs, disclaimers:
+     allow native text selection and the iOS long-press callout menu. */
+  p, h1, h2, h3, h4, h5, h6, li, blockquote, dd, dt, pre, code, figcaption {
+    -webkit-touch-callout: default;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    user-select: text;
+  }
+
+  /* Interactive controls, tabs, and icons: keep selection and callouts off. */
+  button, [role="button"], a, select, summary, svg, img {
     -webkit-user-select: none;
     -moz-user-select: none;
     user-select: none;
   }
 
-  input, textarea, select, [contenteditable="true"] {
+  /* Editable fields keep their native callout and selection. */
+  input, textarea, [contenteditable="true"] {
     -webkit-touch-callout: default;
   }
 

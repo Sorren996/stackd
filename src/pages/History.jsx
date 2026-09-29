@@ -1,6 +1,6 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import PageHeader from "@/components/editorial/PageHeader";
@@ -275,6 +275,8 @@ function EditLogSheet({ log, onClose, onSave, isSaving }) {
 export default function History() {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const levelOrder = { month: 0, days: 1, recap: 2 };
   const { connected: dexcomConnected } = useDexcomConnection();
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
@@ -285,6 +287,7 @@ export default function History() {
   const [targetRange, setTargetRange] = useState(readTargetRange);
   const [direction, setDirection] = useState(1);
   const [viewMode, setViewMode] = useState("list");
+  const levelRef = useRef(level);
 
   useEffect(() => {
     const updateTargetRange = () => setTargetRange(readTargetRange());
@@ -325,21 +328,42 @@ export default function History() {
     [allDays, selectedDay]
   );
 
-  // Deep-link support: "?day=YYYY-MM-DD" (e.g. from Insights "view the days
-  // behind this") opens the Journal straight into that day's recap.
+  // Keep a ref of the current level so the URL-sync effect can detect whether
+  // a navigation moved deeper or shallower and pick the slide direction.
+  useEffect(() => {
+    levelRef.current = level;
+  }, [level]);
+
+  // URL ↔ view synchronization. The search params (month, day) are the source
+  // of truth for the active view. Selecting a month/day pushes a new history
+  // entry; the browser back button pops it and this effect re-derives the
+  // active level, month, and day from the resolved params.
   useEffect(() => {
     const day = searchParams.get("day");
-    if (!day || !/^\d{4}-\d{2}-\d{2}$/.test(day)) return;
-    setSelectedDay(day);
-    setLevel("recap");
-    setSelectedMonth(null);
-    setDirection(1);
-    const { search, ...rest } = Object.fromEntries(searchParams.entries());
-    if (search) setSearchParams(rest, { replace: true });
-    requestAnimationFrame(() => scrollToTop());
-    // Only react to an actual day param change.
+    const month = searchParams.get("month");
+
+    let newLevel = "month";
+    let newMonth = null;
+    let newDay = null;
+
+    if (day && /^\d{4}-\d{2}-\d{2}$/.test(day)) {
+      newLevel = "recap";
+      newDay = day;
+      if (month && /^\d{4}-\d{2}$/.test(month)) newMonth = month;
+    } else if (month && /^\d{4}-\d{2}$/.test(month)) {
+      newLevel = "days";
+      newMonth = month;
+    }
+
+    if (newLevel !== levelRef.current) {
+      setDirection(levelOrder[newLevel] > levelOrder[levelRef.current] ? 1 : -1);
+    }
+    setLevel(newLevel);
+    setSelectedMonth(newMonth);
+    setSelectedDay(newDay);
+    if (newLevel === "recap") requestAnimationFrame(() => scrollToTop());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams.get("day")]);
+  }, [searchParams]);
 
   const { data: recapData = {}, isLoading: loadingRecap } = useQuery({
     queryKey: ["history-day-recap", selectedDay],
@@ -491,26 +515,20 @@ export default function History() {
 
   const handleSelectMonth = (key) => {
     setDirection(1);
-    setSelectedMonth(key);
-    setLevel("days");
+    setSearchParams({ month: key });
   };
 
   const handleSelectDay = (date, dir = 1) => {
     setDirection(dir);
-    setSelectedDay(date);
-    setLevel("recap");
+    const params = {};
+    if (selectedMonth) params.month = selectedMonth;
+    params.day = date;
+    setSearchParams(params);
     requestAnimationFrame(() => scrollToTop());
   };
 
   const goBack = () => {
-    setDirection(-1);
-    if (level === "recap") {
-      setLevel("days");
-      setSelectedDay(null);
-    } else if (level === "days") {
-      setLevel("month");
-      setSelectedMonth(null);
-    }
+    navigate(-1);
   };
 
   let headerTitle = "Your Journal";
