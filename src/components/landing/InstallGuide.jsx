@@ -5,7 +5,7 @@ const STEPS = [
     image: "https://media.base44.com/images/public/6aad64ef13ea720bbe594d6f/740958fde_generated_image.png",
     caption: "Step 1: Open Stackd in Safari",
     description:
-      "On your iPhone, open https://stackdose.base44.app in the Safari browser. This has to be Safari, not Chrome or another browser. iOS only allows installing a web app from Safari.",
+      "On your iPhone, open https://stackdinsight.base44.app in the Safari browser. This has to be Safari, not Chrome or another browser. iOS only allows installing a web app from Safari.",
     alt: "Screenshot showing Stackd opened in the Safari browser on an iPhone",
   },
   {
@@ -32,7 +32,7 @@ const STEPS = [
 ];
 
 const INTRO =
-  "Stackd is available on the App Store as a native iPhone app, and you can also add the web app to your home screen for one-tap access. Either way, it opens full screen so it feels right at home beside your other apps.";
+  "Add Stackd to your home screen for one-tap access. It opens full screen, so it feels right at home beside your other apps.";
 
 export default function InstallGuide() {
   return (

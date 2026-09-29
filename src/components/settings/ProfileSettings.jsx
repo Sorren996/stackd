@@ -132,12 +132,17 @@ export default function ProfileSettings() {
             </p>
           </div>
         ) : passwordStep === "idle" ? (
-          <LedgerRow
-            label="Password"
-            value="••••••••"
-            actionLabel={isSendingReset ? "Sending..." : "Change"}
-            onClick={handleSendPasswordReset}
-          />
+          <div className="py-3 space-y-2">
+            <LedgerRow
+              label="Password"
+              value="••••••••"
+              actionLabel={isSendingReset ? "Sending..." : "Send reset link"}
+              onClick={handleSendPasswordReset}
+            />
+            <p className="text-[11px] leading-relaxed" style={{ color: "#746959" }}>
+              Tapping sends a secure link to your email. Follow it to set a new password. We never email your current one.
+            </p>
+          </div>
         ) : (
           <div className="py-3 space-y-3">
             <p className="text-xs leading-relaxed" style={{ color: "#6b6153" }}>

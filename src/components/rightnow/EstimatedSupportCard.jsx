@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import DashboardCard from "@/components/dashboard/DashboardCard";
-import MiniActivitySparkline from "./MiniActivitySparkline";
 import { getDoseTimingInfo, isBasalInsulinType } from "@/lib/insulinPharmacology";
 import { formatGlucose, glucoseUnitLabel } from "@/lib/glucoseUnits";
 import { formatIOBValue, IOB_FLOOR } from "@/lib/iobModel";
@@ -97,23 +96,24 @@ export default function EstimatedSupportCard({ details }) {
   if (absDiff < 0.05) {
     sentence = (
       <>
-        You took <strong className="font-bold">{takenStr}</strong> for this meal. That matches your plan.
+        You logged <strong className="font-bold">{takenStr}</strong> for this meal. Your settings estimated{" "}
+        <strong className="font-bold">{suggestedStr}</strong>, so the two line up.
       </>
     );
   } else if (difference > 0) {
     sentence = (
       <>
-        You took <strong className="font-bold">{takenStr}</strong> for this meal. Your plan suggested{" "}
+        You logged <strong className="font-bold">{takenStr}</strong> for this meal. Your settings estimated{" "}
         <strong className="font-bold">{suggestedStr}</strong>, so that's{" "}
-        <strong className="font-bold">{diffStr} more.</strong>
+        <strong className="font-bold">{diffStr} more</strong> than the math.
       </>
     );
   } else {
     sentence = (
       <>
-        You took <strong className="font-bold">{takenStr}</strong> for this meal. Your plan suggested{" "}
+        You logged <strong className="font-bold">{takenStr}</strong> for this meal. Your settings estimated{" "}
         <strong className="font-bold">{suggestedStr}</strong>, so that's{" "}
-        <strong className="font-bold">{diffStr} less.</strong>
+        <strong className="font-bold">{diffStr} less</strong> than the math.
       </>
     );
   }
@@ -169,18 +169,23 @@ export default function EstimatedSupportCard({ details }) {
         <div className="flex items-center gap-1.5">
           <span className="h-2 w-2 rounded-full" style={{ background: PALETTE.beige }} />
           <span className="text-[11px]" style={{ color: PALETTE.muted }}>
-            Your plan suggested, {suggested.toFixed(1)}u
+            Settings estimated, {suggested.toFixed(1)}u
           </span>
         </div>
         {difference > 0.05 && (
           <div className="flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full" style={{ background: PALETTE.copper }} />
             <span className="text-[11px]" style={{ color: PALETTE.muted }}>
-              The extra you took, {absDiff.toFixed(1)}u
+              What you logged beyond that, {absDiff.toFixed(1)}u
             </span>
           </div>
         )}
       </div>
+
+      {/* Disclaimer — describes, never prescribes */}
+      <p className="mt-2.5 text-[10px] leading-relaxed" style={{ color: PALETTE.faint }}>
+        Describes your plan's math. Not a dose recommendation.
+      </p>
 
       {/* 5. THE MATH (accordion) */}
       <button
@@ -255,9 +260,6 @@ export default function EstimatedSupportCard({ details }) {
               const shortName = dose.type?.split(" ")[0] || "Insulin";
               return (
                 <div key={dose.id} className="flex items-center gap-2.5">
-                  <span className="shrink-0" style={{ color: PALETTE.copper }}>
-                    <MiniActivitySparkline dose={dose} now={now} />
-                  </span>
                   <div className="min-w-0 flex-1">
                     <span className="text-[13px] font-semibold" style={{ color: PALETTE.ink }}>
                       {shortName}, {fmtUnits(dose.units)}u dose

@@ -29,7 +29,7 @@ function Legend({ color, label, ring }) {
         className="inline-block h-2.5 w-2.5 rounded-full"
         style={ring ? { background: "transparent", border: `1.5px solid ${color}` } : { background: color }}
       />
-      <span className="text-[10px] font-medium" style={{ color: "#eef2e9" }}>{label}</span>
+      <span className="text-[10px] font-medium" style={{ color: "#6b6153" }}>{label}</span>
     </span>
   );
 }
@@ -291,6 +291,7 @@ export default function DayRecapGraph({ glucose, carbs, insulin, targetLow, targ
             tick={{ fontSize: 9, fill: gTheme.tickFill }}
             tickFormatter={(v) => {
               const h = Math.floor(v / 60);
+              if (h === 24) return "12a";
               const ampm = h >= 12 ? "p" : "a";
               const hr = h % 12 === 0 ? 12 : h % 12;
               return `${hr}${ampm}`;

@@ -40,14 +40,35 @@ export default function DaySummary({ metrics, daySummary, manualCount, hasCGM, t
 
   // Manual-only day (no CGM data — only intentional, user-entered readings)
   if (!hasCGM && manualCount > 0) {
+    // A single manual reading can't show a trend — avoid duplicating the same
+    // value as both "Highest" and "Lowest". Show the reading + an honest note.
+    if (manualCount === 1) {
+      return (
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-baseline gap-2">
+            <span className="text-4xl font-black" style={{ color: "#3f3830" }}>{formatGlucose(metrics.avg)}</span>
+            <span className="text-xs font-medium" style={{ color: "#746959" }}>{glucoseUnitLabel()}</span>
+            <span
+              className="ml-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold"
+              style={{ background: "#f7f1e8", borderColor: "#eadccf", color: "#6b6153" }}
+            >
+              1 manual reading
+            </span>
+          </div>
+          <p className="text-[12px] leading-relaxed" style={{ color: "#746959" }}>
+            Not enough readings for a daily trend. Log a few more throughout the day to see how your flow takes shape.
+          </p>
+        </div>
+      );
+    }
     return (
       <div className="space-y-3">
         <div className="flex flex-wrap items-baseline gap-2">
-          <span className="text-4xl font-black text-white">{formatGlucose(metrics.avg)}</span>
-          <span className="text-xs font-medium text-white/40">{glucoseUnitLabel()}</span>
+          <span className="text-4xl font-black" style={{ color: "#3f3830" }}>{formatGlucose(metrics.avg)}</span>
+          <span className="text-xs font-medium" style={{ color: "#746959" }}>{glucoseUnitLabel()}</span>
           <span
-            className="ml-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold text-white/55"
-            style={{ background: "#f7f1e8", borderColor: "#eadccf" }}
+            className="ml-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold"
+            style={{ background: "#f7f1e8", borderColor: "#eadccf", color: "#6b6153" }}
           >
             {manualCount} manual {manualCount === 1 ? "reading" : "readings"}
           </span>

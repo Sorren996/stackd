@@ -272,7 +272,8 @@ export default function Analytics() {
         {gmi !== null && <LedgerRow label="GMI" value={`${gmi.toFixed(1)}%`} />}
         <LedgerRow label="Time above range" value={`${stats.abovePercent.toFixed(0)}%`} />
         <LedgerRow label="Time below range" value={`${stats.belowPercent.toFixed(0)}%`} />
-        <LedgerRow label="Readings" value={String(stats.total)} />
+        <LedgerRow label="Days logged" value={String(stats.days.length)} />
+        <LedgerRow label={`Readings, ${PERIOD_LONG[rangeDays] || `${rangeDays} days`}`} value={String(stats.total)} />
       </SectionCard>
 
       <SectionCard>

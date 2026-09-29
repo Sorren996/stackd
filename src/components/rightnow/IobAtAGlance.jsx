@@ -238,6 +238,33 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
 
                     <p className="py-2 text-[12px]" style={{ color: PALETTE.muted }}>No rapid insulin on board.</p>
                     }
+
+        {/* Dose details drill-down — full labeled activity curve */}
+        {hasBolus &&
+        <div className="mt-3" style={{ borderTop: `1px solid ${PALETTE.hairline}`, paddingTop: 12 }}>
+            <button
+              type="button"
+              onClick={() => setShowDetails((s) => !s)}
+              className="flex w-full items-center justify-between"
+            >
+              <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: PALETTE.faint }}>
+                Dose details
+              </span>
+              <ChevronDown
+                size={14}
+                style={{ color: PALETTE.faint, transform: showDetails ? "rotate(180deg)" : "none", transition: "transform 200ms" }}
+              />
+            </button>
+            {showDetails &&
+            <div className="mt-3">
+              <IobDecayChart bolusDoses={bolusDoses} basalDoses={basalDoses} now={now} />
+              <p className="mt-1.5 text-[10px] leading-relaxed" style={{ color: PALETTE.faint }}>
+                Solid line is insulin activity already underway; the dashed mustard line projects the remaining tail. Per-dose curves show activity, not units remaining — the totals above are your live insulin on board.
+              </p>
+            </div>
+            }
+          </div>
+        }
       </DashboardCard>
 
       {/* 4. Basal / background card */}

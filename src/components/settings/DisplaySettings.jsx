@@ -95,7 +95,7 @@ export default function DisplaySettings() {
         </div>
       </SectionCard>
 
-      <SectionCard label="Graph Height">
+      <SectionCard label="Glucose Chart Scale">
         <div className="space-y-3 pt-3 pb-2">
           {HEIGHT_OPTIONS.map((opt) => {
             const selected = opt.value === currentHeight;
@@ -139,7 +139,7 @@ export default function DisplaySettings() {
 
       <SectionCard>
         <p className="text-[11px] leading-relaxed" style={{ color: "#746959" }}>
-          Graph height sets the normal upper limit of your glucose graph across every Your Flow view. Whenever a real reading rises above or dips below your chosen scale, the graph gently expands to show the true value without changing your saved preference.
+          Your chart scale sets the normal upper limit of your glucose graph across every Your Flow view. Whenever a real reading rises above or dips below your chosen scale, the graph gently expands to show the true value without changing your saved preference.
         </p>
       </SectionCard>
 

@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { ChevronDown } from "lucide-react";
 import DashboardCard from "@/components/dashboard/DashboardCard";
 import AbsorptionProgressCurve from "./AbsorptionProgressCurve";
 import MealGlucoseTrace from "./MealGlucoseTrace";
@@ -54,6 +55,7 @@ function formatCountdownValue(ms) {
 
 export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glucoseTrend, onResolve, glucoseReadings }) {
   const [showEdit, setShowEdit] = useState(false);
+  const [showContext, setShowContext] = useState(false);
   const [openEntryId, setOpenEntryId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const queryClient = useQueryClient();
@@ -201,6 +203,11 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
   null;
   const changeValue = rawRose != null ? formatGlucoseDelta(rawRose) : (Number.isFinite(glucoseNow) && Number.isFinite(glucoseAtStart) ? formatGlucoseDelta(glucoseNow - glucoseAtStart) : "");
 
+  // Insufficient post-meal readings — don't fabricate a "steady" conclusion
+  // or dash-only metrics. Show one honest waiting state until readings arrive.
+  const hasPostMealReading = (glucoseReadings || []).some((r) => new Date(r.recorded_at).getTime() > mealTime);
+  const waitingForReadings = !hasPostMealReading && windowRemaining > 0;
+
   const mealName = d.meal?.food_name || d.meal?.name || "Meal";
   const combinedFoodName = carbEntries.map((e) => e?.food_name || e?.name || "").filter(Boolean).join(", ") || mealName;
   const slotLabel = getMealSlotLabel({
@@ -265,26 +272,37 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
         <div className="mt-4">
           <div className="section-label">Glucose Response</div>
 
-          <div className="mt-2 flex items-baseline justify-between gap-2">
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-[10px] uppercase tracking-wider" style={{ color: PALETTE.faint }}>Before</span>
-              <span className="text-[18px] font-semibold tabular-nums" style={{ color: PALETTE.ink }}>
-                {Number.isFinite(glucoseAtStart) ? formatGlucose(glucoseAtStart) : "-"}
-              </span>
+          {waitingForReadings ? (
+            <>
+              <p className="mt-2 text-[13px] font-semibold" style={{ color: PALETTE.ink }}>
+                Waiting for post-meal readings
+              </p>
+              <p className="mt-0.5 text-[12px] leading-relaxed" style={{ color: PALETTE.muted }}>
+                Your glucose response isn't available yet. We'll keep watching for the next {formatCountdownValue(windowRemaining)}.
+              </p>
+            </>
+          ) : (
+            <div className="mt-2 flex items-baseline justify-between gap-2">
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-[10px] uppercase tracking-wider" style={{ color: PALETTE.faint }}>Before</span>
+                <span className="text-[18px] font-semibold tabular-nums" style={{ color: PALETTE.ink }}>
+                  {Number.isFinite(glucoseAtStart) ? formatGlucose(glucoseAtStart) : "-"}
+                </span>
+              </div>
+              {outcomeValue != null &&
+              <div className="flex items-baseline gap-1.5">
+                  <span className="text-[10px] uppercase tracking-wider" style={{ color: PALETTE.faint }}>{didRise ? "Peak" : "End"}</span>
+                  <span className="text-[18px] font-semibold tabular-nums" style={{ color: PALETTE.ink }}>{outcomeValue}</span>
+                </div>
+              }
+              {changeValue !== "" &&
+              <div className="flex items-baseline gap-1.5">
+                  <span className="text-[10px] uppercase tracking-wider" style={{ color: PALETTE.faint }}>{didRise ? "Rise" : "Change"}</span>
+                  <span className="text-[15px] font-semibold tabular-nums" style={{ color: didRise ? PALETTE.amber : PALETTE.green }}>{changeValue}</span>
+                </div>
+              }
             </div>
-            {outcomeValue != null &&
-            <div className="flex items-baseline gap-1.5">
-                <span className="text-[10px] uppercase tracking-wider" style={{ color: PALETTE.faint }}>{didRise ? "Peak" : "End"}</span>
-                <span className="text-[18px] font-semibold tabular-nums" style={{ color: PALETTE.ink }}>{outcomeValue}</span>
-              </div>
-            }
-            {changeValue !== "" &&
-            <div className="flex items-baseline gap-1.5">
-                <span className="text-[10px] uppercase tracking-wider" style={{ color: PALETTE.faint }}>{didRise ? "Rise" : "Change"}</span>
-                <span className="text-[15px] font-semibold tabular-nums" style={{ color: didRise ? PALETTE.amber : PALETTE.green }}>{changeValue}</span>
-              </div>
-            }
-          </div>
+          )}
 
           <MealGlucoseTrace
             glucoseReadings={glucoseReadings}
@@ -293,57 +311,77 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
             now={now}
             targetLow={targetLow}
             targetHigh={targetHigh} />
-          
 
-          <p className="mt-2 text-[12px] leading-relaxed" style={{ color: PALETTE.ink }}>
-            {glucoseLine}
-          </p>
+          {!waitingForReadings &&
+          <>
+            <p className="mt-2 text-[12px] leading-relaxed" style={{ color: PALETTE.ink }}>
+              {glucoseLine}
+            </p>
 
-          {/* Outcome assessment — descriptive, never prescriptive */}
-          {d.outcomeAssessment &&
-          <div className="mt-2 rounded-[12px] px-3 py-2" style={{ background: "#f7f1e8" }}>
-              <p className="text-[12px] font-semibold leading-snug" style={{ color: d.outcomeAssessment.color }}>
-                {d.outcomeAssessment.label}
-              </p>
-              <p className="mt-0.5 text-[12px] leading-relaxed" style={{ color: PALETTE.muted }}>
-                {d.outcomeAssessment.message}
-              </p>
+            {/* Outcome assessment — descriptive, never prescriptive */}
+            {d.outcomeAssessment &&
+            <div className="mt-2 rounded-[12px] px-3 py-2" style={{ background: "#f7f1e8" }}>
+                <p className="text-[12px] font-semibold leading-snug" style={{ color: d.outcomeAssessment.color }}>
+                  {d.outcomeAssessment.label}
+                </p>
+                <p className="mt-0.5 text-[12px] leading-relaxed" style={{ color: PALETTE.muted }}>
+                  {d.outcomeAssessment.message}
+                </p>
+              </div>
+            }
+
+            {/* Response & context drill-down — detailed metrics on demand */}
+            <div className="mt-3">
+              <button
+                type="button"
+                onClick={() => setShowContext((s) => !s)}
+                className="flex w-full items-center justify-between"
+              >
+                <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: PALETTE.faint }}>
+                  Response & context
+                </span>
+                <ChevronDown
+                  size={14}
+                  style={{ color: PALETTE.faint, transform: showContext ? "rotate(180deg)" : "none", transition: "transform 200ms" }}
+                />
+              </button>
+              {showContext &&
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                <div>
+                  <span className="block text-[9px] uppercase tracking-wider" style={{ color: PALETTE.faint }}>Time to peak</span>
+                  <span className="text-[16px] font-semibold tabular-nums" style={{ color: PALETTE.ink }}>
+                    {glucoseAnalysis.timeToPeakMin != null ? formatDuration(glucoseAnalysis.timeToPeakMin) : "-"}
+                  </span>
+                </div>
+                <div>
+                  <span className="block text-[9px] uppercase tracking-wider" style={{ color: PALETTE.faint }}>Rise from pre-meal</span>
+                  <span className="text-[16px] font-semibold tabular-nums" style={{ color: PALETTE.ink }}>
+                    {glucoseAnalysis.deltaFromBaseline != null ? `${formatGlucoseDelta(glucoseAnalysis.deltaFromBaseline)} ${glucoseUnitLabel()}` : "-"}
+                  </span>
+                </div>
+                <div>
+                  <span className="block text-[9px] uppercase tracking-wider" style={{ color: PALETTE.faint }}>Time in range</span>
+                  <span className="text-[16px] font-semibold tabular-nums" style={{ color: PALETTE.ink }}>
+                    {glucoseAnalysis.timeInRangePct != null ? `${glucoseAnalysis.timeInRangePct}%` : "-"}
+                  </span>
+                </div>
+                <div>
+                  <span className="block text-[9px] uppercase tracking-wider leading-tight" style={{ color: PALETTE.faint }}>
+                    {glucoseAnalysis.backInRangeMin != null ? "Back to range" : "Still elevated"}
+                  </span>
+                  <span className="text-[16px] font-semibold tabular-nums" style={{ color: PALETTE.ink }}>
+                    {glucoseAnalysis.backInRangeMin != null
+                      ? formatDuration(glucoseAnalysis.backInRangeMin)
+                      : glucoseAnalysis.elevatedDurationMin > 0
+                        ? formatDuration(glucoseAnalysis.elevatedDurationMin)
+                        : "-"}
+                  </span>
+                </div>
+              </div>
+              }
             </div>
+          </>
           }
-
-          {/* Enhanced metrics — 2x2 grid of stat tiles */}
-          <div className="mt-3 grid grid-cols-2 gap-3">
-            <div>
-              <span className="block text-[9px] uppercase tracking-wider" style={{ color: PALETTE.faint }}>Time to peak</span>
-              <span className="text-[16px] font-semibold tabular-nums" style={{ color: PALETTE.ink }}>
-                {glucoseAnalysis.timeToPeakMin != null ? formatDuration(glucoseAnalysis.timeToPeakMin) : "-"}
-              </span>
-            </div>
-            <div>
-              <span className="block text-[9px] uppercase tracking-wider" style={{ color: PALETTE.faint }}>Rise from pre-meal</span>
-              <span className="text-[16px] font-semibold tabular-nums" style={{ color: PALETTE.ink }}>
-                {glucoseAnalysis.deltaFromBaseline != null ? `${formatGlucoseDelta(glucoseAnalysis.deltaFromBaseline)} ${glucoseUnitLabel()}` : "-"}
-              </span>
-            </div>
-            <div>
-              <span className="block text-[9px] uppercase tracking-wider" style={{ color: PALETTE.faint }}>Time in range</span>
-              <span className="text-[16px] font-semibold tabular-nums" style={{ color: PALETTE.ink }}>
-                {glucoseAnalysis.timeInRangePct != null ? `${glucoseAnalysis.timeInRangePct}%` : "-"}
-              </span>
-            </div>
-            <div>
-              <span className="block text-[9px] uppercase tracking-wider leading-tight" style={{ color: PALETTE.faint }}>
-                {glucoseAnalysis.backInRangeMin != null ? "Back to range" : "Still elevated"}
-              </span>
-              <span className="text-[16px] font-semibold tabular-nums" style={{ color: PALETTE.ink }}>
-                {glucoseAnalysis.backInRangeMin != null
-                  ? formatDuration(glucoseAnalysis.backInRangeMin)
-                  : glucoseAnalysis.elevatedDurationMin > 0
-                    ? formatDuration(glucoseAnalysis.elevatedDurationMin)
-                    : "-"}
-              </span>
-            </div>
-          </div>
         </div>
 
         {/* 4. INSIGHT — absorption (only once meaningful) + active support */}

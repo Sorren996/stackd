@@ -54,25 +54,28 @@ export default function Settings() {
         </div>
       </SectionCard>
 
-      <SensorSessionCard />
-
-      <SectionCard label="Insulin Plan">
+      <SectionCard label="Health Settings">
         <LedgerRow label="Insulin plan" value="Settings & meal types" to="/settings/insulin" />
-      </SectionCard>
-
-      <SectionCard label="Glucose">
         <LedgerRow label="Dexcom connection" value={dexcomStatus} to="/settings/dexcom" />
       </SectionCard>
 
+      <SensorSessionCard />
+
       <SectionCard label="App">
-        <LedgerRow label="Display" value={`Graph max: ${graphHeight}`} to="/settings/display" />
+        <LedgerRow label="Display" value={`Chart scale: ${graphHeight}`} to="/settings/display" />
         <LedgerRow label="Add to Home Screen" value="Install" to="/install" />
-        <LedgerRow label="Support the Creator" value="Optional gifts" to="/settings/support-creator" />
       </SectionCard>
 
-      <SectionCard label="Privacy & Help">
+      <SectionCard label="Help & Account">
+        <LedgerRow label="Profile" value={user?.email || "Name & email"} to="/settings/profile" />
         <LedgerRow label="Privacy & Consent" value="Consent & controls" to="/settings/privacy-consent" />
         <LedgerRow label="Contact & Support" value="Help & feedback" to="/settings/contact-support" />
+        <LedgerRow label="Support the Creator" value="Optional gifts" to="/settings/support-creator" />
+        <LedgerRow
+          label={isLoggingOut ? "Logging out..." : "Log Out"}
+          onClick={handleLogout}
+          danger
+        />
       </SectionCard>
 
       {user?.role === "admin" && (
@@ -80,15 +83,6 @@ export default function Settings() {
           <LedgerRow label="Support Inbox" value="Review requests" to="/settings/support-inbox" />
         </SectionCard>
       )}
-
-      <SectionCard label="Account">
-        <LedgerRow label="Profile" value={user?.email || "Name & email"} to="/settings/profile" />
-        <LedgerRow
-          label={isLoggingOut ? "Logging out..." : "Log Out"}
-          onClick={handleLogout}
-          danger
-        />
-      </SectionCard>
 
       <SectionCard>
         <p className="text-xs leading-relaxed" style={{ color: "#746959" }}>
