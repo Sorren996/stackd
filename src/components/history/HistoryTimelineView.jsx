@@ -35,9 +35,9 @@ function EditableLog({ children, onEdit }) {
 }
 
 const GROUPS = [
-  { key: "glucose", label: "Glucose", Icon: Droplets, color: "#5b6550" },
-  { key: "insulin", label: "Insulin", Icon: Syringe, color: "#5ba3b8" },
-  { key: "carbs", label: "Carbs", Icon: Wheat, color: "#af751b" },
+  { key: "glucose", label: "Glucose", Icon: Droplets, color: "#b7c4a1" },
+  { key: "insulin", label: "Insulin", Icon: Syringe, color: "#9fd4d8" },
+  { key: "carbs", label: "Carbs", Icon: Wheat, color: "#e0b460" },
 ];
 
 function renderCard(item, groupKey, locked, onEdit, onDeleteDose, onDeleteGlucose, onDeleteCarb) {
@@ -113,7 +113,7 @@ export default function HistoryTimelineView({ logs, loading, dexcomConnected, on
   if (!logs.length) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
-        <p className="text-sm text-white/50">No moments logged on this day.</p>
+        <p className="text-sm" style={{ color: "#e7dfcf" }}>No moments logged on this day.</p>
       </div>
     );
   }
@@ -135,9 +135,9 @@ export default function HistoryTimelineView({ logs, loading, dexcomConnected, on
               className={`shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition ${
                 active
                   ? "text-white"
-                  : "border-white/10 bg-white/[0.03] text-white/45 hover:text-white/75"
+                  : "border-white/20 bg-white/[0.06] text-white/60 hover:text-white/90"
               }`}
-              style={active ? { background: "rgba(91,101,80,0.12)", borderColor: "rgba(91,101,80,0.35)" } : undefined}
+              style={active ? { background: "rgba(91,101,80,0.22)", borderColor: "rgba(183,196,161,0.5)", color: "#f7f1e8" } : undefined}
             >
               {f.label}
             </button>
@@ -146,7 +146,7 @@ export default function HistoryTimelineView({ logs, loading, dexcomConnected, on
       </div>
 
       {visibleGroups.length === 0 && (
-        <p className="py-8 text-center text-sm text-white/40">No moments match this view.</p>
+        <p className="py-8 text-center text-sm" style={{ color: "#cfc6b4" }}>No moments match this view.</p>
       )}
 
       {visibleGroups.map((g) => (
@@ -156,7 +156,7 @@ export default function HistoryTimelineView({ logs, loading, dexcomConnected, on
             <span className="text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: g.color }}>
               {g.label}
             </span>
-            <span className="text-[10px] text-white/30">{grouped[g.key].length}</span>
+            <span className="text-[10px]" style={{ color: "#cfc6b4" }}>{grouped[g.key].length}</span>
           </div>
           <div className="space-y-2">
             {grouped[g.key].map((item) =>
