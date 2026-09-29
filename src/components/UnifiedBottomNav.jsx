@@ -318,15 +318,17 @@ export default function UnifiedBottomNav() {
 
           {/* ── Nav bar — full width, flush to bottom edge ── */}
           <div
-            className="flex items-center justify-between px-2 py-2.5"
+            className="flex items-center px-2 py-2.5"
             style={{
               height: NAV_HEIGHT,
               position: "relative",
               zIndex: 50,
             }}
           >
-            {[navItems.slice(0, 2), navItems.slice(2, 4)].map((group, gi) => (
-              <div key={gi} className="flex gap-1">
+            {[navItems.slice(0, 2), null, navItems.slice(2, 4)].map((group, gi) => group === null ? (
+              <div key="fab-gap" className="w-20 shrink-0" />
+            ) : (
+              <div key={gi} className="flex flex-1 justify-around">
                 {group.map((item) => {
                   const index = navItems.indexOf(item);
                   const isActive = index === activeIndex;
