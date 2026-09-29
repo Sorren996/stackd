@@ -21,22 +21,22 @@ export default function AgpReport({ reports }) {
   const daily = agp.dailyProfiles || [];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <ReportCard title="Standard Glucose Profile">
         <div className="flex items-end gap-4">
           <div>
-            <div className="text-[11px] uppercase tracking-wide" style={{ color: "#746959" }}>Average</div>
+            <div className="text-[11px] uppercase tracking-wide" style={{ color: "#6b6153" }}>Average</div>
             <div className="text-4xl font-light tabular-nums" style={{ color: "#3f3830" }}>
               {h.mean != null ? val(h.mean) : "—"}
               <span className="ml-1 text-base" style={{ color: "#6b6153" }}>{unit()}</span>
             </div>
           </div>
           <div>
-            <div className="text-[11px] uppercase tracking-wide" style={{ color: "#746959" }}>GMI</div>
+            <div className="text-[11px] uppercase tracking-wide" style={{ color: "#6b6153" }}>GMI</div>
             <div className="text-2xl font-semibold tabular-nums" style={{ color: "#3f3830" }}>{h.gmi != null ? `${h.gmi.toFixed(1)}%` : "—"}</div>
           </div>
           <div>
-            <div className="text-[11px] uppercase tracking-wide" style={{ color: "#746959" }}>Variability</div>
+            <div className="text-[11px] uppercase tracking-wide" style={{ color: "#6b6153" }}>Variability</div>
             <div className="text-2xl font-semibold tabular-nums" style={{ color: "#3f3830" }}>{h.cv != null ? `${h.cv.toFixed(0)}%` : "—"}</div>
           </div>
         </div>
@@ -49,12 +49,12 @@ export default function AgpReport({ reports }) {
               targetLow={reports.targetLow} targetHigh={reports.targetHigh}
             />
           )}
-          <div className="mt-1 flex w-full justify-between px-0.5 text-[9px] tabular-nums" style={{ color: "#746959" }}>
+          <div className="mt-1 flex w-full justify-between px-0.5 text-[9px] tabular-nums" style={{ color: "#6b6153" }}>
             <span>mid</span><span>6am</span><span>noon</span><span>6pm</span><span>mid</span>
           </div>
         </div>
 
-        <p className="mt-3 text-[11px] leading-relaxed" style={{ color: "#746959" }}>
+        <p className="mt-3 text-[11px] leading-relaxed" style={{ color: "#6b6153" }}>
           The ribbon shows where your glucose usually sits through the day — the middle line is your median hour by
           hour, and the widest edge is the 90% of the time you spent closest to it. Tightes, more predictable ribbons
           often feel calmer.
@@ -70,13 +70,13 @@ export default function AgpReport({ reports }) {
               {daily.map((d, i) => (
                 <div key={i} className="rounded-md p-1" style={{ background: "rgba(63,56,48,0.03)" }}>
                   <GlucoseCurve series={d.series} height={46} showBands={false} strokeWidth={1.4} />
-                  <div className="mt-0.5 truncate text-center text-[8px] tabular-nums" style={{ color: "#746959" }}>
+                  <div className="mt-0.5 truncate text-center text-[8px] tabular-nums" style={{ color: "#6b6153" }}>
                     {fmtDateShort(d.date)}
                   </div>
                 </div>
               ))}
             </div>
-            <p className="mt-3 text-[11px] leading-relaxed" style={{ color: "#746959" }}>
+            <p className="mt-3 text-[11px] leading-relaxed" style={{ color: "#6b6153" }}>
               Each tile is one day across your full range, read left to right over the 24 hours. Weeks that look alike
               are the quietest, most predictable stretches.
             </p>

@@ -29,11 +29,11 @@ export default function OverlayReport({ reports }) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {weeks.map((week, wi) => (
         <ReportCard key={wi} title={`Week of ${fmtDateShort(week.weekStart)}`}>
           <OverlayPanel week={week} />
-          <p className="mt-3 text-[11px] leading-relaxed" style={{ color: "#746959" }}>
+          <p className="mt-3 text-[11px] leading-relaxed" style={{ color: "#6b6153" }}>
             One line per day, left to right over 24 hours. Lines that stack tightly are your quietest, most familiar days.
           </p>
         </ReportCard>
@@ -89,14 +89,14 @@ function OverlayPanel({ week }) {
         })}
       </svg>
 
-      <div className="mt-1 flex w-full justify-between px-0.5 text-[9px] tabular-nums" style={{ color: "#746959" }}>
+      <div className="mt-1 flex w-full justify-between px-0.5 text-[9px] tabular-nums" style={{ color: "#6b6153" }}>
         <span>mid</span><span>6am</span><span>noon</span><span>6pm</span><span>mid</span>
       </div>
 
       {/* weekday legend */}
       <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1">
         {week.days.map((d) => (
-          <span key={d.date} className="flex items-center gap-1.5 text-[10px]" style={{ color: "#746959" }}>
+          <span key={d.date} className="flex items-center gap-1.5 text-[10px]" style={{ color: "#6b6153" }}>
             <span className="h-2 w-2 rounded-full" style={{ background: DAY_COLOR[d.weekday] || "#eadccf", opacity: d.hasData ? 1 : 0.3 }} />
             {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][d.weekday]} {fmtDateShort(d.date)}
           </span>

@@ -17,7 +17,7 @@ export default function OverviewReport({ reports }) {
   const p75Series = hr.map((b) => ({ value: b.p75 }));
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <ReportCard title="Overview">
         <StatGrid
           cols={2}
@@ -29,9 +29,9 @@ export default function OverviewReport({ reports }) {
           ]}
         />
 
-        <div className="mt-6">
+        <div className="mt-5">
           <div className="section-label">Time in range</div>
-          <div className="pt-3">
+          <div className="pt-2.5">
             <TirBand bands={ov.bands} />
           </div>
         </div>
@@ -65,7 +65,7 @@ export default function OverviewReport({ reports }) {
               {val(s.mean)}
               <span className="ml-1 text-base" style={{ color: "#6b6153" }}>{unit()}</span>
             </div>
-            <div className="text-xs leading-tight" style={{ color: "#746959" }}>
+            <div className="text-xs leading-tight" style={{ color: "#6b6153" }}>
               average across all hours
             </div>
           </div>
@@ -77,17 +77,17 @@ export default function OverviewReport({ reports }) {
               showBands
             />
             <div className="mt-1 flex w-full justify-between px-0.5">
-              <span className="text-[9px] tabular-nums" style={{ color: "#746959" }}>mid</span>
-              <span className="text-[9px] tabular-nums" style={{ color: "#746959" }}>6am</span>
-              <span className="text-[9px] tabular-nums" style={{ color: "#746959" }}>noon</span>
-              <span className="text-[9px] tabular-nums" style={{ color: "#746959" }}>6pm</span>
-              <span className="text-[9px] tabular-nums" style={{ color: "#746959" }}>mid</span>
+              <span className="text-[9px] tabular-nums" style={{ color: "#6b6153" }}>mid</span>
+              <span className="text-[9px] tabular-nums" style={{ color: "#6b6153" }}>6am</span>
+              <span className="text-[9px] tabular-nums" style={{ color: "#6b6153" }}>noon</span>
+              <span className="text-[9px] tabular-nums" style={{ color: "#6b6153" }}>6pm</span>
+              <span className="text-[9px] tabular-nums" style={{ color: "#6b6153" }}>mid</span>
             </div>
           </div>
 
           <div className="mt-5 grid grid-cols-2 gap-x-3 gap-y-3">
             <div>
-              <div className="text-[11px] uppercase tracking-wide" style={{ color: "#746959" }}>Busiest hour</div>
+              <div className="text-[11px] uppercase tracking-wide" style={{ color: "#6b6153" }}>Busiest hour</div>
               <div className="text-sm font-semibold" style={{ color: "#3f3830" }}>
                 {(() => {
                   const peak = hr.reduce((a, b) => (b.count > (a?.count ?? 0) ? b : a), null);
@@ -96,7 +96,7 @@ export default function OverviewReport({ reports }) {
               </div>
             </div>
             <div>
-              <div className="text-[11px] uppercase tracking-wide" style={{ color: "#746959" }}>Hours above target</div>
+              <div className="text-[11px] uppercase tracking-wide" style={{ color: "#6b6153" }}>Hours above target</div>
               <div className="text-sm font-semibold" style={{ color: "#3f3830" }}>
                 {(() => {
                   const above = hr.filter((b) => b.p50 > reports.targetHigh).length;

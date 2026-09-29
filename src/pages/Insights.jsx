@@ -79,14 +79,12 @@ export default function Insights() {
   // Viewer state — a generated report set is on screen.
   if (request && reports) {
     return (
-      <div className="flex flex-col" style={{ minHeight: "100dvh" }}>
-        <ReportViewer
-          reports={reports}
-          reportIds={request.reportIds}
-          windowDays={request.windowDays}
-          onBack={handleBack}
-        />
-      </div>
+      <ReportViewer
+        reports={reports}
+        reportIds={request.reportIds}
+        windowDays={request.windowDays}
+        onBack={handleBack}
+      />
     );
   }
 

@@ -68,11 +68,11 @@ export default function DailyStatsReport({ reports }) {
         <table className="w-full border-collapse text-left">
           <thead>
             <tr>
-              <th className="pb-2 pr-2 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "#746959" }}>
+              <th className="pb-2 pr-2 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "#6b6153" }}>
                 {mode}
               </th>
               {colsArr.map((c) => (
-                <th key={c.label} className="pb-2 pr-1 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "#746959" }}>
+                <th key={c.label} className="pb-2 pr-1 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "#6b6153" }}>
                   {c.label}
                 </th>
               ))}
@@ -93,7 +93,7 @@ export default function DailyStatsReport({ reports }) {
         </table>
       </div>
 
-      <p className="mt-4 text-[11px] leading-relaxed" style={{ color: "#746959" }}>
+      <p className="mt-4 text-[11px] leading-relaxed" style={{ color: "#6b6153" }}>
         "In target" is the share of that weekday's readings within your target range; CV is how varied that day tends
         to be.
       </p>

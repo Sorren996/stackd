@@ -25,9 +25,9 @@ export default function HourlyStatsReport({ reports }) {
         <table className="w-full border-collapse text-left">
           <thead>
             <tr>
-              <th className="pb-2 pr-2 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "#746959" }}>Hour</th>
+              <th className="pb-2 pr-2 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "#6b6153" }}>Hour</th>
               {active.map((h) => (
-                <th key={h.hour} className="pb-2 pr-1 text-[10px] font-semibold tabular-nums" style={{ color: "#746959" }}>
+                <th key={h.hour} className="pb-2 pr-1 text-[10px] font-semibold tabular-nums" style={{ color: "#6b6153" }}>
                   {hourLabel(h.hour)}
                 </th>
               ))}
@@ -54,7 +54,7 @@ export default function HourlyStatsReport({ reports }) {
         </table>
       </div>
 
-      <p className="mt-4 text-[11px] leading-relaxed" style={{ color: "#746959" }}>
+      <p className="mt-4 text-[11px] leading-relaxed" style={{ color: "#6b6153" }}>
         Hours with no readings are left out. Each column covers that one hour across every day in the range.
       </p>
     </ReportCard>

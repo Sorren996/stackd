@@ -31,7 +31,7 @@ function DayTile({ title, day, markers, reports }) {
 
       <div className="mt-3">
         <GlucoseCurve series={day.series} height={130} lineDots={day.series.length <= 48} />
-        <div className="mt-1 flex w-full justify-between px-0.5 text-[9px] tabular-nums" style={{ color: "#746959" }}>
+        <div className="mt-1 flex w-full justify-between px-0.5 text-[9px] tabular-nums" style={{ color: "#6b6153" }}>
           <span>mid</span><span>6am</span><span>noon</span><span>6pm</span><span>mid</span>
         </div>
       </div>
@@ -73,7 +73,7 @@ function RecurringTile({ p, reports }) {
           {p.windowLabel}
         </span>
       </div>
-      <p className="mt-1 text-xs" style={{ color: "#746959" }}>
+      <p className="mt-1 text-xs" style={{ color: "#6b6153" }}>
         Around {p.windowLabel}, your glucose leaned {isHigh ? "above" : "below"} target on {p.count} of {p.ofDays} days
         ({p.duration} consecutive hours). Recurring pattern.
       </p>
@@ -94,7 +94,7 @@ export default function PatternsReport({ reports }) {
   const p = reports?.patterns;
   if (!p) return null;
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <DayTile title="Best day" day={p.bestDay} markers={p.bestDayMarkers} reports={reports} />
       {p.worstDay && p.worstDay.hasData && (
         <DayTile title="Hardest day" day={p.worstDay} markers={p.worstDayMarkers} reports={reports} />

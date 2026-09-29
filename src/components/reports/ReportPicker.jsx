@@ -40,14 +40,14 @@ export default function ReportPicker({ onGenerate }) {
   const isNoneSelected = selected.size === 0;
 
   return (
-    <div className="mx-auto max-w-md space-y-6 pb-28 pt-2">
+    <div className="mx-auto max-w-md space-y-4 pb-36 pt-1">
       <PageHeader italicWord="reports" />
 
       {/* Step 1 — date range */}
-      <DashboardCard className="p-5">
+      <DashboardCard className="p-4">
         <div className="section-label">1 · Choose a range</div>
 
-        <div className="mt-3 inline-flex flex-wrap gap-2">
+        <div className="mt-2.5 inline-flex flex-wrap gap-2">
           {PRESETS.map((w) => (
             <button
               key={w}
@@ -79,15 +79,15 @@ export default function ReportPicker({ onGenerate }) {
             style={{ background: "#f7f1e8", borderColor: "#eadccf", color: "#3f3830" }}
           />
           {customDays && (
-            <span className="text-xs tabular-nums" style={{ color: "#746959" }}>{effectiveDays} days</span>
+            <span className="text-xs tabular-nums" style={{ color: "#6b6153" }}>{effectiveDays} days</span>
           )}
         </div>
       </DashboardCard>
 
       {/* Step 2 — which reports */}
-      <DashboardCard className="p-5">
+      <DashboardCard className="p-4">
         <div className="section-label">2 · Pick your reports</div>
-        <div className="mt-3 space-y-2.5">
+        <div className="mt-2.5 space-y-2">
           {REPORT_TYPES.map((r) => {
             const on = selected.has(r.id);
             return (
@@ -108,7 +108,7 @@ export default function ReportPicker({ onGenerate }) {
                 </span>
                 <span className="min-w-0">
                   <span className="block text-sm font-semibold" style={{ color: "#3f3830" }}>{r.label}</span>
-                  <span className="mt-0.5 block text-xs leading-relaxed" style={{ color: "#746959" }}>{r.description}</span>
+                  <span className="mt-0.5 block text-xs leading-relaxed" style={{ color: "#6b6153" }}>{r.description}</span>
                 </span>
               </button>
             );
@@ -116,24 +116,24 @@ export default function ReportPicker({ onGenerate }) {
         </div>
       </DashboardCard>
 
-      <p className="px-2 text-[11px] leading-relaxed text-center" style={{ color: "#746959" }}>
+      <p className="px-2 text-[11px] leading-relaxed text-center" style={{ color: "#6b6153" }}>
         {DISCLAIMER}
       </p>
 
-      {/* Sticky Generate */}
-      <div className="fixed inset-x-0 bottom-20 z-20 mx-auto max-w-md px-4">
+      {/* Sticky Generate — raised above the bottom nav + FAB so it's never covered */}
+      <div className="fixed inset-x-0 z-20 mx-auto max-w-md px-4" style={{ bottom: "calc(6.5rem + env(safe-area-inset-bottom))" }}>
         <button
           type="button"
           onClick={handleGenerate}
           disabled={isNoneSelected}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-base font-semibold transition active:opacity-80 disabled:opacity-50"
+          className="flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-base font-semibold transition active:opacity-80 disabled:opacity-50"
           style={{ background: "#3f3830", color: "#f7f1e8", boxShadow: "0 8px 28px rgba(63,56,48,0.20)" }}
         >
           Generate {effectiveDays}-day report
           <ChevronRight className="h-5 w-5" />
         </button>
         {isNoneSelected && (
-          <p className="mt-2 text-center text-[11px]" style={{ color: "#746959" }}>Pick at least one report to continue.</p>
+          <p className="mt-2 text-center text-[11px]" style={{ color: "#6b6153" }}>Pick at least one report to continue.</p>
         )}
       </div>
     </div>

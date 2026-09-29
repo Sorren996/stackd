@@ -26,7 +26,7 @@ export default function DailyReport({ reports }) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {pages.map((page, pi) => {
         const s = page.stats;
         return (
@@ -54,7 +54,7 @@ function DayPage({ page, reports }) {
 
       <div className="mt-3">
         <GlucoseCurve series={page.series} height={150} lineDots={page.series.length <= 48} markers={markers} />
-        <div className="mt-1 flex w-full justify-between px-0.5 text-[9px] tabular-nums" style={{ color: "#746959" }}>
+        <div className="mt-1 flex w-full justify-between px-0.5 text-[9px] tabular-nums" style={{ color: "#6b6153" }}>
           <span>mid</span><span>6am</span><span>noon</span><span>6pm</span><span>mid</span>
         </div>
       </div>
@@ -67,7 +67,7 @@ function DayPage({ page, reports }) {
                 background: m.kind === "carb" ? "rgba(138,90,18,0.12)" : "rgba(63,56,48,0.10)",
                 color: m.kind === "carb" ? "#8a5a12" : "#3f3830",
               }}>
-              <span className="tabular-nums" style={{ color: "#746959" }}>{timeOf(m.t)}</span> · {m.label}
+              <span className="tabular-nums" style={{ color: "#6b6153" }}>{timeOf(m.t)}</span> · {m.label}
             </span>
           ))}
         </div>
@@ -78,7 +78,7 @@ function DayPage({ page, reports }) {
           {page.events.map((e, i) => (
             <div key={i} className="flex items-center justify-between gap-3 py-1.5" style={{ borderTop: i === 0 ? "none" : "1px dashed #eadccf" }}>
               <div className="min-w-0">
-                <span className="text-xs font-semibold tabular-nums" style={{ color: "#746959" }}>{timeOf(e.time)}</span>
+                <span className="text-xs font-semibold tabular-nums" style={{ color: "#6b6153" }}>{timeOf(e.time)}</span>
                 <span className="ml-2 text-xs font-medium" style={{ color: "#3f3830" }}>{e.type}</span>
                 {e.details && <span className="ml-1 truncate text-xs" style={{ color: "#6b6153" }}>· {e.details}</span>}
               </div>

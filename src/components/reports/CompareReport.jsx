@@ -6,7 +6,7 @@ import { ReportCard, StatGrid, TirBand, val, unit, fmtDate } from "./reportShare
 function Band({ bands, title }) {
   return (
     <div>
-      <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide" style={{ color: "#746959" }}>{title}</div>
+      <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide" style={{ color: "#6b6153" }}>{title}</div>
       <TirBand bands={bands} compact />
     </div>
   );
@@ -59,7 +59,7 @@ export default function CompareReport({ reports }) {
   const c = reports?.compare;
   if (!c) return null;
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <ReportCard title="Two windows, side by side">
         <p className="text-sm leading-relaxed" style={{ color: "#6b6153" }}>
           This range ({fmtDate(reports.rangeStart)} → {fmtDate(reports.rangeEnd)}) against the same length of time

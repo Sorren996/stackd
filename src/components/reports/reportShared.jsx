@@ -67,13 +67,13 @@ export function StatGrid({ items, cols = 2 }) {
     <div className={`grid grid-cols-${cols} gap-x-3 gap-y-4`}>
       {items.map((it, i) => (
         <div key={i}>
-          <div className="text-[11px] font-medium uppercase tracking-wide" style={{ color: "#746959" }}>
+          <div className="text-[11px] font-medium uppercase tracking-wide" style={{ color: "#6b6153" }}>
             {it.label}
           </div>
           <div className="mt-1 text-xl font-semibold tabular-nums" style={{ color: "#3f3830" }}>
             {it.value}
           </div>
-          {it.hint && <div className="mt-0.5 text-[11px]" style={{ color: "#746959" }}>{it.hint}</div>}
+          {it.hint && <div className="mt-0.5 text-[11px]" style={{ color: "#6b6153" }}>{it.hint}</div>}
         </div>
       ))}
     </div>
@@ -138,7 +138,7 @@ export function TirBand({ bands, compact = false }) {
         })}
       </div>
       {!compact && (
-        <p className="mt-3 text-[11px] leading-relaxed" style={{ color: "#746959" }}>
+        <p className="mt-3 text-[11px] leading-relaxed" style={{ color: "#6b6153" }}>
           Bands use your target range for the "Target" band; above/below thresholds follow the standard 54 / 70 / 180 / 250 convention.
         </p>
       )}
@@ -173,7 +173,7 @@ export function ReportCard({ title, children, className = "" }) {
 // ── Footer disclaimer, required on every report page ────────────────────
 export function ReportFooter() {
   return (
-    <p className="px-2 text-[11px] leading-relaxed text-center" style={{ color: "#746959" }}>
+    <p className="px-2 text-[11px] leading-relaxed text-center" style={{ color: "#6b6153" }}>
       {DISCLAIMER}
     </p>
   );
