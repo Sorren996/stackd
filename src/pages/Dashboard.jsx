@@ -18,7 +18,6 @@ import UnitsStepper from "@/components/insulin/UnitsStepper";
 import { getDefaultInsulinLibrary } from "@/lib/userSettings";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 import { useVisibilityRefresh } from "@/hooks/useVisibilityRefresh";
-import usePullToRefresh from "@/hooks/usePullToRefresh.jsx";
 import { useDexcomRefresh } from "@/hooks/useDexcomRefresh";
 import DexcomSyncStatus from "@/components/DexcomSyncStatus";
 import ConnectGlucoseSourcePrompt from "@/components/ConnectGlucoseSourcePrompt";
@@ -334,7 +333,6 @@ function EditableLog({ children, onEdit }) {
 }
 
 export default function Dashboard() {
-  const { overlay: pullRefreshOverlay } = usePullToRefresh();
   const queryClient = useQueryClient();
   const [, setTick] = useState(0);
   const [showAllDoses, setShowAllDoses] = useState(false);
@@ -662,7 +660,6 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard-page relative w-full max-w-full min-w-0 space-y-0 overflow-visible">
-      {pullRefreshOverlay}
       <EditLogSheet
         log={editingLog}
         onClose={() => setEditingLog(null)}

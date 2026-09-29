@@ -1,8 +1,6 @@
 import { memo, useEffect, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { RefreshCw } from "lucide-react";
-import { motion } from "framer-motion";
 import Dashboard from "../pages/Dashboard";
 import HistoryPage from "../pages/History";
 import SettingsPage from "../pages/Settings";
@@ -10,7 +8,7 @@ import AnalyticsPage from "../pages/Analytics";
 import UnifiedBottomNav from "./UnifiedBottomNav";
 import { useRealtimeLogSync } from "@/hooks/useRealtimeLogSync";
 import { useDexcomRefresh } from "@/hooks/useDexcomRefresh";
-import { setRefreshHandler } from "@/lib/refreshRegistry";
+import usePullToRefresh from "@/hooks/usePullToRefresh.jsx";
 
 const CachedDashboard = memo(Dashboard);
 const CachedHistoryPage = memo(HistoryPage);
@@ -39,19 +37,19 @@ export default function Layout() {
   const { requestRefresh } = useDexcomRefresh();
 
   const queryClient = useQueryClient();
-  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Re-pulls the latest information from the database for every cached query,
+  // Re-pulls the latest information from the database for every cached query
   // and triggers a forced Dexcom Share refresh so new readings are pulled
-  // immediately on manual refresh.
+  // immediately. The Dexcom poll and the DB refetch run in parallel, and the
+  // glucose caches are invalidated once the poll returns — so all data lands
+  // in a single re-render rather than a sequence of partial updates.
   const handleRefresh = async () => {
-    if (isRefreshing) return;
-    setIsRefreshing(true);
     let timeoutId;
     try {
-      // Trigger a forced Dexcom refresh (bypasses the reading-age gate,
-      // but still respects the in-flight lock via the singleton promise).
-      // This runs in parallel with the DB query refetch below.
+      // Trigger a forced Dexcom refresh (bypasses the reading-age gate, but
+      // still respects the in-flight lock via the singleton promise). Runs in
+      // parallel with the DB query refetch. requestRefresh invalidates the
+      // glucose queries itself when a new reading arrives.
       const dexcomPromise = requestRefresh(true).catch(() => {});
 
       const refreshPromise = queryClient.refetchQueries({
@@ -63,23 +61,19 @@ export default function Layout() {
       });
       await Promise.race([refreshPromise, timeoutPromise]);
       clearTimeout(timeoutId);
-      // Wait for the Dexcom refresh to settle (it may have invalidated
-      // glucose queries, which will refetch after this).
+      // Wait for the Dexcom refresh to settle (it may have invalidated glucose
+      // queries, which will refetch after this) so the indicator spins until
+      // every source is updated.
       await dexcomPromise;
     } catch {
       clearTimeout(timeoutId);
-    } finally {
-      setIsRefreshing(false);
     }
   };
 
-  // Expose the manual refresh action to the pull-to-refresh gesture on the
-  // main scroll views (Dashboard, Journal). Pages call triggerRefresh() and
-  // this handler re-pulls every cached query + forces a Dexcom refresh.
-  useEffect(() => {
-    setRefreshHandler(handleRefresh);
-    return () => setRefreshHandler(null);
-  }, [handleRefresh]);
+  // The pull-to-refresh gesture is owned here (the main scroll view is shared
+  // by every tab), so one gesture works app-wide and refresh stays a single
+  // in-flight process.
+  const { overlay: pullRefreshOverlay } = usePullToRefresh({ onRefresh: handleRefresh });
 
   useEffect(() => {
     if (isDashboardRoute) {
@@ -104,12 +98,11 @@ export default function Layout() {
         style={{ paddingTop: "env(safe-area-inset-top)" }}
       >
         <div
-          className="mx-auto grid h-14 max-w-6xl grid-cols-[1fr_auto_1fr] items-center px-4"
+          className="mx-auto flex h-14 max-w-6xl items-center justify-center px-4"
           style={{
             background: "linear-gradient(to bottom, rgba(76,103,112,0.92), rgba(76,103,112,0.6), transparent)",
           }}
         >
-          <div />
           <button
             type="button"
             onClick={handleLogoClick}
@@ -117,39 +110,13 @@ export default function Layout() {
             className="relative flex items-center justify-center rounded-full transition-all"
           >
             {isDashboardRoute &&
-            <motion.img
+            <img
               src="https://media.base44.com/images/public/6a1b93f234a8611ee1595134/9cd3c84cf_stackdappiconver3tran.png"
               alt="Stackd Logo"
               className="relative z-10 h-9 w-auto object-contain"
             />
             }
           </button>
-
-          <div className="flex items-center justify-self-end gap-2">
-            <button
-              type="button"
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              aria-label="Refresh information"
-              className="stackd-top-control flex h-9 w-9 items-center justify-center rounded-full border transition-all"
-              style={{
-                background: "#fdf9f2",
-                borderColor: "#eadccf",
-              }}
-            >
-              <motion.span
-                animate={isRefreshing ? { rotate: 360 } : { rotate: 0 }}
-                transition={
-                  isRefreshing
-                    ? { duration: 0.8, repeat: Infinity, ease: "linear" }
-                    : { duration: 0.2 }
-                }
-                className="flex"
-              >
-                <RefreshCw className="h-4 w-4 text-white/55" />
-              </motion.span>
-            </button>
-          </div>
         </div>
       </header>
 
@@ -183,6 +150,7 @@ export default function Layout() {
       </main>
 
       <UnifiedBottomNav />
+      {pullRefreshOverlay}
     </div>
   );
 }
