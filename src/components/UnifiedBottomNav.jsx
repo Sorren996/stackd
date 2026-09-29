@@ -166,6 +166,9 @@ export default function UnifiedBottomNav() {
         setDoseFormPreloaded(true);
         setDoseFormOpen(true);
       }
+      // Collapse the picker instantly so it never overlaps the sheet.
+      currentHeight.current = 0;
+      setMenuHeight(0);
     };
     window.addEventListener("stackd-open-log", handler);
     const menuHandler = () => {
@@ -194,6 +197,9 @@ export default function UnifiedBottomNav() {
   const handleSelect = (mode) => {
     setExpanded(false);
     animateMenu(0);
+    // Collapse the picker instantly so it never overlaps the sheet.
+    currentHeight.current = 0;
+    setMenuHeight(0);
     if (mode === "both") {
       setCombinedSheetOpen(true);
       return;

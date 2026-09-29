@@ -208,7 +208,10 @@ export default function CombinedLogSheet({ open, onOpenChange }) {
     }, {});
 
     const submittedDoses = Object.values(groupedDoses);
-    if (!submittedDoses.length) return;
+    if (!submittedDoses.length) {
+      toast.error("Choose an insulin type and enter units for every row.");
+      return;
+    }
 
     const optimisticDoses = submittedDoses.map((dose, index) => ({
       ...dose,
