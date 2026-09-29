@@ -31,9 +31,9 @@ function saveSubpath(key, pathname) {
     sessionStorage.setItem(SUBPATH_KEY(key), pathname || "/");
   } catch {
 
+
     // Session storage may be unavailable (private mode) — navigate still works.
   }}
-
 const ALL_ACTIONS = [
 { id: "glucose", label: "Glucose", Icon: Droplets },
 { id: "insulin", label: "Support", Icon: Syringe },
@@ -301,7 +301,7 @@ export default function UnifiedBottomNav() {
                         type="button"
                         onClick={() => handleSelect(action.id)}
                         whileTap={{ scale: 0.97 }}
-                        className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition-colors hover:bg-black/[0.03]"
+                        className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 transition-colors hover:bg-black/[0.03] text-center"
                         aria-label={action.label}>
                         
                         <ActionIcon className="h-4 w-4 shrink-0" style={{ color: "#6b6153" }} />
