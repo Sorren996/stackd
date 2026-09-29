@@ -7,6 +7,13 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
 //
 // User isolation is enforced by RLS (created_by_id) — these user-scoped queries
 // can only ever return the caller's own records.
+//
+// Optimization: uses pre-computed DailySummary records as the PRIMARY glucose
+// data source, and only fetches raw readings for the last 2 days to cover the
+// gap where the incremental sync pipeline may not have written a summary yet.
+// This reduces the function from ~20 parallel API calls (14-day glucose chunks)
+// to ~4 calls, eliminating the rate-limit/timeout 500s that caused the History
+// page to lose its data on navigation.
 
 Deno.serve(async (req) => {
   try {
@@ -39,41 +46,18 @@ Deno.serve(async (req) => {
       // Fall back to defaults if settings cannot be read.
     }
 
-    // When connected to a CGM source, time-in-range and averages should
-    // reflect only actual sensor readings — not manual logs or carry-forward.
-    let dexcomConnected = false;
-    try {
-      const connections = await base44.entities.DexcomConnection.filter({ status: "connected" });
-      dexcomConnected = connections.length > 0;
-    } catch { /* fall back to all readings */ }
+    // Recent window: only fetch raw glucose for the last 2 days to cover the
+    // gap where DailySummary may not exist yet. Everything older uses the
+    // pre-computed DailySummary records.
+    const recentStart = new Date(now.getTime() - 2 * dayMs).toISOString();
 
-    // Dexcom generates ~288 readings/day, and database queries are capped at
-    // 5000 rows. A single fetch only covers ~17 days — older months get cut
-    // off entirely. Paginate through 14-day parallel chunks so the full 9-month
-    // window is captured. Manual readings are sparse and fit in one query.
-    const chunkDays = 14;
-    const glucoseChunks: { start: string; end: string }[] = [];
-    {
-      let cursor = new Date(rangeStart);
-      const end = new Date(rangeEnd);
-      while (cursor < end) {
-        const chunkEnd = new Date(Math.min(cursor.getTime() + chunkDays * dayMs, end.getTime()));
-        glucoseChunks.push({ start: cursor.toISOString(), end: chunkEnd.toISOString() });
-        cursor = chunkEnd;
-      }
-    }
-
-    const [chunkResults, manualGlucose, carbs, insulin] = await Promise.all([
-      Promise.all(
-        glucoseChunks.map((c) =>
-          base44.entities.GlucoseReading.filter(
-            { recorded_at: { $gte: c.start, $lte: c.end } },
-            '-recorded_at', 5000
-          )
-        )
+    const [summaries, recentGlucose, carbs, insulin] = await Promise.all([
+      base44.entities.DailySummary.filter(
+        { date: { $gte: rangeStart.slice(0, 10), $lte: rangeEnd.slice(0, 10) } },
+        "-date", 300
       ),
       base44.entities.GlucoseReading.filter(
-        { source: "manual", recorded_at: { $gte: rangeStart, $lte: rangeEnd } },
+        { recorded_at: { $gte: recentStart, $lte: rangeEnd }, source: { $ne: "system" } },
         '-recorded_at', 5000
       ),
       base44.entities.CarbEntry.filter(
@@ -85,10 +69,6 @@ Deno.serve(async (req) => {
         '-administered_at', 5000
       ),
     ]);
-
-    const glucoseRecent = chunkResults.flat();
-    const seenIds = new Set(glucoseRecent.map((g: any) => g.id));
-    const glucose = [...glucoseRecent, ...manualGlucose.filter((g: any) => !seenIds.has(g.id))];
 
     const dayMap: Record<string, any> = {};
     const dayKey = (ts: string) => {
@@ -110,16 +90,33 @@ Deno.serve(async (req) => {
       return dayMap[day];
     };
 
-    // Include every real reading (manual + CGM); only carry-forward
-    // "system" entries are excluded so they don't skew averages.
-    const glucoseForStats = glucose.filter((g: any) => g.source !== "system");
+    // Seed dayMap from pre-computed DailySummary records (primary source).
+    const summaryMap: Record<string, any> = {};
+    for (const ds of summaries) {
+      if (!ds.date) continue;
+      summaryMap[ds.date] = ds;
+      const d = ensure(ds.date);
+      if (Number.isFinite(ds.reading_count) && ds.reading_count > 0) {
+        d.glucose.sum = ds.glucose_sum || 0;
+        d.glucose.count = ds.reading_count;
+        d.glucose.inRange = ds.glucose_in_range || 0;
+      }
+    }
 
-    glucoseForStats.forEach((g: any) => {
+    // Overlay raw readings for the last 2 days (replaces the summary if the
+    // raw data is richer — the summary may lag by a few minutes).
+    const recentDays = new Set<string>();
+    recentGlucose.forEach((g: any) => {
       const day = dayKey(g.recorded_at);
       if (!day) return;
       const v = Number(g.value);
       if (!Number.isFinite(v)) return;
+      recentDays.add(day);
       const d = ensure(day);
+      // Reset the day's glucose to recompute from raw readings
+      if (d.glucose._fromRaw !== true) {
+        d.glucose = { sum: 0, count: 0, inRange: 0, _fromRaw: true };
+      }
       d.glucose.sum += v;
       d.glucose.count++;
       if (v >= targetLow && v <= targetHigh) d.glucose.inRange++;
@@ -145,47 +142,16 @@ Deno.serve(async (req) => {
       d.insulin.count++;
     });
 
-    // Prefer pre-computed DailySummary records for glucose stats when available.
-    // This avoids recalculating glucose aggregates for days already summarized by
-    // the incremental sync pipeline. Days without a summary fall back to the
-    // on-the-fly computation above. Carbs and insulin are always computed from
-    // raw logs so they stay current with user edits.
-    const summaryMap: Record<string, any> = {};
-    try {
-      const summaries = await base44.entities.DailySummary.filter(
-        { date: { $gte: rangeStart.slice(0, 10), $lte: rangeEnd.slice(0, 10) } },
-        "-date", 300
-      );
-      for (const ds of summaries) {
-        if (ds.date) summaryMap[ds.date] = ds;
-      }
-    } catch {
-      // DailySummary read failure is non-fatal — fall back to on-the-fly
-    }
-
-    const days = Object.values(dayMap).map((d: any) => {
-      const ds = summaryMap[d.date];
-      // Prefer the on-the-fly computation (which now includes manual readings)
-      // and only fall back to a pre-computed summary when raw readings weren't
-      // available for this day.
-      const useSummary = !d.glucose.count && ds && Number.isFinite(ds.reading_count) && ds.reading_count > 0;
-      return {
-        date: d.date,
-        glucose: useSummary
-          ? {
-              sum: ds.glucose_sum || 0,
-              count: ds.reading_count,
-              inRange: ds.glucose_in_range || 0,
-            }
-          : {
-              sum: Math.round(d.glucose.sum * 10) / 10,
-              count: d.glucose.count,
-              inRange: d.glucose.inRange,
-            },
-        carbs: { total: Math.round(d.carbs.total), count: d.carbs.count },
-        insulin: { total: Math.round(d.insulin.total * 10) / 10, count: d.insulin.count },
-      };
-    }).sort((a, b) => b.date.localeCompare(a.date));
+    const days = Object.values(dayMap).map((d: any) => ({
+      date: d.date,
+      glucose: {
+        sum: Math.round(d.glucose.sum * 10) / 10,
+        count: d.glucose.count,
+        inRange: d.glucose.inRange,
+      },
+      carbs: { total: Math.round(d.carbs.total), count: d.carbs.count },
+      insulin: { total: Math.round(d.insulin.total * 10) / 10, count: d.insulin.count },
+    })).sort((a, b) => b.date.localeCompare(a.date));
 
     return Response.json({ rangeStart, rangeEnd, targetLow, targetHigh, days });
   } catch (error) {

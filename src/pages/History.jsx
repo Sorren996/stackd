@@ -307,6 +307,7 @@ export default function History() {
       return res.data;
     },
     staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 
   const allDays = summary?.days || [];
