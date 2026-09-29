@@ -120,7 +120,7 @@ export default function SwipeableRow({
         <button
           type="button"
           onClick={handleEdit}
-          className="flex w-16 flex-col items-center justify-center gap-0.5 rounded-lg"
+          className="flex min-h-[44px] w-16 flex-col items-center justify-center gap-0.5 rounded-lg"
           style={{ background: EDIT_BG, color: BTN_FG }}
           aria-label={editLabel}
         >
@@ -130,7 +130,7 @@ export default function SwipeableRow({
         <button
           type="button"
           onClick={handleDelete}
-          className="flex w-16 flex-col items-center justify-center gap-0.5 rounded-lg"
+          className="flex min-h-[44px] w-16 flex-col items-center justify-center gap-0.5 rounded-lg"
           style={{ background: DELETE_BG, color: BTN_FG }}
           aria-label={deleteLabel}
         >
@@ -158,7 +158,7 @@ export default function SwipeableRow({
         }
         onMouseEnter={supportsHover ? () => apply(true) : undefined}
         onMouseLeave={supportsHover ? () => { if (openRef.current) apply(false); } : undefined}
-        className="relative z-10 pr-6"
+        className="relative z-10 min-h-[44px] pr-6"
       >
         {children}
       </motion.div>
@@ -166,7 +166,7 @@ export default function SwipeableRow({
       {confirming && (
         <DeleteConfirmDialog
           itemName={itemLabel}
-          title="Remove this entry?"
+          title="Are you sure?"
           message="This will permanently remove it from your log."
           confirmLabel="Remove"
           cancelLabel="Cancel"

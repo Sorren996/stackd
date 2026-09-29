@@ -3,9 +3,7 @@ import SectionCard from "@/components/editorial/SectionCard";
 import DaySummary from "./DaySummary";
 import DayRecapGraph from "./DayRecapGraph";
 import EnhancedDayInsights from "./EnhancedDayInsights";
-import DayMealOutcomes from "./DayMealOutcomes";
-import DayInsulinActivity from "./DayInsulinActivity";
-import DayRecovery from "./DayRecovery";
+import DayAnalysis from "./DayAnalysis";
 import DayComparison from "./DayComparison";
 import DayTimeline from "./DayTimeline";
 import { computeDayGlucoseMetrics, isManualGlucose } from "@/lib/dayRecapMetrics";
@@ -126,22 +124,16 @@ export default function DayRecap({
       {/* What stood out */}
       {insights.length > 0 && <EnhancedDayInsights insights={insights} />}
 
-      {/* Meal outcomes */}
-      {mealOutcomes.length > 0 && (
-        <DayMealOutcomes
-          meals={mealOutcomes}
-          glucose={glucose}
-          insulin={insulin}
-          targetLow={targetLow}
-          targetHigh={targetHigh}
-        />
-      )}
-
-      {/* Insulin activity */}
-      {insulinActivity && <DayInsulinActivity activity={insulinActivity} />}
-
-      {/* Recovery */}
-      {recovery && <DayRecovery recovery={recovery} />}
+      {/* Consolidated day analysis — meal outcomes, insulin activity, recovery */}
+      <DayAnalysis
+        mealOutcomes={mealOutcomes}
+        glucose={glucose}
+        insulin={insulin}
+        targetLow={targetLow}
+        targetHigh={targetHigh}
+        insulinActivity={insulinActivity}
+        recovery={recovery}
+      />
 
       {/* Compared with usual */}
       {comparison && <DayComparison comparison={comparison} />}
@@ -159,7 +151,7 @@ export default function DayRecap({
             boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)",
           }}
         >
-          <p className="text-sm font-medium text-white/55">Nothing logged yet</p>
+          <p className="text-sm font-medium" style={{ color: "#746959" }}>Nothing logged yet</p>
         </div>
       )}
     </div>

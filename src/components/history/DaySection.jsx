@@ -20,10 +20,10 @@ export default function DaySection({ icon: Icon, iconColor, label, children, col
         className={`flex w-full items-center gap-2 px-4 py-3 ${collapsible ? "cursor-pointer" : "cursor-default"}`}
         disabled={!collapsible}
       >
-        {Icon && <Icon className="h-3.5 w-3.5" style={{ color: iconColor || "rgba(255,255,255,0.5)" }} />}
-        <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/50">{label}</span>
+        {Icon && <Icon className="h-3.5 w-3.5" style={{ color: iconColor || "#746959" }} />}
+        <span className="text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: "#746959" }}>{label}</span>
         {collapsible && (
-          <ChevronDown className={`ml-auto h-4 w-4 text-white/40 transition-transform duration-200 ${open ? "" : "-rotate-90"}`} />
+          <ChevronDown className={`ml-auto h-4 w-4 transition-transform duration-200 ${open ? "" : "-rotate-90"}`} style={{ color: "#746959" }} />
         )}
       </button>
       <AnimatePresence initial={false}>

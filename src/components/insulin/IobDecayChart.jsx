@@ -1,25 +1,49 @@
 import { useMemo, useState } from "react";
-import { getDoseIOB, getInsulinProfile } from "@/lib/insulinPharmacology";
-import { IOB_FLOOR } from "@/lib/iobModel";
+import { generateActivityCurve, getInsulinProfile } from "@/lib/insulinPharmacology";
 
 const STEP_MS = 5 * 60 * 1000;
 
 /**
- * IOB decay chart — bold total bolus IOB line (point-wise sum of every
- * individual curve), plus translucent per-dose filled curves with a solid
- * stroke on top so overlapping doses stay individually distinguishable.
+ * Linearly interpolate the `activity` value (0–1, peak-normalized) from a
+ * pre-built canonical activity curve at an arbitrary timestamp.
+ */
+function activityAtTime(curve, t) {
+  if (!curve || !curve.length) return 0;
+  if (t <= curve[0].time) return 0;
+  const last = curve[curve.length - 1];
+  if (t >= last.time) return 0;
+  for (let i = 0; i < curve.length - 1; i++) {
+    if (t >= curve[i].time && t < curve[i + 1].time) {
+      const span = curve[i + 1].time - curve[i].time;
+      if (span <= 0) return curve[i].activity;
+      const ratio = (t - curve[i].time) / span;
+      return curve[i].activity + (curve[i + 1].activity - curve[i].activity) * ratio;
+    }
+  }
+  return 0;
+}
+
+/**
+ * Relative insulin activity chart — feeds the visualization from the existing
+ * canonical activity engine (generateActivityCurve), NOT remaining-IOB data.
+ * Curves show relative activity (0–1, peak-normalized): a gentle rise,
+ * identifiable peak, and gradual tail. The live IOB unit total is labelled
+ * separately above (in IobAtAGlance), not on this chart.
  *
- * Each dose curve keeps its pharmaceutical color; same-type overlaps step
- * opacity down so stacked curves don't merge into one line. The total IOB
- * line is the point-wise sum of all individual (real-unit) curves. Flat
- * basal band at the bottom. Hovering a dose marker isolates its curve.
+ * Historical portion (up to NOW) is solid; projected tail (after NOW) is
+ * dashed mustard. Per-dose curves keep pharmaceutical colors with translucent
+ * fills and stepped opacity for same-type overlaps. Basal renders as a
+ * separately labelled background band only when basal doses are present.
+ * The per-bolus ≤0.49u clearance rule is applied consistently — the canonical
+ * engine terminates each dose's activity curve at the floor time, so no
+ * sub-threshold tail is drawn.
  */
 export default function IobDecayChart({ bolusDoses, basalDoses, now = Date.now() }) {
   const W = 300;
-  const H = 110;
-  const padX = 8;
-  const padTop = 8;
-  const padBottom = 22;
+  const H = 124;
+  const padX = 10;
+  const padTop = 18;
+  const padBottom = 26;
   const basalBandH = 10;
   const [highlighted, setHighlighted] = useState(null);
 
@@ -33,29 +57,31 @@ export default function IobDecayChart({ bolusDoses, basalDoses, now = Date.now()
     const timeSteps = [];
     for (let t = domainStart; t <= domainEnd; t += STEP_MS) timeSteps.push(t);
 
+    // Build each dose's canonical activity curve ONCE (5-min steps).
     const doseObjs = bolusDoses.map((d) => ({
       insulin_type: d.type,
       units: d.units,
       administered_at: new Date(d.time).toISOString(),
     }));
+    const curves = doseObjs.map((d) => generateActivityCurve(d, 5));
 
-    // Per-dose IOB at each time step (real units) — the individual curves.
-    const perDoseIOB = doseObjs.map((doseObj) => timeSteps.map((t) => getDoseIOB(doseObj, t)));
-    // Total IOB = point-wise sum of every individual curve.
-    const totalIOB = timeSteps.map((_, i) => perDoseIOB.reduce((s, d) => s + d[i], 0));
-    const maxIOB = Math.max(...totalIOB, 1);
+    // Per-dose relative activity at each time step.
+    const perDoseActivity = curves.map((curve) => timeSteps.map((t) => activityAtTime(curve, t)));
+    // Total = point-wise sum of per-dose relative activity.
+    const totalActivity = timeSteps.map((_, i) => perDoseActivity.reduce((s, a) => s + a[i], 0));
+    const maxActivity = Math.max(...totalActivity, 1);
     const plotH = H - padTop - padBottom - basalBandH - 4;
-    const toY = (v) => padTop + (1 - v / maxIOB) * plotH;
+    const toY = (v) => padTop + (1 - v / maxActivity) * plotH;
     const baseY = padTop + plotH;
 
-    const totalXY = timeSteps.map((t, i) => ({ x: toX(t), y: toY(totalIOB[i]) }));
+    const totalXY = timeSteps.map((t, i) => ({ x: toX(t), y: toY(totalActivity[i]) }));
 
-    // Clip trailing floored points from the total IOB line — keep one 0
-    // point for clean termination, no dangling flat-zero segment.
-    let lastActiveTotal = totalIOB.length - 1;
-    while (lastActiveTotal > 0 && totalIOB[lastActiveTotal] <= IOB_FLOOR) lastActiveTotal--;
+    // Clip trailing zero points — keep one zero point for clean termination.
+    let lastActiveTotal = totalActivity.length - 1;
+    while (lastActiveTotal > 0 && totalActivity[lastActiveTotal] <= 0.001) lastActiveTotal--;
     const totalClipEnd = Math.min(lastActiveTotal + 2, totalXY.length);
 
+    // NOW split: solid (historical) to NOW, dashed (projected) past NOW.
     const nowIdx = timeSteps.findIndex((t) => t >= now);
     const splitIdx = nowIdx === -1 ? totalClipEnd - 1 : Math.min(nowIdx, totalClipEnd - 1);
     const solidPts = totalXY.slice(0, Math.min(splitIdx + 1, totalClipEnd));
@@ -72,41 +98,49 @@ export default function IobDecayChart({ bolusDoses, basalDoses, now = Date.now()
       const color = getInsulinProfile(d.type)?.color || "#3f3830";
       const opacity = Math.max(0.32, 0.9 - sameTypeIdx * 0.22);
       const xy = timeSteps
-        .map((t, j) => ({ x: toX(t), y: toY(perDoseIOB[i][j]), iob: perDoseIOB[i][j] }))
-        .filter((p) => Number.isFinite(p.y) && p.y < H - padBottom);
-      // Clip trailing floored points — keep one 0 point for clean termination.
-      let lastActive = xy.length - 1;
-      while (lastActive > 0 && xy[lastActive].iob <= IOB_FLOOR) lastActive--;
-      const clipped = xy.slice(0, Math.min(lastActive + 2, xy.length));
-      const strokePath = clipped.length >= 2 ? clipped.map((p, k) => `${k ? "L" : "M"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ") : "";
-      const fillPath = clipped.length >= 2
-        ? `${strokePath} L ${clipped[clipped.length - 1].x.toFixed(1)} ${baseY.toFixed(1)} L ${clipped[0].x.toFixed(1)} ${baseY.toFixed(1)} Z`
+        .map((t, j) => ({ x: toX(t), y: toY(perDoseActivity[i][j]), act: perDoseActivity[i][j] }))
+        .filter((p) => Number.isFinite(p.y) && p.act > 0.001);
+      const strokePath = xy.length >= 2 ? xy.map((p, k) => `${k ? "L" : "M"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ") : "";
+      const fillPath = xy.length >= 2
+        ? `${strokePath} L ${xy[xy.length - 1].x.toFixed(1)} ${baseY.toFixed(1)} L ${xy[0].x.toFixed(1)} ${baseY.toFixed(1)} Z`
         : "";
-      return { idx: i, key: `iobdose_${i}`, color, opacity, strokePath, fillPath };
+      return { idx: i, key: `actdose_${i}`, color, opacity, strokePath, fillPath };
     });
 
+    // Dose markers (open rings) — hover isolates the dose curve.
     const doseMarkers = bolusDoses
       .map((d, i) => {
         if (!Number.isFinite(d.time) || d.time < domainStart || d.time > domainEnd) return null;
         const idx = timeSteps.findIndex((t) => t >= d.time);
         if (idx === -1) return null;
-        return { x: toX(d.time), y: toY(perDoseIOB[i][idx]), color: doseMeta[i].color, idx: i };
+        return { x: toX(d.time), y: toY(perDoseActivity[i][idx]), color: doseMeta[i].color, idx: i };
       })
       .filter(Boolean);
 
     const nowX = toX(Math.min(now, domainEnd));
     const basalBandY = H - padBottom - basalBandH;
-    const labelTimes = [domainStart, now, domainEnd];
-    const xLabels = labelTimes.map((t) => ({
-      x: toX(t),
-      label: new Date(t).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
-    }));
 
-    return { totalSolid, totalDashed, doseMeta, doseMarkers, nowX, basalBandY, xLabels };
+    // Time labels — leftmost (first dose) and rightmost (end), bottom lane.
+    // NOW label is in a separate top lane so it can never collide with the
+    // administration-time label at the bottom.
+    const leftLabel = new Date(domainStart).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    const rightLabel = new Date(domainEnd).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+
+    return { totalSolid, totalDashed, doseMeta, doseMarkers, nowX, basalBandY, leftLabel, rightLabel };
   }, [bolusDoses, basalDoses, now]);
 
+  const hasBasal = basalDoses && basalDoses.length > 0;
+
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} preserveAspectRatio="none" style={{ display: "block" }}>
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      width="100%"
+      height={H}
+      preserveAspectRatio="none"
+      style={{ display: "block" }}
+      role="img"
+      aria-label="Relative insulin activity curves over time. Solid line is activity already underway; dashed line projects the remaining tail."
+    >
       {/* Translucent per-dose filled curves */}
       {model.doseMeta.map((m) => {
         if (!m.fillPath) return null;
@@ -124,14 +158,15 @@ export default function IobDecayChart({ bolusDoses, basalDoses, now = Date.now()
         );
       })}
 
-      {/* Bold total bolus IOB — solid to NOW */}
+      {/* Total relative activity — solid (historical) to NOW */}
       {model.totalSolid && <path d={model.totalSolid} fill="none" stroke="#3f3830" strokeWidth={2.75} strokeLinecap="round" strokeLinejoin="round" />}
-      {/* Bold total bolus IOB — dashed mustard past NOW */}
+      {/* Total relative activity — dashed mustard (projected) past NOW */}
       {model.totalDashed && <path d={model.totalDashed} fill="none" stroke="#af751b" strokeWidth={2.25} strokeDasharray="2 6" strokeLinecap="round" />}
 
       {/* NOW vertical line */}
       <line x1={model.nowX} y1={padTop} x2={model.nowX} y2={model.basalBandY} stroke="#3f3830" strokeWidth={1.25} opacity={0.5} />
-      <text x={model.nowX} y={H - 4} textAnchor="middle" fill="#746959" fontSize={9} fontWeight={600} letterSpacing="0.1em">NOW</text>
+      {/* NOW label — TOP lane, separate from bottom time labels to prevent collision */}
+      <text x={model.nowX} y={padTop - 4} textAnchor="middle" fill="#6b6153" fontSize={9} fontWeight={600} letterSpacing="0.1em">NOW</text>
 
       {/* Dose markers (open rings) — hover isolates the dose curve */}
       {model.doseMarkers.map((m) => (
@@ -149,17 +184,22 @@ export default function IobDecayChart({ bolusDoses, basalDoses, now = Date.now()
         />
       ))}
 
-      {/* Flat basal band */}
-      <rect x={padX} y={model.basalBandY} width={W - padX * 2} height={basalBandH} fill="#5b6550" opacity={0.10} rx={2} />
-      <line x1={padX} y1={model.basalBandY + basalBandH + 1} x2={W - padX} y2={model.basalBandY + basalBandH + 1} stroke="#eadccf" strokeWidth={0.5} />
-      <text x={padX + 2} y={model.basalBandY + basalBandH - 1} fill="#746959" fontSize={7} fontWeight={600} letterSpacing="0.12em">BASAL, STEADY BACKGROUND</text>
+      {/* Flat basal band — only when basal doses exist */}
+      {hasBasal && (
+        <>
+          <rect x={padX} y={model.basalBandY} width={W - padX * 2} height={basalBandH} fill="#5b6550" opacity={0.10} rx={2} />
+          <line x1={padX} y1={model.basalBandY + basalBandH + 1} x2={W - padX} y2={model.basalBandY + basalBandH + 1} stroke="#eadccf" strokeWidth={0.5} />
+          <text x={padX + 2} y={model.basalBandY + basalBandH - 1} fill="#746959" fontSize={7} fontWeight={600} letterSpacing="0.12em">BASAL, STEADY BACKGROUND</text>
+        </>
+      )}
 
-      {/* X-axis tick labels */}
-      {model.xLabels.map((l, i) => (
-        <text key={`label_${i}`} x={l.x} y={H - 12} textAnchor={i === 0 ? "start" : i === model.xLabels.length - 1 ? "end" : "middle"} fill="#746959" fontSize={9}>
-          {l.label}
-        </text>
-      ))}
+      {/* X-axis time labels — left (start) and right (end) only, bottom lane */}
+      <text x={padX} y={H - 8} textAnchor="start" fill="#746959" fontSize={9}>
+        {model.leftLabel}
+      </text>
+      <text x={W - padX} y={H - 8} textAnchor="end" fill="#746959" fontSize={9}>
+        {model.rightLabel}
+      </text>
     </svg>
   );
 }

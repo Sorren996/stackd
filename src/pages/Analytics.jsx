@@ -7,7 +7,7 @@ import PageHeader from "@/components/editorial/PageHeader";
 import AnchorNumber from "@/components/editorial/AnchorNumber";
 import SectionCard from "@/components/editorial/SectionCard";
 import LedgerRow from "@/components/editorial/LedgerRow";
-import { Activity } from "lucide-react";
+import { Activity, ChevronDown } from "lucide-react";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 import { filterReadingsForStats } from "@/lib/timeInRange";
 import DailyPatternChart from "@/components/analytics/DailyPatternChart";
@@ -41,6 +41,7 @@ const DAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
 
 export default function Analytics() {
   const [rangeDays, setRangeDays] = useState(readStoredRange);
+  const [showStats, setShowStats] = useState(false);
   const { data: graphReadings = [], isLoading: graphLoading } = useQuery({
     queryKey: ["glucose-readings", "graph"],
     queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", 5000),
@@ -204,6 +205,9 @@ export default function Analytics() {
               </>
             }
           />
+          <p className="mt-3 text-xs" style={{ color: "#746959" }}>
+            {stats.sufficiency.daysCovered} day{stats.sufficiency.daysCovered === 1 ? "" : "s"} logged · {stats.total} readings, {PERIOD_LONG[rangeDays] || `${rangeDays} days`}
+          </p>
         </div>
       </SectionCard>
 
@@ -267,13 +271,29 @@ export default function Analytics() {
         </SectionCard>
       )}
 
-      <SectionCard label="At a Glance">
-        <LedgerRow label="Average glucose" value={`${formatGlucose(stats.averageGlucose)} ${glucoseUnitLabel()}`} />
-        {gmi !== null && <LedgerRow label="GMI" value={`${gmi.toFixed(1)}%`} />}
-        <LedgerRow label="Time above range" value={`${stats.abovePercent.toFixed(0)}%`} />
-        <LedgerRow label="Time below range" value={`${stats.belowPercent.toFixed(0)}%`} />
-        <LedgerRow label="Days logged" value={String(stats.days.length)} />
-        <LedgerRow label={`Readings, ${PERIOD_LONG[rangeDays] || `${rangeDays} days`}`} value={String(stats.total)} />
+      <SectionCard label="Statistics">
+        <button
+          type="button"
+          onClick={() => setShowStats((s) => !s)}
+          aria-expanded={showStats}
+          className="flex w-full items-center justify-between"
+        >
+          <span className="text-sm font-medium" style={{ color: "#3f3830" }}>
+            {showStats ? "Hide detailed statistics" : "Show detailed statistics"}
+          </span>
+          <ChevronDown
+            size={16}
+            style={{ color: "#746959", transform: showStats ? "rotate(180deg)" : "none", transition: "transform 200ms" }}
+          />
+        </button>
+        {showStats && (
+          <div className="mt-3">
+            <LedgerRow label="Average glucose" value={`${formatGlucose(stats.averageGlucose)} ${glucoseUnitLabel()}`} />
+            {gmi !== null && <LedgerRow label="GMI" value={`${gmi.toFixed(1)}%`} />}
+            <LedgerRow label="Time above range" value={`${stats.abovePercent.toFixed(0)}%`} />
+            <LedgerRow label="Time below range" value={`${stats.belowPercent.toFixed(0)}%`} />
+          </div>
+        )}
       </SectionCard>
 
       <SectionCard>

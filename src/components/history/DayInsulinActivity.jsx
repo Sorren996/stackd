@@ -6,10 +6,10 @@ import { getInsulinProfile, getDoseTimingInfo, isBolusInsulinType, isBasalInsuli
 function Stat({ label, value, unit }) {
   return (
     <div className="rounded-xl px-3 py-2" style={{ background: "#fdf9f2", border: "1px solid #eadccf" }}>
-      <p className="text-[9px] uppercase tracking-wider text-white/35">{label}</p>
-      <p className="text-sm font-bold text-white/90">
+      <p className="text-[9px] uppercase tracking-wider" style={{ color: "#746959" }}>{label}</p>
+      <p className="text-sm font-bold" style={{ color: "#3f3830" }}>
         {value}
-        {unit && <span className="text-[10px] text-white/40">{unit}</span>}
+        {unit && <span className="text-[10px]" style={{ color: "#746959" }}>{unit}</span>}
       </p>
     </div>
   );
@@ -25,7 +25,7 @@ function DoseBar({ dose, dayStart, dayEnd }) {
 
   return (
     <div className="flex items-center gap-2">
-      <span className="w-12 shrink-0 text-[9px] text-white/35">{format(new Date(dose.time), "h:mm a")}</span>
+      <span className="w-12 shrink-0 text-[9px]" style={{ color: "#746959" }}>{format(new Date(dose.time), "h:mm a")}</span>
       <div className="relative h-4 flex-1 rounded-full" style={{ background: "rgba(63, 56, 48, 0.06)" }}>
         <div
           className="absolute top-0 h-4 rounded-full"
@@ -37,50 +37,56 @@ function DoseBar({ dose, dayStart, dayEnd }) {
           }}
         />
       </div>
-      <span className="w-8 shrink-0 text-right text-[9px] font-medium text-white/50">{dose.units}u</span>
+      <span className="w-8 shrink-0 text-right text-[9px] font-medium" style={{ color: "#6b6153" }}>{dose.units}u</span>
     </div>
   );
 }
 
-export default function DayInsulinActivity({ activity }) {
+export default function DayInsulinActivity({ activity, bare = false }) {
   if (!activity || !activity.doses?.length) return null;
 
   const { doses, totalUnits, bolusUnits, basalUnits, peakTime, highActivityStart, highActivityEnd, peakWindowStart, peakWindowEnd, overlapCount, dayStart, dayEnd } = activity;
 
+  const content = (
+    <div className="space-y-3">
+      <div className="grid grid-cols-3 gap-2">
+        <Stat label="Total" value={totalUnits} unit="u" />
+        {bolusUnits > 0 && <Stat label="Bolus" value={bolusUnits} unit="u" />}
+        {basalUnits > 0 && <Stat label="Basal" value={basalUnits} unit="u" />}
+      </div>
+
+      {peakWindowStart && peakWindowEnd && (() => {
+        const isProjection = peakWindowEnd > Date.now();
+        return (
+          <p className="text-xs leading-relaxed" style={{ color: "#6b6153" }}>
+            {isProjection
+              ? `Insulin activity is expected to peak between ${format(new Date(peakWindowStart), "h:mm a")} and ${format(new Date(peakWindowEnd), "h:mm a")}.`
+              : `Insulin activity peaked between ${format(new Date(peakWindowStart), "h:mm a")} and ${format(new Date(peakWindowEnd), "h:mm a")}.`}
+          </p>
+        );
+      })()}
+
+      {overlapCount > 0 && (
+        <p className="text-xs leading-relaxed" style={{ color: "#8a5a12" }}>
+          {overlapCount === 1
+            ? "Multiple insulin doses overlapped during this period."
+            : `${overlapCount} periods had overlapping insulin activity.`}
+        </p>
+      )}
+
+      <div className="space-y-1.5">
+        {doses.map((dose, i) => (
+          <DoseBar key={dose.id || i} dose={dose} dayStart={dayStart} dayEnd={dayEnd} />
+        ))}
+      </div>
+    </div>
+  );
+
+  if (bare) return content;
+
   return (
     <DaySection icon={Activity} iconColor="#5ba3b8" label="Insulin Activity" collapsible>
-      <div className="space-y-3">
-        <div className="grid grid-cols-3 gap-2">
-          <Stat label="Total" value={totalUnits} unit="u" />
-          {bolusUnits > 0 && <Stat label="Bolus" value={bolusUnits} unit="u" />}
-          {basalUnits > 0 && <Stat label="Basal" value={basalUnits} unit="u" />}
-        </div>
-
-        {peakWindowStart && peakWindowEnd && (() => {
-          const isProjection = peakWindowEnd > Date.now();
-          return (
-            <p className="text-xs leading-relaxed text-white/50">
-              {isProjection
-                ? `Insulin activity is expected to peak between ${format(new Date(peakWindowStart), "h:mm a")} and ${format(new Date(peakWindowEnd), "h:mm a")}.`
-                : `Insulin activity peaked between ${format(new Date(peakWindowStart), "h:mm a")} and ${format(new Date(peakWindowEnd), "h:mm a")}.`}
-            </p>
-          );
-        })()}
-
-        {overlapCount > 0 && (
-          <p className="text-xs leading-relaxed" style={{ color: "#af751b" }}>
-            {overlapCount === 1
-              ? "Multiple insulin doses overlapped during this period."
-              : `${overlapCount} periods had overlapping insulin activity.`}
-          </p>
-        )}
-
-        <div className="space-y-1.5">
-          {doses.map((dose, i) => (
-            <DoseBar key={dose.id || i} dose={dose} dayStart={dayStart} dayEnd={dayEnd} />
-          ))}
-        </div>
-      </div>
+      {content}
     </DaySection>
   );
 }
