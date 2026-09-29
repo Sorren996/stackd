@@ -31,6 +31,7 @@ import DexcomSettingsPage from './pages/DexcomSettingsPage';
 import ContactSupportPage from './pages/ContactSupportPage';
 import SupportInbox from './pages/SupportInbox';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import AdminRoute from '@/components/AdminRoute';
 import { Navigate } from 'react-router-dom';
 import SplashScreen from "@/components/SplashScreen";
 import { AnimatePresence } from "framer-motion";
@@ -261,7 +262,9 @@ const AuthenticatedApp = () => {
           <Route element={<Layout />}>
             <Route path="/" element={<Dashboard />} />
             <Route path="/history" element={<History />} />
-            <Route path="/insights" element={<Insights />} />
+            <Route element={<AdminRoute />}>
+              <Route path="/insights" element={<Insights />} />
+            </Route>
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/settings/insulin" element={<InsulinSettingsPage />} />

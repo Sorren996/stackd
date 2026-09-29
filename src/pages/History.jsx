@@ -20,6 +20,7 @@ import HistoryWeekList from "@/components/history/HistoryWeekList";
 import MonthHeatmap from "@/components/history/MonthHeatmap";
 import DayRecap from "@/components/history/DayRecap";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
+import { useAuth } from "@/lib/AuthContext";
 import { scrollToTop } from "@/lib/feedScroll";
 
 function readTargetRange() {
@@ -275,6 +276,8 @@ export default function History() {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const { connected: dexcomConnected } = useDexcomConnection();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const [level, setLevel] = useState("month"); // month | days | recap
   const [selectedMonth, setSelectedMonth] = useState(null);
   const [selectedDay, setSelectedDay] = useState(null);
@@ -589,7 +592,7 @@ export default function History() {
           exit={{ opacity: 0, x: direction > 0 ? -28 : 28 }}
           transition={{ duration: 0.28, ease: [0.4, 0, 0.2, 1] }}
         >
-          {level === "month" && (
+          {level === "month" && isAdmin && (
             <SectionCard>
               <LedgerRow label="Stackd Insights" value="CGM patterns" to="/insights" />
             </SectionCard>
