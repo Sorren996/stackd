@@ -113,11 +113,27 @@ export async function upsertDailySummary(
   dateStr: string,
   metrics: DailyMetrics
 ): Promise<void> {
-  const existing = await sr.entities.DailySummary.filter(
+  // Primary lookup: match by user_id + date.
+  let existing = await sr.entities.DailySummary.filter(
     { user_id: userId, date: dateStr },
     "-updated_date",
     1
   );
+
+  // Fallback: if no record found by user_id, check by date only. This
+  // catches records with a stale/incorrect user_id (e.g. from an account
+  // migration or older sync run) and reclaims them with the correct
+  // user_id instead of creating a duplicate.
+  if (existing.length === 0) {
+    const byDate = await sr.entities.DailySummary.filter(
+      { date: dateStr },
+      "-updated_date",
+      2
+    );
+    if (byDate.length === 1) {
+      existing = byDate;
+    }
+  }
 
   const record = {
     user_id: userId,

@@ -389,6 +389,22 @@ export default function History() {
     return map;
   }, [monthReadings]);
 
+  // Calendar fallback: when DailySummary has no glucose data for a day
+  // (reading_count = 0), fill in TIR from the raw readings fetched for the
+  // month so the heatmap never shows blank cells for months with real data.
+  const calendarDays = useMemo(() => {
+    if (!readingsByDay || Object.keys(readingsByDay).length === 0) return monthDays;
+    return monthDays.map((day) => {
+      if (day.glucose?.count > 0) return day;
+      const readings = readingsByDay[day.date];
+      if (!readings || !readings.length) return day;
+      const count = readings.length;
+      const inRange = readings.filter((r) => r.value >= targetLow && r.value <= targetHigh).length;
+      const sum = readings.reduce((acc, r) => acc + r.value, 0);
+      return { ...day, glucose: { count, inRange, sum } };
+    });
+  }, [monthDays, readingsByDay, targetLow, targetHigh]);
+
   const invalidateHistory = () => {
     queryClient.invalidateQueries({ queryKey: ["history-summary"] });
     queryClient.invalidateQueries({ queryKey: ["history-day-recap"] });
@@ -638,7 +654,7 @@ export default function History() {
                 />
               ) : (
                 <SectionCard label={`${currentMonth.label} ${currentMonth.year}`}>
-                  <MonthHeatmap days={monthDays} onSelectDay={handleSelectDay} />
+                  <MonthHeatmap days={calendarDays} onSelectDay={handleSelectDay} />
                 </SectionCard>
               )}
             </>

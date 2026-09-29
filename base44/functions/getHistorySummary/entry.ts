@@ -122,6 +122,55 @@ Deno.serve(async (req) => {
       if (v >= targetLow && v <= targetHigh) d.glucose.inRange++;
     });
 
+    // Fallback: fill glucose stats for days where DailySummary had no data
+    // (reading_count = 0). The sync pipeline sometimes creates empty
+    // DailySummary records. For those days, fetch raw readings in 14-day
+    // chunks and compute stats on the fly so the History page never shows
+    // blank months. Limited to 6 parallel chunks (~84 days) to stay fast.
+    const emptyDays = Object.values(dayMap)
+      .filter((d: any) => d.glucose.count === 0 && !recentDays.has(d.date))
+      .map((d: any) => d.date as string)
+      .sort();
+
+    if (emptyDays.length > 0) {
+      const emptyDaySet = new Set(emptyDays);
+      const gapStart = new Date(`${emptyDays[0]}T00:00:00Z`).getTime();
+      const gapEnd = new Date(`${emptyDays[emptyDays.length - 1]}T23:59:59Z`).getTime();
+      const chunkMs = 14 * dayMs;
+
+      // Process from the most recent empty days first so recent months
+      // (which the user is most likely viewing) are always covered, even
+      // when empty days span a wide range.
+      const chunks: { start: string; end: string }[] = [];
+      for (let cur = gapEnd; cur > gapStart && chunks.length < 6; cur -= chunkMs) {
+        const chunkStart = Math.max(cur - chunkMs, gapStart);
+        chunks.push({ start: new Date(chunkStart).toISOString(), end: new Date(cur).toISOString() });
+      }
+
+      const chunkResults = await Promise.all(
+        chunks.map((c) =>
+          base44.entities.GlucoseReading.filter(
+            { recorded_at: { $gte: c.start, $lte: c.end }, source: { $ne: "system" } },
+            '-recorded_at', 5000
+          ).catch(() => [] as any[])
+        )
+      );
+
+      chunkResults.flat().forEach((g: any) => {
+        const day = dayKey(g.recorded_at);
+        if (!day || !emptyDaySet.has(day)) return;
+        const v = Number(g.value);
+        if (!Number.isFinite(v)) return;
+        const d = ensure(day);
+        if (d.glucose._fromRaw !== true) {
+          d.glucose = { sum: 0, count: 0, inRange: 0, _fromRaw: true };
+        }
+        d.glucose.sum += v;
+        d.glucose.count++;
+        if (v >= targetLow && v <= targetHigh) d.glucose.inRange++;
+      });
+    }
+
     carbs.forEach((c: any) => {
       const day = dayKey(c.consumed_at);
       if (!day) return;
