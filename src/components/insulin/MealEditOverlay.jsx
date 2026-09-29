@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { X, Plus, Trash2 } from "lucide-react";
+import { X, Plus, Trash2, Clock } from "lucide-react";
 import { toast } from "sonner";
 import DeleteConfirmDialog from "./DeleteConfirmDialog";
 
@@ -15,8 +15,31 @@ const PALETTE = {
   danger: "#9c3f2e",
 };
 
+// Convert an ISO consumed_at to "HH:MM" in the user's local timezone, for the
+// native <input type="time"> value.
+function toTimeInputValue(isoString) {
+  if (!isoString) return "";
+  const d = new Date(isoString);
+  if (isNaN(d.getTime())) return "";
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  return `${hh}:${mm}`;
+}
+
+// Apply a new "HH:MM" time onto an existing ISO date, preserving the local
+// date and timezone. Returns a new ISO string.
+function applyNewTimeToISO(originalISO, timeValue) {
+  if (!originalISO || !timeValue) return originalISO;
+  const d = new Date(originalISO);
+  if (isNaN(d.getTime())) return originalISO;
+  const [hours, minutes] = timeValue.split(":").map(Number);
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return originalISO;
+  d.setHours(hours, minutes, 0, 0);
+  return d.toISOString();
+}
+
 /**
- * Self-contained floating overlay for editing all carb items in a meal group.
+ * Self-contained centered modal for editing all carb items in a meal group.
  * Writes directly to CarbEntry records (update / create / delete) and
  * invalidates the shared react-query caches so the dashboard chart, Meal
  * Review focal number, and absorption track all refresh from one source.
@@ -24,10 +47,11 @@ const PALETTE = {
  * Used from both the Activity Graph meal marker and the Meal Review
  * "Edit items" trigger — ensuring a single consistent edit path.
  *
- * Layout: each item shows the food name on its own full-width row, then a
- * second row with the carbs input and a Remove button. Removing an item
- * opens a small "Are you sure?" confirm popup; confirming deletes the
- * CarbEntry record immediately (not deferred to Save).
+ * - Centered modal with safe-area padding, max-height and internal scrolling.
+ * - Meal-level native time input; changing the time moves the meal marker
+ *   on the graph (all items share the new consumed_at).
+ * - Deleting the last remaining item deletes the entire meal log and closes
+ *   the overlay automatically.
  */
 export default function MealEditOverlay({ entries, onClose }) {
   const queryClient = useQueryClient();
@@ -39,6 +63,7 @@ export default function MealEditOverlay({ entries, onClose }) {
       consumed_at: e.consumed_at,
     }))
   );
+  const [mealTime, setMealTime] = useState(() => toTimeInputValue(entries?.[0]?.consumed_at));
   const [isSaving, setIsSaving] = useState(false);
   const [pendingDelete, setPendingDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -68,11 +93,13 @@ export default function MealEditOverlay({ entries, onClose }) {
     const index = pendingDelete;
     if (index == null) return;
     const item = items[index];
+    const isLastItem = items.length === 1;
     setPendingDelete(null);
 
     // Unsaved item (no record yet) — just drop it from local state.
     if (!item?.id) {
       setItems((current) => current.filter((_, i) => i !== index));
+      if (isLastItem) onClose();
       return;
     }
 
@@ -84,6 +111,12 @@ export default function MealEditOverlay({ entries, onClose }) {
       queryClient.invalidateQueries({ queryKey: ["carb-entries", "graph"] });
       queryClient.invalidateQueries({ queryKey: ["history-summary"] });
       toast.success("Item removed");
+      // Last food item deleted → the entire meal log is gone. Close the
+      // overlay so the graph and all views refresh without an empty editor.
+      if (isLastItem) {
+        onClose();
+        return;
+      }
     } catch {
       toast.error("Unable to remove item. Please try again.");
     } finally {
@@ -100,22 +133,30 @@ export default function MealEditOverlay({ entries, onClose }) {
       return;
     }
 
+    // If the time changed, compute a new consumed_at applied to every item
+    // so the meal marker moves on the graph.
+    const originalTime = toTimeInputValue(entries?.[0]?.consumed_at);
+    const timeChanged = mealTime && originalTime && mealTime !== originalTime;
+    const newConsumedAt = timeChanged
+      ? applyNewTimeToISO(entries[0].consumed_at, mealTime)
+      : null;
+
     setIsSaving(true);
     try {
-      // Deletes are handled immediately at confirm-remove time, so Save only
-      // persists updates to existing records and creates new ones.
       for (const item of validItems.filter((i) => i.id)) {
-        await base44.entities.CarbEntry.update(item.id, {
+        const update = {
           food_name: item.food_name.trim(),
           carbs: Number(item.carbs),
-        });
+        };
+        if (newConsumedAt) update.consumed_at = newConsumedAt;
+        await base44.entities.CarbEntry.update(item.id, update);
       }
 
       for (const item of validItems.filter((i) => !i.id)) {
         await base44.entities.CarbEntry.create({
           food_name: item.food_name.trim(),
           carbs: Number(item.carbs),
-          consumed_at: item.consumed_at,
+          consumed_at: newConsumedAt || item.consumed_at,
         });
       }
 
@@ -133,12 +174,18 @@ export default function MealEditOverlay({ entries, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-[80] flex items-end justify-center overflow-y-auto px-3 pb-24 pt-6 sm:items-center sm:px-4 sm:pb-6"
-      style={{ background: "rgba(63, 56, 48, 0.25)" }}
+      className="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto"
+      style={{
+        background: "rgba(63, 56, 48, 0.25)",
+        paddingTop: "max(1rem, env(safe-area-inset-top))",
+        paddingBottom: "max(1rem, env(safe-area-inset-bottom))",
+        paddingLeft: "max(0.75rem, env(safe-area-inset-left))",
+        paddingRight: "max(0.75rem, env(safe-area-inset-right))",
+      }}
       onClick={onClose}
     >
       <div
-        className="meal-edit-overlay max-h-[calc(100dvh-8rem)] w-full max-w-md overflow-y-auto rounded-3xl p-5 sm:max-h-[calc(100dvh-3rem)]"
+        className="meal-edit-overlay max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-3xl p-5"
         style={{
           background: PALETTE.surface,
           boxShadow: "0 8px 28px rgba(63, 56, 48, 0.12), 0 2px 8px rgba(63, 56, 48, 0.06)",
@@ -158,6 +205,28 @@ export default function MealEditOverlay({ entries, onClose }) {
           >
             <X className="h-4 w-4" />
           </button>
+        </div>
+
+        {/* Meal-level time input — native input, moves the meal marker on save */}
+        <div className="mb-4">
+          <label
+            className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider"
+            style={{ color: PALETTE.faint }}
+          >
+            <Clock className="h-3 w-3" />
+            Meal time
+          </label>
+          <input
+            type="time"
+            value={mealTime}
+            onChange={(e) => setMealTime(e.target.value)}
+            className="mt-1.5 w-full rounded-xl px-3 py-2.5 text-sm font-medium tabular-nums outline-none transition"
+            style={{
+              background: PALETTE.canvas,
+              color: PALETTE.ink,
+              border: `1px solid ${PALETTE.hairline}`,
+            }}
+          />
         </div>
 
         <div className="space-y-3">

@@ -1540,40 +1540,26 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         </div>
       </div>
       </div>
-      <div className="px-3 mt-2 space-y-1.5">
-        <div className="flex items-center gap-0.5 rounded-lg border p-0.5" style={{ borderColor: "#eadccf", background: "#fdf9f2" }}>
-          <button
-            onClick={() => toggleFilter("glucose")}
-            className="relative flex items-center gap-1.5 rounded-md px-2.5 py-1 transition-colors"
-            style={{ background: filters.glucose ? "rgba(91,101,80,0.12)" : "transparent" }}
-          >
-            <div className="h-[2px] w-3" style={{ background: filters.glucose ? "#5b6550" : "#b8aea0" }} />
-            <span className="text-[10px] font-semibold" style={{ color: filters.glucose ? "#3f3830" : "#b8aea0" }}>Glucose</span>
-          </button>
-          <button
-            onClick={() => toggleFilter("carbs")}
-            className="relative flex items-center gap-1.5 rounded-md px-2.5 py-1 transition-colors"
-            style={{ background: filters.carbs ? "rgba(91,101,80,0.12)" : "transparent" }}
-          >
-            <div className="h-2 w-2 rounded-full border-[1.5px]" style={{ borderColor: filters.carbs ? "#3f3830" : "#b8aea0", background: "#f7f1e8" }} />
-            <span className="text-[10px] font-semibold" style={{ color: filters.carbs ? "#3f3830" : "#b8aea0" }}>Meals</span>
-          </button>
-          <button
-            onClick={() => toggleFilter("insulin")}
-            className="relative flex items-center gap-1.5 rounded-md px-2.5 py-1 transition-colors"
-            style={{ background: filters.insulin ? "rgba(91,101,80,0.12)" : "transparent" }}
-          >
-            <span className="text-[10px] font-semibold" style={{ color: filters.insulin ? "#3f3830" : "#b8aea0" }}>Insulin</span>
-          </button>
+      <div className="px-3 mt-2 flex items-center gap-x-3 gap-y-1 flex-wrap">
+        <div className="flex items-center gap-1.5">
+          <div className="h-2 w-2 rounded-full" style={{ background: "#9c5228" }} />
+          <span className="text-[10px] font-medium" style={{ color: "#6b6153" }}>Glucose</span>
         </div>
-        {activeDoseKeys.length > 0 && (
-          <div className="flex items-center gap-4 flex-wrap">
-            {activeDoseKeys.map((k) =>
-              <div key={k.label} className="flex items-center gap-1.5">
-                <div className="h-2 w-2 rounded-full" style={{ background: k.color }} />
-                <span className="text-[10px]" style={{ color: "#746959" }}>{k.label} {k.totalUnits} u</span>
-              </div>
-            )}
+        <div className="flex items-center gap-1.5">
+          <div className="h-2 w-2 rounded-full" style={{ background: "#3f3830" }} />
+          <span className="text-[10px] font-medium" style={{ color: "#6b6153" }}>Meals</span>
+        </div>
+        {activeDoseKeys.length > 0 ? (
+          activeDoseKeys.map((k) =>
+            <div key={k.label} className="flex items-center gap-1.5">
+              <div className="h-2 w-2 rounded-full" style={{ background: k.color }} />
+              <span className="text-[10px] font-medium" style={{ color: "#6b6153" }}>{k.label} {k.totalUnits}u</span>
+            </div>
+          )
+        ) : (
+          <div className="flex items-center gap-1.5">
+            <div className="h-2 w-2 rounded-full" style={{ background: "#5b6550" }} />
+            <span className="text-[10px] font-medium" style={{ color: "#6b6153" }}>Insulin</span>
           </div>
         )}
       </div>
