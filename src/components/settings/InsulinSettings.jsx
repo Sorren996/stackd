@@ -1,41 +1,17 @@
 import { useState, useEffect, useRef } from "react";
-import { createPortal } from "react-dom";
 import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
-import { Info, Target, Leaf, Bell, Syringe, ShieldAlert } from "lucide-react";
-import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
-import { AnimatePresence, motion } from "framer-motion";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { getDefaultInsulinLibrary } from "@/lib/userSettings";
-import InsulinTypeSelector from "@/components/settings/InsulinTypeSelector";
-import StepperField from "@/components/settings/insulin/StepperField";
-import AdvancedSection from "@/components/settings/insulin/AdvancedSection";
-import { toast } from "sonner";
 import { isMmolMode, formatGlucose, glucoseUnitLabel, onGlucoseUnitsChange } from "@/lib/glucoseUnits";
-
-const INSULIN_PLAN_HELP = {
-  review: {
-    title: "Meal review",
-    body: "How long the app keeps reviewing a grouped meal after you log it. It uses this window to group post-meal glucose readings with the meal.",
-  },
-  pre: {
-    title: "Pre-meal insulin",
-    body: "How far before the first carb log an insulin dose can still be paired with that meal. If you usually pre-bolus 10-20 minutes before eating, set this at least that long.",
-  },
-  post: {
-    title: "Post-meal insulin",
-    body: "How far after the last carb log an insulin dose can still be paired with that meal. This helps catch doses logged after eating or split meal boluses.",
-  },
-  types: {
-    title: "Meal & correction types",
-    body: "Select the insulin types you use for meals or corrections. Basal insulins such as Lantus or Tresiba should usually stay off so they don't count toward meal coverage.",
-  },
-  library: {
-    title: "My insulin library",
-    body: "Choose every insulin type you personally use. Only these appear when you log a dose, so add your basal insulins here even if they aren't used for meal coverage.",
-  },
-};
+import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
+import Sheet from "@/components/Sheet";
+import SettingRow from "@/components/settings/insulin/SettingRow";
+import NumericEditSheet from "@/components/settings/insulin/NumericEditSheet";
+import TargetRangeSheet from "@/components/settings/insulin/TargetRangeSheet";
+import StackingSheet from "@/components/settings/insulin/StackingSheet";
+import LibraryPicker from "@/components/settings/insulin/LibraryPicker";
+import SubsetPicker from "@/components/settings/insulin/SubsetPicker";
+import { toast } from "sonner";
 
 function getDefaultMealInsulinTypes() {
   return Object.entries(INSULIN_PROFILES)
@@ -61,101 +37,31 @@ function readInsulinLibrary() {
   }
 }
 
-function SettingHelpButton({ id, openHelp, setOpenHelp }) {
-  const help = INSULIN_PLAN_HELP[id];
-  if (!help) return null;
-
-  return (
-    <button
-      type="button"
-      onClick={(event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        setOpenHelp(openHelp === id ? null : id);
-      }}
-      className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition"
-      style={openHelp === id
-        ? { borderColor: "rgba(91,101,80,0.45)", background: "rgba(91,101,80,0.12)", color: "#4d5742" }
-        : { borderColor: "#eadccf", background: "#fdf9f2", color: "#5a5048" }
-      }
-      aria-label={`${help.title} help`}
-    >
-      <Info className="h-3.5 w-3.5" />
-    </button>
-  );
-}
-
-function SettingsHelpOverlay({ openHelp, onClose }) {
-  const [visibleHelp, setVisibleHelp] = useState(openHelp);
-  const help = INSULIN_PLAN_HELP[visibleHelp];
-
-  useEffect(() => {
-    if (openHelp) setVisibleHelp(openHelp);
-  }, [openHelp]);
-
-  if (typeof document === "undefined") return null;
-
-  return createPortal(
-    <AnimatePresence mode="wait" onExitComplete={() => setVisibleHelp(null)}>
-      {openHelp && help && (
-        <motion.div
-          key="settings-help-backdrop"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.16 }}
-          className="fixed inset-0 z-[999]"
-          style={{ background: "rgba(63, 56, 48, 0.25)" }}
-          onClick={onClose}
-        >
-          <motion.div
-            key={openHelp}
-            initial={{ opacity: 0, y: 34, scale: 0.94 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 30, scale: 0.95 }}
-            transition={{ type: "spring", stiffness: 460, damping: 32, mass: 0.85 }}
-            className="fixed bottom-24 left-4 right-4 mx-auto w-auto max-w-sm rounded-2xl border p-4 text-left shadow-2xl sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-24 sm:w-full sm:-translate-x-1/2"
-            style={{ background: "#fdf9f2", borderColor: "#eadccf", boxShadow: "0 8px 28px rgba(63, 56, 48, 0.12)" }}
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="mb-2 flex items-start justify-between gap-3">
-              <p className="text-sm font-semibold" style={{ color: "#3f3830" }}>{help.title}</p>
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full"
-                style={{ color: "#5a5048", background: "#f7f1e8", border: "1px solid #eadccf" }}
-                aria-label="Close help"
-              >
-                x
-              </button>
-            </div>
-            <p className="text-sm leading-relaxed" style={{ color: "#4a423a" }}>{help.body}</p>
-            <p className="mt-2 text-xs leading-relaxed" style={{ color: "#6b6153" }}>
-              For app estimates only — not dosing advice.
-            </p>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>,
-    document.body
-  );
-}
-
-// Group label — small muted caps, passes AA on the teal canvas (4.8:1+).
-function GroupLabel({ icon: Icon, children }) {
+// Section header — plain small gray uppercase text sitting directly on teal.
+function GroupLabel({ children }) {
   return (
     <div className="px-1 pt-1">
-      <span className="flex items-center gap-2">
-        <Icon className="h-3.5 w-3.5 shrink-0" style={{ color: "#8f8577" }} />
-        <span className="text-[11px] font-bold uppercase tracking-[0.18em]" style={{ color: "#eef2e9" }}>{children}</span>
+      <span className="text-[11px] font-bold uppercase tracking-[0.18em]" style={{ color: "#eef2e9" }}>
+        {children}
       </span>
     </div>
   );
 }
 
+// Cream grouped card — no border, drop shadow, hairline row dividers.
+function GroupCard({ children }) {
+  return (
+    <div
+      className="overflow-hidden rounded-[20px]"
+      style={{ background: "#fdf9f2", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}
+    >
+      {children}
+    </div>
+  );
+}
+
 function RowDivider() {
-  return <div className="my-0 h-px" style={{ background: "#eadccf" }} />;
+  return <div className="mx-4 h-px" style={{ background: "#eadccf" }} />;
 }
 
 // Convert a stored mg/dL string to the user's display unit string.
@@ -178,7 +84,6 @@ function fromDisplayGlucose(displayStr) {
 
 export default function InsulinSettings() {
   const { settings: serverSettings, save: saveSettings } = useUserSettings();
-  const [openHelp, setOpenHelp] = useState(null);
   const [, setUnitsTick] = useState(0);
   useEffect(() => onGlucoseUnitsChange(() => setUnitsTick((t) => t + 1)), []);
 
@@ -306,16 +211,18 @@ export default function InsulinSettings() {
     };
   }, []);
 
-  const handleInsulinSettingValueChange = (key, setValue) => (value) => {
-    setValue(value);
+  const markDirty = () => {
     dirtyRef.current = true;
+  };
 
+  const handleValue = (key, setValue) => (value) => {
+    setValue(value);
+    markDirty();
     if (value === "") {
       localStorage.removeItem(key);
     } else {
       localStorage.setItem(key, value);
     }
-
     window.dispatchEvent(new Event("insulin-settings-updated"));
   };
 
@@ -325,7 +232,7 @@ export default function InsulinSettings() {
   };
 
   const toggleMealInsulinType = (name) => {
-    dirtyRef.current = true;
+    markDirty();
     setMealInsulinTypes((current) => {
       const next = current.includes(name)
         ? current.filter((item) => item !== name)
@@ -339,7 +246,7 @@ export default function InsulinSettings() {
   };
 
   const toggleInsulinLibrary = (name) => {
-    dirtyRef.current = true;
+    markDirty();
     setInsulinLibrary((current) => {
       const next = current.includes(name)
         ? current.filter((item) => item !== name)
@@ -352,295 +259,262 @@ export default function InsulinSettings() {
     });
   };
 
-  const isRecommended = targetLow === 70 && targetHigh === 180;
-
-  const handleStackingToggle = (checked) => {
+  const handleStacking = (checked) => {
+    markDirty();
     setStackingAlerts(checked);
-    dirtyRef.current = true;
     localStorage.setItem("stacking_alerts_enabled", checked ? "true" : "false");
     window.dispatchEvent(new Event("insulin-settings-updated"));
   };
 
-  const handleSetRecommended = () => {
-    dirtyRef.current = true;
-    setTargetLow(70);
-    setTargetHigh(180);
-    localStorage.setItem("target_range_low", "70");
-    localStorage.setItem("target_range_high", "180");
-    dispatchTargetRangeUpdated();
-    toast.success(`Set to recommended range (${formatGlucose(70)} to ${formatGlucose(180)} ${glucoseUnitLabel()})`);
-  };
-
-  const handleSliderChange = ([low, high]) => {
-    dirtyRef.current = true;
+  const handleTargetRange = (low, high) => {
+    markDirty();
     setTargetLow(low);
     setTargetHigh(high);
     localStorage.setItem("target_range_low", low.toString());
     localStorage.setItem("target_range_high", high.toString());
     dispatchTargetRangeUpdated();
+    toast.success(`Set target range to ${formatGlucose(low)}–${formatGlucose(high)} ${glucoseUnitLabel()}`);
+  };
+
+  // ── Active edit sheet state ──
+  const [activeSheet, setActiveSheet] = useState(null); // 'sensitivity'|'carb'|'correction'|'range'|'stacking'|'review'|'pre'|'post'
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  const [subsetOpen, setSubsetOpen] = useState(false);
+
+  const closeSheet = () => setActiveSheet(null);
+
+  const sensitivityStep = () => (isMmolMode() ? 0.1 : 5);
+  const sensitivityDecimal = () => isMmolMode();
+
+  // Stepper helpers — return the next display-value string from a draft.
+  const stepDraft = (step, decimal) => (draft) => {
+    const n = draft === "" ? 0 : Number(draft);
+    if (!Number.isFinite(n)) return draft;
+    const next = decimal ? Math.round((n + step) * 100) / 100 : Math.round(n + step);
+    return String(Math.max(0, next));
   };
 
   return (
     <>
-      <SettingsHelpOverlay openHelp={openHelp} onClose={() => setOpenHelp(null)} />
+      {/* Edit sheets */}
+      <Sheet open={activeSheet === "sensitivity"} onClose={closeSheet}>
+        <NumericEditSheet
+          title="Insulin sensitivity"
+          value={toDisplayGlucose(insulinSensitivity)}
+          unit={`${glucoseUnitLabel()} per unit`}
+          help="How much one unit lowers your glucose."
+          decrement={stepDraft(-sensitivityStep(), sensitivityDecimal())}
+          increment={stepDraft(sensitivityStep(), sensitivityDecimal())}
+          onSave={(v) => {
+            handleValue("insulin_sensitivity_mgdl_per_unit", setInsulinSensitivity)(fromDisplayGlucose(v));
+            closeSheet();
+          }}
+          onCancel={closeSheet}
+        />
+      </Sheet>
+
+      <Sheet open={activeSheet === "carb"} onClose={closeSheet}>
+        <NumericEditSheet
+          title="Carb ratio"
+          value={unitsPer5g}
+          unit="units per 5g"
+          help="How much insulin covers a small portion of carbs."
+          decrement={stepDraft(-0.5, true)}
+          increment={stepDraft(0.5, true)}
+          onSave={(v) => {
+            handleValue("meal_insulin_units_per_5g", setUnitsPer5g)(v);
+            closeSheet();
+          }}
+          onCancel={closeSheet}
+        />
+      </Sheet>
+
+      <Sheet open={activeSheet === "correction"} onClose={closeSheet}>
+        <NumericEditSheet
+          title="Correction target"
+          value={toDisplayGlucose(correctionTargetGlucose)}
+          unit={glucoseUnitLabel()}
+          help="The baseline used when estimating a correction."
+          decrement={stepDraft(-sensitivityStep(), sensitivityDecimal())}
+          increment={stepDraft(sensitivityStep(), sensitivityDecimal())}
+          onSave={(v) => {
+            handleValue("correction_target_glucose", setCorrectionTargetGlucose)(fromDisplayGlucose(v));
+            closeSheet();
+          }}
+          onCancel={closeSheet}
+        />
+      </Sheet>
+
+      <Sheet open={activeSheet === "range"} onClose={closeSheet}>
+        <TargetRangeSheet
+          low={targetLow}
+          high={targetHigh}
+          onSave={(low, high) => {
+            handleTargetRange(low, high);
+            closeSheet();
+          }}
+          onCancel={closeSheet}
+        />
+      </Sheet>
+
+      <Sheet open={activeSheet === "stacking"} onClose={closeSheet}>
+        <StackingSheet
+          value={stackingAlerts}
+          onSave={(checked) => {
+            handleStacking(checked);
+            closeSheet();
+          }}
+          onCancel={closeSheet}
+        />
+      </Sheet>
+
+      <Sheet open={activeSheet === "review"} onClose={closeSheet}>
+        <NumericEditSheet
+          title="Meal review window"
+          value={outcomeWindowMinutes}
+          unit="minutes"
+          help="How long a meal is reviewed after you log it."
+          decrement={stepDraft(-15, false)}
+          increment={stepDraft(15, false)}
+          onSave={(v) => {
+            handleValue("meal_outcome_window_minutes", setOutcomeWindowMinutes)(v);
+            closeSheet();
+          }}
+          onCancel={closeSheet}
+        />
+      </Sheet>
+
+      <Sheet open={activeSheet === "pre"} onClose={closeSheet}>
+        <NumericEditSheet
+          title="Pre-meal window"
+          value={preMealWindowMinutes}
+          unit="minutes"
+          help="How far before eating a dose still pairs with the meal."
+          decrement={stepDraft(-5, false)}
+          increment={stepDraft(5, false)}
+          onSave={(v) => {
+            handleValue("meal_prebolus_window_minutes", setPreMealWindowMinutes)(v);
+            closeSheet();
+          }}
+          onCancel={closeSheet}
+        />
+      </Sheet>
+
+      <Sheet open={activeSheet === "post"} onClose={closeSheet}>
+        <NumericEditSheet
+          title="Post-meal window"
+          value={postMealWindowMinutes}
+          unit="minutes"
+          help="How far after eating a dose still pairs with the meal."
+          decrement={stepDraft(setPostMealWindowMinutes, -5, false)}
+          increment={stepDraft(setPostMealWindowMinutes, 5, false)}
+          onSave={(v) => handleValue("meal_postbolus_window_minutes", setPostMealWindowMinutes)(v) && closeSheet()}
+          onCancel={closeSheet}
+        />
+      </Sheet>
+
+      {/* Full-screen pickers */}
+      {libraryOpen && (
+        <LibraryPicker
+          selected={insulinLibrary}
+          onToggle={toggleInsulinLibrary}
+          onClose={() => setLibraryOpen(false)}
+        />
+      )}
+      {subsetOpen && (
+        <SubsetPicker
+          library={insulinLibrary}
+          selected={mealInsulinTypes}
+          onToggle={toggleMealInsulinType}
+          onClose={() => setSubsetOpen(false)}
+        />
+      )}
 
       <div className="space-y-7">
-        {/* ── YOUR PLAN ─────────────────────────────────────── */}
-        <div className="space-y-3">
-          <GroupLabel icon={Syringe}>Your plan</GroupLabel>
-
-          <div className="rounded-2xl p-5" style={{ background: "#fdf9f2", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}>
-            <div className="space-y-5">
-              <div className="space-y-1">
-                <div className="flex items-center justify-between gap-2">
-                  <Label className="text-sm font-semibold" style={{ color: "#3f3830" }}>
-                    Insulin for every 5 g of carbs
-                  </Label>
-                  <SettingHelpButton id="types" openHelp={openHelp} setOpenHelp={setOpenHelp} />
-                </div>
-                <p className="text-xs leading-relaxed" style={{ color: "#5a5048" }}>
-                  How much insulin covers a small portion of carbs.
-                </p>
-                <StepperField
-                  label="Carb ratio"
-                  value={unitsPer5g}
-                  unit="u / 5g"
-                  step={0.5}
-                  decimal
-                  onChange={handleInsulinSettingValueChange("meal_insulin_units_per_5g", setUnitsPer5g)}
-                />
-              </div>
-
-              <RowDivider />
-
-              <div className="space-y-1">
-                <div className="flex items-center justify-between gap-2">
-                  <Label className="text-sm font-semibold" style={{ color: "#3f3830" }}>
-                    How much one unit lowers glucose
-                  </Label>
-                  <SettingHelpButton id="types" openHelp={openHelp} setOpenHelp={setOpenHelp} />
-                </div>
-                <p className="text-xs leading-relaxed" style={{ color: "#5a5048" }}>
-                  A higher number means each unit works harder for you.
-                </p>
-                <StepperField
-                  label="Insulin sensitivity"
-                  value={toDisplayGlucose(insulinSensitivity)}
-                  unit={`${glucoseUnitLabel()} / u`}
-                  step={isMmolMode() ? 0.1 : 5}
-                  decimal={isMmolMode()}
-                  onChange={(v) =>
-                    handleInsulinSettingValueChange(
-                      "insulin_sensitivity_mgdl_per_unit",
-                      setInsulinSensitivity
-                    )(fromDisplayGlucose(v))
-                  }
-                />
-              </div>
-
-              <RowDivider />
-
-              <div className="space-y-1">
-                <div className="flex items-center justify-between gap-2">
-                  <Label className="text-sm font-semibold" style={{ color: "#3f3830" }}>
-                    Glucose target for corrections
-                  </Label>
-                  <SettingHelpButton id="types" openHelp={openHelp} setOpenHelp={setOpenHelp} />
-                </div>
-                <p className="text-xs leading-relaxed" style={{ color: "#5a5048" }}>
-                  The baseline used when estimating a correction.
-                </p>
-                <StepperField
-                  label="Correction target"
-                  value={toDisplayGlucose(correctionTargetGlucose)}
-                  unit={glucoseUnitLabel()}
-                  step={isMmolMode() ? 0.1 : 5}
-                  decimal={isMmolMode()}
-                  onChange={(v) =>
-                    handleInsulinSettingValueChange(
-                      "correction_target_glucose",
-                      setCorrectionTargetGlucose
-                    )(fromDisplayGlucose(v))
-                  }
-                />
-              </div>
-
-              <RowDivider />
-
-              {/* Target range — with quick recommended + slider */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between gap-2">
-                  <Label className="text-sm font-semibold" style={{ color: "#3f3830" }}>
-                    Target range
-                  </Label>
-                  <button
-                    type="button"
-                    onClick={handleSetRecommended}
-                    className="rounded-full px-3 py-1.5 text-xs font-semibold transition active:opacity-70"
-                    style={{ background: isRecommended ? "rgba(91,101,80,0.14)" : "#f7f1e8", border: "1px solid #eadccf", color: "#3f3830" }}
-                  >
-                    Recommended: {formatGlucose(70)}–{formatGlucose(180)} {glucoseUnitLabel()}
-                  </button>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span
-                    className="text-lg font-bold tabular-nums"
-                    style={{ color: isRecommended ? "#5a5048" : "#5b6550" }}
-                  >
-                    {formatGlucose(targetLow)}
-                  </span>
-                  <span className="text-lg font-bold tabular-nums" style={{ color: "#5b6550" }}>
-                    {formatGlucose(targetHigh)}
-                  </span>
-                </div>
-                <Slider
-                  min={70}
-                  max={250}
-                  step={5}
-                  value={[targetLow, targetHigh]}
-                  onValueChange={handleSliderChange}
-                  className="cursor-pointer"
-                />
-                <div className="flex justify-between text-xs" style={{ color: "#5a5048" }}>
-                  <span>{formatGlucose(70)}</span>
-                  <span>{formatGlucose(250)}</span>
-                </div>
-              </div>
-            </div>
-          </div>
+        {/* ── YOUR PLAN ─────────────────────────────────── */}
+        <div className="space-y-2.5">
+          <GroupLabel>Your plan</GroupLabel>
+          <GroupCard>
+            <SettingRow
+              label="Insulin sensitivity"
+              value={`${toDisplayGlucose(insulinSensitivity) || "—"} ${glucoseUnitLabel()} per U`}
+              onPress={() => setActiveSheet("sensitivity")}
+            />
+            <RowDivider />
+            <SettingRow
+              label="Carb ratio"
+              value={`${unitsPer5g || "—"} U per 5g`}
+              onPress={() => setActiveSheet("carb")}
+            />
+            <RowDivider />
+            <SettingRow
+              label="Correction target"
+              value={`${toDisplayGlucose(correctionTargetGlucose) || "—"} ${glucoseUnitLabel()}`}
+              onPress={() => setActiveSheet("correction")}
+            />
+          </GroupCard>
         </div>
 
-        {/* ── INSULIN ───────────────────────────────────────── */}
-        <div className="space-y-3">
-          <GroupLabel icon={Leaf}>Insulin</GroupLabel>
-
-          <div className="rounded-2xl p-5" style={{ background: "#fdf9f2", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}>
-            <div className="space-y-5">
-              <div className="space-y-2">
-                <div className="flex min-h-6 items-center justify-between gap-2">
-                  <Label className="text-sm font-semibold" style={{ color: "#3f3830" }}>
-                    My insulin library
-                  </Label>
-                  <SettingHelpButton id="library" openHelp={openHelp} setOpenHelp={setOpenHelp} />
-                </div>
-                <p className="text-xs" style={{ color: "#5a5048" }}>
-                  The insulin types you use. Only these appear when you log a dose.
-                </p>
-                <InsulinTypeSelector selectedTypes={insulinLibrary} onToggle={toggleInsulinLibrary} />
-              </div>
-
-              <RowDivider />
-
-              <div className="space-y-2">
-                <div className="flex min-h-6 items-center justify-between gap-2">
-                  <Label className="text-sm font-semibold" style={{ color: "#3f3830" }}>
-                    Meal &amp; correction types
-                  </Label>
-                  <SettingHelpButton id="types" openHelp={openHelp} setOpenHelp={setOpenHelp} />
-                </div>
-                <p className="text-xs" style={{ color: "#5a5048" }}>
-                  The subset used for meal coverage and corrections.
-                </p>
-                <InsulinTypeSelector
-                  selectedTypes={mealInsulinTypes}
-                  onToggle={toggleMealInsulinType}
-                  categories={["Rapid-Acting", "Intermediate-Acting"]}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Medical disclaimer — plain muted text, not a UI card */}
-          <div className="flex items-start gap-2.5 px-1 pt-1">
-            <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" style={{ color: "#8f8577" }} />
-            <p className="text-xs leading-relaxed" style={{ color: "#eef2e9", opacity: 0.94 }}>
-              Enter only insulin settings prescribed or confirmed by your licensed healthcare
-              professional. Stackd doesn't provide medical advice, verify dosing, or replace clinical
-              judgment. Incorrect values may lead to serious low or high glucose. Don't start, stop, or
-              adjust insulin based only on what this app shows.
-            </p>
-          </div>
+        {/* ── INSULIN LIBRARY ───────────────────────────── */}
+        <div className="space-y-2.5">
+          <GroupLabel>Insulin library</GroupLabel>
+          <GroupCard>
+            <SettingRow
+              label="My insulin library"
+              value={`${insulinLibrary.length} selected`}
+              onPress={() => setLibraryOpen(true)}
+            />
+            <RowDivider />
+            <SettingRow
+              label="Meal & correction types"
+              value={`${mealInsulinTypes.length} of ${insulinLibrary.length}`}
+              onPress={() => setSubsetOpen(true)}
+            />
+          </GroupCard>
         </div>
 
-        {/* ── ALERTS & TIMING (Advanced) ────────────────────── */}
-        <div className="space-y-3">
-          <GroupLabel icon={Bell}>Alerts &amp; timing</GroupLabel>
-
-          <AdvancedSection>
-            <div className="space-y-5">
-              <div className="flex items-center justify-between gap-4">
-                <div className="space-y-0.5">
-                  <Label className="text-sm font-semibold flex items-center gap-2" style={{ color: "#3f3830" }}>
-                    <Target className="w-4 h-4" style={{ color: "#5b6550" }} />
-                    Insulin stacking warnings
-                  </Label>
-                  <p className="text-xs" style={{ color: "#5a5048" }}>Alert when multiple rapid doses overlap</p>
-                </div>
-                <Switch checked={stackingAlerts} onCheckedChange={handleStackingToggle} />
-              </div>
-
-              <RowDivider />
-
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between gap-2">
-                  <Label className="text-sm font-semibold" style={{ color: "#3f3830" }}>
-                    Meal review window
-                  </Label>
-                  <SettingHelpButton id="review" openHelp={openHelp} setOpenHelp={setOpenHelp} />
-                </div>
-                <p className="text-xs" style={{ color: "#5a5048" }}>How long a meal is reviewed after you log it.</p>
-                <StepperField
-                  label="Meal review minutes"
-                  value={outcomeWindowMinutes}
-                  unit="min"
-                  step={15}
-                  decimal={false}
-                  onChange={handleInsulinSettingValueChange("meal_outcome_window_minutes", setOutcomeWindowMinutes)}
-                />
-              </div>
-
-              <RowDivider />
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <Label className="text-sm font-semibold" style={{ color: "#3f3830" }}>
-                      Pre-meal
-                    </Label>
-                    <SettingHelpButton id="pre" openHelp={openHelp} setOpenHelp={setOpenHelp} />
-                  </div>
-                  <p className="text-xs" style={{ color: "#5a5048" }}>How far before eating a dose still pairs with the meal.</p>
-                  <StepperField
-                    label="Pre-meal window minutes"
-                    value={preMealWindowMinutes}
-                    unit="min"
-                    step={5}
-                    decimal={false}
-                    onChange={handleInsulinSettingValueChange("meal_prebolus_window_minutes", setPreMealWindowMinutes)}
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <Label className="text-sm font-semibold" style={{ color: "#3f3830" }}>
-                      Post-meal
-                    </Label>
-                    <SettingHelpButton id="post" openHelp={openHelp} setOpenHelp={setOpenHelp} />
-                  </div>
-                  <p className="text-xs" style={{ color: "#5a5048" }}>How far after eating a dose still pairs with the meal.</p>
-                  <StepperField
-                    label="Post-meal window minutes"
-                    value={postMealWindowMinutes}
-                    unit="min"
-                    step={5}
-                    decimal={false}
-                    onChange={handleInsulinSettingValueChange("meal_postbolus_window_minutes", setPostMealWindowMinutes)}
-                  />
-                </div>
-              </div>
-            </div>
-          </AdvancedSection>
+        {/* ── ADVANCED ──────────────────────────────────── */}
+        <div className="space-y-2.5">
+          <GroupLabel>Advanced</GroupLabel>
+          <GroupCard>
+            <SettingRow
+              label="Target range"
+              value={`${formatGlucose(targetLow)}–${formatGlucose(targetHigh)} ${glucoseUnitLabel()}`}
+              onPress={() => setActiveSheet("range")}
+            />
+            <RowDivider />
+            <SettingRow
+              label="Stacking warnings"
+              value={stackingAlerts ? "On" : "Off"}
+              onPress={() => setActiveSheet("stacking")}
+            />
+            <RowDivider />
+            <SettingRow
+              label="Meal review window"
+              value={`${outcomeWindowMinutes} min`}
+              onPress={() => setActiveSheet("review")}
+            />
+            <RowDivider />
+            <SettingRow
+              label="Pre-meal window"
+              value={`${preMealWindowMinutes} min`}
+              onPress={() => setActiveSheet("pre")}
+            />
+            <RowDivider />
+            <SettingRow
+              label="Post-meal window"
+              value={`${postMealWindowMinutes} min`}
+              onPress={() => setActiveSheet("post")}
+            />
+          </GroupCard>
         </div>
+
+        {/* ── Disclaimer — plain footnote, AA on teal ────── */}
+        <p className="px-1 pt-1 text-xs leading-relaxed" style={{ color: "#eef2e9" }}>
+          Enter only insulin settings prescribed or confirmed by your licensed healthcare
+          professional. Stackd doesn't provide medical advice or verify dosing. Don't start, stop,
+          or adjust insulin based only on what this app shows.
+        </p>
       </div>
     </>
   );
