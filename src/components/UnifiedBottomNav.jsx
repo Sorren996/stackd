@@ -318,47 +318,52 @@ export default function UnifiedBottomNav() {
 
           {/* ── Nav bar — full width, flush to bottom edge ── */}
           <div
-            className="grid grid-cols-4 gap-1 px-2 py-2.5"
+            className="flex items-center justify-between px-3 py-2.5"
             style={{
               height: NAV_HEIGHT,
               position: "relative",
               zIndex: 50,
             }}
           >
-            {navItems.map((item, index) => {
-              const isActive = index === activeIndex;
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  onClick={(e) => handleTabPress(e, item)}
-                  className="relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-2xl text-center transition-colors"
-                  style={{
-                    color: isActive ? "#9c5228" : "#746959",
-                  }}
-                  aria-label={item.label}
-                >
-                  {isActive && (
-                    <span
-                      className="absolute bottom-0.5 h-0.5 w-5 rounded-full"
-                      style={{ background: "#9c5228" }}
-                    />
-                  )}
-                  <Icon
-                    className="h-5 w-5"
-                    strokeWidth={isActive ? 2.25 : 1.5}
-                    style={{ color: isActive ? "#9c5228" : "#746959" }}
-                  />
-                  <span
-                    className="text-[9.5px] font-semibold uppercase tracking-wide"
-                    style={{ color: isActive ? "#9c5228" : "#746959" }}
-                  >
-                    {item.label}
-                  </span>
-                </Link>
-              );
-            })}
+            {[navItems.slice(0, 2), navItems.slice(2, 4)].map((group, gi) => (
+              <div key={gi} className="flex gap-2">
+                {group.map((item) => {
+                  const index = navItems.indexOf(item);
+                  const isActive = index === activeIndex;
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      onClick={(e) => handleTabPress(e, item)}
+                      className="relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-2 text-center transition-colors"
+                      style={{
+                        color: isActive ? "#9c5228" : "#746959",
+                      }}
+                      aria-label={item.label}
+                    >
+                      {isActive && (
+                        <span
+                          className="absolute bottom-0.5 h-0.5 w-5 rounded-full"
+                          style={{ background: "#9c5228" }}
+                        />
+                      )}
+                      <Icon
+                        className="h-5 w-5"
+                        strokeWidth={isActive ? 2.25 : 1.5}
+                        style={{ color: isActive ? "#9c5228" : "#746959" }}
+                      />
+                      <span
+                        className="text-[9.5px] font-semibold uppercase tracking-wide"
+                        style={{ color: isActive ? "#9c5228" : "#746959" }}
+                      >
+                        {item.label}
+                      </span>
+                    </Link>
+                  );
+                })}
+              </div>
+            ))}
           </div>
 
           {/* ── FAB — floating above the nav pill ── */}
