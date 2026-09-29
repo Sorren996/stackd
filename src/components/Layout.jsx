@@ -1,8 +1,8 @@
 import { memo, useEffect, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { RefreshCw, Check, AlertTriangle } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { RefreshCw } from "lucide-react";
+import { motion } from "framer-motion";
 import Dashboard from "../pages/Dashboard";
 import HistoryPage from "../pages/History";
 import SettingsPage from "../pages/Settings";
@@ -40,7 +40,6 @@ export default function Layout() {
 
   const queryClient = useQueryClient();
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [refreshAlert, setRefreshAlert] = useState(null);
 
   // Re-pulls the latest information from the database for every cached query,
   // and triggers a forced Dexcom Share refresh so new readings are pulled
@@ -49,11 +48,6 @@ export default function Layout() {
     if (isRefreshing) return;
     setIsRefreshing(true);
     let timeoutId;
-    let sawError = false;
-    const unsubscribe = queryClient.getQueryCache().subscribe((event) => {
-      if (event.type !== "updated" || event.action?.type !== "error") return;
-      sawError = true;
-    });
     try {
       // Trigger a forced Dexcom refresh (bypasses the reading-age gate,
       // but still respects the in-flight lock via the singleton promise).
@@ -63,9 +57,7 @@ export default function Layout() {
       const refreshPromise = queryClient.refetchQueries({
         predicate: (query) => query.queryKey[0] !== "dexcom-connection",
       });
-      // Guard against a hung connection — if the refetch can't establish a
-      // connection, time out and surface the unsuccessful alert instead of
-      // spinning forever.
+      // Guard against a hung connection — never leave the refresh spinning.
       const timeoutPromise = new Promise((_, reject) => {
         timeoutId = setTimeout(() => reject(new Error("refresh-timeout")), 3000);
       });
@@ -74,26 +66,12 @@ export default function Layout() {
       // Wait for the Dexcom refresh to settle (it may have invalidated
       // glucose queries, which will refetch after this).
       await dexcomPromise;
-
-      const offline = typeof navigator !== "undefined" && navigator.onLine === false;
-      const hasErrorQuery = queryClient.getQueryCache().getAll().some(
-        (q) => q.state.status === "error"
-      );
-      setRefreshAlert({ type: sawError || offline || hasErrorQuery ? "error" : "success" });
     } catch {
       clearTimeout(timeoutId);
-      setRefreshAlert({ type: "error" });
     } finally {
-      unsubscribe();
       setIsRefreshing(false);
     }
   };
-
-  useEffect(() => {
-    if (!refreshAlert) return;
-    const id = setTimeout(() => setRefreshAlert(null), 2500);
-    return () => clearTimeout(id);
-  }, [refreshAlert]);
 
   // Expose the manual refresh action to the pull-to-refresh gesture on the
   // main scroll views (Dashboard, Journal). Pages call triggerRefresh() and
@@ -174,36 +152,6 @@ export default function Layout() {
           </div>
         </div>
       </header>
-
-      <AnimatePresence>
-        {refreshAlert && (
-          <motion.div
-            key="refresh-alert"
-            initial={{ opacity: 0, x: "-50%", y: -10, scale: 0.96 }}
-            animate={{ opacity: 1, x: "-50%", y: 0, scale: 1 }}
-            exit={{ opacity: 0, x: "-50%", y: -10, scale: 0.96 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            className="fixed left-1/2 top-16 z-[60] flex items-center gap-2 rounded-full border px-4 py-2"
-            style={{
-              background: "#fdf9f2",
-              borderColor: "#eadccf",
-              boxShadow: "0 8px 28px rgba(63,56,48,0.12)",
-            }}
-          >
-            {refreshAlert.type === "success" ? (
-              <Check className="h-3.5 w-3.5 shrink-0" style={{ color: "#4d5742" }} />
-            ) : (
-              <AlertTriangle className="h-3.5 w-3.5 shrink-0" style={{ color: "#8a5a12" }} />
-            )}
-            <span
-              className="whitespace-nowrap text-xs font-semibold"
-              style={{ color: refreshAlert.type === "success" ? "#4d5742" : "#8a5a12" }}
-            >
-              {refreshAlert.type === "success" ? "Refreshed with the latest" : "Refresh unsuccessful. Please try again"}
-            </span>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       <main
         className="relative mx-auto w-full max-w-6xl px-4 overflow-visible pb-44"

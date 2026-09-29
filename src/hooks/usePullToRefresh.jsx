@@ -1,162 +1,167 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { triggerRefresh } from "@/lib/refreshRegistry";
 
 // Native-style pull-to-refresh for the app's main scroll views.
 //
-// These pages scroll the document itself (the fixed header + padded <main>
-// flow with window scroll), so the gesture listens to window scroll offsets
-// rather than an inner container. When the user pulls down past PULL_THRESHOLD
-// pixels while already at the very top of the page, we slide the whole <main>
-// content down so the pull feels native, then trigger the app-wide refresh
-// through refreshRegistry (which Layout wires to its handleRefresh).
+// These pages scroll the document itself, so the gesture watches the top of the
+// document and slides the whole <main> content down as the user pulls, then
+// springs it back. The copper spinner is pinned just under the logo header and
+// sinks slightly with the pull, then holds its spot while the refresh runs and
+// fades away when content slides back up.
 //
-// Because overscroll-behavior: none is set globally, native rubber-banding is
-// already suppressed — so we can translate the content purely visually without
-// preventDefault (which previously broke normal touch scrolling). A dedicated
-// matching-copper spinner floats above the surface while the refresh runs.
+// overscroll-behavior: none suppresses native rubber-banding, so we translate
+// the content purely visually. The touch listeners are passive and the <main>
+// transform is written directly (no per-move React state), which keeps the
+// gesture smooth and avoids the jank/janky re-render churn.
 
 const PULL_THRESHOLD = 60;
-const MAX_OVERDRAW = 120;
+const HEADER_OFFSET = "calc(3.5rem + env(safe-area-inset-top))";
 
 export default function usePullToRefresh() {
-  const [pullDistance, setPullDistance] = useState(0);
+  // Drawn only on gesture start/end and refresh-start, never every touchmove.
+  const [pulling, setPulling] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const startYRef = useRef(null);
   const refreshingRef = useRef(false);
   const mainRef = useRef(null);
+  const spinnerRef = useRef(null);
+  const idle = !pulling && !refreshing;
 
-  const clamp = (v) => Math.min(MAX_OVERDRAW, Math.max(0, v));
+  const mainEl = () => {
+    if (!mainRef.current) mainRef.current = document.querySelector("main");
+    return mainRef.current;
+  };
 
-  // Apply the current pull distance to the app's <main> content so the pull
-  // visibly moves the screen. Nothing is translated while idle or refreshing.
-  const applyTransform = useCallback((dist) => {
-    if (typeof document === "undefined") return;
-    if (!mainRef.current) {
-      mainRef.current = document.querySelector("main");
-    }
-    const el = mainRef.current;
-    if (!el) return;
-    if (dist > 0) {
+  // Apply the pull distance to <main> and the spinner directly. el transitions
+  // are reset per move so the finger tracks 1:1, then restored on release.
+  const applyPull = useCallback((dist) => {
+    const el = mainEl();
+    if (el) {
+      el.style.transition = dist > 0 ? "none" : "transform 260ms cubic-bezier(0.16, 1, 0.3, 1)";
       el.style.transform = `translateY(${dist}px)`;
-      el.style.transition = "none";
-    } else {
-      el.style.transition = "transform 220ms cubic-bezier(0.16, 1, 0.3, 1)";
-      el.style.transform = "translateY(0)";
     }
-  }, []);
+    if (spinnerRef.current) {
+      // Sink with the pull (capped) so the ring sits just below the header,
+      // then settle back to its home right under the logo.
+      const depth = refreshing ? 0 : Math.min(dist * 0.5, 22);
+      spinnerRef.current.style.transform = `translateY(${depth}px)`;
+    }
+  }, [refreshing]);
 
   const handleStart = useCallback((e) => {
     if (refreshingRef.current) return;
-    // Only begin a pull when the document is at the very top so we never
-    // fight natural scrolling mid-page.
     const atTop = typeof window !== "undefined" && (window.scrollY || window.pageYOffset) <= 0;
-    if (!atTop) {
-      startYRef.current = null;
-      return;
-    }
-    startYRef.current = e.touches?.[0]?.clientY ?? null;
+    startYRef.current = atTop ? (e.touches?.[0]?.clientY ?? null) : null;
   }, []);
 
-  const handleMove = useCallback((e) => {
-    if (refreshingRef.current || startYRef.current == null) return;
-    const dy = (e.touches?.[0]?.clientY ?? startYRef.current) - startYRef.current;
-    if (dy <= 0) {
-      setPullDistance(0);
-      applyTransform(0);
-      return;
-    }
-    // Resist as the pull grows so it feels elastic rather than linear.
-    const eased = Math.round(Math.sqrt(dy) * 6);
-    const next = clamp(eased);
-    setPullDistance(next);
-    applyTransform(next);
-  }, [applyTransform]);
-
-  const finishPull = useCallback(() => {
-    setPullDistance((dist) => {
-      const shouldRefresh = dist >= PULL_THRESHOLD && !refreshingRef.current;
-      applyTransform(0);
-      if (shouldRefresh) {
-        refreshingRef.current = true;
-        setRefreshing(true);
-        // Release the gesture state; triggerRefresh drives Layout's
-        // handleRefresh, which manages its own isRefreshing lock.
-        triggerRefresh();
-        window.setTimeout(() => {
-          refreshingRef.current = false;
-          setRefreshing(false);
-        }, 900);
+  const handleMove = useCallback(
+    (e) => {
+      if (refreshingRef.current || startYRef.current == null) return;
+      const dy = (e.touches?.[0]?.clientY ?? startYRef.current) - startYRef.current;
+      if (dy <= 0) {
+        if (pulling) {
+          setPulling(false);
+          applyPull(0);
+        }
+        return;
       }
-      return 0;
-    });
-  }, [applyTransform]);
+      // Elastic resistance so the pull feels natural rather than rigid.
+      const dist = Math.min(120, Math.round(Math.sqrt(dy) * 6));
+      if (!pulling) setPulling(true);
+      applyPull(dist);
+    },
+    [pulling, applyPull]
+  );
 
   const handleEnd = useCallback(() => {
     startYRef.current = null;
-    finishPull();
-  }, [finishPull]);
+    if (!pulling) return;
+    setPulling(false);
+
+    const el = mainEl();
+    const current = el ? parseFloat((el.style.transform || "translateY(0)").replace(/[^0-9.-]/g, "")) || 0 : 0;
+    if (current >= PULL_THRESHOLD && !refreshingRef.current) {
+      refreshingRef.current = true;
+      setRefreshing(true);
+      applyPull(0);
+      // Kick the app-wide refresh; Layout's handleRefresh re-pulls all data.
+      triggerRefresh();
+    } else {
+      applyPull(0);
+    }
+  }, [pulling, applyPull]);
 
   useEffect(() => {
-    const onTouchStart = (e) => handleStart(e);
-    const onTouchMove = (e) => handleMove(e);
-    const onTouchEnd = () => handleEnd();
-
-    // Attach passive touch listeners so we never block native scrolling —
-    // the pull is purely visual on top of the already-suppressed overscroll.
-    window.addEventListener("touchstart", onTouchStart, { passive: true });
-    window.addEventListener("touchmove", onTouchMove, { passive: true });
-    window.addEventListener("touchend", onTouchEnd, { passive: true });
-    window.addEventListener("touchcancel", onTouchEnd, { passive: true });
-
-    // Clear any leftover transform if the page unmounts mid-pull.
+    const onStart = (e) => handleStart(e);
+    const onMove = (e) => handleMove(e);
+    const onEnd = () => handleEnd();
+    window.addEventListener("touchstart", onStart, { passive: true });
+    window.addEventListener("touchmove", onMove, { passive: true });
+    window.addEventListener("touchend", onEnd, { passive: true });
+    window.addEventListener("touchcancel", onEnd, { passive: true });
     return () => {
-      window.removeEventListener("touchstart", onTouchStart);
-      window.removeEventListener("touchmove", onTouchMove);
-      window.removeEventListener("touchend", onTouchEnd);
-      window.removeEventListener("touchcancel", onTouchEnd);
-      applyTransform(0);
+      window.removeEventListener("touchstart", onStart);
+      window.removeEventListener("touchmove", onMove);
+      window.removeEventListener("touchend", onEnd);
+      window.removeEventListener("touchcancel", onEnd);
+      applyPull(0);
     };
-  }, [handleStart, handleMove, handleEnd, applyTransform]);
+  }, [handleStart, handleMove, handleEnd, applyPull]);
 
-  // The spinner shown while pulling / refreshing — floats above the surface
-  // and drops in line with the pull so the feedback stays in view.
-  const overlay =
-    pullDistance > 0 || refreshing ? (
-      <div className="pointer-events-none fixed inset-x-0 z-[45] flex justify-center">
+  // End the refresh ring after a short settle window so the content slides
+  // back up smoothly and the spinner fades.
+  useEffect(() => {
+    if (!refreshing) return;
+    const id = window.setTimeout(() => {
+      refreshingRef.current = false;
+      setRefreshing(false);
+    }, 850);
+    return () => window.clearTimeout(id);
+  }, [refreshing]);
+
+  const overlay = (
+    <AnimatePresence>
+      {!idle && (
         <motion.div
-          style={{
-            height: 40,
-            width: 40,
-            borderRadius: "50%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: "#fdf9f2",
-            border: "1px solid #eadccf",
-            boxShadow: "0 4px 16px rgba(63,56,48,0.10)",
-            marginTop: Math.max(10, 52 - pullDistance + (refreshing ? 12 : 0)),
-          }}
-          animate={{ rotate: refreshing ? 360 : pullDistance * 2 }}
-          transition={
-            refreshing
-              ? { duration: 0.8, repeat: Infinity, ease: "linear" }
-              : { duration: 0.2, ease: "easeOut" }
-          }
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.7 }}
+          transition={{ duration: 0.18, ease: "easeOut" }}
+          className="pointer-events-none fixed inset-x-0 z-[60] flex justify-center"
+          style={{ top: HEADER_OFFSET, marginTop: 8 }}
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M12 4a8 8 0 1 1-6.9 3.9"
-              stroke="#9c5228"
-              strokeWidth="2.4"
-              strokeLinecap="round"
-            />
-          </svg>
+          <div
+            ref={spinnerRef}
+            className="flex items-center justify-center rounded-full"
+            style={{
+              height: 34,
+              width: 34,
+              background: "#fdf9f2",
+              border: "1px solid #eadccf",
+              boxShadow: "0 4px 16px rgba(63,56,48,0.10)",
+              willChange: "transform",
+            }}
+          >
+            <motion.svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              animate={{ rotate: refreshing ? 360 : 0 }}
+              transition={
+                refreshing ? { duration: 0.8, repeat: Infinity, ease: "linear" } : { duration: 0.3 }
+              }
+            >
+              <path d="M12 4a8 8 0 1 1-6.9 3.9" stroke="#9c5228" strokeWidth="2.4" strokeLinecap="round" />
+            </motion.svg>
+          </div>
         </motion.div>
-      </div>
-    ) : null;
+      )}
+    </AnimatePresence>
+  );
 
-  return { pullDistance, refreshing, overlay };
+  return { pullDistance: 0, refreshing, overlay };
 }
 
 export { PULL_THRESHOLD };
