@@ -65,8 +65,8 @@ export default function ReportPicker({ onGenerate }) {
           )}
         </div>
 
-        <div className="mt-3 flex items-center gap-2">
-          <span className="text-xs" style={{ color: "#6b6153" }}>or custom</span>
+        <div className="mt-3 flex items-center gap-2 hidden">
+          <span className="text-xs hidden" style={{ color: "#6b6153" }}>or custom</span>
           <input
             type="number"
             inputMode="numeric"
