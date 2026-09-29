@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown } from "lucide-react";
+
 import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
 import {
   SPLIT_STRATEGIES,
@@ -10,6 +10,7 @@ import {
   calculateRemaining,
 } from "@/lib/splitDoseUtils";
 import SplitPlanConfirm from "./SplitPlanConfirm";
+import BottomSheetSelect from "@/components/BottomSheetSelect";
 
 const STRATEGY_OPTIONS = [
   { id: SPLIT_STRATEGIES.SINGLE, label: "Single dose" },
@@ -246,43 +247,28 @@ export default function SplitDosePlanner({ mealName, expectedDose, onConfirm }) 
                 {/* Timing — native iOS setting row */}
                 <div className="flex items-center justify-between gap-3 border-t pt-5" style={{ borderColor: "#eadccf" }}>
                   <span className="stackd-section-label">Take Remaining Portion</span>
-                  <div className="relative flex items-center">
-                    <select
+                  <div className="flex min-w-0 items-center">
+                    <BottomSheetSelect
+                      label="Take Remaining Portion"
                       value={String(reviewAfterMinutes)}
-                      onChange={(e) => setReviewAfterMinutes(Number(e.target.value))}
-                      className="appearance-none bg-transparent pr-5 text-sm font-semibold text-white focus:outline-none"
-                    >
-                      {REVIEW_OPTIONS.map((r) => (
-                        <option key={r.value} value={String(r.value)} className="bg-popover text-foreground">
-                          {r.label}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="pointer-events-none absolute right-0 h-4 w-4 text-white/40" />
+                      onChange={(v) => setReviewAfterMinutes(Number(v))}
+                      options={REVIEW_OPTIONS}
+                    />
                   </div>
                 </div>
 
                 {/* Insulin type — native iOS setting row */}
                 <div className="flex items-center justify-between gap-3 border-t pt-5" style={{ borderColor: "#eadccf" }}>
                   <span className="stackd-section-label">Insulin Type</span>
-                  <div className="relative flex min-w-0 items-center">
-                    <select
+                  <div className="flex min-w-0 items-center justify-end">
+                    <BottomSheetSelect
+                      label="Insulin Type"
                       value={insulinType}
-                      onChange={(e) => setInsulinType(e.target.value)}
-                      className="appearance-none bg-transparent pr-5 text-right text-sm font-semibold text-white focus:outline-none"
-                    >
-                      {!insulinType && (
-                        <option value="" className="bg-popover text-foreground">
-                          Select insulin type
-                        </option>
-                      )}
-                      {insulinTypeOptions.map((option) => (
-                        <option key={option.value} value={option.value} className="bg-popover text-foreground">
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="pointer-events-none absolute right-0 h-4 w-4 text-white/40" />
+                      onChange={setInsulinType}
+                      options={insulinTypeOptions}
+                      placeholder="Select insulin type"
+                      descriptionKey="description"
+                    />
                   </div>
                 </div>
 

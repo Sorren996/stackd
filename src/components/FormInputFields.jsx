@@ -1,3 +1,5 @@
+import BottomSheetSelect from "./BottomSheetSelect";
+
 const GLASS_SURFACE = {
   background: "#f7f1e8",
   borderColor: "transparent",
@@ -104,19 +106,13 @@ export function SelectField({ label, value, onChange, options, placeholder = "Se
     <div className="stackd-input rounded-xl border p-3" style={GLASS_SURFACE}>
       <div className="flex items-center justify-between gap-3">
         <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wider" style={{ color: "#6b6153" }}>{label}</span>
-        <select
+        <BottomSheetSelect
+          label={label}
           value={value || ""}
-          onChange={(e) => onChange(e.target.value)}
-          className="min-w-0 flex-1 bg-transparent text-right text-sm font-semibold focus:outline-none"
-          style={{ color: "#3f3830" }}>
-          
-          {!value && <option value="">{placeholder}</option>}
-          {options.map((option) =>
-          <option key={option.value} value={option.value} style={{ background: "#fdf9f2", color: "#3f3830" }}>
-              {option.label}
-            </option>
-          )}
-        </select>
+          onChange={onChange}
+          options={options}
+          placeholder={placeholder}
+        />
       </div>
     </div>);
 

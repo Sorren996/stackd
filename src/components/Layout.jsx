@@ -112,7 +112,10 @@ export default function Layout() {
 
   return (
     <div className="isolate relative min-h-screen overflow-x-hidden text-foreground">
-      <header className="fixed inset-x-0 top-0 z-50 bg-transparent">
+      <header
+        className="fixed inset-x-0 top-0 z-50 bg-transparent"
+        style={{ paddingTop: "env(safe-area-inset-top)" }}
+      >
         <div
           className="mx-auto grid h-14 max-w-6xl grid-cols-[1fr_auto_1fr] items-center px-4"
           style={{
@@ -195,7 +198,7 @@ export default function Layout() {
 
       <main
         className="relative mx-auto w-full max-w-6xl px-4 overflow-visible pb-44"
-        style={{ paddingTop: "3.5rem" }}
+        style={{ paddingTop: "calc(3.5rem + env(safe-area-inset-top))" }}
       >
         <div className="min-w-0 w-full">
           <div hidden={!isDashboardRoute}>

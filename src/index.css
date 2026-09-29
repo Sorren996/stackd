@@ -65,69 +65,71 @@
     --sidebar-ring: 30 16% 22%;
   }
 
-  /* Dark mode mirrors :root — the warm editorial light theme is the only
-     theme. These values are identical to :root so even if a .dark class
-     is ever applied, the canvas stays warm sandstone. */
+  /* ── Authentic Dark Mode — deep warm-midnight slate with amber/copper
+     accents. Applied when the device requests dark appearance (iOS/iPadOS
+     Dark Mode in the WebView) and sets .dark on <html>. ── */
   .dark {
-    --background: 36 39% 94%;
-    --foreground: 30 16% 22%;
-    --card: 36 47% 97%;
-    --card-foreground: 30 16% 22%;
-    --popover: 36 47% 97%;
-    --popover-foreground: 30 16% 22%;
-    --primary: 30 16% 22%;
-    --primary-foreground: 36 39% 94%;
-    --secondary: 36 24% 90%;
-    --secondary-foreground: 35 13% 37%;
-    --muted: 36 20% 92%;
-    --muted-foreground: 36 13% 40%;
-    --accent: 88 8% 35%;
-    --accent-foreground: 36 39% 94%;
-    --destructive: 0 45% 50%;
-    --destructive-foreground: 36 39% 94%;
-    --border: 30 18% 87%;
-    --input: 30 18% 87%;
-    --ring: 30 16% 22%;
+    --background: 220 18% 11%;          /* deep slate-midnight canvas */
+    --foreground: 40 25% 90%;           /* warm ivory text */
+    --card: 222 16% 15%;                /* raised surface */
+    --card-foreground: 40 25% 90%;
+    --popover: 222 16% 15%;
+    --popover-foreground: 40 25% 90%;
+    --primary: 34 66% 62%;              /* warm amber — primary accents */
+    --primary-foreground: 220 18% 11%;
+    --secondary: 220 14% 20%;
+    --secondary-foreground: 40 25% 88%;
+    --muted: 220 14% 20%;
+    --muted-foreground: 40 12% 66%;
+    --accent: 88 12% 46%;               /* sage */
+    --accent-foreground: 40 25% 90%;
+    --destructive: 5 55% 55%;
+    --destructive-foreground: 40 25% 92%;
+    --border: 220 14% 24%;              /* subtle hairlines on dark */
+    --input: 220 14% 24%;
+    --ring: 34 66% 62%;
 
-    /* Verified WCAG-compliant text tokens (mirror :root) */
-    --faint: #746959;
-    --taupe: #6b6153;
-    --sage-text: #4d5742;
-    --mustard-text: #8a5a12;
-    --red-text: #9c3f2e;
+    /* Dark-mode text tokens (adjusted for contrast on the midnight canvas) */
+    --faint: #9a968c;
+    --taupe: #c0b9ac;
+    --sage-text: #b7c4a1;
+    --mustard-text: #e0b460;
+    --red-text: #e09377;
 
-    --copper: #9c5228;
+    --copper: #d99a5b;
 
-    --chart-1: 88 8% 35%;
-    --chart-2: 30 16% 22%;
+    --chart-1: 88 12% 46%;
+    --chart-2: 34 66% 62%;
     --chart-3: 32 76% 39%;
-    --chart-4: 30 8% 50%;
-    --chart-5: 0 30% 50%;
-    --sidebar-background: 36 39% 94%;
-    --sidebar-foreground: 30 16% 22%;
-    --sidebar-primary: 30 16% 22%;
-    --sidebar-primary-foreground: 36 39% 94%;
-    --sidebar-accent: 36 24% 90%;
-    --sidebar-accent-foreground: 30 16% 22%;
-    --sidebar-border: 30 18% 87%;
-    --sidebar-ring: 30 16% 22%;
+    --chart-4: 40 12% 66%;
+    --chart-5: 5 55% 55%;
+    --sidebar-background: 220 18% 11%;
+    --sidebar-foreground: 40 25% 90%;
+    --sidebar-primary: 34 66% 62%;
+    --sidebar-primary-foreground: 220 18% 11%;
+    --sidebar-accent: 220 14% 20%;
+    --sidebar-accent-foreground: 40 25% 88%;
+    --sidebar-border: 220 14% 24%;
+    --sidebar-ring: 34 66% 62%;
   }
 }
 
 @layer base {
+  /* Text selection is normal everywhere so users can copy/paste from their
+     journal and policy pages; only interactive controls suppress it. */
   * {
     @apply border-border outline-ring/50;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    user-select: none;
     -webkit-touch-callout: none;
     -webkit-tap-highlight-color: transparent;
   }
 
+  button, [role="button"], a, select, [contenteditable="true"] {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    user-select: none;
+  }
+
   input, textarea, select, [contenteditable="true"] {
-    -webkit-user-select: text;
-    -moz-user-select: text;
-    user-select: text;
     -webkit-touch-callout: default;
   }
 
@@ -136,6 +138,20 @@
     background: #4c6770;
     min-height: 100vh;
     color-scheme: light;
+  }
+
+  /* Dark-mode-aware form controls follow the resolved theme */
+  .dark input, .dark textarea, .dark select,
+  .dark input::placeholder, .dark textarea::placeholder,
+  .dark input[type="date"], .dark input[type="time"], .dark input[type="datetime-local"],
+  .dark input[type="number"], .dark input[type="text"], .dark input[type="email"], .dark input[type="password"] {
+    color-scheme: dark;
+  }
+
+  /* Block the general viewport rubber-band bounce on native WebViews while
+     leaving intentionally-scrollable inner containers to scroll themselves. */
+  html, body {
+    overscroll-behavior: none;
   }
 
   input, textarea, select,

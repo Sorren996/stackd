@@ -12,9 +12,11 @@
     <meta http-equiv="Strict-Transport-Security" content="max-age=31536000; includeSubDomains; preload" />
     <meta name="theme-color" content="#f7f1e8" />
     <script>
+      // Detect the authentic system theme before React mounts to avoid a flash.
       (function () {
-        // Warm editorial light mode is the only theme.
-        document.documentElement.dataset.theme = "light";
+        var dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+        document.documentElement.dataset.theme = dark ? "dark" : "light";
+        document.documentElement.classList.toggle("dark", dark);
       })();
     </script>
     <title>Stackd — Your Glucose Companion</title>
