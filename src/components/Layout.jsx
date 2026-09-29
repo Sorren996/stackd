@@ -209,38 +209,29 @@ export default function Layout() {
         className="relative mx-auto w-full max-w-6xl px-4 overflow-visible pb-44"
         style={{ paddingTop: "calc(3.5rem + env(safe-area-inset-top))" }}
       >
-        {/* Subtle horizontal slide-and-fade as pages are kept alive across
-            tab switches. keyed on the route so the transition fires on change. */}
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.div
-            key={location.pathname}
-            className="min-w-0 w-full"
-            initial={{ opacity: 0, x: 14 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -14 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-          >
-            <div hidden={!isDashboardRoute}>
-              <CachedDashboard />
+        {/* Pages are kept alive across tab switches via the hidden attribute,
+            so they render instantly on return. */}
+        <div className="min-w-0 w-full">
+          <div hidden={!isDashboardRoute}>
+            <CachedDashboard />
+          </div>
+          {visitedTabs.history && (
+            <div hidden={!isHistoryRoute}>
+              <CachedHistoryPage />
             </div>
-            {visitedTabs.history && (
-              <div hidden={!isHistoryRoute}>
-                <CachedHistoryPage />
-              </div>
-            )}
-            {visitedTabs.analytics && (
-              <div hidden={!isAnalyticsRoute}>
-                <CachedAnalyticsPage />
-              </div>
-            )}
-            {visitedTabs.settings && (
-              <div hidden={!isSettingsRoute}>
-                <CachedSettingsPage />
-              </div>
-            )}
-            {!isKeepAliveRoute && <Outlet />}
-          </motion.div>
-        </AnimatePresence>
+          )}
+          {visitedTabs.analytics && (
+            <div hidden={!isAnalyticsRoute}>
+              <CachedAnalyticsPage />
+            </div>
+          )}
+          {visitedTabs.settings && (
+            <div hidden={!isSettingsRoute}>
+              <CachedSettingsPage />
+            </div>
+          )}
+          {!isKeepAliveRoute && <Outlet />}
+        </div>
       </main>
 
       <UnifiedBottomNav />
