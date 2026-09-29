@@ -65,6 +65,7 @@ export default function Register() {
     const cleanEmail = email.trim().toLowerCase();
     try {
       await base44.auth.verifyOtp({ email: cleanEmail, otpCode: otpCode.trim() });
+      localStorage.setItem("stackd_auth_provider", "email");
       await base44.auth.loginViaEmailPassword(cleanEmail, password);
       window.location.href = "/";
     } catch (err) {
@@ -88,10 +89,12 @@ export default function Register() {
   };
 
   const handleGoogle = () => {
+    localStorage.setItem("stackd_auth_provider", "google");
     base44.auth.loginWithProvider("google", "/");
   };
 
   const handleApple = () => {
+    localStorage.setItem("stackd_auth_provider", "apple");
     base44.auth.loginWithProvider("apple", "/");
   };
 

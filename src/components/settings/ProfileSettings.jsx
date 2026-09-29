@@ -23,6 +23,12 @@ export default function ProfileSettings() {
 
   const displayName = settings?.username || user?.full_name || "";
 
+  const authProvider = (() => {
+    if (typeof window === "undefined") return "email";
+    return localStorage.getItem("stackd_auth_provider") || "email";
+  })();
+  const isOAuthAccount = authProvider === "google" || authProvider === "apple";
+
   useEffect(() => {
     if (displayName) setNameValue(displayName);
   }, [displayName]);
@@ -116,7 +122,16 @@ export default function ProfileSettings() {
       </SectionCard>
 
       <SectionCard label="Security">
-        {passwordStep === "idle" ? (
+        {isOAuthAccount ? (
+          <div className="py-3 space-y-2">
+            <p className="text-xs leading-relaxed" style={{ color: "#6b6153" }}>
+              You signed in with {authProvider === "apple" ? "Apple" : "Google"}. Your account is secured through that provider — there's no separate password to manage here.
+            </p>
+            <p className="text-xs leading-relaxed" style={{ color: "#746959" }}>
+              To change your password, visit your {authProvider === "apple" ? "Apple ID" : "Google account"} settings.
+            </p>
+          </div>
+        ) : passwordStep === "idle" ? (
           <LedgerRow
             label="Password"
             value="••••••••"

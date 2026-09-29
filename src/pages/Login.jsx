@@ -29,6 +29,7 @@ export default function Login() {
     setLoading(true);
     const cleanEmail = email.trim().toLowerCase();
     try {
+      localStorage.setItem("stackd_auth_provider", "email");
       await base44.auth.loginViaEmailPassword(cleanEmail, password);
       window.location.href = "/";
     } catch (err) {
@@ -39,10 +40,12 @@ export default function Login() {
   };
 
   const handleGoogle = () => {
+    localStorage.setItem("stackd_auth_provider", "google");
     base44.auth.loginWithProvider("google", "/");
   };
 
   const handleApple = () => {
+    localStorage.setItem("stackd_auth_provider", "apple");
     base44.auth.loginWithProvider("apple", "/");
   };
 
