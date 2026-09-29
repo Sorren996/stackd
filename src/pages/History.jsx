@@ -616,9 +616,14 @@ export default function History() {
           )}
 
           {level === "month" && (
-            <SectionCard label="Months Tracked">
-              <HistoryMonthView months={months} onSelectMonth={handleSelectMonth} />
-            </SectionCard>
+            <>
+              <SectionCard label="Months Tracked">
+                <HistoryMonthView months={months} onSelectMonth={handleSelectMonth} />
+              </SectionCard>
+              <p className="px-1 pt-2 text-xs italic" style={{ color: "#f7f1e8", opacity: 0.7 }}>
+                We gently hold the last 90 days of your journey.
+              </p>
+            </>
           )}
 
           {level === "days" && currentMonth && (
