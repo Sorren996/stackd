@@ -5,6 +5,22 @@ import PageHeader from "@/components/editorial/PageHeader";
 import DashboardCard from "@/components/dashboard/DashboardCard";
 import { composeReportsPdf } from "@/lib/exportReportsPdf";
 import { REPORT_ORDER } from "./reportCatalog";
+import { base44 } from "@/api/base44Client";
+
+// Convert a Blob into a base64 string (without the data: prefix) so it can be
+// attached to a SendEmail call.
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = String(reader.result || "");
+      const comma = result.indexOf(",");
+      resolve(comma >= 0 ? result.slice(comma + 1) : result);
+    };
+    reader.onerror = () => reject(reader.error || new Error("Could not read the PDF."));
+    reader.readAsDataURL(blob);
+  });
+}
 
 const DISCLAIMER = "Describes your CGM data. Not medical advice. Not a dose recommendation.";
 
@@ -16,6 +32,7 @@ const DISCLAIMER = "Describes your CGM data. Not medical advice. Not a dose reco
 
 export default function ReportDelivery({ reports, reportIds, windowDays, onBack, onGenerateAnother }) {
   const [downloading, setDownloading] = useState(false);
+  const [emailing, setEmailing] = useState(false);
 
   const ordered = REPORT_ORDER.filter((id) => reportIds.includes(id));
   const count = ordered.length;
@@ -48,8 +65,39 @@ export default function ReportDelivery({ reports, reportIds, windowDays, onBack,
     }
   };
 
-  const handleEmail = () => {
-    toast.success("Pick up your report from your email inbox.");
+  const handleEmail = async () => {
+    if (emailing) return;
+    setEmailing(true);
+    try {
+      const me = await base44.auth.me();
+      const to = me?.email;
+      if (!to) {
+        toast.error("We couldn't find your email address. Try downloading instead.");
+        return;
+      }
+      const result = await composeReportsPdf(reports, ordered);
+      if (!result?.blob) {
+        toast.error("Unable to build the PDF. Please try again.");
+        return;
+      }
+      const content = await blobToBase64(result.blob);
+      await base44.integrations.Core.SendEmail({
+        to,
+        subject: `Your Stackd report — past ${windowDays} days`,
+        text: `Your Stackd report for the past ${windowDays} days is attached. It describes your CGM data — not medical advice, and not a dose recommendation.`,
+        attachments: [{ filename: result.filename, content }],
+      });
+      toast.success(`Sent to ${to}. Check your inbox.`);
+    } catch (err) {
+      console.error("[ReportDelivery] email failed:", err);
+      const message =
+        err?.message?.includes?.("custom domain") || err?.message?.includes?.("not a registered")
+          ? "Email delivery isn't available right now. Try downloading instead."
+          : "We couldn't send the email. Please try again.";
+      toast.error(message);
+    } finally {
+      setEmailing(false);
+    }
   };
 
   return (
@@ -98,10 +146,11 @@ export default function ReportDelivery({ reports, reportIds, windowDays, onBack,
         <button
           type="button"
           onClick={handleEmail}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl py-5 text-base font-semibold transition active:opacity-80"
+          disabled={emailing}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl py-5 text-base font-semibold transition active:opacity-80 disabled:opacity-60"
           style={{ background: "#fdf9f2", color: "#3f3830", border: "1px solid #eadccf" }}
         >
-          <Mail className="h-5 w-5" />
+          {emailing ? <Loader2 className="h-5 w-5 animate-spin" /> : <Mail className="h-5 w-5" />}
           Email report
         </button>
 

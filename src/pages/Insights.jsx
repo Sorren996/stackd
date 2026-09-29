@@ -101,26 +101,36 @@ export default function Insights() {
     );
   }
 
-  // Generating — the options are removed, replaced with a simple progress bar.
+  // Generating — the options are removed, replaced with a centered progress
+  // card. The card is vertically centered in the content area (between the
+  // fixed header and the bottom nav) rather than pinned to the top.
   if (stage === "generating") {
     return (
       <>
-        <div className="mx-auto max-w-md space-y-4 pb-36 pt-1">
+        <div
+          className="mx-auto flex max-w-md flex-col justify-center px-4"
+          style={{ minHeight: "calc(100dvh - 3.5rem - 7rem)" }}
+        >
           <PageHeader italicWord="reports" />
-          <DashboardCard className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="h-2 flex-1 overflow-hidden rounded-full" style={{ background: "#f0e8db" }}>
+          <DashboardCard className="p-6">
+            <div className="space-y-4">
+              <div className="space-y-1.5 text-center">
+                <h2 className="text-lg font-semibold leading-snug" style={{ color: "#3f3830" }}>
+                  Generating your report…
+                </h2>
+                <p className="text-sm leading-relaxed" style={{ color: "#6b6153" }}>
+                  Gathering your glucose range into a document you can keep.
+                </p>
+              </div>
+              <div className="h-2 w-full overflow-hidden rounded-full" style={{ background: "#f0e8db" }}>
                 <div
                   className="h-full w-full origin-left animate-[indeterminate_1.4s_ease-in-out_infinite]"
                   style={{ background: "#9c5228" }}
                 />
               </div>
-              <span className="shrink-0 text-xs" style={{ color: "#6b6153" }}>
-                Gathering your range…
-              </span>
             </div>
           </DashboardCard>
-          <p className="px-2 text-center text-[11px] leading-relaxed" style={{ color: "#f7f1e8" }}>
+          <p className="mt-5 px-2 text-center text-[11px] leading-relaxed" style={{ color: "#f7f1e8" }}>
             {DISCLAIMER}
           </p>
         </div>
