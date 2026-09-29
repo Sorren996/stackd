@@ -822,46 +822,7 @@ function renderCompare(doc, reports, y) {
     "This window against the equal-length window just before it"
   );
 
-  const side = (data, title) => {
-    const s = data?.stats;
-    const rows = [
-      ["Mean mg/dL", s?.mean != null ? String(s.mean) : "—"],
-      ["GMI %", s?.gmi != null ? String(s.gmi) : "—"],
-      ["Variability (SD)", s?.sd != null ? `\u00B1${s.sd}` : "—"],
-      ["%CV", s?.cv != null ? `${s.cv}%` : "—"],
-      ["Total insulin", data?.insulin?.totalUnits != null ? `${data.insulin.totalUnits} u` : "—"],
-      ["Doses", data?.insulin?.doseCount != null ? String(data.insulin.doseCount) : "—"],
-    ];
-    let yy = y;
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(9);
-    doc.setTextColor(...INK);
-    doc.text(title, M, yy);
-    yy += 14;
-    for (const [k, v] of rows) {
-      yy = ensureSpace(doc, yy, 14);
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(8);
-      doc.setTextColor(...MUTED);
-      doc.text(k, M + 2, yy);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(...INK);
-      doc.text(v, M + CW / 2, yy, { align: "right" });
-      doc.setDrawColor(...GRID);
-      doc.setLineWidth(0.4);
-      doc.line(M, yy + 2, M + CW / 2, yy + 2);
-      yy += 13;
-    }
-    // TIR bar for this side.
-    yy += 4;
-    tirBar(doc, M, yy, CW / 2, 14, data?.bands || []);
-    yy += 24;
-    return yy;
-  };
-
   const half = CW / 2;
-  // Side A (current) left half.
-  const baseY = y;
   let leftY = y;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9);

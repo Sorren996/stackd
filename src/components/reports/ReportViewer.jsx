@@ -34,7 +34,6 @@ export default function ReportViewer({ reports, reportIds, onBack, windowDays })
   const [index, setIndex] = useState(0);
   const [downloading, setDownloading] = useState(false);
   const scrollRef = useRef(null);
-  const captureRef = useRef(null);       // hidden container holding all selected reports
 
   const activeReport = ordered[index];
   const meta = reports?.meta || {};
@@ -66,13 +65,9 @@ export default function ReportViewer({ reports, reportIds, onBack, windowDays })
     if (downloading) return;
     setDownloading(true);
     try {
-      if (!captureRef.current) {
-        toast.error("Nothing to export yet.");
-        return;
-      }
-      // Each selected report is a direct child of the hidden container.
-      const nodes = Array.from(captureRef.current.children);
-      const result = await composeReportsPdf(nodes);
+      // Typeset the selected reports straight from the data — a real print
+      // document, no screenshots, no app UI chrome.
+      const result = await composeReportsPdf(reports, ordered);
       if (!result) {
         toast.error("Unable to build the PDF. Please try again.");
         return;
@@ -213,30 +208,7 @@ export default function ReportViewer({ reports, reportIds, onBack, windowDays })
         </button>
       </div>
 
-      {/* Off-screen capture container — all selected reports, mounted for export.
-          Kept at opacity:1 but pushed far off-screen (left:-10000px) so
-          html2canvas can snapshot it without affecting the visible layout. */}
-      <div
-        ref={captureRef}
-        aria-hidden="true"
-        className="pointer-events-none absolute left-[-10000px] top-0 w-[420px] max-w-[420px] -z-10"
-      >
-        {ordered.map((id) => {
-          const C = REPORT_COMPONENTS[id];
-          return (
-            <div key={id} className="space-y-3" style={{ background: "#fdf9f2" }}>
-              <div className="px-1 pt-1">
-                <h3 className="text-sm font-semibold" style={{ color: "#3f3830" }}>
-                  {REPORT_TYPE_BY_ID[id]?.label || id}
-                </h3>
-              </div>
-              <C reports={reports} />
-              <ReportFooter />
-            </div>
-          );
-        })}
       </div>
-    </div>
   );
 }
 
