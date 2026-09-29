@@ -258,7 +258,7 @@ export default function SplitPlanReview() {
   if (planLoading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <Activity className="h-8 w-8 animate-pulse" style={{ color: "#eadccf" }} />
+        <Activity className="h-8 w-8 animate-pulse" style={{ color: "#f7f1e8" }} />
       </div>
     );
   }
@@ -266,7 +266,7 @@ export default function SplitPlanReview() {
   if (!plan) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 text-center">
-        <p className="text-sm" style={{ color: "#eadccf" }}>This plan could not be found.</p>
+        <p className="text-sm font-medium" style={{ color: "#f7f1e8" }}>This plan could not be found.</p>
         <button onClick={() => navigate("/")} className="mt-4 text-sm underline" style={{ color: "#f7f1e8" }}>
           Return to your flow
         </button>
@@ -291,7 +291,7 @@ export default function SplitPlanReview() {
         </button>
         <div>
           <h1 className="text-lg font-bold" style={{ color: "#f7f1e8" }}>Meal Plan Review</h1>
-          <p className="text-xs" style={{ color: "#eadccf" }}>{STATUS_LABELS[planStatus]}</p>
+          <p className="text-xs font-medium" style={{ color: "#f7f1e8" }}>{STATUS_LABELS[planStatus]}</p>
         </div>
       </div>
 
@@ -315,10 +315,10 @@ export default function SplitPlanReview() {
       {/* Safety states */}
       {!isTerminal && (
         <>
-          <p className="px-1 text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: "#eadccf" }}>
+          <p className="px-1 text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: "#f7f1e8" }}>
             Time to review your meal plan
           </p>
-          <p className="-mt-2 px-1 text-xs leading-relaxed" style={{ color: "#d8cec2" }}>
+          <p className="-mt-2 px-1 text-xs leading-relaxed" style={{ color: "#eef2e9" }}>
             Review your current glucose, direction, recent insulin, and active insulin before deciding whether to log a follow-up portion.
           </p>
 
@@ -434,8 +434,8 @@ export default function SplitPlanReview() {
             <button
               type="button"
               onClick={() => navigate("/")}
-              className="w-full py-2 text-sm font-medium transition hover:opacity-70"
-              style={{ color: "#eadccf" }}
+              className="w-full py-2 text-sm font-semibold transition hover:opacity-70"
+              style={{ color: "#f7f1e8" }}
             >
               Close
             </button>

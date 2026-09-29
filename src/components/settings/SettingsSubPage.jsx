@@ -14,8 +14,8 @@ export default function SettingsSubPage({ title, italicWord, children }) {
         <button
           type="button"
           onClick={() => navigate("/settings")}
-          className="flex h-8 w-8 shrink-0 items-center justify-center transition"
-          style={{ color: "#eadccf" }}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition"
+          style={{ color: "#f7f1e8" }}
           aria-label="Back to Settings"
         >
           <ChevronLeft className="h-5 w-5" />

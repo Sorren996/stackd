@@ -1,27 +1,36 @@
 import { useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Settings2 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 
 /**
- * Collapsible wrapper for rarely-touched settings. Starts collapsed;
- * tapping the header reveals the children with a smooth height animation.
+ * Progressive-disclosure wrapper for rarely-touched settings.
+ *
+ * Rendered as a plainly visible full-width interactive row (espresso label +
+ * rotating chevron) rather than faint caps text, so it reads like every other
+ * tappable row in the page and meets WCAG AA (no low-contrast gray label).
+ * Tapping it expands the children inline.
  */
 export default function AdvancedSection({ children, label = "Advanced" }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="space-y-3">
+    <div className="rounded-2xl p-5" style={{ background: "#fdf9f2", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between px-1 py-1 transition hover:opacity-70"
+        aria-expanded={open}
+        className="flex min-h-12 w-full items-center justify-between gap-3 rounded-xl px-1 text-left transition active:opacity-70"
       >
-        <span className="text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: "#746959" }}>{label}</span>
+        <span className="flex items-center gap-2.5 text-sm font-semibold" style={{ color: "#3f3830" }}>
+          <Settings2 className="h-4 w-4" style={{ color: "#5b6550" }} />
+          {label}
+        </span>
         <ChevronDown
-          className="h-4 w-4 transition-transform duration-200"
-          style={{ color: "#746959", transform: open ? "rotate(180deg)" : "rotate(0deg)" }}
+          className="h-5 w-5 transition-transform duration-200"
+          style={{ color: "#3f3830", transform: open ? "rotate(180deg)" : "rotate(0deg)" }}
         />
       </button>
+
       <AnimatePresence initial={false}>
         {open && (
           <motion.div
@@ -31,7 +40,7 @@ export default function AdvancedSection({ children, label = "Advanced" }) {
             transition={{ duration: 0.25, ease: "easeInOut" }}
             className="overflow-hidden"
           >
-            <div className="space-y-4 pt-1">{children}</div>
+            <div className="space-y-4 pt-4">{children}</div>
           </motion.div>
         )}
       </AnimatePresence>

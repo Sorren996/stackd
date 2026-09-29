@@ -14,6 +14,8 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import Landing from './pages/Landing';
 import Install from './pages/Install';
+import PrivacyPage from './pages/PrivacyPage';
+import PublicContactPage from './pages/PublicContactPage';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import History from './pages/History';
@@ -229,6 +231,8 @@ const AuthenticatedApp = () => {
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/" element={<Landing />} />
         <Route path="/install" element={<Install />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/contact" element={<PublicContactPage />} />
         <Route path="*" element={<SplashScreen showAuth />} />
       </Routes>
     );

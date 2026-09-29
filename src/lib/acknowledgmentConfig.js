@@ -118,9 +118,7 @@ export const LEGAL_DOCUMENTS = {
   terms: {
     title: "Terms of Use",
     version: ACKNOWLEDGMENT_VERSIONS.terms_version,
-    content: `[PLACEHOLDER: Replace with attorney-reviewed language before production launch.]
-
-Last updated: July 4, 2026 (Version ${ACKNOWLEDGMENT_VERSIONS.terms_version})
+    content: `Last updated: July 4, 2026 (Version ${ACKNOWLEDGMENT_VERSIONS.terms_version})
 
 1: Acceptance of Terms
 By creating an account and using Stackd ("the Service"), you agree to be bound by these Terms of Use. If you do not agree, do not use the Service.
@@ -158,9 +156,7 @@ For questions about these Terms, please contact Stackd support.`,
   privacy: {
     title: "Privacy Notice",
     version: ACKNOWLEDGMENT_VERSIONS.privacy_notice_version,
-    content: `[PLACEHOLDER: Replace with attorney-reviewed language before production launch.]
-
-Last updated: July 4, 2026 (Version ${ACKNOWLEDGMENT_VERSIONS.privacy_notice_version})
+    content: `Last updated: July 4, 2026 (Version ${ACKNOWLEDGMENT_VERSIONS.privacy_notice_version})
 
 1: Information We Collect
 Stackd collects and processes health information you choose to enter, including:
@@ -182,7 +178,7 @@ Your health information is used to provide the Service's features, including dis
 Your data is encrypted in transit and at rest. Only you can access your health records. We do not share, sell, or transmit your personal health information to third parties.
 
 4: Data Retention
-Your health data remains stored as long as your account is active. You can export or delete your data at any time from Settings.
+Your health data remains stored as long as your account is active. You can delete your data at any time from Settings.
 
 5: Consent and Withdrawal
 Your consent to health data processing is required to use the Service. You may withdraw consent at any time, which will restrict access to health-related features. Withdrawing consent does not automatically delete your existing data.

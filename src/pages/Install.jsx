@@ -12,7 +12,7 @@ export default function Install() {
   }, []);
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen" style={{ background: "#f7f1e8" }}>
       <LandingNav />
       <InstallGuide />
       <LandingFooter />

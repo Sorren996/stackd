@@ -43,7 +43,7 @@ export default function DoseMathTile({
         onClick={() => setOpen(true)}
         className="flex items-baseline gap-2 rounded-2xl px-1 py-1 text-left transition hover:opacity-70"
       >
-        <span className="text-3xl font-light tabular-nums leading-none" style={{ color: textValue ? "#3f3830" : "#b8aea0" }}>
+        <span className="text-3xl font-light tabular-nums leading-none" style={{ color: textValue ? "#3f3830" : "#746959" }}>
           {textValue || "--"}
         </span>
         {unit && <span className="text-xs font-medium" style={{ color: "#746959" }}>{unit}</span>}

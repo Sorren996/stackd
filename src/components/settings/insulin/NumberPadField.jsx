@@ -93,7 +93,7 @@ export default function NumberPadField({ label, value, onChange, placeholder = "
       style={{ background: "#f7f1e8", border: "1px solid #eadccf" }}
     >
       <button type="button" onClick={() => setOpen((v) => !v)} className="flex min-h-12 w-full items-baseline gap-1.5 text-left">
-        <span className="text-xl font-bold tabular-nums leading-none" style={{ color: textValue ? "#3f3830" : "#b8aea0" }}>{textValue || placeholder}</span>
+        <span className="text-xl font-bold tabular-nums leading-none" style={{ color: textValue ? "#3f3830" : "#746959" }}>{textValue || placeholder}</span>
         {unit && <span className="text-[10px] font-medium" style={{ color: "#746959" }}>{unit}</span>}
       </button>
       <CustomInputTray open={open} onClose={() => setOpen(false)} title={label} anchorRef={fieldRef}>

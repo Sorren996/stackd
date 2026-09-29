@@ -38,8 +38,18 @@ export default function LandingFooter() {
           >
             Install
           </Link>
-          <span className="text-white/55">Privacy</span>
-          <span className="text-white/55">Contact</span>
+          <Link
+            to="/privacy"
+            className="text-white/55 transition-colors hover:text-white"
+          >
+            Privacy
+          </Link>
+          <Link
+            to="/contact"
+            className="text-white/55 transition-colors hover:text-white"
+          >
+            Contact
+          </Link>
         </div>
         <p className="mx-auto mt-6 max-w-xl text-center text-xs leading-relaxed text-white/35">
           Stackd is a review and organization tool, not a medical device, and
