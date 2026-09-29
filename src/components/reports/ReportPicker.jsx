@@ -40,7 +40,7 @@ export default function ReportPicker({ onGenerate }) {
   const isNoneSelected = selected.size === 0;
 
   return (
-    <div className="mx-auto max-w-md space-y-4 pb-36 pt-1">
+    <div className="mx-auto max-w-md space-y-4 pt-1">
       <PageHeader italicWord="reports" />
 
       {/* Step 1 — date range */}
@@ -123,16 +123,16 @@ export default function ReportPicker({ onGenerate }) {
           onClick={handleGenerate}
           disabled={isNoneSelected}
           className="flex w-full items-center justify-center gap-2 rounded-2xl py-5 text-base font-semibold transition active:opacity-80 disabled:opacity-50"
-          style={{ background: "#3f3830", color: "#f7f1e8", boxShadow: "0 8px 28px rgba(63,56,48,0.20)" }}
-        >
+          style={{ background: "#3f3830", color: "#f7f1e8", boxShadow: "0 8px 28px rgba(63,56,48,0.20)" }}>
+          
           Generate {effectiveDays}-day report
           <ChevronRight className="h-5 w-5" />
         </button>
-        {isNoneSelected && (
-          <p className="mt-2 text-center text-[11px]" style={{ color: "#6b6153" }}>
+        {isNoneSelected &&
+        <p className="mt-2 text-center text-[11px]" style={{ color: "#6b6153" }}>
             Pick at least one report to continue.
           </p>
-        )}
+        }
       </div>
 
       <p className="px-2 pt-2 text-center text-[11px] leading-relaxed" style={{ color: "#f7f1e8" }}>
