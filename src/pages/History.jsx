@@ -31,7 +31,7 @@ function readTargetRange() {
 
   return {
     low: Number.isFinite(low) ? low : 70,
-    high: Number.isFinite(high) ? high : 180,
+    high: Number.isFinite(high) ? high : 180
   };
 }
 
@@ -63,7 +63,7 @@ function mergeDateTime(dateValue, timeValue) {
 
 function replaceCachedItem(queryClient, queryKey, updatedItem) {
   queryClient.setQueryData(queryKey, (current = []) =>
-    Array.isArray(current) ? current.map((item) => (item.id === updatedItem.id ? { ...item, ...updatedItem } : item)) : current
+  Array.isArray(current) ? current.map((item) => item.id === updatedItem.id ? { ...item, ...updatedItem } : item) : current
   );
 }
 
@@ -77,7 +77,7 @@ function getEditInitialForm(log) {
       correction_units: String(log.item.correction_units ?? ""),
       date: toDateValue(log.item.administered_at),
       time: toTimeValue(log.item.administered_at),
-      notes: log.item.notes || "",
+      notes: log.item.notes || ""
     };
   }
   if (log.type === "glucose") {
@@ -85,7 +85,7 @@ function getEditInitialForm(log) {
       value: String(log.item.value ?? ""),
       date: toDateValue(log.item.recorded_at),
       time: toTimeValue(log.item.recorded_at),
-      notes: log.item.notes || "",
+      notes: log.item.notes || ""
     };
   }
   return {
@@ -97,21 +97,21 @@ function getEditInitialForm(log) {
     is_rescue_carb: log.item.is_rescue_carb === true || log.item.classification === "rescue_carbs",
     date: toDateValue(log.item.consumed_at),
     time: toTimeValue(log.item.consumed_at),
-    notes: log.item.notes || "",
+    notes: log.item.notes || ""
   };
 }
 
 const insulinTypeOptions = Object.entries(INSULIN_PROFILES).map(([name, profile]) => ({
   value: name,
   label: name,
-  description: profile.category,
+  description: profile.category
 }));
 
 const absorptionProfileOptions = [
-  { value: "fast", label: "Fast", description: "Fast carbs" },
-  { value: "medium", label: "Medium", description: "Balanced carbs" },
-  { value: "slow", label: "Slow", description: "Slow carbs" },
-];
+{ value: "fast", label: "Fast", description: "Fast carbs" },
+{ value: "medium", label: "Medium", description: "Balanced carbs" },
+{ value: "slow", label: "Slow", description: "Slow carbs" }];
+
 
 function EditLogSheet({ log, onClose, onSave, isSaving }) {
   const [form, setForm] = useState(() => getEditInitialForm(log));
@@ -147,8 +147,8 @@ function EditLogSheet({ log, onClose, onSave, isSaving }) {
           meal_units: Number.isFinite(mealUnits) ? mealUnits : undefined,
           correction_units: Number.isFinite(correctionUnits) ? correctionUnits : undefined,
           administered_at: administeredAt,
-          notes: form.notes || undefined,
-        },
+          notes: form.notes || undefined
+        }
       });
       return;
     }
@@ -167,8 +167,8 @@ function EditLogSheet({ log, onClose, onSave, isSaving }) {
         patch: {
           value,
           recorded_at: recordedAt,
-          notes: form.notes || undefined,
-        },
+          notes: form.notes || undefined
+        }
       });
       return;
     }
@@ -193,8 +193,8 @@ function EditLogSheet({ log, onClose, onSave, isSaving }) {
         notes: form.notes || undefined,
         fat_grams: Number(form.fat_grams) || 0,
         protein_grams: Number(form.protein_grams) || 0,
-        is_rescue_carb: form.is_rescue_carb || false,
-      },
+        is_rescue_carb: form.is_rescue_carb || false
+      }
     });
   };
 
@@ -216,49 +216,49 @@ function EditLogSheet({ log, onClose, onSave, isSaving }) {
         </div>
 
         <div className="space-y-4">
-          {log.type === "insulin" && (
-            <>
+          {log.type === "insulin" &&
+          <>
               <SelectField
-                label="Insulin type"
-                value={form.insulin_type}
-                onChange={(value) => updateField("insulin_type", value)}
-                options={insulinTypeOptions}
-                placeholder="Insulin type"
-              />
+              label="Insulin type"
+              value={form.insulin_type}
+              onChange={(value) => updateField("insulin_type", value)}
+              options={insulinTypeOptions}
+              placeholder="Insulin type" />
+            
               <div className="grid grid-cols-1 gap-2">
                 <NumberPadField label="Total" value={form.units} onChange={(value) => updateField("units", value)} />
                 <NumberPadField label="Meal" value={form.meal_units} onChange={(value) => updateField("meal_units", value)} />
                 <NumberPadField label="Correction" value={form.correction_units} onChange={(value) => updateField("correction_units", value)} />
               </div>
             </>
-          )}
+          }
 
-          {log.type === "glucose" && (
-            <NumberPadField label="Glucose" value={form.value} onChange={(value) => updateField("value", value.replace(/\D/g, "").slice(0, 3))} decimal={false} maxLength={3} />
-          )}
+          {log.type === "glucose" &&
+          <NumberPadField label="Glucose" value={form.value} onChange={(value) => updateField("value", value.replace(/\D/g, "").slice(0, 3))} decimal={false} maxLength={3} />
+          }
 
-          {log.type === "carbs" && (
-            <>
+          {log.type === "carbs" &&
+          <>
               <TextPadField label="Food" value={form.food_name} onChange={(value) => updateField("food_name", value)} placeholder="Food" />
               <div className="grid grid-cols-2 gap-2">
                 <NumberPadField label="Carbs" value={form.carbs} onChange={(value) => updateField("carbs", value)} />
                 <SelectField
-                  label="Absorption"
-                  value={form.absorption_profile}
-                  onChange={(value) => updateField("absorption_profile", value)}
-                  options={absorptionProfileOptions}
-                />
+                label="Absorption"
+                value={form.absorption_profile}
+                onChange={(value) => updateField("absorption_profile", value)}
+                options={absorptionProfileOptions} />
+              
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <NumberPadField label="Protein" value={form.protein_grams} onChange={(value) => updateField("protein_grams", value)} unit="g" />
                 <NumberPadField label="Fat" value={form.fat_grams} onChange={(value) => updateField("fat_grams", value)} unit="g" />
               </div>
               <RescueCarbCheckbox
-                checked={form.is_rescue_carb}
-                onChange={(checked) => updateField("is_rescue_carb", checked)}
-              />
+              checked={form.is_rescue_carb}
+              onChange={(checked) => updateField("is_rescue_carb", checked)} />
+            
             </>
-          )}
+          }
 
           <DateScrollField label="Date" value={form.date} onChange={(value) => updateField("date", value)} max={todayDateValue} />
           <TimeScrollField label="Logged at" value={form.time} onChange={(value) => updateField("time", value)} max={form.date === todayDateValue ? nowTimeString : undefined} />
@@ -268,8 +268,8 @@ function EditLogSheet({ log, onClose, onSave, isSaving }) {
           </button>
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 export default function History() {
@@ -302,12 +302,12 @@ export default function History() {
     queryKey: ["history-summary"],
     queryFn: async () => {
       const res = await base44.functions.invoke("getHistorySummary", {
-        tzOffsetMinutes: new Date().getTimezoneOffset(),
+        tzOffsetMinutes: new Date().getTimezoneOffset()
       });
       return res.data;
     },
     staleTime: 5 * 60 * 1000,
-    gcTime: 30 * 60 * 1000,
+    gcTime: 30 * 60 * 1000
   });
 
   const allDays = summary?.days || [];
@@ -317,7 +317,7 @@ export default function History() {
   const months = useMemo(() => groupDaysByMonth(allDays), [allDays]);
   const currentMonth = useMemo(() => months.find((m) => m.key === selectedMonth) || null, [months, selectedMonth]);
   const monthDays = useMemo(
-    () => (currentMonth ? [...currentMonth.days].sort((a, b) => b.date.localeCompare(a.date)) : []),
+    () => currentMonth ? [...currentMonth.days].sort((a, b) => b.date.localeCompare(a.date)) : [],
     [currentMonth]
   );
   const selectedDaySummary = useMemo(
@@ -347,17 +347,17 @@ export default function History() {
       const start = new Date(`${selectedDay}T00:00:00`).toISOString();
       const end = new Date(`${selectedDay}T23:59:59`).toISOString();
       const [glucose, carbs, insulin] = await Promise.all([
-        base44.entities.GlucoseReading.filter({ recorded_at: { $gte: start, $lte: end } }, "-recorded_at", 1000),
-        base44.entities.CarbEntry.filter({ consumed_at: { $gte: start, $lte: end } }, "-consumed_at", 500),
-        base44.entities.InsulinDose.filter({ administered_at: { $gte: start, $lte: end } }, "-administered_at", 500),
-      ]);
+      base44.entities.GlucoseReading.filter({ recorded_at: { $gte: start, $lte: end } }, "-recorded_at", 1000),
+      base44.entities.CarbEntry.filter({ consumed_at: { $gte: start, $lte: end } }, "-consumed_at", 500),
+      base44.entities.InsulinDose.filter({ administered_at: { $gte: start, $lte: end } }, "-administered_at", 500)]
+      );
       return {
         glucose: glucose.filter((g) => g.source !== "system"),
         carbs,
-        insulin,
+        insulin
       };
     },
-    enabled: level === "recap" && !!selectedDay,
+    enabled: level === "recap" && !!selectedDay
   });
 
   const { data: monthReadings = [], isLoading: loadingMonthReadings } = useQuery({
@@ -374,7 +374,7 @@ export default function History() {
       );
     },
     enabled: level === "days" && !!selectedMonth,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 5 * 60 * 1000
   });
 
   const readingsByDay = useMemo(() => {
@@ -423,7 +423,7 @@ export default function History() {
         }
       })();
     },
-    onError: () => toast.error("This moment has been preserved and can't be removed."),
+    onError: () => toast.error("This moment has been preserved and can't be removed.")
   });
 
   const deleteGlucose = useMutation({
@@ -435,7 +435,7 @@ export default function History() {
       invalidateHistory();
       toast.success("Reading gently removed");
     },
-    onError: () => toast.error("This moment has been preserved and can't be removed."),
+    onError: () => toast.error("This moment has been preserved and can't be removed.")
   });
 
   const deleteCarb = useMutation({
@@ -451,7 +451,7 @@ export default function History() {
         }
       })();
     },
-    onError: () => toast.error("This moment has been preserved and can't be removed."),
+    onError: () => toast.error("This moment has been preserved and can't be removed.")
   });
 
   const updateLog = useMutation({
@@ -486,7 +486,7 @@ export default function History() {
       toast.success("Moment updated");
       setEditingLog(null);
     },
-    onError: () => toast.error("Unable to update log. It may have been preserved."),
+    onError: () => toast.error("Unable to update log. It may have been preserved.")
   });
 
   const handleSelectMonth = (key) => {
@@ -519,11 +519,11 @@ export default function History() {
     headerTitle = `${currentMonth.label} ${currentMonth.year}`;
     const s = monthStats(currentMonth);
     const tracked = currentMonth.days.filter((d) => d.glucose.count > 0).length;
-    headerSub = s.glucoseCount
-      ? `${tracked} day${tracked === 1 ? "" : "s"} tracked, ${s.inRangePct}% in range`
-      : tracked
-        ? `${tracked} day${tracked === 1 ? "" : "s"} tracked`
-        : "No moments yet";
+    headerSub = s.glucoseCount ?
+    `${tracked} day${tracked === 1 ? "" : "s"} tracked, ${s.inRangePct}% in range` :
+    tracked ?
+    `${tracked} day${tracked === 1 ? "" : "s"} tracked` :
+    "No moments yet";
   } else if (level === "recap" && selectedDay) {
     headerTitle = format(parseISO(selectedDay), "EEEE, MMMM d");
     headerSub = "Your day at a glance";
@@ -533,8 +533,8 @@ export default function History() {
     return (
       <div className="flex items-center justify-center h-[60vh]">
         <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-      </div>
-    );
+      </div>);
+
   }
 
   return (
@@ -543,20 +543,20 @@ export default function History() {
         log={editingLog}
         onClose={() => setEditingLog(null)}
         onSave={(payload) => updateLog.mutate(payload)}
-        isSaving={updateLog.isPending}
-      />
+        isSaving={updateLog.isPending} />
+      
 
-      {level === "month" ? (
-        <PageHeader italicWord="journal" />
-      ) : (
-        <div className="flex items-center gap-3 px-1 pb-3">
+      {level === "month" ?
+      <PageHeader italicWord="journal" /> :
+
+      <div className="flex items-center gap-3 px-1 pb-3">
           <button
-            type="button"
-            onClick={goBack}
-            aria-label="Back"
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition"
-            style={{ color: "#f7f1e8" }}
-          >
+          type="button"
+          onClick={goBack}
+          aria-label="Back"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition"
+          style={{ color: "#f7f1e8" }}>
+          
             <ChevronLeft className="h-5 w-5" />
           </button>
           <div className="min-w-0 flex-1">
@@ -565,40 +565,40 @@ export default function History() {
             </h2>
             <p className="text-xs font-medium" style={{ color: "#f7f1e8" }}>{headerSub}</p>
           </div>
-        {level === "recap" && selectedDay && allDays.length > 1 && (
-          <div className="ml-auto flex items-center gap-1.5">
+        {level === "recap" && selectedDay && allDays.length > 1 &&
+        <div className="ml-auto flex items-center gap-1.5">
             <button
-              type="button"
-              onClick={() => {
-                const sorted = [...allDays].sort((a, b) => a.date.localeCompare(b.date));
-                const idx = sorted.findIndex((d) => d.date === selectedDay);
-                if (idx > 0) handleSelectDay(sorted[idx - 1].date, -1);
-              }}
-              disabled={!allDays.some((d) => d.date < selectedDay)}
-              aria-label="Previous day"
-              className="flex h-8 w-8 items-center justify-center rounded-full transition disabled:opacity-30"
-              style={{ color: "#f7f1e8" }}
-            >
+            type="button"
+            onClick={() => {
+              const sorted = [...allDays].sort((a, b) => a.date.localeCompare(b.date));
+              const idx = sorted.findIndex((d) => d.date === selectedDay);
+              if (idx > 0) handleSelectDay(sorted[idx - 1].date, -1);
+            }}
+            disabled={!allDays.some((d) => d.date < selectedDay)}
+            aria-label="Previous day"
+            className="flex h-8 w-8 items-center justify-center rounded-full transition disabled:opacity-30"
+            style={{ color: "#f7f1e8" }}>
+            
               <ChevronLeft className="h-4 w-4" />
             </button>
             <button
-              type="button"
-              onClick={() => {
-                const sorted = [...allDays].sort((a, b) => a.date.localeCompare(b.date));
-                const idx = sorted.findIndex((d) => d.date === selectedDay);
-                if (idx < sorted.length - 1) handleSelectDay(sorted[idx + 1].date, 1);
-              }}
-              disabled={!allDays.some((d) => d.date > selectedDay)}
-              aria-label="Next day"
-              className="flex h-8 w-8 items-center justify-center rounded-full transition disabled:opacity-30"
-              style={{ color: "#f7f1e8" }}
-            >
+            type="button"
+            onClick={() => {
+              const sorted = [...allDays].sort((a, b) => a.date.localeCompare(b.date));
+              const idx = sorted.findIndex((d) => d.date === selectedDay);
+              if (idx < sorted.length - 1) handleSelectDay(sorted[idx + 1].date, 1);
+            }}
+            disabled={!allDays.some((d) => d.date > selectedDay)}
+            aria-label="Next day"
+            className="flex h-8 w-8 items-center justify-center rounded-full transition disabled:opacity-30"
+            style={{ color: "#f7f1e8" }}>
+            
               <ChevronRight className="h-5 w-5" />
             </button>
           </div>
-        )}
+        }
       </div>
-      )}
+      }
 
       <AnimatePresence mode="wait" custom={direction}>
         <motion.div
@@ -607,83 +607,83 @@ export default function History() {
           initial={{ opacity: 0, x: direction > 0 ? 28 : -28 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: direction > 0 ? -28 : 28 }}
-          transition={{ duration: 0.28, ease: [0.4, 0, 0.2, 1] }}
-        >
-          {level === "month" && isAdmin && (
-            <SectionCard>
+          transition={{ duration: 0.28, ease: [0.4, 0, 0.2, 1] }}>
+          
+          {level === "month" && isAdmin &&
+          <SectionCard>
               <LedgerRow label="Stackd: Insight" value="Generate Reports" to="/insights" />
             </SectionCard>
-          )}
+          }
 
-          {level === "month" && (
-            <>
+          {level === "month" &&
+          <>
               <SectionCard label="Months Tracked">
                 <HistoryMonthView months={months} onSelectMonth={handleSelectMonth} />
               </SectionCard>
-              <p className="px-1 pt-2 text-xs italic" style={{ color: "#f7f1e8", opacity: 0.7 }}>
+              <p className="px-1 pt-2 text-xs italic text-center" style={{ color: "#f7f1e8", opacity: 0.7 }}>
                 We gently hold the last 90 days of your journey.
               </p>
             </>
-          )}
+          }
 
-          {level === "days" && currentMonth && (
-            <>
+          {level === "days" && currentMonth &&
+          <>
               <div className="flex justify-center px-1 mb-4">
                 <div className="inline-flex rounded-full p-1" style={{ background: "#f0e8db" }}>
                   <button
-                    type="button"
-                    onClick={() => setViewMode("list")}
-                    className="rounded-full px-4 py-1.5 text-xs font-semibold transition"
-                    style={{ background: viewMode === "list" ? "#3f3830" : "transparent", color: viewMode === "list" ? "#f7f1e8" : "#6b6153" }}
-                  >
+                  type="button"
+                  onClick={() => setViewMode("list")}
+                  className="rounded-full px-4 py-1.5 text-xs font-semibold transition"
+                  style={{ background: viewMode === "list" ? "#3f3830" : "transparent", color: viewMode === "list" ? "#f7f1e8" : "#6b6153" }}>
+                  
                     List
                   </button>
                   <button
-                    type="button"
-                    onClick={() => setViewMode("calendar")}
-                    className="rounded-full px-4 py-1.5 text-xs font-semibold transition"
-                    style={{ background: viewMode === "calendar" ? "#3f3830" : "transparent", color: viewMode === "calendar" ? "#f7f1e8" : "#6b6153" }}
-                  >
+                  type="button"
+                  onClick={() => setViewMode("calendar")}
+                  className="rounded-full px-4 py-1.5 text-xs font-semibold transition"
+                  style={{ background: viewMode === "calendar" ? "#3f3830" : "transparent", color: viewMode === "calendar" ? "#f7f1e8" : "#6b6153" }}>
+                  
                     Calendar
                   </button>
                 </div>
               </div>
 
-              {viewMode === "list" ? (
-                <HistoryWeekList
-                  days={monthDays}
-                  readingsByDay={readingsByDay}
-                  targetLow={targetLow}
-                  targetHigh={targetHigh}
-                  onSelectDay={handleSelectDay}
-                />
-              ) : (
-                <SectionCard label={`${currentMonth.label} ${currentMonth.year}`}>
-                  <MonthHeatmap days={calendarDays} onSelectDay={handleSelectDay} />
-                </SectionCard>
-              )}
-            </>
-          )}
-
-          {level === "recap" && selectedDay && (
-            <DayRecap
-              allDays={allDays}
-              daySummary={selectedDaySummary}
-              glucose={recapData.glucose || []}
-              carbs={recapData.carbs || []}
-              insulin={recapData.insulin || []}
-              loading={loadingRecap}
-              dexcomConnected={dexcomConnected}
+              {viewMode === "list" ?
+            <HistoryWeekList
+              days={monthDays}
+              readingsByDay={readingsByDay}
               targetLow={targetLow}
               targetHigh={targetHigh}
-              onEdit={(payload) => setEditingLog(payload)}
-              onDeleteDose={(id) => deleteDose.mutate(id)}
-              onDeleteGlucose={(id) => deleteGlucose.mutate(id)}
-              onDeleteCarb={(id) => deleteCarb.mutate(id)}
-            />
-          )}
+              onSelectDay={handleSelectDay} /> :
+
+
+            <SectionCard label={`${currentMonth.label} ${currentMonth.year}`}>
+                  <MonthHeatmap days={calendarDays} onSelectDay={handleSelectDay} />
+                </SectionCard>
+            }
+            </>
+          }
+
+          {level === "recap" && selectedDay &&
+          <DayRecap
+            allDays={allDays}
+            daySummary={selectedDaySummary}
+            glucose={recapData.glucose || []}
+            carbs={recapData.carbs || []}
+            insulin={recapData.insulin || []}
+            loading={loadingRecap}
+            dexcomConnected={dexcomConnected}
+            targetLow={targetLow}
+            targetHigh={targetHigh}
+            onEdit={(payload) => setEditingLog(payload)}
+            onDeleteDose={(id) => deleteDose.mutate(id)}
+            onDeleteGlucose={(id) => deleteGlucose.mutate(id)}
+            onDeleteCarb={(id) => deleteCarb.mutate(id)} />
+
+          }
         </motion.div>
       </AnimatePresence>
-    </div>
-  );
+    </div>);
+
 }
