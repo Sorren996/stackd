@@ -4,7 +4,6 @@ const VIEWS = [
   { value: 3, label: "3h" },
   { value: 6, label: "6h" },
   { value: 12, label: "12h" },
-  { value: 24, label: "24h" },
 ];
 
 export default function TimeViewToggle({ value, onChange }) {
