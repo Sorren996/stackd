@@ -118,11 +118,11 @@ function sectionHeader(doc, y, title, subtitle) {
     const tw = doc.getTextWidth(subtitle);
     doc.text(subtitle, W - M - tw, y);
   }
-  y += 5;
+  y += 6;
   doc.setDrawColor(...HAIR);
   doc.setLineWidth(0.8);
   doc.line(M, y, W - M, y);
-  return y + 12;
+  return y + 16;
 }
 
 // ── Time-in-range bar (5 colored segments, NO on-band % text) ───────────────
@@ -155,7 +155,9 @@ function tirBar(doc, x, y, w, h, bands) {
   return { y: y + h };
 }
 
-// Legend below the bar — colored dot + label + % as dark text, two columns.
+// Legend below the bar — colored dot + label + % as dark text, stacked
+// vertically so items never collide (the Compare section draws two of these
+// side-by-side in narrow columns, where the old two-column layout overlapped).
 function tirLegend(doc, x, y, bands) {
   const order = ["veryLow", "low", "target", "high", "veryHigh"];
   const present = order
@@ -164,25 +166,21 @@ function tirLegend(doc, x, y, bands) {
       const b = (bands || []).find((bb) => bb.key === key);
       return { key, percent: b.percent, display: b.display || "" };
     });
-  const colW = CW / 2;
   let yy = y;
-  present.forEach((it, i) => {
-    const col = Math.floor(i / 3);
-    const row = i % 3;
-    const lx = x + col * colW;
-    const ly = yy + row * 17;
+  present.forEach((it) => {
     doc.setFillColor(...RANGE[it.key]);
-    doc.rect(lx, ly - 7, 8, 8, "F");
+    doc.rect(x, yy - 7, 8, 8, "F");
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
     doc.setTextColor(...GRAY);
     doc.text(
       `${RANGE_LABEL[it.key]}${it.display ? ` (${it.display})` : ""} — ${it.percent}%`,
-      lx + 12,
-      ly
+      x + 12,
+      yy
     );
+    yy += 14;
   });
-  return yy + Math.ceil(present.length / 3) * 17;
+  return yy;
 }
 
 // ── Vector glucose line chart ───────────────────────────────────────────────
@@ -501,7 +499,7 @@ function renderOverview(doc, reports, y) {
   doc.setFontSize(7);
   doc.setTextColor(...MUTED);
   doc.text("Shaded bands are the 5th–95th and 25th–75th percentiles; the line is the median.", M, base + hh + 22);
-  y = base + hh + 30;
+  y = base + hh + 38;
   return y;
 }
 
@@ -639,17 +637,38 @@ const WEEK_COLORS = [
 ];
 
 function renderOverlay(doc, reports, y) {
-  const weeks = reports?.overlay || [];
-  if (!weeks.length) return y;
+  const allWeeks = (reports?.overlay || []).filter(
+    (wk) => (wk.days || []).some((d) => d.hasData)
+  );
+  if (!allWeeks.length) return y;
   y = ensureSpace(doc, y, 30);
-  y = sectionHeader(doc, y, "Weekly Overlay", "Each day of a week on one 24-hour chart");
+  y = sectionHeader(
+    doc,
+    y,
+    "Weekly Overlay",
+    "Your most recent week beside an earlier comparison week"
+  );
 
-  for (const wk of weeks) {
-    y = ensureSpace(doc, y, 150);
+  // Shrink to two weeks: the most recent, plus one comparison week (about four
+  // weeks prior when available, otherwise the earliest). One full page per
+  // week is gone, so a 30-day window no longer sprawls across five overlay pages.
+  let selected;
+  if (allWeeks.length === 1) {
+    selected = [allWeeks[0]];
+  } else if (allWeeks.length >= 5) {
+    selected = [allWeeks[allWeeks.length - 5], allWeeks[allWeeks.length - 1]];
+  } else {
+    selected = [allWeeks[0], allWeeks[allWeeks.length - 1]];
+  }
+
+  for (const wk of selected) {
+    const dataDays = (wk.days || []).filter((d) => d.hasData).length;
+    const isPartial = dataDays < 7;
+    y = ensureSpace(doc, y, 160);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(9);
     doc.setTextColor(...INK);
-    doc.text(`Week of ${fmtDay(wk.weekStart)}`, M, y);
+    doc.text(`Week of ${fmtDay(wk.weekStart)}${isPartial ? "  ·  partial week" : ""}`, M, y);
     y += 8;
     const base = y;
     const hh = 105;
@@ -692,15 +711,24 @@ function renderOverlay(doc, reports, y) {
     const days = wk.days || [];
     const dayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     for (let d = 0; d < 7; d++) {
-      const any = days.find((x) => x.weekday === d);
       doc.setFillColor(...WEEK_COLORS[d]);
       doc.rect(lx, base + hh + 15, 6, 6, "F");
-      doc.text(any && any.hasData ? dayLabels[d] : dayLabels[d], lx + 9, base + hh + 20);
+      doc.text(dayLabels[d], lx + 9, base + hh + 20);
       lx += 9 + doc.getTextWidth(dayLabels[d]) + 12;
     }
-    y = base + hh + 30;
+    if (isPartial) {
+      doc.setFont("helvetica", "italic");
+      doc.setFontSize(6.5);
+      doc.setTextColor(...MUTED);
+      doc.text(
+        `${dataDays} day${dataDays > 1 ? "s" : ""} of this week fall inside the selected window.`,
+        M,
+        base + hh + 30
+      );
+    }
+    y = base + hh + (isPartial ? 40 : 30);
   }
-  return y + 4;
+  return y + 8;
 }
 
 // ── Section: Daily — compact summary table + sparkline thumbnails ───────────
@@ -709,36 +737,7 @@ function renderDaily(doc, reports, y) {
   const patterns = reports?.patterns;
   if (!daily && !patterns) return y;
 
-  // 1) Full-detail days — Best and Hardest ONLY (the 66-page driver is gone).
-  if (patterns && (patterns.bestDay || patterns.worstDay)) {
-    const findEvents = (date) =>
-      date ? (reports.daily?.pages || []).find((pg) => pg.date === date)?.events || [] : [];
-    if (patterns.bestDay) {
-      y = renderDayDetail(
-        doc,
-        reports,
-        y,
-        `Best day · ${fmtDay(patterns.bestDay.date)}`,
-        "Most time in target",
-        patterns.bestDay,
-        findEvents(patterns.bestDay.date)
-      );
-    }
-    if (patterns.worstDay) {
-      y = ensureSpace(doc, y, 30);
-      y = renderDayDetail(
-        doc,
-        reports,
-        y,
-        `Hardest day · ${fmtDay(patterns.worstDay.date)}`,
-        "Least time in target",
-        patterns.worstDay,
-        findEvents(patterns.worstDay.date)
-      );
-    }
-  }
-
-  // 2) Compact per-day summary table (all days, one row each).
+  // 1) Compact per-day summary table (all days, one row each) — the summary.
   const pages = (daily?.pages || []).slice();
   if (pages.length) {
     y = ensureSpace(doc, y, 40);
@@ -769,47 +768,75 @@ function renderDaily(doc, reports, y) {
       { label: "Insulin", width: colW * 0.85, align: "right" },
       { label: "# Doses", width: colW * 0.7, align: "right" },
     ];
-    y = table(doc, M, y, cols, rows, { rowH: 15 }) + 6;
+    y = table(doc, M, y, cols, rows, { rowH: 15 }) + 8;
   }
 
-  // 3) Sparkline thumbnails for each day (with date + TIR%).
-  if (pages.length) {
-    y = ensureSpace(doc, y, 40);
-    y = sectionHeader(doc, y, "Day Thumbnails", "Glucose shape for every day");
-    const perRow = 2;         // 2 columns
-    const itemsPerBlock = 6;  // 3 rows of 2
-    const cellW = (CW - 24) / 2;
-    const cellH = 56;
-    const rows2 = [];
-    for (const pg of pages) {
-      rows2.push({ date: pg.date, tir: pg.tirPercent ?? 0, series: pg.series || [] });
+  // 2) Best / Hardest day spotlights — the highlights.
+  if (patterns && (patterns.bestDay || patterns.worstDay)) {
+    const findEvents = (date) =>
+      date ? (reports.daily?.pages || []).find((pg) => pg.date === date)?.events || [] : [];
+    if (patterns.bestDay) {
+      y = ensureSpace(doc, y, 30);
+      y = renderDayDetail(
+        doc,
+        reports,
+        y,
+        `Best day · ${fmtDay(patterns.bestDay.date)}`,
+        "Most time in target",
+        patterns.bestDay,
+        findEvents(patterns.bestDay.date)
+      );
     }
-    for (let i = 0; i < rows2.length; i += itemsPerBlock) {
-      const block = rows2.slice(i, i + itemsPerBlock);
-      y = ensureSpace(doc, y, 3 * cellH + 8);
-      block.forEach((item, bi) => {
-        const col = bi % perRow;
-        const row = Math.floor(bi / perRow);
-        const cx = M + col * (cellW + 24);
-        const cy = y + row * cellH;
-        // label + TIR
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(7.5);
-        doc.setTextColor(...INK);
-        doc.text(fmtDay(item.date), cx, cy);
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(7);
-        doc.setTextColor(...item.tir >= 70 ? RANGE.target : GRAY);
-        doc.text(`TIR ${item.tir}%`, cx + 66, cy);
-        sparkline(doc, cx, cy + 4, cellW, cellH - 10, item.series);
-        doc.setDrawColor(...GRID);
-        doc.setLineWidth(0.4);
-        doc.rect(cx, cy + 2, cellW, cellH - 8);
-      });
-      y += 3 * cellH + 10;
+    if (patterns.worstDay) {
+      y = ensureSpace(doc, y, 30);
+      y = renderDayDetail(
+        doc,
+        reports,
+        y,
+        `Hardest day · ${fmtDay(patterns.worstDay.date)}`,
+        "Least time in target",
+        patterns.worstDay,
+        findEvents(patterns.worstDay.date)
+      );
     }
   }
-  return y + 4;
+
+  // 3) Daily Profiles — one compact curve per day (date + TIR + sparkline),
+  //    consolidating the former Day Thumbnails and AGP Daily Profiles into a
+  //    single per-day detail grid so the curve is shown once, not twice.
+  if (pages.length) {
+    y = ensureSpace(doc, y, 40);
+    y = sectionHeader(doc, y, "Daily Profiles", "One compact curve for each day");
+    const perRow = 4;
+    const cellW = (CW - 3 * 14) / perRow;
+    const cellH = 54;
+    const rowGap = 14;
+    for (let i = 0; i < pages.length; i++) {
+      if (i % perRow === 0) {
+        y = ensureSpace(doc, y, cellH + rowGap + 6);
+      }
+      const col = i % perRow;
+      const row = Math.floor(i / perRow);
+      const cx = M + col * (cellW + 14);
+      const cy = y + row * (cellH + rowGap);
+      const pg = pages[i];
+      const tir = pg.tirPercent ?? 0;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(7);
+      doc.setTextColor(...INK);
+      doc.text(fmtDay(pg.date), cx, cy);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(6.5);
+      doc.setTextColor(...(tir >= 70 ? RANGE.target : GRAY));
+      doc.text(`TIR ${tir}%`, cx + cellW, cy, { align: "right" });
+      sparkline(doc, cx, cy + 3, cellW, cellH - 12, pg.series || []);
+      doc.setDrawColor(...GRID);
+      doc.setLineWidth(0.4);
+      doc.rect(cx, cy + 2, cellW, cellH - 8);
+    }
+    y += Math.ceil(pages.length / perRow) * (cellH + rowGap) + 6;
+  }
+  return y + 8;
 }
 
 // ── Section: Compare ────────────────────────────────────────────────────────
@@ -910,9 +937,9 @@ function renderDailyStats(doc, reports, y) {
       label,
       ...dayCols.map((dc) => f(mode[dc])),
     ]);
-    y = table(doc, M, y, cols, rows, { rowH: 15 }) + 8;
+    y = table(doc, M, y, cols, rows, { rowH: 15 }) + 14;
   }
-  return y + 4;
+  return y + 8;
 }
 
 // ── Section: Hourly Statistics ──────────────────────────────────────────────
@@ -1026,34 +1053,8 @@ function renderAgp(doc, reports, y) {
   doc.setFontSize(7);
   doc.setTextColor(...MUTED);
   doc.text("IQR envelope and median, like the standard AGP format.", M, base + hh + 22);
-  y = base + hh + 30;
-
-  // Daily mini-profiles (week-by-week texture) — small vector tiles.
-  const profs = agp.dailyProfiles || [];
-  if (profs.length) {
-    y = ensureSpace(doc, y, 40);
-    y = sectionHeader(doc, y, "Daily Profiles", "A small curve for each day");
-    const perRow = 4;
-    const cellW = (CW - 3 * 16) / perRow;
-    const cellH = 52;
-    profs.forEach((dp, i) => {
-      if (i > 0 && i % (perRow) === 0) y = ensureSpace(doc, y, cellH + 12);
-      const col = i % perRow;
-      const row = Math.floor(i / perRow);
-      const cx = M + col * (cellW + 16);
-      const cy = y + row * (cellH + 16);
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(6.5);
-      doc.setTextColor(...GRAY);
-      doc.text(fmtDay(dp.date), cx, cy);
-      sparkline(doc, cx, cy + 3, cellW, cellH - 10, dp.series);
-      doc.setDrawColor(...GRID);
-      doc.setLineWidth(0.4);
-      doc.rect(cx, cy + 2, cellW, cellH - 6);
-    });
-    y += Math.ceil(profs.length / perRow) * (cellH + 16) + 6;
-  }
-  return y + 4;
+  y = base + hh + 38;
+  return y + 8;
 }
 
 // ── Entry point ─────────────────────────────────────────────────────────────
@@ -1090,7 +1091,7 @@ export async function composeReportsPdf(reports, reportIds = []) {
     const fn = renderers[id];
     if (!fn) continue;
     y = fn(doc, reports, y);
-    y += 8;
+    y += 16;
   }
 
   stampFooter(doc);
