@@ -20,6 +20,17 @@ const PULL_THRESHOLD = 70;
 const MAX_PULL = 120;
 const HEADER_OFFSET = "calc(3.5rem + env(safe-area-inset-top) + 5px)";
 
+// Refresh-cycle timing contract:
+//  - The spinner stays visible for a minimum of 2.5s so every refresh reads as
+//    a complete, deliberate cycle — even on a fast connection.
+//  - It dismisses only once every data source has settled (or the hard cap
+//    fires), so a quick first fetch can never end the cycle early.
+//  - It never spins beyond 6s: if a source is unreachable, the spinner quietly
+//    fades out and the last known data stays on screen. No toast, no note.
+const MIN_VISIBLE_MS = 2500;
+const MAX_DURATION_MS = 6000;
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export default function usePullToRefresh({ onRefresh }) {
   const [refreshing, setRefreshing] = useState(false);
 
@@ -31,6 +42,8 @@ export default function usePullToRefresh({ onRefresh }) {
   const pullDistRef = useRef(0);        // dampened distance we intend to render
   const travelRef = useRef(0);          // distance currently applied to <main>
   const rafRef = useRef(null);          // pending animation frame
+  const generationRef = useRef(0);      // increments each cycle; stale continuations
+                                        // compare against it and refuse to apply state
   const mainRef = useRef(null);
   const spinnerRef = useRef(null);
 
@@ -102,21 +115,43 @@ export default function usePullToRefresh({ onRefresh }) {
     if (travelRef.current <= 3 && pullDistRef.current < PULL_THRESHOLD) return;
 
     if (pullDistRef.current >= PULL_THRESHOLD && !refreshingRef.current) {
-      // Threshold reached — begin the refresh. The content holds pulled-down
-      // and the spinner spins until all data arrives, then springs back.
+      // Threshold reached — begin the refresh cycle. The content holds
+      // pulled-down and the spinner spins while data refreshes, then springs
+      // back through a clean fade. The gesture is locked during the cycle
+      // (handleStart/handleMove return early), so cycles can never overlap or
+      // stack; the generation counter additionally guarantees an old cycle's
+      // async work can never finish into a newer one's state.
       refreshingRef.current = true;
       setRefreshing(true);
       schedulePaint(46);
 
-      Promise.resolve()
+      const gen = ++generationRef.current;
+
+      // Fetch every source (Dexcom poll + all cached queries) in parallel.
+      const fetchAll = Promise.resolve()
         .then(() => onRefresh())
-        .catch(() => {})
-        .finally(() => {
-          if (!refreshingRef.current) return;
-          refreshingRef.current = false;
-          setRefreshing(false);
-          schedulePaint(0);
-        });
+        .catch(() => {}); // refresh is silent — a failure just keeps last data
+
+      // Dismiss only when BOTH the full refresh has settled AND the minimum
+      // visible duration has elapsed — never on the first resolved fetch.
+      const settled = Promise.all([fetchAll, delay(MIN_VISIBLE_MS)]);
+
+      // Hard cap: if anything is still pending at 6s, dismiss quietly anyway.
+      const capped = delay(MAX_DURATION_MS);
+
+      const finish = () => {
+        // Race to a clean finish once; ignore this cycle if a newer one owns
+        // the state or the view already resolved.
+        if (gen !== generationRef.current || !refreshingRef.current) return;
+        refreshingRef.current = false;
+        setRefreshing(false);
+        schedulePaint(0);
+      };
+
+      // Whichever settles first decides the finish. The losing `delay` timer
+      // just resolves an already-unawaited promise — inert, no listener, no
+      // stacked state, so repeated refreshing never accumulates timers.
+      Promise.race([settled, capped]).then(finish);
     } else {
       schedulePaint(0);
     }
