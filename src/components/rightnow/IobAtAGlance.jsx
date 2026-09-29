@@ -1,8 +1,9 @@
 import { useMemo, useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { ChevronDown } from "lucide-react";
 import DashboardCard from "@/components/dashboard/DashboardCard";
-import MiniActivitySparkline from "./MiniActivitySparkline";
 import SwipeableRow from "@/components/SwipeableRow";
+import IobDecayChart from "@/components/insulin/IobDecayChart";
 import { isBasalInsulinType, getDoseStatus, getDoseTimingInfo } from "@/lib/insulinPharmacology";
 import { formatIOBValue, IOB_FLOOR } from "@/lib/iobModel";
 
@@ -103,6 +104,7 @@ function bolusStatusLine(dose, now) {
 export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus, onEditDose, onDeleteDose }) {
   const now = Date.now();
   const [openDoseId, setOpenDoseId] = useState(null);
+  const [showDetails, setShowDetails] = useState(false);
 
   // Close any revealed swipe actions when the IOB view unmounts or the
   // underlying breakdown reference changes (new ingestion, refresh, etc.).
@@ -166,7 +168,12 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
 
       {/* 2. Rapid insulin card */}
       <DashboardCard className="p-4">
-        <div className="section-label">Rapid Insulin</div>
+        <div className="flex items-baseline justify-between">
+          <div className="flex items-baseline gap-1.5">
+            <span className="section-label" style={{ marginBottom: 0 }}>Insulin on Board</span>
+            <span className="text-[10px] font-medium" style={{ color: PALETTE.faint }}>Estimated</span>
+          </div>
+        </div>
 
         {/* Totals row */}
         <div className="mt-3 flex items-baseline gap-2">
@@ -206,16 +213,11 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
                         {dose.shortName || dose.type?.split(" ")[0] || "Insulin"}
                       </span>
                       <span className="text-[11px]" style={{ color: PALETTE.muted }}>
-                        {fmtUnits(dose.units)}u dose
+                        {fmtUnits(dose.units)}u, {formatClock(dose.time)}
                       </span>
                     </span>
-                    <span className="mt-0.5 flex items-center gap-1.5">
-                      <span className="shrink-0" style={{ color: dotColor }}>
-                        <MiniActivitySparkline dose={dose} now={now} />
-                      </span>
-                      <span className="text-[11px] leading-tight" style={{ color: PALETTE.muted }}>
-                        {status.label}
-                      </span>
+                    <span className="mt-0.5 text-[11px] leading-tight" style={{ color: PALETTE.muted }}>
+                      {status.label}
                     </span>
                   </span>
                   <span className="shrink-0 text-right">
@@ -277,16 +279,11 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
                         {dose.shortName || dose.type?.split(" ")[0] || "Basal"}
                       </span>
                       <span className="text-[11px]" style={{ color: PALETTE.muted }}>
-                        {fmtUnits(dose.units)}u dose
+                        {fmtUnits(dose.units)}u, {formatClock(dose.time)}
                       </span>
                     </span>
-                    <span className="mt-0.5 flex items-center gap-1.5">
-                      <span style={{ color: dotColor }}>
-                        <MiniActivitySparkline dose={dose} now={now} />
-                      </span>
-                      <span className="text-[11px] leading-tight" style={{ color: PALETTE.muted }}>
-                        {status.label}
-                      </span>
+                    <span className="mt-0.5 text-[11px] leading-tight" style={{ color: PALETTE.muted }}>
+                      {status.label}
                     </span>
                   </span>
                   <span className="shrink-0 text-right">
