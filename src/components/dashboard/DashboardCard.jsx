@@ -6,13 +6,13 @@
 export default function DashboardCard({ children, className = "" }) {
   return (
     <div
-      className={`rounded-[24px] ${className}`}
+      className={`rounded-[24px] my-5 ${className}`}
       style={{
         background: "#fdf9f2",
-        boxShadow: "0 8px 28px rgba(63,56,48,0.10)",
-      }}
-    >
+        boxShadow: "0 8px 28px rgba(63,56,48,0.10)"
+      }}>
+      
       {children}
-    </div>
-  );
+    </div>);
+
 }
