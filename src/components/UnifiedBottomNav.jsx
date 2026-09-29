@@ -60,6 +60,13 @@ export default function UnifiedBottomNav() {
     const idx = navItems.findIndex((it) => it.path === location.pathname);
     return idx === -1 ? 0 : idx;
   })();
+  // Whether the current path actually belongs to a nav tab (not a fallback).
+  // Non-nav pages like /insights or /split-plan/:id fall back to "dashboard"
+  // for highlighting, but must NOT overwrite the dashboard's saved subpath.
+  const isNavMatch = (() => {
+    if (location.pathname.startsWith("/settings")) return true;
+    return navItems.some((it) => it.path === location.pathname);
+  })();
   const activeTabKey = navItems[activeIndex]?.key || "dashboard";
 
   // ── FAB / menu / logging forms ──
@@ -109,10 +116,12 @@ export default function UnifiedBottomNav() {
   // Persist the active sub-path of each tab so switching back restores the
   // exact screen the user was on (Journal month/day/recap, etc.).
   useEffect(() => {
-    // Persist full sub-path including any query (e.g. Journal day/recap),
-    // so returning to the tab restores the exact screen the user was on.
+    // Only persist the sub-path when the current page actually belongs to
+    // this nav tab. Non-nav pages (e.g. /insights) fall back to "dashboard"
+    // for highlighting but must not overwrite the dashboard's saved subpath.
+    if (!isNavMatch) return;
     saveSubpath(activeTabKey, `${location.pathname}${location.search}`);
-  }, [activeTabKey, location.pathname, location.search]);
+  }, [activeTabKey, location.pathname, location.search, isNavMatch]);
 
   // Tap behavior: navigating to a tab last visited restores its saved
   // sub-path; a second consecutive tap of the already-active tab resets to
