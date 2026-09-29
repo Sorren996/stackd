@@ -1,49 +1,53 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 
-// Native-style pull-to-refresh for the app's main scroll view.
+// Native-style pull-to-refresh for the app's main scroll view, following the
+// Facebook/News Feed release pattern:
 //
-// The app scrolls the document itself (the <main> element is the scrolling
-// container). The gesture watches the top of the page and, when the user pulls
-// down from scroll position zero, slides <main> down to follow the finger —
-// the classic iOS/Android reveal (Mail, Instagram, etc.). A small circular
-// indicator appears in the space opened up between the sticky header and the
-// first card: it fades/scales in with the pull, spins while data refreshes,
-// then fades out as the content springs back.
+//   - Pull down from the top: <main> follows the finger 1:1 (rAF transform +
+//     opacity, no React renders during the gesture).
+//   - Release past the threshold: content does NOT snap back — it settles and
+//     HOLDS at the hold offset, spinner fully visible in the gap between the
+//     sticky header and the first card, spinning for the whole refresh cycle.
+//   - The gesture stays live while a refresh runs: pulling down again from the
+//     held position extends the content further elastically, and releasing past
+//     a re-trigger distance restarts the cycle cleanly (fresh 2.5s min / 6s cap,
+//     superseded cycle's state application canceled via the generation counter).
+//   - Only when the refresh completes does the held offset spring back to 0 and
+//     the spinner fade out — sequence is data-swap first, then release.
 //
-// Performance: every per-frame visual update (content translation + spinner
-// opacity/scale) is a single requestAnimationFrame pass that mutates
-// transform/opacity directly on ref'd DOM elements. No React state is touched
-// during the gesture, so there are no re-renders and no dropped frames. React
-// state only changes at gesture boundaries (refresh start / completion).
+// Timing contract:
+//   - The spinner holds for a minimum of 2.5s so every refresh reads as a
+//     complete, deliberate cycle — even on a fast connection.
+//   - It dismisses only once every source has settled (or the 6s hard cap
+//     fires), then the content relaxes back — no toast, no note.
 
-const PULL_THRESHOLD = 70;
-const MAX_PULL = 120;
+const PULL_THRESHOLD = 70;      // dampened px needed to begin a refresh
+const MAX_PULL = 120;           // absolute translateY ceiling for <main>
+const HOLD_OFFSET = 46;         // transform hold during a running refresh
+const RE_TRIGGER_EXTRA = 45;    // fresh dampened px past the hold to restart a running cycle
+const SPRING_MS = 320;          // spring-back / settle duration (matches the easing below)
 const HEADER_OFFSET = "calc(3.5rem + env(safe-area-inset-top) + 5px)";
-
-// Refresh-cycle timing contract:
-//  - The spinner stays visible for a minimum of 2.5s so every refresh reads as
-//    a complete, deliberate cycle — even on a fast connection.
-//  - It dismisses only once every data source has settled (or the hard cap
-//    fires), so a quick first fetch can never end the cycle early.
-//  - It never spins beyond 6s: if a source is unreachable, the spinner quietly
-//    fades out and the last known data stays on screen. No toast, no note.
 const MIN_VISIBLE_MS = 2500;
 const MAX_DURATION_MS = 6000;
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+const dampen = (dy) => Math.min(MAX_PULL, Math.round(Math.sqrt(Math.max(0, dy)) * 7));
+
 export default function usePullToRefresh({ onRefresh }) {
   const [refreshing, setRefreshing] = useState(false);
 
-  // Gesture state lives in refs so the touchmove handler never triggers a
-  // React render.
-  const startYRef = useRef(null);       // touch start Y once we're at the top
-  const activeRef = useRef(false);      // a top-of-page pull is in progress
-  const refreshingRef = useRef(false);  // single in-flight refresh guard
-  const pullDistRef = useRef(0);        // dampened distance we intend to render
-  const travelRef = useRef(0);          // distance currently applied to <main>
+  // Gesture state lives in refs so the touch handlers never trigger a React
+  // render. `phaseRef` is the source of truth for the gesture machine.
+  const phaseRef = useRef("idle");      // "idle" | "pulling" | "refreshing"
+  const baseRef = useRef(0);            // resting offset gestures sit on top of: 0 idle, HOLD_OFFSET refreshing
+  const startYRef = useRef(null);
+  const activeRef = useRef(false);      // a finger is currently pulling
+  const refreshingRef = useRef(false);  // mirrors phase for the spin class + spinner visuals
+  const pushDistRef = useRef(0);        // translateY we intend to render
+  const animateRef = useRef(false);     // whether the next paint applies a CSS spring transition
   const rafRef = useRef(null);          // pending animation frame
-  const generationRef = useRef(0);      // increments each cycle; stale continuations
-                                        // compare against it and refuse to apply state
+  const generationRef = useRef(0);      // increments each cycle; stale continuations refuse to apply state
+  const finishTimerRef = useRef(null);  // spinner-transition cleanup after the exit spring
   const mainRef = useRef(null);
   const spinnerRef = useRef(null);
 
@@ -52,55 +56,161 @@ export default function usePullToRefresh({ onRefresh }) {
     return mainRef.current;
   };
 
-  // Coalesce every touchmove into a single rAF pass. Two scheduled pulls in the
-  // same frame collapse into one paint — no dropped frames, no React renders.
-  const schedulePaint = useCallback((target) => {
-    pullDistRef.current = target;
-    if (rafRef.current) return; // a frame is already pending
-    rafRef.current = requestAnimationFrame(() => {
-      rafRef.current = null;
-      const el = mainEl();
-      const dist = pullDistRef.current;
-      travelRef.current = dist;
+  // Single coalesced rAF pass. Each touchmove / boundary writes the desired
+  // target + whether to animate; the next frame applies both. Two scheduled
+  // paints in one frame collapse into one — no dropped frames, no React.
+  const paintFrame = useCallback(() => {
+    rafRef.current = null;
+    const el = mainEl();
+    const target = pushDistRef.current;
+    const animate = animateRef.current;
 
-      if (el) {
-        // Track the finger 1:1 with no transition while pulling; then a gentle
-        // spring brings it back (or locks in place during the refresh hold).
-        el.style.transition = dist > 0 ? "none" : "transform 320ms cubic-bezier(0.16, 1, 0.3, 1)";
-        el.style.transform = `translateY(${dist}px)`;
-      }
+    if (el) {
+      el.style.transition = animate
+        ? `transform ${SPRING_MS}ms cubic-bezier(0.16, 1, 0.3, 1)`
+        : "none";
+      el.style.transform = `translateY(${target}px)`;
+    }
 
-      // Spinner lives in the gap between the header and the first card. It
-      // fades and scales in proportion to the pull, then holds while spinning.
-      if (spinnerRef.current) {
-        const progress = Math.min(1, dist / PULL_THRESHOLD);
-        const sink = refreshingRef.current ? 20 : Math.min(dist * 0.4, 22);
-        spinnerRef.current.style.opacity = String(progress);
-        spinnerRef.current.style.transform = `translateY(${sink}px) scale(${0.55 + progress * 0.45})`;
-      }
-    });
+    if (spinnerRef.current) {
+      const s = spinnerRef.current;
+      const active = refreshingRef.current;
+      // Fully visible at scale 1 while refreshing (held + spinning); otherwise
+      // fades/scales in proportion to the current pull.
+      const progress = active ? 1 : Math.min(1, target / PULL_THRESHOLD);
+      const sink = active ? 22 : Math.min(target * 0.4, 22);
+      s.style.opacity = String(progress);
+      s.style.transform = `translateY(${sink}px) scale(${0.55 + progress * 0.45})`;
+    }
   }, []);
 
-  const handleStart = useCallback((e) => {
-    if (refreshingRef.current) return;
-    const atTop = (window.scrollY || window.pageYOffset) <= 0;
-    startYRef.current = atTop ? (e.touches?.[0]?.clientY ?? null) : null;
-    activeRef.current = startYRef.current != null;
+  const schedulePaint = useCallback(
+    (target, animate = false) => {
+      pushDistRef.current = target;
+      animateRef.current = animate;
+      if (rafRef.current) return; // a frame is already pending
+      rafRef.current = requestAnimationFrame(paintFrame);
+    },
+    [paintFrame]
+  );
+
+  const clearSpinnerTransition = useCallback(() => {
+    if (spinnerRef.current) spinnerRef.current.style.transition = "";
   }, []);
+
+  // Begin a brand-new refresh cycle (first release past threshold). Holds the
+  // content at HOLD_OFFSET, spins, and runs the fetch + min/cap windows.
+  const beginCycle = useCallback(() => {
+      phaseRef.current = "refreshing";
+      refreshingRef.current = true;
+      setRefreshing(true);
+      baseRef.current = HOLD_OFFSET;
+      clearSpinnerTransition();
+      // Settle from wherever the finger let go down/up to the hold offset.
+      schedulePaint(HOLD_OFFSET, true);
+
+      const gen = ++generationRef.current;
+      const settle = (gen2) => {
+        if (gen2 !== generationRef.current || !refreshingRef.current) return;
+        const fetchAll = Promise.resolve().then(() => onRefresh()).catch(() => {});
+        const settled = Promise.all([fetchAll, delay(MIN_VISIBLE_MS)]);
+        const capped = delay(MAX_DURATION_MS);
+        Promise.race([settled, capped]).then(() => finishCycle(gen2));
+      };
+      settle(gen);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [onRefresh, schedulePaint, clearSpinnerTransition]
+  );
+
+  // Restart an already-running cycle (re-pull released past the re-trigger
+  // distance). Bumps the generation so the superseded cycle's finish becomes a
+  // no-op, then restarts the fetch + a fresh min/cap window while staying held.
+  const restartCycle = useCallback(() => {
+    if (finishTimerRef.current) {
+      clearTimeout(finishTimerRef.current);
+      finishTimerRef.current = null;
+    }
+    generationRef.current += 1;
+    const gen = generationRef.current;
+    clearSpinnerTransition();
+    schedulePaint(HOLD_OFFSET, true); // re-hold after the released extra pull
+
+    const fetchAll = Promise.resolve().then(() => onRefresh()).catch(() => {});
+    const settled = Promise.all([fetchAll, delay(MIN_VISIBLE_MS)]);
+    const capped = delay(MAX_DURATION_MS);
+    Promise.race([settled, capped]).then(() => finishCycle(gen));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [schedulePaint, clearSpinnerTransition]);
+
+  // End the cycle: the data swap already happened (onRefresh settled). Spring
+  // the content back to 0 and fade the spinner over the same window, then hand
+  // control back to the idle gesture. The generation guard makes a superseded
+  // cycle a no-op.
+  const finishCycle = useCallback(
+    (gen) => {
+      if (gen !== generationRef.current || !refreshingRef.current) return;
+
+      refreshingRef.current = false;
+      setRefreshing(false);
+      phaseRef.current = "idle";
+      baseRef.current = 0;
+
+      const s = spinnerRef.current;
+      if (s) {
+        // CSS-driven simultaneous exit: content springs back, spinner fades.
+        s.style.transition = `opacity ${SPRING_MS}ms ease, transform ${SPRING_MS}ms ease`;
+        s.style.opacity = "0";
+        s.style.transform = "translateY(0) scale(1)";
+      }
+      schedulePaint(0, true);
+
+      // Drop the CSS transition once the spring completes so the next pull's
+      // rAF-written opacity/transform are never fought by a stale transition.
+      if (finishTimerRef.current) clearTimeout(finishTimerRef.current);
+      finishTimerRef.current = setTimeout(() => {
+        finishTimerRef.current = null;
+        clearSpinnerTransition();
+      }, SPRING_MS + 60);
+    },
+    [schedulePaint, clearSpinnerTransition]
+  );
+
+  const handleStart = useCallback(
+    (e) => {
+      // Allow grabbing from the top when idle, and always while a refresh holds
+      // the content. During a refresh the content is transform-held so scrollY
+      // stays at 0, meaning atTop is also true there — the explicit refreshing
+      // check just guarantees we never drop the finger mid-cycle.
+      const atTop = (window.scrollY || window.pageYOffset) <= 0;
+      const refreshingNow = refreshingRef.current;
+      if (!refreshingNow && !atTop) return;
+
+      // A fresh finger must not inherit a leftover CSS transition from the exit.
+      clearSpinnerTransition();
+
+      startYRef.current = e.touches?.[0]?.clientY ?? null;
+      activeRef.current = startYRef.current != null;
+      if (activeRef.current) phaseRef.current = "pulling";
+    },
+    [clearSpinnerTransition]
+  );
 
   const handleMove = useCallback(
     (e) => {
-      if (refreshingRef.current || !activeRef.current) return;
+      if (!activeRef.current) return;
       const y = e.touches?.[0]?.clientY ?? startYRef.current;
       const dy = y - startYRef.current;
+
       if (dy <= 0) {
-        schedulePaint(0);
+        // Finger never went below the grab point — sit at the phase's base.
+        schedulePaint(baseRef.current, false);
         return;
       }
-      // Elastic resistance — the pull gets heavier as it extends, so it feels
-      // natural rather than rigid.
-      const dist = Math.min(MAX_PULL, Math.round(Math.sqrt(dy) * 7));
-      schedulePaint(dist);
+
+      // Elastic extension on top of the held/resting base offset.
+      const dist = Math.min(MAX_PULL, baseRef.current + dampen(dy));
+      schedulePaint(dist, false);
     },
     [schedulePaint]
   );
@@ -112,50 +222,30 @@ export default function usePullToRefresh({ onRefresh }) {
       cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     }
-    if (travelRef.current <= 3 && pullDistRef.current < PULL_THRESHOLD) return;
+    const dist = pushDistRef.current;
+    const extra = Math.max(0, dist - baseRef.current);
 
-    if (pullDistRef.current >= PULL_THRESHOLD && !refreshingRef.current) {
-      // Threshold reached — begin the refresh cycle. The content holds
-      // pulled-down and the spinner spins while data refreshes, then springs
-      // back through a clean fade. The gesture is locked during the cycle
-      // (handleStart/handleMove return early), so cycles can never overlap or
-      // stack; the generation counter additionally guarantees an old cycle's
-      // async work can never finish into a newer one's state.
-      refreshingRef.current = true;
-      setRefreshing(true);
-      schedulePaint(46);
-
-      const gen = ++generationRef.current;
-
-      // Fetch every source (Dexcom poll + all cached queries) in parallel.
-      const fetchAll = Promise.resolve()
-        .then(() => onRefresh())
-        .catch(() => {}); // refresh is silent — a failure just keeps last data
-
-      // Dismiss only when BOTH the full refresh has settled AND the minimum
-      // visible duration has elapsed — never on the first resolved fetch.
-      const settled = Promise.all([fetchAll, delay(MIN_VISIBLE_MS)]);
-
-      // Hard cap: if anything is still pending at 6s, dismiss quietly anyway.
-      const capped = delay(MAX_DURATION_MS);
-
-      const finish = () => {
-        // Race to a clean finish once; ignore this cycle if a newer one owns
-        // the state or the view already resolved.
-        if (gen !== generationRef.current || !refreshingRef.current) return;
-        refreshingRef.current = false;
-        setRefreshing(false);
-        schedulePaint(0);
-      };
-
-      // Whichever settles first decides the finish. The losing `delay` timer
-      // just resolves an already-unawaited promise — inert, no listener, no
-      // stacked state, so repeated refreshing never accumulates timers.
-      Promise.race([settled, capped]).then(finish);
-    } else {
-      schedulePaint(0);
+    if (phaseRef.current === "refreshing") {
+      // Released while a cycle runs.
+      if (extra >= RE_TRIGGER_EXTRA) {
+        restartCycle(); // deliberate re-pull past the re-trigger distance
+      } else {
+        // Mild tug — just relax back to the held offset, keep spinning.
+        schedulePaint(HOLD_OFFSET, true);
+      }
+      return;
     }
-  }, [onRefresh, schedulePaint]);
+
+    // Not refreshing.
+    if (dist < PULL_THRESHOLD) {
+      // Released before the threshold — spring back, no refresh.
+      baseRef.current = 0;
+      schedulePaint(0, true);
+      return;
+    }
+
+    beginCycle();
+  }, [beginCycle, restartCycle, schedulePaint]);
 
   // Attach the gesture and contain overscroll on the scrolling container so
   // the browser's native rubber-band doesn't fight the gesture.
@@ -176,6 +266,7 @@ export default function usePullToRefresh({ onRefresh }) {
       window.removeEventListener("touchend", onEnd);
       window.removeEventListener("touchcancel", onEnd);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      if (finishTimerRef.current) clearTimeout(finishTimerRef.current);
       if (el) el.style.transform = "";
       if (spinnerRef.current) spinnerRef.current.style.opacity = "0";
     };
