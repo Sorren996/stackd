@@ -65,23 +65,23 @@ export default function ReportPicker({ onGenerate }) {
           )}
         </div>
 
-        <div className="mt-3 flex items-center gap-2 hidden">
-          <span className="text-xs hidden" style={{ color: "#6b6153" }}>or custom</span>
-          <input
-            type="number"
-            inputMode="numeric"
-            min={2}
-            max={90}
-            placeholder="days (2–90)"
-            value={customDays}
-            onChange={(e) => setCustomDays(e.target.value)}
-            className="w-32 rounded-xl border px-3 py-2 text-sm outline-none"
-            style={{ background: "#f7f1e8", borderColor: "#eadccf", color: "#3f3830" }} />
-          
-          {customDays &&
-          <span className="text-xs tabular-nums" style={{ color: "#6b6153" }}>{effectiveDays} days</span>
-          }
-        </div>
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
       </DashboardCard>
 
       {/* Step 2 — which reports */}
