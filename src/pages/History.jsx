@@ -594,7 +594,7 @@ export default function History() {
         >
           {level === "month" && isAdmin && (
             <SectionCard>
-              <LedgerRow label="Stackd Insights" value="CGM patterns" to="/insights" />
+              <LedgerRow label="Stackd: Insight" value="CGM patterns" to="/insights" />
             </SectionCard>
           )}
 
