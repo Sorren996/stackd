@@ -116,26 +116,28 @@ export default function ReportPicker({ onGenerate }) {
         </div>
       </DashboardCard>
 
-      <p className="px-2 text-[11px] leading-relaxed text-center" style={{ color: "#f7f1e8" }}>
-        {DISCLAIMER}
-      </p>
-
-      {/* Sticky Generate — raised above the bottom nav + FAB so it's never covered */}
-      <div className="fixed inset-x-0 z-20 mx-auto max-w-md px-4 my-4" style={{ bottom: "calc(6.5rem + env(safe-area-inset-bottom))" }}>
+      {/* Generate — right after the report options, in its natural spot */}
+      <div className="pt-1">
         <button
           type="button"
           onClick={handleGenerate}
           disabled={isNoneSelected}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl text-base font-semibold transition active:opacity-80 disabled:opacity-50 py-5"
-          style={{ background: "#3f3830", color: "#f7f1e8", boxShadow: "0 8px 28px rgba(63,56,48,0.20)" }}>
-          
+          className="flex w-full items-center justify-center gap-2 rounded-2xl py-5 text-base font-semibold transition active:opacity-80 disabled:opacity-50"
+          style={{ background: "#3f3830", color: "#f7f1e8", boxShadow: "0 8px 28px rgba(63,56,48,0.20)" }}
+        >
           Generate {effectiveDays}-day report
           <ChevronRight className="h-5 w-5" />
         </button>
-        {isNoneSelected &&
-        <p className="mt-2 text-center text-[11px]" style={{ color: "#6b6153" }}>Pick at least one report to continue.</p>
-        }
+        {isNoneSelected && (
+          <p className="mt-2 text-center text-[11px]" style={{ color: "#6b6153" }}>
+            Pick at least one report to continue.
+          </p>
+        )}
       </div>
+
+      <p className="px-2 pt-2 text-center text-[11px] leading-relaxed" style={{ color: "#f7f1e8" }}>
+        {DISCLAIMER}
+      </p>
     </div>);
 
 }

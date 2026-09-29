@@ -547,7 +547,7 @@ function renderPatterns(doc, reports, y) {
 // ── One full-detail day (chart + event table) — used for Best & Hardest ────
 // Best/Hardest day detail lives under patterns.bestDay/worstDay (dayDetail) and
 // their event rows once under daily.pages (matched by date) — never duplicated.
-function renderDayDetail(doc, y, title, tag, day, events) {
+function renderDayDetail(doc, reports, y, title, tag, day, events) {
   y = ensureSpace(doc, y, 60);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
@@ -716,6 +716,7 @@ function renderDaily(doc, reports, y) {
     if (patterns.bestDay) {
       y = renderDayDetail(
         doc,
+        reports,
         y,
         `Best day · ${fmtDay(patterns.bestDay.date)}`,
         "Most time in target",
@@ -727,6 +728,7 @@ function renderDaily(doc, reports, y) {
       y = ensureSpace(doc, y, 30);
       y = renderDayDetail(
         doc,
+        reports,
         y,
         `Hardest day · ${fmtDay(patterns.worstDay.date)}`,
         "Least time in target",
@@ -868,7 +870,6 @@ function renderCompare(doc, reports, y) {
   // TIR legends beneath each bar.
   leftY = tirLegend(doc, M, leftY, c.current?.bands || []) + 12;
   rightY = tirLegend(doc, M + half + 20, rightY, c.prior?.bands || []) + 12;
-  void baseY;
   return Math.max(leftY, rightY) + 6;
 }
 
