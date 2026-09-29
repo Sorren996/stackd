@@ -80,11 +80,21 @@ export function StatGrid({ items, cols = 2 }) {
   );
 }
 
+// Pale, readable tint chips for the TIR bar — the app's sage-led accent
+// colors rendered light so label text always meets contrast on cream.
+const BAND_TINT = {
+  veryLow: { bg: "rgba(156,63,46,0.12)", text: "#9c3f2e", dot: "#9c3f2e" },
+  low: { bg: "rgba(201,133,95,0.16)", text: "#8a5a12", dot: "#c9855f" },
+  target: { bg: "rgba(91,101,80,0.16)", text: "#4d5742", dot: "#5b6550" },
+  high: { bg: "rgba(177,151,63,0.18)", text: "#8a5a12", dot: "#b5973f" },
+  veryHigh: { bg: "rgba(156,63,46,0.12)", text: "#9c3f2e", dot: "#9c3f2e" },
+};
+
 // ── 5-band time-in-range bar, Stackd's sage-led colors ──────────────────
 export function TirBand({ bands, compact = false }) {
   const ordered = ["veryLow", "low", "target", "high", "veryHigh"];
   const present = ordered
-    .map((key) => ({ key, ...(BAND_STYLES[key] || {}), percent: (bands || []).find((b) => b.key === key)?.percent ?? 0 }))
+    .map((key) => ({ key, ...(BAND_STYLES[key] || {}), tint: BAND_TINT[key] || {}, percent: (bands || []).find((b) => b.key === key)?.percent ?? 0 }))
     .filter((b) => b.percent > 0);
 
   return (
@@ -101,11 +111,11 @@ export function TirBand({ bands, compact = false }) {
             <div
               key={b.key}
               className="flex min-w-0 items-center justify-center"
-              style={{ width: `${b.percent}%`, background: b.bg }}
+              style={{ width: `${b.percent}%`, background: b.tint.bg }}
               title={`${b.label} ${b.percent}%`}
             >
               {b.percent >= 4 && (
-                <span className="truncate px-0.5 text-[10px] font-semibold" style={{ color: "#fdf9f2" }}>
+                <span className="truncate px-0.5 text-[10px] font-bold" style={{ color: b.tint.text }}>
                   {b.percent}%
                 </span>
               )}
@@ -116,9 +126,10 @@ export function TirBand({ bands, compact = false }) {
       <div className="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-1.5">
         {ordered.map((key) => {
           const b = (bands || []).find((x) => x.key === key);
+          const tint = BAND_TINT[key] || {};
           return (
             <div key={key} className="flex items-center gap-2">
-              <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: b?.bg || "#eadccf" }} />
+              <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: b ? tint.dot : "#eadccf" }} />
               <span className="text-[11px]" style={{ color: "#6b6153" }}>
                 {BAND_STYLES[key].label} <span className="font-semibold tabular-nums" style={{ color: "#3f3830" }}>{b?.percent ?? 0}%</span>
               </span>
@@ -148,12 +159,12 @@ export function ReportEmpty({ message }) {
 export function ReportCard({ title, children, className = "" }) {
   return (
     <div
-      className={`rounded-[24px] ${className}`}
+      className={`rounded-[22px] ${className}`}
       style={{ background: "#fdf9f2", boxShadow: "0 8px 28px rgba(63,56,48,0.10)" }}
     >
-      <div className="p-5">
+      <div className="p-4">
         {title && <div className="section-label">{title}</div>}
-        <div className={title ? "pt-3" : ""}>{children}</div>
+        <div className={title ? "pt-2.5" : ""}>{children}</div>
       </div>
     </div>
   );

@@ -1,10 +1,9 @@
-import { useRef, useState, useCallback } from "react";
-import { base44 } from "@/api/base44Client";
+import { useRef, useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { ChevronLeft, ChevronRight, Download, Loader2 } from "lucide-react";
-import { downloadBase64Pdf } from "@/lib/pdfDownload";
 import { REPORT_ORDER, REPORT_TYPE_BY_ID } from "./reportCatalog";
-import { ReportHeader, ReportFooter } from "./reportShared";
+import { ReportFooter } from "./reportShared";
+import { composeReportsPdf } from "@/lib/exportReportsPdf";
 import OverviewReport from "./OverviewReport";
 import PatternsReport from "./PatternsReport";
 import OverlayReport from "./OverlayReport";
@@ -26,18 +25,26 @@ const REPORT_COMPONENTS = {
 };
 
 // ReportViewer — paginated, swipeable walk through the selected reports.
-// Each report is one slide; arrows + swipe move between slides. The header
-// holds a share/download affordance and a Done button back to the picker.
+// Full-screen overlay: a single compact header row (fixed), a swipeable slide
+// area, and a dots/arrows row that clears the home indicator. Download builds
+// ONE combined PDF containing every selected report, not just the active one.
 
 export default function ReportViewer({ reports, reportIds, onBack, windowDays }) {
   const ordered = REPORT_ORDER.filter((id) => reportIds.includes(id));
   const [index, setIndex] = useState(0);
   const [downloading, setDownloading] = useState(false);
   const scrollRef = useRef(null);
+  const captureRef = useRef(null);       // hidden container holding all selected reports
 
   const activeReport = ordered[index];
-  const Active = REPORT_COMPONENTS[activeReport];
   const meta = reports?.meta || {};
+
+  // Reset to the first slide whenever the report set changes.
+  useEffect(() => {
+    setIndex(0);
+    const el = scrollRef.current;
+    if (el) el.scrollLeft = 0;
+  }, [reports, reportIds]);
 
   const go = useCallback(
     (i) => {
@@ -59,15 +66,28 @@ export default function ReportViewer({ reports, reportIds, onBack, windowDays })
     if (downloading) return;
     setDownloading(true);
     try {
-      const res = await base44.functions.invoke("generateInsightsPdf", {
-        mode: "download",
-        windowDays,
-        tzOffsetMinutes: new Date().getTimezoneOffset(),
-      });
-      const ok = downloadBase64Pdf(res.data.base64, res.data.filename);
-      if (!ok) toast.error("Unable to build the PDF. Please try again.");
-      else toast.success("Report downloaded");
-    } catch {
+      if (!captureRef.current) {
+        toast.error("Nothing to export yet.");
+        return;
+      }
+      // Each selected report is a direct child of the hidden container.
+      const nodes = Array.from(captureRef.current.children);
+      const result = await composeReportsPdf(nodes);
+      if (!result) {
+        toast.error("Unable to build the PDF. Please try again.");
+        return;
+      }
+      const url = URL.createObjectURL(result.blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = result.filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success(`Downloaded ${ordered.length} report${ordered.length > 1 ? "s" : ""}`);
+    } catch (err) {
+      console.error("[ReportViewer] download failed:", err);
       toast.error("Unable to build the PDF. Please try again.");
     } finally {
       setDownloading(false);
@@ -75,62 +95,69 @@ export default function ReportViewer({ reports, reportIds, onBack, windowDays })
   };
 
   return (
-    <div className="flex h-[calc(100dvh-0px)] flex-col">
-      {/* Header bar */}
-      <div className="flex items-center justify-between px-4 pb-2 pt-3">
+    <div
+      className="fixed inset-0 z-[60] flex flex-col"
+      style={{ background: "#4c6770" }}
+    >
+      {/* Compact single-row header */}
+      <div
+        className="flex shrink-0 items-center justify-between gap-2 px-3"
+        style={{ paddingTop: "env(safe-area-inset-top)" }}
+      >
         <button
           type="button"
           onClick={onBack}
-          className="flex h-9 items-center gap-1 rounded-full px-3 text-sm font-semibold transition active:opacity-70"
+          className="flex h-9 shrink-0 items-center gap-1 rounded-full px-3 text-sm font-semibold transition active:opacity-70"
           style={{ background: "rgba(253,249,242,0.10)", color: "#f7f1e8" }}
         >
           <ChevronLeft className="h-4 w-4" /> Back
         </button>
-        <div className="text-xs font-semibold tabular-nums" style={{ color: "#f7f1e8", opacity: 0.92 }}>
-          {index + 1} of {ordered.length}
+
+        <div className="min-w-0 text-center">
+          <div className="truncate text-sm font-semibold" style={{ color: "#f7f1e8" }}>
+            {REPORT_TYPE_BY_ID[activeReport]?.label || activeReport}
+          </div>
+          <div className="text-[11px] tabular-nums" style={{ color: "#f7f1e8", opacity: 0.85 }}>
+            {index + 1} of {ordered.length}
+          </div>
         </div>
+
         <button
           type="button"
           onClick={handleDownload}
           disabled={downloading}
-          className="flex h-9 items-center gap-1 rounded-full px-3 text-sm font-semibold transition active:opacity-70 disabled:opacity-50"
+          className="flex h-9 shrink-0 items-center gap-1 rounded-full px-3 text-sm font-semibold transition active:opacity-70 disabled:opacity-50"
           style={{ background: "rgba(253,249,242,0.10)", color: "#f7f1e8" }}
-          aria-label="Download report as PDF"
+          aria-label="Download all selected reports as PDF"
         >
           {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-          <span className="hidden sm:inline">PDF</span>
+          <span className="hidden min-[380px]:inline">PDF</span>
         </button>
       </div>
 
-      {/* Title line with the selected report name */}
-      <div className="px-2 pb-2">
-        <ReportHeader reports={reports} />
-        <div className="mt-2 px-1">
-          <span
-            className="inline-block rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide"
-            style={{ background: "rgba(253,249,242,0.12)", color: "#f7f1e8" }}
-          >
-            {REPORT_TYPE_BY_ID[activeReport]?.label || activeReport}
-          </span>
-        </div>
+      {/* Title line — range + author, compact */}
+      <div className="shrink-0 px-4 pt-2">
+        <h2 className="truncate text-sm font-semibold" style={{ color: "#f7f1e8" }}>
+          {fmtRange(reports)} · {meta.displayName || "Stackd user"}
+        </h2>
       </div>
 
-      {/* Slide content */}
+      {/* Slide content — scrolls, clears the bottom controls */}
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="no-scrollbar flex-1 snap-x snap-mandatory overflow-x-auto"
+        className="no-scrollbar mt-2 min-h-0 flex-1 snap-x snap-mandatory overflow-x-auto"
       >
         {ordered.map((id, i) => {
           const C = REPORT_COMPONENTS[id];
           return (
             <section
               key={id}
-              className="h-full w-full shrink-0 snap-center overflow-y-auto px-4 pb-10"
+              className="h-full w-full shrink-0 snap-center overflow-y-auto px-4"
               style={{ scrollSnapAlign: "center" }}
             >
               {i === index && C ? (
-                <div className="mx-auto max-w-md space-y-4">
+                <div className="mx-auto max-w-md space-y-3 pb-6 pt-1">
                   <C reports={reports} />
                   <ReportFooter />
                 </div>
@@ -142,8 +169,11 @@ export default function ReportViewer({ reports, reportIds, onBack, windowDays })
         })}
       </div>
 
-      {/* Slide dots + arrows */}
-      <div className="flex items-center justify-between px-4 py-3">
+      {/* Slide dots + arrows — clears the home indicator */}
+      <div
+        className="flex shrink-0 items-center justify-between px-3 pt-2"
+        style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
+      >
         <button
           type="button"
           onClick={() => go(index - 1)}
@@ -182,6 +212,37 @@ export default function ReportViewer({ reports, reportIds, onBack, windowDays })
           <ChevronRight className="h-5 w-5" />
         </button>
       </div>
+
+      {/* Hidden capture container — all selected reports, mounted for export.
+          Positioned off-screen so it never affects layout but stays in the DOM. */}
+      <div
+        ref={captureRef}
+        aria-hidden="true"
+        className="pointer-events-none absolute left-0 top-0 w-[420px] max-w-[420px] -z-10 opacity-0"
+      >
+        {ordered.map((id) => {
+          const C = REPORT_COMPONENTS[id];
+          return (
+            <div key={id} className="space-y-3" style={{ background: "#fdf9f2" }}>
+              <div className="px-1 pt-1">
+                <h3 className="text-sm font-semibold" style={{ color: "#3f3830" }}>
+                  {REPORT_TYPE_BY_ID[id]?.label || id}
+                </h3>
+              </div>
+              <C reports={reports} />
+              <ReportFooter />
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
+}
+
+function fmtRange(reports) {
+  if (!reports?.rangeStart || !reports?.rangeEnd) return "";
+  const a = new Date(reports.rangeStart);
+  const b = new Date(reports.rangeEnd);
+  if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime())) return "";
+  return `${a.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${b.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
 }
