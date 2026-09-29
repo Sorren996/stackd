@@ -18,8 +18,8 @@ export default function ReportPicker({ onGenerate }) {
   const toggle = (id) => {
     setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(id)) next.delete(id);else
+      next.add(id);
       return next;
     });
   };
@@ -48,21 +48,21 @@ export default function ReportPicker({ onGenerate }) {
         <div className="section-label">1 · Choose a range</div>
 
         <div className="mt-2.5 inline-flex flex-wrap gap-2">
-          {PRESETS.map((w) => (
-            <button
-              key={w}
-              type="button"
-              onClick={() => { setWindowDays(w); setCustomDays(""); }}
-              className="min-w-[54px] rounded-full px-3 py-1.5 text-xs font-semibold transition"
-              style={{
-                background: !customDays && windowDays === w ? "#3f3830" : "#f0e8db",
-                color: !customDays && windowDays === w ? "#f7f1e8" : "#6b6153",
-              }}
-              aria-pressed={!customDays && windowDays === w}
-            >
+          {PRESETS.map((w) =>
+          <button
+            key={w}
+            type="button"
+            onClick={() => {setWindowDays(w);setCustomDays("");}}
+            className="min-w-[54px] rounded-full px-3 py-1.5 text-xs font-semibold transition"
+            style={{
+              background: !customDays && windowDays === w ? "#3f3830" : "#f0e8db",
+              color: !customDays && windowDays === w ? "#f7f1e8" : "#6b6153"
+            }}
+            aria-pressed={!customDays && windowDays === w}>
+            
               {w} days
             </button>
-          ))}
+          )}
         </div>
 
         <div className="mt-3 flex items-center gap-2">
@@ -76,11 +76,11 @@ export default function ReportPicker({ onGenerate }) {
             value={customDays}
             onChange={(e) => setCustomDays(e.target.value)}
             className="w-32 rounded-xl border px-3 py-2 text-sm outline-none"
-            style={{ background: "#f7f1e8", borderColor: "#eadccf", color: "#3f3830" }}
-          />
-          {customDays && (
-            <span className="text-xs tabular-nums" style={{ color: "#6b6153" }}>{effectiveDays} days</span>
-          )}
+            style={{ background: "#f7f1e8", borderColor: "#eadccf", color: "#3f3830" }} />
+          
+          {customDays &&
+          <span className="text-xs tabular-nums" style={{ color: "#6b6153" }}>{effectiveDays} days</span>
+          }
         </div>
       </DashboardCard>
 
@@ -97,26 +97,26 @@ export default function ReportPicker({ onGenerate }) {
                 onClick={() => toggle(r.id)}
                 className="flex w-full items-start gap-3 rounded-2xl px-3 py-3 text-left transition"
                 style={{ background: on ? "rgba(91,101,80,0.10)" : "rgba(63,56,48,0.03)" }}
-                aria-pressed={on}
-              >
+                aria-pressed={on}>
+                
                 <span
                   className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition"
                   style={{ background: on ? "#3f3830" : "#f0e8db" }}
-                  aria-hidden="true"
-                >
+                  aria-hidden="true">
+                  
                   {on && <Check className="h-4 w-4" style={{ color: "#f7f1e8" }} />}
                 </span>
                 <span className="min-w-0">
                   <span className="block text-sm font-semibold" style={{ color: "#3f3830" }}>{r.label}</span>
                   <span className="mt-0.5 block text-xs leading-relaxed" style={{ color: "#6b6153" }}>{r.description}</span>
                 </span>
-              </button>
-            );
+              </button>);
+
           })}
         </div>
       </DashboardCard>
 
-      <p className="px-2 text-[11px] leading-relaxed text-center" style={{ color: "#6b6153" }}>
+      <p className="px-2 text-[11px] leading-relaxed text-center text-[hsl(var(--primary-foreground))]" style={{ color: "#6b6153" }}>
         {DISCLAIMER}
       </p>
 
@@ -127,15 +127,15 @@ export default function ReportPicker({ onGenerate }) {
           onClick={handleGenerate}
           disabled={isNoneSelected}
           className="flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-base font-semibold transition active:opacity-80 disabled:opacity-50"
-          style={{ background: "#3f3830", color: "#f7f1e8", boxShadow: "0 8px 28px rgba(63,56,48,0.20)" }}
-        >
+          style={{ background: "#3f3830", color: "#f7f1e8", boxShadow: "0 8px 28px rgba(63,56,48,0.20)" }}>
+          
           Generate {effectiveDays}-day report
           <ChevronRight className="h-5 w-5" />
         </button>
-        {isNoneSelected && (
-          <p className="mt-2 text-center text-[11px]" style={{ color: "#6b6153" }}>Pick at least one report to continue.</p>
-        )}
+        {isNoneSelected &&
+        <p className="mt-2 text-center text-[11px]" style={{ color: "#6b6153" }}>Pick at least one report to continue.</p>
+        }
       </div>
-    </div>
-  );
+    </div>);
+
 }
