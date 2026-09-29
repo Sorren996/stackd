@@ -32,7 +32,7 @@ const STEPS = [
 ];
 
 const INTRO =
-  "Stackd is a web app, so there's no App Store download and nothing taking up storage. Once it's on your home screen, it opens full screen like a native app.";
+  "Stackd is available on the App Store as a native iPhone app, and you can also add the web app to your home screen for one-tap access. Either way, it opens full screen so it feels right at home beside your other apps.";
 
 export default function InstallGuide() {
   return (

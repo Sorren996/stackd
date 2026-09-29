@@ -59,7 +59,7 @@ export default function TargetRangeSheet({ low, high, onSave, onCancel }) {
               <Slider
                 min={70}
                 max={250}
-                step={mmol ? 5 : 5}
+                step={5}
                 value={[draftLow, draftHigh]}
                 onValueChange={(v) => {
                   setDraftLow(v[0]);

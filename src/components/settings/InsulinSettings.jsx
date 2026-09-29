@@ -406,9 +406,12 @@ export default function InsulinSettings() {
           value={postMealWindowMinutes}
           unit="minutes"
           help="How far after eating a dose still pairs with the meal."
-          decrement={stepDraft(setPostMealWindowMinutes, -5, false)}
-          increment={stepDraft(setPostMealWindowMinutes, 5, false)}
-          onSave={(v) => handleValue("meal_postbolus_window_minutes", setPostMealWindowMinutes)(v) && closeSheet()}
+          decrement={stepDraft(-5, false)}
+          increment={stepDraft(5, false)}
+          onSave={(v) => {
+            handleValue("meal_postbolus_window_minutes", setPostMealWindowMinutes)(v);
+            closeSheet();
+          }}
           onCancel={closeSheet}
         />
       </Sheet>
