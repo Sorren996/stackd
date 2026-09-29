@@ -1,9 +1,11 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import PageHeader from "@/components/editorial/PageHeader";
 import SectionCard from "@/components/editorial/SectionCard";
+import LedgerRow from "@/components/editorial/LedgerRow";
 import AnchorNumber from "@/components/editorial/AnchorNumber";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { format, parseISO } from "date-fns";
@@ -271,6 +273,7 @@ function EditLogSheet({ log, onClose, onSave, isSaving }) {
 
 export default function History() {
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { connected: dexcomConnected } = useDexcomConnection();
   const [level, setLevel] = useState("month"); // month | days | recap
   const [selectedMonth, setSelectedMonth] = useState(null);
@@ -317,6 +320,22 @@ export default function History() {
     () => allDays.find((d) => d.date === selectedDay) || null,
     [allDays, selectedDay]
   );
+
+  // Deep-link support: "?day=YYYY-MM-DD" (e.g. from Insights "view the days
+  // behind this") opens the Journal straight into that day's recap.
+  useEffect(() => {
+    const day = searchParams.get("day");
+    if (!day || !/^\d{4}-\d{2}-\d{2}$/.test(day)) return;
+    setSelectedDay(day);
+    setLevel("recap");
+    setSelectedMonth(null);
+    setDirection(1);
+    const { search, ...rest } = Object.fromEntries(searchParams.entries());
+    if (search) setSearchParams(rest, { replace: true });
+    requestAnimationFrame(() => scrollToTop());
+    // Only react to an actual day param change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams.get("day")]);
 
   const { data: recapData = {}, isLoading: loadingRecap } = useQuery({
     queryKey: ["history-day-recap", selectedDay],
@@ -570,6 +589,12 @@ export default function History() {
           exit={{ opacity: 0, x: direction > 0 ? -28 : 28 }}
           transition={{ duration: 0.28, ease: [0.4, 0, 0.2, 1] }}
         >
+          {level === "month" && (
+            <SectionCard>
+              <LedgerRow label="Stackd Insights" value="CGM patterns" to="/insights" />
+            </SectionCard>
+          )}
+
           {level === "month" && (
             <SectionCard label="Months Tracked">
               <HistoryMonthView months={months} onSelectMonth={handleSelectMonth} />
