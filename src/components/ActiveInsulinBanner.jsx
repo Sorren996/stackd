@@ -744,11 +744,12 @@ function MetricCard({ label, value, sub, status, color, tooltipId, openTooltip, 
       </div>
 
       <div className="relative z-10 mb-1 flex items-start justify-between gap-2">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-white/35">{label}</span>
+        <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "#eef2e9" }}>{label}</span>
         {tooltipId &&
         <button
           onClick={() => setOpenTooltip(openTooltip === tooltipId ? null : tooltipId)}
-          className="text-white/20 transition-colors hover:text-white/50">
+          className="transition-colors hover:text-white/50"
+          style={{ color: "#cdd9cd" }}>
           
             <Info className="h-3 w-3" />
           </button>
@@ -756,8 +757,8 @@ function MetricCard({ label, value, sub, status, color, tooltipId, openTooltip, 
       </div>
 
       <div className="relative z-10 mt-1">
-        <span className="text-2xl font-bold leading-none text-white">{value}</span>
-        {sub && <p className="mt-1 text-[11px] text-white/35">{sub}</p>}
+        <span className="text-2xl font-bold leading-none" style={{ color: "#f7f1e8" }}>{value}</span>
+        {sub && <p className="mt-1 text-[11px]" style={{ color: "#eef2e9" }}>{sub}</p>}
       </div>
 
       <span className="relative z-10 mt-2 text-xs font-semibold" style={{ color }}>
