@@ -7,11 +7,11 @@ import CombinedLogSheet from "@/components/CombinedLogSheet";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 
 const navItems = [
-  { key: "dashboard", path: "/", label: "Home", icon: Home },
-  { key: "history", path: "/history", label: "Journal", icon: BookOpen },
-  { key: "analytics", path: "/analytics", label: "Rhythm", icon: Activity },
-  { key: "settings", path: "/settings", label: "Profile", icon: CircleUser },
-];
+{ key: "dashboard", path: "/", label: "Home", icon: Home },
+{ key: "history", path: "/history", label: "Journal", icon: BookOpen },
+{ key: "analytics", path: "/analytics", label: "Rhythm", icon: Activity },
+{ key: "settings", path: "/settings", label: "Profile", icon: CircleUser }];
+
 
 const SUBPATH_KEY = (key) => `stackd-tab-subpath:${key}`;
 
@@ -30,16 +30,16 @@ function saveSubpath(key, pathname) {
   try {
     sessionStorage.setItem(SUBPATH_KEY(key), pathname || "/");
   } catch {
+
     // Session storage may be unavailable (private mode) — navigate still works.
-  }
-}
+  }}
 
 const ALL_ACTIONS = [
-  { id: "glucose", label: "Glucose", Icon: Droplets },
-  { id: "insulin", label: "Support", Icon: Syringe },
-  { id: "carbs", label: "Nourishment", Icon: Wheat },
-  { id: "both", label: "Meal + Support", Icon: Utensils },
-];
+{ id: "glucose", label: "Glucose", Icon: Droplets },
+{ id: "insulin", label: "Support", Icon: Syringe },
+{ id: "carbs", label: "Nourishment", Icon: Wheat },
+{ id: "both", label: "Meal + Support", Icon: Utensils }];
+
 
 const NAV_HEIGHT = 64;
 const EASE = [0.22, 1, 0.36, 1];
@@ -85,9 +85,9 @@ export default function UnifiedBottomNav() {
 
   const actions = useMemo(
     () =>
-      manualGlucoseEnabled && !dexcomConnected
-        ? ALL_ACTIONS
-        : ALL_ACTIONS.filter((a) => a.id !== "glucose"),
+    manualGlucoseEnabled && !dexcomConnected ?
+    ALL_ACTIONS :
+    ALL_ACTIONS.filter((a) => a.id !== "glucose"),
     [manualGlucoseEnabled, dexcomConnected]
   );
 
@@ -100,12 +100,12 @@ export default function UnifiedBottomNav() {
       onUpdate: (v) => {
         currentHeight.current = v;
         setMenuHeight(v);
-      },
+      }
     });
   }, []);
 
   useEffect(() => {
-    return () => { if (animControls.current) animControls.current.stop(); };
+    return () => {if (animControls.current) animControls.current.stop();};
   }, []);
 
   useEffect(() => {
@@ -223,32 +223,32 @@ export default function UnifiedBottomNav() {
     if (!expanded || doseFormOpen) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = prev; };
+    return () => {document.body.style.overflow = prev;};
   }, [expanded, doseFormOpen]);
 
   return (
     <>
-      {(doseFormPreloaded || doseFormOpen) && (
-        <DoseForm open={doseFormOpen} onOpenChange={setDoseFormOpen} mode={selectedMode} />
-      )}
+      {(doseFormPreloaded || doseFormOpen) &&
+      <DoseForm open={doseFormOpen} onOpenChange={setDoseFormOpen} mode={selectedMode} />
+      }
 
-      {combinedSheetOpen && (
-        <CombinedLogSheet open={combinedSheetOpen} onOpenChange={setCombinedSheetOpen} />
-      )}
+      {combinedSheetOpen &&
+      <CombinedLogSheet open={combinedSheetOpen} onOpenChange={setCombinedSheetOpen} />
+      }
 
       {/* Backdrop */}
       <AnimatePresence>
-        {expanded && !doseFormOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-40"
-            style={{ background: "rgba(63,56,48,0.20)" }}
-            onClick={() => handleFabClick()}
-          />
-        )}
+        {expanded && !doseFormOpen &&
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          className="fixed inset-0 z-40"
+          style={{ background: "rgba(63,56,48,0.20)" }}
+          onClick={() => handleFabClick()} />
+
+        }
       </AnimatePresence>
 
       <motion.nav
@@ -261,9 +261,9 @@ export default function UnifiedBottomNav() {
           background: "#fdf9f2",
           borderTop: "1px solid #eadccf",
           boxShadow: "0 -4px 20px rgba(63,56,48,0.06)",
-          zIndex: expanded ? 50 : 30,
-        }}
-      >
+          zIndex: expanded ? 50 : 30
+        }}>
+        
         <div className="relative w-full">
           {/* ── Menu content — expands upward from the nav pill ── */}
           <div
@@ -276,19 +276,19 @@ export default function UnifiedBottomNav() {
               overflow: "hidden",
               display: "flex",
               flexDirection: "column",
-              justifyContent: "flex-end",
-            }}
-          >
+              justifyContent: "flex-end"
+            }}>
+            
             <div ref={menuContentRef} style={{ maxWidth: "26rem", margin: "0 auto", padding: "0 1rem" }}>
               {/* Picker-style floating overlay */}
               <div
-                className="overflow-hidden rounded-3xl"
+                className="overflow-hidden rounded-3xl px-16"
                 style={{
                   background: "#fdf9f2",
                   border: "1px solid #eadccf",
-                  boxShadow: "0 8px 28px rgba(63,56,48,0.12), 0 2px 8px rgba(63,56,48,0.06)",
-                }}
-              >
+                  boxShadow: "0 8px 28px rgba(63,56,48,0.12), 0 2px 8px rgba(63,56,48,0.06)"
+                }}>
+                
                 <div className="px-6 pt-5 pb-2 text-center">
                   <h3 className="text-sm font-semibold" style={{ color: "#3f3830" }}>Log a moment</h3>
                 </div>
@@ -302,14 +302,14 @@ export default function UnifiedBottomNav() {
                         onClick={() => handleSelect(action.id)}
                         whileTap={{ scale: 0.97 }}
                         className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition-colors hover:bg-black/[0.03]"
-                        aria-label={action.label}
-                      >
+                        aria-label={action.label}>
+                        
                         <ActionIcon className="h-4 w-4 shrink-0" style={{ color: "#6b6153" }} />
                         <span className="text-sm font-medium" style={{ color: "#3f3830" }}>
                           {action.label}
                         </span>
-                      </motion.button>
-                    );
+                      </motion.button>);
+
                   })}
                 </div>
               </div>
@@ -322,50 +322,50 @@ export default function UnifiedBottomNav() {
             style={{
               height: NAV_HEIGHT,
               position: "relative",
-              zIndex: 50,
-            }}
-          >
-            {[navItems.slice(0, 2), null, navItems.slice(2, 4)].map((group, gi) => group === null ? (
-              <div key="fab-gap" className="w-20 shrink-0" />
-            ) : (
-              <div key={gi} className="flex flex-1 justify-around">
+              zIndex: 50
+            }}>
+            
+            {[navItems.slice(0, 2), null, navItems.slice(2, 4)].map((group, gi) => group === null ?
+            <div key="fab-gap" className="w-20 shrink-0" /> :
+
+            <div key={gi} className="flex flex-1 justify-around">
                 {group.map((item) => {
-                  const index = navItems.indexOf(item);
-                  const isActive = index === activeIndex;
-                  const Icon = item.icon;
-                  return (
-                    <Link
-                      key={item.path}
-                      to={item.path}
-                      onClick={(e) => handleTabPress(e, item)}
-                      className="relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-2 text-center transition-colors"
-                      style={{
-                        color: isActive ? "#9c5228" : "#746959",
-                      }}
-                      aria-label={item.label}
-                    >
-                      {isActive && (
-                        <span
-                          className="absolute bottom-0.5 h-0.5 w-5 rounded-full"
-                          style={{ background: "#9c5228" }}
-                        />
-                      )}
+                const index = navItems.indexOf(item);
+                const isActive = index === activeIndex;
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    onClick={(e) => handleTabPress(e, item)}
+                    className="relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-2 text-center transition-colors"
+                    style={{
+                      color: isActive ? "#9c5228" : "#746959"
+                    }}
+                    aria-label={item.label}>
+                    
+                      {isActive &&
+                    <span
+                      className="absolute bottom-0.5 h-0.5 w-5 rounded-full"
+                      style={{ background: "#9c5228" }} />
+
+                    }
                       <Icon
-                        className="h-5 w-5"
-                        strokeWidth={isActive ? 2.25 : 1.5}
-                        style={{ color: isActive ? "#9c5228" : "#746959" }}
-                      />
+                      className="h-5 w-5"
+                      strokeWidth={isActive ? 2.25 : 1.5}
+                      style={{ color: isActive ? "#9c5228" : "#746959" }} />
+                    
                       <span
-                        className="text-[9.5px] font-semibold uppercase tracking-wide"
-                        style={{ color: isActive ? "#9c5228" : "#746959" }}
-                      >
+                      className="text-[9.5px] font-semibold uppercase tracking-wide"
+                      style={{ color: isActive ? "#9c5228" : "#746959" }}>
+                      
                         {item.label}
                       </span>
-                    </Link>
-                  );
-                })}
+                    </Link>);
+
+              })}
               </div>
-            ))}
+            )}
           </div>
 
           {/* ── FAB — floating above the nav pill ── */}
@@ -380,37 +380,37 @@ export default function UnifiedBottomNav() {
               height: 48,
               background: "#3f3830",
               border: "1px solid #3f3830",
-              boxShadow: "0 6px 20px rgba(63,56,48,0.20)",
-            }}
-          >
+              boxShadow: "0 6px 20px rgba(63,56,48,0.20)"
+            }}>
+            
             <AnimatePresence mode="wait" initial={false}>
-              {expanded ? (
-                <motion.span
-                  key="x"
-                  initial={{ rotate: -90, opacity: 0 }}
-                  animate={{ rotate: 0, opacity: 1 }}
-                  exit={{ rotate: 90, opacity: 0 }}
-                  transition={{ duration: 0.2, ease: EASE }}
-                  className="flex"
-                >
+              {expanded ?
+              <motion.span
+                key="x"
+                initial={{ rotate: -90, opacity: 0 }}
+                animate={{ rotate: 0, opacity: 1 }}
+                exit={{ rotate: 90, opacity: 0 }}
+                transition={{ duration: 0.2, ease: EASE }}
+                className="flex">
+                
                   <X className="h-5 w-5" style={{ color: "#f7f1e8" }} />
-                </motion.span>
-              ) : (
-                <motion.span
-                  key="plus"
-                  initial={{ rotate: 90, opacity: 0 }}
-                  animate={{ rotate: 0, opacity: 1 }}
-                  exit={{ rotate: -90, opacity: 0 }}
-                  transition={{ duration: 0.2, ease: EASE }}
-                  className="flex"
-                >
+                </motion.span> :
+
+              <motion.span
+                key="plus"
+                initial={{ rotate: 90, opacity: 0 }}
+                animate={{ rotate: 0, opacity: 1 }}
+                exit={{ rotate: -90, opacity: 0 }}
+                transition={{ duration: 0.2, ease: EASE }}
+                className="flex">
+                
                   <Plus className="h-5 w-5" style={{ color: "#f7f1e8" }} />
                 </motion.span>
-              )}
+              }
             </AnimatePresence>
           </button>
         </div>
       </motion.nav>
-    </>
-  );
+    </>);
+
 }
