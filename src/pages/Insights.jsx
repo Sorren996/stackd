@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { Mail } from "lucide-react";
-import PageHeader from "@/components/editorial/PageHeader";
+import InsightsHeader from "@/components/reports/InsightsHeader";
 import DashboardCard from "@/components/dashboard/DashboardCard";
 import InsightSkeleton from "@/components/insights/InsightSkeleton";
 import ReportPicker from "@/components/reports/ReportPicker";
@@ -59,7 +59,7 @@ export default function Insights() {
   if (dexcomLoading) {
     return (
       <div className="mx-auto max-w-md space-y-6 pb-4 pt-2">
-        <PageHeader italicWord="reports" />
+        <InsightsHeader />
         <InsightSkeleton />
       </div>
     );
@@ -68,7 +68,7 @@ export default function Insights() {
   if (!connected) {
     return (
       <div className="mx-auto max-w-md space-y-6 pb-4 pt-2">
-        <PageHeader italicWord="reports" />
+        <InsightsHeader />
         <DashboardCard className="p-6 text-center">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full" style={{ background: "#f0e8db" }}>
             <Mail className="h-6 w-6" style={{ color: "#6b6153" }} />
@@ -111,7 +111,7 @@ export default function Insights() {
           className="mx-auto flex max-w-md flex-col justify-center px-4"
           style={{ minHeight: "calc(100dvh - 3.5rem - 7rem)" }}
         >
-          <PageHeader italicWord="reports" />
+          <InsightsHeader />
           <DashboardCard className="p-6">
             <div className="space-y-4">
               <div className="space-y-1.5 text-center">

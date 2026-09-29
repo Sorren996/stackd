@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ChevronRight, Check } from "lucide-react";
 import DashboardCard from "@/components/dashboard/DashboardCard";
-import PageHeader from "@/components/editorial/PageHeader";
+import InsightsHeader from "./InsightsHeader";
 import { REPORT_TYPES, DISCLAIMER } from "./reportCatalog";
 
 // Report Picker — the front door of the Reports engine. Pick a date range
@@ -41,7 +41,7 @@ export default function ReportPicker({ onGenerate }) {
 
   return (
     <div className="mx-auto max-w-md space-y-4 pt-1">
-      <PageHeader italicWord="reports" />
+      <InsightsHeader />
 
       {/* Step 1 — date range */}
       <DashboardCard className="p-4">
