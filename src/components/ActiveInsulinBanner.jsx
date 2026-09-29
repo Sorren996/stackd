@@ -1148,12 +1148,12 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
 
         <div className="section-label mt-5">Current Glucose</div>
         <AnchorNumber
-          value={isGlucoseStale ? "-" : glucoseValue != null ? formatGlucose(glucoseValue) : "-"}
+          value={glucoseValue != null ? formatGlucose(glucoseValue) : "-"}
           unit={glucoseUnitLabel()}
-          caption={isGlucoseStale ? "Waiting for a fresh reading" : rangeCardLabel}
-          trendIcon={!isGlucoseStale && glucoseValue != null ? <TrendIcon size={30} strokeWidth={2.5} /> : null}
-          trendColor={isGlucoseStale ? "#3f3830" : inRange ? "#3f3830" : glucoseColor}
-          subcaption={isGlucoseStale ? null :
+          caption={rangeCardLabel}
+          trendIcon={glucoseValue != null ? <TrendIcon size={30} strokeWidth={2.5} /> : null}
+          trendColor={inRange ? "#3f3830" : glucoseColor}
+          subcaption={
           <span className="font-serif-italic">updated {(() => {
               if (!latestGlucose?.recorded_at) return "just now";
               const mins = Math.max(0, Math.round((nowMinute * MINUTE_MS - new Date(latestGlucose.recorded_at).getTime()) / 60000));

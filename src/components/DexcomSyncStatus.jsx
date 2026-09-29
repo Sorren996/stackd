@@ -51,7 +51,7 @@ export default function DexcomSyncStatus() {
   const { connected, connection } = useDexcomConnection();
   const [showHelp, setShowHelp] = useState(false);
 
-  const { data: latestDexcom = [] } = useQuery({
+  const { data: latestDexcom = [], isLoading } = useQuery({
     queryKey: ["latest-dexcom-glucose"],
     queryFn: () => base44.entities.GlucoseReading.filter({ source: { $in: ["dexcom", "dexcom_share"] } }, "-recorded_at", 1),
     enabled: connected,
@@ -62,6 +62,10 @@ export default function DexcomSyncStatus() {
 
   if (!connected || !connection) return null;
   if (hasDexcomData) return null;
+  // Don't claim the source hasn't connected while the check is still loading
+  // (e.g. right after reopening the app) — wait until we've actually confirmed
+  // there's no Dexcom data before showing the "over 3 hours" guidance.
+  if (isLoading) return null;
 
   const connectedAt = connection.connected_at || connection.created_date;
   const connectedTime = connectedAt ? new Date(connectedAt).getTime() : Date.now();
