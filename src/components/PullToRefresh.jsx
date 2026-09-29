@@ -94,7 +94,7 @@ export default function PullToRefresh({ onRefresh, children }) {
 
   return (
     <div style={{ position: "relative", height: "100%" }}>
-      <div ref={spinRef} style={{ position: "absolute", top: 4, left: "50%", width: 30, height: 30,
+      <div ref={spinRef} style={{ position: "absolute", top: -34, left: "50%", width: 30, height: 30,
         marginLeft: -15, opacity: 0, pointerEvents: "none", zIndex: 10,
         filter: "drop-shadow(0 1px 3px rgba(20,30,40,0.35))" }}>
         <svg width="30" height="30" viewBox="0 0 30 30" className={spin ? "animate-spin" : ""}>
