@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { getFeedScroller, getScrollY } from "@/lib/feedScroll";
 
 export default function ParallaxBackground() {
   const ref = useRef(null);
@@ -12,7 +13,8 @@ export default function ParallaxBackground() {
       raf = 0;
       const doc = document.documentElement;
       const maxScroll = Math.max(1, doc.scrollHeight - window.innerHeight);
-      const progress = Math.min(1, Math.max(0, window.scrollY / maxScroll));
+      const scrollY = getScrollY();
+      const progress = Math.min(1, Math.max(0, scrollY / maxScroll));
       el.style.backgroundPositionY = `${(progress * 100).toFixed(2)}%`;
     };
     const onScroll = () => {
@@ -20,9 +22,14 @@ export default function ParallaxBackground() {
     };
 
     update();
+    // Listen to both the feed scroller (when it owns scrolling) and the window
+    // (for non-feed pages) so parallax tracks whichever container scrolls.
+    const scroller = getFeedScroller();
+    scroller?.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onScroll);
     return () => {
+      scroller?.removeEventListener("scroll", onScroll);
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
       if (raf) cancelAnimationFrame(raf);

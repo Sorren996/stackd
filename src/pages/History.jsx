@@ -18,6 +18,7 @@ import HistoryWeekList from "@/components/history/HistoryWeekList";
 import MonthHeatmap from "@/components/history/MonthHeatmap";
 import DayRecap from "@/components/history/DayRecap";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
+import { scrollToTop } from "@/lib/feedScroll";
 
 function readTargetRange() {
   if (typeof window === "undefined") return { low: 70, high: 180 };
@@ -459,7 +460,7 @@ export default function History() {
     setDirection(dir);
     setSelectedDay(date);
     setLevel("recap");
-    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "instant" }));
+    requestAnimationFrame(() => scrollToTop());
   };
 
   const goBack = () => {

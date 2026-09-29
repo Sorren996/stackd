@@ -8,7 +8,7 @@ import AnalyticsPage from "../pages/Analytics";
 import UnifiedBottomNav from "./UnifiedBottomNav";
 import { useRealtimeLogSync } from "@/hooks/useRealtimeLogSync";
 import { useDexcomRefresh } from "@/hooks/useDexcomRefresh";
-import usePullToRefresh from "@/hooks/usePullToRefresh.jsx";
+import PullToRefresh from "@/components/PullToRefresh";
 
 const CachedDashboard = memo(Dashboard);
 const CachedHistoryPage = memo(HistoryPage);
@@ -70,11 +70,6 @@ export default function Layout() {
     }
   };
 
-  // The pull-to-refresh gesture is owned here (the main scroll view is shared
-  // by every tab), so one gesture works app-wide and refresh stays a single
-  // in-flight process.
-  const { overlay: pullRefreshOverlay } = usePullToRefresh({ onRefresh: handleRefresh });
-
   useEffect(() => {
     if (isDashboardRoute) {
       setVisitedTabs((tabs) => (tabs.dashboard ? tabs : { ...tabs, dashboard: true }));
@@ -120,37 +115,41 @@ export default function Layout() {
         </div>
       </header>
 
+      {/* The feed is the only scrollable, translated region. The fixed header
+          and bottom nav sit outside it, so they never move during a pull. */}
       <main
-        className="relative mx-auto w-full max-w-6xl px-4 overflow-visible pb-44"
-        style={{ paddingTop: "calc(3.5rem + env(safe-area-inset-top))" }}
+        className="relative mx-auto w-full max-w-6xl px-4 overflow-visible"
+        style={{
+          paddingTop: "calc(3.5rem + env(safe-area-inset-top))",
+          height: "100dvh",
+        }}
       >
-        {/* Pages are kept alive across tab switches via the hidden attribute,
-            so they render instantly on return. */}
-        <div className="min-w-0 w-full">
-          <div hidden={!isDashboardRoute}>
-            <CachedDashboard />
+        <PullToRefresh onRefresh={handleRefresh}>
+          <div className="min-w-0 w-full pb-44">
+            <div hidden={!isDashboardRoute}>
+              <CachedDashboard />
+            </div>
+            {visitedTabs.history && (
+              <div hidden={!isHistoryRoute}>
+                <CachedHistoryPage />
+              </div>
+            )}
+            {visitedTabs.analytics && (
+              <div hidden={!isAnalyticsRoute}>
+                <CachedAnalyticsPage />
+              </div>
+            )}
+            {visitedTabs.settings && (
+              <div hidden={!isSettingsRoute}>
+                <CachedSettingsPage />
+              </div>
+            )}
+            {!isKeepAliveRoute && <Outlet />}
           </div>
-          {visitedTabs.history && (
-            <div hidden={!isHistoryRoute}>
-              <CachedHistoryPage />
-            </div>
-          )}
-          {visitedTabs.analytics && (
-            <div hidden={!isAnalyticsRoute}>
-              <CachedAnalyticsPage />
-            </div>
-          )}
-          {visitedTabs.settings && (
-            <div hidden={!isSettingsRoute}>
-              <CachedSettingsPage />
-            </div>
-          )}
-          {!isKeepAliveRoute && <Outlet />}
-        </div>
+        </PullToRefresh>
       </main>
 
       <UnifiedBottomNav />
-      {pullRefreshOverlay}
     </div>
   );
 }

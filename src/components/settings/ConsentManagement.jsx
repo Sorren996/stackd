@@ -11,6 +11,7 @@ import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import SectionCard from "@/components/editorial/SectionCard";
 import LedgerRow from "@/components/editorial/LedgerRow";
+import { getFeedScroller, getScrollY } from "@/lib/feedScroll";
 
 export default function ConsentManagement() {
   const { user, checkUserAuth } = useAuth();
@@ -21,17 +22,17 @@ export default function ConsentManagement() {
 
   useEffect(() => {
     if (!showWithdrawModal) return;
-    const scrollY = window.scrollY;
-    document.body.style.position = "fixed";
-    document.body.style.top = `-${scrollY}px`;
-    document.body.style.width = "100%";
-    document.documentElement.style.overflow = "hidden";
+    const scroller = getFeedScroller();
+    const scrollY = getScrollY();
+    // Lock the feed scroller (or the window fallback) so the page can't scroll
+    // behind the modal, restoring the original position on close.
+    if (scroller) scroller.style.overflowY = "hidden";
+    else document.documentElement.style.overflow = "hidden";
     return () => {
-      document.body.style.position = "";
-      document.body.style.top = "";
-      document.body.style.width = "";
-      document.documentElement.style.overflow = "";
-      window.scrollTo(0, scrollY);
+      if (scroller) scroller.style.overflowY = "auto";
+      else document.documentElement.style.overflow = "";
+      if (scroller) scroller.scrollTo({ top: scrollY, left: 0, behavior: "instant" });
+      else window.scrollTo(0, scrollY);
     };
   }, [showWithdrawModal]);
 
