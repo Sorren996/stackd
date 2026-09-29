@@ -16,9 +16,9 @@ function Side({ data, title, tag }) {
   const s = data?.stats;
   return (
     <div>
-      <div className="mb-3 flex items-baseline justify-between">
+      <div className="mb-3 flex items-center justify-between gap-3">
         <span className="text-sm font-semibold" style={{ color: "#3f3830" }}>{title}</span>
-        <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide" style={{ background: tag === "now" ? "rgba(91,101,80,0.15)" : "rgba(177,151,63,0.15)", color: tag === "now" ? "#4d5742" : "#8a5a12" }}>
+        <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: tag === "now" ? "#4d5742" : "#8a5a12" }}>
           {tag === "now" ? "This stretch" : "The stretch before"}
         </span>
       </div>

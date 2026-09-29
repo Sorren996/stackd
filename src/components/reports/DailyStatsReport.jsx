@@ -1,18 +1,20 @@
-import { useState } from "react";
 import { ReportCard, val, unit } from "./reportShared";
 
-// Daily Statistics — Monday→Sunday breakdown, split into daytime and overnight.
-// Transposed so each row is one metric (Average, In target, Low–High, CV),
-// each column a weekday.
+// Daily Statistics — Monday→Sunday breakdown, split into daytime and the
+// overnight hours. Transposed so each row is one metric (Average, In target,
+// Low–High, CV), each column a weekday. Both periods are always shown as plain
+// labelled tables so a static report/export carries the full picture with no
+// dead interactive toggle.
 
-export default function DailyStatsReport({ reports }) {
-  const [mode, setMode] = useState("daytime");
-  const ds = reports?.dailyStats;
-  if (!ds) return null;
+const MODES = [
+  { k: "daytime", label: "Daytime" },
+  { k: "overnight", label: "Overnight" },
+];
 
-  const cols = ds[mode] || {};
+function StatTable({ ds, mode }) {
   const displayOrder = [1, 2, 3, 4, 5, 6, 0]; // Mon..Sun -> JS dow keys
-  const colsArr = displayOrder.map((k) => ({ label: ds.columns[displayOrder.indexOf(k)], col: cols[k] }));
+  const labels = ds[mode.k] || {};
+  const colsArr = displayOrder.map((k) => ({ label: ds.columns[displayOrder.indexOf(k)], col: labels[k] }));
 
   const metricRows = [
     {
@@ -40,36 +42,16 @@ export default function DailyStatsReport({ reports }) {
   ];
 
   return (
-    <ReportCard title="Daily Statistics">
-      <p className="text-sm" style={{ color: "#6b6153" }}>
-        The week, day by day — split into daytime and the overnight hours.
-      </p>
-
-      <div className="mt-4 flex gap-2">
-        {[
-          { k: "daytime", label: "Daytime" },
-          { k: "overnight", label: "Overnight" },
-        ].map((t) => (
-          <button
-            key={t.k}
-            onClick={() => setMode(t.k)}
-            className="rounded-full px-3 py-1.5 text-xs font-semibold transition-colors"
-            style={{
-              background: mode === t.k ? "#3f3830" : "#f0e8db",
-              color: mode === t.k ? "#f7f1e8" : "#6b6153",
-            }}
-          >
-            {t.label}
-          </button>
-        ))}
+    <div className="mt-4">
+      <div className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "#6b6153" }}>
+        {mode.label}
       </div>
-
-      <div className="mt-4 overflow-x-auto">
+      <div className="mt-2 overflow-x-auto">
         <table className="w-full border-collapse text-left">
           <thead>
             <tr>
               <th className="pb-2 pr-2 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "#6b6153" }}>
-                {mode}
+                {mode.label}
               </th>
               {colsArr.map((c) => (
                 <th key={c.label} className="pb-2 pr-1 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "#6b6153" }}>
@@ -92,6 +74,23 @@ export default function DailyStatsReport({ reports }) {
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+export default function DailyStatsReport({ reports }) {
+  const ds = reports?.dailyStats;
+  if (!ds) return null;
+
+  return (
+    <ReportCard title="Daily Statistics">
+      <p className="text-sm" style={{ color: "#6b6153" }}>
+        The week, day by day — split into daytime and the overnight hours.
+      </p>
+
+      {MODES.map((m) => (
+        <StatTable key={m.k} ds={ds} mode={m} />
+      ))}
 
       <p className="mt-4 text-[11px] leading-relaxed" style={{ color: "#6b6153" }}>
         "In target" is the share of that weekday's readings within your target range; CV is how varied that day tends

@@ -96,7 +96,7 @@ export default function ReportViewer({ reports, reportIds, onBack, windowDays })
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex flex-col"
+      className="fixed inset-0 z-[60] flex flex-col overflow-hidden"
       style={{ background: "#4c6770" }}
     >
       {/* Compact single-row header */}
@@ -213,12 +213,13 @@ export default function ReportViewer({ reports, reportIds, onBack, windowDays })
         </button>
       </div>
 
-      {/* Hidden capture container — all selected reports, mounted for export.
-          Positioned off-screen so it never affects layout but stays in the DOM. */}
+      {/* Off-screen capture container — all selected reports, mounted for export.
+          Kept at opacity:1 but pushed far off-screen (left:-10000px) so
+          html2canvas can snapshot it without affecting the visible layout. */}
       <div
         ref={captureRef}
         aria-hidden="true"
-        className="pointer-events-none absolute left-0 top-0 w-[420px] max-w-[420px] -z-10 opacity-0"
+        className="pointer-events-none absolute left-[-10000px] top-0 w-[420px] max-w-[420px] -z-10"
       >
         {ordered.map((id) => {
           const C = REPORT_COMPONENTS[id];
