@@ -34,7 +34,7 @@ const STATUS_META = {
   closed: {
     label: "Closed",
     icon: CheckCircle2,
-    color: "#8a7f70",
+    color: "#6b6153",
     blurb: "This conversation has been closed.",
   },
 };

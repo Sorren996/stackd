@@ -63,11 +63,11 @@ export default function DoseCard({ dose, onDelete, onEdit, locked = false }) {
 </div>
 
       <div className="min-w-0 flex-1 pt-0.5">
-        <p className="text-sm font-semibold text-white/85">
+        <p className="text-sm font-semibold" style={{ color: "#f7f1e8" }}>
           {dose.units}u {shortName} logged
         </p>
 
-        <p className="mt-0.5 text-xs text-white/35">
+        <p className="mt-0.5 text-xs" style={{ color: "#eef2e9" }}>
           {timeAgo}, {format(new Date(dose.administered_at), "h:mm a")}
         </p>
 
@@ -79,10 +79,10 @@ export default function DoseCard({ dose, onDelete, onEdit, locked = false }) {
         </p>
 
         {dose.notes && (
-          <p className="mt-1 text-xs italic text-white/30">{dose.notes}</p>
+          <p className="mt-1 text-xs italic" style={{ color: "#eef2e9" }}>{dose.notes}</p>
         )}
         {locked && (
-          <p className="mt-1 flex items-center gap-1 text-[10px] font-medium text-white/30">
+          <p className="mt-1 flex items-center gap-1 text-[10px] font-medium" style={{ color: "#eef2e9" }}>
             <Lock className="w-3 h-3" /> Archived
           </p>
         )}
@@ -95,7 +95,8 @@ export default function DoseCard({ dose, onDelete, onEdit, locked = false }) {
           variant="ghost"
           size="icon"
           onClick={() => onEdit?.(dose)}
-          className="h-7 w-7 text-white/25 hover:bg-white/10 hover:text-white/80"
+          className="h-7 w-7 hover:bg-white/10 hover:text-[#f7f1e8]"
+          style={{ color: "#cdd9cd" }}
         >
         
         </Button>
@@ -105,7 +106,8 @@ export default function DoseCard({ dose, onDelete, onEdit, locked = false }) {
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7 text-white/20 hover:bg-destructive/10 hover:text-destructive"
+              className="h-7 w-7 hover:bg-destructive/10 hover:text-destructive"
+              style={{ color: "#cdd9cd" }}
             >
               <Trash2 className="h-3.5 w-3.5" />
             </Button>

@@ -74,7 +74,7 @@ export default function SensorSessionCard() {
     <div className="space-y-2">
       <h2
         className="px-1 text-[10px] font-bold uppercase tracking-[0.18em]"
-        style={{ color: "#eadccf", paddingBottom: "6px", borderBottom: "1px solid rgba(234,220,207,0.3)" }}
+        style={{ color: "#f7f1e8", paddingBottom: "6px", borderBottom: "1px solid rgba(234,220,207,0.3)" }}
       >
         Sensor Session
       </h2>

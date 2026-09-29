@@ -37,15 +37,15 @@ export default function CarbCard({ entry, onDelete, locked = false }) {
       </div>
 
       <div className="flex-1 min-w-0 pt-0.5">
-        <p className="text-sm font-semibold text-white/85">{entry.food_name} enjoyed</p>
-        <p className="text-xs text-white/35 mt-0.5">{timeAgo}, {format(new Date(entry.consumed_at), "h:mm a")}</p>
+        <p className="text-sm font-semibold" style={{ color: "#f7f1e8" }}>{entry.food_name} enjoyed</p>
+        <p className="text-xs mt-0.5" style={{ color: "#eef2e9" }}>{timeAgo}, {format(new Date(entry.consumed_at), "h:mm a")}</p>
         <p className="text-xs mt-1.5 font-medium" style={{ color }}>
           {entry.carbs}g {profileLabel}
         </p>
 
-        {entry.notes && <p className="text-xs text-white/30 mt-1 italic">{entry.notes}</p>}
+        {entry.notes && <p className="text-xs text-white/30 mt-1 italic" style={{ color: "#eef2e9" }}>{entry.notes}</p>}
         {locked && (
-          <p className="mt-1 flex items-center gap-1 text-[10px] font-medium text-white/30">
+          <p className="mt-1 flex items-center gap-1 text-[10px] font-medium" style={{ color: "#eef2e9" }}>
             <Lock className="w-3 h-3" /> Archived
           </p>
         )}
@@ -54,7 +54,7 @@ export default function CarbCard({ entry, onDelete, locked = false }) {
       {!locked && (
       <AlertDialog>
         <AlertDialogTrigger asChild>
-          <Button variant="ghost" size="icon" className="shrink-0 w-7 h-7 text-white/20 hover:text-destructive hover:bg-destructive/10 mt-0.5">
+          <Button variant="ghost" size="icon" className="shrink-0 w-7 h-7 hover:text-destructive hover:bg-destructive/10 mt-0.5" style={{ color: "#cdd9cd" }}>
             <Trash2 className="w-3.5 h-3.5" />
           </Button>
         </AlertDialogTrigger>

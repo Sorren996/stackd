@@ -172,7 +172,7 @@ export default function Analytics() {
         <PageHeader italicWord="rhythm" rightText={dateRangeText} />
         <SectionCard>
           <div className="flex flex-col items-center justify-center py-10 text-center">
-            <Activity className="w-10 h-10 mb-3" style={{ color: "#a89e8d" }} />
+            <Activity className="w-10 h-10 mb-3" style={{ color: "#746959" }} />
             <h3 className="text-lg font-semibold" style={{ color: "#3f3830" }}>Your journey awaits</h3>
             <p className="mt-1 max-w-[240px] text-sm" style={{ color: "#746959" }}>
               Log a few glucose readings to begin revealing your body's gentle patterns.
@@ -221,7 +221,7 @@ export default function Analytics() {
             <div className="flex items-end justify-between gap-2 pt-1 pb-3" style={{ height: 120 }}>
             {stats.days.map((d, i) => (
               <div key={i} className="flex flex-1 flex-col items-center gap-1.5">
-                <span className="text-[10px] font-medium tabular-nums" style={{ color: "#8a7f70" }}>
+                <span className="text-[10px] font-medium tabular-nums" style={{ color: "#746959" }}>
                   {d.tir}
                 </span>
                 <div
@@ -240,7 +240,7 @@ export default function Analytics() {
             ))}
           </div>
           {stats.bestDay && (
-            <div className="flex justify-between pt-2 text-xs" style={{ color: "#8a7f70" }}>
+            <div className="flex justify-between pt-2 text-xs" style={{ color: "#6b6153" }}>
               <span>
                 Best day{" "}
                 <span className="font-semibold" style={{ color: "#3f3830" }}>

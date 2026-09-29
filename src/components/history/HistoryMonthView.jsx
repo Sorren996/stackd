@@ -5,9 +5,9 @@ export default function HistoryMonthView({ months, onSelectMonth }) {
   if (!months.length) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
-        <CalendarDays className="w-10 h-10 mb-3" style={{ color: "#a89e8d" }} />
+        <CalendarDays className="w-10 h-10 mb-3" style={{ color: "#746959" }} />
         <h3 className="text-lg font-semibold" style={{ color: "#3f3830" }}>Your journey is just beginning</h3>
-        <p className="text-sm mt-1 max-w-xs" style={{ color: "#a89e8d" }}>
+        <p className="text-sm mt-1 max-w-xs" style={{ color: "#6b6153" }}>
           Your last 90 days of moments will gently gather here as you log them.
         </p>
       </div>
@@ -42,10 +42,10 @@ export default function HistoryMonthView({ months, onSelectMonth }) {
             <span className="flex-1 overflow-hidden">
               <span className="dotted-leader block" />
             </span>
-            <span className="shrink-0 text-xs" style={{ color: "#8a7f70" }}>
+            <span className="shrink-0 text-xs" style={{ color: "#6b6153" }}>
               {subline}
             </span>
-            <ChevronRight className="h-4 w-4 shrink-0" style={{ color: "#a89e8d" }} />
+            <ChevronRight className="h-4 w-4 shrink-0" style={{ color: "#746959" }} />
           </button>
         );
       })}

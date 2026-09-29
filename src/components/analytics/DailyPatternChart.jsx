@@ -57,7 +57,7 @@ export default function DailyPatternChart({ hourlyAverages, targetLow, targetHig
     <section className="px-1">
       <div className="section-label">Daily Rhythm</div>
       <div className="pt-3">
-        <p className="text-[11px] mb-2" style={{ color: "#a89e8d" }}>Average glucose throughout the day</p>
+        <p className="text-[11px] mb-2" style={{ color: "#6b6153" }}>Average glucose throughout the day</p>
 
         <div className="h-48">
           <ResponsiveContainer width="100%" height="100%">
@@ -77,7 +77,7 @@ export default function DailyPatternChart({ hourlyAverages, targetLow, targetHig
               <ReferenceArea y1={targetLow} y2={targetHigh} fill="rgba(91, 101, 80, 0.06)" />
               <XAxis
                 dataKey="hour"
-                tick={{ fontSize: 9, fill: "#a89e8d" }}
+                tick={{ fontSize: 9, fill: "#746959" }}
                 axisLine={false}
                 tickLine={false}
                 interval={2}
@@ -85,7 +85,7 @@ export default function DailyPatternChart({ hourlyAverages, targetLow, targetHig
               />
               <YAxis
                 domain={[yMin, yMax]}
-                tick={{ fontSize: 9, fill: "#a89e8d" }}
+                tick={{ fontSize: 9, fill: "#746959" }}
                 tickFormatter={(v) => formatGlucose(v)}
                 axisLine={false}
                 tickLine={false}
@@ -110,8 +110,8 @@ export default function DailyPatternChart({ hourlyAverages, targetLow, targetHig
 
         {insight && (
           <div className="mt-2 flex items-center gap-2">
-            <ArrowUp className="h-3 w-3 shrink-0" strokeWidth={2} style={{ color: "#8a7f70" }} />
-            <p className="text-[11px]" style={{ color: "#8a7f70" }}>
+            <ArrowUp className="h-3 w-3 shrink-0" strokeWidth={2} style={{ color: "#746959" }} />
+            <p className="text-[11px]" style={{ color: "#6b6153" }}>
               <span className="font-semibold" style={{ color: "#3f3830" }}>Highest average around {insight.peakHour}</span>
             </p>
           </div>

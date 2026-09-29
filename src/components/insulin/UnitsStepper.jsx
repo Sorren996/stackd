@@ -42,7 +42,7 @@ export default function UnitsStepper({ value, onChange }) {
 
         <div className="flex min-w-[104px] items-baseline justify-center gap-1">
           <span className="text-4xl font-black leading-none" style={{ color: "#3f3830" }}>{current}</span>
-          <span className="text-sm font-medium" style={{ color: "#a89e8d" }}>U</span>
+          <span className="text-sm font-medium" style={{ color: "#746959" }}>U</span>
         </div>
 
         <button
@@ -85,7 +85,7 @@ export default function UnitsStepper({ value, onChange }) {
                   minWidth: 56,
                   transition: "background 250ms ease-out, color 250ms ease-out",
                   background: isSelected ? "#9c5228" : "#f7f1e8",
-                  color: isSelected ? "#f7f1e8" : "#8a7f70",
+                  color: isSelected ? "#f7f1e8" : "#6b6153",
                 }}
                 aria-pressed={isSelected}
               >

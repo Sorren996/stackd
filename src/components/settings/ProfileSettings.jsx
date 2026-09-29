@@ -151,7 +151,7 @@ export default function ProfileSettings() {
       </SectionCard>
 
       <div className="flex justify-center pt-4 pb-2">
-        <span className="text-[10px] font-medium tracking-wide" style={{ color: "#b8aea0" }}>
+        <span className="text-[10px] font-medium tracking-wide" style={{ color: "#f7f1e8" }}>
           {getVersionString()}
         </span>
       </div>

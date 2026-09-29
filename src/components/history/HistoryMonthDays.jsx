@@ -12,7 +12,7 @@ function dayTir(day) {
 
 export default function HistoryMonthDays({ days, onSelectDay }) {
   if (!days.length) {
-    return <p className="py-10 text-center text-sm" style={{ color: "#a89e8d" }}>No moments this month yet.</p>;
+    return <p className="py-10 text-center text-sm" style={{ color: "#746959" }}>No moments this month yet.</p>;
   }
 
   return (
@@ -46,10 +46,10 @@ export default function HistoryMonthDays({ days, onSelectDay }) {
             <span className="flex-1 overflow-hidden">
               <span className="dotted-leader block" />
             </span>
-            <span className="shrink-0 text-xs" style={{ color: "#8a7f70" }}>
+            <span className="shrink-0 text-xs" style={{ color: "#6b6153" }}>
               {summary}{extras && `, ${extras}`}
             </span>
-            <ChevronRight className="h-4 w-4 shrink-0" style={{ color: "#a89e8d" }} />
+            <ChevronRight className="h-4 w-4 shrink-0" style={{ color: "#746959" }} />
           </button>
         );
       })}
