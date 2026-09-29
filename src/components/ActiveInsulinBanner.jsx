@@ -489,8 +489,8 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
   let outcomeAssessment = null;
 
   if (mealStillUnderReview && ratio !== null && !correctionGlucoseLow) {
-    const glucoseDelta = Number.isFinite(latestGlucoseValue) && Number.isFinite(glucoseValue)
-    ? latestGlucoseValue - glucoseValue : null;
+    const glucoseDelta = Number.isFinite(latestGlucoseValue) && Number.isFinite(glucoseValue) ?
+    latestGlucoseValue - glucoseValue : null;
 
     // Falling-too-fast caution (a watch, not a command).
     if (recentSlopeMgDlPerMin != null && recentSlopeMgDlPerMin <= -2 && minutesSinceMeal >= 30) {
@@ -504,9 +504,9 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
       color = "#9c3f2e";
     }
     // Misalignment heads-up after roughly 1 to 2 hours. Does not suggest dosing.
-    else if (minutesSinceMeal >= 60 && minutesSinceMeal <= 150
-    && glucoseDelta != null && glucoseDelta > 40
-    && recentSlopeMgDlPerMin != null && recentSlopeMgDlPerMin > 0.5) {
+    else if (minutesSinceMeal >= 60 && minutesSinceMeal <= 150 &&
+    glucoseDelta != null && glucoseDelta > 40 &&
+    recentSlopeMgDlPerMin != null && recentSlopeMgDlPerMin > 0.5) {
       outcomeAssessment = {
         label: "Not aligning yet",
         message: "Dose may not be aligning entirely. Worth paying attention to the outcome.",
@@ -518,9 +518,9 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
     }
     // In range now.
     else if (latestIsAfterMeal && latestInRange) {
-      const startPart = correctionGlucoseAvailable
-      ? `Started at ${formatGlucose(glucoseValue)} ${glucoseUnitLabel()}`
-      : "Started this meal";
+      const startPart = correctionGlucoseAvailable ?
+      `Started at ${formatGlucose(glucoseValue)} ${glucoseUnitLabel()}` :
+      "Started this meal";
       outcomeAssessment = {
         label: "In range",
         message: `${startPart}, now at ${formatGlucose(latestGlucoseValue)} ${glucoseUnitLabel()}. ${activeIOB.toFixed(1)}u still active.`,
@@ -1143,7 +1143,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
         {/* Card header — "Your day" + current date/time */}
         <div className="flex items-baseline justify-between">
           <h1 className="hdr">Today</h1>
-          <span className="hdr-date">{format(new Date(nowMinute * MINUTE_MS), "EEE, MMM d, h:mm a")}</span>
+          <span className="hdr-date hidden">{format(new Date(nowMinute * MINUTE_MS), "EEE, MMM d, h:mm a")}</span>
         </div>
 
         <div className="section-label mt-5">Current Glucose</div>
@@ -1152,7 +1152,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
           unit={glucoseUnitLabel()}
           caption={isGlucoseStale ? "Waiting for a fresh reading" : rangeCardLabel}
           trendIcon={!isGlucoseStale && glucoseValue != null ? <TrendIcon size={30} strokeWidth={2.5} /> : null}
-          trendColor={isGlucoseStale ? "#3f3830" : (inRange ? "#3f3830" : glucoseColor)}
+          trendColor={isGlucoseStale ? "#3f3830" : inRange ? "#3f3830" : glucoseColor}
           subcaption={isGlucoseStale ? null :
           <span className="font-serif-italic">updated {(() => {
               if (!latestGlucose?.recorded_at) return "just now";
