@@ -52,7 +52,12 @@ export function useUserSettings() {
     mutationFn: (settingsData) =>
       saveUserSettings({
         ...settingsData,
-        username: user?.full_name || user?.email || "unknown",
+        // Only set username from the auth user when the caller hasn't
+        // provided one. This preserves a custom display name set via
+        // Profile Settings instead of overwriting it on every save.
+        ...(settingsData.username
+          ? {}
+          : { username: user?.full_name || user?.email || "unknown" }),
       }),
     onMutate: () => {
       setIsSaving(true);

@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
+import { useUserSettings } from "@/hooks/useUserSettings";
+import { saveUserSettings } from "@/lib/userSettings";
 import { Loader2, Check, ChevronRight, Pencil } from "lucide-react";
 import { getVersionString } from "@/lib/appVersion";
 import { toast } from "sonner";
@@ -8,7 +11,9 @@ import SectionCard from "@/components/editorial/SectionCard";
 import LedgerRow from "@/components/editorial/LedgerRow";
 
 export default function ProfileSettings() {
-  const { user, checkUserAuth } = useAuth();
+  const { user } = useAuth();
+  const { settings } = useUserSettings();
+  const queryClient = useQueryClient();
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState("");
   const [isSavingName, setIsSavingName] = useState(false);
@@ -16,9 +21,11 @@ export default function ProfileSettings() {
   const [passwordStep, setPasswordStep] = useState("idle");
   const [isSendingReset, setIsSendingReset] = useState(false);
 
+  const displayName = settings?.username || user?.full_name || "";
+
   useEffect(() => {
-    if (user?.full_name) setNameValue(user.full_name);
-  }, [user?.full_name]);
+    if (displayName) setNameValue(displayName);
+  }, [displayName]);
 
   const handleSaveName = async () => {
     const trimmed = nameValue.trim();
@@ -28,8 +35,8 @@ export default function ProfileSettings() {
     }
     setIsSavingName(true);
     try {
-      await base44.auth.updateMe({ full_name: trimmed });
-      await checkUserAuth();
+      await saveUserSettings({ username: trimmed });
+      await queryClient.invalidateQueries({ queryKey: ["user-settings"] });
       setEditingName(false);
       toast.success("Your name has been updated.");
     } catch {
@@ -74,7 +81,7 @@ export default function ProfileSettings() {
                 type="button"
                 onClick={() => {
                   setEditingName(false);
-                  setNameValue(user?.full_name || "");
+                  setNameValue(displayName);
                 }}
                 disabled={isSavingName}
                 className="text-xs font-medium transition disabled:opacity-40"
@@ -97,10 +104,10 @@ export default function ProfileSettings() {
         ) : (
           <LedgerRow
             label="Name"
-            value={user?.full_name || "Not set"}
+            value={displayName || "Not set"}
             actionLabel="Edit"
             onClick={() => {
-              setNameValue(user?.full_name || "");
+              setNameValue(displayName);
               setEditingName(true);
             }}
           />
