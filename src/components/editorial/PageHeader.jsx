@@ -11,11 +11,11 @@ export default function PageHeader({ italicWord, date = new Date(), showDate = t
       <h1 className="text-lg font-semibold tracking-tight" style={{ color: "#f7f1e8" }}>
         Your <span className="font-serif-italic" style={{ fontWeight: 400 }}>{italicWord}</span>
       </h1>
-      {showDate && (
-        <span className="text-xs font-semibold" style={{ color: "#f7f1e8", opacity: 0.92 }}>
+      {showDate &&
+      <span className="text-xs font-semibold hidden" style={{ color: "#f7f1e8", opacity: 0.92 }}>
           {rightText || format(date, "EEE, MMM d, h:mm aa")}
         </span>
-      )}
-    </div>
-  );
+      }
+    </div>);
+
 }
