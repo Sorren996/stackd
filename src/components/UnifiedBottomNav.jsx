@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, animate } from "framer-motion";
 import { Home, BookOpen, Activity, CircleUser, Plus, X, Syringe, Droplets, Wheat, Utensils } from "lucide-react";
 import DoseForm from "@/components/DoseForm";
@@ -7,11 +7,32 @@ import CombinedLogSheet from "@/components/CombinedLogSheet";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 
 const navItems = [
-  { path: "/", label: "Home", icon: Home },
-  { path: "/history", label: "Journal", icon: BookOpen },
-  { path: "/analytics", label: "Rhythm", icon: Activity },
-  { path: "/settings", label: "Profile", icon: CircleUser },
+  { key: "dashboard", path: "/", label: "Home", icon: Home },
+  { key: "history", path: "/history", label: "Journal", icon: BookOpen },
+  { key: "analytics", path: "/analytics", label: "Rhythm", icon: Activity },
+  { key: "settings", path: "/settings", label: "Profile", icon: CircleUser },
 ];
+
+const SUBPATH_KEY = (key) => `stackd-tab-subpath:${key}`;
+
+function readSavedSubpath(key) {
+  if (typeof window === "undefined" || typeof sessionStorage === "undefined") return null;
+  try {
+    const v = sessionStorage.getItem(SUBPATH_KEY(key));
+    return v && v !== "/" ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveSubpath(key, pathname) {
+  if (typeof window === "undefined" || typeof sessionStorage === "undefined") return;
+  try {
+    sessionStorage.setItem(SUBPATH_KEY(key), pathname || "/");
+  } catch {
+    // Session storage may be unavailable (private mode) — navigate still works.
+  }
+}
 
 const ALL_ACTIONS = [
   { id: "glucose", label: "Glucose", Icon: Droplets },
@@ -32,12 +53,14 @@ function readManualGlucoseEnabled() {
 
 export default function UnifiedBottomNav() {
   const location = useLocation();
+  const navigate = useNavigate();
 
   const activeIndex = (() => {
     if (location.pathname.startsWith("/settings")) return 3;
     const idx = navItems.findIndex((it) => it.path === location.pathname);
     return idx === -1 ? 0 : idx;
   })();
+  const activeTabKey = navItems[activeIndex]?.key || "dashboard";
 
   // ── FAB / menu / logging forms ──
   const [expanded, setExpanded] = useState(false);
@@ -82,6 +105,31 @@ export default function UnifiedBottomNav() {
     setExpanded(false);
     animateMenu(0);
   }, [location.pathname, animateMenu]);
+
+  // Persist the active sub-path of each tab so switching back restores the
+  // exact screen the user was on (Journal month/day/recap, etc.).
+  useEffect(() => {
+    // Persist full sub-path including any query (e.g. Journal day/recap),
+    // so returning to the tab restores the exact screen the user was on.
+    saveSubpath(activeTabKey, `${location.pathname}${location.search}`);
+  }, [activeTabKey, location.pathname, location.search]);
+
+  // Tap behavior: navigating to a tab last visited restores its saved
+  // sub-path; a second consecutive tap of the already-active tab resets to
+  // the tab's root.
+  const handleTabPress = (e, item) => {
+    const alreadyActive = item.key === activeTabKey;
+    if (alreadyActive) {
+      // Second consecutive tap on the active tab → reset to root.
+      e.preventDefault();
+      if (location.pathname !== item.path) navigate(item.path);
+      return;
+    }
+    // A different tab → go to its saved sub-path, or its root if none saved.
+    const saved = readSavedSubpath(item.key);
+    e.preventDefault();
+    navigate(saved || item.path);
+  };
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -269,6 +317,7 @@ export default function UnifiedBottomNav() {
                 <Link
                   key={item.path}
                   to={item.path}
+                  onClick={(e) => handleTabPress(e, item)}
                   className="relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-2xl text-center transition-colors"
                   style={{
                     color: isActive ? "#9c5228" : "#746959",

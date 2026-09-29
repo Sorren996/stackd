@@ -10,6 +10,7 @@ import AnalyticsPage from "../pages/Analytics";
 import UnifiedBottomNav from "./UnifiedBottomNav";
 import { useRealtimeLogSync } from "@/hooks/useRealtimeLogSync";
 import { useDexcomRefresh } from "@/hooks/useDexcomRefresh";
+import { setRefreshHandler } from "@/lib/refreshRegistry";
 
 const CachedDashboard = memo(Dashboard);
 const CachedHistoryPage = memo(HistoryPage);
@@ -93,6 +94,14 @@ export default function Layout() {
     const id = setTimeout(() => setRefreshAlert(null), 2500);
     return () => clearTimeout(id);
   }, [refreshAlert]);
+
+  // Expose the manual refresh action to the pull-to-refresh gesture on the
+  // main scroll views (Dashboard, Journal). Pages call triggerRefresh() and
+  // this handler re-pulls every cached query + forces a Dexcom refresh.
+  useEffect(() => {
+    setRefreshHandler(handleRefresh);
+    return () => setRefreshHandler(null);
+  }, [handleRefresh]);
 
   useEffect(() => {
     if (isDashboardRoute) {
@@ -200,27 +209,38 @@ export default function Layout() {
         className="relative mx-auto w-full max-w-6xl px-4 overflow-visible pb-44"
         style={{ paddingTop: "calc(3.5rem + env(safe-area-inset-top))" }}
       >
-        <div className="min-w-0 w-full">
-          <div hidden={!isDashboardRoute}>
-            <CachedDashboard />
-          </div>
-          {visitedTabs.history && (
-            <div hidden={!isHistoryRoute}>
-              <CachedHistoryPage />
+        {/* Subtle horizontal slide-and-fade as pages are kept alive across
+            tab switches. keyed on the route so the transition fires on change. */}
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={location.pathname}
+            className="min-w-0 w-full"
+            initial={{ opacity: 0, x: 14 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -14 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+          >
+            <div hidden={!isDashboardRoute}>
+              <CachedDashboard />
             </div>
-          )}
-          {visitedTabs.analytics && (
-            <div hidden={!isAnalyticsRoute}>
-              <CachedAnalyticsPage />
-            </div>
-          )}
-          {visitedTabs.settings && (
-            <div hidden={!isSettingsRoute}>
-              <CachedSettingsPage />
-            </div>
-          )}
-          {!isKeepAliveRoute && <Outlet />}
-        </div>
+            {visitedTabs.history && (
+              <div hidden={!isHistoryRoute}>
+                <CachedHistoryPage />
+              </div>
+            )}
+            {visitedTabs.analytics && (
+              <div hidden={!isAnalyticsRoute}>
+                <CachedAnalyticsPage />
+              </div>
+            )}
+            {visitedTabs.settings && (
+              <div hidden={!isSettingsRoute}>
+                <CachedSettingsPage />
+              </div>
+            )}
+            {!isKeepAliveRoute && <Outlet />}
+          </motion.div>
+        </AnimatePresence>
       </main>
 
       <UnifiedBottomNav />

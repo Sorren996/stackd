@@ -18,6 +18,7 @@ import HistoryWeekList from "@/components/history/HistoryWeekList";
 import MonthHeatmap from "@/components/history/MonthHeatmap";
 import DayRecap from "@/components/history/DayRecap";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
+import usePullToRefresh from "@/hooks/usePullToRefresh.jsx";
 
 function readTargetRange() {
   if (typeof window === "undefined") return { low: 70, high: 180 };
@@ -269,6 +270,7 @@ function EditLogSheet({ log, onClose, onSave, isSaving }) {
 }
 
 export default function History() {
+  const { overlay: pullRefreshOverlay } = usePullToRefresh();
   const queryClient = useQueryClient();
   const { connected: dexcomConnected } = useDexcomConnection();
   const [level, setLevel] = useState("month"); // month | days | recap
@@ -499,6 +501,7 @@ export default function History() {
 
   return (
     <div className="space-y-6">
+      {pullRefreshOverlay}
       <EditLogSheet
         log={editingLog}
         onClose={() => setEditingLog(null)}
