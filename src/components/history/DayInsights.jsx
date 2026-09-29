@@ -57,7 +57,7 @@ export default function DayInsights({ metrics, carbs }) {
       </div>
       <ul className="space-y-1.5">
         {insights.map((line, i) => (
-          <li key={i} className="text-xs leading-relaxed text-white/70">
+          <li key={i} className="text-xs leading-relaxed" style={{ color: "#f7f1e8" }}>
             {line}
           </li>
         ))}

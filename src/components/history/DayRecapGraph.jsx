@@ -29,7 +29,7 @@ function Legend({ color, label, ring }) {
         className="inline-block h-2.5 w-2.5 rounded-full"
         style={ring ? { background: "transparent", border: `1.5px solid ${color}` } : { background: color }}
       />
-      <span className="text-[10px] font-medium text-white/45">{label}</span>
+      <span className="text-[10px] font-medium" style={{ color: "#eef2e9" }}>{label}</span>
     </span>
   );
 }

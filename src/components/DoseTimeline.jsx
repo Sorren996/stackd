@@ -12,10 +12,10 @@ function DoseTimelineBar({ dose }) {
       <div className="mb-2 flex items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
           <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
-          <p className="truncate text-xs font-semibold text-white/75">{shortName}</p>
-          <span className="text-[10px] text-white/30">{units}u</span>
+          <p className="truncate text-xs font-semibold" style={{ color: "#f7f1e8" }}>{shortName}</p>
+          <span className="text-[10px]" style={{ color: "#eef2e9" }}>{units}u</span>
         </div>
-        <span className="shrink-0 text-sm font-bold text-white tabular-nums">{formatIOBValue(iob)}u</span>
+        <span className="shrink-0 text-sm font-bold tabular-nums" style={{ color: "#f7f1e8" }}>{formatIOBValue(iob)}u</span>
       </div>
 
       <div className="relative h-2.5 overflow-hidden rounded-full" style={{ background: "rgba(255,255,255,0.05)" }}>
@@ -34,7 +34,7 @@ function DoseTimelineBar({ dose }) {
       </div>
 
       <div className="mt-1.5 flex items-center justify-between">
-        <p className="text-[10px] text-white/35">{statusLabel}</p>
+        <p className="text-[10px]" style={{ color: "#eef2e9" }}>{statusLabel}</p>
         <p className="text-[10px] font-medium" style={{ color: isSettling ? "rgba(255,255,255,0.3)" : color }}>
           {isSettling ? "Gently settling" : `Estimated ~${formatMinutes(remainingMin)} left`}
         </p>
