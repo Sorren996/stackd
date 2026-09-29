@@ -40,7 +40,7 @@ export default function ReportPicker({ onGenerate }) {
   const isNoneSelected = selected.size === 0;
 
   return (
-    <div className="mx-auto max-w-md space-y-4 pb-36 pt-1">
+    <div className="mx-auto max-w-md space-y-4 pt-1 pb-10">
       <PageHeader italicWord="reports" />
 
       {/* Step 1 — date range */}
@@ -121,7 +121,7 @@ export default function ReportPicker({ onGenerate }) {
       </p>
 
       {/* Sticky Generate — raised above the bottom nav + FAB so it's never covered */}
-      <div className="fixed inset-x-0 z-20 mx-auto max-w-md px-4" style={{ bottom: "calc(6.5rem + env(safe-area-inset-bottom))" }}>
+      <div className="fixed inset-x-0 z-20 mx-auto max-w-md px-4 my-5" style={{ bottom: "calc(6.5rem + env(safe-area-inset-bottom))" }}>
         <button
           type="button"
           onClick={handleGenerate}
