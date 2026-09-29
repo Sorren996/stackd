@@ -1143,7 +1143,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
         {/* Card header — "Your day" + current date/time */}
         <div className="flex items-baseline justify-between">
           <h1 className="hdr">Today</h1>
-          <span className="hdr-date hidden">{format(new Date(nowMinute * MINUTE_MS), "EEE, MMM d, h:mm a")}</span>
+          
         </div>
 
         <div className="section-label mt-5">Current Glucose</div>
