@@ -33,7 +33,7 @@ export default function PullToRefresh({ onRefresh, children }) {
     contentRef.current.style.transform = `translate3d(0,${S.pull}px,0)`;
     spinRef.current.style.transition = "none";
     spinRef.current.style.opacity = String(t);
-    spinRef.current.style.transform = `translate3d(0,${S.pull * 0.9}px,0) scale(${t})`;
+    spinRef.current.style.transform = `translate3d(0,${S.pull}px,0) scale(${t})`;
   };
 
   // glide: eased transition to a target offset (used for hold-settle and release)
@@ -44,7 +44,7 @@ export default function PullToRefresh({ onRefresh, children }) {
     contentRef.current.style.transform = `translate3d(0,${target}px,0)`;
     spinRef.current.style.transition = `transform ${ms}ms cubic-bezier(.32,.72,0,1), opacity ${ms}ms`;
     spinRef.current.style.opacity = String(t);
-    spinRef.current.style.transform = `translate3d(0,${target * 0.9}px,0) scale(${t})`;
+    spinRef.current.style.transform = `translate3d(0,${target}px,0) scale(${t})`;
     if (done) setTimeout(done, ms);
   };
 
@@ -94,13 +94,15 @@ export default function PullToRefresh({ onRefresh, children }) {
 
   return (
     <div style={{ position: "relative", height: "100%" }}>
-      <div ref={spinRef} style={{ position: "absolute", top: 8, left: "50%", width: 24, height: 24,
-        marginLeft: -12, opacity: 0, pointerEvents: "none", zIndex: 0 }}>
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className={spin ? "animate-spin" : ""}>
+      <div ref={spinRef} style={{ position: "absolute", top: 4, left: "50%", width: 30, height: 30,
+        marginLeft: -15, opacity: 0, pointerEvents: "none", zIndex: 10,
+        filter: "drop-shadow(0 1px 3px rgba(20,30,40,0.35))" }}>
+        <svg width="30" height="30" viewBox="0 0 30 30" className={spin ? "animate-spin" : ""}>
+          <circle cx="15" cy="15" r="13.5" fill="#fdf9f2" stroke="rgba(255,255,255,0.6)" strokeWidth="1" />
           <path
-            d="M12 4a8 8 0 1 1-6.9 3.9"
-            stroke="#3f3830"
-            strokeWidth="2.4"
+            d="M15 3a12 12 0 1 1-10.2 4.9"
+            stroke="#9c5228"
+            strokeWidth="3"
             strokeLinecap="round"
           />
         </svg>
