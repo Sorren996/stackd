@@ -4,6 +4,7 @@ import { ChevronDown } from "lucide-react";
 import DashboardCard from "@/components/dashboard/DashboardCard";
 import SwipeableRow from "@/components/SwipeableRow";
 import IobDecayChart from "@/components/insulin/IobDecayChart";
+import RemainingBar, { RemainingAxis, RemainingLegend, computeAxis } from "@/components/insulin/RemainingBars";
 import { isBasalInsulinType, getDoseStatus, getDoseTimingInfo } from "@/lib/insulinPharmacology";
 import { formatIOBValue, IOB_FLOOR } from "@/lib/iobModel";
 
@@ -129,8 +130,13 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
     return () => document.removeEventListener("pointerdown", onPointerDown, true);
   }, [openDoseId]);
 
+  // Chronological order — earliest dose first, matching "Remaining by dose"
+  // as a chronological read.
   const bolusDoses = useMemo(
-    () => (breakdown || []).filter((d) => !isBasalInsulinType(d.type) && d.iob > IOB_FLOOR),
+    () =>
+      (breakdown || [])
+        .filter((d) => !isBasalInsulinType(d.type) && d.iob > IOB_FLOOR)
+        .sort((a, b) => a.time - b.time),
     [breakdown]
   );
   const basalDoses = useMemo(
@@ -148,14 +154,18 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
   const hasBolus = bolusDoses.length > 0;
   const hasBasal = basalDoses.length > 0;
 
+  // Shared absolute units axis for all remaining-unit bars (0 → axisMax).
+  // Every bar uses the same scale — no per-row normalization.
+  const { axisMax, ticks } = useMemo(() => computeAxis(bolusDoses), [bolusDoses]);
+
   // Gentle awareness: multiple rapid doses active at once
   const showStackingBanner = activeBolusCount > 1;
 
   return (
     <div className="space-y-3">
       {/* 1. Gentle awareness banner */}
-      {showStackingBanner &&
-      <DashboardCard className="px-4 py-3">
+      {showStackingBanner && (
+        <DashboardCard className="px-4 py-3">
           <div className="flex items-start gap-2">
             <span className="mt-0.5 shrink-0 text-[14px]" style={{ color: PALETTE.amber }}>⚠</span>
             <div>
@@ -163,12 +173,12 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
                 {activeBolusCount} rapid doses are active at once
               </p>
               <p className="mt-0.5 text-[12px] leading-relaxed" style={{ color: PALETTE.muted }}>
-                Notice how you feel. The curves below show where each one is.
+                Notice how you feel.
               </p>
             </div>
           </div>
         </DashboardCard>
-      }
+      )}
 
       {/* 2. Rapid insulin card */}
       <DashboardCard className="p-4">
@@ -191,89 +201,105 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
         {/* Hairline divider */}
         <div className="my-3" style={{ height: 1, background: PALETTE.hairline }} />
 
-        {/* One row per dose */}
-        {hasBolus ?
-        <div className="space-y-2.5">
-            {bolusDoses.map((dose) => {
-            const status = bolusStatusLine(dose, now);
-            const dotColor = dose.color;
-            const textColor = PALETTE.ink;
-            return (
-              <SwipeableRow
-                key={dose.id}
-                rowId={dose.id}
-                isOpen={openDoseId === dose.id}
-                onOpenChange={(o) => setOpenDoseId(o ? dose.id : null)}
-                onEdit={() => onEditDose?.(dose.id)}
-                onDelete={() => onDeleteDose?.(dose.id)}
-                editLabel="Edit"
-                deleteLabel="Remove"
-                itemLabel={`${dose.shortName || dose.type?.split(" ")[0] || "Insulin"}, ${fmtUnits(dose.units)}u`}
-              >
-                <div className="flex w-full items-center gap-2.5 text-left">
-                  <span className="min-w-0 flex-1">
-                    <span className="flex items-baseline gap-1.5">
-                      <span className="text-[13px] font-semibold truncate" style={{ color: textColor }}>
-                        {dose.shortName || dose.type?.split(" ")[0] || "Insulin"}
-                      </span>
-                      <span className="text-[11px]" style={{ color: PALETTE.muted }}>
-                        {fmtUnits(dose.units)}u, {formatClock(dose.time)}
-                      </span>
-                    </span>
-                    <span className="mt-0.5 text-[11px] leading-tight" style={{ color: PALETTE.muted }}>
-                      {status.label}
-                    </span>
-                  </span>
-                  <span className="shrink-0 text-right">
-                    <span className="block text-[13px] font-semibold tabular-nums" style={{ color: textColor }}>
-                      {fmtIob(dose.iob)}
-                    </span>
-                    {status.remaining &&
-                    <span className="block text-[10px] tabular-nums" style={{ color: PALETTE.faint }}>
-                        clears in <motion.span key={status.remaining} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>{status.remaining}</motion.span>
-                      </span>
-                    }
-                    </span>
-                    </div>
-                    </SwipeableRow>);
-
-                    })}
-                    </div> :
-
-                    <p className="py-2 text-[12px]" style={{ color: PALETTE.muted }}>No rapid insulin on board.</p>
-                    }
-
-        {/* Dose details drill-down — full labeled activity curve */}
-        {hasBolus &&
-        <div className="mt-3" style={{ borderTop: `1px solid ${PALETTE.hairline}`, paddingTop: 12 }}>
-            <button
-              type="button"
-              onClick={() => setShowDetails((s) => !s)}
-              className="flex w-full items-center justify-between"
-            >
-              <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: PALETTE.faint }}>
-                Dose details
-              </span>
-              <ChevronDown
-                size={14}
-                style={{ color: PALETTE.faint, transform: showDetails ? "rotate(180deg)" : "none", transition: "transform 200ms" }}
-              />
-            </button>
-            {showDetails &&
-            <div className="mt-3">
-              <IobDecayChart bolusDoses={bolusDoses} basalDoses={[]} now={now} />
-              <p className="mt-1.5 text-[10px] leading-relaxed" style={{ color: PALETTE.faint }}>
-                Curves show <span style={{ fontWeight: 600 }}>relative activity</span> (peak-normalized), not units. Solid curves are activity already underway; the dashed mustard line projects the remaining tail. Your estimated live insulin on board in units is shown above.
-              </p>
+        {/* Remaining by dose — shared-scale horizontal bars */}
+        {hasBolus ? (
+          <div>
+            <div className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: PALETTE.faint }}>
+              Remaining by dose
             </div>
-            }
+            <RemainingAxis axisMax={axisMax} ticks={ticks} />
+            <div className="mt-1.5 mb-3">
+              <RemainingLegend />
+            </div>
+            <div className="space-y-3">
+              {bolusDoses.map((dose) => {
+                const status = bolusStatusLine(dose, now);
+                return (
+                  <SwipeableRow
+                    key={dose.id}
+                    rowId={dose.id}
+                    isOpen={openDoseId === dose.id}
+                    onOpenChange={(o) => setOpenDoseId(o ? dose.id : null)}
+                    onEdit={() => onEditDose?.(dose.id)}
+                    onDelete={() => onDeleteDose?.(dose.id)}
+                    editLabel="Edit"
+                    deleteLabel="Remove"
+                    itemLabel={`${dose.shortName || dose.type?.split(" ")[0] || "Insulin"}, ${fmtUnits(dose.units)}u`}
+                  >
+                    <div className="w-full">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <span className="min-w-0 flex-1">
+                          <span className="text-[13px] font-semibold truncate" style={{ color: PALETTE.ink }}>
+                            {dose.shortName || dose.type?.split(" ")[0] || "Insulin"}
+                          </span>
+                          <span className="text-[11px] ml-1.5" style={{ color: PALETTE.muted }}>
+                            {fmtUnits(dose.units)}u logged, {formatClock(dose.time)}
+                          </span>
+                        </span>
+                        <span className="shrink-0 text-right">
+                          <span className="block text-[15px] font-semibold tabular-nums leading-none" style={{ color: PALETTE.ink }}>
+                            {fmtIob(dose.iob)}
+                          </span>
+                          <span className="block text-[9px] mt-0.5" style={{ color: PALETTE.faint }}>remaining</span>
+                        </span>
+                      </div>
+                      <div className="mt-1.5">
+                        <RemainingBar logged={dose.units} remaining={dose.iob} axisMax={axisMax} />
+                      </div>
+                      <div className="mt-1 text-[10px] leading-tight" style={{ color: PALETTE.faint }}>
+                        {status.label}
+                        {status.remaining && (
+                          <>
+                            {" · clears in "}
+                            <motion.span key={status.remaining} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
+                              {status.remaining}
+                            </motion.span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </SwipeableRow>
+                );
+              })}
+            </div>
+            <p className="mt-3 text-[10px] leading-relaxed" style={{ color: PALETTE.faint }}>
+              Bars show estimated remaining units, not activity strength.
+            </p>
+
+            {/* Optional activity view — existing canonical curve visualization */}
+            <div className="mt-3" style={{ borderTop: `1px solid ${PALETTE.hairline}`, paddingTop: 12 }}>
+              <button
+                type="button"
+                onClick={() => setShowDetails((s) => !s)}
+                aria-expanded={showDetails}
+                className="flex w-full items-center justify-between"
+              >
+                <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: PALETTE.faint }}>
+                  View activity
+                </span>
+                <ChevronDown
+                  size={14}
+                  style={{ color: PALETTE.faint, transform: showDetails ? "rotate(180deg)" : "none", transition: "transform 200ms" }}
+                />
+              </button>
+              {showDetails && (
+                <div className="mt-3">
+                  <IobDecayChart bolusDoses={bolusDoses} basalDoses={[]} now={now} />
+                  <p className="mt-2 text-[10px] leading-relaxed" style={{ color: PALETTE.faint }}>
+                    Curves show <span style={{ fontWeight: 600 }}>relative activity</span> (peak-normalized), not units. Solid curves are activity already underway; the dashed mustard line projects the remaining tail. Your estimated live insulin on board in units is shown above.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
-        }
+        ) : (
+          <p className="py-2 text-[12px]" style={{ color: PALETTE.muted }}>No rapid insulin on board.</p>
+        )}
       </DashboardCard>
 
       {/* 4. Basal / background card */}
-      {hasBasal &&
-      <DashboardCard className="p-4">
+      {hasBasal && (
+        <DashboardCard className="p-4">
           <div className="section-label">Basal / Background</div>
 
           <div className="mt-3 flex items-baseline gap-2">
@@ -288,56 +314,54 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
 
           <div className="space-y-2.5">
             {basalDoses.map((dose) => {
-            const dotColor = dose.color;
-            const textColor = PALETTE.ink;
-            const status = basalStatusLine(dose, now);
-            return (
-              <SwipeableRow
-                key={dose.id}
-                rowId={dose.id}
-                isOpen={openDoseId === dose.id}
-                onOpenChange={(o) => setOpenDoseId(o ? dose.id : null)}
-                onEdit={() => onEditDose?.(dose.id)}
-                onDelete={() => onDeleteDose?.(dose.id)}
-                editLabel="Edit"
-                deleteLabel="Remove"
-                itemLabel={`${dose.shortName || dose.type?.split(" ")[0] || "Basal"}, ${fmtUnits(dose.units)}u`}
-              >
-                <div className="flex w-full items-center gap-2.5 text-left">
-                  <span className="min-w-0 flex-1">
-                    <span className="flex items-baseline gap-1.5">
-                      <span className="text-[13px] font-semibold" style={{ color: textColor }}>
-                        {dose.shortName || dose.type?.split(" ")[0] || "Basal"}
-                      </span>
-                      <span className="text-[11px]" style={{ color: PALETTE.muted }}>
-                        {fmtUnits(dose.units)}u, {formatClock(dose.time)}
-                      </span>
-                    </span>
-                    <span className="mt-0.5 text-[11px] leading-tight" style={{ color: PALETTE.muted }}>
-                      {status.label}
-                    </span>
-                  </span>
-                  <span className="shrink-0 text-right">
-                    <span className="block text-[13px] font-semibold tabular-nums" style={{ color: textColor }}>
-                      {fmtIob(dose.units)}
-                    </span>
-                    {status.remaining &&
-                  <span className="block text-[10px] tabular-nums" style={{ color: PALETTE.faint }}>
-                        clears in <motion.span key={status.remaining} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>{status.remaining}</motion.span>
+              const textColor = PALETTE.ink;
+              const status = basalStatusLine(dose, now);
+              return (
+                <SwipeableRow
+                  key={dose.id}
+                  rowId={dose.id}
+                  isOpen={openDoseId === dose.id}
+                  onOpenChange={(o) => setOpenDoseId(o ? dose.id : null)}
+                  onEdit={() => onEditDose?.(dose.id)}
+                  onDelete={() => onDeleteDose?.(dose.id)}
+                  editLabel="Edit"
+                  deleteLabel="Remove"
+                  itemLabel={`${dose.shortName || dose.type?.split(" ")[0] || "Basal"}, ${fmtUnits(dose.units)}u`}
+                >
+                  <div className="flex w-full items-center gap-2.5 text-left">
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-baseline gap-1.5">
+                        <span className="text-[13px] font-semibold" style={{ color: textColor }}>
+                          {dose.shortName || dose.type?.split(" ")[0] || "Basal"}
                         </span>
-                        }
+                        <span className="text-[11px]" style={{ color: PALETTE.muted }}>
+                          {fmtUnits(dose.units)}u, {formatClock(dose.time)}
                         </span>
-                        </div>
-                        </SwipeableRow>);
-
-                        })}
+                      </span>
+                      <span className="mt-0.5 text-[11px] leading-tight" style={{ color: PALETTE.muted }}>
+                        {status.label}
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-right">
+                      <span className="block text-[13px] font-semibold tabular-nums" style={{ color: textColor }}>
+                        {fmtIob(dose.units)}
+                      </span>
+                      {status.remaining && (
+                        <span className="block text-[10px] tabular-nums" style={{ color: PALETTE.faint }}>
+                          clears in{" "}
+                          <motion.span key={status.remaining} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
+                            {status.remaining}
+                          </motion.span>
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                </SwipeableRow>
+              );
+            })}
           </div>
-
-          
-
-        
         </DashboardCard>
-      }
-    </div>);
-
+      )}
+    </div>
+  );
 }
