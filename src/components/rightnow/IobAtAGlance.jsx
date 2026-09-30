@@ -4,7 +4,7 @@ import { ChevronDown } from "lucide-react";
 import DashboardCard from "@/components/dashboard/DashboardCard";
 import SwipeableRow from "@/components/SwipeableRow";
 import IobDecayChart from "@/components/insulin/IobDecayChart";
-import RemainingBar, { RemainingAxis, RemainingLegend, computeAxis } from "@/components/insulin/RemainingBars";
+import RemainingBar, { RemainingLegend } from "@/components/insulin/RemainingBars";
 import { isBasalInsulinType, getDoseStatus, getDoseTimingInfo } from "@/lib/insulinPharmacology";
 import { formatIOBValue, IOB_FLOOR } from "@/lib/iobModel";
 
@@ -154,10 +154,6 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
   const hasBolus = bolusDoses.length > 0;
   const hasBasal = basalDoses.length > 0;
 
-  // Shared absolute units axis for all remaining-unit bars (0 → axisMax).
-  // Every bar uses the same scale — no per-row normalization.
-  const { axisMax, ticks } = useMemo(() => computeAxis(bolusDoses), [bolusDoses]);
-
   // Gentle awareness: multiple rapid doses active at once
   const showStackingBanner = activeBolusCount > 1;
 
@@ -201,14 +197,13 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
         {/* Hairline divider */}
         <div className="my-3" style={{ height: 1, background: PALETTE.hairline }} />
 
-        {/* Remaining by dose — shared-scale horizontal bars */}
+        {/* Remaining by dose — self-relative horizontal bars */}
         {hasBolus ? (
           <div>
             <div className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: PALETTE.faint }}>
               Remaining by dose
             </div>
-            <RemainingAxis axisMax={axisMax} ticks={ticks} />
-            <div className="mt-1.5 mb-3">
+            <div className="mb-3">
               <RemainingLegend />
             </div>
             <div className="space-y-3">
@@ -244,7 +239,7 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
                         </span>
                       </div>
                       <div className="mt-1.5">
-                        <RemainingBar logged={dose.units} remaining={dose.iob} axisMax={axisMax} />
+                        <RemainingBar logged={dose.units} remaining={dose.iob} />
                       </div>
                       <div className="mt-1 text-[10px] leading-tight" style={{ color: PALETTE.faint }}>
                         {status.label}
@@ -263,7 +258,7 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
               })}
             </div>
             <p className="mt-3 text-[10px] leading-relaxed" style={{ color: PALETTE.faint }}>
-              Bars show estimated remaining units, not activity strength.
+              Each bar is scaled to its own logged amount — the fill shows what fraction of that dose is still estimated to be active, not activity strength.
             </p>
 
             {/* Optional activity view — existing canonical curve visualization */}
