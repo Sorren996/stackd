@@ -89,15 +89,19 @@ function bolusStatusLine(dose, now) {
     return { label: "Fully cleared", color: PALETTE.grey, remaining: null };
   }
   const remaining = formatRemaining(timing.remainingMin);
+  // Every possible phase gets a bolus-appropriate label so a basal-language
+  // phase ("steady" from a flat-model profile) can never leak onto a bolus
+  // row, even if the insulin profile was misresolved by the engine.
   const map = {
     waiting: { label: "Absorbing gently", color: PALETTE.amber },
     rising: { label: "Rising toward peak", color: PALETTE.amber },
     near_peak: { label: "Near peak", color: PALETTE.amber },
     peak: { label: "Peak activity", color: PALETTE.amber },
+    steady: { label: "Active and working", color: PALETTE.amber },
     declining: { label: "Activity declining", color: PALETTE.green },
     low_activity: { label: "Lingering gently", color: PALETTE.green }
   };
-  const entry = map[status.phase] || { label: status.label, color: PALETTE.muted };
+  const entry = map[status.phase] || { label: "Active and working", color: PALETTE.muted };
   return { label: entry.label, color: entry.color, remaining };
 }
 
@@ -259,7 +263,7 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
             <div className="mt-3">
               <IobDecayChart bolusDoses={bolusDoses} basalDoses={basalDoses} now={now} />
               <p className="mt-1.5 text-[10px] leading-relaxed" style={{ color: PALETTE.faint }}>
-                Curves show <span style={{ fontWeight: 600 }}>relative activity</span> (peak-normalized), not units. Solid curves are activity already underway; the dashed mustard line projects the remaining tail. Your live insulin on board in units is shown above.
+                Curves show <span style={{ fontWeight: 600 }}>relative activity</span> (peak-normalized), not units. Solid curves are activity already underway; the dashed mustard line projects the remaining tail. Your estimated live insulin on board in units is shown above.
               </p>
             </div>
             }
