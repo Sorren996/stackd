@@ -25,8 +25,7 @@ export function hasDelayedRise(entry) {
   return false;
 }
 
-export function getHighProteinFatMonitoringStatus(carbEntries) {
-  const now = Date.now();
+export function getHighProteinFatMonitoringStatus(carbEntries, now = Date.now()) {
   const qualifying = (Array.isArray(carbEntries) ? carbEntries : []).filter((entry) => {
     if (!hasDelayedRise(entry)) return false;
     if (!entry.consumed_at) return false;

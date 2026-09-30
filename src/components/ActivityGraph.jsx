@@ -1563,7 +1563,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           </div>
         )}
       </div>
-      <DelayedRiseCautionCard carbEntries={carbEntries} now={Date.now()} />
+      <DelayedRiseCautionCard carbEntries={carbEntries} />
       </div>
 
       {activeMarker &&

@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { Clock } from "lucide-react";
-import { getDelayedRiseCautionStatus } from "@/lib/mealMonitoring";
+import { useMonitoringStatus } from "@/hooks/useMonitoringStatus";
 
 /**
  * Inline caution card anchored beneath the activity graph. Shows when one or
@@ -8,16 +8,21 @@ import { getDelayedRiseCautionStatus } from "@/lib/mealMonitoring";
  * window (about 8 hours after eating) is current. Multiple qualifying meals
  * merge into a single card. Height animates so the chart never jumps.
  *
+ * Active status is derived live from the qualifying meals and the current
+ * time via useMonitoringStatus — never a sticky persisted flag. The hook
+ * schedules its own expiry timeout so the card disappears promptly when the
+ * window ends, even if the graph stays open without a data refresh.
+ *
  * Copy describes, never prescribes. Sandstone-tinted surface, amber text
  * (#8a5a12, 5.3:1), small leading clock glyph, no border, no red/alarm styling.
  */
-export default function DelayedRiseCautionCard({ carbEntries, now = Date.now() }) {
-  const status = getDelayedRiseCautionStatus(carbEntries, now);
+export default function DelayedRiseCautionCard({ carbEntries }) {
+  const status = useMonitoringStatus(carbEntries);
   const multiple = status.meals.length > 1;
 
   return (
     <AnimatePresence initial={false}>
-      {status.active && (
+      {status.isActive && (
         <motion.div
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: "auto" }}

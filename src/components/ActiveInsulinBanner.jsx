@@ -10,7 +10,8 @@ import {
   Info,
   X } from
 "lucide-react";
-import { getHighProteinFatMonitoringStatus, formatMonitoringEndTime } from "@/lib/mealMonitoring";
+import { formatMonitoringEndTime } from "@/lib/mealMonitoring";
+import { useMonitoringStatus } from "@/hooks/useMonitoringStatus";
 import {
   generateActivityCurve,
   getDoseIOB,
@@ -902,10 +903,11 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
     trajectory.trough;
   }, [trajectory]);
 
-  const highProteinFatStatus = useMemo(
-    () => getHighProteinFatMonitoringStatus(safeCarbEntries),
-    [safeCarbEntries, nowMinute]
-  );
+  // Active status is derived live from the qualifying meals and current
+  // time — never a sticky persisted flag. The hook schedules its own expiry
+  // timeout so the alert resolves when the window ends, even without a data
+  // refresh. Recomputes after meal edits/deletions (carbEntries changes).
+  const highProteinFatStatus = useMonitoringStatus(safeCarbEntries);
 
   const mealInsightRaw = useMemo(
     () =>
