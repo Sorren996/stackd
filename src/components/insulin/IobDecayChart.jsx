@@ -4,8 +4,12 @@ import { generateActivityCurve, getInsulinProfile } from "@/lib/insulinPharmacol
 const STEP_MS = 5 * 60 * 1000;
 
 /**
- * Linearly interpolate the `activity` value (0–1, peak-normalized) from a
- * pre-built canonical activity curve at an arbitrary timestamp.
+ * Linearly interpolate the dose's activity at an arbitrary timestamp from a
+ * pre-built canonical activity curve. The value read is `activityUnitsPerMinute`
+ * — each dose's activity amplitude already scaled by its logged units, so the
+ * curve height is proportional to units (a 20u dose reaches ~3.3x a 6u dose),
+ * while the rise → peak → tail shape is unchanged. The canonical engine already
+ * applies the ≤0.49u clearance floor to these curves, terminating them at 0.
  */
 function activityAtTime(curve, t) {
   if (!curve || !curve.length) return 0;
@@ -15,20 +19,23 @@ function activityAtTime(curve, t) {
   for (let i = 0; i < curve.length - 1; i++) {
     if (t >= curve[i].time && t < curve[i + 1].time) {
       const span = curve[i + 1].time - curve[i].time;
-      if (span <= 0) return curve[i].activity;
+      const a = Number(curve[i].activityUnitsPerMinute) || 0;
+      const b = Number(curve[i + 1].activityUnitsPerMinute) || 0;
+      if (span <= 0) return Math.max(0, a);
       const ratio = (t - curve[i].time) / span;
-      return curve[i].activity + (curve[i + 1].activity - curve[i].activity) * ratio;
+      return Math.max(0, a + (b - a) * ratio);
     }
   }
   return 0;
 }
 
 /**
- * Relative insulin activity chart — feeds the visualization from the existing
- * canonical activity engine (generateActivityCurve), NOT remaining-IOB data.
- * Curves show relative activity (0–1, peak-normalized): a gentle rise,
- * identifiable peak, and gradual tail. The live IOB unit total is labelled
- * separately above (in IobAtAGlance), not on this chart.
+ * Insulin activity chart — feeds the visualization from the existing canonical
+ * activity engine (generateActivityCurve), NOT remaining-IOB data. Each dose's
+ * curve amplitude is scaled by its logged units and plotted on ONE shared
+ * y-axis (activity units per minute), so a larger dose renders visibly taller
+ * than a smaller one while keeping the same rise → peak → tail shape. The live
+ * IOB unit total is labelled separately above (in IobAtAGlance), not on the chart.
  *
  * Historical portion (up to NOW) is solid; projected tail (after NOW) is
  * dashed mustard. Per-dose curves keep pharmaceutical colors with translucent
@@ -65,9 +72,10 @@ export default function IobDecayChart({ bolusDoses, basalDoses, now = Date.now()
     }));
     const curves = doseObjs.map((d) => generateActivityCurve(d, 5));
 
-    // Per-dose relative activity at each time step.
+    // Per-dose activity (units-scaled) at each time step — amplitude is
+    // proportional to the dose's logged units.
     const perDoseActivity = curves.map((curve) => timeSteps.map((t) => activityAtTime(curve, t)));
-    // Total = point-wise sum of per-dose relative activity.
+    // Total = point-wise sum of per-dose units-scaled activity.
     const totalActivity = timeSteps.map((_, i) => perDoseActivity.reduce((s, a) => s + a[i], 0));
     const maxActivity = Math.max(...totalActivity, 1);
     const plotH = H - padTop - padBottom - basalBandH - 4;
@@ -139,7 +147,7 @@ export default function IobDecayChart({ bolusDoses, basalDoses, now = Date.now()
       preserveAspectRatio="none"
       style={{ display: "block" }}
       role="img"
-      aria-label="Relative insulin activity curves over time. Solid line is activity already underway; dashed line projects the remaining tail."
+      aria-label="Insulin activity curves over time, scaled to each dose's logged units on a shared scale. Solid line is activity already underway; dashed line projects the remaining tail."
     >
       {/* Translucent per-dose filled curves */}
       {model.doseMeta.map((m) => {
