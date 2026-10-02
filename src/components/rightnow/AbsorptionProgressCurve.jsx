@@ -26,7 +26,11 @@ function formatPeakLabel(peakMin) {
  * point so it stays legible at any peak height. At 100% the entire curve
  * renders solid with a completion mark.
  */
-export default function AbsorptionProgressCurve({ entries, mealTime, now = Date.now(), peakTime: peakTimeProp, opts }) {
+// `peakTime` is accepted for API compatibility (the parent still passes the
+// analytical peak from the absorption model), but it intentionally NO LONGER
+// drives the marker. The peak dot and label are derived from the rendered
+// curve's actual highest point so they always agree with the drawn shape.
+export default function AbsorptionProgressCurve({ entries, mealTime, now = Date.now(), opts }) {
   const { solidPath, dashedPath, fillPath, nowX, nowY, peakX, peakY, peakLabel, endX, isComplete } = useMemo(() => {
     const curves = (Array.isArray(entries) ? entries : [])
       .map((entry) => {
@@ -68,32 +72,19 @@ export default function AbsorptionProgressCurve({ entries, mealTime, now = Date.
     // padding is reserved for the peak label and never overlaps the curve.
     const toY = (r) => H - 8 - (r / maxRate) * (H - 16 - TOP_PAD);
 
-    // Use the parent-provided peak time when available so the chart's peak
-    // marker always matches the "Peak ~Xh" text shown elsewhere in the card.
-    // Fall back to the combined curve's actual peak for backward compatibility.
-    let peakT;
-    let peakMin;
-    if (Number.isFinite(peakTimeProp) && peakTimeProp >= start && peakTimeProp <= end) {
-      peakT = peakTimeProp;
-      peakMin = (peakT - start) / 60000;
-    } else {
-      let peakIdx = 0;
-      let peakRateVal = -1;
-      samples.forEach((s, i) => { if (s.rate > peakRateVal) { peakRateVal = s.rate; peakIdx = i; } });
-      peakT = samples[peakIdx].t;
-      peakMin = (peakT - start) / 60000;
-    }
-
-    // Compute the y-coordinate of the peak point so the label can be
-    // positioned with a fixed pixel offset above it.
-    let peakRate = 0;
-    for (let i = 0; i < samples.length - 1; i++) {
-      if (samples[i].t <= peakT && samples[i + 1].t >= peakT) {
-        const r = (peakT - samples[i].t) / (samples[i + 1].t - samples[i].t || 1);
-        peakRate = samples[i].rate + (samples[i + 1].rate - samples[i].rate) * r;
-        break;
-      }
-    }
+    // The peak marker is placed on the RENDERED geometry itself: the drawn
+    // curve is a direct polyline through these samples, so its apex is exactly
+    // the sample with the highest rate. Source the marker position and its
+    // "Peak ~Xh" label from that same rendered-max point — never from a
+    // separately-computed analytical peak time — so dot, label and drawn
+    // shape always agree, for every curve shape (single-wave or the tallest
+    // hump of a dual-wave).
+    let peakIdx = 0;
+    let peakRateVal = -1;
+    samples.forEach((s, i) => { if (s.rate > peakRateVal) { peakRateVal = s.rate; peakIdx = i; } });
+    const peakT = samples[peakIdx].t;
+    const peakMin = (peakT - start) / 60000;
+    const peakRate = samples[peakIdx].rate;
     const peakYVal = toY(peakRate);
 
     // Now position
@@ -136,7 +127,7 @@ export default function AbsorptionProgressCurve({ entries, mealTime, now = Date.
       endX: toX(end),
       isComplete: nowClamped >= end,
     };
-  }, [entries, mealTime, now, peakTimeProp, opts]);
+  }, [entries, mealTime, now, opts]);
 
   if (!solidPath && !dashedPath) {
     return <div style={{ height: H }} />;
