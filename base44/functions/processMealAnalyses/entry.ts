@@ -176,22 +176,22 @@ Deno.serve(async (req) => {
             );
             const adj = existingAdj?.[0] || null;
 
-            // Recording a sample every time is fine; the factor only actually
-            // "learns" (nudges) once enough history exists. Below the threshold
-            // we still count the sample so the gate eventually opens.
+            // The factor only actually "learns" (nudges away from 1) once enough
+            // qualifying meals of this class exist to trust the signal. Below
+            // the threshold we still count the sample so the gate eventually
+            // opens, but keep speed_factor at 1 (no learned adjustment yet).
+            const priorSamples = Number(adj?.sample_size) || 0;
+            const sampleSize = priorSamples + 1;
             if (adj?.id) {
-              const { factor, sampleSize } = updateSpeedFactor(
-                adj.speed_factor,
-                observedRatio,
-                Number(adj.sample_size) || 0,
-              );
+              const factor = sampleSize >= MIN_LEARN_SAMPLES
+                ? updateSpeedFactor(adj.speed_factor, observedRatio, priorSamples).factor
+                : 1;
               const patch: any = {
                 speed_factor: factor,
                 sample_size: sampleSize,
                 last_observed_at: new Date().toISOString(),
               };
-              if (sampleSize <= MIN_LEARN_SAMPLES) patch.analysis_version = 'learning-gathering';
-              else patch.analysis_version = 'learning-active';
+              patch.analysis_version = sampleSize < MIN_LEARN_SAMPLES ? 'learning-gathering' : 'learning-active';
               await sr.entities.AbsorptionAdjustment.update(adj.id, patch);
             } else {
               await sr.entities.AbsorptionAdjustment.create({
