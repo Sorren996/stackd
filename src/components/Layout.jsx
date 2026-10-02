@@ -121,13 +121,14 @@ export default function Layout() {
         className="relative mx-auto w-full max-w-6xl px-4 overflow-visible"
         style={{
           paddingTop: "calc(3.5rem + env(safe-area-inset-top))",
-          // Bottom clearance lifts the scroll viewport's bottom edge above the
-          // fixed chrome, so the last card (Daily Flow) is never hidden. It
-          // clears the higher of the nav bar top (64px + safe-area) and the
-          // floating "+" button's top (~92px), plus a 20px breathing gap that
-          // mirrors the 20px (my-5) gap the first card keeps below the header.
+          // Bottom clearance lifts the scroll viewport's bottom edge just above
+          // the fixed nav bar (64px + safe-area), plus a normal 20px breathing
+          // gap that mirrors the 20px (my-5) gap the first card keeps below the
+          // header. The floating "+" button is fixed and stays on top, so it
+          // may overlap the page's inert trailing content — it does not need
+          // extra clearance that would leave a tall empty band above the nav.
           paddingBottom:
-            "calc(max(92px, calc(64px + env(safe-area-inset-bottom))) + 20px)",
+            "calc(64px + env(safe-area-inset-bottom) + 20px)",
           height: "100dvh",
         }}
       >
