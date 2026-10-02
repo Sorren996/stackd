@@ -1,6 +1,12 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.41';
 import { computeMealResponse, DEFAULT_SETTINGS } from '../../shared/mealResponseAnalysis.ts';
 import { hasDelayedRise } from '../../shared/delayedRiseDetection.ts';
+import {
+  getCarbSpeedClass,
+  updateSpeedFactor,
+  MIN_LEARN_SAMPLES,
+  BASELINE_CLASS_PARAMS,
+} from '../../shared/carbAbsorptionProfile.ts';
 
 // Scheduled Meal Memory analysis pipeline (no user context — service role).
 // Scans CarbEntry records that are at least 4 hours old and either have no
@@ -145,6 +151,63 @@ Deno.serve(async (req) => {
           await sr.entities.MealResponseAnalysis.create(payload);
         }
         saved++;
+
+        // ── Per-user, per-class absorption learning ────────────────
+        // After a meal actually resolves against Dexcom data, compare the actual
+        // glucose peak timing to the class's predicted peak and nudge a learned
+        // speed factor. Only active once enough qualifying meals of a class exist
+        // to trust the signal. This only reshapes the ESTIMATED timing curve —
+        // it never recommends a dose.
+        if (status === 'complete' && result.peak_time) {
+          try {
+            const speedClass = getCarbSpeedClass(meal);
+            const baseline = BASELINE_CLASS_PARAMS[speedClass];
+            const actualPeakMin = Math.round((new Date(result.peak_time).getTime() - mealTime) / MINUTE_MS);
+            // observedRatio > 1 => actual glucose peaked later than the class
+            // baseline predicts => this user's meals of this class run slow.
+            const observedRatio = baseline.peakMin > 0
+              ? actualPeakMin / baseline.peakMin
+              : 1;
+
+            const existingAdj = await sr.entities.AbsorptionAdjustment.filter(
+              { user_id: userId, speed_class: speedClass },
+              '-updated_date',
+              1,
+            );
+            const adj = existingAdj?.[0] || null;
+
+            // Recording a sample every time is fine; the factor only actually
+            // "learns" (nudges) once enough history exists. Below the threshold
+            // we still count the sample so the gate eventually opens.
+            if (adj?.id) {
+              const { factor, sampleSize } = updateSpeedFactor(
+                adj.speed_factor,
+                observedRatio,
+                Number(adj.sample_size) || 0,
+              );
+              const patch: any = {
+                speed_factor: factor,
+                sample_size: sampleSize,
+                last_observed_at: new Date().toISOString(),
+              };
+              if (sampleSize <= MIN_LEARN_SAMPLES) patch.analysis_version = 'learning-gathering';
+              else patch.analysis_version = 'learning-active';
+              await sr.entities.AbsorptionAdjustment.update(adj.id, patch);
+            } else {
+              await sr.entities.AbsorptionAdjustment.create({
+                user_id: userId,
+                speed_class: speedClass,
+                speed_factor: 1,
+                sample_size: 1,
+                first_observed_at: new Date().toISOString(),
+                last_observed_at: new Date().toISOString(),
+                analysis_version: 'learning-gathering',
+              });
+            }
+          } catch (learnErr) {
+            console.error('[processMealAnalyses] learning-update error:', learnErr.message);
+          }
+        }
       } catch (err) {
         errors.push(`${meal.id}: ${err.message}`);
       }

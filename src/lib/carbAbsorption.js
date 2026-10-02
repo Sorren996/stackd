@@ -358,13 +358,47 @@ export function getMealPeakMinutes(fatGrams, proteinGrams, windowMin) {
   return Math.max(30, Math.round(win * peakFraction));
 }
 
-export function getAbsorptionModel(entry) {
+export function getAbsorptionModel(entry, opts = {}) {
   const fat = Number(entry?.fat_grams ?? 0) || 0;
   const protein = Number(entry?.protein_grams ?? 0) || 0;
   const carbs = Number(entry?.carbs ?? 0) || 0;
-  const windowMin = getMealWindowMinutes(fat, protein);
-  const peakMin = getMealPeakMinutes(fat, protein, windowMin);
-  return { carbs, fat, protein, windowMin, peakMin, fpu: computeFPU(fat, protein) };
+  let windowMin = getMealWindowMinutes(fat, protein);
+  let peakMin = getMealPeakMinutes(fat, protein, windowMin);
+
+  // Per-user learned speed factor (per speed class) shifts the ESTIMATED
+  // timing curve — when the user's past meals of this class tended to run fast
+  // or slow, the peak and window follow. Area under the curve still integrates
+  // exactly to the logged carbs; only WHEN the grams are estimated to arrive
+  // is nudged. speedFactor < 1 = run fast, > 1 = run slow.
+  const factor = Number(opts?.speedFactor);
+  if (Number.isFinite(factor) && factor > 0 && factor !== 1) {
+    windowMin = Math.max(90, Math.min(360, Math.round(windowMin * factor)));
+    peakMin = Math.max(20, Math.min(240, Math.round(peakMin * factor)));
+  }
+
+  return {
+    carbs,
+    fat,
+    protein,
+    windowMin,
+    peakMin,
+    fpu: computeFPU(fat, protein),
+    // dual-wave: fatty/protein-heavy meals listed in the FOOD_DATABASE and AI
+    // estimates (pizza, pad thai, fried dishes) — the user picked a "slow"
+    // absorption profile, or macros cross the delayed-rise threshold.
+    dualWave: Boolean(
+      opts?.dualWave ??
+        (Number.isFinite(entry?.dual_wave) ? entry.dual_wave : hasDelayedRiseLike(fat, protein, carbs))
+    ),
+  };
+}
+
+// Mirrors mealMonitoring.hasDelayedRise so carbAbsorption stays self-contained.
+function hasDelayedRiseLike(fat, protein, carbs) {
+  if (fat >= 40) return true;
+  if (protein >= 30 && carbs > 0) return true;
+  if (protein >= 75 && carbs === 0) return true;
+  return false;
 }
 
 function integrateGamma(toMin, peakMin, shapeExp, step = 2) {
@@ -378,7 +412,7 @@ function integrateGamma(toMin, peakMin, shapeExp, step = 2) {
   return area;
 }
 
-export function getCarbAbsorptionAt(entry, targetTime = Date.now()) {
+export function getCarbAbsorptionAt(entry, targetTime = Date.now(), opts = {}) {
   if (!entry || !Number.isFinite(entry.carbs) || entry.carbs <= 0) {
     return { absorbedGrams: 0, remainingGrams: 0, absorptionRateGPerMin: 0, percentAbsorbed: 0, peakMin: 0, windowMin: 0 };
   }
@@ -388,7 +422,7 @@ export function getCarbAbsorptionAt(entry, targetTime = Date.now()) {
     return { absorbedGrams: 0, remainingGrams: entry.carbs, absorptionRateGPerMin: 0, percentAbsorbed: 0, peakMin: 0, windowMin: 0 };
   }
 
-  const model = getAbsorptionModel(entry);
+  const model = getAbsorptionModel(entry, opts);
   const elapsedMin = (targetTime - mealTime) / 60000;
 
   if (elapsedMin <= 0) {
@@ -419,31 +453,64 @@ export function getCarbAbsorptionAt(entry, targetTime = Date.now()) {
   };
 }
 
-export function generateCarbCurve(entry) {
+// Dual-wave rate: a quick first wave plus a delayed second wave, each a gamma
+// bump. The two are weighted so their combined area still integrates to carbs
+// exactly. Used for high-fat / protein-rich meals (pizza, pad thai style).
+function dualWaveRate(minOffset, peakMin, windowMin) {
+  const firstPeak = Math.min(35, peakMin * 0.8);
+  const secondPeak = Math.max(Math.min(120, peakMin + 80), firstPeak + 25);
+  const firstShare = 0.35;
+  const secondShare = 0.65;
+  const first = gammaRate(minOffset, firstPeak, 2.2) * firstShare;
+  const second = gammaRate(minOffset, secondPeak, 3.2) * secondShare;
+  return { rate: first + second, firstPeak, secondPeak };
+}
+
+function integrateRate(toMin, rateFn, step = 2) {
+  if (toMin <= 0) return 0;
+  let area = 0;
+  for (let t = 0; t < toMin; t += step) {
+    area += ((rateFn(t) + rateFn(t + step)) / 2) * step;
+  }
+  return area;
+}
+
+export function generateCarbCurve(entry, opts = {}) {
   if (!entry || !Number.isFinite(entry.carbs) || entry.carbs <= 0 || !entry.consumed_at) return [];
 
-  const model = getAbsorptionModel(entry);
+  const model = getAbsorptionModel(entry, opts);
   const start = new Date(entry.consumed_at).getTime();
   const end = start + model.windowMin * 60000;
   const stepMin = 3;
   const stepMs = stepMin * 60000;
-  const totalArea = integrateGamma(model.windowMin, model.peakMin, ABSORPTION_SHAPE_EXP);
+
+  // Combined per-minute rate fn for this entry — single gamma, or dual-wave.
+  const rateFn = model.dualWave
+    ? (t) => dualWaveRate(t, model.peakMin, model.windowMin).rate
+    : (t) => gammaRate(t, model.peakMin, ABSORPTION_SHAPE_EXP);
+
+  const totalArea = integrateRate(model.windowMin, rateFn);
   if (totalArea <= 0) return [];
 
-  const peakRate = gammaRate(model.peakMin, model.peakMin, ABSORPTION_SHAPE_EXP);
+  // Peak of this entry's combined rate — used to peak-normalize the display
+  // shape (activity: 0..1) exactly as before.
+  let peakRate = 0;
+  for (let m = 1; m <= model.windowMin; m += 1) {
+    const v = rateFn(m);
+    if (v > peakRate) peakRate = v;
+  }
+
   const result = [];
-  let cumulativeArea = 0;
+  let cumulativeRate = 0;
 
   for (let time = start, minOffset = 0; time <= end; time += stepMs, minOffset += stepMin) {
-    for (let t = Math.max(0, minOffset - stepMin); t < minOffset; t += 1) {
-      const r1 = gammaRate(t, model.peakMin, ABSORPTION_SHAPE_EXP);
-      const r2 = gammaRate(t + 1, model.peakMin, ABSORPTION_SHAPE_EXP);
-      cumulativeArea += (r1 + r2) / 2;
-    }
+    const prevMin = Math.max(0, minOffset - stepMin);
+    const segArea = integrateRate(minOffset, rateFn) - integrateRate(prevMin, rateFn);
+    cumulativeRate += segArea;
 
-    const fraction = Math.max(0, Math.min(1, cumulativeArea / totalArea));
+    const fraction = Math.max(0, Math.min(1, cumulativeRate / totalArea));
     const absorbedGrams = entry.carbs * fraction;
-    const rate = gammaRate(minOffset, model.peakMin, ABSORPTION_SHAPE_EXP);
+    const rate = rateFn(minOffset);
 
     result.push({
       time,
@@ -453,6 +520,9 @@ export function generateCarbCurve(entry) {
       absorbedGrams,
       remainingGrams: entry.carbs - absorbedGrams,
       absorptionRateGPerMin: (rate / totalArea) * entry.carbs,
+      peakMin: model.peakMin,
+      windowMin: model.windowMin,
+      dualWave: model.dualWave,
     });
   }
   return result;

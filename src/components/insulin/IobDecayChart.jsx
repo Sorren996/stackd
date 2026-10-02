@@ -55,15 +55,6 @@ export default function IobDecayChart({ bolusDoses, basalDoses, now = Date.now()
   const [highlighted, setHighlighted] = useState(null);
 
   const model = useMemo(() => {
-    const doseStarts = bolusDoses.map((d) => d.time).filter(Number.isFinite);
-    const domainStart = doseStarts.length ? Math.min(...doseStarts) : now - 4 * 3600 * 1000;
-    const domainEnd = now + 3 * 3600 * 1000;
-    const domainMs = Math.max(1, domainEnd - domainStart);
-    const toX = (t) => padX + ((t - domainStart) / domainMs) * (W - padX * 2);
-
-    const timeSteps = [];
-    for (let t = domainStart; t <= domainEnd; t += STEP_MS) timeSteps.push(t);
-
     // Build each dose's canonical activity curve ONCE (5-min steps).
     const doseObjs = bolusDoses.map((d) => ({
       insulin_type: d.type,
@@ -71,6 +62,36 @@ export default function IobDecayChart({ bolusDoses, basalDoses, now = Date.now()
       administered_at: new Date(d.time).toISOString(),
     }));
     const curves = doseObjs.map((d) => generateActivityCurve(d, 5));
+
+    // X-axis start: the earliest dose in view.
+    const doseStarts = bolusDoses.map((d) => d.time).filter(Number.isFinite);
+    const domainStart = doseStarts.length ? Math.min(...doseStarts) : now - 4 * 3600 * 1000;
+
+    // X-axis end: when the LAST dose clears, per the 0.49u IOB floor rule.
+    // Each canonical curve already terminates at its floor-clearance time (the
+    // point where activity drops to 0). The end extends just past the last such
+    // point so the axis hugs the active curves — no dead ~2h gap after them.
+    // Falls back to now + 3h only when there are no dose curves to bound it.
+    let latestClear = null;
+    for (const curve of curves) {
+      if (!Array.isArray(curve) || !curve.length) continue;
+      for (let i = 0; i < curve.length; i++) {
+        const act = Number(curve[i].activity) || 0;
+        if (act > 0.001 && (latestClear == null || curve[i].time > latestClear)) {
+          latestClear = curve[i].time;
+        }
+      }
+    }
+    const CLEAR_BUFFER_MS = 18 * 60 * 1000; // small breathing room past the last tail
+    const domainEnd = latestClear != null
+      ? latestClear + CLEAR_BUFFER_MS
+      : now + 3 * 3600 * 1000;
+
+    const domainMs = Math.max(1, domainEnd - domainStart);
+    const toX = (t) => padX + ((t - domainStart) / domainMs) * (W - padX * 2);
+
+    const timeSteps = [];
+    for (let t = domainStart; t <= domainEnd; t += STEP_MS) timeSteps.push(t);
 
     // Per-dose activity (units-scaled) at each time step — amplitude is
     // proportional to the dose's logged units.

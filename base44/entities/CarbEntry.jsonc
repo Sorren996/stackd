@@ -41,6 +41,20 @@
       ],
       "description": "Absorption speed profile"
     },
+    "speed_class": {
+      "type": "string",
+      "enum": [
+        "fast",
+        "mixed",
+        "high_fat"
+      ],
+      "description": "Estimated carb-absorption speed class for this entry. Set by the classifyLogEntry backend function shortly after creation from the meal's macros, glycemic index, and absorption profile. Used to shape the estimated absorption curve rendered in Meal Review."
+    },
+    "dual_wave": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this entry is estimated to absorb in a dual wave (a quick first wave plus a delayed second wave). Automatically true for high-fat / protein-rich meals (pizza, pad thai style) whose glucose typically rises slowly at first, then climbs later."
+    },
     "consumed_at": {
       "type": "string",
       "format": "date-time",

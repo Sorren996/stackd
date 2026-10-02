@@ -11,6 +11,7 @@ import { generateMealGlucoseResponse, analyzeGlucoseResponse } from "@/lib/mealG
 import MealEditOverlay from "@/components/insulin/MealEditOverlay";
 import EstimatedSupportCard from "./EstimatedSupportCard";
 import { getCarbAbsorptionAt, getMealWindowMinutes, getMealPeakMinutes } from "@/lib/carbAbsorption";
+import { useAbsorptionAdjustments, entrySpeedFactor, hasLearnedTiming, learnedTimingCaption, deriveSpeedClass } from "@/lib/absorptionLearning";
 import { getMealSlotLabel } from "@/lib/mealSlot";
 import { formatGlucose, formatGlucoseDelta, formatGlucoseAbsDelta, glucoseUnitLabel, glucoseDeltaUnit, getGlucoseUnits } from "@/lib/glucoseUnits";
 
@@ -60,6 +61,7 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
   const [deletingId, setDeletingId] = useState(null);
   const queryClient = useQueryClient();
   const now = Date.now();
+  const adjustmentsByClass = useAbsorptionAdjustments(Boolean(mealInsight));
 
   // Hooks must run unconditionally on every render, so compute them up front
   // with safe fallbacks derived from whatever is available before the early
@@ -130,6 +132,16 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
   const windowRemaining = reviewWindowEnd - now;
   const minutesSinceMeal = (now - mealTime) / 60000;
 
+  // Resolve the user's learned absorption-timing factor for this meal's class.
+  // It only reshapes WHEN the (estimated) carbs arrive — never the total.
+  const primarySpeedFactor = (() => {
+    const withClass = carbEntries[0] ? { ...carbEntries[0], speed_class: carbEntries[0].speed_class || deriveSpeedClass(carbEntries[0]) } : null;
+    return withClass ? entrySpeedFactor(adjustmentsByClass, withClass) : null;
+  })();
+  const learnedTiming = Boolean(carbEntries.length) && hasLearnedTiming(adjustmentsByClass, { speed_class: deriveSpeedClass(carbEntries[0]) });
+  const timingCaption = carbEntries.length ? learnedTimingCaption(adjustmentsByClass, carbEntries[0]) : null;
+  const absorptionOpts = primarySpeedFactor != null ? { speedFactor: primarySpeedFactor } : {};
+
   // Absorption — only meaningful once the meal has had time to begin digesting.
   let totalAbsorbed = 0;
   let totalRemaining = 0;
@@ -137,9 +149,9 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
   carbEntries.forEach((entry) => {
     if (!entry || !Number.isFinite(entry.carbs)) return;
     const forCalc = !entry.absorption_profile || entry.is_custom ?
-    { ...entry, absorption_profile: entry.absorption_profile || "medium", is_custom: false } :
+    { ...entry, absorption_profile: entry.absorption_profile || "medium", is_custom: false, dual_wave: entry.dual_wave } :
     entry;
-    const r = getCarbAbsorptionAt(forCalc, now);
+    const r = getCarbAbsorptionAt(forCalc, now, absorptionOpts);
     totalAbsorbed += r.absorbedGrams || 0;
     totalRemaining += r.remainingGrams || 0;
     rateGPerMin += r.absorptionRateGPerMin || 0;
@@ -158,12 +170,22 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
   const peakOutcome = d.peakOutcome;
   const trendArrow = glucoseTrend?.icon ? TREND_ARROW[glucoseTrend.icon] : null;
 
-  const absorptionPeakTime = mealTime + getMealPeakMinutes(mealFatGrams, mealProteinGrams, dynamicWindowMin) * 60000;
-  const peakPassed = absorptionPeakTime <= now;
-  const peakMinAgo = peakPassed ? Math.round((now - absorptionPeakTime) / 60000) : null;
-  const absorptionCaption = peakPassed ?
-  absorptionPct >= 85 ? "Nearly complete" : `Absorption peaked ${peakMinAgo}m ago` :
-  absorptionPct < 5 ? "Just starting to absorb" : "Rising toward peak";
+  const absorptionPeakMin = (() => {
+    let p = getMealPeakMinutes(mealFatGrams, mealProteinGrams, dynamicWindowMin);
+    if (primarySpeedFactor != null && Number.isFinite(primarySpeedFactor) && primarySpeedFactor > 0) {
+      p = Math.max(20, Math.min(240, Math.round(p * primarySpeedFactor)));
+    }
+    return p;
+  })();
+  const absorptionPeakTime = mealTime + absorptionPeakMin * 60000;
+  // Dual-wave meals have two estimated peaks (a quick first wave + a delayed
+  // second wave); the caption stays estimate-framed and never prescribes.
+  const isDualWaveMeal = (carbEntries[0]?.dual_wave || deriveSpeedClass(carbEntries[0]) === "high_fat");
+  const firstWavePassed = absorptionPeakTime <= now;
+  const peakMinAgo = firstWavePassed ? Math.round((now - absorptionPeakTime) / 60000) : null;
+  const absorptionCaption = firstWavePassed ?
+  (absorptionPct >= 90 ? "Absorption nearly complete" : (isDualWaveMeal ? `First wave peaked ${peakMinAgo}m ago — a second wave may follow` : `Absorption peaked ${peakMinAgo}m ago`)) :
+  (absorptionPct < 5 ? "Just starting to absorb" : (isDualWaveMeal ? "Rising through the first wave" : "Rising toward peak"));
 
   // Glucose response descriptive line
   let glucoseLine = "Steady so far.";
@@ -399,8 +421,36 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
                 {Math.round(totalAbsorbed)} of {Math.round(totalCarbs)} g absorbed
               </p>
               <div className="mt-2">
-                <AbsorptionProgressCurve entries={carbEntries} mealTime={mealTime} now={now} peakTime={absorptionPeakTime} />
+                <AbsorptionProgressCurve entries={carbEntries} mealTime={mealTime} now={now} peakTime={absorptionPeakTime} opts={absorptionOpts} />
               </div>
+
+              {/* Reconciliation — two of three legs: estimated absorption vs the
+                  actual Dexcom glucose trace. Describes what happened; never
+                  prescribes. Always framed as an estimate from meal + history. */}
+              {!waitingForReadings && glucoseAnalysis.timeToPeakMin != null && (
+                <p className="mt-1.5 text-[11px] leading-relaxed" style={{ color: PALETTE.muted }}>
+                  Estimated from your meal and history: the absorption curve{" "}
+                  {isDualWaveMeal ? "rose in two waves — the glucose trace followed" : "peaked"}{" "}
+                  <span className="font-serif-italic" style={{ color: PALETTE.ink }}>
+                    {Math.abs(glucoseAnalysis.timeToPeakMin - absorptionPeakMin) <= 40
+                      ? "closely"
+                      : glucoseAnalysis.timeToPeakMin < absorptionPeakMin
+                        ? "ahead"
+                        : "behind"}
+                  </span>{" "}
+                  the <span className="font-serif-italic" style={{ color: PALETTE.ink }}>estimation</span>, with glucose peaking{" "}
+                  <span className="font-semibold tabular-nums" style={{ color: PALETTE.ink }}>{formatDuration(glucoseAnalysis.timeToPeakMin)}</span>{" "}
+                  after you ate.
+                </p>
+              )}
+
+              {/* Learned per-class timing — only when the user's own history
+                  supports it. Estimate-framed, never a recommendation. */}
+              {learnedTiming && timingCaption && (
+                <p className="mt-1 text-[11px] leading-relaxed" style={{ color: PALETTE.faint }}>
+                  {timingCaption} Your future estimates include this.
+                </p>
+              )}
               <p className="mt-1.5 text-[12px]" style={{ color: PALETTE.muted }}>
                 {absorptionCaption}
               </p>

@@ -1,0 +1,69 @@
+{
+  "name": "AbsorptionAdjustment",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "User this learned adjustment belongs to. Set for service-created records so the owning user can read them."
+    },
+    "speed_class": {
+      "type": "string",
+      "enum": [
+        "fast",
+        "mixed",
+        "high_fat"
+      ],
+      "description": "Which meal class this per-user speed adjustment applies to (fast-absorbing, mixed, or high-fat & protein-rich)."
+    },
+    "speed_factor": {
+      "type": "number",
+      "default": 1,
+      "description": "Learned multiplier on the class's estimated absorption timing. <1 = the user's meals tend to run fast (peak earlier), >1 = they tend to run slow (peak later). Start at 1 (no adjustment); nudged after meals with enough Dexcom history."
+    },
+    "sample_size": {
+      "type": "number",
+      "default": 0,
+      "description": "How many qualifying meals with glucose data have contributed to this adjustment."
+    },
+    "first_observed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the first contributing meal was observed."
+    },
+    "last_observed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the most recent contributing meal was observed."
+    },
+    "analysis_version": {
+      "type": "string",
+      "description": "Version of the learning logic that produced this adjustment."
+    }
+  },
+  "required": [
+    "speed_class",
+    "speed_factor",
+    "sample_size"
+  ],
+  "rls": {
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.user_id": "{{user.id}}"
+        }
+      ]
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

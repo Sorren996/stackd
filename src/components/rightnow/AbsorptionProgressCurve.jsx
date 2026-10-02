@@ -26,15 +26,15 @@ function formatPeakLabel(peakMin) {
  * point so it stays legible at any peak height. At 100% the entire curve
  * renders solid with a completion mark.
  */
-export default function AbsorptionProgressCurve({ entries, mealTime, now = Date.now(), peakTime: peakTimeProp }) {
+export default function AbsorptionProgressCurve({ entries, mealTime, now = Date.now(), peakTime: peakTimeProp, opts }) {
   const { solidPath, dashedPath, fillPath, nowX, nowY, peakX, peakY, peakLabel, endX, isComplete } = useMemo(() => {
     const curves = (Array.isArray(entries) ? entries : [])
       .map((entry) => {
         if (!entry || !Number.isFinite(entry.carbs)) return null;
         const forCalc = (!entry.absorption_profile || entry.is_custom)
-          ? { ...entry, absorption_profile: entry.absorption_profile || "medium", is_custom: false }
+          ? { ...entry, absorption_profile: entry.absorption_profile || "medium", is_custom: false, dual_wave: entry.dual_wave }
           : entry;
-        return generateCarbCurve(forCalc);
+        return generateCarbCurve(forCalc, opts);
       })
       .filter(Boolean);
 
@@ -136,7 +136,7 @@ export default function AbsorptionProgressCurve({ entries, mealTime, now = Date.
       endX: toX(end),
       isComplete: nowClamped >= end,
     };
-  }, [entries, mealTime, now, peakTimeProp]);
+  }, [entries, mealTime, now, peakTimeProp, opts]);
 
   if (!solidPath && !dashedPath) {
     return <div style={{ height: H }} />;

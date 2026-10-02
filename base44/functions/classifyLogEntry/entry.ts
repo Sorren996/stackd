@@ -9,6 +9,7 @@
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 import { classifyCarbDeterministic, classifyInsulinDeterministic } from '../../shared/logClassification.ts';
+import { getCarbSpeedClass, getCarbDualWave } from '../../shared/carbAbsorptionProfile.ts';
 
 const MINUTE_MS = 60 * 1000;
 
@@ -128,7 +129,10 @@ export default async function(req: Request): Promise<Response> {
 
     if (deterministic) {
       if (isCarb) {
-        await sr.entities.CarbEntry.update(entityId, { classification: deterministic.classification, classification_reasoning: deterministic.reasoning });
+        const carbPatch = isCarb
+          ? { classification: deterministic.classification, classification_reasoning: deterministic.reasoning, speed_class: getCarbSpeedClass(record), dual_wave: getCarbDualWave(record) }
+          : {};
+        await sr.entities.CarbEntry.update(entityId, carbPatch);
       } else {
         await sr.entities.InsulinDose.update(entityId, { classification: deterministic.classification, classification_reasoning: deterministic.reasoning });
       }
@@ -181,7 +185,12 @@ Respond as JSON with:
     const reasoning: string = (result.reasoning || '').slice(0, 500);
 
     if (isCarb) {
-      await sr.entities.CarbEntry.update(entityId, { classification, classification_reasoning: reasoning });
+      await sr.entities.CarbEntry.update(entityId, {
+        classification,
+        classification_reasoning: reasoning,
+        speed_class: getCarbSpeedClass(record),
+        dual_wave: getCarbDualWave(record),
+      });
     } else {
       await sr.entities.InsulinDose.update(entityId, { classification, classification_reasoning: reasoning });
     }
