@@ -119,12 +119,10 @@ export default function Layout() {
         className="relative mx-auto w-full max-w-6xl px-4 overflow-visible"
         style={{
           paddingTop: "calc(3.5rem + env(safe-area-inset-top))",
-          // Bottom clearance lifts the scroll viewport's bottom edge just above
-          // the fixed nav bar (64px + safe-area), plus a normal 20px breathing
-          // gap that mirrors the 20px (my-5) gap the first card keeps below the
-          // header. The floating "+" button is fixed and stays on top, so it
-          // may overlap the page's inert trailing content — it does not need
-          // extra clearance that would leave a tall empty band above the nav.
+          // Bottom clearance lifts the scroll viewport's bottom edge flush with
+          // the fixed nav bar (64px + safe-area) so no teal gutter shows between
+          // the content and the nav. The floating "+" button is fixed and stays
+          // on top, so it may overlap the page's inert trailing content.
           paddingBottom:
             "calc(64px + env(safe-area-inset-bottom))",
           height: "100dvh",
