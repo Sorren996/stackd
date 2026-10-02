@@ -121,11 +121,18 @@ export default function Layout() {
         className="relative mx-auto w-full max-w-6xl px-4 overflow-visible"
         style={{
           paddingTop: "calc(3.5rem + env(safe-area-inset-top))",
+          // Bottom clearance lifts the scroll viewport's bottom edge above the
+          // fixed chrome, so the last card (Daily Flow) is never hidden. It
+          // clears the higher of the nav bar top (64px + safe-area) and the
+          // floating "+" button's top (~92px), plus a 20px breathing gap that
+          // mirrors the 20px (my-5) gap the first card keeps below the header.
+          paddingBottom:
+            "calc(max(92px, calc(64px + env(safe-area-inset-bottom))) + 20px)",
           height: "100dvh",
         }}
       >
         <PullToRefresh onRefresh={handleRefresh}>
-          <div className="min-w-0 w-full pb-44">
+          <div className="min-w-0 w-full">
             <div hidden={!isDashboardRoute}>
               <CachedDashboard />
             </div>
