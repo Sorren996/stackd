@@ -263,7 +263,17 @@ export default function UnifiedBottomNav() {
           boxShadow: "0 -4px 20px rgba(63,56,48,0.06)",
           zIndex: expanded ? 50 : 30
         }}>
-        
+        {/* Cream paint extends through the bottom home-indicator inset so the
+            teal page background never bleeds through below the nav icons. */}
+        <div
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            inset: "0 0 calc(-1 * env(safe-area-inset-bottom)) 0",
+            zIndex: -1,
+            background: "#fdf9f2"
+          }}
+        />
         <div className="relative w-full">
           {/* ── Menu content — expands upward from the nav pill ── */}
           <div

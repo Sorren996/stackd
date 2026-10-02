@@ -89,14 +89,17 @@ export default function Layout() {
   return (
     <div className="isolate relative min-h-screen overflow-x-hidden text-foreground">
       <header
-        className="fixed inset-x-0 top-0 z-50 bg-transparent"
-        style={{ paddingTop: "env(safe-area-inset-top)" }}
+        className="fixed inset-x-0 top-0 z-50"
+        style={{
+          paddingTop: "env(safe-area-inset-top)",
+          background: "#fdf9f2",
+          borderBottom: "1px solid #eadccf",
+          boxShadow: "0 4px 20px rgba(63,56,48,0.06)",
+        }}
       >
         <div
           className="mx-auto flex h-14 max-w-6xl items-center justify-center px-4"
-          style={{
-            background: "linear-gradient(to bottom, rgba(76,103,112,0.92), rgba(76,103,112,0.6), transparent)",
-          }}
+          style={{ background: "#fdf9f2" }}
         >
           <button
             type="button"
