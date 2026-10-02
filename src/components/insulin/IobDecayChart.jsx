@@ -32,18 +32,22 @@ function activityAtTime(curve, t) {
 /**
  * Insulin activity chart — feeds the visualization from the existing canonical
  * activity engine (generateActivityCurve), NOT remaining-IOB data. Each dose's
- * curve amplitude is scaled by its logged units and plotted on ONE shared
- * y-axis (activity units per minute), so a larger dose renders visibly taller
- * than a smaller one while keeping the same rise → peak → tail shape. The live
- * IOB unit total is labelled separately above (in IobAtAGlance), not on the chart.
+ * curve is plotted on ONE shared y-axis with a FLOORED amplitude scale so a
+ * larger dose still renders taller than a smaller one while every active dose
+ * keeps a clearly visible rise → peak → tail shape (never flattening to a
+ * near-invisible line when a much larger dose dominates). Per spec:
+ *   amplitude = floorFraction + (1 - floorFraction) * (units / maxUnits among active doses)
+ * The dose with the most units renders at full height; the smallest active
+ * dose renders with at least `floorFraction` (~25%) of that height. The live
+ * IOB unit total is labelled separately above (in IobAtAGlance), not on the
+ * chart — this is a purely visual amplitude fix; the underlying dose/IOB math,
+ * the ≤0.49u clearance floor, translucent fills, per-dose colors, and the
+ * solid-underway vs dashed-mustard-projected-tail rendering are unchanged.
  *
  * Historical portion (up to NOW) is solid; projected tail (after NOW) is
  * dashed mustard. Per-dose curves keep pharmaceutical colors with translucent
  * fills and stepped opacity for same-type overlaps. Basal renders as a
  * separately labelled background band only when basal doses are present.
- * The per-bolus ≤0.49u clearance rule is applied consistently — the canonical
- * engine terminates each dose's activity curve at the floor time, so no
- * sub-threshold tail is drawn.
  */
 export default function IobDecayChart({ bolusDoses, basalDoses, now = Date.now() }) {
   const W = 300;
@@ -93,12 +97,35 @@ export default function IobDecayChart({ bolusDoses, basalDoses, now = Date.now()
     const timeSteps = [];
     for (let t = domainStart; t <= domainEnd; t += STEP_MS) timeSteps.push(t);
 
-    // Per-dose activity (units-scaled) at each time step — amplitude is
-    // proportional to the dose's logged units.
-    const perDoseActivity = curves.map((curve) => timeSteps.map((t) => activityAtTime(curve, t)));
-    // Total = point-wise sum of per-dose units-scaled activity.
+    // Per-dose raw activity (units-scaled by the canonical engine) at each
+    // time step — its amplitude tracks the logged units, so a lone small dose
+    // would otherwise flatten to near-invisible next to a much larger one.
+    const perDoseRaw = curves.map((curve) => timeSteps.map((t) => activityAtTime(curve, t)));
+
+    // FLOORED amplitude scale per dose. Instead of pure linear-from-zero, each
+    // active dose's curve keeps a minimum visible height so its rise → peak →
+    // tail shape stays readable even when another dose dwarfs it. The formula
+    // (per spec): amplitude = floorFraction + (1 - floorFraction) * (units / maxUnits among active doses).
+    // - The dose with the most units renders at full height (tallest).
+    // - The smallest active dose still shows a clearly visible curve, never a flat line.
+    // - Relative ordering (more units = visibly taller) is preserved between floor and full.
+    const FLOOR_FRACTION = 0.25;
+    const doseUnits = bolusDoses.map((d) => Number(d.units) || 0);
+    const maxUnits = Math.max(...doseUnits, 1);
+    const doseAmplitude = doseUnits.map((u) => FLOOR_FRACTION + (1 - FLOOR_FRACTION) * (u / maxUnits));
+
+    // Normalize each dose's raw curve to its own peak (shape-preserving 0→1),
+    // then re-scale to its floored amplitude so all curves share one y-axis
+    // while keeping each dose's real rise → peak → tail geometry.
+    const perDoseActivity = perDoseRaw.map((raw, i) => {
+      const peak = Math.max(...raw, 0.0001);
+      return raw.map((v) => (v / peak) * doseAmplitude[i]);
+    });
+    // Total = point-wise sum of the floored per-dose curves — one shared axis.
     const totalActivity = timeSteps.map((_, i) => perDoseActivity.reduce((s, a) => s + a[i], 0));
-    const maxActivity = Math.max(...totalActivity, 1);
+    // Axis top: the tallest dose renders at full height; if the combined total
+    // slightly exceeds it at overlap peaks, let the axis expand so nothing clips.
+    const maxActivity = Math.max(...totalActivity, ...doseAmplitude, 1);
     const plotH = H - padTop - padBottom - basalBandH - 4;
     const toY = (v) => padTop + (1 - v / maxActivity) * plotH;
     const baseY = padTop + plotH;
