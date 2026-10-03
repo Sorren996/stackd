@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Minus, Plus } from "lucide-react";
 
 // ── Field component kit for the shared log/edit forms ─────────────────────
