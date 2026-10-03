@@ -10,6 +10,43 @@ import { useRealtimeLogSync } from "@/hooks/useRealtimeLogSync";
 import { useDexcomRefresh } from "@/hooks/useDexcomRefresh";
 import PullToRefresh from "@/components/PullToRefresh";
 
+// iOS repaint bug after backgrounding: WebKit sometimes fails to repaint
+// scrolled content when the WebView returns from the background, leaving
+// sections invisible until touched. On visibilitychange / pageshow we nudge
+// the compositor layer (translateZ toggle) and re-trigger any
+// IntersectionObservers so hidden content re-renders.
+function useForegroundRepaint() {
+  useEffect(() => {
+    const repaint = () => {
+      if (document.visibilityState !== "visible") return;
+      // Layer nudge — forces a repaint of the composited layer.
+      document.body.style.transform = "translateZ(0)";
+      // Force reflow so the transform commits, then clear it.
+      void document.body.offsetHeight;
+      document.body.style.transform = "";
+      // Nudge any paused IntersectionObservers by emitting a scroll tick —
+      // observers re-evaluate their targets on scroll.
+      try {
+        const scroller = document.querySelector("[data-refresh-scroll]");
+        if (scroller) {
+          const top = scroller.scrollTop;
+          scroller.scrollTop = top + 1;
+          scroller.scrollTop = top;
+        }
+        window.dispatchEvent(new Event("scroll"));
+      } catch {
+        // Non-fatal — repaint already forced via transform above.
+      }
+    };
+    document.addEventListener("visibilitychange", repaint);
+    window.addEventListener("pageshow", repaint);
+    return () => {
+      document.removeEventListener("visibilitychange", repaint);
+      window.removeEventListener("pageshow", repaint);
+    };
+  }, []);
+}
+
 const CachedDashboard = memo(Dashboard);
 const CachedHistoryPage = memo(HistoryPage);
 const CachedSettingsPage = memo(SettingsPage);

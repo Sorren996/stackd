@@ -17,6 +17,9 @@ function invalidateGlucoseQueries(queryClient) {
   queryClient.invalidateQueries({ queryKey: ["latest-glucose"] });
   queryClient.invalidateQueries({ queryKey: ["glucose-readings", "graph"] });
   queryClient.invalidateQueries({ queryKey: ["glucose-readings"] });
+  // Re-read the connection row so the stale-sync banner's "since last sync"
+  // timer resets the moment last_fetched_at bumps forward.
+  queryClient.invalidateQueries({ queryKey: ["dexcom-connection"] });
 }
 
 /**

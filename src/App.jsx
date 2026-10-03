@@ -46,21 +46,6 @@ import { fetchAllGlucoseReadings } from "@/lib/fetchAllGlucose";
 const AuthenticatedApp = () => {
   const { user, isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, isAuthenticated, handleSessionExpired } = useAuth();
   const [dataReady, setDataReady] = useState(false);
-  const [graphReady, setGraphReady] = useState(false);
-
-  useEffect(() => {
-    const handler = () => setGraphReady(true);
-    window.addEventListener("dashboard-graph-ready", handler);
-    return () => window.removeEventListener("dashboard-graph-ready", handler);
-  }, []);
-
-  // Safety fallback: never trap the user behind the splash if the graph
-  // signal never arrives (e.g. landing on a non-dashboard route).
-  useEffect(() => {
-    if (!dataReady || graphReady) return;
-    const id = setTimeout(() => setGraphReady(true), 5000);
-    return () => clearTimeout(id);
-  }, [dataReady, graphReady]);
 
   // Wire global auth-failure handler so any 401/403 during a query or mutation
   // triggers the centralized session-expiration flow.
@@ -240,8 +225,12 @@ const AuthenticatedApp = () => {
     );
   }
 
-  // Authenticated — wait for data prefetch and acknowledgment check
-  if (!dataReady || ackLoading) {
+  // Authenticated — render the app shell immediately so the user never stares
+  // at a blank teal screen on revisit. The shell (header, nav, card
+  // structure) paints now and data fills in as the prefetch resolves. Only
+  // the acknowledgment flow is gated on the ack record loading, so we briefly
+  // hold the splash until the ack check has resolved (it's a tiny list call).
+  if (ackLoading) {
     return (
       <AnimatePresence>
         <SplashScreen />
@@ -281,9 +270,6 @@ const AuthenticatedApp = () => {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </ErrorBoundary>
-      <AnimatePresence>
-        {!graphReady && <SplashScreen />}
-      </AnimatePresence>
     </>
   );
 };

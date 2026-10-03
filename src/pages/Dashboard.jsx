@@ -60,7 +60,6 @@ export default function Dashboard() {
   const queryClient = useQueryClient();
   const [, setTick] = useState(0);
   const [showAllDoses, setShowAllDoses] = useState(false);
-  const [showGraph, setShowGraph] = useState(false);
   const [editingLog, setEditingLog] = useState(null);
   const { connected: dexcomConnected, isLoading: dexcomLoading, connection: dexcomConnection } = useDexcomConnection();
   useVisibilityRefresh();
@@ -71,23 +70,6 @@ export default function Dashboard() {
     const interval = setInterval(() => setTick((t) => t + 1), 60000);
     return () => clearInterval(interval);
   }, []);
-
-  useEffect(() => {
-    const id = setTimeout(() => setShowGraph(true), 120);
-    return () => clearTimeout(id);
-  }, []);
-
-  useEffect(() => {
-    if (!showGraph) return;
-    // The graph slot has committed — let two frames paint before dismissing
-    // the splash so the user never sees the graph pop in.
-    const rafId = requestAnimationFrame(() =>
-      requestAnimationFrame(() =>
-        window.dispatchEvent(new CustomEvent("dashboard-graph-ready"))
-      )
-    );
-    return () => cancelAnimationFrame(rafId);
-  }, [showGraph]);
 
   const { data: doses = [], isLoading: loadingDoses } = useQuery({
     queryKey: ["insulin-doses"],
@@ -417,18 +399,14 @@ export default function Dashboard() {
                 <ConnectGlucoseSourcePrompt connection={dexcomConnection} />
               ) : null}
               graphSlot={
-                showGraph ? (
-                  <ActivityGraph
-                    doses={graphDoses}
-                    glucoseReadings={graphGlucose}
-                    carbEntries={graphCarbs}
-                    onSelectLog={setEditingLog}
-                    onDeleteLog={handleDeleteLog}
-                    glucoseReadOnly={dexcomConnected}
-                  />
-                ) : (
-                  <div className="h-[320px] w-full" />
-                )
+                <ActivityGraph
+                  doses={graphDoses}
+                  glucoseReadings={graphGlucose}
+                  carbEntries={graphCarbs}
+                  onSelectLog={setEditingLog}
+                  onDeleteLog={handleDeleteLog}
+                  glucoseReadOnly={dexcomConnected}
+                />
               }
               onEditGlucose={dexcomConnected ? null : (reading) => setEditingLog({ type: "glucose", item: reading })}
               onEditDose={(log) => setEditingLog(log)}

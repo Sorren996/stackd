@@ -67,9 +67,13 @@ export default function DexcomSyncStatus() {
   // there's no Dexcom data before showing the "over 3 hours" guidance.
   if (isLoading) return null;
 
-  const connectedAt = connection.connected_at || connection.created_date;
-  const connectedTime = connectedAt ? new Date(connectedAt).getTime() : Date.now();
-  const elapsedMs = Date.now() - connectedTime;
+  // Both the timer text and the "over 3 hours" trigger read the same source:
+  // the last successful fetch (falling back to when the connection was made).
+  // This keeps the displayed "Xh Ym" in sync with the "over 3 hours" copy and
+  // resets the moment a new reading lands (last_fetched_at bumps forward).
+  const lastActivityAt = connection.last_fetched_at || connection.connected_at || connection.created_date;
+  const lastActivityTime = lastActivityAt ? new Date(lastActivityAt).getTime() : Date.now();
+  const elapsedMs = Date.now() - lastActivityTime;
   const elapsedHours = Math.floor(elapsedMs / (60 * 60 * 1000));
   const elapsedMinutes = Math.floor((elapsedMs % (60 * 60 * 1000)) / (60 * 1000));
   const isOverdue = elapsedMs > ESTIMATED_SYNC_MS;
@@ -109,7 +113,7 @@ export default function DexcomSyncStatus() {
               {elapsedHours > 0
                 ? `${elapsedHours}h ${elapsedMinutes}m`
                 : `${elapsedMinutes}m`}{" "}
-              since connection
+              since last sync
             </span>
           </div>
         </div>
