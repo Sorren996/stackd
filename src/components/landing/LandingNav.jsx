@@ -17,10 +17,7 @@ export default function LandingNav() {
   return (
     <nav
       className="sticky top-0 z-50"
-      style={{
-        background: "rgba(247, 241, 232, 0.88)",
-        borderBottom: "1px solid #eadccf",
-      }}
+      style={{ background: "transparent" }}
     >
       <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
         <a href="#top" className="flex items-center gap-2">
@@ -68,7 +65,7 @@ export default function LandingNav() {
       {open && (
         <div
           className="md:hidden"
-          style={{ borderTop: "1px solid #eadccf" }}
+          style={{ background: "#f7f1e8", borderTop: "1px solid #eadccf", borderBottom: "1px solid #eadccf" }}
         >
           <div className="flex flex-col gap-1 px-4 py-3">
             {NAV_LINKS.map((link) => (
