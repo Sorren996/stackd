@@ -71,6 +71,9 @@ export default function Layout() {
   // including Dexcom syncs that land while the user is on Journal/Rhythms.
   useRealtimeLogSync();
 
+  // iOS repaint nudge when returning to the foreground.
+  useForegroundRepaint();
+
   const { requestRefresh } = useDexcomRefresh();
 
   const queryClient = useQueryClient();
@@ -156,12 +159,12 @@ export default function Layout() {
         className="relative mx-auto w-full max-w-6xl px-4 overflow-visible"
         style={{
           paddingTop: "calc(3.5rem + env(safe-area-inset-top))",
-          // Bottom clearance lifts the scroll viewport's bottom edge flush with
-          // the fixed nav bar (64px + safe-area) so no teal gutter shows between
-          // the content and the nav. The floating "+" button is fixed and stays
-          // on top, so it may overlap the page's inert trailing content.
+          // Bottom clearance lifts the scroll viewport's bottom edge clear of
+          // the floating pill nav (60px tall + 16px bottom inset + safe-area)
+          // plus a small breathing gap so the last card isn't flush against
+          // the pill. The copper Log pill floats above the nav's right edge.
           paddingBottom:
-            "calc(64px + env(safe-area-inset-bottom))",
+            "calc(60px + 32px + env(safe-area-inset-bottom))",
           height: "100dvh",
         }}
       >
