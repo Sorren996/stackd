@@ -2,8 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, animate } from "framer-motion";
 import { Home, BookOpen, Activity, CircleUser, Plus, X, Droplets, Wheat, Syringe } from "lucide-react";
-import DoseForm from "@/components/DoseForm";
-import CombinedLogSheet from "@/components/CombinedLogSheet";
+import LogInsulinForm from "@/components/forms/LogInsulinForm";
+import LogMealForm from "@/components/forms/LogMealForm";
+import LogGlucoseForm from "@/components/forms/LogGlucoseForm";
+import LogInsulinMealForm from "@/components/forms/LogInsulinMealForm";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 
 // ── Design tokens (cream cards, copper accent, espresso ink) ─────────────
@@ -196,12 +198,18 @@ export default function UnifiedBottomNav() {
 
   return (
     <>
-      {(doseFormPreloaded || doseFormOpen) && (
-        <DoseForm open={doseFormOpen} onOpenChange={setDoseFormOpen} mode={selectedMode} />
+      {(doseFormPreloaded || doseFormOpen) && selectedMode === "insulin" && (
+        <LogInsulinForm open={doseFormOpen} onClose={() => setDoseFormOpen(false)} />
+      )}
+      {(doseFormPreloaded || doseFormOpen) && selectedMode === "carbs" && (
+        <LogMealForm open={doseFormOpen} onClose={() => setDoseFormOpen(false)} />
+      )}
+      {(doseFormPreloaded || doseFormOpen) && selectedMode === "glucose" && (
+        <LogGlucoseForm open={doseFormOpen} onClose={() => setDoseFormOpen(false)} />
       )}
 
       {combinedSheetOpen && (
-        <CombinedLogSheet open={combinedSheetOpen} onOpenChange={setCombinedSheetOpen} />
+        <LogInsulinMealForm open={combinedSheetOpen} onClose={() => setCombinedSheetOpen(false)} />
       )}
 
       {/* Scrim dims the page while the action stack is open */}
