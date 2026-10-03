@@ -173,7 +173,7 @@ export default function LogInsulinMealForm({ open, onClose }) {
       open={open}
       onClose={onClose}
       title="Log Meal + Support"
-      taller
+      detent="tall"
       footer={
         <button
           type="button"
@@ -205,7 +205,7 @@ export default function LogInsulinMealForm({ open, onClose }) {
       </div>
 
       {/* ── INSULIN section ── */}
-      <div className="mx-5 mt-6 mb-2 flex items-center gap-2 border-t pt-4" style={{ borderColor: HAIRLINE }}>
+      <div className="mt-6 mb-2 flex items-center gap-2 border-t pt-4" style={{ borderColor: HAIRLINE }}>
         <span
           style={{
             width: 6,

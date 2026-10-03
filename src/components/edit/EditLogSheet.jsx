@@ -3,11 +3,18 @@ import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
 import { getDefaultInsulinLibrary } from "@/lib/userSettings";
 import { getGlucoseUnits, glucoseUnitLabel, parseGlucoseInput } from "@/lib/glucoseUnits";
 import { toast } from "sonner";
-import { DateScrollField, TimeScrollField, NumberPadField, TextPadField, SelectField } from "@/components/FormInputFields";
-import InsulinTypeSelector from "@/components/insulin/InsulinTypeSelector";
-import UnitsStepper from "@/components/insulin/UnitsStepper";
-import RescueCarbCheckbox from "@/components/RescueCarbCheckbox";
-import EditSheetShell from "./EditSheetShell";
+import LogSheetShell from "@/components/forms/LogSheetShell";
+import {
+  StepperField,
+  SegmentedControl,
+  TimeField,
+  TextField,
+  RescueCarbToggle,
+  FieldLabel,
+  COPPER,
+  CREAM,
+  FAINT,
+} from "@/components/forms/FieldKit";
 
 function toTimeValue(timestamp) {
   const date = timestamp ? new Date(timestamp) : new Date();
@@ -41,8 +48,6 @@ function getEditInitialForm(log) {
     return {
       insulin_type: log.item.insulin_type || "",
       units: String(log.item.units ?? ""),
-      meal_units: String(log.item.meal_units ?? ""),
-      correction_units: String(log.item.correction_units ?? ""),
       date: toDateValue(log.item.administered_at),
       time: toTimeValue(log.item.administered_at),
       notes: log.item.notes || "",
@@ -59,7 +64,6 @@ function getEditInitialForm(log) {
   return {
     food_name: log.item.food_name || log.item.name || "",
     carbs: String(log.item.carbs ?? ""),
-    absorption_profile: log.item.absorption_profile || log.item.profile || "medium",
     fat_grams: log.item.fat_grams ?? "",
     protein_grams: log.item.protein_grams ?? "",
     is_rescue_carb: log.item.is_rescue_carb === true || log.item.classification === "rescue_carbs",
@@ -79,24 +83,16 @@ function readInsulinLibrary() {
   return getDefaultInsulinLibrary();
 }
 
-const absorptionProfileOptions = [
-  { value: "fast", label: "Fast", description: "Fast carbs" },
-  { value: "medium", label: "Medium", description: "Balanced carbs" },
-  { value: "slow", label: "Slow", description: "Slow carbs" },
-];
-
 /**
- * Shared edit sheet for insulin, glucose, and nourishment logs. Uses the
- * viewport-safe EditSheetShell (portaled to document.body) so the form is
- * always reachable regardless of scrolling/transformed ancestors. Preserves
- * existing values and time/date editing semantics with native inputs.
+ * Shared edit sheet for insulin, glucose, and nourishment logs — now on the
+ * shared LogSheetShell with the field kit. Locked logs are read-only (the
+ * entity's RLS blocks writes server-side, but we also gate the Save button
+ * here for clarity). Preserves existing values and time/date semantics.
  */
 export default function EditLogSheet({ log, onClose, onSave, isSaving }) {
   const [form, setForm] = useState(() => getEditInitialForm(log));
   const [insulinLibrary, setInsulinLibrary] = useState(readInsulinLibrary);
   const [glucoseUnits, setGlucoseUnits] = useState(getGlucoseUnits);
-  const todayDateValue = getTodayDateValue();
-  const nowTimeString = new Date().toTimeString().slice(0, 5);
 
   useEffect(() => {
     setForm(getEditInitialForm(log));
@@ -119,15 +115,16 @@ export default function EditLogSheet({ log, onClose, onSave, isSaving }) {
     () =>
       Object.entries(INSULIN_PROFILES)
         .filter(([name]) => insulinLibrary.includes(name))
-        .map(([name, profile]) => ({ value: name, label: name, description: profile.category, color: profile.color })),
+        .map(([name, profile]) => ({ value: name, label: name, color: profile.color })),
     [insulinLibrary]
   );
 
   const updateField = (key, value) => setForm((current) => ({ ...current, [key]: value }));
-  const title = log?.type === "insulin" ? "Edit Insulin" : log?.type === "glucose" ? "Edit Glucose" : "Edit Nourishment";
+  const title = log?.type === "insulin" ? "Edit Insulin" : log?.type === "glucose" ? "Edit Reading" : "Edit Meal";
+  const isLocked = !!log?.item?.is_locked;
 
   const submit = () => {
-    if (!log) return;
+    if (!log || isLocked) return;
     if (log.type === "insulin") {
       const units = Number(form.units);
       if (!form.insulin_type || !Number.isFinite(units) || units <= 0) {
@@ -139,16 +136,12 @@ export default function EditLogSheet({ log, onClose, onSave, isSaving }) {
         toast.error("Choose a time that is not in the future.");
         return;
       }
-      const mealUnits = form.meal_units === "" ? undefined : Number(form.meal_units);
-      const correctionUnits = form.correction_units === "" ? undefined : Number(form.correction_units);
       onSave({
         type: "insulin",
         id: log.item.id,
         patch: {
           insulin_type: form.insulin_type,
           units,
-          meal_units: Number.isFinite(mealUnits) ? mealUnits : undefined,
-          correction_units: Number.isFinite(correctionUnits) ? correctionUnits : undefined,
           administered_at: administeredAt,
           notes: form.notes || undefined,
         },
@@ -170,11 +163,7 @@ export default function EditLogSheet({ log, onClose, onSave, isSaving }) {
       onSave({
         type: "glucose",
         id: log.item.id,
-        patch: {
-          value,
-          recorded_at: recordedAt,
-          notes: form.notes || undefined,
-        },
+        patch: { value, recorded_at: recordedAt, notes: form.notes || undefined },
       });
       return;
     }
@@ -196,8 +185,6 @@ export default function EditLogSheet({ log, onClose, onSave, isSaving }) {
         name: form.food_name || "Food",
         food_name: form.food_name || "Food",
         carbs,
-        absorption_profile: form.absorption_profile || "medium",
-        profile: form.absorption_profile || "medium",
         consumed_at: consumedAt,
         notes: form.notes || undefined,
         fat_grams: Number(form.fat_grams) || 0,
@@ -207,87 +194,100 @@ export default function EditLogSheet({ log, onClose, onSave, isSaving }) {
     });
   };
 
+  const todayDateValue = getTodayDateValue();
+  const nowTimeString = new Date().toTimeString().slice(0, 5);
+
   return (
-    <EditSheetShell
+    <LogSheetShell
       open={!!log}
       onClose={onClose}
       title={title}
       footer={
-        <button
-          type="button"
-          onClick={submit}
-          disabled={isSaving}
-          className="w-full rounded-2xl py-4 text-base font-semibold transition disabled:opacity-40"
-          style={{ background: "#3f3830", color: "#f7f1e8", boxShadow: "0 4px 16px rgba(63, 56, 48, 0.15)" }}
-        >
-          {isSaving ? "Saving..." : "Save moment"}
-        </button>
+        isLocked ? (
+          <p className="py-2 text-center text-xs" style={{ color: FAINT }}>
+            This moment is locked and can't be edited.
+          </p>
+        ) : (
+          <button
+            type="button"
+            onClick={submit}
+            disabled={isSaving}
+            className="w-full rounded-2xl py-4 text-base font-semibold transition disabled:opacity-40"
+            style={{ background: COPPER, color: CREAM, boxShadow: "0 4px 16px rgba(156,82,40,0.25)" }}
+          >
+            {isSaving ? "Saving..." : "Save moment"}
+          </button>
+        )
       }
     >
-      <style>{`.edit-sheet-body input,.edit-sheet-body select,.edit-sheet-body textarea{font-size:16px}`}</style>
       <div className="space-y-4">
         {log?.type === "insulin" && (
           <>
-            <InsulinTypeSelector
+            <SegmentedControl
+              label="Insulin Type"
               value={form.insulin_type}
               onChange={(value) => updateField("insulin_type", value)}
               options={insulinTypeOptions}
+              ariaLabel="Insulin type"
             />
-            <UnitsStepper
+            <StepperField
+              label="Units"
               value={form.units}
               onChange={(value) => updateField("units", value)}
+              unit="U"
+              step={1}
+              presets={[5, 10, 15, 20]}
             />
-            <div className="grid grid-cols-1 gap-2">
-              <NumberPadField label="Meal" value={form.meal_units} onChange={(value) => updateField("meal_units", value)} />
-              <NumberPadField label="Correction" value={form.correction_units} onChange={(value) => updateField("correction_units", value)} />
-            </div>
           </>
         )}
 
-        {log?.type === "glucose" && (
-          <NumberPadField
-            label="Glucose"
-            value={form.value}
-            onChange={(value) => {
-              if (glucoseUnits === "mmol/L") {
-                updateField("value", value.replace(/[^\d.]/g, "").slice(0, 4));
-              } else {
-                updateField("value", value.replace(/\D/g, "").slice(0, 3));
-              }
-            }}
-            unit={glucoseUnitLabel()}
-            decimal={glucoseUnits === "mmol/L"}
-            maxLength={glucoseUnits === "mmol/L" ? 4 : 3}
-          />
-        )}
+        {log?.type === "glucose" &&
+          (glucoseUnits === "mmol/L" ? (
+            <TextField
+              label={`Glucose (${glucoseUnitLabel()})`}
+              value={form.value}
+              onChange={(v) => updateField("value", v.replace(/[^\d.]/g, "").slice(0, 4))}
+              placeholder="e.g. 6.5"
+            />
+          ) : (
+            <StepperField
+              label={`Glucose (${glucoseUnitLabel()})`}
+              value={form.value}
+              onChange={(value) => updateField("value", value)}
+              step={5}
+              presets={[70, 100, 130, 180]}
+            />
+          ))}
 
         {log?.type === "carbs" && (
           <>
-            <TextPadField label="Food" value={form.food_name} onChange={(value) => updateField("food_name", value)} placeholder="Food" />
-            <div className="grid grid-cols-2 gap-2">
-              <NumberPadField label="Carbs" value={form.carbs} onChange={(value) => updateField("carbs", value)} />
-              <SelectField
-                label="Absorption"
-                value={form.absorption_profile}
-                onChange={(value) => updateField("absorption_profile", value)}
-                options={absorptionProfileOptions}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <NumberPadField label="Protein" value={form.protein_grams} onChange={(value) => updateField("protein_grams", value)} unit="g" />
-              <NumberPadField label="Fat" value={form.fat_grams} onChange={(value) => updateField("fat_grams", value)} unit="g" />
-            </div>
-            <RescueCarbCheckbox
-              checked={form.is_rescue_carb}
-              onChange={(checked) => updateField("is_rescue_carb", checked)}
+            <TextField label="Meal" value={form.food_name} onChange={(value) => updateField("food_name", value)} placeholder="Food" />
+            <StepperField
+              label="Carbs"
+              value={form.carbs}
+              onChange={(value) => updateField("carbs", value)}
+              unit="g"
+              step={5}
+              presets={[15, 30, 45, 60]}
             />
+            <div className="grid grid-cols-2 gap-3">
+              <TextField label="Protein" value={form.protein_grams} onChange={(v) => updateField("protein_grams", v.replace(/[^\d.]/g, "").slice(0, 4))} placeholder="0" />
+              <TextField label="Fat" value={form.fat_grams} onChange={(v) => updateField("fat_grams", v.replace(/[^\d.]/g, "").slice(0, 4))} placeholder="0" />
+            </div>
+            <RescueCarbToggle checked={form.is_rescue_carb} onChange={(checked) => updateField("is_rescue_carb", checked)} />
           </>
         )}
 
-        <DateScrollField label="Date" value={form.date} onChange={(value) => updateField("date", value)} max={todayDateValue} />
-        <TimeScrollField label="Time" value={form.time} onChange={(value) => updateField("time", value)} max={form.date === todayDateValue ? nowTimeString : undefined} />
-        <TextPadField label="Notes" value={form.notes} onChange={(value) => updateField("notes", value)} placeholder="Notes" multiline />
+        <TimeField
+          dateValue={form.date}
+          timeValue={form.time}
+          onDateChange={(value) => updateField("date", value)}
+          onTimeChange={(value) => updateField("time", value)}
+          maxDate={todayDateValue}
+          maxTime={form.date === todayDateValue ? nowTimeString : undefined}
+        />
+        <TextField label="Notes" value={form.notes} onChange={(value) => updateField("notes", value)} placeholder="Notes" multiline />
       </div>
-    </EditSheetShell>
+    </LogSheetShell>
   );
 }
