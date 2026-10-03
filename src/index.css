@@ -146,7 +146,7 @@
 
   body {
     @apply text-foreground;
-    background: #4c6770;
+    background: #f7f1e8;
     min-height: 100vh;
     color-scheme: light;
   }
