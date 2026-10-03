@@ -169,10 +169,12 @@ export default function Layout() {
         <PullToRefresh onRefresh={handleRefresh}>
           {/* Clearance lives inside the scroll content (not on the viewport)
               so cards scroll visibly beneath the frosted nav, while the last
-              card can still scroll fully clear of it. */}
+              card can still scroll fully clear of it. The nav sits at 28px
+              from the bottom (60px tall), so the last card needs ~60+28+32px
+              of breathing room to scroll fully above the frosted bar. */}
           <div
             className="min-w-0 w-full"
-            style={{ paddingBottom: "calc(60px + 32px + env(safe-area-inset-bottom))" }}
+            style={{ paddingBottom: "calc(60px + 60px + env(safe-area-inset-bottom))" }}
           >
             <div hidden={!isDashboardRoute}>
               <CachedDashboard />

@@ -231,7 +231,7 @@ export default function UnifiedBottomNav() {
       <nav
         className="fixed inset-x-0"
         style={{
-          bottom: "calc(16px + env(safe-area-inset-bottom))",
+          bottom: "calc(28px + env(safe-area-inset-bottom))",
           paddingLeft: "16px",
           paddingRight: "16px",
           zIndex: 50,
@@ -292,14 +292,14 @@ export default function UnifiedBottomNav() {
         className="fixed"
         style={{
           right: "calc(20px + env(safe-area-inset-right))",
-          bottom: "calc(76px + env(safe-area-inset-bottom))",
+          bottom: "calc(104px + env(safe-area-inset-bottom))",
           zIndex: 55,
         }}
       >
         {/* Action stack — bottom-to-top staggered rise */}
         <AnimatePresence>
           {stackVisible && (
-            <div className="absolute right-0 bottom-[60px] flex flex-col items-end gap-3">
+            <div className="absolute right-0 bottom-[88px] flex flex-col items-end gap-3">
               {actions.map((action, i) => {
                 const ActionIcon = action.Icon;
                 // i=0 is the bottommost (first to rise, closest to thumb).

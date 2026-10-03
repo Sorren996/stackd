@@ -51,23 +51,31 @@ Deno.serve(async (req) => {
     // pre-computed DailySummary records.
     const recentStart = new Date(now.getTime() - 2 * dayMs).toISOString();
 
+    // Each source is fetched independently so a single failed call (rate-limit,
+    // timeout) never blanks the entire History page. A failed source simply
+    // contributes zero records; the others still populate the timeline.
+    const safeList = (p: Promise<any[]>) => p.catch((e) => {
+      console.log(JSON.stringify({ stage: "getHistorySummary", source: "fetch_error", error: e?.message || String(e) }));
+      return [] as any[];
+    });
+
     const [summaries, recentGlucose, carbs, insulin] = await Promise.all([
-      base44.entities.DailySummary.filter(
+      safeList(base44.entities.DailySummary.filter(
         { date: { $gte: rangeStart.slice(0, 10), $lte: rangeEnd.slice(0, 10) } },
         "-date", 300
-      ),
-      base44.entities.GlucoseReading.filter(
+      )),
+      safeList(base44.entities.GlucoseReading.filter(
         { recorded_at: { $gte: recentStart, $lte: rangeEnd }, source: { $ne: "system" } },
         '-recorded_at', 5000
-      ),
-      base44.entities.CarbEntry.filter(
+      )),
+      safeList(base44.entities.CarbEntry.filter(
         { consumed_at: { $gte: rangeStart, $lte: rangeEnd } },
         '-consumed_at', 5000
-      ),
-      base44.entities.InsulinDose.filter(
+      )),
+      safeList(base44.entities.InsulinDose.filter(
         { administered_at: { $gte: rangeStart, $lte: rangeEnd } },
         '-administered_at', 5000
-      ),
+      )),
     ]);
 
     const dayMap: Record<string, any> = {};
