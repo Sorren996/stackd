@@ -241,7 +241,10 @@ export default function UnifiedBottomNav() {
           className="mx-auto flex items-center justify-between"
           style={{
             maxWidth: "30rem",
-            background: CREAM,
+            background: "rgba(253,249,242,0.62)",
+            backdropFilter: "blur(20px) saturate(180%)",
+            WebkitBackdropFilter: "blur(20px) saturate(180%)",
+            border: "1px solid rgba(253,249,242,0.55)",
             borderRadius: "28px",
             boxShadow: "0 8px 28px rgba(63,56,48,0.16), 0 2px 8px rgba(63,56,48,0.08)",
             padding: "8px",
@@ -345,7 +348,10 @@ export default function UnifiedBottomNav() {
           className="flex items-center gap-2 pl-5 pr-6"
           style={{
             height: "52px",
-            background: COPPER,
+            background: "rgba(156,82,40,0.82)",
+            backdropFilter: "blur(16px) saturate(160%)",
+            WebkitBackdropFilter: "blur(16px) saturate(160%)",
+            border: "1px solid rgba(253,249,242,0.22)",
             color: CREAM,
             borderRadius: "9999px",
             boxShadow: "0 8px 24px rgba(156,82,40,0.32), 0 2px 6px rgba(63,56,48,0.16)",

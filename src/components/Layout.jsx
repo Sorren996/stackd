@@ -163,13 +163,17 @@ export default function Layout() {
           // the floating pill nav (60px tall + 16px bottom inset + safe-area)
           // plus a small breathing gap so the last card isn't flush against
           // the pill. The copper Log pill floats above the nav's right edge.
-          paddingBottom:
-            "calc(60px + 32px + env(safe-area-inset-bottom))",
           height: "100dvh",
         }}
       >
         <PullToRefresh onRefresh={handleRefresh}>
-          <div className="min-w-0 w-full">
+          {/* Clearance lives inside the scroll content (not on the viewport)
+              so cards scroll visibly beneath the frosted nav, while the last
+              card can still scroll fully clear of it. */}
+          <div
+            className="min-w-0 w-full"
+            style={{ paddingBottom: "calc(60px + 32px + env(safe-area-inset-bottom))" }}
+          >
             <div hidden={!isDashboardRoute}>
               <CachedDashboard />
             </div>
