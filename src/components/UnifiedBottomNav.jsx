@@ -231,7 +231,7 @@ export default function UnifiedBottomNav() {
       <nav
         className="fixed inset-x-0"
         style={{
-          bottom: "calc(28px + env(safe-area-inset-bottom))",
+          bottom: "calc(0px + env(safe-area-inset-bottom))",
           paddingLeft: "16px",
           paddingRight: "16px",
           zIndex: 50,
