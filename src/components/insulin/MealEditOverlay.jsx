@@ -188,8 +188,6 @@ export default function MealEditOverlay({ entries, onClose }) {
           </button>
         }
       >
-        <style>{`.edit-sheet-body input { font-size: 16px; }`}</style>
-
         {/* Meal-level time input — native input, moves the meal marker on save */}
         <div className="mb-4">
           <label
@@ -205,6 +203,9 @@ export default function MealEditOverlay({ entries, onClose }) {
             onChange={(e) => setMealTime(e.target.value)}
             className="mt-1.5 w-full rounded-xl px-3 py-2.5 text-sm font-medium tabular-nums outline-none transition"
             style={{
+              width: "100%",
+              maxWidth: "100%",
+              boxSizing: "border-box",
               background: PALETTE.canvas,
               color: PALETTE.ink,
               border: `1px solid ${PALETTE.hairline}`,
@@ -226,7 +227,7 @@ export default function MealEditOverlay({ entries, onClose }) {
                 onChange={(e) => updateItem(index, "food_name", e.target.value)}
                 placeholder="Food name"
                 className="w-full rounded-xl px-3 py-2.5 text-sm outline-none transition"
-                style={{ background: PALETTE.surface, color: PALETTE.ink }}
+                style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box", background: PALETTE.surface, color: PALETTE.ink }}
               />
               {/* Row 2 — carbs input + remove button */}
               <div className="mt-2 flex items-center gap-2">
@@ -238,7 +239,7 @@ export default function MealEditOverlay({ entries, onClose }) {
                     onChange={(e) => updateItem(index, "carbs", e.target.value)}
                     placeholder="0"
                     className="w-full rounded-xl px-3 py-2.5 pr-8 text-sm outline-none transition"
-                    style={{ background: PALETTE.surface, color: PALETTE.ink }}
+                    style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box", background: PALETTE.surface, color: PALETTE.ink }}
                   />
                   <span
                     className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs"

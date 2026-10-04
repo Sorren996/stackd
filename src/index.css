@@ -177,6 +177,32 @@
     color: #6b6153;
     opacity: 1;
   }
+
+  /* ── Global form/sheet overflow lock ─────────────────────────
+     No form, sheet, or modal can be panned horizontally or diagonally on
+     a phone. Every portal-rendered sheet body and every input/textarea is
+     clamped to its parent width. touch-action: pan-y kills the horizontal
+     drag gesture at the browser level — vertical scroll still works. */
+  [role="dialog"],
+  [role="dialog"] > * {
+    max-width: 100vw;
+    box-sizing: border-box;
+  }
+
+  [role="dialog"] input,
+  [role="dialog"] textarea,
+  [role="dialog"] select {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  [role="dialog"] textarea {
+    resize: none;
+    overflow-y: auto;
+    overflow-x: hidden;
+    word-wrap: break-word;
+  }
 }
 
 @layer utilities {
