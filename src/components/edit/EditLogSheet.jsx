@@ -1,16 +1,18 @@
 import { useState, useEffect, useMemo } from "react";
-import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
+import { INSULIN_PROFILES, isBasalInsulinType } from "@/lib/insulinPharmacology";
 import { getDefaultInsulinLibrary } from "@/lib/userSettings";
 import { getGlucoseUnits, glucoseUnitLabel, parseGlucoseInput } from "@/lib/glucoseUnits";
 import { toast } from "sonner";
 import LogSheetShell from "@/components/forms/LogSheetShell";
 import {
-  StepperField,
-  SegmentedControl,
-  TimeField,
+  TapStepper,
+  InsulinChips,
+  CompactSegmented,
+  TripleSegmented,
+  RescueChip,
+  NowTimeField,
   TextField,
-  RescueCarbToggle,
-  FieldLabel,
+  MACRO_GRAMS,
   COPPER,
   CREAM,
   FAINT,
@@ -42,6 +44,13 @@ function mergeDateTime(dateValue, timeValue) {
   return date.toISOString();
 }
 
+const toLevel = (g) => {
+  const n = Number(g) || 0;
+  if (n >= 40) return "high";
+  if (n >= 15) return "med";
+  return "low";
+};
+
 function getEditInitialForm(log) {
   if (!log) return {};
   if (log.type === "insulin") {
@@ -64,8 +73,8 @@ function getEditInitialForm(log) {
   return {
     food_name: log.item.food_name || log.item.name || "",
     carbs: String(log.item.carbs ?? ""),
-    fat_grams: log.item.fat_grams ?? "",
-    protein_grams: log.item.protein_grams ?? "",
+    fat_level: toLevel(log.item.fat_grams),
+    protein_level: toLevel(log.item.protein_grams),
     is_rescue_carb: log.item.is_rescue_carb === true || log.item.classification === "rescue_carbs",
     date: toDateValue(log.item.consumed_at),
     time: toTimeValue(log.item.consumed_at),
@@ -84,10 +93,10 @@ function readInsulinLibrary() {
 }
 
 /**
- * Shared edit sheet for insulin, glucose, and nourishment logs — now on the
- * shared LogSheetShell with the field kit. Locked logs are read-only (the
- * entity's RLS blocks writes server-side, but we also gate the Save button
- * here for clarity). Preserves existing values and time/date semantics.
+ * Shared edit sheet for insulin, glucose, and nourishment logs — on the
+ * reference shell. Prefilled with the record's current values; footer reads
+ * "Save changes". Locked logs are read-only (the entity's RLS blocks writes
+ * server-side, but we also gate the Save button here for clarity).
  */
 export default function EditLogSheet({ log, onClose, onSave, isSaving }) {
   const [form, setForm] = useState(() => getEditInitialForm(log));
@@ -115,12 +124,12 @@ export default function EditLogSheet({ log, onClose, onSave, isSaving }) {
     () =>
       Object.entries(INSULIN_PROFILES)
         .filter(([name]) => insulinLibrary.includes(name))
-        .map(([name, profile]) => ({ value: name, label: name, color: profile.color })),
+        .map(([name]) => ({ value: name, label: name })),
     [insulinLibrary]
   );
 
   const updateField = (key, value) => setForm((current) => ({ ...current, [key]: value }));
-  const title = log?.type === "insulin" ? "Edit Insulin" : log?.type === "glucose" ? "Edit Reading" : "Edit Meal";
+  const title = log?.type === "insulin" ? "Edit insulin" : log?.type === "glucose" ? "Edit reading" : "Edit meal";
   const isLocked = !!log?.item?.is_locked;
 
   const submit = () => {
@@ -187,8 +196,8 @@ export default function EditLogSheet({ log, onClose, onSave, isSaving }) {
         carbs,
         consumed_at: consumedAt,
         notes: form.notes || undefined,
-        fat_grams: Number(form.fat_grams) || 0,
-        protein_grams: Number(form.protein_grams) || 0,
+        fat_grams: MACRO_GRAMS[form.fat_level] ?? 0,
+        protein_grams: MACRO_GRAMS[form.protein_level] ?? 0,
         is_rescue_carb: form.is_rescue_carb || false,
       },
     });
@@ -215,26 +224,26 @@ export default function EditLogSheet({ log, onClose, onSave, isSaving }) {
             className="w-full rounded-2xl py-4 text-base font-semibold transition disabled:opacity-40"
             style={{ background: COPPER, color: CREAM, boxShadow: "0 4px 16px rgba(156,82,40,0.25)" }}
           >
-            {isSaving ? "Saving..." : "Save moment"}
+            {isSaving ? "Saving..." : "Save changes"}
           </button>
         )
       }
     >
-      <div className="space-y-4">
+      <div className="space-y-6">
         {log?.type === "insulin" && (
           <>
-            <SegmentedControl
-              label="Insulin Type"
+            <InsulinChips
               value={form.insulin_type}
               onChange={(value) => updateField("insulin_type", value)}
               options={insulinTypeOptions}
               ariaLabel="Insulin type"
             />
-            <StepperField
-              label="Units"
+            <TapStepper
+              label="Dose"
+              sub="· steps of 1u · tap to type"
               value={form.units}
               onChange={(value) => updateField("units", value)}
-              unit="U"
+              unit="u"
               step={1}
               presets={[5, 10, 15, 20]}
             />
@@ -250,7 +259,7 @@ export default function EditLogSheet({ log, onClose, onSave, isSaving }) {
               placeholder="e.g. 6.5"
             />
           ) : (
-            <StepperField
+            <TapStepper
               label={`Glucose (${glucoseUnitLabel()})`}
               value={form.value}
               onChange={(value) => updateField("value", value)}
@@ -262,23 +271,22 @@ export default function EditLogSheet({ log, onClose, onSave, isSaving }) {
         {log?.type === "carbs" && (
           <>
             <TextField label="Meal" value={form.food_name} onChange={(value) => updateField("food_name", value)} placeholder="Food" />
-            <StepperField
+            <TapStepper
               label="Carbs"
+              sub="· steps of 5g · tap to type"
               value={form.carbs}
               onChange={(value) => updateField("carbs", value)}
               unit="g"
               step={5}
               presets={[15, 30, 45, 60]}
             />
-            <div className="grid grid-cols-2 gap-3">
-              <TextField label="Protein" value={form.protein_grams} onChange={(v) => updateField("protein_grams", v.replace(/[^\d.]/g, "").slice(0, 4))} placeholder="0" />
-              <TextField label="Fat" value={form.fat_grams} onChange={(v) => updateField("fat_grams", v.replace(/[^\d.]/g, "").slice(0, 4))} placeholder="0" />
-            </div>
-            <RescueCarbToggle checked={form.is_rescue_carb} onChange={(checked) => updateField("is_rescue_carb", checked)} />
+            <TripleSegmented label="Protein" value={form.protein_level} onChange={(v) => updateField("protein_level", v)} />
+            <TripleSegmented label="Fat" value={form.fat_level} onChange={(v) => updateField("fat_level", v)} />
+            <RescueChip checked={form.is_rescue_carb} onChange={(checked) => updateField("is_rescue_carb", checked)} />
           </>
         )}
 
-        <TimeField
+        <NowTimeField
           dateValue={form.date}
           timeValue={form.time}
           onDateChange={(value) => updateField("date", value)}
@@ -286,6 +294,7 @@ export default function EditLogSheet({ log, onClose, onSave, isSaving }) {
           maxDate={todayDateValue}
           maxTime={form.date === todayDateValue ? nowTimeString : undefined}
         />
+
         <TextField label="Notes" value={form.notes} onChange={(value) => updateField("notes", value)} placeholder="Notes" multiline />
       </div>
     </LogSheetShell>

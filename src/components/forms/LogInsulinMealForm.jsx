@@ -1,19 +1,24 @@
 import { useEffect, useMemo, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
-import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
+import { INSULIN_PROFILES, isBasalInsulinType } from "@/lib/insulinPharmacology";
 import { getDefaultInsulinLibrary } from "@/lib/userSettings";
 import { useCreateDoses, useCreateCarbs } from "@/hooks/useLogMutations";
+import { hasDelayedRise } from "@/lib/mealMonitoring";
 import { toast } from "sonner";
 import LogSheetShell from "@/components/forms/LogSheetShell";
 import {
-  StepperField,
-  SegmentedControl,
-  TimeField,
+  TapStepper,
+  InsulinChips,
+  CompactSegmented,
+  TripleSegmented,
+  RescueChip,
+  NowTimeField,
   TextField,
-  RescueCarbToggle,
   FieldLabel,
+  MACRO_GRAMS,
   INK,
   COPPER,
+  SAGE,
   CREAM,
   TAUPE,
   FAINT,
@@ -22,7 +27,7 @@ import {
 } from "@/components/forms/FieldKit";
 
 function createInsulinRow(defaults = {}) {
-  return { id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, insulinType: "", units: "", ...defaults };
+  return { id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, insulinType: "", covers: "meal", units: "", ...defaults };
 }
 
 function readInsulinLibrary() {
@@ -50,13 +55,16 @@ function buildTimestampNoFuture(dateValue, timeValue) {
 }
 
 /**
- * Log Insulin + Meal — shared shell at a taller detent. MEAL section and
- * INSULIN section labels, same field kit. Shared date/time/notes across both.
- * No dose estimates or recommendation copy (per spec).
+ * Log Insulin + Meal — combined form on the reference shell (taller detent).
+ * Meal section and Insulin section, same field kit. Shared date/time/notes.
+ * No dose estimates or recommendation copy (per spec). Insulin chips show
+ * only the user's settings; basal hides the covers row.
  */
 export default function LogInsulinMealForm({ open, onClose }) {
   const [foodName, setFoodName] = useState("");
   const [carbs, setCarbs] = useState("");
+  const [proteinLevel, setProteinLevel] = useState("low");
+  const [fatLevel, setFatLevel] = useState("low");
   const [isRescue, setIsRescue] = useState(false);
   const [insulinRows, setInsulinRows] = useState(() => [createInsulinRow()]);
   const [sharedNotes, setSharedNotes] = useState("");
@@ -72,6 +80,8 @@ export default function LogInsulinMealForm({ open, onClose }) {
     if (!open) return;
     setFoodName("");
     setCarbs("");
+    setProteinLevel("low");
+    setFatLevel("low");
     setIsRescue(false);
     setInsulinRows([createInsulinRow()]);
     setSharedNotes("");
@@ -93,7 +103,7 @@ export default function LogInsulinMealForm({ open, onClose }) {
     () =>
       Object.entries(INSULIN_PROFILES)
         .filter(([name]) => insulinLibrary.includes(name))
-        .map(([name, profile]) => ({ value: name, label: name, color: profile.color })),
+        .map(([name]) => ({ value: name, label: name })),
     [insulinLibrary]
   );
 
@@ -109,6 +119,8 @@ export default function LogInsulinMealForm({ open, onClose }) {
     setInsulinRows((rows) => (rows.length === 1 ? rows : rows.filter((row) => row.id !== id)));
 
   const carbsNum = Number(carbs) || 0;
+  const proteinGrams = MACRO_GRAMS[proteinLevel] ?? 0;
+  const fatGrams = MACRO_GRAMS[fatLevel] ?? 0;
   const hasMeal = foodName.trim() && carbsNum > 0;
 
   const insulinTotals = insulinRows.reduce((totals, row) => {
@@ -134,9 +146,9 @@ export default function LogInsulinMealForm({ open, onClose }) {
     setLogging(true);
 
     if (hasInsulin) {
-      const submittedDoses = Object.values(insulinTotals).map((dose) => ({
-        insulin_type: dose.insulin_type,
-        units: dose.units,
+      const submittedDoses = Object.entries(insulinTotals).map(([insulin_type, units]) => ({
+        insulin_type,
+        units,
         administered_at: timestamp.toISOString(),
         notes: sharedNotes || undefined,
       }));
@@ -155,13 +167,14 @@ export default function LogInsulinMealForm({ open, onClose }) {
         carbs: carbsNum,
         consumed_at: timestamp.toISOString(),
         is_rescue_carb: isRescue,
+        fat_grams: fatGrams,
+        protein_grams: proteinGrams,
         notes: sharedNotes || undefined,
       };
       const optimisticEntries = [{ ...entry, id: `optimistic-carb-${Date.now()}`, created_date: new Date().toISOString() }];
       createCarb.mutate({ submittedEntries: [entry], optimisticEntries, splitPlan: null });
     }
 
-    // Close after a brief beat so the toasts from the hooks land.
     setTimeout(() => {
       setLogging(false);
       onClose?.();
@@ -172,7 +185,7 @@ export default function LogInsulinMealForm({ open, onClose }) {
     <LogSheetShell
       open={open}
       onClose={onClose}
-      title="Log Meal + Support"
+      title="Log meal + support"
       detent="tall"
       footer={
         <button
@@ -186,60 +199,82 @@ export default function LogInsulinMealForm({ open, onClose }) {
         </button>
       }
     >
-      {/* ── MEAL section ── */}
+      {/* ── Meal section ── */}
       <div className="mb-2 flex items-center gap-2">
-        <span
-          style={{
-            width: 6,
-            height: 6,
-            borderRadius: "9999px",
-            background: COPPER,
-          }}
-        />
+        <span style={{ width: 6, height: 6, borderRadius: "9999px", background: COPPER }} />
         <FieldLabel>Meal</FieldLabel>
       </div>
-      <div className="space-y-4">
-        <TextField label="Meal" value={foodName} onChange={setFoodName} placeholder="e.g. Lunch, snack" />
-        <StepperField label="Carbs" value={carbs} onChange={setCarbs} unit="g" step={5} presets={[15, 30, 45, 60]} />
-        <RescueCarbToggle checked={isRescue} onChange={setIsRescue} />
+      <div className="space-y-5">
+        <TextField value={foodName} onChange={setFoodName} placeholder="Meal name (optional)" />
+        <TapStepper
+          label="Carbs"
+          sub="· steps of 5g · tap to type"
+          value={carbs}
+          onChange={setCarbs}
+          unit="g"
+          step={5}
+          presets={[15, 30, 45, 60]}
+        />
+        <TripleSegmented label="Protein" value={proteinLevel} onChange={setProteinLevel} />
+        <TripleSegmented label="Fat" value={fatLevel} onChange={setFatLevel} />
+        <RescueChip checked={isRescue} onChange={setIsRescue} />
       </div>
 
-      {/* ── INSULIN section ── */}
+      {/* ── Insulin section ── */}
       <div className="mt-6 mb-2 flex items-center gap-2 border-t pt-4" style={{ borderColor: HAIRLINE }}>
-        <span
-          style={{
-            width: 6,
-            height: 6,
-            borderRadius: "9999px",
-            background: "#4d5742",
-          }}
-        />
+        <span style={{ width: 6, height: 6, borderRadius: "9999px", background: SAGE }} />
         <FieldLabel>Insulin</FieldLabel>
       </div>
       <div className="space-y-5">
-        {insulinRows.map((row) => (
-          <div key={row.id} className="space-y-4">
-            <SegmentedControl
-              label="Insulin Type"
-              value={row.insulinType}
-              onChange={(value) => updateInsulinRow(row.id, { insulinType: value })}
-              options={typeOptions}
-              ariaLabel="Insulin type"
-            />
-            <StepperField label="Units" value={row.units} onChange={(v) => updateInsulinRow(row.id, { units: v })} unit="U" step={1} presets={[5, 10, 15, 20]} />
-            {insulinRows.length > 1 && (
-              <button
-                type="button"
-                onClick={() => removeInsulinRow(row.id)}
-                className="flex items-center gap-1.5 px-1 text-xs"
-                style={{ color: FAINT }}
-              >
-                <Trash2 className="h-3 w-3" />
-                Remove this dose
-              </button>
-            )}
-          </div>
-        ))}
+        {insulinRows.map((row) => {
+          const basal = row.insulinType ? isBasalInsulinType(row.insulinType) : false;
+          return (
+            <div key={row.id} className="space-y-4">
+              <InsulinChips
+                value={row.insulinType}
+                onChange={(value) => updateInsulinRow(row.id, { insulinType: value })}
+                options={typeOptions}
+                ariaLabel="Insulin type"
+              />
+              {!basal && row.insulinType && (
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-medium" style={{ color: FAINT }}>
+                    This dose covers
+                  </span>
+                  <CompactSegmented
+                    value={row.covers}
+                    onChange={(v) => updateInsulinRow(row.id, { covers: v })}
+                    options={[
+                      { value: "meal", label: "A meal" },
+                      { value: "correction", label: "Correction" },
+                    ]}
+                    ariaLabel="Covers"
+                  />
+                </div>
+              )}
+              <TapStepper
+                label="Dose"
+                sub="· steps of 1u · tap to type"
+                value={row.units}
+                onChange={(v) => updateInsulinRow(row.id, { units: v })}
+                unit="u"
+                step={1}
+                presets={[5, 10, 15, 20]}
+              />
+              {insulinRows.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => removeInsulinRow(row.id)}
+                  className="flex items-center gap-1.5 px-1 text-xs"
+                  style={{ color: FAINT }}
+                >
+                  <Trash2 className="h-3 w-3" />
+                  Remove this dose
+                </button>
+              )}
+            </div>
+          );
+        })}
         <button
           type="button"
           onClick={addInsulinRow}
@@ -252,8 +287,8 @@ export default function LogInsulinMealForm({ open, onClose }) {
       </div>
 
       {/* ── Shared time + notes ── */}
-      <div className="mt-6 space-y-4">
-        <TimeField
+      <div className="mt-6 space-y-5">
+        <NowTimeField
           dateValue={date}
           timeValue={time}
           onDateChange={setDate}

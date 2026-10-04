@@ -1,19 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
-import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
 import { useCreateDoses } from "@/hooks/useLogMutations";
+import { INSULIN_PROFILES, isBasalInsulinType } from "@/lib/insulinPharmacology";
 import { getDefaultInsulinLibrary } from "@/lib/userSettings";
 import { toast } from "sonner";
 import LogSheetShell from "@/components/forms/LogSheetShell";
 import {
-  StepperField,
-  SegmentedControl,
-  TimeField,
-  TextField,
-  INK,
+  TapStepper,
+  InsulinChips,
+  CompactSegmented,
+  NowTimeField,
+  CollapsibleNote,
+  FieldLabel,
   COPPER,
   CREAM,
+  FAINT,
 } from "@/components/forms/FieldKit";
 
 function readInsulinLibrary() {
@@ -32,13 +32,15 @@ function getTodayDateValue() {
 }
 
 /**
- * Log Insulin form — uses the shared LogSheetShell and field kit.
- * The insulin type segmented control shows ONLY the types the user has
- * configured in their insulin settings (their personal list — never a fixed
- * Rapid/Short/Intermediate/Long set). No dose estimates or recommendations.
+ * Log Insulin — reference shell. Only insulins from the user's settings appear.
+ * A basal (e.g. Tresiba) hides the "covers" row; a fast insulin shows
+ * "A meal | Correction" defaulting to A meal. Dose is a tap-to-type stepper
+ * in 1u steps plus fixed pills 5/10/15/20. Time defaults to now. Optional
+ * collapsed note. No dose recommendations anywhere in the flow.
  */
 export default function LogInsulinForm({ open, onClose }) {
   const [insulinType, setInsulinType] = useState("");
+  const [covers, setCovers] = useState("meal");
   const [units, setUnits] = useState("");
   const [date, setDate] = useState(getTodayDateValue);
   const [time, setTime] = useState(() => new Date().toTimeString().slice(0, 5));
@@ -46,12 +48,12 @@ export default function LogInsulinForm({ open, onClose }) {
   const [insulinLibrary, setInsulinLibrary] = useState(readInsulinLibrary);
   const [logging, setLogging] = useState(false);
 
-  const queryClient = useQueryClient();
   const createDoses = useCreateDoses();
 
   useEffect(() => {
     if (!open) return;
     setInsulinType("");
+    setCovers("meal");
     setUnits("");
     setNotes("");
     setDate(getTodayDateValue());
@@ -72,9 +74,11 @@ export default function LogInsulinForm({ open, onClose }) {
     () =>
       Object.entries(INSULIN_PROFILES)
         .filter(([name]) => insulinLibrary.includes(name))
-        .map(([name, profile]) => ({ value: name, label: name, color: profile.color })),
+        .map(([name]) => ({ value: name, label: name })),
     [insulinLibrary]
   );
+
+  const isBasal = insulinType ? isBasalInsulinType(insulinType) : false;
 
   const totalUnits = Number(units) || 0;
   const canSubmit = insulinType && totalUnits > 0 && !logging;
@@ -129,7 +133,7 @@ export default function LogInsulinForm({ open, onClose }) {
     <LogSheetShell
       open={open}
       onClose={onClose}
-      title="Log Insulin"
+      title="Log insulin"
       footer={
         <button
           type="button"
@@ -146,23 +150,42 @@ export default function LogInsulinForm({ open, onClose }) {
         </button>
       }
     >
-      <div className="space-y-4">
-        <SegmentedControl
-          label="Insulin Type"
+      <div className="space-y-6">
+        <InsulinChips
           value={insulinType}
           onChange={setInsulinType}
           options={typeOptions}
           ariaLabel="Insulin type"
         />
-        <StepperField
-          label="Units"
+
+        {!isBasal && insulinType && (
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium" style={{ color: FAINT }}>
+              This dose covers
+            </span>
+            <CompactSegmented
+              value={covers}
+              onChange={setCovers}
+              options={[
+                { value: "meal", label: "A meal" },
+                { value: "correction", label: "Correction" },
+              ]}
+              ariaLabel="Covers"
+            />
+          </div>
+        )}
+
+        <TapStepper
+          label="Dose"
+          sub="· steps of 1u · tap to type"
           value={units}
           onChange={setUnits}
-          unit="U"
+          unit="u"
           step={1}
           presets={[5, 10, 15, 20]}
         />
-        <TimeField
+
+        <NowTimeField
           dateValue={date}
           timeValue={time}
           onDateChange={setDate}
@@ -170,7 +193,8 @@ export default function LogInsulinForm({ open, onClose }) {
           maxDate={getTodayDateValue()}
           maxTime={date === getTodayDateValue() ? new Date().toTimeString().slice(0, 5) : undefined}
         />
-        <TextField label="Notes" value={notes} onChange={setNotes} placeholder="e.g. before lunch" multiline />
+
+        <CollapsibleNote value={notes} onChange={setNotes} placeholder="e.g. before lunch" />
       </div>
     </LogSheetShell>
   );

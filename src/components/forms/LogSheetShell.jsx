@@ -1,15 +1,15 @@
 import { useEffect, useRef, useId } from "react";
 import { createPortal } from "react-dom";
 import { motion, useDragControls, useReducedMotion, AnimatePresence } from "framer-motion";
-import { X } from "lucide-react";
 
-const DISMISS_OFFSET = 140;
+const DISMISS_OFFSET = 110;
 const DISMISS_VELOCITY = 500;
 
 const PALETTE = {
   ink: "#3f3830",
   copper: "#9c5228",
   copperText: "#f7f1e8",
+  sage: "#5b6550",
   muted: "#6b6153",
   faint: "#746959",
   hairline: "#eadccf",
@@ -111,7 +111,7 @@ export default function LogSheetShell({
 
   if (typeof document === "undefined" || !open) return null;
 
-  const sheetHeight = detent === "tall" ? "92dvh" : "88dvh";
+  const sheetHeight = "92dvh";
 
   const handleDragEnd = (_event, info) => {
     if (info.offset.y > DISMISS_OFFSET || info.velocity.y > DISMISS_VELOCITY) {
@@ -147,13 +147,13 @@ export default function LogSheetShell({
             transition={
               prefersReducedMotion
                 ? { duration: 0 }
-                : { type: "spring", stiffness: 380, damping: 36, mass: 0.8 }
+                : { duration: 0.38, ease: [0.32, 0.72, 0.25, 1] }
             }
             drag="y"
             dragControls={dragControls}
             dragListener={false}
             dragConstraints={{ top: 0, bottom: 0 }}
-            dragElastic={{ top: 0, bottom: 0.5 }}
+            dragElastic={{ top: 0.08, bottom: 0.5 }}
             onDragEnd={handleDragEnd}
             className="absolute inset-x-0 bottom-0 flex flex-col overflow-hidden"
             style={{
@@ -168,46 +168,48 @@ export default function LogSheetShell({
             <div
               onPointerDown={(e) => dragControls.start(e)}
               className="flex shrink-0 cursor-grab touch-none items-center justify-center"
-              style={{ minHeight: "20px", paddingTop: "10px", paddingBottom: "4px" }}
+              style={{ minHeight: "20px", paddingTop: "8px", paddingBottom: "2px" }}
               role="button"
               aria-label="Drag down to dismiss"
             >
               <div style={{ height: "5px", width: "40px", borderRadius: "9999px", background: "#d8cec2" }} />
             </div>
 
-            {/* Header — left-aligned title, optional meta line, × close */}
-            <div className="flex shrink-0 items-start justify-between px-6 pb-3">
-              <div className="min-w-0 flex-1">
-                <h2 id={headingId} className="text-lg font-semibold leading-tight" style={{ color: PALETTE.ink }}>
-                  {title}
-                </h2>
-                {meta && (
-                  <p className="mt-1 text-xs" style={{ color: PALETTE.faint }}>
-                    {meta}
-                  </p>
-                )}
-              </div>
+            {/* Header — Cancel + centered title (drag-to-dismiss target) */}
+            <div
+              onPointerDown={(e) => dragControls.start(e)}
+              className="flex shrink-0 cursor-grab touch-none items-center justify-between px-5 pb-2"
+              role="button"
+              aria-label="Drag down to dismiss"
+            >
               <button
                 type="button"
                 onClick={onClose}
-                aria-label="Close"
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition hover:opacity-70"
-                style={{ background: PALETTE.canvas, color: PALETTE.muted }}
+                className="flex h-9 items-center rounded-full px-1 text-sm font-medium transition active:opacity-60"
+                style={{ color: PALETTE.copper }}
               >
-                <X className="h-5 w-5" />
+                Cancel
               </button>
+              <h2 id={headingId} className="text-base font-semibold" style={{ color: PALETTE.ink }}>
+                {title}
+              </h2>
+              <div style={{ width: "52px" }} aria-hidden />
             </div>
 
-            {/* Content — independently scrolling, 24px side padding enforced */}
-            <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-4">{children}</div>
+            {/* Body — independently scrolling, overscroll contained at top edge */}
+            <div
+              className="min-h-0 flex-1 overflow-y-auto px-5 pb-4"
+              style={{ overscrollBehavior: "contain" }}
+            >
+              {children}
+            </div>
 
-            {/* Pinned footer — full-width copper primary button */}
+            {/* Pinned footer — borderless, safe-area padded */}
             {footer && (
               <div
-                className="shrink-0 px-6 pt-3"
+                className="shrink-0 px-5 pt-3"
                 style={{
-                  paddingBottom: "max(env(safe-area-inset-bottom), 20px)",
-                  borderTop: `1px solid ${PALETTE.hairline}`,
+                  paddingBottom: "max(env(safe-area-inset-bottom), 16px)",
                   background: PALETTE.surface,
                 }}
               >
