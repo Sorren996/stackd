@@ -92,24 +92,6 @@ export default function Dashboard() {
     writeCachedLatestGlucose(latestGlucoseRows[0]);
   }, [latestGlucoseRows]);
 
-  // When the latest-glucose query picks up a newer reading before the graph
-  // query's next refetch, inject it into the graph cache so the ActivityGraph
-  // displays the freshest value immediately — no stale flicker.
-  // Only depends on latestGlucoseRows (not glucoseReadings) to avoid a
-  // feedback loop: setQueryData changes glucoseReadings which would retrigger
-  // this effect.
-  useEffect(() => {
-    if (!latestGlucoseRows.length) return;
-    const latest = latestGlucoseRows[0];
-    if (!latest?.recorded_at) return;
-    const graphData = queryClient.getQueryData(["glucose-readings", "graph"]) ?? [];
-    if (!graphData.length) return;
-    const graphLatest = graphData[0];
-    if (!graphLatest?.recorded_at) return;
-    if (new Date(latest.recorded_at).getTime() <= new Date(graphLatest.recorded_at).getTime()) return;
-    queryClient.setQueryData(["glucose-readings", "graph"], (old = []) => [latest, ...old]);
-  }, [latestGlucoseRows, queryClient]);
-
   const { data: glucoseReadings = [] } = useQuery({
     queryKey: ["glucose-readings", "graph"],
     queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", 5000),
@@ -118,6 +100,26 @@ export default function Dashboard() {
     gcTime: 30 * 60 * 1000,
     placeholderData: () => queryClient.getQueryData(["glucose-readings", "graph"]) ?? latestGlucoseRows,
   });
+
+  // ── Single source of truth for glucose display ──────────────────────────
+  // The latest-glucose query refetches every 60s; the graph query every 120s.
+  // Merge the latest reading into the graph data on every render so the Daily
+  // Flow graph and the Current Glucose card always derive from the same
+  // freshest source. This replaces the old cache-injection effect, which was
+  // fragile: a graph refetch could overwrite the injected reading with stale
+  // server data, and the effect wouldn't re-run to re-inject it.
+  const mergedGraphReadings = useMemo(() => {
+    if (!latestGlucoseRows.length) return glucoseReadings;
+    const latest = latestGlucoseRows[0];
+    if (!latest?.recorded_at) return glucoseReadings;
+    const latestTime = new Date(latest.recorded_at).getTime();
+    const graphLatest = glucoseReadings[0];
+    const graphLatestTime = graphLatest ? new Date(graphLatest.recorded_at).getTime() : -Infinity;
+    if (latestTime > graphLatestTime && !glucoseReadings.some((r) => r.id === latest.id)) {
+      return [latest, ...glucoseReadings];
+    }
+    return glucoseReadings;
+  }, [glucoseReadings, latestGlucoseRows]);
 
   const { data: carbEntries = [], isLoading: loadingCarbs } = useQuery({
     queryKey: ["carb-entries"],
@@ -295,7 +297,7 @@ export default function Dashboard() {
     return age < TWO_DAYS_MS;
   });
 
-  const heroGlucoseReadings = glucoseReadings.length ? glucoseReadings : latestGlucoseRows;
+  const heroGlucoseReadings = mergedGraphReadings.length ? mergedGraphReadings : latestGlucoseRows;
 
   const recentGlucose = heroGlucoseReadings.filter((reading) => {
     const age = Date.now() - new Date(reading.recorded_at).getTime();
@@ -307,7 +309,7 @@ export default function Dashboard() {
     return age < ONE_DAY_MS;
   });
 
-  const graphGlucose = glucoseReadings.filter((reading) => {
+  const graphGlucose = mergedGraphReadings.filter((reading) => {
     const age = Date.now() - new Date(reading.recorded_at).getTime();
     return age < FOURTEEN_DAYS_MS;
   });

@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
-import { Sparkles, Loader2 } from "lucide-react";
-import { InvokeLLM } from "@/api/integrations";
+import { useEffect, useRef, useState } from "react";
+import { Sparkles, Camera, Loader2, X } from "lucide-react";
+import { InvokeLLM, UploadPublicFile } from "@/api/integrations";
 import { useCreateCarbs } from "@/hooks/useLogMutations";
 import { hasDelayedRise } from "@/lib/mealMonitoring";
 import { toast } from "sonner";
@@ -79,6 +79,9 @@ export default function LogMealForm({ open, onClose }) {
   const [aiText, setAiText] = useState("");
   const [isEstimating, setIsEstimating] = useState(false);
   const [aiResult, setAiResult] = useState(null);
+  const [photoUrl, setPhotoUrl] = useState(null);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const fileInputRef = useRef(null);
 
   const createCarb = useCreateCarbs();
 
@@ -93,6 +96,8 @@ export default function LogMealForm({ open, onClose }) {
     setNotes("");
     setAiText("");
     setAiResult(null);
+    setPhotoUrl(null);
+    setIsUploadingPhoto(false);
     setDate(getTodayDateValue());
     setTime(new Date().toTimeString().slice(0, 5));
   }, [open]);
@@ -105,16 +110,19 @@ export default function LogMealForm({ open, onClose }) {
     ? carbsNum > 0 && !logging
     : !!aiResult && !logging;
 
-  const handleEstimate = async () => {
-    const description = aiText.trim();
-    if (!description) {
-      toast.error("Describe what you ate.");
+  const runEstimate = async (url, description) => {
+    if (!description && !url) {
+      toast.error("Describe what you ate or take a photo.");
       return;
     }
     setIsEstimating(true);
     try {
+      const prompt = description
+        ? `Estimate nutrition for this meal: "${description}".${url ? " A photo is also provided for reference." : ""} Return a cautious estimate using typical US serving sizes when exact serving sizes are missing. Estimate: meal name, carbs in grams, protein in grams, fat in grams, glycemic index 0-100, absorption profile (fast/medium/slow), confidence 0-1, assumptions. Do not give insulin dosing advice.`
+        : `Estimate nutrition for this meal from the photo. Return a cautious estimate using typical US serving sizes. Estimate: meal name, carbs in grams, protein in grams, fat in grams, glycemic index 0-100, absorption profile (fast/medium/slow), confidence 0-1, assumptions. Do not give insulin dosing advice.`;
       const data = await InvokeLLM({
-        prompt: `Estimate nutrition for this meal: "${description}". Return a cautious estimate using typical US serving sizes when exact serving sizes are missing. Estimate: meal name, carbs in grams, protein in grams, fat in grams, glycemic index 0-100, absorption profile (fast/medium/slow), confidence 0-1, assumptions. Do not give insulin dosing advice.`,
+        prompt,
+        file_urls: url ? [url] : undefined,
         response_json_schema: {
           type: "object",
           properties: {
@@ -130,11 +138,29 @@ export default function LogMealForm({ open, onClose }) {
           required: ["mealName", "carbs", "protein", "fat", "gi", "absorptionProfile", "confidence", "assumptions"],
         },
       });
-      setAiResult(normalizeEstimatedMeal(data, description));
+      setAiResult(normalizeEstimatedMeal(data, description || "Photo estimate"));
     } catch (error) {
       toast.error(error?.message || "Unable to estimate that meal yet.");
     } finally {
       setIsEstimating(false);
+    }
+  };
+
+  const handleEstimate = () => runEstimate(photoUrl, aiText.trim());
+
+  const handlePhotoSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingPhoto(true);
+    try {
+      const { file_url } = await UploadPublicFile({ file });
+      setPhotoUrl(file_url);
+      await runEstimate(file_url, aiText.trim());
+    } catch {
+      toast.error("Unable to upload photo. Please try again.");
+    } finally {
+      setIsUploadingPhoto(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
@@ -148,6 +174,7 @@ export default function LogMealForm({ open, onClose }) {
     setMode("custom");
     setAiResult(null);
     setAiText("");
+    setPhotoUrl(null);
   };
 
   const handleSubmit = () => {
@@ -270,25 +297,61 @@ export default function LogMealForm({ open, onClose }) {
           </div>
         ) : (
           <div className="space-y-4">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handlePhotoSelect}
+              className="hidden"
+            />
+
+            {photoUrl && (
+              <div className="relative overflow-hidden rounded-2xl" style={{ border: "1px solid rgba(91,101,80,0.18)" }}>
+                <img src={photoUrl} alt="Meal photo" className="max-h-48 w-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => setPhotoUrl(null)}
+                  className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full transition active:scale-95"
+                  style={{ background: "rgba(63,56,48,0.7)", color: CREAM }}
+                  aria-label="Remove photo"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+
             <textarea
               value={aiText}
               onChange={(e) => setAiText(e.target.value)}
-              placeholder="Describe what you ate"
+              placeholder="Describe what you ate (optional with photo)"
               rows={3}
               className="w-full rounded-2xl px-4 pt-3.5 text-base font-medium"
               style={{ background: "#f7f1e8", color: INK, border: "none", outline: "none", resize: "none", minHeight: "84px" }}
             />
 
-            <button
-              type="button"
-              onClick={handleEstimate}
-              disabled={!aiText.trim() || isEstimating}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-semibold transition disabled:opacity-40"
-              style={{ background: SAGE, color: CREAM }}
-            >
-              {isEstimating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-              {isEstimating ? "Estimating..." : "Estimate"}
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isEstimating || isUploadingPhoto}
+                className="flex flex-1 items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-semibold transition disabled:opacity-40"
+                style={{ background: "#f7f1e8", color: INK, border: "1px solid #eadccf" }}
+              >
+                {isUploadingPhoto ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+                {isUploadingPhoto ? "Uploading..." : "Take photo"}
+              </button>
+              <button
+                type="button"
+                onClick={handleEstimate}
+                disabled={(!aiText.trim() && !photoUrl) || isEstimating}
+                className="flex flex-1 items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-semibold transition disabled:opacity-40"
+                style={{ background: SAGE, color: CREAM }}
+              >
+                {isEstimating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                {isEstimating ? "Estimating..." : "Estimate"}
+              </button>
+            </div>
 
             {aiResult && (
               <div
@@ -302,11 +365,11 @@ export default function LogMealForm({ open, onClose }) {
                 <div className="mt-3 flex gap-2">
                   <button
                     type="button"
-                    onClick={() => { setAiResult(null); }}
+                    onClick={() => { setAiResult(null); setPhotoUrl(null); }}
                     className="flex-1 rounded-full py-2.5 text-sm font-semibold"
                     style={{ background: "#f7f1e8", color: FAINT }}
                   >
-                    Adjust text
+                    Start over
                   </button>
                   <button
                     type="button"

@@ -45,7 +45,21 @@ export default function PullToRefresh({ onRefresh, children }) {
     spinRef.current.style.transition = `transform ${ms}ms cubic-bezier(.32,.72,0,1), opacity ${ms}ms`;
     spinRef.current.style.opacity = String(t);
     spinRef.current.style.transform = `translate3d(0,${target}px,0) scale(${t})`;
-    if (done) setTimeout(done, ms);
+    if (done) setTimeout(() => {
+      done();
+      // Clear the transition so the element rests in a clean state.
+      // Without this, the leftover transition can cause a visible shift/jump
+      // in the header spacing when React re-renders after the spinner hides.
+      if (contentRef.current) {
+        contentRef.current.style.transition = "none";
+        contentRef.current.style.transform = `translate3d(0,${target}px,0)`;
+      }
+      if (spinRef.current) {
+        spinRef.current.style.transition = "none";
+        spinRef.current.style.transform = `translate3d(0,${target}px,0) scale(${t})`;
+        spinRef.current.style.opacity = String(t);
+      }
+    }, ms);
   };
 
   const runRefresh = useCallback(() => {
