@@ -327,7 +327,7 @@ export default function History() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-md space-y-6 pt-2">
       <EditLogSheet
         log={editingLog}
         onClose={() => setEditingLog(null)}

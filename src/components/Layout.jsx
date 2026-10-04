@@ -142,13 +142,11 @@ export default function Layout() {
             aria-label="Stackd home"
             className="relative flex items-center justify-center rounded-full transition-all"
           >
-            {isDashboardRoute &&
             <img
               src="https://media.base44.com/images/public/6a1b93f234a8611ee1595134/9cd3c84cf_stackdappiconver3tran.png"
               alt="Stackd Logo"
               className="relative z-10 h-9 w-auto object-contain"
             />
-            }
           </button>
         </div>
       </header>
