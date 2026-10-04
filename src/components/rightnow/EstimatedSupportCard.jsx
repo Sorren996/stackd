@@ -21,6 +21,16 @@ function fmtUnits(u) {
   return n % 1 === 0 ? String(n) : n.toFixed(1);
 }
 
+function formatDoseClockTime(time) {
+  if (!Number.isFinite(time)) return null;
+  const d = new Date(time);
+  const h = d.getHours();
+  const m = d.getMinutes();
+  const period = h >= 12 ? "pm" : "am";
+  const h12 = h % 12 || 12;
+  return `${h12}:${String(m).padStart(2, "0")}${period}`;
+}
+
 function formatRemaining(min) {
   if (!Number.isFinite(min) || min <= 0) return null;
   const m = Math.round(min);
@@ -146,6 +156,13 @@ export default function EstimatedSupportCard({ details }) {
       <p className="mt-3 text-[13px] leading-relaxed" style={{ color: PALETTE.ink }}>
         {sentence}
       </p>
+
+      {/* IOB context — prior dose still active (informational, never a penalty) */}
+      {Number.isFinite(d.priorActiveIOB) && d.priorActiveIOB > IOB_FLOOR && d.topPriorDose && (
+        <p className="mt-2 text-[11px] leading-relaxed" style={{ color: PALETTE.faint }}>
+          {d.priorActiveIOB.toFixed(1)}u still active from your {formatDoseClockTime(d.topPriorDose.time)} dose.
+        </p>
+      )}
 
       {/* 3. PROGRESS BAR */}
       <div

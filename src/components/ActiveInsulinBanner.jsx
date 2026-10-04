@@ -245,29 +245,50 @@ function buildMealEventGroups(carbEntries, doses, insulinSettings = {}, glucoseR
     lastGroup.carbEvents.push(event);
   });
 
-  return carbGroups.
-  map((group) => {
+  // First pass: compute each group's mealTime and pairing window.
+  const groupsWithWindows = carbGroups.map((group) => {
     const carbs = group.carbEvents.reduce((sum, event) => sum + event.carbs, 0);
     const carbTimeTotal = group.carbEvents.reduce((sum, event) => sum + event.time * event.carbs, 0);
     const mealTime = carbs > 0 ? carbTimeTotal / carbs : group.start;
     const pairingStart = group.start - preMealWindowMs;
     const pairingEnd = group.end + postMealWindowMs;
-    const groupDoses = doseEvents.
-    filter((event) => event.time >= pairingStart && event.time <= pairingEnd).
-    map((event) => event.dose);
-
     return {
       ...group,
-      start: pairingStart,
-      end: pairingEnd,
-      carbLogStart: group.start,
-      carbLogEnd: group.end,
-      carbs,
       mealTime,
-      carbEntries: group.carbEvents.map((event) => event.entry),
-      doses: groupDoses
+      pairingStart,
+      pairingEnd,
+      carbs,
+      carbEntries: group.carbEvents.map((event) => event.entry)
     };
   });
+
+  // Assign each dose to exactly one group — the one whose mealTime is closest,
+  // among groups whose pairing window contains the dose. This prevents a dose
+  // from one meal being pooled into a nearby meal's insulin total.
+  const groupDoses = groupsWithWindows.map(() => []);
+  doseEvents.forEach((doseEvent) => {
+    let bestIndex = -1;
+    let bestDist = Infinity;
+    groupsWithWindows.forEach((group, index) => {
+      if (doseEvent.time >= group.pairingStart && doseEvent.time <= group.pairingEnd) {
+        const dist = Math.abs(doseEvent.time - group.mealTime);
+        if (dist < bestDist) {
+          bestDist = dist;
+          bestIndex = index;
+        }
+      }
+    });
+    if (bestIndex >= 0) groupDoses[bestIndex].push(doseEvent.dose);
+  });
+
+  return groupsWithWindows.map((group, index) => ({
+    ...group,
+    start: group.pairingStart,
+    end: group.pairingEnd,
+    carbLogStart: group.start,
+    carbLogEnd: group.end,
+    doses: groupDoses[index]
+  }));
 }
 
 function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latestGlucose, insulinSettings) {
@@ -462,6 +483,14 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
   filter(Boolean).
   sort((a, b) => b.iob - a.iob);
 
+  // Split active doses into this meal's own vs prior (from other meals/doses
+  // still active). Prior IOB is shown as informational context only — never
+  // folded into the current meal's needed-vs-logged comparison.
+  const pairedDoseIds = new Set((pairedDoses || []).map((dose) => dose.id));
+  const priorDoseBreakdown = bolusIOBBreakdown.filter((dose) => !pairedDoseIds.has(dose.id));
+  const priorActiveIOB = priorDoseBreakdown.reduce((sum, dose) => sum + dose.iob, 0);
+  const topPriorDose = priorDoseBreakdown[0] || null;
+
   let value = `${activeIOB.toFixed(1)}u`;
   let status = "Active support";
   let color = "#4d5742";
@@ -584,6 +613,8 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
       recentSlopeMgDlPerMin,
       minutesSinceMeal,
       bolusIOBBreakdown,
+      priorActiveIOB,
+      topPriorDose,
       estimatedAdditionalUnits,
       expectedTotalUnits: grossDoseEstimate,
       loggedMealUnits,
