@@ -31,11 +31,10 @@ export default function MealEstimatorInsight({ details, splitPlan = null }) {
   const d = details;
   if (!d) return null;
 
-  const hasPlan = Number.isFinite(d.insulinSensitivityMgDlPerUnit)
-    && d.insulinSensitivityMgDlPerUnit > 0
-    && Number.isFinite(d.mealInsulinUnitsPer5g)
-    && d.mealInsulinUnitsPer5g > 0;
-  if (!hasPlan) return null;
+  // Only the I:C setting is required for the meal math; ISF only adds the
+  // optional correction line.
+  const hasPlan = Number.isFinite(d.mealInsulinUnitsPer5g) && d.mealInsulinUnitsPer5g > 0;
+  if (!hasPlan || !d.meal) return null;
 
   const carbs = Math.round(d.meal?.carbs ?? 0);
   const gramsPerUnit = Number.isFinite(d.gramsPerUnit) ? d.gramsPerUnit : 5 / d.mealInsulinUnitsPer5g;

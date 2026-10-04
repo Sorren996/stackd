@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { useCreateCarbs } from "@/hooks/useLogMutations";
 import { toast } from "sonner";
 import LogSheetShell from "@/components/forms/LogSheetShell";
+import MealPresetPicker from "@/components/forms/MealPresetPicker";
+import PlanMathNote from "@/components/forms/PlanMathNote";
+import DelayedRiseNote from "@/components/forms/DelayedRiseNote";
 import {
   StepperField,
   TimeField,
@@ -112,12 +115,24 @@ export default function LogMealForm({ open, onClose }) {
       }
     >
       <div className="space-y-4">
-        <TextField label="Meal" value={foodName} onChange={setFoodName} placeholder="e.g. Lunch, snack" />
+        <MealPresetPicker
+          selectedName={foodName}
+          onPick={(p) => {
+            setFoodName(p.name);
+            setCarbs(String(Math.round(p.carbs)));
+            setFatGrams(p.fat ? String(p.fat) : "");
+            setProteinGrams(p.protein ? String(p.protein) : "");
+          }}
+          onCustom={() => { setFoodName(""); setCarbs(""); setFatGrams(""); setProteinGrams(""); }}
+        />
+        <TextField label="Meal name" value={foodName} onChange={setFoodName} placeholder="e.g. Grandma's lasagna" />
         <StepperField label="Carbs" value={carbs} onChange={setCarbs} unit="g" step={5} presets={[15, 30, 45, 60]} />
         <div className="grid grid-cols-2 gap-3">
           <TextField label="Protein (g)" value={proteinGrams} onChange={(v) => setProteinGrams(v.replace(/[^\d.]/g, "").slice(0, 4))} placeholder="0" />
           <TextField label="Fat (g)" value={fatGrams} onChange={(v) => setFatGrams(v.replace(/[^\d.]/g, "").slice(0, 4))} placeholder="0" />
         </div>
+        <DelayedRiseNote carbs={carbs} fat={fatGrams} protein={proteinGrams} />
+        {!isRescue && <PlanMathNote carbs={carbs} />}
         <RescueCarbToggle checked={isRescue} onChange={setIsRescue} />
         <TimeField
           dateValue={date}
