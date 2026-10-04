@@ -1205,7 +1205,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
 
         <div className="section-label mt-6">Daily Balance</div>
         <AnchorNumber
-          value={comfortZonePercentage != null ? Math.round(comfortZonePercentage) : "-"}
+          value={comfortZonePercentage != null ? Math.floor(comfortZonePercentage) : "-"}
           unit="%"
           gathering={isGathering}
           caption={isGathering ? "Still gathering today" : null} />
