@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import { Minus, Plus } from "lucide-react";
 import { isBasalInsulinType } from "@/lib/insulinPharmacology";
 
@@ -135,8 +136,11 @@ export function TapStepper({ label, sub, value, onChange, unit, step = 1, preset
 }
 
 // ── Compact segmented control ─────────────────────────────────────────────
-// For "A meal | Correction" and "Custom meal | AI estimate". Selected = copper.
-export function CompactSegmented({ value, onChange, options, ariaLabel }) {
+// For "A meal | Correction" and "Custom meal | AI estimate". The active
+// segment carries a copper pill that slides between segments (framer-motion
+// layout animation). Pass a unique `layoutId` when multiple segmented
+// controls could share a layout group.
+export function CompactSegmented({ value, onChange, options, ariaLabel, layoutId = "compact-segmented" }) {
   return (
     <div
       className="inline-flex rounded-full p-1"
@@ -149,18 +153,26 @@ export function CompactSegmented({ value, onChange, options, ariaLabel }) {
             key={opt.value}
             type="button"
             onClick={() => onChange(opt.value)}
-            className="rounded-full text-sm font-semibold transition"
+            className="relative rounded-full text-sm font-semibold"
             style={{
               height: 40,
               padding: "0 18px",
-              transition: "background 200ms ease-out, color 200ms ease-out",
-              background: isSelected ? COPPER : "transparent",
               color: isSelected ? CREAM : TAUPE,
             }}
             aria-pressed={isSelected}
             aria-label={ariaLabel ? `${ariaLabel}: ${opt.label}` : opt.label}
           >
-            {opt.label}
+            {isSelected && (
+              <motion.span
+                layoutId={layoutId}
+                className="absolute inset-0 rounded-full"
+                style={{ background: COPPER, zIndex: 0 }}
+                transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                initial={false}
+                aria-hidden
+              />
+            )}
+            <span className="relative z-10">{opt.label}</span>
           </button>
         );
       })}

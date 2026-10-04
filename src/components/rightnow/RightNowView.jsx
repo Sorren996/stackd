@@ -45,7 +45,7 @@ export default function RightNowView({
         </h1>
       </div>
 
-      {/* Tab switcher — pill segmented control with copper active state */}
+      {/* Tab switcher — pill segmented control with a sliding copper indicator */}
       <div className="mt-3 px-1">
         <div className="inline-flex w-full rounded-full p-1" style={{ background: "#f0e8db" }}>
           {TABS.map((t) => {
@@ -57,26 +57,34 @@ export default function RightNowView({
                 onClick={() => selectTab(t.id)}
                 className="relative flex-1 rounded-full px-4 py-2 text-center text-[12px] font-semibold transition-colors"
                 style={{
-                  background: active ? "#9c5228" : "transparent",
                   color: active ? "#f7f1e8" : "#6b6153",
                 }}
                 aria-pressed={active}
               >
-                {t.label}
+                {active && (
+                  <motion.span
+                    layoutId="rightnow-tab-indicator"
+                    className="absolute inset-0 rounded-full"
+                    style={{ background: "#9c5228", zIndex: 0 }}
+                    transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                    initial={false}
+                    aria-hidden
+                  />
+                )}
+                <span className="relative z-10">{t.label}</span>
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* Tab content: a simple keyed fade with no exit phase, so switching
-          tabs can never leave the area blank waiting on an animation. */}
+      {/* Tab content: slides in from the direction of the incoming tab. */}
       <div className="mt-4">
           <motion.div
             key={tab}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.15 }}
+            initial={{ opacity: 0, x: activeIndex === 0 ? -24 : 24 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.28, ease: [0.32, 0.72, 0.25, 1] }}
           >
             {tab === "iob" ? (
               <CardErrorBoundary>

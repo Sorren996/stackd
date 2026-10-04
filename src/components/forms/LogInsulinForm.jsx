@@ -171,6 +171,7 @@ export default function LogInsulinForm({ open, onClose }) {
                 { value: "correction", label: "Correction" },
               ]}
               ariaLabel="Covers"
+              layoutId="insulin-covers-segment"
             />
           </div>
         )}

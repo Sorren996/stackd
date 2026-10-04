@@ -249,6 +249,7 @@ export default function LogInsulinMealForm({ open, onClose }) {
                       { value: "correction", label: "Correction" },
                     ]}
                     ariaLabel="Covers"
+                    layoutId={`insulin-meal-covers-${row.id}`}
                   />
                 </div>
               )}

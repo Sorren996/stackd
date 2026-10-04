@@ -213,15 +213,18 @@ export default function LogMealForm({ open, onClose }) {
       }
     >
       <div className="space-y-5">
-        <CompactSegmented
-          value={mode}
-          onChange={setMode}
-          options={[
-            { value: "custom", label: "Custom meal" },
-            { value: "ai", label: "AI estimate" },
-          ]}
-          ariaLabel="Meal mode"
-        />
+        <div className="flex justify-center">
+          <CompactSegmented
+            value={mode}
+            onChange={setMode}
+            options={[
+              { value: "custom", label: "Custom meal" },
+              { value: "ai", label: "AI estimate" },
+            ]}
+            ariaLabel="Meal mode"
+            layoutId="meal-mode-segment"
+          />
+        </div>
 
         {mode === "custom" ? (
           <div className="space-y-5">
