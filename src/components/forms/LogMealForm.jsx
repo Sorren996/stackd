@@ -24,6 +24,8 @@ function getTodayDateValue() {
 export default function LogMealForm({ open, onClose }) {
   const [foodName, setFoodName] = useState("");
   const [carbs, setCarbs] = useState("");
+  const [fatGrams, setFatGrams] = useState("");
+  const [proteinGrams, setProteinGrams] = useState("");
   const [isRescue, setIsRescue] = useState(false);
   const [date, setDate] = useState(getTodayDateValue);
   const [time, setTime] = useState(() => new Date().toTimeString().slice(0, 5));
@@ -36,6 +38,8 @@ export default function LogMealForm({ open, onClose }) {
     if (!open) return;
     setFoodName("");
     setCarbs("");
+    setFatGrams("");
+    setProteinGrams("");
     setIsRescue(false);
     setNotes("");
     setDate(getTodayDateValue());
@@ -66,6 +70,8 @@ export default function LogMealForm({ open, onClose }) {
       name: foodName.trim(),
       food_name: foodName.trim(),
       carbs: carbsNum,
+      fat_grams: Number(fatGrams) || 0,
+      protein_grams: Number(proteinGrams) || 0,
       consumed_at: dt.toISOString(),
       is_rescue_carb: isRescue,
       notes: notes || undefined,
@@ -108,6 +114,10 @@ export default function LogMealForm({ open, onClose }) {
       <div className="space-y-4">
         <TextField label="Meal" value={foodName} onChange={setFoodName} placeholder="e.g. Lunch, snack" />
         <StepperField label="Carbs" value={carbs} onChange={setCarbs} unit="g" step={5} presets={[15, 30, 45, 60]} />
+        <div className="grid grid-cols-2 gap-3">
+          <TextField label="Protein (g)" value={proteinGrams} onChange={(v) => setProteinGrams(v.replace(/[^\d.]/g, "").slice(0, 4))} placeholder="0" />
+          <TextField label="Fat (g)" value={fatGrams} onChange={(v) => setFatGrams(v.replace(/[^\d.]/g, "").slice(0, 4))} placeholder="0" />
+        </div>
         <RescueCarbToggle checked={isRescue} onChange={setIsRescue} />
         <TimeField
           dateValue={date}

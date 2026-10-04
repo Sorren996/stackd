@@ -57,6 +57,8 @@ function buildTimestampNoFuture(dateValue, timeValue) {
 export default function LogInsulinMealForm({ open, onClose }) {
   const [foodName, setFoodName] = useState("");
   const [carbs, setCarbs] = useState("");
+  const [fatGrams, setFatGrams] = useState("");
+  const [proteinGrams, setProteinGrams] = useState("");
   const [isRescue, setIsRescue] = useState(false);
   const [insulinRows, setInsulinRows] = useState(() => [createInsulinRow()]);
   const [sharedNotes, setSharedNotes] = useState("");
@@ -72,6 +74,8 @@ export default function LogInsulinMealForm({ open, onClose }) {
     if (!open) return;
     setFoodName("");
     setCarbs("");
+    setFatGrams("");
+    setProteinGrams("");
     setIsRescue(false);
     setInsulinRows([createInsulinRow()]);
     setSharedNotes("");
@@ -153,6 +157,8 @@ export default function LogInsulinMealForm({ open, onClose }) {
         name: foodName.trim(),
         food_name: foodName.trim(),
         carbs: carbsNum,
+        fat_grams: Number(fatGrams) || 0,
+        protein_grams: Number(proteinGrams) || 0,
         consumed_at: timestamp.toISOString(),
         is_rescue_carb: isRescue,
         notes: sharedNotes || undefined,

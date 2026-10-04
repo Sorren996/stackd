@@ -9,11 +9,12 @@ import SwipeableRow from "@/components/SwipeableRow";
 import { base44 } from "@/api/base44Client";
 import { generateMealGlucoseResponse, analyzeGlucoseResponse } from "@/lib/mealGlucoseResponse";
 import MealEditOverlay from "@/components/insulin/MealEditOverlay";
-import EstimatedSupportCard from "./EstimatedSupportCard";
+import MealEstimatorInsight from "./MealEstimatorInsight";
 import { getCarbAbsorptionAt, getMealWindowMinutes, getMealPeakMinutes } from "@/lib/carbAbsorption";
 import { useAbsorptionAdjustments, entrySpeedFactor, hasLearnedTiming, learnedTimingCaption, deriveSpeedClass } from "@/lib/absorptionLearning";
 import { getMealSlotLabel } from "@/lib/mealSlot";
 import { formatGlucose, formatGlucoseDelta, formatGlucoseAbsDelta, glucoseUnitLabel, glucoseDeltaUnit, getGlucoseUnits } from "@/lib/glucoseUnits";
+import { hasDelayedRise } from "@/lib/mealMonitoring";
 
 const PALETTE = {
   ink: "#3f3830",
@@ -232,6 +233,9 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
 
   const mealName = d.meal?.food_name || d.meal?.name || "Meal";
   const combinedFoodName = carbEntries.map((e) => e?.food_name || e?.name || "").filter(Boolean).join(", ") || mealName;
+
+  // High-fat / high-protein detection — descriptive label only.
+  const mealIsHighFatProtein = carbEntries.some((e) => hasDelayedRise(e));
   const slotLabel = getMealSlotLabel({
     time: mealTime,
     carbs: totalCarbs,
@@ -271,6 +275,13 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
           </div>
           <span className="shrink-0 text-[11px] tabular-nums" style={{ color: PALETTE.faint }}>{formatClock(mealTime)}</span>
         </div>
+
+        {/* High-fat / high-protein label — descriptive only */}
+        {mealIsHighFatProtein && (
+          <p className="mt-2 text-[12px] leading-relaxed" style={{ color: PALETTE.amber }}>
+            High-fat, high-protein meal — fat and protein can slow carb absorption and shift the glucose rise later.
+          </p>
+        )}
 
         {/* 2. INPUTS — label-first stat tiles (small muted label above bold value) */}
         <div className="mt-3 flex items-end gap-5">
@@ -406,7 +417,10 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
           }
         </div>
 
-        {/* 4. INSIGHT — absorption (only once meaningful) + active support */}
+        {/* 4. SECONDARY INSIGHT — meal estimator (retrospective, bolus-only) */}
+        <MealEstimatorInsight details={d} />
+
+        {/* 5. ABSORPTION — absorption track (only once meaningful) */}
         <div className="mt-4">
           <div className="section-label">Absorption</div>
           {tooEarlyToRead ?
@@ -456,10 +470,6 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
               </p>
             </>
           }
-        </div>
-
-        <div className="mt-4">
-          <EstimatedSupportCard details={d} />
         </div>
 
         {/* 5. ACTIONS — swipe to edit or remove */}
