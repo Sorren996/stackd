@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Clock } from "lucide-react";
 import DashboardCard from "@/components/dashboard/DashboardCard";
 import AbsorptionProgressCurve from "./AbsorptionProgressCurve";
 import MealGlucoseTrace from "./MealGlucoseTrace";
@@ -339,6 +339,20 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
             <p className="mt-2 text-[12px] leading-relaxed" style={{ color: PALETTE.ink }}>
               {glucoseLine}
             </p>
+
+            {/* High protein/fat monitoring notice */}
+            {monitoringStatus?.isActive && (
+              <div className="mt-3 flex items-start gap-1.5">
+                <Clock className="h-3.5 w-3.5 shrink-0" style={{ color: PALETTE.amber }} />
+                <p className="text-[11px] leading-relaxed" style={{ color: PALETTE.muted }}>
+                  This meal is high in fat and protein, so glucose may rise more slowly at first, then climb later (3 to 8 hours after eating). Monitoring through{" "}
+                  <span className="font-semibold" style={{ color: PALETTE.amber }}>
+                    {new Date(monitoringStatus.endTime).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+                  </span>
+                  .
+                </p>
+              </div>
+            )}
 
             {/* Outcome assessment — descriptive, never prescriptive */}
             {d.outcomeAssessment &&

@@ -4,7 +4,15 @@ import { base44 } from "@/api/base44Client";
 import { Plus, Trash2, Clock } from "lucide-react";
 import { toast } from "sonner";
 import DeleteConfirmDialog from "./DeleteConfirmDialog";
-import EditSheetShell from "@/components/edit/EditSheetShell";
+import LogSheetShell from "@/components/forms/LogSheetShell";
+import {
+  TextField,
+  TapStepper,
+  NowTimeField,
+  COPPER,
+  CREAM,
+  FAINT,
+} from "@/components/forms/FieldKit";
 
 const PALETTE = {
   ink: "#3f3830",
@@ -27,6 +35,18 @@ function toTimeInputValue(isoString) {
   return `${hh}:${mm}`;
 }
 
+function toDateInputValue(isoString) {
+  if (!isoString) return "";
+  const d = new Date(isoString);
+  if (isNaN(d.getTime())) return "";
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function getTodayDateValue() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
+
 // Apply a new "HH:MM" time onto an existing ISO date, preserving the local
 // date and timezone. Returns a new ISO string.
 function applyNewTimeToISO(originalISO, timeValue) {
@@ -40,14 +60,18 @@ function applyNewTimeToISO(originalISO, timeValue) {
 }
 
 /**
- * Self-contained edit sheet for all carb items in a meal group, using the
- * shared viewport-safe EditSheetShell (portaled to document.body). Writes
- * directly to CarbEntry records (update / create / delete) and invalidates
- * the shared react-query caches so the dashboard chart, Meal Review focal
- * number, and absorption track all refresh from one source.
+ * Self-contained edit sheet for all carb items in a meal group, on the shared
+ * LogSheetShell (same drag-to-dismiss sheet, sticky Cancel header, and sticky
+ * "Save changes" footer as the create forms). Writes directly to CarbEntry
+ * records (update / create / delete) and invalidates the shared react-query
+ * caches so the dashboard chart, Meal Review focal number, and absorption
+ * track all refresh from one source.
  *
- * - Meal-level native time input; changing the time moves the meal marker
- *   on the graph (all items share the new consumed_at).
+ * - Meal-level time field (date + time, defaulting to the meal's current
+ *   value); changing the time moves the meal marker on the graph (all items
+ *   share the new consumed_at).
+ * - Each item uses the same FieldKit components as the create form (name text
+ *   field + 5g carb stepper), prefilled with the record's current values.
  * - Deleting the last remaining item deletes the entire meal log and closes
  *   the sheet automatically.
  */
@@ -61,6 +85,7 @@ export default function MealEditOverlay({ entries, onClose }) {
       consumed_at: e.consumed_at,
     }))
   );
+  const [mealDate, setMealDate] = useState(() => toDateInputValue(entries?.[0]?.consumed_at));
   const [mealTime, setMealTime] = useState(() => toTimeInputValue(entries?.[0]?.consumed_at));
   const [isSaving, setIsSaving] = useState(false);
   const [pendingDelete, setPendingDelete] = useState(null);
@@ -170,9 +195,12 @@ export default function MealEditOverlay({ entries, onClose }) {
     }
   };
 
+  const todayDateValue = getTodayDateValue();
+  const nowTimeString = new Date().toTimeString().slice(0, 5);
+
   return (
     <>
-      <EditSheetShell
+      <LogSheetShell
         open={!!entries}
         onClose={onClose}
         title="Edit meal items"
@@ -182,96 +210,90 @@ export default function MealEditOverlay({ entries, onClose }) {
             onClick={save}
             disabled={isSaving}
             className="w-full rounded-2xl py-4 text-base font-semibold transition disabled:opacity-40"
-            style={{ background: PALETTE.ink, color: "#f7f1e8", boxShadow: "0 4px 16px rgba(63, 56, 48, 0.15)" }}
+            style={{ background: COPPER, color: CREAM, boxShadow: "0 4px 16px rgba(156,82,40,0.25)" }}
           >
-            {isSaving ? "Saving..." : "Save meal"}
+            {isSaving ? "Saving..." : "Save changes"}
           </button>
         }
       >
-        <style>{`.edit-sheet-body input { font-size: 16px; }`}</style>
-
-        {/* Meal-level time input — native input, moves the meal marker on save */}
-        <div className="mb-4">
-          <label
-            className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider"
-            style={{ color: PALETTE.faint }}
-          >
-            <Clock className="h-3 w-3" />
-            Meal time
-          </label>
-          <input
-            type="time"
-            value={mealTime}
-            onChange={(e) => setMealTime(e.target.value)}
-            className="mt-1.5 w-full rounded-xl px-3 py-2.5 text-sm font-medium tabular-nums outline-none transition"
-            style={{
-              background: PALETTE.canvas,
-              color: PALETTE.ink,
-              border: `1px solid ${PALETTE.hairline}`,
-            }}
-          />
-        </div>
-
-        <div className="space-y-3">
-          {items.map((item, index) => (
-            <div
-              key={index}
-              className="rounded-2xl p-3"
-              style={{ background: PALETTE.canvas, border: `1px solid ${PALETTE.hairline}` }}
-            >
-              {/* Row 1 — food name, full width */}
-              <input
-                type="text"
-                value={item.food_name}
-                onChange={(e) => updateItem(index, "food_name", e.target.value)}
-                placeholder="Food name"
-                className="w-full rounded-xl px-3 py-2.5 text-sm outline-none transition"
-                style={{ background: PALETTE.surface, color: PALETTE.ink }}
+        <div className="space-y-5">
+          {/* Meal-level time field — date + time, moves the meal marker on save */}
+          <div>
+            <div className="flex items-center gap-1.5">
+              <Clock className="h-3.5 w-3.5" style={{ color: FAINT }} />
+              <span
+                style={{
+                  textTransform: "uppercase",
+                  letterSpacing: "0.16em",
+                  fontWeight: 700,
+                  fontSize: "10px",
+                  color: FAINT,
+                }}
+              >
+                Meal time
+              </span>
+            </div>
+            <div className="mt-1.5">
+              <NowTimeField
+                dateValue={mealDate}
+                timeValue={mealTime}
+                onDateChange={setMealDate}
+                onTimeChange={setMealTime}
+                maxDate={todayDateValue}
+                maxTime={mealDate === todayDateValue ? nowTimeString : undefined}
               />
-              {/* Row 2 — carbs input + remove button */}
-              <div className="mt-2 flex items-center gap-2">
-                <div className="relative flex-1">
-                  <input
-                    type="number"
-                    inputMode="decimal"
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            {items.map((item, index) => (
+              <div
+                key={index}
+                className="rounded-2xl p-4"
+                style={{ background: PALETTE.canvas, border: `1px solid ${PALETTE.hairline}` }}
+              >
+                <TextField
+                  value={item.food_name}
+                  onChange={(value) => updateItem(index, "food_name", value)}
+                  placeholder="Food name"
+                />
+                <div className="mt-3">
+                  <TapStepper
+                    label="Carbs"
+                    sub="· steps of 5g · tap to type"
                     value={item.carbs}
-                    onChange={(e) => updateItem(index, "carbs", e.target.value)}
-                    placeholder="0"
-                    className="w-full rounded-xl px-3 py-2.5 pr-8 text-sm outline-none transition"
-                    style={{ background: PALETTE.surface, color: PALETTE.ink }}
+                    onChange={(value) => updateItem(index, "carbs", value)}
+                    unit="g"
+                    step={5}
+                    presets={[15, 30, 45, 60]}
                   />
-                  <span
-                    className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs"
-                    style={{ color: PALETTE.faint }}
-                  >
-                    g
-                  </span>
                 </div>
                 <button
                   type="button"
                   onClick={() => requestRemove(index)}
                   disabled={isDeleting}
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition hover:opacity-70 disabled:opacity-40"
-                  style={{ background: PALETTE.surface, color: PALETTE.danger, border: `1px solid ${PALETTE.hairline}` }}
+                  className="mt-3 flex items-center gap-1.5 text-sm font-medium transition hover:opacity-70 disabled:opacity-40"
+                  style={{ color: PALETTE.danger }}
                   aria-label="Remove item"
                 >
                   <Trash2 className="h-4 w-4" />
+                  Remove item
                 </button>
               </div>
-            </div>
-          ))}
+            ))}
 
-          <button
-            type="button"
-            onClick={addItem}
-            className="flex w-full items-center justify-center gap-1.5 rounded-xl py-3 text-sm font-medium transition hover:opacity-70"
-            style={{ background: PALETTE.canvas, color: PALETTE.muted }}
-          >
-            <Plus className="h-4 w-4" />
-            Add item
-          </button>
+            <button
+              type="button"
+              onClick={addItem}
+              className="flex w-full items-center justify-center gap-1.5 rounded-2xl py-3.5 text-sm font-medium transition hover:opacity-70"
+              style={{ background: PALETTE.canvas, color: PALETTE.muted, border: `1px solid ${PALETTE.hairline}` }}
+            >
+              <Plus className="h-4 w-4" />
+              Add item
+            </button>
+          </div>
         </div>
-      </EditSheetShell>
+      </LogSheetShell>
 
       {pendingDelete != null && (
         <DeleteConfirmDialog
