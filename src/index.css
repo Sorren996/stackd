@@ -166,10 +166,16 @@
   }
 
   input, textarea, select,
-  input::placeholder, textarea::placeholder,
   input[type="date"], input[type="time"], input[type="datetime-local"],
   input[type="number"], input[type="text"], input[type="email"], input[type="password"] {
     color-scheme: light;
+  }
+
+  /* AA-compliant placeholder text (TAUPE #6b6153 ≈ 5.4:1 on canvas) for every
+     form input across log/edit sheets — meets WCAG 4.5:1. */
+  input::placeholder, textarea::placeholder {
+    color: #6b6153;
+    opacity: 1;
   }
 }
 

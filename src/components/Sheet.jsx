@@ -94,14 +94,17 @@ export default function Sheet({ open, onClose, children, accentColor }) {
             drag="y"
             dragControls={dragControls}
             dragListener={false}
-            dragConstraints={{ top: 0, bottom: 0 }}
-            dragElastic={{ top: 0, bottom: 0.5 }}
+            dragConstraints={{ top: 0, bottom: 0, left: 0, right: 0 }}
+            dragElastic={{ top: 0, bottom: 0.5, left: 0, right: 0 }}
             onDragEnd={handleDragEnd}
-            className="relative flex h-[90dvh] max-h-[92dvh] flex-col overflow-hidden rounded-t-[28px] border-t"
+            className="relative flex h-[90dvh] max-h-[92dvh] flex-col overflow-x-hidden overflow-y-hidden rounded-t-[28px] border-t"
             style={{
   background: "#fdf9f2",
   borderColor: "#eadccf",
   boxShadow: "0 -12px 40px rgba(63, 56, 48, 0.10)",
+  maxWidth: "100vw",
+  overscrollBehavior: "contain",
+  touchAction: "pan-y",
   willChange: "transform",
 }}
           >

@@ -103,11 +103,14 @@ export default function EditSheetShell({ open, onClose, title, children, footer,
         aria-modal="true"
         aria-labelledby={headingId}
         tabIndex={-1}
-        className="flex w-full max-w-md flex-col overflow-hidden rounded-3xl"
+        className="flex w-full max-w-md flex-col overflow-x-hidden overflow-y-hidden rounded-3xl"
         style={{
           background: PALETTE.surface,
           boxShadow: "0 8px 28px rgba(63, 56, 48, 0.12), 0 2px 8px rgba(63, 56, 48, 0.06)",
           height: "min(90dvh, 100%)",
+          maxWidth: "100vw",
+          overscrollBehavior: "contain",
+          touchAction: "pan-y",
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -130,8 +133,11 @@ export default function EditSheetShell({ open, onClose, title, children, footer,
           </button>
         </div>
 
-        {/* Independently scrolling body */}
-        <div className="edit-sheet-body min-h-0 flex-1 overflow-y-auto px-5 py-4">
+        {/* Independently scrolling body — horizontal panning locked */}
+        <div
+          className="edit-sheet-body min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-5 py-4"
+          style={{ overscrollBehavior: "contain", touchAction: "pan-y" }}
+        >
           {children}
         </div>
 

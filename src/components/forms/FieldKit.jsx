@@ -237,6 +237,7 @@ export function TimeField({ dateLabel = "Date", timeLabel = "Time", dateValue, t
 
 // ── Text field — optional notes / name ─────────────────────────────────────
 // Single-line or multiline, 56px height (multiline grows).
+// Placeholder color is WCAG AA (TAUPE #6b6153 ≈ 5.4:1 on canvas).
 export function TextField({ label, value, onChange, placeholder, multiline = false }) {
   return (
     <div>

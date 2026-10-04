@@ -118,7 +118,7 @@ export default function LogGlucoseForm({ open, onClose }) {
           className="w-full rounded-2xl py-4 text-base font-semibold transition disabled:opacity-40"
           style={{ background: COPPER, color: CREAM, boxShadow: "0 4px 16px rgba(156,82,40,0.25)" }}
         >
-          {logging ? "Logging..." : `Log ${value || "--"} ${glucoseUnitLabel()}`}
+          {logging ? "Saving..." : `Save ${value || "--"} ${glucoseUnitLabel()}`}
         </button>
       }
     >

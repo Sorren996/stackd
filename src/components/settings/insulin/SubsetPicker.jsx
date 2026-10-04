@@ -44,7 +44,7 @@ export default function SubsetPicker({ library, selected, onToggle, onClose }) {
           Choose the types you use for meals or corrections.
         </p>
 
-        <div className="flex-1 overflow-y-auto pt-2" style={{ scrollbarWidth: "thin" }}>
+        <div className="flex-1 overflow-y-auto overflow-x-hidden pt-2" style={{ scrollbarWidth: "thin", overscrollBehavior: "contain", touchAction: "pan-y" }}>
           {library.map((name) => {
             const isSelected = selectedSet.has(name);
             return (

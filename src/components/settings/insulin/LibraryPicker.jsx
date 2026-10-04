@@ -73,7 +73,7 @@ export default function LibraryPicker({ selected, onToggle, onClose }) {
         </div>
 
         {/* Scrollable group list */}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto" style={{ scrollbarWidth: "thin" }}>
+        <div ref={scrollRef} className="flex-1 overflow-y-auto overflow-x-hidden" style={{ scrollbarWidth: "thin", overscrollBehavior: "contain", touchAction: "pan-y" }}>
           {grouped.map(({ key, items }) => (
             <div key={key}>
               {/* Sticky category header */}

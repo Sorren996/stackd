@@ -182,7 +182,7 @@ export default function LogInsulinMealForm({ open, onClose }) {
           className="w-full rounded-2xl py-4 text-base font-semibold transition disabled:opacity-40"
           style={{ background: COPPER, color: CREAM, boxShadow: "0 4px 16px rgba(156,82,40,0.25)" }}
         >
-          {logging ? "Logging..." : "Log both"}
+          {logging ? "Saving..." : "Save meal + insulin"}
         </button>
       }
     >
@@ -261,7 +261,7 @@ export default function LogInsulinMealForm({ open, onClose }) {
           maxDate={getTodayDateValue()}
           maxTime={date === getTodayDateValue() ? new Date().toTimeString().slice(0, 5) : undefined}
         />
-        <TextField label="Notes" value={sharedNotes} onChange={setSharedNotes} placeholder="e.g. before lunch" multiline />
+        <TextField label="Notes" value={sharedNotes} onChange={setSharedNotes} placeholder="e.g. before lunch, with a meal" multiline />
       </div>
     </LogSheetShell>
   );

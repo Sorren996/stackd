@@ -182,7 +182,7 @@ export default function MealEditOverlay({ entries, onClose }) {
             onClick={save}
             disabled={isSaving}
             className="w-full rounded-2xl py-4 text-base font-semibold transition disabled:opacity-40"
-            style={{ background: PALETTE.ink, color: "#f7f1e8", boxShadow: "0 4px 16px rgba(63, 56, 48, 0.15)" }}
+            style={{ background: "#9c5228", color: "#f7f1e8", boxShadow: "0 4px 16px rgba(156,82,40,0.25)" }}
           >
             {isSaving ? "Saving..." : "Save meal"}
           </button>
