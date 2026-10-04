@@ -152,18 +152,15 @@ export default function LogSheetShell({
             drag="y"
             dragControls={dragControls}
             dragListener={false}
-            dragConstraints={{ top: 0, bottom: 0, left: 0, right: 0 }}
-            dragElastic={{ top: 0, bottom: 0.5, left: 0, right: 0 }}
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={{ top: 0, bottom: 0.5 }}
             onDragEnd={handleDragEnd}
-            className="absolute inset-x-0 bottom-0 flex flex-col overflow-x-hidden overflow-y-hidden"
+            className="absolute inset-x-0 bottom-0 flex flex-col overflow-hidden"
             style={{
               background: PALETTE.surface,
               borderRadius: "28px 28px 0 0",
               boxShadow: "0 -12px 40px rgba(63,56,48,0.12)",
               height: sheetHeight,
-              maxWidth: "100vw",
-              overscrollBehavior: "contain",
-              touchAction: "pan-y",
               willChange: "transform",
             }}
           >
@@ -201,14 +198,8 @@ export default function LogSheetShell({
               </button>
             </div>
 
-            {/* Content — independently scrolling, 24px side padding enforced.
-                Horizontal panning is locked: content never shifts sideways. */}
-            <div
-              className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-6 pb-4"
-              style={{ overscrollBehavior: "contain", touchAction: "pan-y" }}
-            >
-              {children}
-            </div>
+            {/* Content — independently scrolling, 24px side padding enforced */}
+            <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-4">{children}</div>
 
             {/* Pinned footer — full-width copper primary button */}
             {footer && (

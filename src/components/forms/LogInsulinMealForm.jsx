@@ -5,9 +5,6 @@ import { getDefaultInsulinLibrary } from "@/lib/userSettings";
 import { useCreateDoses, useCreateCarbs } from "@/hooks/useLogMutations";
 import { toast } from "sonner";
 import LogSheetShell from "@/components/forms/LogSheetShell";
-import MealPresetPicker from "@/components/forms/MealPresetPicker";
-import PlanMathNote from "@/components/forms/PlanMathNote";
-import DelayedRiseNote from "@/components/forms/DelayedRiseNote";
 import {
   StepperField,
   SegmentedControl,
@@ -15,10 +12,12 @@ import {
   TextField,
   RescueCarbToggle,
   FieldLabel,
+  INK,
   COPPER,
   CREAM,
   TAUPE,
   FAINT,
+  CANVAS,
   HAIRLINE,
 } from "@/components/forms/FieldKit";
 
@@ -58,8 +57,6 @@ function buildTimestampNoFuture(dateValue, timeValue) {
 export default function LogInsulinMealForm({ open, onClose }) {
   const [foodName, setFoodName] = useState("");
   const [carbs, setCarbs] = useState("");
-  const [fatGrams, setFatGrams] = useState("");
-  const [proteinGrams, setProteinGrams] = useState("");
   const [isRescue, setIsRescue] = useState(false);
   const [insulinRows, setInsulinRows] = useState(() => [createInsulinRow()]);
   const [sharedNotes, setSharedNotes] = useState("");
@@ -75,8 +72,6 @@ export default function LogInsulinMealForm({ open, onClose }) {
     if (!open) return;
     setFoodName("");
     setCarbs("");
-    setFatGrams("");
-    setProteinGrams("");
     setIsRescue(false);
     setInsulinRows([createInsulinRow()]);
     setSharedNotes("");
@@ -139,9 +134,9 @@ export default function LogInsulinMealForm({ open, onClose }) {
     setLogging(true);
 
     if (hasInsulin) {
-      const submittedDoses = Object.entries(insulinTotals).map(([insulin_type, units]) => ({
-        insulin_type,
-        units,
+      const submittedDoses = Object.values(insulinTotals).map((dose) => ({
+        insulin_type: dose.insulin_type,
+        units: dose.units,
         administered_at: timestamp.toISOString(),
         notes: sharedNotes || undefined,
       }));
@@ -158,8 +153,6 @@ export default function LogInsulinMealForm({ open, onClose }) {
         name: foodName.trim(),
         food_name: foodName.trim(),
         carbs: carbsNum,
-        fat_grams: Number(fatGrams) || 0,
-        protein_grams: Number(proteinGrams) || 0,
         consumed_at: timestamp.toISOString(),
         is_rescue_carb: isRescue,
         notes: sharedNotes || undefined,
@@ -189,7 +182,7 @@ export default function LogInsulinMealForm({ open, onClose }) {
           className="w-full rounded-2xl py-4 text-base font-semibold transition disabled:opacity-40"
           style={{ background: COPPER, color: CREAM, boxShadow: "0 4px 16px rgba(156,82,40,0.25)" }}
         >
-          {logging ? "Saving..." : "Save meal + insulin"}
+          {logging ? "Logging..." : "Log both"}
         </button>
       }
     >
@@ -206,24 +199,8 @@ export default function LogInsulinMealForm({ open, onClose }) {
         <FieldLabel>Meal</FieldLabel>
       </div>
       <div className="space-y-4">
-        <MealPresetPicker
-          selectedName={foodName}
-          onPick={(p) => {
-            setFoodName(p.name);
-            setCarbs(String(Math.round(p.carbs)));
-            setFatGrams(p.fat ? String(p.fat) : "");
-            setProteinGrams(p.protein ? String(p.protein) : "");
-          }}
-          onCustom={() => { setFoodName(""); setCarbs(""); setFatGrams(""); setProteinGrams(""); }}
-        />
-        <TextField label="Meal name" value={foodName} onChange={setFoodName} placeholder="e.g. Grandma's lasagna" />
+        <TextField label="Meal" value={foodName} onChange={setFoodName} placeholder="e.g. Lunch, snack" />
         <StepperField label="Carbs" value={carbs} onChange={setCarbs} unit="g" step={5} presets={[15, 30, 45, 60]} />
-        <div className="grid grid-cols-2 gap-3">
-          <TextField label="Protein (g)" value={proteinGrams} onChange={(v) => setProteinGrams(v.replace(/[^\d.]/g, "").slice(0, 4))} placeholder="0" />
-          <TextField label="Fat (g)" value={fatGrams} onChange={(v) => setFatGrams(v.replace(/[^\d.]/g, "").slice(0, 4))} placeholder="0" />
-        </div>
-        <DelayedRiseNote carbs={carbs} fat={fatGrams} protein={proteinGrams} />
-        {!isRescue && <PlanMathNote carbs={carbs} />}
         <RescueCarbToggle checked={isRescue} onChange={setIsRescue} />
       </div>
 
@@ -284,7 +261,7 @@ export default function LogInsulinMealForm({ open, onClose }) {
           maxDate={getTodayDateValue()}
           maxTime={date === getTodayDateValue() ? new Date().toTimeString().slice(0, 5) : undefined}
         />
-        <TextField label="Notes" value={sharedNotes} onChange={setSharedNotes} placeholder="e.g. before lunch, with a meal" multiline />
+        <TextField label="Notes" value={sharedNotes} onChange={setSharedNotes} placeholder="e.g. before lunch" multiline />
       </div>
     </LogSheetShell>
   );

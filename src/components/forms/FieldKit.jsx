@@ -78,28 +78,30 @@ export function StepperField({ label, value, onChange, unit, step = 1, presets, 
       </div>
 
       {presets && presets.length > 0 && (
-        <div className="mt-4 flex flex-wrap justify-center gap-2" style={{ touchAction: "pan-y" }}>
-          {presets.map((preset) => {
-            const isSelected = current === preset;
-            return (
-              <button
-                key={preset}
-                type="button"
-                onClick={() => set(preset)}
-                className="flex shrink-0 items-center justify-center rounded-full text-sm font-semibold"
-                style={{
-                  height: 44,
-                  minWidth: 56,
-                  transition: "background 200ms ease-out, color 200ms ease-out",
-                  background: isSelected ? COPPER : CANVAS,
-                  color: isSelected ? CREAM : TAUPE,
-                }}
-                aria-pressed={isSelected}
-              >
-                {preset}
-              </button>
-            );
-          })}
+        <div className="no-scrollbar mt-4" style={{ overflowX: "auto", overflowY: "hidden", scrollbarWidth: "none" }}>
+          <div className="flex justify-center gap-2">
+            {presets.map((preset) => {
+              const isSelected = current === preset;
+              return (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => set(preset)}
+                  className="flex shrink-0 items-center justify-center rounded-full text-sm font-semibold"
+                  style={{
+                    height: 44,
+                    minWidth: 56,
+                    transition: "background 200ms ease-out, color 200ms ease-out",
+                    background: isSelected ? COPPER : CANVAS,
+                    color: isSelected ? CREAM : TAUPE,
+                  }}
+                  aria-pressed={isSelected}
+                >
+                  {preset}
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
@@ -125,42 +127,50 @@ export function SegmentedControl({ label, value, onChange, options, ariaLabel })
     <div>
       {label && <FieldLabel>{label}</FieldLabel>}
       <div
-        className="mt-2.5 flex flex-wrap gap-2"
-        style={{ touchAction: "pan-y" }}
+        className="no-scrollbar"
+        style={{
+          marginTop: label ? "10px" : 0,
+          overflowX: "auto",
+          overflowY: "hidden",
+          scrollbarWidth: "none",
+          overscrollBehaviorX: "contain",
+        }}
       >
-        {options.map((option) => {
-          const isSelected = option.value === value;
-          return (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => onChange(option.value)}
-              className="flex shrink-0 items-center gap-2 rounded-full text-sm font-semibold"
-              style={{
-                height: "44px",
-                padding: "0 16px",
-                transition: "background 200ms ease-out, color 200ms ease-out",
-                background: isSelected ? COPPER : CANVAS,
-                color: isSelected ? CREAM : TAUPE,
-              }}
-              aria-pressed={isSelected}
-              aria-label={ariaLabel ? `${ariaLabel}: ${option.label}` : option.label}
-            >
-              {option.color && (
-                <span
-                  style={{
-                    width: 12,
-                    height: 12,
-                    borderRadius: "9999px",
-                    background: option.color,
-                    boxShadow: isSelected ? "0 0 0 2px rgba(247,241,232,0.85)" : "0 0 0 1px rgba(63,56,48,0.10)",
-                  }}
-                />
-              )}
-              {option.label}
-            </button>
-          );
-        })}
+        <div className="flex gap-2">
+          {options.map((option) => {
+            const isSelected = option.value === value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => onChange(option.value)}
+                className="flex shrink-0 items-center gap-2 rounded-full text-sm font-semibold"
+                style={{
+                  height: "44px",
+                  padding: "0 16px",
+                  transition: "background 200ms ease-out, color 200ms ease-out",
+                  background: isSelected ? COPPER : CANVAS,
+                  color: isSelected ? CREAM : TAUPE,
+                }}
+                aria-pressed={isSelected}
+                aria-label={ariaLabel ? `${ariaLabel}: ${option.label}` : option.label}
+              >
+                {option.color && (
+                  <span
+                    style={{
+                      width: 12,
+                      height: 12,
+                      borderRadius: "9999px",
+                      background: option.color,
+                      boxShadow: isSelected ? "0 0 0 2px rgba(247,241,232,0.85)" : "0 0 0 1px rgba(63,56,48,0.10)",
+                    }}
+                  />
+                )}
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -181,9 +191,6 @@ export function TimeField({ dateLabel = "Date", timeLabel = "Time", dateValue, t
   const inputClass = "w-full rounded-2xl px-4 text-base font-medium";
   const inputStyle = {
     height: "56px",
-    width: "100%",
-    maxWidth: "100%",
-    boxSizing: "border-box",
     background: CANVAS,
     color: INK,
     border: "none",
@@ -230,7 +237,6 @@ export function TimeField({ dateLabel = "Date", timeLabel = "Time", dateValue, t
 
 // ── Text field — optional notes / name ─────────────────────────────────────
 // Single-line or multiline, 56px height (multiline grows).
-// Placeholder color is WCAG AA (TAUPE #6b6153 ≈ 5.4:1 on canvas).
 export function TextField({ label, value, onChange, placeholder, multiline = false }) {
   return (
     <div>
@@ -244,18 +250,12 @@ export function TextField({ label, value, onChange, placeholder, multiline = fal
           className="w-full rounded-2xl px-4 pt-3.5 text-base font-medium"
           style={{
             marginTop: label ? "10px" : 0,
-            width: "100%",
-            maxWidth: "100%",
-            boxSizing: "border-box",
             background: CANVAS,
             color: INK,
             border: "none",
             outline: "none",
             resize: "none",
             minHeight: "56px",
-            overflowY: "auto",
-            overflowX: "hidden",
-            wordWrap: "break-word",
           }}
         />
       ) : (
@@ -268,9 +268,6 @@ export function TextField({ label, value, onChange, placeholder, multiline = fal
           style={{
             height: "56px",
             marginTop: label ? "10px" : 0,
-            width: "100%",
-            maxWidth: "100%",
-            boxSizing: "border-box",
             background: CANVAS,
             color: INK,
             border: "none",

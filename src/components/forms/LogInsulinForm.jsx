@@ -139,10 +139,10 @@ export default function LogInsulinForm({ open, onClose }) {
           style={{ background: COPPER, color: CREAM, boxShadow: "0 4px 16px rgba(156,82,40,0.25)" }}
         >
           {logging
-            ? "Saving..."
+            ? "Logging..."
             : totalUnits
-              ? `Save ${totalUnits % 1 === 0 ? totalUnits : totalUnits.toFixed(1)} units`
-              : "Add insulin"}
+              ? `Log ${totalUnits % 1 === 0 ? totalUnits : totalUnits.toFixed(1)} units`
+              : "Add insulin units"}
         </button>
       }
     >
@@ -170,13 +170,7 @@ export default function LogInsulinForm({ open, onClose }) {
           maxDate={getTodayDateValue()}
           maxTime={date === getTodayDateValue() ? new Date().toTimeString().slice(0, 5) : undefined}
         />
-        <TextField
-          label="Notes"
-          value={notes}
-          onChange={setNotes}
-          placeholder={insulinType && /lantus|tresiba|degludec|levemir|detemir|nph|humulin n|novolin n|icodec|awiqli|basaglar|semglee|rezvoglar|toujeo/i.test(insulinType) ? "e.g. morning dose" : "e.g. before lunch"}
-          multiline
-        />
+        <TextField label="Notes" value={notes} onChange={setNotes} placeholder="e.g. before lunch" multiline />
       </div>
     </LogSheetShell>
   );

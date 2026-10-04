@@ -215,7 +215,7 @@ export default function EditLogSheet({ log, onClose, onSave, isSaving }) {
             className="w-full rounded-2xl py-4 text-base font-semibold transition disabled:opacity-40"
             style={{ background: COPPER, color: CREAM, boxShadow: "0 4px 16px rgba(156,82,40,0.25)" }}
           >
-            {isSaving ? "Saving..." : log?.type === "insulin" ? "Save insulin" : log?.type === "glucose" ? "Save reading" : "Save meal"}
+            {isSaving ? "Saving..." : "Save moment"}
           </button>
         )
       }
@@ -286,21 +286,7 @@ export default function EditLogSheet({ log, onClose, onSave, isSaving }) {
           maxDate={todayDateValue}
           maxTime={form.date === todayDateValue ? nowTimeString : undefined}
         />
-        <TextField
-          label="Notes"
-          value={form.notes}
-          onChange={(value) => updateField("notes", value)}
-          placeholder={
-            log?.type === "insulin"
-              ? /lantus|tresiba|degludec|levemir|detemir|nph|humulin n|novolin n|icodec|awiqli|basaglar|semglee|rezvoglar|toujeo/i.test(form.insulin_type || "")
-                ? "e.g. morning dose"
-                : "e.g. before lunch"
-              : log?.type === "glucose"
-                ? "e.g. fasting, after meal"
-                : "e.g. restaurant, homemade"
-          }
-          multiline
-        />
+        <TextField label="Notes" value={form.notes} onChange={(value) => updateField("notes", value)} placeholder="Notes" multiline />
       </div>
     </LogSheetShell>
   );
