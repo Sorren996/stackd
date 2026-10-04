@@ -158,7 +158,6 @@ export default function Layout() {
       <main
         className="relative mx-auto w-full max-w-6xl px-4 overflow-visible"
         style={{
-          paddingTop: "calc(3.5rem + env(safe-area-inset-top))",
           // Bottom clearance lifts the scroll viewport's bottom edge clear of
           // the floating pill nav (60px tall + 16px bottom inset + safe-area)
           // plus a small breathing gap so the last card isn't flush against
@@ -174,7 +173,10 @@ export default function Layout() {
               of breathing room to scroll fully above the frosted bar. */}
           <div
             className="min-w-0 w-full"
-            style={{ paddingBottom: "calc(60px + 60px + env(safe-area-inset-bottom))" }}
+            style={{
+              paddingTop: "calc(3.5rem + env(safe-area-inset-top))",
+              paddingBottom: "calc(60px + 60px + env(safe-area-inset-bottom))",
+            }}
           >
             <div hidden={!isDashboardRoute}>
               <CachedDashboard />
