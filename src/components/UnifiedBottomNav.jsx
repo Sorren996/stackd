@@ -292,7 +292,7 @@ export default function UnifiedBottomNav() {
         className="fixed"
         style={{
           right: "calc(20px + env(safe-area-inset-right))",
-          bottom: "calc(104px + env(safe-area-inset-bottom))",
+          bottom: "calc(74px + env(safe-area-inset-bottom))",
           zIndex: 55,
         }}
       >
