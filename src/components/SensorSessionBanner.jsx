@@ -30,7 +30,8 @@ export default function SensorSessionBanner() {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
           transition={{ duration: 0.25, ease: "easeOut" }}
-          className="sticky top-14 z-40 flex justify-center px-4"
+          className="sticky z-40 flex justify-center px-4"
+          style={{ top: "calc(3.5rem + env(safe-area-inset-top))" }}
         >
           <Link
             to="/settings"
