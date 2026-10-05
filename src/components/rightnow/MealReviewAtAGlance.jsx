@@ -54,7 +54,7 @@ function formatCountdownValue(ms) {
 
 
 
-export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glucoseTrend, onResolve, glucoseReadings }) {
+export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glucoseTrend, onResolve, glucoseReadings, hideIdentity = false }) {
   const [showEdit, setShowEdit] = useState(false);
   const [showContext, setShowContext] = useState(false);
   const [openEntryId, setOpenEntryId] = useState(null);
@@ -261,16 +261,20 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
     <div className="space-y-3">
       {/* The meal card — identity, inputs, outcome, insight, actions */}
       <DashboardCard className="p-4">
-        {/* 1. IDENTITY */}
-        <div className="flex items-baseline justify-between gap-2">
-          <div className="min-w-0 flex items-baseline gap-2">
-            <span className="text-[15px] font-semibold truncate" style={{ color: PALETTE.ink }}>{mealName}</span>
-            <span className="shrink-0 text-[8px] font-semibold uppercase tracking-wider" style={{ color: PALETTE.faint }}>
-              {slotLabel}
-            </span>
-          </div>
-          <span className="shrink-0 text-[11px] tabular-nums" style={{ color: PALETTE.faint }}>{formatClock(mealTime)}</span>
-        </div>
+        {!hideIdentity && (
+          <>
+            {/* 1. IDENTITY */}
+            <div className="flex items-baseline justify-between gap-2">
+              <div className="min-w-0 flex items-baseline gap-2">
+                <span className="text-[15px] font-semibold truncate" style={{ color: PALETTE.ink }}>{mealName}</span>
+                <span className="shrink-0 text-[8px] font-semibold uppercase tracking-wider" style={{ color: PALETTE.faint }}>
+                  {slotLabel}
+                </span>
+              </div>
+              <span className="shrink-0 text-[11px] tabular-nums" style={{ color: PALETTE.faint }}>{formatClock(mealTime)}</span>
+            </div>
+          </>
+        )}
 
         {/* 2. INPUTS — label-first stat tiles (small muted label above bold value) */}
         <div className="mt-3 flex items-end gap-5">
