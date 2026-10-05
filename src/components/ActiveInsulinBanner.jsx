@@ -53,16 +53,27 @@ import HairlineSection from "@/components/editorial/HairlineSection";
 import CardErrorBoundary from "@/components/CardErrorBoundary";
 import { format } from "date-fns";
 import { formatGlucose, glucoseUnitLabel, isMmolMode, formatGlucoseAbsDelta, glucoseDeltaUnit } from "@/lib/glucoseUnits";
+import {
+  buildMealEventGroups,
+  getEntryTime,
+  getDoseTime,
+  isMealCoverageInsulin,
+  getDefaultMealInsulinTypes,
+  detectConcurrentStack,
+  computePerMealIOBAt,
+  computeMealClearTime,
+  computeOverlapContext,
+  buildStackChartCurves,
+  DEFAULT_PRE_MEAL_WINDOW_MINUTES,
+  DEFAULT_POST_MEAL_WINDOW_MINUTES,
+  DEFAULT_OUTCOME_WINDOW_MINUTES,
+} from "@/lib/concurrentMeals";
 
 // Flip to false to instantly revert to the original dense dashboard layout.
 const CLEAN_LAYOUT = true;
 
 const SAMPLE_STEP_MS = 5 * 60 * 1000;
 const MINUTE_MS = 60 * 1000;
-const DEFAULT_PRE_MEAL_WINDOW_MINUTES = 45;
-const DEFAULT_POST_MEAL_WINDOW_MINUTES = 90;
-const DEFAULT_OUTCOME_WINDOW_MINUTES = 240;
-const MEAL_GROUP_WINDOW_MS = 30 * MINUTE_MS;
 
 function readTargetRange() {
   if (typeof window === "undefined") return { low: 70, high: 180 };
@@ -74,12 +85,6 @@ function readTargetRange() {
     low: Number.isFinite(low) ? low : 70,
     high: Number.isFinite(high) ? high : 180
   };
-}
-
-function getDefaultMealInsulinTypes() {
-  return Object.entries(INSULIN_PROFILES).
-  filter(([, profile]) => ["Rapid-Acting", "Short-Acting"].includes(profile.category)).
-  map(([name]) => name);
 }
 
 function readMealInsulinTypes() {
@@ -168,14 +173,6 @@ function getActiveCarbsAt(entries, targetTime) {
   );
 }
 
-function getEntryTime(entry) {
-  return new Date(entry.consumed_at || entry.recorded_at || entry.administered_at).getTime();
-}
-
-function getDoseTime(dose) {
-  return new Date(dose.administered_at).getTime();
-}
-
 function getClosestGlucose(readings, targetTime, maxDistanceMinutes = 30) {
   const maxDistance = maxDistanceMinutes * MINUTE_MS;
   return (Array.isArray(readings) ? readings : []).reduce((closest, reading) => {
@@ -194,104 +191,7 @@ function sumDoseUnits(doses, selectUnits) {
   }, 0);
 }
 
-function isMealCoverageInsulin(dose, insulinSettings = {}) {
-  const selectedTypes = insulinSettings.mealInsulinTypes || getDefaultMealInsulinTypes();
-  return selectedTypes.includes(dose.insulin_type);
-}
-
-function buildMealEventGroups(carbEntries, doses, insulinSettings = {}, glucoseReadings = [], targetLow = 70) {
-  const preMealWindowMs = (insulinSettings.preMealWindowMinutes ?? DEFAULT_PRE_MEAL_WINDOW_MINUTES) * MINUTE_MS;
-  const postMealWindowMs = (insulinSettings.postMealWindowMinutes ?? DEFAULT_POST_MEAL_WINDOW_MINUTES) * MINUTE_MS;
-  const carbEvents = (Array.isArray(carbEntries) ? carbEntries : []).
-  filter((entry) => {
-    if (entry.is_rescue_carb === true || entry.classification === "rescue_carbs") return false;
-    if (entry.classification === "meal" || entry.classification === "snack") return true;
-    return !isRescueCarbEntry(entry, glucoseReadings, doses, targetLow);
-  }).
-  map((entry) => ({
-    type: "carb",
-    time: getEntryTime(entry),
-    carbs: Number(entry.carbs),
-    entry
-  })).
-  filter((event) => Number.isFinite(event.time) && Number.isFinite(event.carbs) && event.carbs > 0);
-
-  const doseEvents = (Array.isArray(doses) ? doses : []).
-  filter((dose) => isMealCoverageInsulin(dose, insulinSettings) && !isBasalInsulinType(dose.insulin_type)).
-  map((dose) => ({
-    type: "dose",
-    time: getDoseTime(dose),
-    units: Number(dose.units),
-    dose
-  })).
-  filter((event) => Number.isFinite(event.time) && Number.isFinite(event.units) && event.units > 0);
-
-  const carbGroups = [];
-
-  carbEvents.
-  sort((a, b) => a.time - b.time).
-  forEach((event) => {
-    const lastGroup = carbGroups[carbGroups.length - 1];
-    if (!lastGroup || event.time - lastGroup.end > MEAL_GROUP_WINDOW_MS) {
-      carbGroups.push({
-        start: event.time,
-        end: event.time,
-        carbEvents: [event]
-      });
-      return;
-    }
-
-    lastGroup.end = event.time;
-    lastGroup.carbEvents.push(event);
-  });
-
-  // First pass: compute each group's mealTime and pairing window.
-  const groupsWithWindows = carbGroups.map((group) => {
-    const carbs = group.carbEvents.reduce((sum, event) => sum + event.carbs, 0);
-    const carbTimeTotal = group.carbEvents.reduce((sum, event) => sum + event.time * event.carbs, 0);
-    const mealTime = carbs > 0 ? carbTimeTotal / carbs : group.start;
-    const pairingStart = group.start - preMealWindowMs;
-    const pairingEnd = group.end + postMealWindowMs;
-    return {
-      ...group,
-      mealTime,
-      pairingStart,
-      pairingEnd,
-      carbs,
-      carbEntries: group.carbEvents.map((event) => event.entry)
-    };
-  });
-
-  // Assign each dose to exactly one group — the one whose mealTime is closest,
-  // among groups whose pairing window contains the dose. This prevents a dose
-  // from one meal being pooled into a nearby meal's insulin total.
-  const groupDoses = groupsWithWindows.map(() => []);
-  doseEvents.forEach((doseEvent) => {
-    let bestIndex = -1;
-    let bestDist = Infinity;
-    groupsWithWindows.forEach((group, index) => {
-      if (doseEvent.time >= group.pairingStart && doseEvent.time <= group.pairingEnd) {
-        const dist = Math.abs(doseEvent.time - group.mealTime);
-        if (dist < bestDist) {
-          bestDist = dist;
-          bestIndex = index;
-        }
-      }
-    });
-    if (bestIndex >= 0) groupDoses[bestIndex].push(doseEvent.dose);
-  });
-
-  return groupsWithWindows.map((group, index) => ({
-    ...group,
-    start: group.pairingStart,
-    end: group.pairingEnd,
-    carbLogStart: group.start,
-    carbLogEnd: group.end,
-    doses: groupDoses[index]
-  }));
-}
-
-function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latestGlucose, insulinSettings) {
+function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latestGlucose, insulinSettings, targetGroup = null) {
   if (!insulinSettings.isComplete) {
     return {
       value: "Setup needed",
@@ -302,14 +202,16 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
     };
   }
 
-  const groups = buildMealEventGroups(carbEntries, doses, insulinSettings, glucoseReadings, insulinSettings.targetLow).sort((a, b) => b.mealTime - a.mealTime);
-
   const now = Date.now();
-  const maxOutcomeWindowMs = Math.max(insulinSettings.outcomeWindowMinutes * MINUTE_MS, 6 * 3600 * 1000);
-  // Only meals still inside the user's configured review window are tracked.
-  // Once the window ends the review resets to "no meal to review yet".
-  // Rescue carbs never open a meal review on their own, regardless of volume.
-  const mealGroup = groups.find((group) => now - group.mealTime <= maxOutcomeWindowMs);
+  let mealGroup = targetGroup;
+  if (!mealGroup) {
+    const groups = buildMealEventGroups(carbEntries, doses, insulinSettings, glucoseReadings, insulinSettings.targetLow).sort((a, b) => b.mealTime - a.mealTime);
+    const maxOutcomeWindowMs = Math.max(insulinSettings.outcomeWindowMinutes * MINUTE_MS, 6 * 3600 * 1000);
+    // Only meals still inside the user's configured review window are tracked.
+    // Once the window ends the review resets to "no meal to review yet".
+    // Rescue carbs never open a meal review on their own, regardless of volume.
+    mealGroup = groups.find((group) => now - group.mealTime <= maxOutcomeWindowMs);
+  }
 
   if (!mealGroup) {
     return {
@@ -986,6 +888,31 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
     } catch {}
   };
 
+  // Multi-meal stack: when 2+ meals under review share overlapping bolus IOB
+  // windows, the Meal Review renders as a stack with a shared chart and
+  // peeking tabs. Single-meal behavior is unchanged (mealStack is null).
+  const mealStack = useMemo(() => {
+    if (!insulinSettings.isComplete) return null;
+    const stackNow = nowMinute * MINUTE_MS;
+    const groups = buildMealEventGroups(safeCarbEntries, safeDoses, insulinSettings, safeGlucoseReadings, insulinSettings.targetLow);
+    const stackGroups = detectConcurrentStack(groups, insulinSettings, stackNow);
+    if (!stackGroups) return null;
+
+    const meals = stackGroups.map((group) => {
+      const insight = computeMealAlignmentInsight(safeDoses, safeCarbEntries, safeGlucoseReadings, latestGlucose, insulinSettings, group);
+      const perMealIOB = computePerMealIOBAt(group, stackNow);
+      const clearTime = computeMealClearTime(group, stackNow);
+      const name = group.carbEntries[0]?.food_name || group.carbEntries[0]?.name || "Meal";
+      const carbs = group.carbs;
+      const units = (group.doses || []).reduce((s, d) => s + (Number(d.units) || 0), 0);
+      return { group, insight, name, mealTime: group.mealTime, carbs, units, perMealIOB, clearTime };
+    });
+    const totalIOB = meals.reduce((s, m) => s + m.perMealIOB, 0);
+    const chartData = buildStackChartCurves(stackGroups, stackNow);
+    const overlapContexts = stackGroups.map((_, i) => computeOverlapContext(stackGroups, i));
+    return { isStack: true, meals, totalIOB, chartData, overlapContexts, now: stackNow };
+  }, [safeDoses, safeCarbEntries, safeGlucoseReadings, latestGlucose, insulinSettings, nowMinute]);
+
   const netActiveCarbs = worstPoint?.net ?? 0;
   const netPeakTime = worstPoint?.time ?? null;
   const isPeakInFuture = Boolean(netPeakTime && netPeakTime > Date.now() + 60000);
@@ -1240,6 +1167,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
         breakdown={activeInsulinBreakdown}
         basalRegimenStatus={basalRegimenStatus}
         mealInsight={mealInsight}
+        mealStack={mealStack}
         monitoringStatus={highProteinFatStatus}
         glucoseTrend={trend}
         glucoseReadings={safeGlucoseReadings}

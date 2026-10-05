@@ -10,6 +10,7 @@ import { base44 } from "@/api/base44Client";
 import { generateMealGlucoseResponse, analyzeGlucoseResponse } from "@/lib/mealGlucoseResponse";
 import MealEditOverlay from "@/components/insulin/MealEditOverlay";
 import EstimatedSupportCard from "./EstimatedSupportCard";
+import MultiMealStack from "./MultiMealStack";
 import { getCarbAbsorptionAt, getMealWindowMinutes, getMealPeakMinutes } from "@/lib/carbAbsorption";
 import { useAbsorptionAdjustments, entrySpeedFactor, hasLearnedTiming, learnedTimingCaption, deriveSpeedClass } from "@/lib/absorptionLearning";
 import { getMealSlotLabel } from "@/lib/mealSlot";
@@ -54,7 +55,7 @@ function formatCountdownValue(ms) {
 
 
 
-export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glucoseTrend, onResolve, glucoseReadings }) {
+export default function MealReviewAtAGlance({ mealInsight, mealStack, monitoringStatus, glucoseTrend, onResolve, glucoseReadings, stackExtras }) {
   const [showEdit, setShowEdit] = useState(false);
   const [showContext, setShowContext] = useState(false);
   const [openEntryId, setOpenEntryId] = useState(null);
@@ -103,6 +104,26 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
         </p>
       </DashboardCard>);
 
+  }
+
+  // Multi-meal stack: 2+ concurrent meals share a window banner, a shared IOB
+  // chart, and peeking tabs. The active card is this same single-meal review
+  // (rendered by MultiMealStack without mealStack), so single-meal behavior is
+  // unchanged when there is no overlap.
+  if (mealStack?.isStack) {
+    return (
+      <MultiMealStack
+        meals={mealStack.meals}
+        totalIOB={mealStack.totalIOB}
+        chartData={mealStack.chartData}
+        overlapContexts={mealStack.overlapContexts}
+        now={mealStack.now}
+        glucoseReadings={glucoseReadings}
+        monitoringStatus={monitoringStatus}
+        glucoseTrend={glucoseTrend}
+        onResolve={onResolve}
+      />
+    );
   }
 
   if (!d || d.noActiveMeal) {
@@ -525,6 +546,8 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
 
           
         </div>
+
+        {stackExtras}
       </DashboardCard>
 
       {showEdit &&

@@ -21,6 +21,7 @@ export default function RightNowView({
   breakdown,
   basalRegimenStatus,
   mealInsight,
+  mealStack,
   monitoringStatus,
   glucoseTrend,
   onEditDose,
@@ -100,6 +101,7 @@ export default function RightNowView({
               <CardErrorBoundary>
                 <MealReviewAtAGlance
                   mealInsight={mealInsight}
+                  mealStack={mealStack}
                   monitoringStatus={monitoringStatus}
                   glucoseTrend={glucoseTrend}
                   onResolve={onResolve}
