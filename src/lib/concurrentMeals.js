@@ -1,25 +1,19 @@
-// Concurrent-meal grouping, IOB math, and chart-curve building for the
-// multi-meal "Stack" Meal Review.
+// Concurrent-meal grouping for the stacked Meal Review cards.
 //
 // Meals are grouped exactly as the single-meal review groups them (carb
 // entries within a 30-minute window, each bolus dose paired to the closest
-// meal by mealTime). A stack exists when 2+ meals under review share
-// overlapping bolus IOB windows — i.e. an earlier meal's bolus IOB was still
-// above the 0.49u floor when a later meal was logged.
+// meal by mealTime). A meal is "active" while it is still inside its
+// glucose-response window (meal_outcome_window_minutes, with the same
+// 6-hour floor the single-meal review uses). When 2+ meals are active at
+// once, the Meal Review renders one full card per meal, most recent first.
 //
-// All insulin math delegates to the existing pharmacology engine
-// (insulinPharmacology / iobModel) so per-meal IOB, clear times, and the
-// total envelope reconcile exactly with the rest of the app.
+// Rescue carbs never form a meal group on their own — they are filtered out
+// upstream in buildMealEventGroups.
 
 import {
-  getDoseIOB,
-  isBolusInsulinType,
   isBasalInsulinType,
   INSULIN_PROFILES,
-  getDoseTimingInfo,
-  generateActivityCurve,
 } from "./insulinPharmacology";
-import { IOB_FLOOR } from "./iobModel";
 import { isRescueCarbEntry } from "./rescueCarbDetection";
 
 const MINUTE_MS = 60 * 1000;
@@ -155,137 +149,17 @@ export function buildMealEventGroups(
   }));
 }
 
-// ── Per-meal IOB math ─────────────────────────────────────────────────────
+// ── Active-meal detection ──────────────────────────────────────────────────
+// Returns every meal group still inside its glucose-response window, most
+// recent first. Uses the same window the single-meal review uses
+// (meal_outcome_window_minutes with a 6-hour floor) so a meal appears in the
+// stacked cards exactly when it would appear in the single-meal review.
 
-// Remaining bolus IOB from a single meal's paired doses at a given time.
-export function computePerMealIOBAt(group, atTime) {
-  return (group.doses || []).reduce((sum, dose) => {
-    if (!isBolusInsulinType(dose.insulin_type)) return sum;
-    return sum + getDoseIOB(dose, atTime);
-  }, 0);
-}
-
-// When this meal's last active bolus dose clears the IOB floor. Returns null
-// if no paired dose is currently active.
-export function computeMealClearTime(group, now = Date.now()) {
-  let clearTime = now;
-  let anyActive = false;
-  for (const dose of group.doses || []) {
-    if (!isBolusInsulinType(dose.insulin_type)) continue;
-    const iob = getDoseIOB(dose, now);
-    if (iob > IOB_FLOOR) {
-      anyActive = true;
-      const timing = getDoseTimingInfo(dose, now);
-      const doseClear = now + timing.remainingMin * MINUTE_MS;
-      if (doseClear > clearTime) clearTime = doseClear;
-    }
-  }
-  return anyActive ? clearTime : null;
-}
-
-// ── Concurrency detection ─────────────────────────────────────────────────
-// A stack exists when 2+ meals under review share overlapping bolus IOB
-// windows. We walk backward from the most recent meal, chaining earlier
-// meals whose bolus IOB was still above the floor when the next meal in the
-// chain was logged. The result is the cluster of meals transitively
-// overlapping the most recent meal, sorted ascending by mealTime.
-
-export function detectConcurrentStack(groups, insulinSettings, now = Date.now()) {
+export function getActiveMealGroups(groups, insulinSettings, now = Date.now()) {
   const maxOutcomeWindowMs =
     Math.max(insulinSettings.outcomeWindowMinutes || DEFAULT_OUTCOME_WINDOW_MINUTES, 360) *
     MINUTE_MS;
-
-  // Meals still under review with at least one paired bolus dose.
-  const underReview = groups
-    .filter((g) => now - g.mealTime <= maxOutcomeWindowMs && (g.doses || []).some((d) => isBolusInsulinType(d.insulin_type)))
-    .sort((a, b) => a.mealTime - b.mealTime);
-
-  if (underReview.length < 2) return null;
-
-  const recent = underReview[underReview.length - 1];
-  const stackGroups = [recent];
-  for (let i = underReview.length - 2; i >= 0; i--) {
-    const later = stackGroups[0];
-    const earlier = underReview[i];
-    const earlierIOB = computePerMealIOBAt(earlier, later.mealTime);
-    if (earlierIOB > IOB_FLOOR) {
-      stackGroups.unshift(earlier);
-    } else {
-      break;
-    }
-  }
-
-  if (stackGroups.length < 2) return null;
-  return stackGroups;
-}
-
-// ── Overlap context ───────────────────────────────────────────────────────
-// For the active meal, find the earlier meal whose IOB was most active when
-// the active meal's dose started. Powers the "What happened" overlap insight.
-
-export function computeOverlapContext(stackGroups, activeIndex) {
-  if (activeIndex <= 0) return null;
-  const active = stackGroups[activeIndex];
-  let best = null;
-  for (let i = activeIndex - 1; i >= 0; i--) {
-    const earlier = stackGroups[i];
-    const iob = computePerMealIOBAt(earlier, active.mealTime);
-    if (iob > IOB_FLOOR && (!best || iob > best.earlierIOB)) {
-      best = { earlier, earlierIOB: iob };
-    }
-  }
-  if (!best) return null;
-  return {
-    earlierMealName: best.earlier.carbEntries[0]?.food_name || best.earlier.carbEntries[0]?.name || "an earlier meal",
-    earlierMealTime: best.earlier.mealTime,
-    activeMealTime: active.mealTime,
-    earlierIOB: best.earlierIOB,
-  };
-}
-
-// ── Chart curves ──────────────────────────────────────────────────────────
-// All meals' bolus doses on one shared zero-based axis. Each meal's curve is
-// the pointwise sum of its paired doses' IOB. The total envelope is the
-// pointwise sum of all meals' curves. The 0.49u floor rule is honored inside
-// getDoseIOB, so a dose clips to 0 and drops out of totals once its remaining
-// IOB hits the floor.
-
-export function buildStackChartCurves(stackGroups, now = Date.now()) {
-  const allDoses = [];
-  stackGroups.forEach((group) => {
-    (group.doses || []).forEach((dose) => {
-      if (isBolusInsulinType(dose.insulin_type)) allDoses.push(dose);
-    });
-  });
-  if (!allDoses.length) return null;
-
-  let windowStart = Infinity;
-  let windowEnd = -Infinity;
-  allDoses.forEach((dose) => {
-    const curve = generateActivityCurve(dose, 5);
-    if (curve.length) {
-      windowStart = Math.min(windowStart, curve[0].time);
-      windowEnd = Math.max(windowEnd, curve[curve.length - 1].time);
-    }
-  });
-  if (!Number.isFinite(windowStart) || !Number.isFinite(windowEnd)) return null;
-
-  // Pad and ensure "now" is visible with breathing room.
-  windowStart = Math.min(windowStart - 15 * MINUTE_MS, now - 30 * MINUTE_MS);
-  windowEnd = Math.max(windowEnd + 15 * MINUTE_MS, now + 30 * MINUTE_MS);
-
-  const step = 5 * MINUTE_MS;
-  const sampleTimes = [];
-  for (let t = windowStart; t <= windowEnd; t += step) sampleTimes.push(t);
-
-  const mealCurves = stackGroups.map((group) =>
-    sampleTimes.map((t) => ({ time: t, iob: computePerMealIOBAt(group, t) }))
-  );
-
-  const totalCurve = sampleTimes.map((t, i) => ({
-    time: t,
-    iob: mealCurves.reduce((sum, mc) => sum + mc[i].iob, 0),
-  }));
-
-  return { windowStart, windowEnd, sampleTimes, mealCurves, totalCurve };
+  return groups
+    .filter((g) => now - g.mealTime <= maxOutcomeWindowMs)
+    .sort((a, b) => b.mealTime - a.mealTime); // most recent first
 }

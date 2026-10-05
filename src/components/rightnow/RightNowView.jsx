@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import IobAtAGlance from "./IobAtAGlance";
 import MealReviewAtAGlance from "./MealReviewAtAGlance";
+import StackedMealCards from "./StackedMealCards";
 import CardErrorBoundary from "@/components/CardErrorBoundary";
 
 const TABS = [
@@ -15,13 +16,17 @@ const TAB_ORDER = TABS.map((t) => t.id);
  * "Right Now" — the at-a-glance combined view.
  * Eyebrow + title, a two-tab segmented control with a sliding active
  * indicator, and tab content that slides in from the correct side.
+ *
+ * Meal Review: when 2+ meals are still in their response window, renders one
+ * full card per meal (most recent first) via StackedMealCards. Otherwise
+ * renders the single-meal review exactly as before.
  */
 export default function RightNowView({
   totalUnits,
   breakdown,
   basalRegimenStatus,
   mealInsight,
-  mealStack,
+  activeMeals,
   monitoringStatus,
   glucoseTrend,
   onEditDose,
@@ -33,6 +38,7 @@ export default function RightNowView({
   const [tab, setTab] = useState("iob");
   const selectTab = (id) => { if (id !== tab) setTab(id); };
   const activeIndex = TAB_ORDER.indexOf(tab);
+  const hasStack = Array.isArray(activeMeals) && activeMeals.length >= 2;
 
   return (
     <div className="relative">
@@ -97,11 +103,20 @@ export default function RightNowView({
                   onDeleteDose={onDeleteDose}
                 />
               </CardErrorBoundary>
+            ) : hasStack ? (
+              <CardErrorBoundary>
+                <StackedMealCards
+                  meals={activeMeals}
+                  monitoringStatus={monitoringStatus}
+                  glucoseTrend={glucoseTrend}
+                  onResolve={onResolve}
+                  glucoseReadings={glucoseReadings}
+                />
+              </CardErrorBoundary>
             ) : (
               <CardErrorBoundary>
                 <MealReviewAtAGlance
                   mealInsight={mealInsight}
-                  mealStack={mealStack}
                   monitoringStatus={monitoringStatus}
                   glucoseTrend={glucoseTrend}
                   onResolve={onResolve}

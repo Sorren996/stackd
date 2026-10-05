@@ -59,11 +59,7 @@ import {
   getDoseTime,
   isMealCoverageInsulin,
   getDefaultMealInsulinTypes,
-  detectConcurrentStack,
-  computePerMealIOBAt,
-  computeMealClearTime,
-  computeOverlapContext,
-  buildStackChartCurves,
+  getActiveMealGroups,
   DEFAULT_PRE_MEAL_WINDOW_MINUTES,
   DEFAULT_POST_MEAL_WINDOW_MINUTES,
   DEFAULT_OUTCOME_WINDOW_MINUTES,
@@ -888,30 +884,28 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
     } catch {}
   };
 
-  // Multi-meal stack: when 2+ meals under review share overlapping bolus IOB
-  // windows, the Meal Review renders as a stack with a shared chart and
-  // peeking tabs. Single-meal behavior is unchanged (mealStack is null).
-  const mealStack = useMemo(() => {
-    if (!insulinSettings.isComplete) return null;
+  // Active meals still within their glucose-response window. When 2+ meals
+  // are active, the Meal Review renders one full card per meal (most recent
+  // first). Single-meal behavior is unchanged (activeMeals has one entry,
+  // and RightNowView falls back to the single-card path).
+  const activeMeals = useMemo(() => {
+    if (!insulinSettings.isComplete) return [];
     const stackNow = nowMinute * MINUTE_MS;
     const groups = buildMealEventGroups(safeCarbEntries, safeDoses, insulinSettings, safeGlucoseReadings, insulinSettings.targetLow);
-    const stackGroups = detectConcurrentStack(groups, insulinSettings, stackNow);
-    if (!stackGroups) return null;
-
-    const meals = stackGroups.map((group) => {
-      const insight = computeMealAlignmentInsight(safeDoses, safeCarbEntries, safeGlucoseReadings, latestGlucose, insulinSettings, group);
-      const perMealIOB = computePerMealIOBAt(group, stackNow);
-      const clearTime = computeMealClearTime(group, stackNow);
+    const active = getActiveMealGroups(groups, insulinSettings, stackNow);
+    return active.map((group) => {
+      const rawInsight = computeMealAlignmentInsight(safeDoses, safeCarbEntries, safeGlucoseReadings, latestGlucose, insulinSettings, group);
+      const mealId = rawInsight?.details?.meal?.id;
+      const resolved = mealId && resolvedMealIds.includes(mealId);
+      const insight = resolved && rawInsight?.details
+        ? { ...rawInsight, details: { ...rawInsight.details, mealStillUnderReview: false } }
+        : rawInsight;
       const name = group.carbEntries[0]?.food_name || group.carbEntries[0]?.name || "Meal";
       const carbs = group.carbs;
       const units = (group.doses || []).reduce((s, d) => s + (Number(d.units) || 0), 0);
-      return { group, insight, name, mealTime: group.mealTime, carbs, units, perMealIOB, clearTime };
+      return { group, insight, name, mealTime: group.mealTime, carbs, units };
     });
-    const totalIOB = meals.reduce((s, m) => s + m.perMealIOB, 0);
-    const chartData = buildStackChartCurves(stackGroups, stackNow);
-    const overlapContexts = stackGroups.map((_, i) => computeOverlapContext(stackGroups, i));
-    return { isStack: true, meals, totalIOB, chartData, overlapContexts, now: stackNow };
-  }, [safeDoses, safeCarbEntries, safeGlucoseReadings, latestGlucose, insulinSettings, nowMinute]);
+  }, [safeDoses, safeCarbEntries, safeGlucoseReadings, latestGlucose, insulinSettings, nowMinute, resolvedMealIds]);
 
   const netActiveCarbs = worstPoint?.net ?? 0;
   const netPeakTime = worstPoint?.time ?? null;
@@ -1167,7 +1161,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
         breakdown={activeInsulinBreakdown}
         basalRegimenStatus={basalRegimenStatus}
         mealInsight={mealInsight}
-        mealStack={mealStack}
+        activeMeals={activeMeals}
         monitoringStatus={highProteinFatStatus}
         glucoseTrend={trend}
         glucoseReadings={safeGlucoseReadings}
