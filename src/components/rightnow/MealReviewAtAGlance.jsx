@@ -515,9 +515,6 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
                       <span className="text-[13px] font-medium" style={{ color: PALETTE.ink }}>{name}</span>
                       {detail && <span className="text-[11px]" style={{ color: PALETTE.faint }}>, {detail}</span>}
                     </span>
-                    <span className="overflow-hidden">
-                      <span className="dotted-leader block" />
-                    </span>
                     <span className="shrink-0 text-[13px] font-semibold tabular-nums" style={{ color: PALETTE.muted }}>
                       {Math.round(entry.carbs)} g
                     </span>
@@ -538,9 +535,7 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
                   >
                     Rescue
                   </span>
-                  <span className="flex-1 overflow-hidden">
-                    <span className="dotted-leader block" />
-                  </span>
+                  <span className="flex-1" />
                   <span className="shrink-0 text-[13px] font-semibold tabular-nums" style={{ color: PALETTE.red }}>
                     {Math.round(entry.carbs)} g
                   </span>
