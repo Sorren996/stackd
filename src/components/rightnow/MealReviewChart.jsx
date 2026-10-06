@@ -208,7 +208,7 @@ export default function MealReviewChart({
         {/* Pinned value badges — only when not narrow */}
         {!isNarrow && startBadge && (
           <Badge style={startBadge} tone="neutral">
-            {formatGlucose(startValue)}
+            Start {formatGlucose(startValue)}
           </Badge>
         )}
         {!isNarrow && peakBadge && (
@@ -233,7 +233,7 @@ export default function MealReviewChart({
       {isNarrow && (
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
           {showStartBadge && (
-            <Badge tone="neutral">{formatGlucose(startValue)}</Badge>
+            <Badge tone="neutral">Start {formatGlucose(startValue)}</Badge>
           )}
           {showPeakBadge && (
             <Badge tone="peak">Peak {formatGlucose(resolvedPeakValue)} · +{Math.round(timeToPeakMin)}m</Badge>

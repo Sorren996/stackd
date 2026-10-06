@@ -268,7 +268,7 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
 
   // ---- Reconciliation (no number repeat — the chart already shows peak time) ----
   const reconciliation = !waitingForReadings && glucoseAnalysis.timeToPeakMin != null
-    ? `Estimated from your meal and history: the absorption curve ${isDualWaveMeal ? "rose in two waves — the glucose trace followed" : "peaked"} ${Math.abs(glucoseAnalysis.timeToPeakMin - absorptionPeakMin) <= 40 ? "closely" : glucoseAnalysis.timeToPeakMin < absorptionPeakMin ? "ahead of" : "behind"} the estimation.`
+    ? `Estimated from your meal and history: the absorption curve ${isDualWaveMeal ? "rose in two waves — the glucose trace followed" : "peaked"} ${Math.abs(glucoseAnalysis.timeToPeakMin - absorptionPeakMin) <= 40 ? "in line with" : glucoseAnalysis.timeToPeakMin < absorptionPeakMin ? "ahead of" : "behind"} the estimation.`
     : null;
 
   const mealName = d.meal?.food_name || d.meal?.name || "Meal";
