@@ -525,7 +525,7 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
             {rescueEntries.map((entry) => {
               const name = entry.food_name || entry.name || "Rescue carbs";
               return (
-                <div key={`rescue-${entry.id || name}`} className="flex items-center gap-2 py-1">
+                <div key={`rescue-${entry.id || name}`} className="flex min-h-[44px] items-center gap-2">
                   <span className="min-w-0 max-w-[160px] truncate text-[13px] font-medium" style={{ color: PALETTE.ink }}>
                     {name}
                   </span>
