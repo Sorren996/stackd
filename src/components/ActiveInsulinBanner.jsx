@@ -38,6 +38,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import DashboardCard from "@/components/dashboard/DashboardCard";
 import RightNowView from "@/components/rightnow/RightNowView";
 import ComfortZoneCard from "./ComfortZoneCard";
+import DailyBalanceSection from "./dailybalance/DailyBalanceSection";
 import CurrentGlucoseCard from "./graph/CurrentGlucoseCard";
 import { getSupportiveGlucoseMessage } from "@/lib/supportiveMessages";
 import { filterReadingsForStats, computeTimeInRangeFromReadings } from "@/lib/timeInRange";
@@ -1069,7 +1070,10 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
     return {
       inRange: fmt(inR * intervalMin),
       above: fmt(above * intervalMin),
-      below: fmt(below * intervalMin)
+      below: fmt(below * intervalMin),
+      inRangeMin: inR * intervalMin,
+      aboveMin: above * intervalMin,
+      belowMin: below * intervalMin
     };
   }, [safeGlucoseReadings, targetRange.low, targetRange.high, dexcomConnected]);
 
@@ -1129,19 +1133,13 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
         <SupportiveGlucoseMessage insight={supportiveGlucoseInsight} trend={trend} TrendIcon={TrendIcon} />
         }
 
-        <div className="section-label mt-6">Daily Balance</div>
-        <AnchorNumber
-          value={comfortZonePercentage != null ? Math.floor(comfortZonePercentage) : "-"}
-          unit="%"
-          gathering={isGathering}
-          caption={isGathering ? "Still gathering today" : null} />
-        
-        {dailyTimeBreakdown &&
-        <div className="mt-2 flex justify-between text-xs px-1" style={{ color: "#746959" }}>
-            <span>{dailyTimeBreakdown.inRange} in range so far</span>
-            <span>{dailyTimeBreakdown.above} above, {dailyTimeBreakdown.below} below</span>
-          </div>
-        }
+        <DailyBalanceSection
+          percentage={comfortZonePercentage}
+          breakdown={dailyTimeBreakdown}
+          isGathering={isGathering}
+          readings={safeGlucoseReadings}
+          targetLow={targetRange.low}
+          targetHigh={targetRange.high} />
       </DashboardCard>
 
       {/* 2. YOUR FLOW CARD */}
