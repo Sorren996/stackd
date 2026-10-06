@@ -482,6 +482,16 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
     }
   }
 
+  // Rescue carb entries logged within this meal's response window. Surfaced
+  // in the Meal Review so the user can compare treatment carbs alongside
+  // insulin. Never included in the meal's carb-coverage math.
+  const rescueCarbEntries = (Array.isArray(carbEntries) ? carbEntries : []).filter((entry) => {
+    if (entry.is_rescue_carb !== true && entry.classification !== "rescue_carbs" && !isRescueCarbEntry(entry, glucoseReadings, doses, insulinSettings.targetLow)) return false;
+    const eTime = getEntryTime(entry);
+    return Number.isFinite(eTime) && eTime >= mealTime && eTime <= mealTime + outcomeWindowMs;
+  });
+  const rescueCarbTotal = rescueCarbEntries.reduce((sum, entry) => sum + Number(entry.carbs || 0), 0);
+
   return {
     value,
     status,
@@ -533,13 +543,8 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
       hasCorrectiveInsulin,
       hasCorrectiveCarbs,
       mealStillUnderReview,
-      rescueCarbs: Math.round((Array.isArray(carbEntries) ? carbEntries : []).
-      filter((entry) => {
-        if (entry.is_rescue_carb !== true && entry.classification !== "rescue_carbs" && !isRescueCarbEntry(entry, glucoseReadings, doses, insulinSettings.targetLow)) return false;
-        const eTime = getEntryTime(entry);
-        return Number.isFinite(eTime) && eTime >= mealTime && eTime <= mealTime + outcomeWindowMs;
-      }).
-      reduce((sum, entry) => sum + Number(entry.carbs || 0), 0)),
+      rescueCarbs: Math.round(rescueCarbTotal),
+      rescueCarbEntries,
       windowStart,
       windowEnd,
       reviewWindowEnd: mealTime + outcomeWindowMs

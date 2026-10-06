@@ -163,6 +163,8 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
 
   // Bolus support for this meal (basal excluded upstream).
   const bolusSupport = Number.isFinite(d.loggedTotalUnits) ? d.loggedTotalUnits : null;
+  const rescueGrams = Number.isFinite(d.rescueCarbs) && d.rescueCarbs > 0 ? Math.round(d.rescueCarbs) : 0;
+  const rescueEntries = Array.isArray(d.rescueCarbEntries) ? d.rescueCarbEntries : [];
 
   // Glucose response
   const glucoseNow = Number.isFinite(d.latestGlucoseValue) ? d.latestGlucoseValue : d.windowEndGlucoseValue;
@@ -287,6 +289,12 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
               <span className="block text-[9px] uppercase tracking-wider" style={{ color: PALETTE.faint }}>Support</span>
               <span className="text-[22px] font-semibold tabular-nums leading-tight" style={{ color: PALETTE.ink }}>{bolusSupport % 1 === 0 ? bolusSupport : bolusSupport.toFixed(1)}u</span>
             </div>
+          }
+          {rescueGrams > 0 &&
+          <div>
+            <span className="block text-[9px] uppercase tracking-wider" style={{ color: PALETTE.red }}>Rescue</span>
+            <span className="text-[22px] font-semibold tabular-nums leading-tight" style={{ color: PALETTE.red }}>{rescueGrams}g</span>
+          </div>
           }
           <div className="ml-auto text-right">
             <span className="block text-[9px] uppercase tracking-wider leading-tight" style={{ color: PALETTE.faint }}>Remaining in window</span>
@@ -515,6 +523,23 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
                   </div>
                 </SwipeableRow>);
 
+            })}
+            {rescueEntries.map((entry) => {
+              const name = entry.food_name || entry.name || "Rescue carbs";
+              return (
+                <div key={`rescue-${entry.id || name}`} className="flex items-baseline gap-2 rounded-lg px-1 py-1">
+                  <span className="min-w-0 flex-1 break-words">
+                    <span className="text-[13px] font-medium" style={{ color: PALETTE.ink }}>{name}</span>
+                    <span className="ml-1.5 inline-block rounded-full px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-wider" style={{ background: "rgba(156,63,46,0.10)", color: PALETTE.red }}>Rescue</span>
+                  </span>
+                  <span className="overflow-hidden">
+                    <span className="dotted-leader block" />
+                  </span>
+                  <span className="shrink-0 text-[13px] font-semibold tabular-nums" style={{ color: PALETTE.red }}>
+                    {Math.round(entry.carbs)} g
+                  </span>
+                </div>
+              );
             })}
           </div>
 
