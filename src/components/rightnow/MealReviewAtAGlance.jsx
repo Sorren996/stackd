@@ -528,13 +528,15 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
             {rescueEntries.map((entry) => {
               const name = entry.food_name || entry.name || "Rescue carbs";
               return (
-                <div key={`rescue-${entry.id || name}`} className="flex items-baseline gap-2 rounded-lg px-1 py-1">
-                  <span className="min-w-0 flex-1 break-words">
-                    <span className="text-[13px] font-medium" style={{ color: PALETTE.ink }}>{name}</span>
-                    <span className="ml-2 inline-block rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider" style={{ background: "rgba(156,63,46,0.14)", color: PALETTE.red, border: "1px solid rgba(156,63,46,0.22)" }}>Rescue</span>
+                <div key={`rescue-${entry.id || name}`} className="flex items-center gap-2 py-1">
+                  <span className="min-w-0 flex-1 truncate text-[13px] font-medium" style={{ color: PALETTE.ink }}>
+                    {name}
                   </span>
-                  <span className="overflow-hidden">
-                    <span className="dotted-leader block" />
+                  <span
+                    className="shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider"
+                    style={{ background: "rgba(156,63,46,0.14)", color: PALETTE.red, border: "1px solid rgba(156,63,46,0.22)" }}
+                  >
+                    Rescue
                   </span>
                   <span className="shrink-0 text-[13px] font-semibold tabular-nums" style={{ color: PALETTE.red }}>
                     {Math.round(entry.carbs)} g

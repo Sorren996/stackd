@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
-import DashboardCard from "@/components/dashboard/DashboardCard";
 import { getDoseTimingInfo, isBasalInsulinType } from "@/lib/insulinPharmacology";
 import { formatGlucose, glucoseUnitLabel } from "@/lib/glucoseUnits";
 import { formatIOBValue, IOB_FLOOR } from "@/lib/iobModel";
@@ -144,7 +143,7 @@ export default function EstimatedSupportCard({ details }) {
   const rescueGrams = Number.isFinite(d.rescueCarbs) && d.rescueCarbs > 0 ? Math.round(d.rescueCarbs) : 0;
 
   return (
-    <DashboardCard className="p-4">
+    <>
       {/* 1. HERO */}
       <div className="section-label">Active Support</div>
       <div className="mt-3 flex items-baseline gap-2">
@@ -316,6 +315,6 @@ export default function EstimatedSupportCard({ details }) {
           I:C {ratioLabel}, ISF 1:{isfLabel}, target {targetLabel} {unitLabel}
         </span>
       </div>
-    </DashboardCard>
+    </>
   );
 }
