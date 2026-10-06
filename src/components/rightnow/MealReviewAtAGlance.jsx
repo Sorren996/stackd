@@ -21,6 +21,7 @@ const PALETTE = {
   faint: "#746959",
   green: "#4d5742",
   amber: "#8a5a12",
+  red: "#9c3f2e",
   hairline: "#eadccf"
 };
 
