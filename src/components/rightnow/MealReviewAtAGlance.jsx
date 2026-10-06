@@ -265,8 +265,8 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
           <>
             {/* 1. IDENTITY */}
             <div className="flex items-baseline justify-between gap-2">
-              <div className="min-w-0 flex items-baseline gap-2">
-                <span className="text-[15px] font-semibold truncate" style={{ color: PALETTE.ink }}>{mealName}</span>
+              <div className="min-w-0 flex-1 flex items-baseline gap-2">
+                <span className="min-w-0 truncate text-[15px] font-semibold" style={{ color: PALETTE.ink }}>{mealName}</span>
                 <span className="shrink-0 text-[8px] font-semibold uppercase tracking-wider" style={{ color: PALETTE.faint }}>
                   {slotLabel}
                 </span>
@@ -502,7 +502,7 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
                   itemLabel={name}>
                   
                   <div className="flex w-full items-baseline gap-2 text-left">
-                    <span className="min-w-0 flex-1">
+                    <span className="min-w-0 flex-1 break-words">
                       <span className="text-[13px] font-medium" style={{ color: PALETTE.ink }}>{name}</span>
                       {detail && <span className="text-[11px]" style={{ color: PALETTE.faint }}>, {detail}</span>}
                     </span>

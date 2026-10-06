@@ -27,7 +27,7 @@ export default function DayMealOutcomes({ meals, glucose, insulin, targetLow, ta
             style={{ background: "#fdf9f2", borderColor: "#eadccf" }}
           >
             <div className="flex items-baseline justify-between gap-2">
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold" style={{ color: "#3f3830" }}>{meal.name}</p>
                 <p className="text-[10px]" style={{ color: "#746959" }}>{getMealSlotLabel({ time: meal.time, carbs: meal.carbs, fatGrams: meal.fat_grams, proteinGrams: meal.protein_grams, foodName: meal.name })}</p>
               </div>

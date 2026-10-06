@@ -74,7 +74,7 @@ export default function CollapsibleMealCard({
             }}
           />
           <div className="min-w-0 flex-1">
-            <span className="truncate text-[15px] font-semibold" style={{ color: PALETTE.ink }}>
+            <span className="block truncate text-[15px] font-semibold" style={{ color: PALETTE.ink }}>
               {mealName}
             </span>
           </div>

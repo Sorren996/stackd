@@ -154,7 +154,7 @@ export default function Layout() {
       {/* The feed is the only scrollable, translated region. The fixed header
           and bottom nav sit outside it, so they never move during a pull. */}
       <main
-        className="relative mx-auto w-full max-w-6xl px-4 overflow-visible"
+        className="relative mx-auto w-full max-w-6xl px-4 overflow-x-hidden"
         style={{
           // Bottom clearance lifts the scroll viewport's bottom edge clear of
           // the floating pill nav (60px tall + 16px bottom inset + safe-area)
