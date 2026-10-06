@@ -56,7 +56,7 @@ function formatCountdownValue(ms) {
 
 
 export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glucoseTrend, onResolve, glucoseReadings, hideIdentity = false }) {
-  const [showEdit, setShowEdit] = useState(false);
+  const [editEntries, setEditEntries] = useState(null);
   const [showContext, setShowContext] = useState(false);
   const [openEntryId, setOpenEntryId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
@@ -504,7 +504,7 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
                   rowId={entry.id}
                   isOpen={openEntryId === entry.id}
                   onOpenChange={(o) => setOpenEntryId(o ? entry.id : null)}
-                  onEdit={() => setShowEdit(true)}
+                  onEdit={() => setEditEntries(carbEntries)}
                   onDelete={() => handleDeleteEntry(entry)}
                   editLabel="Edit"
                   deleteLabel="Remove"
@@ -525,21 +525,32 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
             {rescueEntries.map((entry) => {
               const name = entry.food_name || entry.name || "Rescue carbs";
               return (
-                <div key={`rescue-${entry.id || name}`} className="flex min-h-[44px] items-center gap-2">
-                  <span className="min-w-0 max-w-[160px] truncate text-[13px] font-medium" style={{ color: PALETTE.ink }}>
-                    {name}
-                  </span>
-                  <span
-                    className="shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider"
-                    style={{ background: "rgba(156,63,46,0.14)", color: PALETTE.red, border: "1px solid rgba(156,63,46,0.22)" }}
-                  >
-                    Rescue
-                  </span>
-                  <span className="flex-1" />
-                  <span className="shrink-0 text-[13px] font-semibold tabular-nums" style={{ color: PALETTE.red }}>
-                    {Math.round(entry.carbs)} g
-                  </span>
-                </div>
+                <SwipeableRow
+                  key={entry.id || `rescue-${name}`}
+                  rowId={entry.id}
+                  isOpen={openEntryId === entry.id}
+                  onOpenChange={(o) => setOpenEntryId(o ? entry.id : null)}
+                  onEdit={() => setEditEntries(rescueEntries)}
+                  onDelete={() => handleDeleteEntry(entry)}
+                  editLabel="Edit"
+                  deleteLabel="Remove"
+                  itemLabel={name}>
+
+                  <div className="flex w-full items-baseline gap-2 text-left">
+                    <span className="flex min-w-0 flex-1 items-baseline gap-1.5 break-words">
+                      <span className="text-[13px] font-medium" style={{ color: PALETTE.ink }}>{name}</span>
+                      <span
+                        className="shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider"
+                        style={{ background: "rgba(156,63,46,0.14)", color: PALETTE.red, border: "1px solid rgba(156,63,46,0.22)" }}
+                      >
+                        Rescue
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-[13px] font-semibold tabular-nums" style={{ color: PALETTE.red }}>
+                      {Math.round(entry.carbs)} g
+                    </span>
+                  </div>
+                </SwipeableRow>
               );
             })}
           </div>
@@ -558,8 +569,8 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
 
       </DashboardCard>
 
-      {showEdit &&
-      <MealEditOverlay entries={carbEntries} onClose={() => setShowEdit(false)} />
+      {editEntries &&
+      <MealEditOverlay entries={editEntries} onClose={() => setEditEntries(null)} />
       }
     </div>);
 
