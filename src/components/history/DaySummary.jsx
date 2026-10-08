@@ -81,13 +81,15 @@ export default function DaySummary({ metrics, daySummary, manualCount, hasCGM, t
     );
   }
 
-  // CGM day
-  const avg = daySummary?.glucose?.count
-    ? Math.round(daySummary.glucose.sum / daySummary.glucose.count)
-    : metrics.avg;
-  const tir = daySummary?.glucose?.count
-    ? Math.round((daySummary.glucose.inRange / daySummary.glucose.count) * 100)
-    : metrics.tir;
+  // CGM day — TIR and average come from the SAME raw readings the graph
+  // plots (via computeDayGlucoseMetrics → computeDayTirPercent), using the
+  // user's current target range. We deliberately do NOT use the pre-aggregated
+  // daySummary.glucose values here: those are stored DailySummary records that
+  // go stale when the target range changes or late readings arrive, which is
+  // what caused the journal day to show 100% while the graph showed
+  // out-of-range points and the Rhythms view showed a different value.
+  const avg = metrics.avg;
+  const tir = metrics.tir;
 
   return (
     <div className="space-y-3">

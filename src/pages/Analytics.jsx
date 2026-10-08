@@ -9,7 +9,7 @@ import SectionCard from "@/components/editorial/SectionCard";
 import LedgerRow from "@/components/editorial/LedgerRow";
 import { Activity, ChevronDown } from "lucide-react";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
-import { filterReadingsForStats } from "@/lib/timeInRange";
+import { filterReadingsForStats, computeDayTirPercent } from "@/lib/timeInRange";
 import DailyPatternChart from "@/components/analytics/DailyPatternChart";
 import RangeSelector from "@/components/analytics/RangeSelector";
 import { fetchAllGlucoseReadings } from "@/lib/fetchAllGlucose";
@@ -95,23 +95,21 @@ export default function Analytics() {
     const total = recent.length;
     const averageGlucose = recent.reduce((s, r) => s + r.value, 0) / total;
 
-    // Per-day breakdown for bar chart
+    // Per-day breakdown for bar chart — TIR via the shared function so it
+    // matches the journal day view exactly for the same day.
     const dayBuckets = {};
     recent.forEach((r) => {
       const dayKey = format(new Date(r.recorded_at), "yyyy-MM-dd");
       if (!dayBuckets[dayKey]) dayBuckets[dayKey] = [];
-      dayBuckets[dayKey].push(r.value);
+      dayBuckets[dayKey].push(r);
     });
     const days = Object.entries(dayBuckets)
-      .map(([date, values]) => {
-        const inRange = values.filter((v) => v >= low && v <= high).length;
-        return {
-          date,
-          dayLabel: DAY_LABELS[new Date(date + "T00:00:00").getDay()],
-          tir: Math.round((inRange / values.length) * 100),
-          count: values.length,
-        };
-      })
+      .map(([date, dayReadings]) => ({
+        date,
+        dayLabel: DAY_LABELS[new Date(date + "T00:00:00").getDay()],
+        tir: computeDayTirPercent(dayReadings, low, high),
+        count: dayReadings.length,
+      }))
       .sort((a, b) => a.date.localeCompare(b.date))
       .slice(-7);
 

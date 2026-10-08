@@ -1,4 +1,5 @@
 import { format } from "date-fns";
+import { computeDayTirPercent } from "./timeInRange";
 
 export function normalizeCarbEntry(entry) {
   const consumedAt = entry.consumed_at || entry.recorded_at || entry.created_date || entry.created_at;
@@ -97,7 +98,9 @@ export function computeDayGlucoseMetrics(glucose, targetLow, targetHigh) {
     if (r.value >= targetLow && r.value <= targetHigh) inRange++;
   }
   const avg = Math.round(sum / readings.length);
-  const tir = Math.round((inRange / readings.length) * 100);
+  // Single shared TIR function — identical to the Rhythms view and every
+  // other surface. Includes the 100%-guard for out-of-range days.
+  const tir = computeDayTirPercent(readings, targetLow, targetHigh);
 
   // Approximate time above/below range by summing the gap to the next
   // reading while the current reading is out of range (capped at 15 min

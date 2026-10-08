@@ -8,6 +8,8 @@ function dayAvg(day) {
   return day.glucose?.count ? Math.round(day.glucose.sum / day.glucose.count) : null;
 }
 function dayTir(day) {
+  // Prefer the precomputed guarded TIR (from raw readings) when present.
+  if (day?.tir != null) return day.tir;
   return day.glucose?.count ? Math.round((day.glucose.inRange / day.glucose.count) * 100) : null;
 }
 

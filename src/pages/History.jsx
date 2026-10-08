@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import EditLogSheet from "@/components/edit/EditLogSheet";
 import { cancelSplitPlansForMeal, cleanupSplitPlansForDose } from "@/lib/splitDoseUtils";
 import { groupDaysByMonth, monthStats } from "@/lib/historyAggregations";
+import { computeDayTirPercent } from "@/lib/timeInRange";
 import HistoryMonthView from "@/components/history/HistoryMonthView";
 import HistoryWeekList from "@/components/history/HistoryWeekList";
 import MonthHeatmap from "@/components/history/MonthHeatmap";
@@ -184,19 +185,23 @@ export default function History() {
     return map;
   }, [monthReadings]);
 
-  // Calendar fallback: when DailySummary has no glucose data for a day
-  // (reading_count = 0), fill in TIR from the raw readings fetched for the
-  // month so the heatmap never shows blank cells for months with real data.
-  const calendarDays = useMemo(() => {
+  // Recompute every day's glucose stats (TIR, count, sum) from the RAW
+  // readings fetched for the month, using the user's CURRENT target range.
+  // This is the same data the graph plots and the same function the Rhythms
+  // view uses, so a day's TIR is identical in the month list, the heatmap, the
+  // journal day recap, and the Rhythms view. We no longer trust the
+  // pre-aggregated DailySummary values (day.glucose) for display because they
+  // go stale when the target range changes or late readings arrive.
+  const enrichedDays = useMemo(() => {
     if (!readingsByDay || Object.keys(readingsByDay).length === 0) return monthDays;
     return monthDays.map((day) => {
-      if (day.glucose?.count > 0) return day;
       const readings = readingsByDay[day.date];
       if (!readings || !readings.length) return day;
       const count = readings.length;
       const inRange = readings.filter((r) => r.value >= targetLow && r.value <= targetHigh).length;
       const sum = readings.reduce((acc, r) => acc + r.value, 0);
-      return { ...day, glucose: { count, inRange, sum } };
+      const tir = computeDayTirPercent(readings, targetLow, targetHigh);
+      return { ...day, glucose: { count, inRange, sum }, tir };
     });
   }, [monthDays, readingsByDay, targetLow, targetHigh]);
 
@@ -440,7 +445,7 @@ export default function History() {
 
               {viewMode === "list" ?
             <HistoryWeekList
-              days={monthDays}
+              days={enrichedDays}
               readingsByDay={readingsByDay}
               targetLow={targetLow}
               targetHigh={targetHigh}
@@ -448,7 +453,7 @@ export default function History() {
 
 
             <SectionCard label={`${currentMonth.label} ${currentMonth.year}`}>
-                  <MonthHeatmap days={calendarDays} onSelectDay={handleSelectDay} />
+                  <MonthHeatmap days={enrichedDays} onSelectDay={handleSelectDay} />
                 </SectionCard>
             }
             </>

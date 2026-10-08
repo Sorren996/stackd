@@ -76,3 +76,35 @@ export function computeTimeInRangeFromReadings(readings, targetLow, targetHigh) 
   }
   return total > 0 ? (inRange / total) * 100 : null;
 }
+
+// ── Single source of truth for a single day's Time-in-Range percentage ──
+//
+// Every surface that shows one day's TIR (journal day recap, Rhythms daily
+// bars, month list, month heatmap) MUST go through this function so the
+// number is identical everywhere for the same day. It is a point-count over
+// the SAME raw readings the glucose graph plots, using the user's CURRENT
+// target range — never a pre-aggregated/stored DailySummary value, which can
+// go stale when the range changes or late readings arrive.
+//
+// Guard: a day that contains ANY out-of-range reading can never display as
+// 100%, even when rounding would otherwise push it there (e.g. 287/288).
+export function computeDayTirPercent(readings, targetLow, targetHigh) {
+  if (!Array.isArray(readings) || !readings.length) return null;
+  if (!Number.isFinite(targetLow) || !Number.isFinite(targetHigh) || targetHigh <= targetLow) return null;
+
+  let inRange = 0;
+  let total = 0;
+  let outOfRange = 0;
+  for (const r of readings) {
+    const v = Number(r?.value);
+    if (!Number.isFinite(v)) continue;
+    total++;
+    if (v >= targetLow && v <= targetHigh) inRange++;
+    else outOfRange++;
+  }
+  if (total === 0) return null;
+
+  const rounded = Math.round((inRange / total) * 100);
+  if (outOfRange > 0 && rounded >= 100) return 99;
+  return rounded;
+}

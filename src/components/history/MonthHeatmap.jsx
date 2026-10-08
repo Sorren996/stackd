@@ -3,6 +3,8 @@ import { format, parseISO, startOfWeek, addDays, isSameMonth } from "date-fns";
 const DOW = ["M", "T", "W", "T", "F", "S", "S"];
 
 function dayTir(day) {
+  // Prefer the precomputed guarded TIR (from raw readings) when present.
+  if (day?.tir != null) return day.tir;
   return day.glucose?.count ? Math.round((day.glucose.inRange / day.glucose.count) * 100) : null;
 }
 
