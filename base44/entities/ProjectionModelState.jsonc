@@ -1,0 +1,76 @@
+{
+  "name": "ProjectionModelState",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "Explicit user ID for service-role created state, so the owning user can read it."
+    },
+    "model_version": {
+      "type": "string",
+      "description": "Current model version backing this user's projection state."
+    },
+    "parameters": {
+      "type": "object",
+      "description": "Personalized model parameters. Empty for the Milestone 1 baseline; Milestone 2 fills these with learned values (momentum decay, carb conversion factor adjustment, etc.)."
+    },
+    "sample_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of evaluated predictions that have contributed to this state. Zero means baseline, no personalization yet."
+    },
+    "evaluation_summary": {
+      "type": "object",
+      "description": "Aggregate evaluation metrics (MAE at horizons, bias, coverage) filled in Milestone 2."
+    },
+    "last_updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the state was last updated."
+    },
+    "baseline_locked": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether the state is still at baseline (no personalization applied). True in Milestone 1."
+    }
+  },
+  "required": [
+    "model_version",
+    "sample_count"
+  ],
+  "rls": {
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.user_id": "{{user.id}}"
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.user_id": "{{user.id}}"
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.user_id": "{{user.id}}"
+        }
+      ]
+    }
+  }
+}

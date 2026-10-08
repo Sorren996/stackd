@@ -1,0 +1,125 @@
+{
+  "name": "GlucoseProjection",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "Explicit user ID for service-role created projections, so the owning user can read them."
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the projection was generated. This is the prediction timestamp \u2014 only information available at this time was used."
+    },
+    "model_version": {
+      "type": "string",
+      "description": "Version of the projection model that produced this prediction, for reproducibility and evaluation."
+    },
+    "anchor_time": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Time of the latest valid CGM reading the projection starts from."
+    },
+    "anchor_value": {
+      "type": "number",
+      "description": "Glucose value at the anchor reading (mg/dL)."
+    },
+    "horizon_minutes": {
+      "type": "number",
+      "description": "How far forward the projection extends in minutes."
+    },
+    "trajectory": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "default": [],
+      "description": "Time-indexed projected glucose values, each { time, min_offset, value, lower, upper }. Empty when the engine abstained."
+    },
+    "uncertainty_summary": {
+      "type": "object",
+      "description": "Calibrated uncertainty metadata: base_sigma, widening factors, band type."
+    },
+    "data_quality": {
+      "type": "object",
+      "description": "Data quality and confounder flags at generation time: stale_readings, gap_present, reading_count, active_meal_count, active_dose_count, calibrated, confounders."
+    },
+    "input_provenance": {
+      "type": "object",
+      "description": "Compact summary of inputs used (counts, time range, settings hash) for auditability \u2014 never full raw data."
+    },
+    "active_inputs": {
+      "type": "object",
+      "description": "Summary of active carbs and insulin at generation time: total_active_carb_grams, total_active_insulin_units, meal_count, dose_count."
+    },
+    "confidence": {
+      "type": "number",
+      "description": "Overall confidence in the projection, 0 to 1. Low confidence widens the uncertainty band."
+    },
+    "abstained": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the engine abstained from producing a trajectory due to insufficient evidence."
+    },
+    "abstain_reason": {
+      "type": "string",
+      "description": "Why the engine abstained, when abstained is true."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "evaluated",
+        "superseded"
+      ],
+      "default": "active",
+      "description": "Whether the prediction is still awaiting outcome data, has been evaluated against actuals, or superseded by a newer projection."
+    },
+    "evaluation": {
+      "type": "object",
+      "description": "Filled in Milestone 2 when actual outcomes are compared: errors at horizons, bias, coverage."
+    }
+  },
+  "required": [
+    "generated_at",
+    "model_version",
+    "anchor_time",
+    "anchor_value",
+    "status"
+  ],
+  "rls": {
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.user_id": "{{user.id}}"
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.user_id": "{{user.id}}"
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.user_id": "{{user.id}}"
+        }
+      ]
+    }
+  }
+}
