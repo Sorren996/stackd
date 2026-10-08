@@ -8,9 +8,12 @@ const PALETTE = {
   faint: "#746959",
   hairline: "#eadccf",
   canvas: "#f7f1e8",
-  inRange: "#4d5742",
-  above: "#8a5a12",
-  below: "#9c3f2e",
+  // Soft, muted earthy tones that match the BalanceSpectrum gradient —
+  // lighter than the WCAG text tokens so the bar reads as a calm summary,
+  // not a danger indicator.
+  inRange: "#8a9789",   // muted sage — matches the spectrum's right (steady) end
+  above: "#c69a78",     // warm clay  — matches the spectrum's left end
+  below: "#b87f6a",     // muted clay-red for time below range
 };
 
 function formatDate() {

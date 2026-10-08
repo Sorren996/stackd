@@ -10,7 +10,7 @@ import { useReducedMotion } from "framer-motion";
 // indicator; real glucose risk continues to use Stackd's existing warning
 // treatment elsewhere.
 
-const GRADIENT = "linear-gradient(90deg, #8a9789 0%, #b3a594 50%, #c69a78 100%)";
+const GRADIENT = "linear-gradient(90deg, #c69a78 0%, #b3a594 50%, #8a9789 100%)";
 
 export default function BalanceSpectrum({ percentage, markerSize = 18, trackHeight = 8 }) {
   const prefersReducedMotion = useReducedMotion();
