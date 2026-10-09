@@ -80,15 +80,26 @@ export function replayProjection(
   };
 }
 
-// Speed-class derivation (inlined from absorptionLearning to keep the engine
-// self-contained and testable without pulling in the base44 client).
-function deriveSpeedClass(entry) {
+// Continuous 0-1 blend factor: how much fat/protein-driven delayed absorption
+// is estimated. 0 = pure single-wave, 1 = full dual-wave. Medium levels get
+// a graduated blend instead of a hard cliff. Mirrors the backend shared copy.
+function deriveDualWaveBlend(entry) {
   const fat = Number(entry?.fat_grams ?? 0) || 0;
   const protein = Number(entry?.protein_grams ?? 0) || 0;
   const carbs = Number(entry?.carbs ?? 0) || 0;
+  const fatScore = Math.min(1, fat / 40);
+  const proteinWithCarbs = carbs > 0 ? Math.min(1, protein / 30) : 0;
+  const proteinOnly = carbs === 0 ? Math.min(1, protein / 45) : 0;
+  return Math.max(0, Math.min(1, Math.max(fatScore, proteinWithCarbs, proteinOnly)));
+}
+
+// Speed-class derivation (inlined from absorptionLearning to keep the engine
+// self-contained and testable without pulling in the base44 client).
+function deriveSpeedClass(entry) {
+  const blend = deriveDualWaveBlend(entry);
+  if (blend >= 0.5) return "high_fat";
   const gi = Number(entry?.glycemic_index ?? entry?.gi ?? 0) || 0;
   const profile = entry?.absorption_profile || "medium";
-  if (fat >= 40 || (protein >= 30 && carbs > 0) || (protein >= 75 && carbs === 0)) return "high_fat";
   if (profile === "fast" || gi >= 70) return "fast";
   return "mixed";
 }
@@ -136,17 +147,17 @@ function integrateGamma(toMin, peakMin, shapeExp, step = 2) {
   return area;
 }
 
-// Front-loaded dual-wave rate for high-fat/protein meals (pizza, pad thai
-// style). A sharp early wave carries most of the carbs — matching the
-// observed rapid rise — with a broad low prolonged tail for fat/protein-
-// delayed absorption over several hours. Weights and shapes chosen so
-// cumulative absorption reaches a large fraction by 60 min while still
-// extending across the full window. ESTIMATE derived from meal composition
-// and learned parameters — describes, never prescribes.
-function dualWaveRate(minOffset, peakMin) {
+// Front-loaded dual-wave rate for high-fat/protein meals. The `blend`
+// parameter (0-1) controls the intensity: 1.0 = full dual-wave, 0.5 =
+// partial blend with a single-wave gamma. ESTIMATE — describes, never
+// prescribes.
+function dualWaveRate(minOffset, peakMin, blend = 1.0) {
   const firstPeak = Math.max(20, Math.min(35, Math.round(peakMin * 0.625)));
   const secondPeak = Math.max(firstPeak + 100, Math.min(180, peakMin + 90));
-  return gammaRate(minOffset, firstPeak, 1.0) * 0.65 + gammaRate(minOffset, secondPeak, 2.0) * 0.35;
+  const fullDual = gammaRate(minOffset, firstPeak, 1.0) * 0.65 + gammaRate(minOffset, secondPeak, 2.0) * 0.35;
+  if (blend >= 1.0) return fullDual;
+  const single = gammaRate(minOffset, peakMin, ABSORPTION_SHAPE_EXP);
+  return single * (1 - blend) + fullDual * blend;
 }
 
 function getClassPeakMinutes(speedClass, speedFactor) {
@@ -172,6 +183,7 @@ export function carbAppearanceRateGPerMin(entry, atTime, mealModelParams) {
 
   const speedClass = deriveSpeedClass(entry);
   const dualWave = speedClass === "high_fat";
+  const blend = deriveDualWaveBlend(entry);
   // Apply learned speed factor for this meal's class (Milestone 3). The speed
   // factor adjusts the peak time and window duration — it shapes WHEN the
   // carbs are estimated to hit the bloodstream, never the total amount.
@@ -182,7 +194,7 @@ export function carbAppearanceRateGPerMin(entry, atTime, mealModelParams) {
   if (elapsedMin >= windowMin) return 0;
 
   const rateFn = dualWave
-    ? (t) => dualWaveRate(t, peakMin)
+    ? (t) => dualWaveRate(t, peakMin, blend)
     : (t) => gammaRate(t, peakMin, ABSORPTION_SHAPE_EXP);
 
   let totalArea = 0;
@@ -496,8 +508,9 @@ export function projectGlucose(snapshot, opts = {}) {
     const windowMin = getClassWindowMinutes(speedClass, speedFactor);
     const peakMin = getClassPeakMinutes(speedClass, speedFactor);
     const dualWave = speedClass === "high_fat";
+    const mealBlend = deriveDualWaveBlend(m);
     const rateFn = dualWave
-      ? (t) => dualWaveRate(t, peakMin)
+      ? (t) => dualWaveRate(t, peakMin, mealBlend)
       : (t) => gammaRate(t, peakMin, ABSORPTION_SHAPE_EXP);
     const step = 2;
     let totalArea = 0;

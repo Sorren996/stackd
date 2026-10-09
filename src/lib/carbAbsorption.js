@@ -335,13 +335,23 @@ const BASELINE_CLASS_PARAMS = {
   high_fat: { peakMin: 40, windowMin: 300, secPeakMin: 120 },
 };
 
-function deriveSpeedClass(entry) {
+// Continuous 0-1 blend factor: how much fat/protein-driven delayed absorption
+// is estimated. 0 = pure single-wave, 1 = full dual-wave. Mirrors the backend.
+export function deriveDualWaveBlend(entry) {
   const fat = Number(entry?.fat_grams ?? 0) || 0;
   const protein = Number(entry?.protein_grams ?? 0) || 0;
   const carbs = Number(entry?.carbs ?? 0) || 0;
+  const fatScore = Math.min(1, fat / 40);
+  const proteinWithCarbs = carbs > 0 ? Math.min(1, protein / 30) : 0;
+  const proteinOnly = carbs === 0 ? Math.min(1, protein / 45) : 0;
+  return Math.max(0, Math.min(1, Math.max(fatScore, proteinWithCarbs, proteinOnly)));
+}
+
+function deriveSpeedClass(entry) {
+  const blend = deriveDualWaveBlend(entry);
+  if (blend >= 0.5) return "high_fat";
   const gi = Number(entry?.glycemic_index ?? entry?.gi ?? 0) || 0;
   const profile = entry?.absorption_profile || "medium";
-  if (fat >= 40 || (protein >= 30 && carbs > 0) || (protein >= 75 && carbs === 0)) return "high_fat";
   if (profile === "fast" || gi >= 70) return "fast";
   return "mixed";
 }
@@ -377,19 +387,19 @@ export function getMealPeakMinutes(fatGrams, proteinGrams, windowMin) {
   return Math.max(30, Math.round(win * peakFraction));
 }
 
-// Front-loaded dual-wave rate for high-fat/protein meals (pizza, pad thai
-// style). A sharp early wave carries most of the carbs — matching the
-// observed rapid rise — with a broad low prolonged tail for fat/protein-
-// delayed absorption over several hours. Weights and shapes are chosen so
-// cumulative absorption reaches a large fraction by 60 min while still
-// extending across the full window. This is an ESTIMATE derived from meal
-// composition and learned parameters — never a measurement, never a dosing
-// recommendation. It describes, never prescribes.
-function dualWaveRate(minOffset, peakMin) {
+// Front-loaded dual-wave rate for high-fat/protein meals. The `blend`
+// parameter (0-1, from deriveDualWaveBlend) controls the intensity: 1.0 =
+// full dual-wave, 0.5 = partial blend with a single-wave gamma. This gives
+// medium-fat/protein meals a graduated transition. ESTIMATE — describes,
+// never prescribes.
+function dualWaveRate(minOffset, peakMin, blend = 1.0) {
   const firstPeak = Math.max(20, Math.min(35, Math.round(peakMin * 0.625)));
   const secondPeak = Math.max(firstPeak + 100, Math.min(180, peakMin + 90));
-  return gammaRate(minOffset, firstPeak, 1.0) * 0.65
+  const fullDual = gammaRate(minOffset, firstPeak, 1.0) * 0.65
        + gammaRate(minOffset, secondPeak, 2.0) * 0.35;
+  if (blend >= 1.0) return fullDual;
+  const single = gammaRate(minOffset, peakMin, ABSORPTION_SHAPE_EXP);
+  return single * (1 - blend) + fullDual * blend;
 }
 
 export function getAbsorptionModel(entry, opts = {}) {
@@ -424,6 +434,11 @@ export function getAbsorptionModel(entry, opts = {}) {
       (Number.isFinite(entry?.dual_wave) ? entry.dual_wave : false)
   );
 
+  // Graduated blend (0-1): how much dual-wave intensity to apply. Computed
+  // from fat/protein content so medium levels get a partial blend instead of
+  // a hard cliff. When opts.dualWave is explicitly false, blend is 0.
+  const blend = opts?.dualWave === false ? 0 : deriveDualWaveBlend(entry);
+
   return {
     carbs,
     fat,
@@ -432,6 +447,7 @@ export function getAbsorptionModel(entry, opts = {}) {
     peakMin,
     fpu: computeFPU(fat, protein),
     dualWave,
+    blend,
     speedClass,
   };
 }
@@ -471,7 +487,7 @@ export function getCarbAbsorptionAt(entry, targetTime = Date.now(), opts = {}) {
   // Use the SAME rate function as generateCarbCurve and the projection engine
   // so the display number, the curve, and the projection all agree.
   const rateFn = model.dualWave
-    ? (t) => dualWaveRate(t, model.peakMin)
+    ? (t) => dualWaveRate(t, model.peakMin, model.blend ?? 1.0)
     : (t) => gammaRate(t, model.peakMin, ABSORPTION_SHAPE_EXP);
 
   const totalArea = integrateRate(model.windowMin, rateFn);
@@ -514,7 +530,7 @@ export function generateCarbCurve(entry, opts = {}) {
 
   // Combined per-minute rate fn for this entry — single gamma, or dual-wave.
   const rateFn = model.dualWave
-    ? (t) => dualWaveRate(t, model.peakMin)
+    ? (t) => dualWaveRate(t, model.peakMin, model.blend ?? 1.0)
     : (t) => gammaRate(t, model.peakMin, ABSORPTION_SHAPE_EXP);
 
   const totalArea = integrateRate(model.windowMin, rateFn);

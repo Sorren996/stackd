@@ -9,7 +9,7 @@ import SwipeableRow from "@/components/SwipeableRow";
 import { base44 } from "@/api/base44Client";
 import { generateMealGlucoseResponse, analyzeGlucoseResponse } from "@/lib/mealGlucoseResponse";
 import MealEditOverlay from "@/components/insulin/MealEditOverlay";
-import { getCarbAbsorptionAt, getMealWindowMinutes, getMealPeakMinutes } from "@/lib/carbAbsorption";
+import { getCarbAbsorptionAt, getMealWindowMinutes, getMealPeakMinutes, deriveDualWaveBlend } from "@/lib/carbAbsorption";
 import { useMealModelResolution, entrySpeedFactorFromResolution, hasLearnedTimingFromResolution, learnedTimingCaptionFromResolution, deriveSpeedClass } from "@/hooks/useMealModelResolution";
 import { getDoseTimingInfo, isBasalInsulinType } from "@/lib/insulinPharmacology";
 import { formatIOBValue, IOB_FLOOR } from "@/lib/iobModel";
@@ -200,7 +200,7 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
   const firstWavePassed = absorptionPeakTime <= now;
   const peakMinAgo = firstWavePassed ? Math.round((now - absorptionPeakTime) / 60000) : null;
   const absorptionCaption = firstWavePassed
-    ? (absorptionPct >= 90 ? "Absorption nearly complete" : (isDualWaveMeal ? `First wave peaked ${peakMinAgo}m ago — a second wave may follow` : `Absorption peaked ${peakMinAgo}m ago`))
+    ? (absorptionPct >= 90 ? "Absorption nearly complete" : (isDualWaveMeal && glucoseAnalysis.secondRise ? `First wave peaked ${peakMinAgo}m ago — a second wave appeared` : isDualWaveMeal ? `First wave peaked ${peakMinAgo}m ago — watching for a second` : `Absorption peaked ${peakMinAgo}m ago`))
     : (absorptionPct < 5 ? "Just starting to absorb" : (isDualWaveMeal ? "Rising through the first wave" : "Rising toward peak"));
 
   // ---- Glucose now + trend ----
@@ -253,15 +253,23 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
   const rescueGrams = Number.isFinite(d.rescueCarbs) && d.rescueCarbs > 0 ? Math.round(d.rescueCarbs) : 0;
   const rescueEntries = Array.isArray(d.rescueCarbEntries) ? d.rescueCarbEntries : [];
 
+  // ---- Per-meal delayed-rise check (Issue 1: no global flag leak) ----
+  // Check the CURRENT meal's carbEntries, not the global monitoringStatus.
+  // The global monitoringStatus remains only for the caution card under the
+  // activity graph.
+  const mealHasDelayedRise = carbEntries.length > 0 && carbEntries.some((e) => deriveDualWaveBlend(e) >= 0.5);
+
   // ---- One insight line (qualitative only — never restates a number) ----
+  // All narrative derives from the meal-state machine (Issue 4) so
+  // contradictions are impossible.
   let insightLine = null;
   if (waitingForReadings) {
     insightLine = "Your glucose response isn't available yet — still watching.";
   } else if (glucoseAnalysis.secondRise) {
     insightLine = "A second gentle climb appeared after the first peak.";
-  } else if (monitoringStatus?.isActive) {
+  } else if (mealHasDelayedRise && glucoseAnalysis.phase === "rising") {
     insightLine = "High in fat and protein — glucose may climb later in the window.";
-  } else if (mealResponse.hasDelayedRise) {
+  } else if (mealHasDelayedRise && !glucoseAnalysis.validPeak) {
     insightLine = "Watching for a possible delayed wave.";
   } else {
     insightLine = "Steady through the window so far.";

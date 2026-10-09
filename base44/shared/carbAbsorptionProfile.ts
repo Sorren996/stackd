@@ -12,35 +12,49 @@ const MINUTE_MS = 60 * 1000;
 // thresholds — the same rule that drives extended monitoring.
 export type SpeedClass = "fast" | "mixed" | "high_fat";
 
-// Deterministic speed-class + dual-wave derivation for one carb entry.
-//   - high_fat: macros cross the delayed-rise threshold (fat>=40g, or
-//     protein>=30g with carbs, or protein>=75g alone). These meals absorb with
-//     a long, often double-wave profile.
-//   - fast: quick-sugar / high-GI / fast-absorption profile.
-//   - mixed: everything else (starchy, medium profile).
-// dual_wave flags fatty/protein-heavy meals (pizza, pad thai style): a quick
-// first wave + a delayed second wave peaking ~2h later with a long tail.
-export function getCarbSpeedClass(entry: any): SpeedClass {
+// Continuous 0-1 blend factor: how much fat/protein-driven delayed absorption
+// is estimated for this meal. 0 = pure single-wave (fast/mixed), 1 = full
+// dual-wave (high-fat/protein). Values in between produce a graduated blend
+// so medium-fat/medium-protein meals get partial dual-wave behavior instead
+// of jumping straight to "mixed" with no middle ground.
+//
+// Fat:       0g→0, 20g→0.5, 40g+→1.0
+// Protein w/ carbs: 0g→0, 20g→0.5, 30g+→1.0
+// Protein alone:     0g→0, 45g→1.0  (lowered from 75g to match the "high" UI level)
+export function getDualWaveBlend(entry: any): number {
   const fat = Number(entry?.fat_grams ?? entry?.fat ?? 0) || 0;
   const protein = Number(entry?.protein_grams ?? entry?.protein ?? 0) || 0;
   const carbs = Number(entry?.carbs ?? 0) || 0;
+
+  const fatScore = Math.min(1, fat / 40);
+  const proteinWithCarbs = carbs > 0 ? Math.min(1, protein / 30) : 0;
+  const proteinOnly = carbs === 0 ? Math.min(1, protein / 45) : 0;
+
+  return Math.max(0, Math.min(1, Math.max(fatScore, proteinWithCarbs, proteinOnly)));
+}
+
+// Deterministic speed-class + dual-wave derivation for one carb entry.
+//   - high_fat: dual-wave blend >= 0.5 (fat >= 20g+protein >= 20g, or
+//     fat >= 40g, or protein >= 30g with carbs, or protein >= 45g alone).
+//     These meals absorb with a graduated dual-wave profile.
+//   - fast: quick-sugar / high-GI / fast-absorption profile.
+//   - mixed: everything else (starchy, medium profile).
+// The blend factor (getDualWaveBlend) controls the intensity of the
+// dual-wave shape within the high_fat class.
+export function getCarbSpeedClass(entry: any): SpeedClass {
+  const blend = getDualWaveBlend(entry);
+  if (blend >= 0.5) return "high_fat";
+
   const gi = Number(entry?.glycemic_index ?? entry?.gi ?? 0) || 0;
   const profile = entry?.absorption_profile || "medium";
-
-  const highFat =
-    fat >= 40 || (protein >= 30 && carbs > 0) || (protein >= 75 && carbs === 0);
-  if (highFat) return "high_fat";
-
-  const fastish =
-    profile === "fast" || gi >= 70;
+  const fastish = profile === "fast" || gi >= 70;
   if (fastish) return "fast";
 
   return "mixed";
 }
 
 export function getCarbDualWave(entry: any): boolean {
-  const speed = getCarbSpeedClass(entry);
-  return speed === "high_fat";
+  return getDualWaveBlend(entry) >= 0.5;
 }
 
 // Baseline (unlearned) peak / window minutes for a speed class — used both when

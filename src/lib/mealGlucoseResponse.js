@@ -110,10 +110,82 @@ export function generateMealGlucoseResponse(carbEntries, mealTime, now = Date.no
   return { points, peakTime, peakValue, hasDelayedRise };
 }
 
+// ── Meal-state machine (Issue 4) ──────────────────────────────────────────
+// A peak is only declared when glucose has risen by a meaningful margin AND
+// then fallen by a meaningful margin, with enough readings to trust the
+// shape. This prevents false "peaked" declarations from 1-2 readings where
+// the max is just the first or second reading with no subsequent decline.
+//
+// States: not_started → rising → plateau → peaked_and_declining → clearing
+//
+// THRESHOLDS: These are engineering defaults, not clinically validated
+// boundaries. They describe what counts as a meaningful rise/fall for the
+// purpose of narrative copy — never a clinical determination.
+const PEAK_RISE_THRESHOLD_MGDL = 10;  // must rise >= 10 mg/dL above baseline
+const PEAK_FALL_THRESHOLD_MGDL = 5;   // must then fall >= 5 mg/dL from the max
+const MIN_READINGS_FOR_PEAK = 3;      // need 3+ readings spanning rise and fall
+
+export function analyzeMealPhase(readings, mealTime, baseline, now = Date.now()) {
+  const windowReadings = (Array.isArray(readings) ? readings : [])
+    .map((r) => ({ time: new Date(r.recorded_at).getTime(), value: Number(r.value) }))
+    .filter((r) => Number.isFinite(r.time) && Number.isFinite(r.value) && r.time >= mealTime && r.time <= now)
+    .sort((a, b) => a.time - b.time);
+
+  if (windowReadings.length === 0) return { phase: "not_started", validPeak: false, peak: null, peakIdx: -1 };
+
+  const base = Number.isFinite(baseline) ? baseline : windowReadings[0].value;
+
+  // Find the max reading.
+  let peakIdx = 0;
+  let peak = windowReadings[0];
+  for (let i = 0; i < windowReadings.length; i++) {
+    if (windowReadings[i].value > peak.value) { peak = windowReadings[i]; peakIdx = i; }
+  }
+
+  const peakRise = peak.value - base;
+
+  // Check for a meaningful decline after the peak.
+  let declineAfterPeak = 0;
+  if (peakIdx < windowReadings.length - 1) {
+    for (let i = peakIdx + 1; i < windowReadings.length; i++) {
+      const decline = peak.value - windowReadings[i].value;
+      if (decline > declineAfterPeak) declineAfterPeak = decline;
+    }
+  }
+
+  // A valid peak requires: meaningful rise, meaningful fall, and enough
+  // readings to trust the shape (readings spanning both rise and fall).
+  const hasRise = peakRise >= PEAK_RISE_THRESHOLD_MGDL;
+  const hasFall = declineAfterPeak >= PEAK_FALL_THRESHOLD_MGDL;
+  const hasEnoughReadings = windowReadings.length >= MIN_READINGS_FOR_PEAK;
+  const hasReadingsAfterPeak = peakIdx < windowReadings.length - 1;
+  const validPeak = hasRise && hasFall && hasEnoughReadings && hasReadingsAfterPeak;
+
+  // Determine the phase.
+  let phase;
+  if (windowReadings.length < 2) {
+    phase = "not_started";
+  } else if (validPeak) {
+    // Check if glucose has returned close to baseline (clearing) or is still
+    // declining (peaked_and_declining).
+    const lastValue = windowReadings[windowReadings.length - 1].value;
+    const backToBase = Math.abs(lastValue - base) < PEAK_FALL_THRESHOLD_MGDL;
+    phase = backToBase ? "clearing" : "peaked_and_declining";
+  } else if (hasRise && !hasFall) {
+    // Rising or plateauing but not yet declined.
+    phase = peakRise > PEAK_RISE_THRESHOLD_MGDL * 1.5 ? "plateau" : "rising";
+  } else {
+    phase = "rising";
+  }
+
+  return { phase, validPeak, peak, peakIdx, peakRise, declineAfterPeak };
+}
+
 /**
  * Analyze actual glucose readings within a meal window.
  * Returns time-to-peak, delta from baseline, time-in-range %, elevated
- * duration, time back to range, and second-rise detection.
+ * duration, time back to range, second-rise detection, and the meal phase
+ * from the state machine (Issue 4).
  */
 export function analyzeGlucoseResponse(readings, mealTime, targetLow, targetHigh, now = Date.now(), baselineGlucose = null) {
   const windowReadings = (Array.isArray(readings) ? readings : [])
@@ -129,6 +201,8 @@ export function analyzeGlucoseResponse(readings, mealTime, targetLow, targetHigh
       elevatedDurationMin: null,
       backInRangeMin: null,
       secondRise: false,
+      phase: "not_started",
+      validPeak: false,
     };
   }
 
@@ -136,14 +210,21 @@ export function analyzeGlucoseResponse(readings, mealTime, targetLow, targetHigh
   // pre-meal" stat always matches the RISE stat in the card header.
   const baseline = Number.isFinite(baselineGlucose) ? baselineGlucose : windowReadings[0].value;
 
-  let peak = windowReadings[0];
-  for (const r of windowReadings) {
-    if (r.value > peak.value) peak = r;
-  }
-  const timeToPeakMin = Math.round((peak.time - mealTime) / MINUTE_MS);
-  const deltaFromBaseline = Math.round(peak.value - baseline);
+  // ── Meal-state machine (Issue 4) ──
+  // A valid peak requires a meaningful rise AND fall with enough readings.
+  // Only report timeToPeakMin / deltaFromBaseline when the peak is valid.
+  const { phase, validPeak, peak, peakIdx } = analyzeMealPhase(readings, mealTime, baseline, now);
 
-  const totalDurationMin = (windowReadings[windowReadings.length - 1].time - mealTime) / MINUTE_MS;
+  const timeToPeakMin = validPeak ? Math.round((peak.time - mealTime) / MINUTE_MS) : null;
+  const deltaFromBaseline = validPeak ? Math.round(peak.value - baseline) : null;
+
+  // ── TIR (Issue 6 fix) ──
+  // Both numerator and denominator now cover the SAME span: from the first
+  // reading to the last reading (no gap between mealTime and first reading
+  // in the denominator). This ensures 100% in-range returns exactly 100%.
+  const coverageStart = windowReadings[0].time;
+  const coverageEnd = windowReadings[windowReadings.length - 1].time;
+  const totalDurationMin = (coverageEnd - coverageStart) / MINUTE_MS;
   let inRangeMin = 0;
   let aboveRangeMin = 0;
   let firstAboveTime = null;
@@ -178,9 +259,9 @@ export function analyzeGlucoseResponse(readings, mealTime, targetLow, targetHigh
 
   // Second-rise detection: after the first peak, did glucose fall then rise
   // again by >15 mg/dL? This catches delayed fat/protein-driven rises.
+  // Only check for second rise when a valid peak exists.
   let secondRise = false;
-  const peakIdx = windowReadings.indexOf(peak);
-  if (peakIdx < windowReadings.length - 2) {
+  if (validPeak && peakIdx < windowReadings.length - 2) {
     let trough = peak;
     for (let i = peakIdx + 1; i < windowReadings.length; i++) {
       if (windowReadings[i].value < trough.value) trough = windowReadings[i];
@@ -201,5 +282,7 @@ export function analyzeGlucoseResponse(readings, mealTime, targetLow, targetHigh
     elevatedDurationMin,
     backInRangeMin,
     secondRise,
+    phase,
+    validPeak,
   };
 }

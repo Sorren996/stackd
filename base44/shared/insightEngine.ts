@@ -25,6 +25,7 @@
 import {
   getCarbSpeedClass,
   getCarbDualWave,
+  getDualWaveBlend,
   BASELINE_CLASS_PARAMS,
   getClassPeakMinutes,
   getClassWindowMinutes,
@@ -234,14 +235,19 @@ function integrateGamma(toMin: number, peakMin: number, shapeExp: number, step =
 // Front-loaded dual-wave rate for high-fat/protein meals (pizza, pad thai
 // style). A sharp early wave carries most of the carbs — matching the
 // observed rapid rise — with a broad low prolonged tail for fat/protein-
-// delayed absorption over several hours. Weights and shapes chosen so
-// cumulative absorption reaches a large fraction by 60 min while still
-// extending across the full window. ESTIMATE derived from meal composition
-// and learned parameters — describes, never prescribes.
-function dualWaveRate(minOffset: number, peakMin: number): number {
+// delayed absorption over several hours. The `blend` parameter (0-1, from
+// getDualWaveBlend) controls the intensity: 1.0 = full dual-wave, 0.5 =
+// partial blend with a single-wave gamma. This gives medium-fat/protein
+// meals a graduated transition instead of a hard cliff. ESTIMATE derived
+// from meal composition and learned parameters — describes, never prescribes.
+function dualWaveRate(minOffset: number, peakMin: number, blend: number = 1.0): number {
   const firstPeak = Math.max(20, Math.min(35, Math.round(peakMin * 0.625)));
   const secondPeak = Math.max(firstPeak + 100, Math.min(180, peakMin + 90));
-  return gammaRate(minOffset, firstPeak, 1.0) * 0.65 + gammaRate(minOffset, secondPeak, 2.0) * 0.35;
+  const fullDual = gammaRate(minOffset, firstPeak, 1.0) * 0.65 + gammaRate(minOffset, secondPeak, 2.0) * 0.35;
+  if (blend >= 1.0) return fullDual;
+  // Blend with a single-wave gamma at the class peak for graduated transition.
+  const single = gammaRate(minOffset, peakMin, ABSORPTION_SHAPE_EXP);
+  return single * (1 - blend) + fullDual * blend;
 }
 
 // Carb appearance rate (g/min) for a meal at elapsed minutes since meal time.
@@ -255,6 +261,7 @@ export function carbAppearanceRateGPerMin(entry: any, atTime: number, mealModelP
 
   const speedClass = getCarbSpeedClass(entry);
   const dualWave = getCarbDualWave(entry);
+  const blend = getDualWaveBlend(entry);
   // Apply learned speed factor for this meal's class (Milestone 3). The speed
   // factor adjusts the peak time and window duration — it shapes WHEN the
   // carbs are estimated to hit the bloodstream, never the total amount.
@@ -267,7 +274,7 @@ export function carbAppearanceRateGPerMin(entry: any, atTime: number, mealModelP
   if (elapsedMin >= windowMin) return 0;
 
   const rateFn = dualWave
-    ? (t: number) => dualWaveRate(t, peakMin)
+    ? (t: number) => dualWaveRate(t, peakMin, blend)
     : (t: number) => gammaRate(t, peakMin, ABSORPTION_SHAPE_EXP);
 
   // Total area under the rate curve (integrates to 1.0 when normalized).
@@ -702,8 +709,9 @@ export function projectGlucose(
     const windowMin = getClassWindowMinutes(speedClass, speedFactor);
     const peakMin = getClassPeakMinutes(speedClass, speedFactor);
     const dualWave = getCarbDualWave(m);
+    const mealBlend = getDualWaveBlend(m);
     const rateFn = dualWave
-      ? (t: number) => dualWaveRate(t, peakMin)
+      ? (t: number) => dualWaveRate(t, peakMin, mealBlend)
       : (t: number) => gammaRate(t, peakMin, ABSORPTION_SHAPE_EXP);
     const step = 2;
     let totalArea = 0;
