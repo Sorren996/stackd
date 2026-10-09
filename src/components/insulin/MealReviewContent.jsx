@@ -2,6 +2,7 @@ import { useState } from "react";
 import { CheckCircle2, Clock, ChevronDown } from "lucide-react";
 import { getCarbAbsorptionAt } from "@/lib/carbAbsorption";
 import { getMealSlotLabel } from "@/lib/mealSlot";
+import { useMealModelResolution, entrySpeedFactorFromResolution, deriveSpeedClass } from "@/hooks/useMealModelResolution";
 import MealProjectionChart from "./MealProjectionChart";
 import MealEditOverlay from "./MealEditOverlay";
 import { formatGlucose, glucoseUnitLabel } from "@/lib/glucoseUnits";
@@ -41,6 +42,7 @@ function formatClock(time) {
  */
 export default function MealReviewContent({ mealInsight, monitoringStatus, glucoseTrend, onResolve }) {
   const [showEditItems, setShowEditItems] = useState(false);
+  const { resolution } = useMealModelResolution(Boolean(mealInsight));
 
   if (!mealInsight) return null;
 
@@ -84,9 +86,16 @@ export default function MealReviewContent({ mealInsight, monitoringStatus, gluco
   const targetHigh = d.targetHigh || 180;
   const reviewWindowEnd = d.reviewWindowEnd || (mealTime + 4 * 3600 * 1000);
 
-  // Compute absorption from carb entries
+  // Compute absorption from carb entries, using the authoritative model
+  // resolution for the primary entry's speed class (same persisted state
+  // the backend projection engine uses).
   const carbEntries = d.mealGroup?.carbEntries || (d.meal ? [d.meal] : []);
   const nowMs = Date.now();
+  const primaryEntry = carbEntries[0]
+    ? { ...carbEntries[0], speed_class: carbEntries[0].speed_class || deriveSpeedClass(carbEntries[0]) }
+    : null;
+  const primarySpeedFactor = primaryEntry ? entrySpeedFactorFromResolution(resolution, primaryEntry) : null;
+  const absorptionOpts = primarySpeedFactor != null ? { speedFactor: primarySpeedFactor } : {};
   let totalAbsorbed = 0;
   let totalRemaining = 0;
   carbEntries.forEach((entry) => {
@@ -97,7 +106,7 @@ export default function MealReviewContent({ mealInsight, monitoringStatus, gluco
     const entryForCalc = (!entry.absorption_profile || entry.is_custom)
       ? { ...entry, absorption_profile: entry.absorption_profile || "medium", is_custom: false }
       : entry;
-    const result = getCarbAbsorptionAt(entryForCalc, nowMs);
+    const result = getCarbAbsorptionAt(entryForCalc, nowMs, absorptionOpts);
     totalAbsorbed += result.absorbedGrams || 0;
     totalRemaining += result.remainingGrams || 0;
   });

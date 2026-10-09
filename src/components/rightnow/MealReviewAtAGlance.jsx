@@ -10,7 +10,7 @@ import { base44 } from "@/api/base44Client";
 import { generateMealGlucoseResponse, analyzeGlucoseResponse } from "@/lib/mealGlucoseResponse";
 import MealEditOverlay from "@/components/insulin/MealEditOverlay";
 import { getCarbAbsorptionAt, getMealWindowMinutes, getMealPeakMinutes } from "@/lib/carbAbsorption";
-import { useAbsorptionAdjustments, entrySpeedFactor, hasLearnedTiming, learnedTimingCaption, deriveSpeedClass } from "@/lib/absorptionLearning";
+import { useMealModelResolution, entrySpeedFactorFromResolution, hasLearnedTimingFromResolution, learnedTimingCaptionFromResolution, deriveSpeedClass } from "@/hooks/useMealModelResolution";
 import { getDoseTimingInfo, isBasalInsulinType } from "@/lib/insulinPharmacology";
 import { formatIOBValue, IOB_FLOOR } from "@/lib/iobModel";
 import { formatGlucose, formatGlucoseDelta, glucoseUnitLabel } from "@/lib/glucoseUnits";
@@ -94,7 +94,7 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
   const [deletingId, setDeletingId] = useState(null);
   const queryClient = useQueryClient();
   const now = Date.now();
-  const adjustmentsByClass = useAbsorptionAdjustments(Boolean(mealInsight));
+  const { resolution } = useMealModelResolution(Boolean(mealInsight));
 
   const d = mealInsight?.details;
   const mealTime = d?.meal?.time ?? now;
@@ -163,10 +163,10 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
 
   const primarySpeedFactor = (() => {
     const withClass = carbEntries[0] ? { ...carbEntries[0], speed_class: carbEntries[0].speed_class || deriveSpeedClass(carbEntries[0]) } : null;
-    return withClass ? entrySpeedFactor(adjustmentsByClass, withClass) : null;
+    return withClass ? entrySpeedFactorFromResolution(resolution, withClass) : null;
   })();
-  const learnedTiming = Boolean(carbEntries.length) && hasLearnedTiming(adjustmentsByClass, { speed_class: deriveSpeedClass(carbEntries[0]) });
-  const timingCaption = carbEntries.length ? learnedTimingCaption(adjustmentsByClass, carbEntries[0]) : null;
+  const learnedTiming = Boolean(carbEntries.length) && hasLearnedTimingFromResolution(resolution, { speed_class: deriveSpeedClass(carbEntries[0]) });
+  const timingCaption = carbEntries.length ? learnedTimingCaptionFromResolution(resolution, carbEntries[0]) : null;
   const absorptionOpts = primarySpeedFactor != null ? { speedFactor: primarySpeedFactor } : {};
 
   let totalAbsorbed = 0;
@@ -266,9 +266,23 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
     insightLine = "Steady through the window so far.";
   }
 
-  // ---- Reconciliation (no number repeat — the chart already shows peak time) ----
+  // ---- Reconciliation (narrative integrity: separate estimate from observation) ----
+  // Only mention "from your history" when personalization is active (learnedTiming).
+  // Only mention "two waves" when the model estimates a dual-wave curve (isDualWaveMeal).
+  // Describe the glucose observation separately — never claim the trace "followed"
+  // a two-wave pattern when only peak timing was compared.
   const reconciliation = !waitingForReadings && glucoseAnalysis.timeToPeakMin != null
-    ? `Estimated from your meal and history: the absorption curve ${isDualWaveMeal ? "rose in two waves — the glucose trace followed" : "peaked"} ${Math.abs(glucoseAnalysis.timeToPeakMin - absorptionPeakMin) <= 40 ? "in line with" : glucoseAnalysis.timeToPeakMin < absorptionPeakMin ? "ahead of" : "behind"} the estimation.`
+    ? (() => {
+        const source = learnedTiming ? "Estimated from your meal and history" : "Estimated from your meal";
+        const estimatePart = isDualWaveMeal ? "the absorption curve rose in two waves" : "the absorption curve peaked";
+        const timingDiff = glucoseAnalysis.timeToPeakMin - absorptionPeakMin;
+        const obsPart = Math.abs(timingDiff) <= 40
+          ? "Your glucose peaked in line with the estimation."
+          : timingDiff < 0
+            ? "Your glucose peaked ahead of the estimation."
+            : "Your glucose peaked behind the estimation.";
+        return `${source}: ${estimatePart}. ${obsPart}`;
+      })()
     : null;
 
   const mealName = d.meal?.food_name || d.meal?.name || "Meal";
