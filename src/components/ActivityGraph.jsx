@@ -1,4 +1,4 @@
-import { useMemo, useRef, useEffect, useState } from "react";
+import { useMemo, useRef, useEffect, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Area, XAxis, YAxis, Line, ComposedChart, ReferenceLine, ReferenceArea } from "recharts";
 import { generateActivityCurve, getDoseIOB, getDoseRelativeActivity, getInsulinProfile, isBasalInsulinType } from "@/lib/insulinPharmacology";
@@ -336,12 +336,16 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const { connected: dexcomConnected } = useDexcomConnection();
   const gTheme = getGraphTheme(useIsLightTheme());
 
-  // ── Stable `now` (Issue 7: eliminate dashboard jitter) ──
-  // Compute once per render so every calculation in this pass uses the same
-  // timestamp. Multiple Date.now() calls return slightly different values,
-  // causing the "now" line, IOB calculations, and domain edges to shift by
-  // a few pixels between renders — visible as jitter.
-  const stableNow = Date.now();
+  // ── Stable `now` (jitter fix: state + 60s timer) ──
+  // Updates only every 60s, not on every render. This prevents the NOW line,
+  // future zone, and IOB thresholds from shifting on every re-render — the
+  // primary jitter source: recharts received new x1/x props for
+  // ReferenceLine/ReferenceArea on every render, triggering chart re-layout.
+  const [stableNow, setStableNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setStableNow(Date.now()), 60000);
+    return () => clearInterval(id);
+  }, []);
 
   const openMarker = (type, item, rect) => {
     setConfirmDelete(false);
@@ -707,12 +711,12 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         units: getDoseUnits(dose),
         color: getInsulinProfile(dose.insulin_type)?.color || "#888",
         isBasal: isBasalInsulinType(dose.insulin_type),
-        isActive: getDoseIOB(dose, Date.now()) > IOB_FLOOR,
-        isSpent: getDoseIOB(dose, Date.now()) <= IOB_FLOOR,
+        isActive: getDoseIOB(dose, stableNow) > IOB_FLOOR,
+        isSpent: getDoseIOB(dose, stableNow) <= IOB_FLOOR,
         opacity
       };
     });
-  }, [filteredDoses]);
+  }, [filteredDoses, stableNow]);
 
   // Only insulin types whose curves have activity overlapping the visible
   // graph window — drives the legend so it reflects what's actually shown.
@@ -721,11 +725,10 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   // accurate to what's genuinely on board, including lingering long-lasting
   // insulins. Displayed as "Xu Type" next to each color dot.
   const activeDoseKeys = useMemo(() => {
-    const now = Date.now();
     const byType = new Map();
     allCurvesMeta.forEach(({ dose, curve }) => {
       if (!curve.length) return;
-      const iob = getDoseIOB(dose, now);
+      const iob = getDoseIOB(dose, stableNow);
       if (iob <= IOB_FLOOR) return;
       const label = String(dose.insulin_type || "Insulin").split(" ")[0];
       const color = getInsulinProfile(dose.insulin_type)?.color || "#888";
@@ -739,7 +742,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       }
     });
     return Array.from(byType.values());
-  }, [allCurvesMeta]);
+  }, [allCurvesMeta, stableNow]);
 
   const totalMs = domainEnd - domainStart;
   const visibleMs = viewWindow * 60 * 60 * 1000;
@@ -868,17 +871,17 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       pillTop = Math.max(pillTop, 0);
 
       placed.push({ x, pillTop });
-      const isActive = getDoseIOB(dose, Date.now()) > IOB_FLOOR;
-      const isSpent = getDoseIOB(dose, Date.now()) <= IOB_FLOOR;
+      const isActive = getDoseIOB(dose, stableNow) > IOB_FLOOR;
+      const isSpent = getDoseIOB(dose, stableNow) <= IOB_FLOOR;
       return { dose, x, units, key, color, pillTop, peakY, isActive, isSpent };
     }).
     filter(Boolean);
-  }, [filteredDoses, allCurvesMeta, maxBolusUnits, maxBasalUnits, maxVisibleUnits, domainStart, domainEnd, totalMs, chartWidth, dynamicInsulinMarginTop]);
+  }, [filteredDoses, allCurvesMeta, maxBolusUnits, maxBasalUnits, maxVisibleUnits, domainStart, domainEnd, totalMs, chartWidth, dynamicInsulinMarginTop, stableNow]);
 
-  const getGlucoseY = (value) => {
+  const getGlucoseY = useCallback((value) => {
     const clamped = Math.min(Math.max(value, effectiveMin), effectiveMax);
     return GLUCOSE_MARGIN_TOP + (effectiveMax - clamped) / (effectiveMax - effectiveMin) * plotHeight;
-  };
+  }, [effectiveMin, effectiveMax, plotHeight]);
 
   const getHighRangeOpacity = (value) => {
     const pctFromTop = (effectiveMax - Math.min(value, effectiveMax)) / (effectiveMax - effectiveMin);

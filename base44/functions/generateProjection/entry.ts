@@ -23,10 +23,31 @@ import { buildInputSnapshot } from "../../shared/projectionSnapshot.ts";
 export default async function (req) {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
+    let body: any = {};
+    try { body = await req.json(); } catch { /* workflow/scheduler may send empty body */ }
+
+    // Resolve the user: workflow calls pass user_id in the body (no user
+    // session); frontend calls authenticate via auth.me().
+    let userId: string;
+    if (body.user_id) {
+      userId = body.user_id;
+    } else {
+      const authenticatedUser = await base44.auth.me();
+      if (!authenticatedUser) return Response.json({ error: "Unauthorized" }, { status: 401 });
+      userId = authenticatedUser.id;
+    }
 
     const now = Date.now();
+
+    // Throttle: skip if a projection was generated in the last 25s for this
+    // user. Coalesces the frontend hook and the workflow trigger so they
+    // don't double-generate when both fire for the same reading.
+    const recent = await base44.asServiceRole.entities.GlucoseProjection.filter(
+      { user_id: userId }, "-generated_at", 1
+    );
+    if (recent.length > 0 && now - new Date(recent[0].generated_at).getTime() < 25 * 1000) {
+      return Response.json({ ok: true, skipped: true, reason: "recent_generation" });
+    }
 
     // Fetch ONLY the authenticated user's data. asServiceRole bypasses RLS, so
     // every fetch must filter by the user's ID explicitly — otherwise readings,
@@ -35,27 +56,27 @@ export default async function (req) {
     // or manual (created_by_id), so both are matched.
     const [readings, meals, doses, settingsList, stateRows, mealStateRows, evaluatedProjections] = await Promise.all([
       base44.asServiceRole.entities.GlucoseReading.filter(
-        { $or: [{ user_id: user.id }, { created_by_id: user.id }] },
+        { $or: [{ user_id: userId }, { created_by_id: userId }] },
         "-recorded_at", 200
       ),
       base44.asServiceRole.entities.CarbEntry.filter(
-        { created_by_id: user.id }, "-consumed_at", 100
+        { created_by_id: userId }, "-consumed_at", 100
       ),
       base44.asServiceRole.entities.InsulinDose.filter(
-        { created_by_id: user.id }, "-administered_at", 100
+        { created_by_id: userId }, "-administered_at", 100
       ),
       base44.asServiceRole.entities.UserSettings.filter(
-        { created_by_id: user.id }, "-created_date", 1
+        { created_by_id: userId }, "-created_date", 1
       ),
       base44.asServiceRole.entities.ProjectionModelState.filter(
-        { user_id: user.id }, "-created_date", 1
+        { user_id: userId }, "-created_date", 1
       ),
       base44.asServiceRole.entities.MealResponseModelState.filter(
-        { user_id: user.id }, "-created_date", 1
+        { user_id: userId }, "-created_date", 1
       ),
       // Fetch evaluated projections for uncertainty calibration (Milestone 4).
       base44.asServiceRole.entities.GlucoseProjection.filter(
-        { user_id: user.id, status: "evaluated" },
+        { user_id: userId, status: "evaluated" },
         "-generated_at", 100
       ),
     ]);
@@ -99,7 +120,7 @@ export default async function (req) {
 
     // Persist the prediction with full provenance.
     const projectionRecord = await base44.asServiceRole.entities.GlucoseProjection.create({
-      user_id: user.id,
+      user_id: userId,
       generated_at: new Date(now).toISOString(),
       model_version: result.modelVersion,
       meal_response_model_version: result.mealModelVersion,
@@ -131,7 +152,7 @@ export default async function (req) {
     // Ensure a ProjectionModelState record exists (baseline scaffolding).
     if (!modelState) {
       await base44.asServiceRole.entities.ProjectionModelState.create({
-        user_id: user.id,
+        user_id: userId,
         model_version: PROJECTION_MODEL_VERSION,
         parameters: {},
         sample_count: 0,
@@ -144,7 +165,7 @@ export default async function (req) {
     // Ensure a MealResponseModelState record exists (baseline scaffolding).
     if (!mealModelState) {
       await base44.asServiceRole.entities.MealResponseModelState.create({
-        user_id: user.id,
+        user_id: userId,
         model_version: MEAL_RESPONSE_MODEL_VERSION_BASELINE,
         speed_class_parameters: {},
         sample_counts_by_class: {},

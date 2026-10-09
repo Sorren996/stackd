@@ -1,0 +1,50 @@
+{
+  "name": "Re-anchor Projection on New Reading",
+  "description": "Triggers a background projection re-anchoring when a new glucose reading arrives, so the cone stays current even when no page is open. Coalesces bursts via a 30s wait and a 25s throttle check in the function.",
+  "trigger": {
+    "config": {
+      "trigger_type": "entity",
+      "entity_name": "GlucoseReading",
+      "events": [
+        "create"
+      ]
+    },
+    "condition": "${ .trigger.data.source != \"system\" }"
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "reanchor_projection_on_reading",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "coalesce_burst": {
+          "wait": "PT30S",
+          "then": "generate_projection",
+          "x-base44": {
+            "title": "Coalesce burst",
+            "description": "Wait 30s so a burst of readings fires one generation"
+          }
+        }
+      },
+      {
+        "generate_projection": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "generateProjection",
+            "args": {
+              "user_id": "${ .trigger.data.user_id // .trigger.data.created_by_id }"
+            }
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Generate projection",
+            "description": "Re-anchor to the latest reading"
+          }
+        }
+      }
+    ]
+  }
+}

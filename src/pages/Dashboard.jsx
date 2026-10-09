@@ -59,7 +59,7 @@ function replaceCachedItem(queryClient, queryKey, updatedItem) {
 
 export default function Dashboard() {
   const queryClient = useQueryClient();
-  const [, setTick] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
   const [showAllDoses, setShowAllDoses] = useState(false);
   const [editingLog, setEditingLog] = useState(null);
   const { connected: dexcomConnected, isLoading: dexcomLoading, connection: dexcomConnection } = useDexcomConnection();
@@ -68,7 +68,7 @@ export default function Dashboard() {
   const stackingAlertsEnabled = localStorage.getItem("stacking_alerts_enabled") !== "false";
 
   useEffect(() => {
-    const interval = setInterval(() => setTick((t) => t + 1), 60000);
+    const interval = setInterval(() => setNow(Date.now()), 60000);
     return () => clearInterval(interval);
   }, []);
 
@@ -305,37 +305,42 @@ export default function Dashboard() {
     else deleteCarb.mutate(log.item.id);
   };
 
-  const recentDoses = doses.filter((dose) => {
-    const age = Date.now() - new Date(dose.administered_at).getTime();
+  // ── Jitter fix: memoize all filtered arrays with a stabilized `now` ──
+  // Previously these were plain .filter() calls on every render, producing new
+  // array references each time. New references cascade into ActivityGraph's
+  // useMemo hooks (chartData, allCurvesMeta, etc.) causing recharts to
+  // re-render on every Dashboard tick even when the data hasn't changed.
+  const recentDoses = useMemo(() => doses.filter((dose) => {
+    const age = now - new Date(dose.administered_at).getTime();
     return age < TWO_DAYS_MS;
-  });
+  }), [doses, now]);
 
   const heroGlucoseReadings = mergedGraphReadings.length ? mergedGraphReadings : latestGlucoseRows;
 
-  const recentGlucose = heroGlucoseReadings.filter((reading) => {
-    const age = Date.now() - new Date(reading.recorded_at).getTime();
+  const recentGlucose = useMemo(() => heroGlucoseReadings.filter((reading) => {
+    const age = now - new Date(reading.recorded_at).getTime();
     return age < ONE_DAY_MS;
-  });
+  }), [heroGlucoseReadings, now]);
 
-  const recentCarbs = carbEntries.filter((entry) => {
-    const age = Date.now() - new Date(entry.consumed_at).getTime();
+  const recentCarbs = useMemo(() => carbEntries.filter((entry) => {
+    const age = now - new Date(entry.consumed_at).getTime();
     return age < ONE_DAY_MS;
-  });
+  }), [carbEntries, now]);
 
-  const graphGlucose = mergedGraphReadings.filter((reading) => {
-    const age = Date.now() - new Date(reading.recorded_at).getTime();
+  const graphGlucose = useMemo(() => mergedGraphReadings.filter((reading) => {
+    const age = now - new Date(reading.recorded_at).getTime();
     return age < FOURTEEN_DAYS_MS;
-  });
+  }), [mergedGraphReadings, now]);
 
-  const graphDoses = graphDosesSource.filter((dose) => {
-    const age = Date.now() - new Date(dose.administered_at).getTime();
+  const graphDoses = useMemo(() => graphDosesSource.filter((dose) => {
+    const age = now - new Date(dose.administered_at).getTime();
     return age < FOURTEEN_DAYS_MS;
-  });
+  }), [graphDosesSource, now]);
 
-  const graphCarbs = graphCarbsSource.filter((entry) => {
-    const age = Date.now() - new Date(entry.consumed_at).getTime();
+  const graphCarbs = useMemo(() => graphCarbsSource.filter((entry) => {
+    const age = now - new Date(entry.consumed_at).getTime();
     return age < FOURTEEN_DAYS_MS;
-  });
+  }), [graphCarbsSource, now]);
 
   const latestGlucose = latestGlucoseRows[0] || glucoseReadings[0] || null;
 

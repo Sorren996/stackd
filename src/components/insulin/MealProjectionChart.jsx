@@ -3,11 +3,15 @@ import { useMemo } from "react";
 /**
  * Meal projection chart — a compact SVG showing the glucose journey from
  * meal time through the review window. Solid ink curve to NOW, dashed
- * mustard projection past NOW, comfort zone sage fill, future zone
- * mustard rect, open-ring meal marker, NOW vertical line.
+ * mustard projection past NOW using the ACTUAL engine trajectory (no
+ * invented curve), comfort zone sage fill, future zone mustard rect,
+ * open-ring meal marker, NOW vertical line.
  *
- * Purely presentational — draws from scalar data points already computed
- * by the meal alignment logic. No new calculations.
+ * The dashed projection line comes exclusively from the real
+ * GlucoseProjection trajectory (the same engine pipeline the Dashboard
+ * uses). When no valid projection exists (abstained / insufficient data),
+ * an honest "No projection yet" label is shown instead of a fabricated
+ * curve.
  */
 export default function MealProjectionChart({
   mealTime,
@@ -19,6 +23,7 @@ export default function MealProjectionChart({
   targetLow,
   targetHigh,
   now = Date.now(),
+  projectionTrajectory = null,
 }) {
   const W = 300;
   const H = 90;
@@ -26,7 +31,7 @@ export default function MealProjectionChart({
   const padTop = 10;
   const padBottom = 20;
 
-  const { solidPath, dashedPath, points, nowX, mealX, comfortY, comfortH, futureRect } = useMemo(() => {
+  const { solidPath, dashedPath, upperPath, lowerPath, points, nowX, mealX, comfortY, comfortH, futureRect, hasProjection } = useMemo(() => {
     const domainStart = mealTime;
     const domainEnd = reviewWindowEnd || mealTime + 4 * 3600 * 1000;
     const domainMs = Math.max(1, domainEnd - domainStart);
@@ -39,7 +44,7 @@ export default function MealProjectionChart({
     const toX = (t) => padX + ((t - domainStart) / domainMs) * (W - padX * 2);
     const toY = (v) => padTop + ((yMax - Math.min(Math.max(v, yMin), yMax)) / yRange) * (H - padTop - padBottom);
 
-    // Build known glucose points
+    // Build known glucose points (solid line: meal → now)
     const pts = [];
     if (Number.isFinite(startingGlucose)) pts.push({ t: mealTime, v: startingGlucose });
     if (Number.isFinite(peakGlucose) && Number.isFinite(peakTime) && peakTime > mealTime && peakTime < domainEnd) {
@@ -59,17 +64,55 @@ export default function MealProjectionChart({
       solid = `M ${xy[0].x.toFixed(1)} ${xy[0].y.toFixed(1)}`;
     }
 
-    // Dashed projection: from last known point to window end
+    // Dashed projection: use the REAL engine trajectory when available.
+    // No invented curve — if the engine abstained or no projection exists,
+    // the dashed line is empty (honest empty state).
     let dashed = "";
-    if (xy.length >= 1) {
-      const last = xy[xy.length - 1];
-      const endX = toX(domainEnd);
-      const endY = toY(Number.isFinite(currentGlucose) ? currentGlucose : (startingGlucose || 120));
-      // Gentle curve toward target mid
-      const midTarget = (targetLow + targetHigh) / 2;
-      const midY = toY(midTarget);
-      const midX = (last.x + endX) / 2;
-      dashed = `M ${last.x.toFixed(1)} ${last.y.toFixed(1)} Q ${midX.toFixed(1)} ${midY.toFixed(1)} ${endX.toFixed(1)} ${endY.toFixed(1)}`;
+    let upper = "";
+    let lower = "";
+    let hasProj = false;
+
+    if (projectionTrajectory && Array.isArray(projectionTrajectory) && projectionTrajectory.length >= 2) {
+      const futurePoints = projectionTrajectory
+        .map((p) => ({
+          t: new Date(p.time).getTime(),
+          v: Number(p.value),
+          upper: Number(p.upper),
+          lower: Number(p.lower),
+        }))
+        .filter((p) => Number.isFinite(p.t) && Number.isFinite(p.v) && p.t >= domainStart && p.t <= domainEnd)
+        .sort((a, b) => a.t - b.t);
+
+      if (futurePoints.length >= 2) {
+        hasProj = true;
+        const projXY = futurePoints.map((p) => ({
+          x: toX(p.t),
+          y: toY(p.v),
+          yUpper: Number.isFinite(p.upper) ? toY(p.upper) : null,
+          yLower: Number.isFinite(p.lower) ? toY(p.lower) : null,
+        }));
+
+        // Connect to the last solid point for visual continuity
+        const lastSolid = xy[xy.length - 1];
+        const pathParts = [];
+        if (lastSolid) {
+          pathParts.push(`M ${lastSolid.x.toFixed(1)} ${lastSolid.y.toFixed(1)}`);
+        }
+        projXY.forEach((p) => {
+          pathParts.push(`L ${p.x.toFixed(1)} ${p.y.toFixed(1)}`);
+        });
+        dashed = pathParts.join(" ");
+
+        // Faint high/low lines (same palette as Dashboard ProjectionOverlay)
+        const upperPts = projXY.filter((p) => p.yUpper != null);
+        const lowerPts = projXY.filter((p) => p.yLower != null);
+        if (upperPts.length >= 2) {
+          upper = upperPts.map((p, i) => `${i ? "L" : "M"} ${p.x.toFixed(1)} ${p.yUpper.toFixed(1)}`).join(" ");
+        }
+        if (lowerPts.length >= 2) {
+          lower = lowerPts.map((p, i) => `${i ? "L" : "M"} ${p.x.toFixed(1)} ${p.yLower.toFixed(1)}`).join(" ");
+        }
+      }
     }
 
     const nowX = toX(Math.min(now, domainEnd));
@@ -78,8 +121,8 @@ export default function MealProjectionChart({
     const comfortH = Math.max(0, toY(targetLow) - toY(targetHigh));
     const futureRect = { x: nowX, y: padTop, w: W - padX - nowX, h: H - padTop - padBottom };
 
-    return { solidPath: solid, dashedPath: dashed, points: xy, nowX, mealX, comfortY, comfortH, futureRect };
-  }, [mealTime, reviewWindowEnd, startingGlucose, peakGlucose, peakTime, currentGlucose, targetLow, targetHigh, now]);
+    return { solidPath: solid, dashedPath: dashed, upperPath: upper, lowerPath: lower, points: xy, nowX, mealX, comfortY, comfortH, futureRect, hasProjection: hasProj };
+  }, [mealTime, reviewWindowEnd, startingGlucose, peakGlucose, peakTime, currentGlucose, targetLow, targetHigh, now, projectionTrajectory]);
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} preserveAspectRatio="none" style={{ display: "block" }}>
@@ -98,8 +141,14 @@ export default function MealProjectionChart({
       {/* Solid ink curve to NOW */}
       {solidPath && <path d={solidPath} fill="none" stroke="#3f3830" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />}
 
-      {/* Dashed mustard projection past NOW */}
-      {dashedPath && <path d={dashedPath} fill="none" stroke="#af751b" strokeWidth={1.5} strokeDasharray="2 6" strokeLinecap="round" />}
+      {/* Dashed mustard projection from real engine trajectory */}
+      {dashedPath && <path d={dashedPath} fill="none" stroke="#af751b" strokeWidth={1.5} strokeDasharray="5 4" strokeLinecap="round" opacity={0.5} />}
+
+      {/* Faint high line — muted amber */}
+      {upperPath && <path d={upperPath} fill="none" stroke="#8a5a12" strokeWidth={1} strokeDasharray="3 3" opacity={0.3} />}
+
+      {/* Faint low line — muted sage */}
+      {lowerPath && <path d={lowerPath} fill="none" stroke="#4d5742" strokeWidth={1} strokeDasharray="3 3" opacity={0.3} />}
 
       {/* NOW vertical line */}
       <line x1={nowX} y1={padTop} x2={nowX} y2={H - padBottom} stroke="#3f3830" strokeWidth={1.25} opacity={0.6} />
@@ -112,6 +161,13 @@ export default function MealProjectionChart({
       {points.map((p, i) => (
         <circle key={i} cx={p.x} cy={p.y} r={2.5} fill="#5b6550" opacity={i === 0 ? 0 : 0.8} />
       ))}
+
+      {/* Honest empty state — no engine projection available */}
+      {!hasProjection && (
+        <text x={W / 2} y={H / 2} textAnchor="middle" fill="#746959" fontSize={9} fontWeight={500}>
+          No projection yet
+        </text>
+      )}
     </svg>
   );
 }

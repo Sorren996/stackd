@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
 import { CheckCircle2, Clock, ChevronDown } from "lucide-react";
 import { getCarbAbsorptionAt } from "@/lib/carbAbsorption";
 import { getMealSlotLabel } from "@/lib/mealSlot";
@@ -43,6 +45,21 @@ function formatClock(time) {
 export default function MealReviewContent({ mealInsight, monitoringStatus, glucoseTrend, onResolve }) {
   const [showEditItems, setShowEditItems] = useState(false);
   const { resolution } = useMealModelResolution(Boolean(mealInsight));
+
+  // Fetch the latest engine projection for the real trajectory. No invented
+  // curve — the dashed line uses actual engine output or shows an honest
+  // empty state when the engine abstained.
+  const { data: projectionRows = [] } = useQuery({
+    queryKey: ["latest-projection"],
+    queryFn: () => base44.entities.GlucoseProjection.list("-generated_at", 1),
+    staleTime: 30 * 1000,
+    refetchInterval: 60 * 1000,
+  });
+  const projectionTrajectory = (() => {
+    const p = projectionRows[0];
+    if (!p || p.abstained || !Array.isArray(p.trajectory) || p.trajectory.length < 2) return null;
+    return p.trajectory;
+  })();
 
   if (!mealInsight) return null;
 
@@ -200,6 +217,7 @@ export default function MealReviewContent({ mealInsight, monitoringStatus, gluco
           currentGlucose={glucoseNow}
           targetLow={targetLow}
           targetHigh={targetHigh}
+          projectionTrajectory={projectionTrajectory}
         />
       </div>
 
