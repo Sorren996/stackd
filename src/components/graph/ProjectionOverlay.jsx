@@ -21,9 +21,12 @@
 // prediction. The dashed treatment and muted color ensure it never
 // looks like a confirmed reading.
 
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useEffect, useLayoutEffect, useRef } from "react";
+import { createPortal } from "react-dom";
+import { AnimatePresence, motion } from "framer-motion";
 
 const MINUTE_MS = 60 * 1000;
+const MARGIN = 8;
 
 function formatProjectionTime(time) {
   if (!Number.isFinite(time)) return "";
@@ -50,6 +53,8 @@ export default function ProjectionOverlay({
   getGlucoseY,
 }) {
   const [activePoint, setActivePoint] = useState(null);
+  const svgRef = useRef(null);
+  const [pos, setPos] = useState({ left: 0, top: 0, ready: false });
 
   const points = useMemo(() => {
     if (!projection || !projection.trajectory || projection.abstained) return [];
@@ -80,9 +85,65 @@ export default function ProjectionOverlay({
 
   const handlePointTap = useCallback((point) => {
     setActivePoint((prev) =>
-      prev && prev.x === point.x ? null : point
+      prev && prev.x === point.x && prev.minOffset === point.minOffset ? null : point
     );
   }, []);
+
+  // Tooltip dimensions and local (chart-relative) position.
+  const tooltipW = 78;
+  const tooltipH = 64;
+  const tooltipX = activePoint
+    ? Math.max(4, Math.min(chartWidth - tooltipW - 4, activePoint.x - tooltipW / 2))
+    : 0;
+  const tooltipY = activePoint
+    ? Math.max(4, activePoint.y - tooltipH - 10)
+    : 0;
+
+  // Convert chart-local coordinates to viewport coordinates via the SVG's
+  // bounding rect, then clamp within the viewport. Runs in useLayoutEffect
+  // so the tooltip never flashes at a stale position.
+  useLayoutEffect(() => {
+    if (!activePoint || !svgRef.current) {
+      setPos({ left: 0, top: 0, ready: false });
+      return;
+    }
+    const rect = svgRef.current.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    let left = rect.left + tooltipX;
+    let top = rect.top + tooltipY;
+    left = Math.max(MARGIN, Math.min(left, vw - tooltipW - MARGIN));
+    top = Math.max(MARGIN, Math.min(top, vh - tooltipH - MARGIN));
+    setPos({ left, top, ready: true });
+  }, [activePoint, tooltipX, tooltipY, tooltipW, tooltipH]);
+
+  // Dismiss the tooltip on outside tap, any scroll, Escape, or resize.
+  // Hit circles are marked with data-projection-hit so taps on them don't
+  // close the tooltip before the click handler can switch points.
+  useEffect(() => {
+    if (!activePoint) return;
+    const onDown = (e) => {
+      if (e.target?.closest?.("[data-projection-hit]")) return;
+      setActivePoint(null);
+    };
+    const onEsc = (e) => {
+      if (e.key === "Escape") setActivePoint(null);
+    };
+    const onScroll = () => setActivePoint(null);
+    const onResize = () => setActivePoint(null);
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("touchstart", onDown, { passive: true });
+    document.addEventListener("keydown", onEsc);
+    window.addEventListener("scroll", onScroll, true);
+    window.addEventListener("resize", onResize);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("touchstart", onDown);
+      document.removeEventListener("keydown", onEsc);
+      window.removeEventListener("scroll", onScroll, true);
+      window.removeEventListener("resize", onResize);
+    };
+  }, [activePoint]);
 
   if (points.length < 2) return null;
 
@@ -117,19 +178,10 @@ export default function ProjectionOverlay({
     bandPath = `M ${points[0].x.toFixed(1)} ${points[0].yLower.toFixed(1)} ${lower.slice(1)} L ${points[points.length - 1].x.toFixed(1)} ${points[points.length - 1].yUpper.toFixed(1)} ${upper.slice(1)} Z`;
   }
 
-  // Tooltip positioning — clamp within chart bounds.
-  const tooltipW = 78;
-  const tooltipH = 64;
-  const tooltipX = activePoint
-    ? Math.max(4, Math.min(chartWidth - tooltipW - 4, activePoint.x - tooltipW / 2))
-    : 0;
-  const tooltipY = activePoint
-    ? Math.max(4, activePoint.y - tooltipH - 10)
-    : 0;
-
   return (
     <>
       <svg
+        ref={svgRef}
         className="absolute top-0 left-0"
         style={{ width: chartWidth, height: glucoseChartHeight, overflow: "visible" }}
         aria-hidden="true"
@@ -199,10 +251,13 @@ export default function ProjectionOverlay({
             style={{ pointerEvents: "none" }}
           />
         )}
-        {/* Invisible hit circles at each trajectory point — tap to show value */}
+        {/* Invisible hit circles at each trajectory point — tap to show value.
+            data-projection-hit marks them so the dismiss handler can skip taps
+            that land on a point (the click handler toggles the point instead). */}
         {points.map((p, i) => (
           <circle
             key={`hit-${i}`}
+            data-projection-hit
             cx={p.x}
             cy={p.y}
             r={12}
@@ -213,57 +268,65 @@ export default function ProjectionOverlay({
         ))}
       </svg>
 
-      {/* Tooltip bubble — shows projected value and time offset */}
-      {activePoint && (
-        <div
-          className="absolute z-10 pointer-events-none"
-          style={{
-            left: tooltipX,
-            top: tooltipY,
-            width: tooltipW,
-          }}
-        >
-          <div
-            className="rounded-[8px] px-2 py-1.5 text-center"
+      {/* Tooltip bubble — portaled to document.body so it floats above all
+          graph layers (insulin row, legend, glucose ticker). Closes on
+          outside tap, scroll, Escape, or resize. */}
+      {activePoint && createPortal(
+        <AnimatePresence>
+          <motion.div
+            initial={{ opacity: 0, y: 6, scale: 0.96 }}
+            animate={{ opacity: pos.ready ? 1 : 0, y: pos.ready ? 0 : 6, scale: pos.ready ? 1 : 0.96 }}
+            transition={{ duration: 0.14 }}
+            className="fixed z-[300] pointer-events-none"
             style={{
-              background: "#fdf9f2",
-              border: "1px solid #eadccf",
-              boxShadow: "0 4px 14px rgba(63,56,48,0.12)",
+              left: pos.left,
+              top: pos.top,
+              width: tooltipW,
             }}
           >
             <div
-              className="text-[9px] font-medium leading-tight"
-              style={{ color: "#746959" }}
+              className="rounded-[8px] px-2 py-1.5 text-center"
+              style={{
+                background: "#fdf9f2",
+                border: "1px solid #eadccf",
+                boxShadow: "0 8px 28px rgba(63,56,48,0.16), 0 2px 8px rgba(63,56,48,0.08)",
+              }}
             >
-              {formatProjectionTime(activePoint.time)}
-            </div>
-            {/* Mean estimate */}
-            <div className="flex items-center justify-between gap-2 mt-0.5">
-              <span className="text-[9px] font-medium" style={{ color: "#746959" }}>Est.</span>
-              <span className="text-[14px] font-semibold tabular-nums leading-tight" style={{ color: "#8a5a12" }}>
-                {activePoint.value}
-              </span>
-            </div>
-            {/* Highest estimated value (upper bound) — same trajectory point */}
-            {activePoint.upper != null && (
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[9px] font-medium" style={{ color: "#746959" }}>High</span>
-                <span className="text-[11px] font-semibold tabular-nums leading-tight" style={{ color: "#8a5a12" }}>
-                  ~{activePoint.upper}
+              <div
+                className="text-[9px] font-medium leading-tight"
+                style={{ color: "#746959" }}
+              >
+                {formatProjectionTime(activePoint.time)}
+              </div>
+              {/* Mean estimate */}
+              <div className="flex items-center justify-between gap-2 mt-0.5">
+                <span className="text-[9px] font-medium" style={{ color: "#746959" }}>Est.</span>
+                <span className="text-[14px] font-semibold tabular-nums leading-tight" style={{ color: "#8a5a12" }}>
+                  {activePoint.value}
                 </span>
               </div>
-            )}
-            {/* Lowest estimated value (lower bound) — same trajectory point */}
-            {activePoint.lower != null && (
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[9px] font-medium" style={{ color: "#746959" }}>Low</span>
-                <span className="text-[11px] font-semibold tabular-nums leading-tight" style={{ color: "#4d5742" }}>
-                  ~{activePoint.lower}
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
+              {/* Highest estimated value (upper bound) — same trajectory point */}
+              {activePoint.upper != null && (
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[9px] font-medium" style={{ color: "#746959" }}>High</span>
+                  <span className="text-[11px] font-semibold tabular-nums leading-tight" style={{ color: "#8a5a12" }}>
+                    ~{activePoint.upper}
+                  </span>
+                </div>
+              )}
+              {/* Lowest estimated value (lower bound) — same trajectory point */}
+              {activePoint.lower != null && (
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[9px] font-medium" style={{ color: "#746959" }}>Low</span>
+                  <span className="text-[11px] font-semibold tabular-nums leading-tight" style={{ color: "#4d5742" }}>
+                    ~{activePoint.lower}
+                  </span>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        </AnimatePresence>,
+        document.body
       )}
     </>
   );
