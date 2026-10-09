@@ -456,6 +456,25 @@ export function normalizeInputs(
   };
 }
 
+// ── Horizon resolution (close-window rule) ──────────────────────────────────
+//
+// The forecast horizon adapts to what's driving glucose:
+//   - Active meals: 60 min (the near-term meal-response window). Existing
+//     behavior, unchanged.
+//   - No meals, active insulin: 30 min (close window — insulin still acts
+//     but no meal is driving a rise; the near-term is most informative).
+//   - No meals, no insulin: 20 min (very close — only momentum, which
+//     decays in ~20 min; beyond that the projection is flat with widening
+//     uncertainty).
+// When nothing is actively driving glucose, we don't pretend to forecast
+// far. The band still widens honestly; we just don't extend a flat line
+// with growing uncertainty.
+export function resolveHorizonMin(snapshot: NormalizedSnapshot): number {
+  if (snapshot.activeMeals.length > 0) return 60;
+  if (snapshot.activeDoses.length > 0) return 30;
+  return 20;
+}
+
 // ── Uncertainty ─────────────────────────────────────────────────────────────
 
 function computeSigmaAtOffset(
@@ -464,19 +483,41 @@ function computeSigmaAtOffset(
   netRate: number,
   uncertaintyCalibration?: UncertaintyCalibration | null
 ): number {
+  // The band starts at ZERO WIDTH at the anchor (the current reading) and
+  // widens with the horizon. We know the current value exactly; uncertainty
+  // grows as we project forward. This is honest uncertainty: confident at
+  // "now", less confident further out. The high/low lines connect to the
+  // glucose line at the anchor and expand outward.
+  if (minOffset <= 0) return 0;
+
+  // Data-quality penalties ramp in over the first few minutes — a stale
+  // reading or sensor gap doesn't make us uncertain about the value we just
+  // read, it makes us uncertain about the future.
+  const dqRamp = Math.min(1, minOffset / 5);
+
   // ── Empirically calibrated sigma (Milestone 4) ──
   // When enough evaluation data exists, use the empirical MAE-by-horizon as
   // the base sigma. This is a MEASURED error distribution, not an arbitrary
-  // constant. Binary data-quality penalties (stale, gap) are still added on
-  // top because they reflect conditions worse than the calibration average.
-  // The interval is NOT narrowed for personalization — the empirical sigma
-  // already reflects the actual error of whatever model was evaluated.
+  // constant. The band is anchored to zero width at the current reading and
+  // ramps to the empirical sigma at the first measured horizon, then follows
+  // the empirical interpolation. The interval is NOT narrowed for
+  // personalization — the empirical sigma already reflects the actual error
+  // of whatever model was evaluated.
   if (uncertaintyCalibration?.calibrated) {
     const empirical = getEmpiricalSigma(minOffset, uncertaintyCalibration);
     if (empirical != null) {
-      let sigma = empirical;
-      if (dq.staleReadings) sigma += 10;
-      if (dq.gapPresent) sigma += 8;
+      // Ramp from 0 at the anchor to the full empirical sigma at the first
+      // measured horizon. The MAE at offset 0 is 0 (we know the current
+      // value), so we scale the empirical sigma by sqrt(offset/firstHorizon).
+      const horizonKeys = Object.keys(uncertaintyCalibration.sigmaByHorizon)
+        .map(Number)
+        .sort((a, b) => a - b);
+      const firstHorizon = horizonKeys.length > 0 ? horizonKeys[0] : 15;
+      const anchorRamp = Math.min(1, Math.sqrt(minOffset / firstHorizon));
+      let sigma = empirical * anchorRamp;
+      // Binary data-quality penalties are still added on top (ramped from 0).
+      if (dq.staleReadings) sigma += 10 * dqRamp;
+      if (dq.gapPresent) sigma += 8 * dqRamp;
       return Math.min(MAX_SIGMA_MGDL, sigma);
     }
   }
@@ -484,21 +525,22 @@ function computeSigmaAtOffset(
   // ── Heuristic sigma (Milestone 1 fallback) ──
   // Used when no empirical calibration is available. Marked as "uncalibrated"
   // in the projection's uncertainty field so consumers know this is a
-  // heuristic estimate, not a measured error distribution.
-  let sigma = BASE_SIGMA_MGDL + SIGMA_PER_SQRT_MIN * Math.sqrt(Math.max(0, minOffset));
+  // heuristic estimate, not a measured error distribution. Starts at zero
+  // width at the anchor and widens with sqrt(offset) — no base sigma, because
+  // we know the current value exactly.
+  let sigma = SIGMA_PER_SQRT_MIN * Math.sqrt(minOffset);
 
-  // Widen for data quality issues.
-  if (dq.staleReadings) sigma += 10;
-  if (dq.gapPresent) sigma += 8;
-  if (!dq.calibrated) sigma += 6;
-  if (dq.confounders.includes("overlapping_meals")) sigma += 5;
-  if (dq.confounders.includes("multiple_active_doses")) sigma += 4;
+  // Widen for data quality issues (ramped from 0).
+  if (dq.staleReadings) sigma += 10 * dqRamp;
+  if (dq.gapPresent) sigma += 8 * dqRamp;
+  if (!dq.calibrated) sigma += 6 * dqRamp;
+  if (dq.confounders.includes("overlapping_meals")) sigma += 5 * dqRamp;
+  if (dq.confounders.includes("multiple_active_doses")) sigma += 4 * dqRamp;
 
-  // Asymmetric widening: a strongly rising net rate has more upside uncertainty;
-  // a strongly falling rate has more downside. This keeps the band honest
-  // about which direction is less certain.
+  // Asymmetric widening: a strongly rising net rate has more upside
+  // uncertainty; a strongly falling rate has more downside. Ramped from 0.
   const rateInfluence = Math.min(15, Math.abs(netRate) * 3);
-  sigma += rateInfluence;
+  sigma += rateInfluence * dqRamp;
 
   return Math.min(MAX_SIGMA_MGDL, sigma);
 }
@@ -544,7 +586,12 @@ export function projectGlucose(
     uncertaintyCalibration?: UncertaintyCalibration | null;
   } = {}
 ): ProjectionResult {
-  const horizonMin = Math.max(5, Math.min(180, Number(opts.horizonMin) || DEFAULT_HORIZON_MIN));
+  // Horizon: use the explicit override when provided (tests, replay), otherwise
+  // resolve from the snapshot via the close-window rule (meals → 60, insulin
+  // only → 30, momentum only → 20).
+  const horizonMin = Number(opts.horizonMin) > 0
+    ? Math.max(5, Math.min(180, Number(opts.horizonMin)))
+    : resolveHorizonMin(snapshot);
   const stepMin = Math.max(1, Number(opts.stepMin) || STEP_MIN);
   const generatedAt = snapshot.now;
 
@@ -751,7 +798,7 @@ export function projectGlucose(
     abstained: false,
     abstainReason: null,
     dataQuality: snapshot.dataQuality,
-    uncertaintySummary: { baseSigma: BASE_SIGMA_MGDL, sigmaPerSqrtMin: SIGMA_PER_SQRT_MIN, maxSigma: MAX_SIGMA_MGDL },
+    uncertaintySummary: { baseSigma: 0, sigmaPerSqrtMin: SIGMA_PER_SQRT_MIN, maxSigma: MAX_SIGMA_MGDL },
     inputProvenance: {
       readingCount: snapshot.dataQuality.readingCount,
       mealCount: snapshot.dataQuality.activeMealCount,

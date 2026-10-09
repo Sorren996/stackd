@@ -81,8 +81,10 @@ export default async function (req) {
 
     // Run the projection engine with the resolved model and calibrated uncertainty.
     const snapshot = normalizeInputs(readings, meals, doses, settings, now);
+    // Let the engine resolve the horizon via the close-window rule (meals →
+    // 60, insulin only → 30, momentum only → 20). Passing no horizonMin lets
+    // resolveHorizonMin(snapshot) decide based on what's driving glucose.
     const result = projectGlucose(snapshot, {
-      horizonMin: 60,
       modelResolution,
       uncertaintyCalibration,
     });

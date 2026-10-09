@@ -345,25 +345,60 @@ export function normalizeInputs(rawReadings, rawMeals, rawDoses, settings, now) 
   };
 }
 
+// ── Horizon resolution (close-window rule) ──────────────────────────────────
+//
+// The forecast horizon adapts to what's driving glucose:
+//   - Active meals: 60 min (the near-term meal-response window). Existing
+//     behavior, unchanged.
+//   - No meals, active insulin: 30 min (close window).
+//   - No meals, no insulin: 20 min (very close — momentum only, decays ~20 min).
+export function resolveHorizonMin(snapshot) {
+  if (snapshot.activeMeals.length > 0) return 60;
+  if (snapshot.activeDoses.length > 0) return 30;
+  return 20;
+}
+
 // ── Uncertainty ─────────────────────────────────────────────────────────────
 
 function computeSigmaAtOffset(minOffset, dq, netRate, uncertaintyCalibration) {
+  // The band starts at ZERO WIDTH at the anchor (the current reading) and
+  // widens with the horizon. We know the current value exactly; uncertainty
+  // grows as we project forward. The high/low lines connect to the glucose
+  // line at the anchor and expand outward.
+  if (minOffset <= 0) return 0;
+
+  // Data-quality penalties ramp in over the first few minutes.
+  const dqRamp = Math.min(1, minOffset / 5);
+
+  // ── Empirically calibrated sigma (Milestone 4) ──
   if (uncertaintyCalibration?.calibrated) {
     const empirical = getEmpiricalSigma(minOffset, uncertaintyCalibration);
     if (empirical != null) {
-      let sigma = empirical;
-      if (dq.staleReadings) sigma += 10;
-      if (dq.gapPresent) sigma += 8;
+      // Ramp from 0 at the anchor to the full empirical sigma at the first
+      // measured horizon. The MAE at offset 0 is 0 (we know the current
+      // value), so we scale by sqrt(offset/firstHorizon).
+      const horizonKeys = Object.keys(uncertaintyCalibration.sigmaByHorizon)
+        .map(Number)
+        .sort((a, b) => a - b);
+      const firstHorizon = horizonKeys.length > 0 ? horizonKeys[0] : 15;
+      const anchorRamp = Math.min(1, Math.sqrt(minOffset / firstHorizon));
+      let sigma = empirical * anchorRamp;
+      if (dq.staleReadings) sigma += 10 * dqRamp;
+      if (dq.gapPresent) sigma += 8 * dqRamp;
       return Math.min(MAX_SIGMA_MGDL, sigma);
     }
   }
-  let sigma = BASE_SIGMA_MGDL + SIGMA_PER_SQRT_MIN * Math.sqrt(Math.max(0, minOffset));
-  if (dq.staleReadings) sigma += 10;
-  if (dq.gapPresent) sigma += 8;
-  if (!dq.calibrated) sigma += 6;
-  if (dq.confounders.includes("overlapping_meals")) sigma += 5;
-  if (dq.confounders.includes("multiple_active_doses")) sigma += 4;
-  sigma += Math.min(15, Math.abs(netRate) * 3);
+
+  // ── Heuristic sigma (Milestone 1 fallback) ──
+  // Starts at zero width at the anchor and widens with sqrt(offset) — no base
+  // sigma, because we know the current value exactly.
+  let sigma = SIGMA_PER_SQRT_MIN * Math.sqrt(minOffset);
+  if (dq.staleReadings) sigma += 10 * dqRamp;
+  if (dq.gapPresent) sigma += 8 * dqRamp;
+  if (!dq.calibrated) sigma += 6 * dqRamp;
+  if (dq.confounders.includes("overlapping_meals")) sigma += 5 * dqRamp;
+  if (dq.confounders.includes("multiple_active_doses")) sigma += 4 * dqRamp;
+  sigma += Math.min(15, Math.abs(netRate) * 3) * dqRamp;
   return Math.min(MAX_SIGMA_MGDL, sigma);
 }
 
@@ -386,7 +421,9 @@ function computeConfidence(dq, hasActiveInputs, momentum, modelResolution, uncer
 // ── Projection ──────────────────────────────────────────────────────────────
 
 export function projectGlucose(snapshot, opts = {}) {
-  const horizonMin = Math.max(5, Math.min(180, Number(opts.horizonMin) || DEFAULT_HORIZON_MIN));
+  const horizonMin = Number(opts.horizonMin) > 0
+    ? Math.max(5, Math.min(180, Number(opts.horizonMin)))
+    : resolveHorizonMin(snapshot);
   const stepMin = Math.max(1, Number(opts.stepMin) || STEP_MIN);
   const generatedAt = snapshot.now;
 
@@ -544,7 +581,7 @@ export function projectGlucose(snapshot, opts = {}) {
     confidence: Math.round(confidence * 100) / 100,
     abstained: false, abstainReason: null,
     dataQuality: snapshot.dataQuality,
-    uncertaintySummary: { baseSigma: BASE_SIGMA_MGDL, sigmaPerSqrtMin: SIGMA_PER_SQRT_MIN, maxSigma: MAX_SIGMA_MGDL },
+    uncertaintySummary: { baseSigma: 0, sigmaPerSqrtMin: SIGMA_PER_SQRT_MIN, maxSigma: MAX_SIGMA_MGDL },
     inputProvenance: {
       readingCount: snapshot.dataQuality.readingCount,
       mealCount: snapshot.dataQuality.activeMealCount,
