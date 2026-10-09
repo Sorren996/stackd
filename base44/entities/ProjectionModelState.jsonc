@@ -25,6 +25,11 @@
       "default": 0,
       "description": "Number of evaluated predictions that have contributed to this state. Zero means baseline, no personalization yet."
     },
+    "last_processed_evaluation_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Milestone 5.1: the count of evaluated projections the last model-state update processed. Used for idempotency: if the current evaluated count has not increased since this value, the model-state update is skipped to prevent duplicate learning updates from concurrent or retried evaluation runs."
+    },
     "evaluation_summary": {
       "type": "object",
       "description": "Aggregate evaluation metrics from the most recent update cycle: mae, bias, coverage, byHorizon, byModelVersion."
@@ -33,6 +38,11 @@
       "type": "string",
       "format": "date-time",
       "description": "When the state was last updated by the evaluation pipeline."
+    },
+    "update_locked_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Milestone 5.1: mutex timestamp for concurrent model-state update protection. Set when a worker claims the state for processing; cleared when the update completes. A stale lock (older than the stale-claim timeout) is recoverable by another worker."
     },
     "baseline_locked": {
       "type": "boolean",

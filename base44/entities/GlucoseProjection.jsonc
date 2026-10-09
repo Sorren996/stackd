@@ -48,6 +48,10 @@
       "type": "object",
       "description": "Data quality and confounder flags at generation time: stale_readings, gap_present, reading_count, active_meal_count, active_dose_count, calibrated, confounders."
     },
+    "input_snapshot": {
+      "type": "object",
+      "description": "Milestone 5.1: immutable, user-scoped snapshot of the exact model inputs available at generation time. Contains compact copies of readings, meals, doses, and settings filtered by created_date <= generated_at (not event time). Used by shadow evaluation to replay alternative model configurations without future-data leakage. Legacy projections without this field are ineligible for trustworthy shadow comparison."
+    },
     "input_provenance": {
       "type": "object",
       "description": "Compact summary of inputs used (counts, time range, settings hash) for auditability \u2014 never full raw data."
@@ -70,7 +74,11 @@
     },
     "shadow_evaluation": {
       "type": "object",
-      "description": "Milestone 4: shadow evaluation results comparing alternative model configurations on the same eligible observations. Contains per-config metrics (baseline, general_personalized, meal_personalized, integrated) with mae, bias, coverage, valid_count. Only populated by the evaluation pipeline after the forecast window has elapsed. Does not modify the original trajectory."
+      "description": "Milestone 4: shadow evaluation results comparing alternative model configurations on the same eligible observations. Contains per-config metrics (baseline, general_personalized, meal_personalized, integrated) with mae, bias, coverage, valid_count. Only populated by the evaluation pipeline after the forecast window has elapsed. Does not modify the original trajectory. Milestone 5.1: shadow replay now uses the immutable input_snapshot, not current records."
+    },
+    "shadow_eligibility": {
+      "type": "object",
+      "description": "Milestone 5.1: whether this projection is eligible for trustworthy shadow comparison. Contains: eligible (boolean), reason (string). Legacy projections without a valid input_snapshot are marked ineligible with reason 'missing_snapshot' or 'invalid_snapshot'."
     },
     "confidence": {
       "type": "number",
@@ -89,16 +97,22 @@
       "type": "string",
       "enum": [
         "active",
+        "processing",
         "evaluated",
         "unscorable",
         "superseded"
       ],
       "default": "active",
-      "description": "Whether the prediction is still awaiting outcome data, has been evaluated against actuals, was unscorable (no observations available), or superseded by a newer projection."
+      "description": "Lifecycle state: active (awaiting evaluation), processing (claimed by a worker for evaluation), evaluated (scored against actuals), unscorable (no observations), superseded (replaced by a newer projection)."
+    },
+    "locked_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Milestone 5.1: when a worker atomically claimed this projection for evaluation (status transitioned to 'processing'). Cleared when evaluation completes. Used for stale-claim recovery: a projection stuck in 'processing' with an old locked_at is reset to 'active'."
     },
     "evaluation": {
       "type": "object",
-      "description": "Filled by the Milestone 2 evaluation pipeline when actual outcomes are compared: status (evaluated/unscorable), reason, horizons [{horizon_min, scored, predicted, actual, error, abs_error, in_interval, exclusion_reason}], mae, bias, coverage, valid_count, excluded_count, exclusions, evaluation_version, evaluated_at."
+      "description": "Filled by the evaluation pipeline when actual outcomes are compared: status (evaluated/unscorable), reason, horizons [{horizon_min, scored, predicted, actual, error, abs_error, in_interval, exclusion_reason}], mae, bias, coverage, valid_count, excluded_count, exclusions, evaluation_version, evaluated_at."
     }
   },
   "required": [

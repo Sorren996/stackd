@@ -1,30 +1,33 @@
-// Stackd Insight Engine — Real-World Validation Report (Milestone 5)
+// Stackd Insight Engine — Real-World Validation Report (Milestone 5.1)
 //
 // Produces a defensible, privacy-safe comparison of the four model
 // configurations (baseline, general-personalized, meal-personalized,
 // integrated) using the existing shadow-evaluation data stored on
 // evaluated GlucoseProjection records.
 //
-// Returns `insufficient_evidence` when the available real-world data
-// does not meet the minimum evidence policy. Does NOT fabricate results,
-// inflate sample counts, or declare one model superior without
-// uncertainty-aware comparison.
+// Milestone 5.1: The report now separately tracks:
+//   - Projections with valid immutable input snapshots (eligible for shadow)
+//   - Legacy projections excluded because snapshots are missing/invalid
+//   - Projections still awaiting a mature evaluation window
+//   - Successfully evaluated projections
+//   - Eligible and completed shadow comparisons
+//   - Failed or ineligible evaluations with reasons
+//   - Whether the shadow comparison is methodologically valid
+//
+// Does NOT fabricate results, inflate sample counts, or declare one model
+// superior without uncertainty-aware comparison. Preserves
+// `insufficient_evidence` until actual eligible evaluation data supports a
+// stronger conclusion. Clearly distinguishes synthetic test results from
+// real-world accuracy.
 //
 // SAFETY: Informational only. Never recommends or prescribes insulin.
 // All data is scoped to the authenticated user — no cross-user pooling.
 
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.52";
+import { isSnapshotValid } from "../../shared/projectionSnapshot.ts";
 
 // ── Minimum evidence policy ─────────────────────────────────────────────────
-// A model comparison is only reported when BOTH candidates have at least
-// this many valid evaluated observations on the same eligible projections.
-// Below this, the report returns `insufficient_evidence`.
 const MIN_COMPARISON_SAMPLES = 5;
-
-// A model is declared "better" than baseline only when its MAE is lower by
-// at least this margin (mg/dL) AND the sample count meets the minimum.
-// This is a conservative, uncertainty-aware threshold — it requires a
-// clear, non-noise improvement before declaring superiority.
 const MIN_IMPROVEMENT_MGDL = 1.0;
 
 const SHADOW_CONFIGS = ["baseline", "general_personalized", "meal_personalized", "integrated"] as const;
@@ -37,36 +40,101 @@ export default async function (req: Request): Promise<Response> {
 
     const sr = base44.asServiceRole;
 
-    // Fetch ALL evaluated projections for this user that have shadow evaluation data.
-    const evaluated = await sr.entities.GlucoseProjection.filter(
-      { user_id: user.id, status: "evaluated" },
+    // Fetch ALL projections for this user (all statuses) for full pipeline
+    // transparency.
+    const allProjections = await sr.entities.GlucoseProjection.filter(
+      { user_id: user.id },
       "-generated_at", 500
     );
 
-    // Filter to projections with shadow evaluation data.
-    const withShadow = evaluated.filter((p: any) =>
-      p.shadow_evaluation && typeof p.shadow_evaluation === "object"
-      && Object.keys(p.shadow_evaluation).length > 0
-    );
+    // ── Categorize projections by pipeline state ───────────────────────────
+    const now = Date.now();
+    const bufferMs = 10 * 60 * 1000; // EVAL_BUFFER_MIN
 
-    // Fetch exclusion statistics from all evaluated/unscorable projections.
-    const allProcessed = evaluated;
+    let awaitingMaturity = 0;
+    let evaluatedCount = 0;
+    let unscorableCount = 0;
+    let processingCount = 0;
+    let eligibleWithSnapshot = 0;
+    let legacyWithoutSnapshot = 0;
+    let shadowCompleted = 0;
+    let shadowIneligible = 0;
+
     const exclusionReasons: Record<string, number> = {};
-    for (const p of allProcessed) {
-      if (p.evaluation?.exclusions) {
-        for (const ex of p.evaluation.exclusions) {
-          if (ex?.reason) {
-            exclusionReasons[ex.reason] = (exclusionReasons[ex.reason] || 0) + 1;
+    const shadowIneligibilityReasons: Record<string, number> = {};
+
+    for (const p of allProjections) {
+      const status = p.status || "active";
+
+      if (status === "processing") {
+        processingCount++;
+        continue;
+      }
+
+      if (status === "active") {
+        // Check if it's awaiting maturity or just hasn't been picked up.
+        const generatedAt = new Date(p.generated_at).getTime();
+        const horizonMs = (Number(p.horizon_minutes) || 60) * 60 * 1000;
+        if (generatedAt + horizonMs + bufferMs > now) {
+          awaitingMaturity++;
+        }
+        continue;
+      }
+
+      if (status === "evaluated") {
+        evaluatedCount++;
+
+        // Check snapshot eligibility for shadow comparison.
+        const snapshotValid = isSnapshotValid(p.input_snapshot);
+        if (snapshotValid) {
+          eligibleWithSnapshot++;
+        } else {
+          legacyWithoutSnapshot++;
+          const reason = p.input_snapshot ? "invalid_snapshot" : "missing_snapshot";
+          shadowIneligibilityReasons[reason] = (shadowIneligibilityReasons[reason] || 0) + 1;
+        }
+
+        // Check shadow evaluation status.
+        const shadowEligibility = p.shadow_eligibility;
+        if (shadowEligibility && shadowEligibility.eligible === false) {
+          shadowIneligible++;
+          if (shadowEligibility.reason) {
+            shadowIneligibilityReasons[shadowEligibility.reason] =
+              (shadowIneligibilityReasons[shadowEligibility.reason] || 0) + 1;
+          }
+        } else if (p.shadow_evaluation && Object.keys(p.shadow_evaluation).length > 0) {
+          shadowCompleted++;
+        }
+
+        // Collect exclusion reasons from the evaluation.
+        if (p.evaluation?.exclusions) {
+          for (const ex of p.evaluation.exclusions) {
+            if (ex?.reason) {
+              exclusionReasons[ex.reason] = (exclusionReasons[ex.reason] || 0) + 1;
+            }
           }
         }
+        continue;
       }
-      if (p.evaluation?.status === "unscorable" && p.evaluation?.reason) {
-        exclusionReasons[p.evaluation.reason] = (exclusionReasons[p.evaluation.reason] || 0) + 1;
+
+      if (status === "unscorable") {
+        unscorableCount++;
+        if (p.evaluation?.reason) {
+          exclusionReasons[p.evaluation.reason] = (exclusionReasons[p.evaluation.reason] || 0) + 1;
+        }
+        if (p.evaluation?.exclusions) {
+          for (const ex of p.evaluation.exclusions) {
+            if (ex?.reason) {
+              exclusionReasons[ex.reason] = (exclusionReasons[ex.reason] || 0) + 1;
+            }
+          }
+        }
+        continue;
       }
     }
 
     // Date range
-    const dates = evaluated
+    const dates = allProjections
       .map((p: any) => new Date(p.generated_at).getTime())
       .filter((t: number) => Number.isFinite(t));
     const dateRange = dates.length > 0
@@ -75,22 +143,57 @@ export default async function (req: Request): Promise<Response> {
 
     // Model version distribution
     const modelVersions: Record<string, number> = {};
-    for (const p of evaluated) {
+    for (const p of allProjections) {
       const mv = p.model_version || "unknown";
       modelVersions[mv] = (modelVersions[mv] || 0) + 1;
     }
 
-    // If no shadow evaluations, return insufficient evidence.
+    // ── Shadow comparison metrics (only from eligible, completed shadows) ──
+    const withShadow = allProjections.filter((p: any) =>
+      p.status === "evaluated" &&
+      p.shadow_evaluation && typeof p.shadow_evaluation === "object" &&
+      Object.keys(p.shadow_evaluation).length > 0 &&
+      isSnapshotValid(p.input_snapshot)
+    );
+
+    // Determine if the shadow comparison is methodologically valid.
+    // It is valid only when ALL completed shadow comparisons used snapshots
+    // (no legacy projections mixed in). If any shadow was completed without
+    // a snapshot, the comparison is methodologically suspect.
+    const shadowCompletedTotal = allProjections.filter((p: any) =>
+      p.status === "evaluated" &&
+      p.shadow_evaluation && Object.keys(p.shadow_evaluation).length > 0
+    ).length;
+    const shadowMethodologicallyValid = shadowCompletedTotal > 0 &&
+      shadowCompletedTotal === withShadow.length;
+
+    // If no shadow evaluations, return insufficient evidence with full
+    // pipeline transparency.
     if (withShadow.length === 0) {
       return Response.json({
         status: "insufficient_evidence",
-        reason: "no_shadow_evaluations",
-        totalEvaluated: evaluated.length,
-        withShadow: 0,
+        reason: "no_eligible_shadow_evaluations",
+        totalProjections: allProjections.length,
+        pipeline: {
+          awaitingMaturity,
+          evaluated: evaluatedCount,
+          unscorable: unscorableCount,
+          processing: processingCount,
+        },
+        snapshotEligibility: {
+          eligibleWithSnapshot,
+          legacyWithoutSnapshot,
+        },
+        shadowComparison: {
+          completed: shadowCompleted,
+          ineligible: shadowIneligible,
+          methodologicallyValid: shadowCompletedTotal > 0 ? shadowMethodologicallyValid : null,
+          ineligibilityReasons: shadowIneligibilityReasons,
+        },
         exclusionReasons,
         dateRange,
         modelVersions,
-        message: "No shadow evaluations have been completed yet. The evaluation pipeline needs mature projections with elapsed forecast windows before comparisons can be made.",
+        message: "No eligible shadow evaluations have been completed yet. The evaluation pipeline needs mature projections with valid input snapshots before comparisons can be made.",
       });
     }
 
@@ -171,7 +274,6 @@ export default async function (req: Request): Promise<Response> {
       const coverageDelta = cm.coverage != null && bm.coverage != null
         ? Math.round((cm.coverage - bm.coverage) * 1000) / 1000 : null;
 
-      // Determine superiority using the minimum evidence policy.
       const enoughSamples = cm.validCount >= MIN_COMPARISON_SAMPLES && bm.validCount >= MIN_COMPARISON_SAMPLES;
       const betterByMargin = maeDelta < -MIN_IMPROVEMENT_MGDL;
 
@@ -196,8 +298,23 @@ export default async function (req: Request): Promise<Response> {
 
     return Response.json({
       status: hasEnoughData ? "evidence_available" : "insufficient_evidence",
-      totalEvaluated: evaluated.length,
-      withShadow: withShadow.length,
+      totalProjections: allProjections.length,
+      pipeline: {
+        awaitingMaturity,
+        evaluated: evaluatedCount,
+        unscorable: unscorableCount,
+        processing: processingCount,
+      },
+      snapshotEligibility: {
+        eligibleWithSnapshot,
+        legacyWithoutSnapshot,
+      },
+      shadowComparison: {
+        completed: shadowCompleted,
+        ineligible: shadowIneligible,
+        methodologicallyValid: shadowMethodologicallyValid,
+        ineligibilityReasons: shadowIneligibilityReasons,
+      },
       exclusionReasons,
       dateRange,
       modelVersions,
@@ -213,8 +330,8 @@ export default async function (req: Request): Promise<Response> {
         minImprovementMgdl: MIN_IMPROVEMENT_MGDL,
       },
       message: hasEnoughData
-        ? `${totalValid} valid shadow evaluations. Comparisons are based on same-input replay on identical observations.`
-        : `Only ${totalValid} valid shadow evaluations (need ${MIN_COMPARISON_SAMPLES}). Continue collecting eligible observations.`,
+        ? `${totalValid} valid shadow evaluations from snapshot-eligible projections. Comparisons use immutable input snapshots for temporally valid replay.`
+        : `Only ${totalValid} valid shadow evaluations (need ${MIN_COMPARISON_SAMPLES}). Continue collecting eligible observations with valid snapshots.`,
     });
   } catch (error: any) {
     console.error('[getValidationReport] fatal:', error.message);

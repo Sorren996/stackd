@@ -2,6 +2,7 @@ import { createClientFromRequest } from "npm:@base44/sdk@0.8.52";
 import { normalizeInputs, projectGlucose, PROJECTION_MODEL_VERSION, MEAL_RESPONSE_MODEL_VERSION_BASELINE } from "../../shared/insightEngine.ts";
 import { resolveModelComponents } from "../../shared/modelResolution.ts";
 import { calibrateUncertainty } from "../../shared/uncertaintyCalibration.ts";
+import { buildInputSnapshot } from "../../shared/projectionSnapshot.ts";
 
 // Stackd Insight Engine — Glucose Projection Generator (Milestone 4)
 //
@@ -86,6 +87,14 @@ export default async function (req) {
       uncertaintyCalibration,
     });
 
+    // ── Build immutable input snapshot (Milestone 5.1) ──────────────────────
+    // Persist the exact model inputs available at generation time, filtered by
+    // created_date <= now (database storage time, not event time). This snapshot
+    // is used by shadow evaluation to replay alternative model configurations
+    // without future-data leakage from meals, insulin, or readings logged after
+    // the projection was generated.
+    const inputSnapshot = buildInputSnapshot(readings, meals, doses, settings, modelResolution, now);
+
     // Persist the prediction with full provenance.
     const projectionRecord = await base44.asServiceRole.entities.GlucoseProjection.create({
       user_id: user.id,
@@ -104,6 +113,7 @@ export default async function (req) {
       })),
       uncertainty_summary: result.uncertaintySummary,
       data_quality: result.dataQuality,
+      input_snapshot: inputSnapshot,
       input_provenance: result.inputProvenance,
       active_inputs: result.activeInputs,
       // Milestone 4 provenance.

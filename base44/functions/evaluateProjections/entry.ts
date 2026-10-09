@@ -1,33 +1,26 @@
-// Stackd Insight Engine — Forecast Evaluation Pipeline (Milestone 2)
+// Stackd Insight Engine — Forecast Evaluation Pipeline (Milestone 5.1)
 //
 // Evaluates saved GlucoseProjection records against actual CGM observations
 // after their forecast windows have elapsed, then runs guarded adaptive
 // learning to update the user's ProjectionModelState when sufficient evidence
 // supports it.
 //
-// Scheduled by the "Evaluate Projections" workflow (every 15 minutes). Does
-// not block the dashboard or run on every CGM reading.
+// Milestone 5.1 changes:
+//   - Atomic claim: projections transition "active" → "processing" →
+//     "evaluated"/"unscorable" via updateMany, so concurrent workers cannot
+//     evaluate the same projection twice.
+//   - Stale-claim recovery: projections stuck in "processing" with an old
+//     locked_at are reset to "active" for retry.
+//   - Snapshot-based shadow replay: shadow evaluation uses the immutable
+//     input_snapshot persisted at generation time, not current records.
+//     Legacy projections without a valid snapshot are marked ineligible.
+//   - Model-state mutex: only one worker can update a user's model state at
+//     a time, and idempotency tracking prevents duplicate learning updates.
 //
-// Idempotency: projections transition from "active" → "evaluated" or
-// "unscorable" once scored. Re-runs skip already-scored projections because
-// the query filters for status "active" only. Evaluation is deterministic:
-// the same projection + readings always produce the same scores.
-//
-// No future-data leakage: only readings with recorded_at >= generated_at are
-// used. The original forecast and its inputs are never rewritten — only the
-// evaluation field and status are updated.
-//
-// User isolation: each projection is evaluated only against its owning user's
-// readings (filtered by created_by_id). Model state updates are per-user.
-//
-// SAFETY: Never recommends, prescribes, or calculates insulin doses. Only
-// adjusts a multiplicative rate factor that shapes future glucose projections.
+// SAFETY: Never recommends, prescribes, or calculates insulin doses.
 //
 // SCOPE: rateAdjustmentFactor is a single learned correction for systematic
-// prediction bias — not a model of the individual's glucose physiology. It
-// cannot distinguish absorption timing, magnitude, insulin action, or
-// activity/stress causes. It describes what the baseline tended to get wrong
-// on average; it never prescribes.
+// prediction bias — not a model of the individual's glucose physiology.
 
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.52";
 import {
@@ -43,7 +36,6 @@ import {
 import {
   BASELINE_MODEL_VERSION,
   PERSONALIZED_MODEL_VERSION,
-  replayProjection,
 } from "../../shared/insightEngine.ts";
 import {
   createBaselineResolution,
@@ -51,9 +43,20 @@ import {
   createMealOnlyResolution,
   resolveModelComponents,
 } from "../../shared/modelResolution.ts";
+import { isSnapshotValid, replayFromSnapshot } from "../../shared/projectionSnapshot.ts";
 
 const MINUTE_MS = 60 * 1000;
 const BATCH_LIMIT = 20;
+
+// A projection stuck in "processing" longer than this is considered crashed
+// and reset to "active" for retry. 5 minutes is generous for a single
+// evaluation (typically < 1 second) while being short enough to not delay
+// recovery significantly.
+const STALE_CLAIM_TIMEOUT_MS = 5 * MINUTE_MS;
+
+// Model-state mutex stale timeout. A model-state lock held longer than this
+// is considered crashed and can be reclaimed.
+const STALE_MODEL_LOCK_MS = 5 * MINUTE_MS;
 
 export default async function (req: Request): Promise<Response> {
   try {
@@ -63,17 +66,37 @@ export default async function (req: Request): Promise<Response> {
     const limit = Math.min(Number(body.limit) || BATCH_LIMIT, BATCH_LIMIT);
     const sr = base44.asServiceRole;
     const now = Date.now();
-
-    // Find active projections that are due for evaluation.
-    // A projection is due when: generated_at + horizon_minutes + buffer <= now.
     const bufferMs = EVAL_BUFFER_MIN * MINUTE_MS;
 
+    // ── Stale-claim recovery ────────────────────────────────────────────────
+    // Find projections stuck in "processing" and reset those with stale locks
+    // back to "active" so they can be retried. This handles crashed workers.
+    let staleRecovered = 0;
+    try {
+      const processingProjections = await sr.entities.GlucoseProjection.filter(
+        { status: "processing" }, "locked_at", 100
+      );
+      for (const p of processingProjections) {
+        const lockedAt = p.locked_at ? new Date(p.locked_at).getTime() : 0;
+        if (!Number.isFinite(lockedAt) || lockedAt < now - STALE_CLAIM_TIMEOUT_MS) {
+          // Atomically reset to "active" only if still "processing" (not
+          // already completed by another worker).
+          const resetResult = await sr.entities.GlucoseProjection.updateMany(
+            { _id: p.id, status: "processing" },
+            { $set: { status: "active", locked_at: null } }
+          );
+          if (resetResult.updated > 0) staleRecovered++;
+        }
+      }
+    } catch (err: any) {
+      console.error(`[evaluateProjections] stale recovery error: ${err.message}`);
+    }
+
+    // ── Find eligible projections ──────────────────────────────────────────
     const activeProjections = await sr.entities.GlucoseProjection.filter(
-      { status: "active" },
-      "-generated_at", limit
+      { status: "active" }, "-generated_at", limit
     );
 
-    // Filter to those whose forecast window has actually elapsed.
     const eligible = activeProjections.filter((p: any) => {
       const generatedAt = new Date(p.generated_at).getTime();
       if (!Number.isFinite(generatedAt)) return false;
@@ -83,24 +106,34 @@ export default async function (req: Request): Promise<Response> {
 
     let evaluated = 0;
     let unscorable = 0;
+    let claimFailed = 0;
     const userEvaluationMap: Map<string, any[]> = new Map();
 
     for (const projection of eligible) {
       const userId = projection.user_id || projection.created_by_id;
       if (!userId) continue;
 
+      // ── Atomic claim ──────────────────────────────────────────────────────
+      // Transition from "active" to "processing" atomically. If another
+      // worker already claimed it (or it's no longer active), updated === 0
+      // and we skip this projection.
+      const claimResult = await sr.entities.GlucoseProjection.updateMany(
+        { _id: projection.id, status: "active" },
+        { $set: { status: "processing", locked_at: new Date(now).toISOString() } }
+      );
+      if (claimResult.updated === 0) {
+        claimFailed++;
+        continue;
+      }
+
       try {
         // Fetch actual readings for this user from generation time to now.
-        // Only this user's readings — never another user's. Dexcom-synced
-        // readings have user_id (service-created), manual readings have
-        // created_by_id — both must be matched or evaluations silently fail
-        // for CGM-connected users.
+        // Match both user_id (Dexcom-synced) and created_by_id (manual).
         const readings = await sr.entities.GlucoseReading.filter(
           { recorded_at: { $gte: projection.generated_at }, $or: [{ user_id: userId }, { created_by_id: userId }] },
           "recorded_at", 2000
         );
 
-        // Normalize readings for evaluation.
         const normalizedReadings = readings
           .filter((r: any) => r && Number.isFinite(Number(r.value)))
           .map((r: any) => ({
@@ -126,9 +159,7 @@ export default async function (req: Request): Promise<Response> {
 
         const result = evaluateProjection(normalizedProjection, normalizedReadings, now);
 
-        // Persist the evaluation. Idempotent: status changes from "active" to
-        // "evaluated" or "unscorable", so re-runs skip already-scored projections.
-        // The original forecast (trajectory, inputs, provenance) is never rewritten.
+        // Persist the evaluation and clear the lock atomically.
         await sr.entities.GlucoseProjection.update(projection.id, {
           status: result.status,
           evaluation: {
@@ -144,6 +175,7 @@ export default async function (req: Request): Promise<Response> {
             evaluation_version: result.evaluation_version,
             evaluated_at: new Date(result.evaluated_at).toISOString(),
           },
+          locked_at: null,
         });
 
         if (result.status === "evaluated") {
@@ -157,18 +189,22 @@ export default async function (req: Request): Promise<Response> {
           unscorable++;
         }
       } catch (err: any) {
+        // On error, release the claim back to "active" for retry.
+        await sr.entities.GlucoseProjection.updateMany(
+          { _id: projection.id, status: "processing" },
+          { $set: { status: "active", locked_at: null } }
+        ).catch(() => {});
         console.error(`[evaluateProjections] error evaluating ${projection.id}: ${err.message}`);
       }
     }
 
-    // For each user with new evaluations, check for model state updates.
+    // ── Model state updates (with mutex) ───────────────────────────────────
     let stateUpdates = 0;
     let reverts = 0;
 
-    for (const [userId, newEvals] of userEvaluationMap) {
+    for (const [userId, _newEvals] of userEvaluationMap) {
       try {
-        // Fetch ALL evaluated projections for this user (not just this batch)
-        // so the aggregate metrics reflect the full evaluation history.
+        // Fetch ALL evaluated projections for this user.
         const allEvaluated = await sr.entities.GlucoseProjection.filter(
           { user_id: userId, status: "evaluated" },
           "-generated_at", 500
@@ -188,67 +224,119 @@ export default async function (req: Request): Promise<Response> {
         const state = stateRows[0];
         if (!state) continue;
 
-        // Check if we should revert to baseline (personalized model performing worse).
-        const validation = validatePersonalization(metrics);
-        if (validation.shouldRevert) {
-          const { updatedState, provenance } = revertToBaseline(state, metrics, validation);
-          if (provenance) {
-            await sr.entities.ProjectionModelState.update(state.id, {
-              model_version: updatedState.model_version,
-              parameters: updatedState.parameters,
-              sample_count: updatedState.sample_count,
-              baseline_locked: true,
-              evaluation_summary: updatedState.evaluation_summary,
-              last_updated_at: updatedState.last_updated_at,
-              update_history: updatedState.update_history,
-            });
-            reverts++;
-            continue;
-          }
+        // ── Idempotency check ───────────────────────────────────────────────
+        // If the evaluated count hasn't increased since the last update, skip.
+        const currentEvaluatedCount = allEvaluated.length;
+        const lastProcessedCount = Number(state.last_processed_evaluation_count) || 0;
+        if (currentEvaluatedCount <= lastProcessedCount) {
+          continue; // no new evaluations since last update
         }
 
-        // Check if we should update the model with a learned parameter.
-        const decision = shouldUpdateModel(state, metrics);
-        if (decision.shouldUpdate) {
-          const { updatedState, provenance } = applyGuardedUpdate(state, metrics, decision);
-          if (provenance) {
-            await sr.entities.ProjectionModelState.update(state.id, {
-              model_version: updatedState.model_version,
-              parameters: updatedState.parameters,
-              sample_count: updatedState.sample_count,
-              baseline_locked: false,
-              evaluation_summary: updatedState.evaluation_summary,
-              last_updated_at: updatedState.last_updated_at,
-              update_history: updatedState.update_history,
-            });
-            stateUpdates++;
+        // ── Model-state mutex ───────────────────────────────────────────────
+        // Claim the model state atomically. Only one worker can update it.
+        const lockAge = state.update_locked_at
+          ? now - new Date(state.update_locked_at).getTime()
+          : Infinity;
+        const lockIsStale = lockAge > STALE_MODEL_LOCK_MS;
+
+        // Build the claim filter: either unlocked, or stale lock with the
+        // same locked_at value (to avoid racing with a fresh claim).
+        const claimFilter = state.update_locked_at && !lockIsStale
+          ? null  // locked and not stale — skip
+          : state.update_locked_at && lockIsStale
+            ? { _id: state.id, update_locked_at: state.update_locked_at }
+            : { _id: state.id, update_locked_at: null };
+
+        if (!claimFilter) continue; // locked by another worker
+
+        const lockResult = await sr.entities.ProjectionModelState.updateMany(
+          claimFilter,
+          { $set: { update_locked_at: new Date(now).toISOString() } }
+        );
+        if (lockResult.updated === 0) continue; // another worker claimed it
+
+        try {
+          // Check if we should revert to baseline.
+          const validation = validatePersonalization(metrics);
+          if (validation.shouldRevert) {
+            const { updatedState, provenance } = revertToBaseline(state, metrics, validation);
+            if (provenance) {
+              await sr.entities.ProjectionModelState.update(state.id, {
+                model_version: updatedState.model_version,
+                parameters: updatedState.parameters,
+                sample_count: updatedState.sample_count,
+                baseline_locked: true,
+                evaluation_summary: updatedState.evaluation_summary,
+                last_updated_at: updatedState.last_updated_at,
+                update_history: updatedState.update_history,
+                update_locked_at: null,
+                last_processed_evaluation_count: currentEvaluatedCount,
+              });
+              reverts++;
+            } else {
+              // No update needed — release the lock.
+              await sr.entities.ProjectionModelState.update(state.id, {
+                update_locked_at: null,
+                last_processed_evaluation_count: currentEvaluatedCount,
+              });
+            }
+            continue;
           }
+
+          // Check if we should update the model with a learned parameter.
+          const decision = shouldUpdateModel(state, metrics);
+          if (decision.shouldUpdate) {
+            const { updatedState, provenance } = applyGuardedUpdate(state, metrics, decision);
+            if (provenance) {
+              await sr.entities.ProjectionModelState.update(state.id, {
+                model_version: updatedState.model_version,
+                parameters: updatedState.parameters,
+                sample_count: updatedState.sample_count,
+                baseline_locked: false,
+                evaluation_summary: updatedState.evaluation_summary,
+                last_updated_at: updatedState.last_updated_at,
+                update_history: updatedState.update_history,
+                update_locked_at: null,
+                last_processed_evaluation_count: currentEvaluatedCount,
+              });
+              stateUpdates++;
+            } else {
+              await sr.entities.ProjectionModelState.update(state.id, {
+                update_locked_at: null,
+                last_processed_evaluation_count: currentEvaluatedCount,
+              });
+            }
+          } else {
+            // No update needed — release the lock.
+            await sr.entities.ProjectionModelState.update(state.id, {
+              update_locked_at: null,
+              last_processed_evaluation_count: currentEvaluatedCount,
+            });
+          }
+        } catch (updateErr: any) {
+          // Release the lock on failure.
+          await sr.entities.ProjectionModelState.update(state.id, {
+            update_locked_at: null,
+          }).catch(() => {});
+          throw updateErr;
         }
       } catch (err: any) {
         console.error(`[evaluateProjections] error updating state for ${userId}: ${err.message}`);
       }
     }
 
-    // ── Shadow evaluation (Milestone 4) ──────────────────────────────────────
+    // ── Shadow evaluation (snapshot-based, Milestone 5.1) ──────────────────
     // For each user with newly evaluated projections, replay the projection
-    // with alternative model configurations (baseline, general-only,
-    // meal-only, integrated) on the SAME historical inputs and score each
-    // against the SAME actual readings. This enables fair baseline-vs-
-    // personalized comparison without changing the historical forecast record.
-    //
-    // LIMITATION: The total glucose forecast error CANNOT isolate the
-    // meal-response or general-bias component — the forecast includes carb +
-    // insulin + momentum contributions. A difference in MAE may reflect
-    // changes in the user's overall glucose management, not just the
-    // parameter change. Results are stored for analysis, not for automatic
-    // model selection.
+    // with alternative model configurations using the IMMUTABLE INPUT SNAPSHOT
+    // persisted at generation time. This eliminates future-data leakage from
+    // meals, insulin, or readings logged after the projection was generated.
     let shadowEvaluated = 0;
+    let shadowIneligible = 0;
+
     for (const [userId, _newEvals] of userEvaluationMap) {
       try {
-        // Fetch the user's historical data for replay (once per user).
-        const [userMeals, userDoses, userSettingsList, userProjState, userMealState, userEvaluatedProjs] = await Promise.all([
-          sr.entities.CarbEntry.filter({ created_by_id: userId }, "-consumed_at", 500),
-          sr.entities.InsulinDose.filter({ created_by_id: userId }, "-administered_at", 500),
+        // Fetch the user's model states for constructing alternative resolutions.
+        const [userSettingsList, userProjState, userMealState, userEvaluatedProjs] = await Promise.all([
           sr.entities.UserSettings.filter({ created_by_id: userId }, "-created_date", 1),
           sr.entities.ProjectionModelState.filter({ user_id: userId }, "-created_date", 1),
           sr.entities.MealResponseModelState.filter({ user_id: userId }, "-created_date", 1),
@@ -265,7 +353,7 @@ export default async function (req: Request): Promise<Response> {
         // Construct the 4 alternative model resolutions for shadow evaluation.
         const userResolution = resolveModelComponents(projState, mealState);
         const rateAdj = userResolution.general.eligible ? userResolution.general.effectiveValue : 1.0;
-        const mealParams = {};
+        const mealParams: Record<string, { speedFactor: number; magnitudeFactor: number }> = {};
         if (mealState?.speed_class_parameters) {
           for (const cls of ["fast", "mixed", "high_fat"]) {
             const cp = mealState.speed_class_parameters[cls];
@@ -284,9 +372,27 @@ export default async function (req: Request): Promise<Response> {
 
         for (const proj of userEvaluatedProjs) {
           try {
-            // Fetch actual readings for this projection (same as the original evaluation).
-            // Match both user_id (Dexcom-synced) and created_by_id (manual) so
-            // CGM-connected users have their readings found for shadow replay.
+            // ── Snapshot eligibility check ──────────────────────────────────
+            // Legacy projections without a valid input_snapshot are ineligible
+            // for trustworthy shadow comparison. They are marked but not
+            // silently reconstructed from current data.
+            const snapshot = proj.input_snapshot;
+            if (!isSnapshotValid(snapshot)) {
+              // Mark as ineligible (only if not already marked).
+              if (!proj.shadow_eligibility || !proj.shadow_eligibility.eligible === false) {
+                await sr.entities.GlucoseProjection.update(proj.id, {
+                  shadow_eligibility: {
+                    eligible: false,
+                    reason: snapshot ? "invalid_snapshot" : "missing_snapshot",
+                  },
+                });
+              }
+              shadowIneligible++;
+              continue;
+            }
+
+            // Fetch actual readings for scoring (outcomes only — these are
+            // readings that arrived AFTER generation, used for evaluation).
             const readings = await sr.entities.GlucoseReading.filter(
               { recorded_at: { $gte: proj.generated_at }, $or: [{ user_id: userId }, { created_by_id: userId }] },
               "recorded_at", 2000
@@ -301,17 +407,10 @@ export default async function (req: Request): Promise<Response> {
 
             const shadowResults: Record<string, any> = {};
             for (const config of shadowConfigs) {
-              const replayed = replayProjection(
-                {
-                  anchor_time: proj.anchor_time,
-                  anchor_value: proj.anchor_value,
-                  generated_at: proj.generated_at,
-                  horizon_minutes: Number(proj.horizon_minutes) || 60,
-                },
-                readings,
-                userMeals,
-                userDoses,
-                userSettings,
+              // Replay using the immutable snapshot — NOT current records.
+              const replayed = replayFromSnapshot(
+                snapshot,
+                Number(proj.horizon_minutes) || 60,
                 config.resolution
               );
 
@@ -337,9 +436,10 @@ export default async function (req: Request): Promise<Response> {
               };
             }
 
-            // Persist shadow evaluation results on the projection record.
+            // Persist shadow evaluation results and eligibility.
             await sr.entities.GlucoseProjection.update(proj.id, {
               shadow_evaluation: shadowResults,
+              shadow_eligibility: { eligible: true, reason: "valid_snapshot" },
             });
             shadowEvaluated++;
           } catch (err: any) {
@@ -351,16 +451,19 @@ export default async function (req: Request): Promise<Response> {
       }
     }
 
-    console.log(`[evaluateProjections] processed=${eligible.length} evaluated=${evaluated} unscorable=${unscorable} stateUpdates=${stateUpdates} reverts=${reverts} shadowEvaluated=${shadowEvaluated}`);
+    console.log(`[evaluateProjections] staleRecovered=${staleRecovered} processed=${eligible.length} evaluated=${evaluated} unscorable=${unscorable} claimFailed=${claimFailed} stateUpdates=${stateUpdates} reverts=${reverts} shadowEvaluated=${shadowEvaluated} shadowIneligible=${shadowIneligible}`);
 
     return Response.json({
       ok: true,
+      staleRecovered,
       processed: eligible.length,
       evaluated,
       unscorable,
+      claimFailed,
       stateUpdates,
       reverts,
       shadowEvaluated,
+      shadowIneligible,
     });
   } catch (error: any) {
     console.error('[evaluateProjections] fatal:', error.message);
