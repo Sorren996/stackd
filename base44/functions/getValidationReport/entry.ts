@@ -47,8 +47,58 @@ export default async function (req: Request): Promise<Response> {
       "-generated_at", 500
     );
 
-    // ── Categorize projections by pipeline state ───────────────────────────
     const now = Date.now();
+
+    // ── Meal-response model state and observation counts ──────────────────
+    // Separate from projection-level metrics: absorption-estimation and
+    // glucose-projection are different targets with different evaluation
+    // criteria. Never combine their accuracy.
+    const [mealStateRows, mealAnalyses] = await Promise.all([
+      sr.entities.MealResponseModelState.filter({ user_id: user.id }, "-created_date", 1),
+      sr.entities.MealResponseAnalysis.filter(
+        { $or: [{ user_id: user.id }, { created_by_id: user.id }] },
+        "-created_date", 500
+      ),
+    ]);
+    const mealState = mealStateRows?.[0] || null;
+
+    const eligibleMealObservations = (mealAnalyses || []).filter((a: any) =>
+      a?.analysis_status === "complete" &&
+      a?.peak_time != null &&
+      a?.starting_glucose != null &&
+      Number(a?.maximum_glucose_rise) > 0
+    );
+    const mealsWithSufficientFollowup = eligibleMealObservations.filter((a: any) =>
+      a?.analysis_window_end != null &&
+      new Date(a.analysis_window_end).getTime() <= now
+    );
+
+    const mealClasses: Record<string, any> = {};
+    for (const cls of ["fast", "mixed", "high_fat"]) {
+      const cp = mealState?.speed_class_parameters?.[cls];
+      mealClasses[cls] = {
+        eligible: !mealState?.baseline_locked && cp != null &&
+          Number.isFinite(Number(cp.speed_factor)) &&
+          Math.abs(Number(cp.speed_factor) - 1.0) > 0.001,
+        speedFactor: cp ? Number(cp.speed_factor) : 1.0,
+        magnitudeFactor: cp ? Number(cp.magnitude_factor) : 1.0,
+        sampleCount: cp?.sample_count ?? 0,
+      };
+    }
+
+    const mealResponseSection = {
+      modelVersion: mealState?.model_version || "1.0.0-meal-baseline",
+      baselineLocked: mealState?.baseline_locked ?? true,
+      resolutionReason: mealState?.baseline_locked ? "baseline_locked" :
+        (Object.values(mealClasses).some((c: any) => c.eligible) ? "personalized_active" : "no_eligible_classes"),
+      classes: mealClasses,
+      eligibleObservations: eligibleMealObservations.length,
+      mealsWithSufficientFollowup: mealsWithSufficientFollowup.length,
+      totalAnalyses: mealAnalyses?.length || 0,
+      note: "Absorption-estimation accuracy and glucose-projection accuracy are evaluated separately and never combined.",
+    };
+
+    // ── Categorize projections by pipeline state ───────────────────────────
     const bufferMs = 10 * 60 * 1000; // EVAL_BUFFER_MIN
 
     let awaitingMaturity = 0;
@@ -193,6 +243,7 @@ export default async function (req: Request): Promise<Response> {
         exclusionReasons,
         dateRange,
         modelVersions,
+        mealResponse: mealResponseSection,
         message: "No eligible shadow evaluations have been completed yet. The evaluation pipeline needs mature projections with valid input snapshots before comparisons can be made.",
       });
     }
@@ -329,6 +380,7 @@ export default async function (req: Request): Promise<Response> {
         minComparisonSamples: MIN_COMPARISON_SAMPLES,
         minImprovementMgdl: MIN_IMPROVEMENT_MGDL,
       },
+      mealResponse: mealResponseSection,
       message: hasEnoughData
         ? `${totalValid} valid shadow evaluations from snapshot-eligible projections. Comparisons use immutable input snapshots for temporally valid replay.`
         : `Only ${totalValid} valid shadow evaluations (need ${MIN_COMPARISON_SAMPLES}). Continue collecting eligible observations with valid snapshots.`,
