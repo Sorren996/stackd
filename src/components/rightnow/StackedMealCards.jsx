@@ -132,12 +132,24 @@ export default function StackedMealCards({
         </div>
       </div>
 
-      {/* Selected meal — full card, cross-fades with a soft rise on switch */}
+      {/* Selected meal — swipeable carousel card.
+          Swipe left/right to move between meals; chips update as indicators. */}
       <motion.div
         key={(selectedMeal?.group && selectedMeal?.group?.mealTime) || `meal-${safeIndex}`}
-        initial={{ opacity: 0, y: 24 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
         transition={{ duration: 0.32, ease: [0.32, 0.72, 0.25, 1] }}
+        drag="x"
+        dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={0.18}
+        onDragEnd={(_, info) => {
+          const SWIPE_THRESHOLD = 50;
+          if (info.offset.x < -SWIPE_THRESHOLD && safeIndex < meals.length - 1) {
+            setSelectedIndex(safeIndex + 1);
+          } else if (info.offset.x > SWIPE_THRESHOLD && safeIndex > 0) {
+            setSelectedIndex(safeIndex - 1);
+          }
+        }}
       >
         <MealReviewAtAGlance
           mealInsight={selectedMeal?.insight}

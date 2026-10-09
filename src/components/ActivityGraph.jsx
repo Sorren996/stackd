@@ -336,6 +336,13 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const { connected: dexcomConnected } = useDexcomConnection();
   const gTheme = getGraphTheme(useIsLightTheme());
 
+  // ── Stable `now` (Issue 7: eliminate dashboard jitter) ──
+  // Compute once per render so every calculation in this pass uses the same
+  // timestamp. Multiple Date.now() calls return slightly different values,
+  // causing the "now" line, IOB calculations, and domain edges to shift by
+  // a few pixels between renders — visible as jitter.
+  const stableNow = Date.now();
+
   const openMarker = (type, item, rect) => {
     setConfirmDelete(false);
     setActiveMarker({ type, item, rect });
@@ -441,6 +448,11 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   // scale temporarily expands with padding so the real reading is always shown.
   // This is a display scale only — raw glucose values are never clamped.
   const { effectiveMax, effectiveMin } = useMemo(() => {
+    // ── Issue 7: stable Y-axis bounds ──
+    // Use only VISIBLE readings (within the current domain) so scrolling
+    // doesn't change the bounds. Round to stable 50mg/dL increments so a
+    // single new reading doesn't cause a visual jump. The bounds only
+    // expand when a visible reading truly exceeds the current tier.
     let visibleMax = -Infinity;
     let visibleMin = Infinity;
     for (const r of glucoseReadings || []) {
@@ -450,7 +462,9 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       if (v < visibleMin) visibleMin = v;
     }
     const maxBase = Math.max(graphHeight, Number.isFinite(visibleMax) ? visibleMax : graphHeight);
+    // Round UP to the next 50 so small fluctuations don't shift the axis.
     const max = visibleMax > graphHeight ? Math.ceil(maxBase / 50) * 50 : graphHeight;
+    // Round DOWN to the nearest 10 for the min, with a 40 floor.
     const min = Number.isFinite(visibleMin) && visibleMin < 40 ? Math.floor(visibleMin / 10) * 10 : 40;
     return { effectiveMax: max, effectiveMin: min };
   }, [glucoseReadings, graphHeight]);
@@ -488,7 +502,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     [sortedGlucoseReadings]
   );
   const isGlucoseStale = useGlucoseStaleness(latestDexcomReading, dexcomConnected);
-  const latestGlucoseTime = latestGlucoseReading?.time ?? Math.round(Date.now() / STEP_MS) * STEP_MS;
+  const latestGlucoseTime = latestGlucoseReading?.time ?? Math.round(stableNow / STEP_MS) * STEP_MS;
   const latestGlucoseBucket = isCandlestick ?
   Math.floor(latestGlucoseTime / HOUR_MS) * HOUR_MS :
   Math.round(latestGlucoseTime / STEP_MS) * STEP_MS;
@@ -1321,7 +1335,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               {filters.glucose &&
                     <ReferenceArea
                       yAxisId="glucose"
-                      x1={Date.now()}
+                      x1={stableNow}
                       x2={domainEnd}
                       fill="#af751b"
                       fillOpacity={0.06}
@@ -1352,7 +1366,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                         strokeDasharray="6 5" />
                       
                   <ReferenceLine
-                        x={Date.now()}
+                        x={stableNow}
                         yAxisId="glucose"
                         stroke="#8a7b6bff"
                         strokeWidth={1}

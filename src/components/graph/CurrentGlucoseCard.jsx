@@ -78,16 +78,16 @@ export default function CurrentGlucoseCard({
 
       <div className="relative z-10 mt-1 flex items-end gap-1.5">
         {isStale ?
-        <span className="text-4xl font-black leading-none" style={{ color: "#746959" }}>--</span> :
+        <span className="text-4xl font-black leading-none tabular-nums" style={{ color: "#746959" }}>--</span> :
         glucoseValue != null ?
         <GlucoseTicker
           ref={tickerRef}
           initialValue={formatGlucose(glucoseValue)}
-          className="text-4xl font-black leading-none"
+          className="text-4xl font-black leading-none tabular-nums"
           style={{ color: "#3f3830" }} /> :
 
 
-        <span className="text-4xl font-black leading-none" style={{ color: "#3f3830" }}>--</span>
+        <span className="text-4xl font-black leading-none tabular-nums" style={{ color: "#3f3830" }}>--</span>
         }
         <span className="mb-1 text-[11px] font-medium" style={{ color: "#746959" }}>{glucoseUnitLabel()}</span>
         {latestGlucose && !isStale &&

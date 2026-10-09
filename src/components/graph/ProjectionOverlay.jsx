@@ -14,14 +14,28 @@
 //   - No confidence percentages, model versions, or parameter values
 //     are shown to the user — just the visual trajectory.
 //   - The "now" reference line already separates observed from projected.
+//   - Tapping a projected point shows its value and time in a small bubble
+//     (Issue 3: tap-to-show-values for readability).
 //
 // SAFETY: This is an informational wellness estimate, never a clinical
 // prediction. The dashed treatment and muted color ensure it never
 // looks like a confirmed reading.
 
-import { useMemo } from "react";
+import { useMemo, useState, useCallback } from "react";
 
 const MINUTE_MS = 60 * 1000;
+
+function formatProjectionTime(time) {
+  if (!Number.isFinite(time)) return "";
+  const d = new Date(time);
+  const now = new Date();
+  const diffMin = Math.round((time - now.getTime()) / MINUTE_MS);
+  if (diffMin <= 0) return "now";
+  if (diffMin < 60) return `+${diffMin}m`;
+  const h = Math.floor(diffMin / 60);
+  const m = diffMin % 60;
+  return m ? `+${h}h ${m}m` : `+${h}h`;
+}
 
 export default function ProjectionOverlay({
   projection,
@@ -35,6 +49,8 @@ export default function ProjectionOverlay({
   effectiveMax,
   getGlucoseY,
 }) {
+  const [activePoint, setActivePoint] = useState(null);
+
   const points = useMemo(() => {
     if (!projection || !projection.trajectory || projection.abstained) return [];
     return projection.trajectory
@@ -52,10 +68,19 @@ export default function ProjectionOverlay({
           y: getGlucoseY(value),
           yLower: Number.isFinite(lower) ? getGlucoseY(lower) : null,
           yUpper: Number.isFinite(upper) ? getGlucoseY(upper) : null,
+          value: Math.round(value),
+          time: t,
+          minOffset: Number(p.min_offset) || 0,
         };
       })
       .filter(Boolean);
   }, [projection, domainStart, totalMs, chartWidth, getGlucoseY]);
+
+  const handlePointTap = useCallback((point) => {
+    setActivePoint((prev) =>
+      prev && prev.x === point.x ? null : point
+    );
+  }, []);
 
   if (points.length < 2) return null;
 
@@ -77,35 +102,108 @@ export default function ProjectionOverlay({
     bandPath = `M ${points[0].x.toFixed(1)} ${points[0].yLower.toFixed(1)} ${lower.slice(1)} L ${points[points.length - 1].x.toFixed(1)} ${points[points.length - 1].yUpper.toFixed(1)} ${upper.slice(1)} Z`;
   }
 
+  // Tooltip positioning — clamp within chart bounds.
+  const tooltipW = 64;
+  const tooltipH = 36;
+  const tooltipX = activePoint
+    ? Math.max(4, Math.min(chartWidth - tooltipW - 4, activePoint.x - tooltipW / 2))
+    : 0;
+  const tooltipY = activePoint
+    ? Math.max(4, activePoint.y - tooltipH - 10)
+    : 0;
+
   return (
-    <svg
-      className="pointer-events-none absolute top-0 left-0"
-      style={{ width: chartWidth, height: glucoseChartHeight, overflow: "visible" }}
-      aria-hidden="true"
-    >
-      {hasBand && (
-        <path d={bandPath} fill="#af751b" fillOpacity={0.07} stroke="none" />
+    <>
+      <svg
+        className="absolute top-0 left-0"
+        style={{ width: chartWidth, height: glucoseChartHeight, overflow: "visible" }}
+        aria-hidden="true"
+      >
+        {hasBand && (
+          <path d={bandPath} fill="#af751b" fillOpacity={0.07} stroke="none" />
+        )}
+        <path
+          d={linePath}
+          stroke="#af751b"
+          strokeWidth={1.5}
+          strokeDasharray="5 4"
+          strokeOpacity={0.45}
+          fill="none"
+          strokeLinecap="round"
+          style={{ pointerEvents: "none" }}
+        />
+        {/* Anchor dot — connects the projection to the last actual reading */}
+        <circle
+          cx={points[0].x}
+          cy={points[0].y}
+          r={3}
+          fill="#af751b"
+          fillOpacity={0.3}
+          stroke="#af751b"
+          strokeWidth={1}
+          strokeOpacity={0.4}
+          style={{ pointerEvents: "none" }}
+        />
+        {/* Active point marker */}
+        {activePoint && (
+          <circle
+            cx={activePoint.x}
+            cy={activePoint.y}
+            r={4}
+            fill="#af751b"
+            fillOpacity={0.7}
+            stroke="#fdf9f2"
+            strokeWidth={1.5}
+            style={{ pointerEvents: "none" }}
+          />
+        )}
+        {/* Invisible hit circles at each trajectory point — tap to show value */}
+        {points.map((p, i) => (
+          <circle
+            key={`hit-${i}`}
+            cx={p.x}
+            cy={p.y}
+            r={12}
+            fill="transparent"
+            style={{ cursor: "pointer", touchAction: "manipulation" }}
+            onClick={() => handlePointTap(p)}
+          />
+        ))}
+      </svg>
+
+      {/* Tooltip bubble — shows projected value and time offset */}
+      {activePoint && (
+        <div
+          className="absolute z-10 pointer-events-none"
+          style={{
+            left: tooltipX,
+            top: tooltipY,
+            width: tooltipW,
+          }}
+        >
+          <div
+            className="rounded-[8px] px-2 py-1.5 text-center"
+            style={{
+              background: "#fdf9f2",
+              border: "1px solid #eadccf",
+              boxShadow: "0 4px 14px rgba(63,56,48,0.12)",
+            }}
+          >
+            <div
+              className="text-[14px] font-semibold tabular-nums leading-tight"
+              style={{ color: "#8a5a12" }}
+            >
+              {activePoint.value}
+            </div>
+            <div
+              className="text-[9px] font-medium leading-tight"
+              style={{ color: "#746959" }}
+            >
+              {formatProjectionTime(activePoint.time)}
+            </div>
+          </div>
+        </div>
       )}
-      <path
-        d={linePath}
-        stroke="#af751b"
-        strokeWidth={1.5}
-        strokeDasharray="5 4"
-        strokeOpacity={0.45}
-        fill="none"
-        strokeLinecap="round"
-      />
-      {/* Anchor dot — connects the projection to the last actual reading */}
-      <circle
-        cx={points[0].x}
-        cy={points[0].y}
-        r={3}
-        fill="#af751b"
-        fillOpacity={0.3}
-        stroke="#af751b"
-        strokeWidth={1}
-        strokeOpacity={0.4}
-      />
-    </svg>
+    </>
   );
 }

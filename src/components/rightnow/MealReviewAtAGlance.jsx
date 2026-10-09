@@ -275,12 +275,14 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
     insightLine = "Steady through the window so far.";
   }
 
-  // ---- Reconciliation (narrative integrity: separate estimate from observation) ----
-  // Only mention "from your history" when personalization is active (learnedTiming).
-  // Only mention "two waves" when the model estimates a dual-wave curve (isDualWaveMeal).
-  // Describe the glucose observation separately — never claim the trace "followed"
-  // a two-wave pattern when only peak timing was compared.
-  const reconciliation = !waitingForReadings && glucoseAnalysis.timeToPeakMin != null
+  // ---- Reconciliation (Issue 4 + 5) ----
+  // Only compare observed vs model peak when a VALID observed peak exists
+  // (the state machine has reached peaked_and_declining or later). Before
+  // that, reconciliation is absent — we don't compare against an invalid
+  // max-of-readings value. Only mention "from your history" when
+  // personalization is active (learnedTiming). Only mention "two waves"
+  // when the model estimates a dual-wave curve (isDualWaveMeal).
+  const reconciliation = !waitingForReadings && glucoseAnalysis.validPeak && glucoseAnalysis.timeToPeakMin != null
     ? (() => {
         const source = learnedTiming ? "Estimated from your meal and history" : "Estimated from your meal";
         const estimatePart = isDualWaveMeal ? "the absorption curve rose in two waves" : "the absorption curve peaked";
