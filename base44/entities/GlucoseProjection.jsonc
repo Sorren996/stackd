@@ -13,7 +13,7 @@
     },
     "model_version": {
       "type": "string",
-      "description": "Version of the projection model that produced this prediction, for reproducibility and evaluation."
+      "description": "Version of the projection model that produced this prediction: '1.0.0-baseline' or '1.1.0-personalized'. Used to compare baseline vs personalized performance."
     },
     "anchor_time": {
       "type": "string",
@@ -70,14 +70,15 @@
       "enum": [
         "active",
         "evaluated",
+        "unscorable",
         "superseded"
       ],
       "default": "active",
-      "description": "Whether the prediction is still awaiting outcome data, has been evaluated against actuals, or superseded by a newer projection."
+      "description": "Whether the prediction is still awaiting outcome data, has been evaluated against actuals, was unscorable (no observations available), or superseded by a newer projection."
     },
     "evaluation": {
       "type": "object",
-      "description": "Filled in Milestone 2 when actual outcomes are compared: errors at horizons, bias, coverage."
+      "description": "Filled by the Milestone 2 evaluation pipeline when actual outcomes are compared: status (evaluated/unscorable), reason, horizons [{horizon_min, scored, predicted, actual, error, abs_error, in_interval, exclusion_reason}], mae, bias, coverage, valid_count, excluded_count, exclusions, evaluation_version, evaluated_at."
     }
   },
   "required": [

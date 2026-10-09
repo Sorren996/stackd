@@ -24,6 +24,8 @@
 
 // ── Model identity ──────────────────────────────────────────────────────────
 export const PROJECTION_MODEL_VERSION = "1.0.0-baseline";
+export const BASELINE_MODEL_VERSION = "1.0.0-baseline";
+export const PERSONALIZED_MODEL_VERSION = "1.1.0-personalized";
 
 // Speed-class derivation (inlined from absorptionLearning to keep the engine
 // self-contained and testable without pulling in the base44 client).
@@ -295,10 +297,13 @@ export function projectGlucose(snapshot, opts = {}) {
   const horizonMin = Math.max(5, Math.min(180, Number(opts.horizonMin) || DEFAULT_HORIZON_MIN));
   const stepMin = Math.max(1, Number(opts.stepMin) || STEP_MIN);
   const generatedAt = snapshot.now;
+  const rateAdjustmentFactor = Number(opts.modelParams?.rateAdjustmentFactor) || 1.0;
+  const isPersonalized = Math.abs(rateAdjustmentFactor - 1.0) > 0.001;
+  const modelVersion = isPersonalized ? PERSONALIZED_MODEL_VERSION : BASELINE_MODEL_VERSION;
 
   if (!snapshot.anchor) {
     return {
-      trajectory: [], anchor: null, modelVersion: PROJECTION_MODEL_VERSION,
+      trajectory: [], anchor: null, modelVersion,
       generatedAt, horizonMinutes: horizonMin, confidence: 0,
       abstained: true, abstainReason: "No valid CGM reading within the freshness window.",
       dataQuality: snapshot.dataQuality, uncertaintySummary: null,
@@ -311,7 +316,7 @@ export function projectGlucose(snapshot, opts = {}) {
 
   if (confidence < ABSTAIN_CONFIDENCE_THRESHOLD) {
     return {
-      trajectory: [], anchor: snapshot.anchor, modelVersion: PROJECTION_MODEL_VERSION,
+      trajectory: [], anchor: snapshot.anchor, modelVersion,
       generatedAt, horizonMinutes: horizonMin, confidence,
       abstained: true, abstainReason: "Insufficient evidence to project.",
       dataQuality: snapshot.dataQuality, uncertaintySummary: null,
@@ -345,7 +350,7 @@ export function projectGlucose(snapshot, opts = {}) {
     }
 
     const momentum = snapshot.momentumMgDlPerMin * Math.exp(-offset / MOMENTUM_DECAY_MIN);
-    const netRate = carbRiseRate - insulinDropRate + momentum;
+    const netRate = (carbRiseRate - insulinDropRate + momentum) * rateAdjustmentFactor;
 
     if (offset > 0) currentValue += netRate * stepMin;
     currentValue = Math.max(20, Math.min(500, currentValue));
@@ -384,7 +389,7 @@ export function projectGlucose(snapshot, opts = {}) {
   }, 0);
 
   return {
-    trajectory, anchor: snapshot.anchor, modelVersion: PROJECTION_MODEL_VERSION,
+    trajectory, anchor: snapshot.anchor, modelVersion,
     generatedAt, horizonMinutes: horizonMin,
     confidence: Math.round(confidence * 100) / 100,
     abstained: false, abstainReason: null,

@@ -33,6 +33,8 @@ import {
 
 // ── Model identity ──────────────────────────────────────────────────────────
 export const PROJECTION_MODEL_VERSION = "1.0.0-baseline";
+export const BASELINE_MODEL_VERSION = "1.0.0-baseline";
+export const PERSONALIZED_MODEL_VERSION = "1.1.0-personalized";
 
 // ── Tunable constants (Milestone 1 baseline) ───────────────────────────────
 const STALE_THRESHOLD_MIN = 15;       // abstain if latest reading is older
@@ -380,18 +382,21 @@ function computeConfidence(dq: DataQuality, hasActiveInputs: boolean, momentum: 
 
 export function projectGlucose(
   snapshot: NormalizedSnapshot,
-  opts: { horizonMin?: number; stepMin?: number } = {}
+  opts: { horizonMin?: number; stepMin?: number; modelParams?: { rateAdjustmentFactor?: number } | null } = {}
 ): ProjectionResult {
   const horizonMin = Math.max(5, Math.min(180, Number(opts.horizonMin) || DEFAULT_HORIZON_MIN));
   const stepMin = Math.max(1, Number(opts.stepMin) || STEP_MIN);
   const generatedAt = snapshot.now;
+  const rateAdjustmentFactor = Number(opts.modelParams?.rateAdjustmentFactor) || 1.0;
+  const isPersonalized = Math.abs(rateAdjustmentFactor - 1.0) > 0.001;
+  const modelVersion = isPersonalized ? PERSONALIZED_MODEL_VERSION : BASELINE_MODEL_VERSION;
 
   // Abstain if no valid anchor.
   if (!snapshot.anchor) {
     return {
       trajectory: [],
       anchor: null,
-      modelVersion: PROJECTION_MODEL_VERSION,
+      modelVersion,
       generatedAt,
       horizonMinutes: horizonMin,
       confidence: 0,
@@ -412,7 +417,7 @@ export function projectGlucose(
     return {
       trajectory: [],
       anchor: snapshot.anchor,
-      modelVersion: PROJECTION_MODEL_VERSION,
+      modelVersion,
       generatedAt,
       horizonMinutes: horizonMin,
       confidence,
@@ -459,7 +464,7 @@ export function projectGlucose(
     // Momentum (decaying).
     const momentum = snapshot.momentumMgDlPerMin * Math.exp(-offset / MOMENTUM_DECAY_MIN);
 
-    const netRate = carbRiseRate - insulinDropRate + momentum;
+    const netRate = (carbRiseRate - insulinDropRate + momentum) * rateAdjustmentFactor;
 
     // Integrate: advance the value by netRate * stepMin (except at offset 0).
     if (offset > 0) {
@@ -508,7 +513,7 @@ export function projectGlucose(
   return {
     trajectory,
     anchor: snapshot.anchor,
-    modelVersion: PROJECTION_MODEL_VERSION,
+    modelVersion,
     generatedAt,
     horizonMinutes: horizonMin,
     confidence: Math.round(confidence * 100) / 100,

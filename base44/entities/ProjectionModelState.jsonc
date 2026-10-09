@@ -8,11 +8,17 @@
     },
     "model_version": {
       "type": "string",
-      "description": "Current model version backing this user's projection state."
+      "description": "Current model version backing this user's projection state. '1.0.0-baseline' when no personalization has been applied; '1.1.0-personalized' when a learned rateAdjustmentFactor is active."
     },
     "parameters": {
       "type": "object",
-      "description": "Personalized model parameters. Empty for the Milestone 1 baseline; Milestone 2 fills these with learned values (momentum decay, carb conversion factor adjustment, etc.)."
+      "description": "Personalized model parameters. Contains rateAdjustmentFactor (multiplicative adjustment to the net glucose rate, baseline 1.0) when personalization is active. Empty for baseline.",
+      "properties": {
+        "rateAdjustmentFactor": {
+          "type": "number",
+          "description": "Multiplicative factor applied to the net glucose rate (carbRise - insulinDrop + momentum). Baseline = 1.0. Clamped to [0.7, 1.3]. <1.0 slows the projected change; >1.0 accelerates it."
+        }
+      }
     },
     "sample_count": {
       "type": "number",
@@ -21,17 +27,25 @@
     },
     "evaluation_summary": {
       "type": "object",
-      "description": "Aggregate evaluation metrics (MAE at horizons, bias, coverage) filled in Milestone 2."
+      "description": "Aggregate evaluation metrics from the most recent update cycle: mae, bias, coverage, byHorizon, byModelVersion."
     },
     "last_updated_at": {
       "type": "string",
       "format": "date-time",
-      "description": "When the state was last updated."
+      "description": "When the state was last updated by the evaluation pipeline."
     },
     "baseline_locked": {
       "type": "boolean",
       "default": true,
-      "description": "Whether the state is still at baseline (no personalization applied). True in Milestone 1."
+      "description": "Whether the state is still at baseline (no personalization applied, or personalization was reverted). True = baseline is the active model."
+    },
+    "update_history": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "default": [],
+      "description": "Chronological log of every accepted parameter update or reversion: timestamp, previous_params, new_params, sample_count, reason, model_version, evaluation_version, evaluation_summary."
     }
   },
   "required": [

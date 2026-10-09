@@ -35,9 +35,19 @@ export default async function (req) {
 
     const settings = (settingsList && settingsList.length > 0) ? settingsList[0] : {};
 
+    // Read the user's model state for personalized parameters (Milestone 2).
+    // If the evaluation pipeline has learned a rateAdjustmentFactor, it shapes
+    // the projection. Baseline (1.0) is used when no personalization exists.
+    const stateRows = await base44.asServiceRole.entities.ProjectionModelState.list("-created_date", 1);
+    const modelState = (stateRows && stateRows.length > 0) ? stateRows[0] : null;
+    const rateAdjustmentFactor = Number(modelState?.parameters?.rateAdjustmentFactor) || 1.0;
+    const modelParams = Math.abs(rateAdjustmentFactor - 1.0) > 0.001
+      ? { rateAdjustmentFactor }
+      : null;
+
     // Run the projection engine.
     const snapshot = normalizeInputs(readings, meals, doses, settings, now);
-    const result = projectGlucose(snapshot, { horizonMin: 60 });
+    const result = projectGlucose(snapshot, { horizonMin: 60, modelParams });
 
     // Persist the prediction with provenance.
     const projectionRecord = await base44.asServiceRole.entities.GlucoseProjection.create({
@@ -65,8 +75,7 @@ export default async function (req) {
     });
 
     // Ensure a ProjectionModelState record exists (baseline scaffolding).
-    const existingState = await base44.asServiceRole.entities.ProjectionModelState.list("-created_date", 1);
-    if (!existingState || existingState.length === 0) {
+    if (!modelState) {
       await base44.asServiceRole.entities.ProjectionModelState.create({
         user_id: user.id,
         model_version: PROJECTION_MODEL_VERSION,
