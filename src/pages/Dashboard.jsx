@@ -15,6 +15,7 @@ import EditLogSheet from "@/components/edit/EditLogSheet";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 import { useVisibilityRefresh } from "@/hooks/useVisibilityRefresh";
 import { useDexcomRefresh } from "@/hooks/useDexcomRefresh";
+import { useLatestProjection } from "@/hooks/useLatestProjection";
 import DexcomSyncStatus from "@/components/DexcomSyncStatus";
 import ConnectGlucoseSourcePrompt from "@/components/ConnectGlucoseSourcePrompt";
 import SensorSessionBanner from "@/components/SensorSessionBanner";
@@ -65,6 +66,7 @@ export default function Dashboard() {
   useVisibilityRefresh();
   const { requestRefresh } = useDexcomRefresh();
   const stackingAlertsEnabled = localStorage.getItem("stacking_alerts_enabled") !== "false";
+  const projection = useLatestProjection();
 
   useEffect(() => {
     const interval = setInterval(() => setTick((t) => t + 1), 60000);
@@ -408,6 +410,7 @@ export default function Dashboard() {
                   onSelectLog={setEditingLog}
                   onDeleteLog={handleDeleteLog}
                   glucoseReadOnly={dexcomConnected}
+                  projection={projection}
                 />
               }
               onEditGlucose={dexcomConnected ? null : (reading) => setEditingLog({ type: "glucose", item: reading })}

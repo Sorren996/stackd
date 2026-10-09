@@ -24,6 +24,7 @@ import TimeViewToggle from "@/components/graph/TimeViewToggle";
 import CandlestickView from "@/components/graph/CandlestickView";
 import ReferenceLabels from "@/components/graph/ReferenceLabels";
 import MealEditOverlay from "@/components/insulin/MealEditOverlay";
+import ProjectionOverlay from "@/components/graph/ProjectionOverlay";
 
 const STEP_MS = 3 * 60 * 1000;
 const HALF_HOUR_MS = 30 * 60 * 1000;
@@ -315,7 +316,7 @@ function FilterDropdown({ filters, onChange, anchorRect }) {
 
 }
 
-export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries = [], onSelectLog = null, onDeleteLog = null, glucoseReadOnly = false }) {
+export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries = [], onSelectLog = null, onDeleteLog = null, glucoseReadOnly = false, projection = null }) {
   const [showFilter, setShowFilter] = useState(false);
   const [filterAnchorRect, setFilterAnchorRect] = useState(null);
   const [filters, setFilters] = useState({ glucose: true, insulin: true, carbs: true });
@@ -1379,6 +1380,22 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             </ComposedChart>
           </div>
 
+          {/* ── Projection overlay (future trajectory) ── */}
+          {projection && !isCandlestick && (
+            <ProjectionOverlay
+              projection={projection}
+              domainStart={domainStart}
+              totalMs={totalMs}
+              chartWidth={chartWidth}
+              glucoseChartHeight={GLUCOSE_CHART_HEIGHT}
+              glucoseMarginTop={GLUCOSE_MARGIN_TOP}
+              plotHeight={plotHeight}
+              effectiveMin={effectiveMin}
+              effectiveMax={effectiveMax}
+              getGlucoseY={getGlucoseY}
+            />
+          )}
+
           {/* ── Insulin row (lower) — one shared timeline ── */}
           <div style={{ position: "absolute", top: INSULIN_ROW_TOP, left: 0 }}>
             <ComposedChart
@@ -1545,6 +1562,12 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           <div className="h-[2.5px] w-3 rounded-full" style={{ background: "#9c5228" }} />
           <span className="text-[10px] font-medium" style={{ color: "#6b6153" }}>Glucose</span>
         </div>
+        {projection && (
+          <div className="flex items-center gap-1.5">
+            <div className="h-[2.5px] w-3 border-t-2 border-dashed" style={{ borderColor: "#af751b", opacity: 0.5 }} />
+            <span className="text-[10px] font-medium" style={{ color: "#6b6153" }}>Projection</span>
+          </div>
+        )}
         <div className="flex items-center gap-1.5">
           <div className="h-2 w-2 rounded-full" style={{ border: "1.5px solid #3f3830", background: "#f7f1e8" }} />
           <span className="text-[10px] font-medium" style={{ color: "#6b6153" }}>Meals</span>

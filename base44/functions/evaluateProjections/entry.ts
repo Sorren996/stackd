@@ -91,9 +91,12 @@ export default async function (req: Request): Promise<Response> {
 
       try {
         // Fetch actual readings for this user from generation time to now.
-        // Only this user's readings — never another user's.
+        // Only this user's readings — never another user's. Dexcom-synced
+        // readings have user_id (service-created), manual readings have
+        // created_by_id — both must be matched or evaluations silently fail
+        // for CGM-connected users.
         const readings = await sr.entities.GlucoseReading.filter(
-          { recorded_at: { $gte: projection.generated_at }, created_by_id: userId },
+          { recorded_at: { $gte: projection.generated_at }, $or: [{ user_id: userId }, { created_by_id: userId }] },
           "recorded_at", 2000
         );
 
@@ -282,8 +285,10 @@ export default async function (req: Request): Promise<Response> {
         for (const proj of userEvaluatedProjs) {
           try {
             // Fetch actual readings for this projection (same as the original evaluation).
+            // Match both user_id (Dexcom-synced) and created_by_id (manual) so
+            // CGM-connected users have their readings found for shadow replay.
             const readings = await sr.entities.GlucoseReading.filter(
-              { recorded_at: { $gte: proj.generated_at }, created_by_id: userId },
+              { recorded_at: { $gte: proj.generated_at }, $or: [{ user_id: userId }, { created_by_id: userId }] },
               "recorded_at", 2000
             );
             const normalizedReadings = readings
