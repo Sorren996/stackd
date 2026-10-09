@@ -33,6 +33,53 @@ export const PERSONALIZED_MODEL_VERSION = "1.1.0-personalized";
 export const MEAL_RESPONSE_MODEL_VERSION_BASELINE = "1.0.0-meal-baseline";
 export const MEAL_RESPONSE_MODEL_VERSION_PERSONALIZED = "1.1.0-meal-personalized";
 
+import { extractEffectiveMealParams } from "./modelResolution";
+import { getEmpiricalSigma } from "./uncertaintyCalibration";
+
+// ── Shadow evaluation (Milestone 4) ─────────────────────────────────────────
+export function replayProjection(
+  originalProjection,
+  historicalReadings,
+  historicalMeals,
+  historicalDoses,
+  settings,
+  alternativeResolution,
+  uncertaintyCalibration
+) {
+  const generatedAt = new Date(originalProjection.generated_at).getTime();
+  if (!Number.isFinite(generatedAt)) {
+    return {
+      trajectory: [],
+      modelVersion: alternativeResolution.modelVersion,
+      mealModelVersion: alternativeResolution.mealModelVersion,
+      abstained: true,
+      confidence: 0,
+    };
+  }
+
+  const readingsAtTime = (Array.isArray(historicalReadings) ? historicalReadings : [])
+    .filter((r) => {
+      const t = new Date(r.recorded_at).getTime();
+      return Number.isFinite(t) && t <= generatedAt;
+    });
+
+  const snapshot = normalizeInputs(readingsAtTime, historicalMeals || [], historicalDoses || [], settings || {}, generatedAt);
+
+  const result = projectGlucose(snapshot, {
+    horizonMin: originalProjection.horizon_minutes,
+    modelResolution: alternativeResolution,
+    uncertaintyCalibration: uncertaintyCalibration ?? null,
+  });
+
+  return {
+    trajectory: result.trajectory,
+    modelVersion: result.modelVersion,
+    mealModelVersion: result.mealModelVersion,
+    abstained: result.abstained,
+    confidence: result.confidence,
+  };
+}
+
 // Speed-class derivation (inlined from absorptionLearning to keep the engine
 // self-contained and testable without pulling in the base44 client).
 function deriveSpeedClass(entry) {
@@ -95,14 +142,16 @@ function dualWaveRate(minOffset, peakMin) {
   return gammaRate(minOffset, firstPeak, 2.2) * 0.35 + gammaRate(minOffset, secondPeak, 3.2) * 0.65;
 }
 
-function getClassPeakMinutes(speedClass) {
+function getClassPeakMinutes(speedClass, speedFactor) {
+  const s = Number.isFinite(speedFactor) && speedFactor > 0 ? speedFactor : 1;
   const base = BASELINE_CLASS_PARAMS[speedClass] || BASELINE_CLASS_PARAMS.mixed;
-  return base.peakMin;
+  return Math.max(20, Math.min(240, Math.round(base.peakMin * s)));
 }
 
-function getClassWindowMinutes(speedClass) {
+function getClassWindowMinutes(speedClass, speedFactor) {
+  const s = Number.isFinite(speedFactor) && speedFactor > 0 ? speedFactor : 1;
   const base = BASELINE_CLASS_PARAMS[speedClass] || BASELINE_CLASS_PARAMS.mixed;
-  return base.windowMin;
+  return Math.max(90, Math.min(360, Math.round(base.windowMin * s)));
 }
 
 // Carb appearance rate (g/min) for a meal at a future time.
@@ -279,7 +328,16 @@ export function normalizeInputs(rawReadings, rawMeals, rawDoses, settings, now) 
 
 // ── Uncertainty ─────────────────────────────────────────────────────────────
 
-function computeSigmaAtOffset(minOffset, dq, netRate) {
+function computeSigmaAtOffset(minOffset, dq, netRate, uncertaintyCalibration) {
+  if (uncertaintyCalibration?.calibrated) {
+    const empirical = getEmpiricalSigma(minOffset, uncertaintyCalibration);
+    if (empirical != null) {
+      let sigma = empirical;
+      if (dq.staleReadings) sigma += 10;
+      if (dq.gapPresent) sigma += 8;
+      return Math.min(MAX_SIGMA_MGDL, sigma);
+    }
+  }
   let sigma = BASE_SIGMA_MGDL + SIGMA_PER_SQRT_MIN * Math.sqrt(Math.max(0, minOffset));
   if (dq.staleReadings) sigma += 10;
   if (dq.gapPresent) sigma += 8;
@@ -290,7 +348,7 @@ function computeSigmaAtOffset(minOffset, dq, netRate) {
   return Math.min(MAX_SIGMA_MGDL, sigma);
 }
 
-function computeConfidence(dq, hasActiveInputs, momentum) {
+function computeConfidence(dq, hasActiveInputs, momentum, modelResolution, uncertaintyCalibration) {
   let confidence = 0.7;
   if (dq.staleReadings) confidence -= 0.3;
   if (dq.gapPresent) confidence -= 0.15;
@@ -299,6 +357,10 @@ function computeConfidence(dq, hasActiveInputs, momentum) {
   if (dq.confounders.includes("multiple_active_doses")) confidence -= 0.05;
   if (!hasActiveInputs && Math.abs(momentum) < 0.5) confidence -= 0.25;
   if (dq.readingCount < 3) confidence -= 0.1;
+  const hasPersonalization = modelResolution?.general.eligible || modelResolution?.meal.eligible;
+  if (hasPersonalization && !uncertaintyCalibration?.calibrated) {
+    confidence -= 0.05;
+  }
   return Math.max(MIN_CONFIDENCE, Math.min(1, confidence));
 }
 
@@ -308,26 +370,36 @@ export function projectGlucose(snapshot, opts = {}) {
   const horizonMin = Math.max(5, Math.min(180, Number(opts.horizonMin) || DEFAULT_HORIZON_MIN));
   const stepMin = Math.max(1, Number(opts.stepMin) || STEP_MIN);
   const generatedAt = snapshot.now;
-  // rateAdjustmentFactor: a single learned correction for systematic prediction
-  // bias (Milestone 2). NOT a model of the individual's glucose physiology —
-  // it cannot distinguish absorption timing, magnitude, insulin action, or
-  // activity/stress causes. It describes what the baseline tended to get wrong
-  // on average; it never prescribes. Baseline = 1.0 (no correction).
-  const rateAdjustmentFactor = Number(opts.modelParams?.rateAdjustmentFactor) || 1.0;
-  const isPersonalized = Math.abs(rateAdjustmentFactor - 1.0) > 0.001;
-  const modelVersion = isPersonalized ? PERSONALIZED_MODEL_VERSION : BASELINE_MODEL_VERSION;
 
-  // Meal-response model version (Milestone 3). Separate from the general
-  // forecast model version. Reflects whether any per-class meal-response
-  // personalization is active.
-  const mealModelParams = opts.mealModelParams || null;
-  const hasMealPersonalization = mealModelParams != null &&
-    Object.values(mealModelParams).some((p) =>
-      p && (Math.abs(Number(p.speedFactor) - 1.0) > 0.001 || Math.abs(Number(p.magnitudeFactor) - 1.0) > 0.001)
-    );
-  const mealModelVersion = hasMealPersonalization
-    ? MEAL_RESPONSE_MODEL_VERSION_PERSONALIZED
-    : MEAL_RESPONSE_MODEL_VERSION_BASELINE;
+  // ── Model resolution (Milestone 4) ──
+  const modelResolution = opts.modelResolution ?? null;
+  const uncertaintyCalibration = opts.uncertaintyCalibration ?? null;
+
+  let rateAdjustmentFactor;
+  let mealModelParams;
+  let modelVersion;
+  let mealModelVersion;
+
+  if (modelResolution) {
+    rateAdjustmentFactor = modelResolution.general.eligible
+      ? modelResolution.general.effectiveValue
+      : 1.0;
+    mealModelParams = extractEffectiveMealParams(modelResolution);
+    modelVersion = modelResolution.modelVersion;
+    mealModelVersion = modelResolution.mealModelVersion;
+  } else {
+    rateAdjustmentFactor = Number(opts.modelParams?.rateAdjustmentFactor) || 1.0;
+    const isPersonalized = Math.abs(rateAdjustmentFactor - 1.0) > 0.001;
+    modelVersion = isPersonalized ? PERSONALIZED_MODEL_VERSION : BASELINE_MODEL_VERSION;
+    mealModelParams = opts.mealModelParams || null;
+    const hasMealPersonalization = mealModelParams != null &&
+      Object.values(mealModelParams).some((p) =>
+        p && (Math.abs(Number(p.speedFactor) - 1.0) > 0.001 || Math.abs(Number(p.magnitudeFactor) - 1.0) > 0.001)
+      );
+    mealModelVersion = hasMealPersonalization
+      ? MEAL_RESPONSE_MODEL_VERSION_PERSONALIZED
+      : MEAL_RESPONSE_MODEL_VERSION_BASELINE;
+  }
 
   if (!snapshot.anchor) {
     return {
@@ -340,7 +412,10 @@ export function projectGlucose(snapshot, opts = {}) {
   }
 
   const hasActiveInputs = snapshot.activeMeals.length > 0 || snapshot.activeDoses.length > 0;
-  const confidence = computeConfidence(snapshot.dataQuality, hasActiveInputs, snapshot.momentumMgDlPerMin);
+  const confidence = computeConfidence(
+    snapshot.dataQuality, hasActiveInputs, snapshot.momentumMgDlPerMin,
+    modelResolution, uncertaintyCalibration
+  );
 
   if (confidence < ABSTAIN_CONFIDENCE_THRESHOLD) {
     return {
@@ -393,7 +468,7 @@ export function projectGlucose(snapshot, opts = {}) {
     if (offset > 0) currentValue += netRate * stepMin;
     currentValue = Math.max(20, Math.min(500, currentValue));
 
-    const sigma = computeSigmaAtOffset(offset, snapshot.dataQuality, netRate);
+    const sigma = computeSigmaAtOffset(offset, snapshot.dataQuality, netRate, uncertaintyCalibration);
     trajectory.push({
       time: futureTime, min_offset: offset,
       value: Math.round(currentValue),
@@ -450,5 +525,19 @@ export function projectGlucose(snapshot, opts = {}) {
       doseCount: snapshot.activeDoses.length,
       activeSpeedClasses,
     },
+    modelResolution,
+    effectiveParameters: {
+      rateAdjustmentFactor,
+      mealParams: mealModelParams,
+    },
+    uncertainty: uncertaintyCalibration
+      ? {
+          method: uncertaintyCalibration.method,
+          version: uncertaintyCalibration.version,
+          calibrated: uncertaintyCalibration.calibrated,
+          sampleCount: uncertaintyCalibration.sampleCount,
+          coverageObserved: uncertaintyCalibration.coverageObserved,
+        }
+      : null,
   };
 }

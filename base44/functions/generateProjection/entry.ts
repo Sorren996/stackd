@@ -1,22 +1,19 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.52";
 import { normalizeInputs, projectGlucose, PROJECTION_MODEL_VERSION, MEAL_RESPONSE_MODEL_VERSION_BASELINE } from "../../shared/insightEngine.ts";
-import { resolveMealModelParams, getMealModelVersion } from "../../shared/mealResponseLearning.ts";
+import { resolveModelComponents } from "../../shared/modelResolution.ts";
+import { calibrateUncertainty } from "../../shared/uncertaintyCalibration.ts";
 
-// Stackd Insight Engine — Glucose Projection Generator (Milestone 1 + 3)
+// Stackd Insight Engine — Glucose Projection Generator (Milestone 4)
 //
 // Reads the authenticated user's glucose readings, active meals, active
-// insulin doses, and settings; runs the projection engine; and persists the
-// prediction with full provenance so Milestone 2 can evaluate it against
-// actual outcomes without data leakage.
+// insulin doses, settings, and model states; resolves which model components
+// are eligible; calibrates uncertainty from historical forecast errors; runs
+// the projection engine; and persists the prediction with full provenance.
 //
-// Milestone 3: Also reads the user's MealResponseModelState to apply learned
-// per-class speed and magnitude factors to the meal-response component of
-// the projection. The meal-response model version is recorded separately
-// from the general forecast model version so meal-response personalization
-// can be evaluated independently.
-//
-// Also ensures ProjectionModelState and MealResponseModelState records exist
-// for the user (baseline-locked scaffolding for personalization).
+// Milestone 4: The pipeline now uses explicit model resolution (each
+// component checked independently for eligibility, bounds, and evidence)
+// and empirically calibrated uncertainty (sigma from historical MAE when
+// enough evaluation data exists, heuristic fallback otherwise).
 //
 // SAFETY: Informational only. Never recommends or modifies insulin doses.
 // Server-side authorization: only the authenticated user's data is read and
@@ -30,15 +27,12 @@ export default async function (req) {
 
     const now = Date.now();
 
-    // Fetch the user's data in parallel. Use the service role so we can set
-    // user_id on the persisted projection record (RLS lets the owning user
-    // read it back).
     // Fetch ONLY the authenticated user's data. asServiceRole bypasses RLS, so
     // every fetch must filter by the user's ID explicitly — otherwise readings,
     // meals, doses, settings, and model state from OTHER users would contaminate
     // this user's projection. GlucoseReading can be service-created (user_id)
     // or manual (created_by_id), so both are matched.
-    const [readings, meals, doses, settingsList, stateRows, mealStateRows] = await Promise.all([
+    const [readings, meals, doses, settingsList, stateRows, mealStateRows, evaluatedProjections] = await Promise.all([
       base44.asServiceRole.entities.GlucoseReading.filter(
         { $or: [{ user_id: user.id }, { created_by_id: user.id }] },
         "-recorded_at", 200
@@ -58,38 +52,46 @@ export default async function (req) {
       base44.asServiceRole.entities.MealResponseModelState.filter(
         { user_id: user.id }, "-created_date", 1
       ),
+      // Fetch evaluated projections for uncertainty calibration (Milestone 4).
+      base44.asServiceRole.entities.GlucoseProjection.filter(
+        { user_id: user.id, status: "evaluated" },
+        "-generated_at", 100
+      ),
     ]);
 
     const settings = (settingsList && settingsList.length > 0) ? settingsList[0] : {};
 
-    // ── General forecast model state (Milestone 2) ──
-    // rateAdjustmentFactor is a single learned correction for systematic
-    // prediction bias — not a model of the individual's glucose physiology.
+    // ── Model resolution (Milestone 4) ──
+    // Explicitly resolve which model components are eligible based on the
+    // user's persisted state. Each component is checked independently:
+    // a user may have an eligible general model but insufficient meal-response
+    // evidence, or vice versa. Ineligible components fall back to baseline
+    // without affecting other eligible components.
     const modelState = (stateRows && stateRows.length > 0) ? stateRows[0] : null;
-    const rateAdjustmentFactor = Number(modelState?.parameters?.rateAdjustmentFactor) || 1.0;
-    const modelParams = Math.abs(rateAdjustmentFactor - 1.0) > 0.001
-      ? { rateAdjustmentFactor }
-      : null;
-
-    // ── Meal-response model state (Milestone 3) ──
-    // Per-class speedFactor and magnitudeFactor are EMPIRICAL corrections
-    // derived from the user's observed meal responses — NOT measurements of
-    // carbohydrate absorption physiology. They shape the meal-response
-    // component of the projection; they never prescribe clinical action.
     const mealModelState = (mealStateRows && mealStateRows.length > 0) ? mealStateRows[0] : null;
-    const mealModelParams = resolveMealModelParams(mealModelState);
-    const mealModelVersion = getMealModelVersion(mealModelState);
+    const modelResolution = resolveModelComponents(modelState, mealModelState);
 
-    // Run the projection engine.
+    // ── Uncertainty calibration (Milestone 4) ──
+    // Calibrate prediction-interval width from the user's historical
+    // out-of-sample forecast errors. When enough evaluated projections exist,
+    // sigma is set to the empirical MAE at each horizon. Otherwise the
+    // heuristic is used and the interval is marked as uncalibrated.
+    const uncertaintyCalibration = calibrateUncertainty(evaluatedProjections || []);
+
+    // Run the projection engine with the resolved model and calibrated uncertainty.
     const snapshot = normalizeInputs(readings, meals, doses, settings, now);
-    const result = projectGlucose(snapshot, { horizonMin: 60, modelParams, mealModelParams });
+    const result = projectGlucose(snapshot, {
+      horizonMin: 60,
+      modelResolution,
+      uncertaintyCalibration,
+    });
 
-    // Persist the prediction with provenance.
+    // Persist the prediction with full provenance.
     const projectionRecord = await base44.asServiceRole.entities.GlucoseProjection.create({
       user_id: user.id,
       generated_at: new Date(now).toISOString(),
       model_version: result.modelVersion,
-      meal_response_model_version: mealModelVersion,
+      meal_response_model_version: result.mealModelVersion,
       anchor_time: result.anchor ? new Date(result.anchor.time).toISOString() : null,
       anchor_value: result.anchor ? result.anchor.value : null,
       horizon_minutes: result.horizonMinutes,
@@ -104,6 +106,10 @@ export default async function (req) {
       data_quality: result.dataQuality,
       input_provenance: result.inputProvenance,
       active_inputs: result.activeInputs,
+      // Milestone 4 provenance.
+      model_resolution: modelResolution,
+      effective_parameters: result.effectiveParameters,
+      uncertainty_info: result.uncertainty,
       confidence: result.confidence,
       abstained: result.abstained,
       abstain_reason: result.abstainReason,
@@ -145,7 +151,11 @@ export default async function (req) {
       anchor: result.anchor,
       trajectory_length: result.trajectory.length,
       model_version: result.modelVersion,
-      meal_response_model_version: mealModelVersion,
+      meal_response_model_version: result.mealModelVersion,
+      resolution_reason: modelResolution.resolutionReason,
+      is_integrated: modelResolution.isIntegrated,
+      uncertainty_method: uncertaintyCalibration.method,
+      uncertainty_calibrated: uncertaintyCalibration.calibrated,
       data_quality: result.dataQuality,
     });
   } catch (error) {

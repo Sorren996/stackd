@@ -30,6 +30,78 @@ import {
   getClassWindowMinutes,
   MINUTE_MS,
 } from "./carbAbsorptionProfile.ts";
+import type { ModelResolution } from "./modelResolution.ts";
+import { extractEffectiveMealParams } from "./modelResolution.ts";
+import type { UncertaintyCalibration } from "./uncertaintyCalibration.ts";
+import { getEmpiricalSigma } from "./uncertaintyCalibration.ts";
+
+// ── Shadow evaluation (Milestone 4) ─────────────────────────────────────────
+//
+// Replays a projection with alternative model parameters on the SAME
+// historical inputs that were available at the original projection's
+// generation time. This enables fair baseline-vs-personalized comparison on
+// identical observations without changing the historical forecast record.
+//
+// The replay reconstructs the snapshot at the original generated_at using
+// historical readings, meals, doses, and settings filtered to that moment.
+// It then runs projectGlucose with the alternative ModelResolution.
+//
+// LIMITATION: Meals or doses logged or edited AFTER the original projection
+// but before the replay will be included if they fall within the active
+// window at generated_at. This is a known limitation of historical replay
+// from the current data store — the original projection's active_inputs
+// summary is preserved unchanged on the stored record.
+
+export function replayProjection(
+  originalProjection: {
+    anchor_time: string | number;
+    anchor_value: number;
+    generated_at: string | number;
+    horizon_minutes: number;
+  },
+  historicalReadings: any[],
+  historicalMeals: any[],
+  historicalDoses: any[],
+  settings: any,
+  alternativeResolution: ModelResolution,
+  uncertaintyCalibration?: UncertaintyCalibration | null
+): {
+  trajectory: ProjectionPoint[];
+  modelVersion: string;
+  mealModelVersion: string;
+  abstained: boolean;
+  confidence: number;
+} {
+  const generatedAt = new Date(originalProjection.generated_at).getTime();
+  if (!Number.isFinite(generatedAt)) {
+    return { trajectory: [], modelVersion: alternativeResolution.modelVersion, mealModelVersion: alternativeResolution.mealModelVersion, abstained: true, confidence: 0 };
+  }
+
+  // Filter readings to those available at generated_at (no future data).
+  const readingsAtTime = (Array.isArray(historicalReadings) ? historicalReadings : [])
+    .filter((r) => {
+      const t = new Date(r.recorded_at).getTime();
+      return Number.isFinite(t) && t <= generatedAt;
+    });
+
+  // Reconstruct the snapshot at the original generation time.
+  const snapshot = normalizeInputs(readingsAtTime, historicalMeals || [], historicalDoses || [], settings || {}, generatedAt);
+
+  // Run the projection with the alternative resolution.
+  const result = projectGlucose(snapshot, {
+    horizonMin: originalProjection.horizon_minutes,
+    modelResolution: alternativeResolution,
+    uncertaintyCalibration: uncertaintyCalibration ?? null,
+  });
+
+  return {
+    trajectory: result.trajectory,
+    modelVersion: result.modelVersion,
+    mealModelVersion: result.mealModelVersion,
+    abstained: result.abstained,
+    confidence: result.confidence,
+  };
+}
 
 // ── Model identity ──────────────────────────────────────────────────────────
 export const PROJECTION_MODEL_VERSION = "1.0.0-baseline";
@@ -121,6 +193,19 @@ export interface ProjectionResult {
     mealCount: number;
     doseCount: number;
     activeSpeedClasses: string[];
+  } | null;
+  // Milestone 4: explicit model resolution provenance.
+  modelResolution?: ModelResolution | null;
+  effectiveParameters?: {
+    rateAdjustmentFactor: number;
+    mealParams: Record<string, { speedFactor: number; magnitudeFactor: number }> | null;
+  } | null;
+  uncertainty?: {
+    method: string;
+    version: string;
+    calibrated: boolean;
+    sampleCount: number;
+    coverageObserved: number | null;
   } | null;
 }
 
@@ -362,7 +447,33 @@ export function normalizeInputs(
 
 // ── Uncertainty ─────────────────────────────────────────────────────────────
 
-function computeSigmaAtOffset(minOffset: number, dq: DataQuality, netRate: number): number {
+function computeSigmaAtOffset(
+  minOffset: number,
+  dq: DataQuality,
+  netRate: number,
+  uncertaintyCalibration?: UncertaintyCalibration | null
+): number {
+  // ── Empirically calibrated sigma (Milestone 4) ──
+  // When enough evaluation data exists, use the empirical MAE-by-horizon as
+  // the base sigma. This is a MEASURED error distribution, not an arbitrary
+  // constant. Binary data-quality penalties (stale, gap) are still added on
+  // top because they reflect conditions worse than the calibration average.
+  // The interval is NOT narrowed for personalization — the empirical sigma
+  // already reflects the actual error of whatever model was evaluated.
+  if (uncertaintyCalibration?.calibrated) {
+    const empirical = getEmpiricalSigma(minOffset, uncertaintyCalibration);
+    if (empirical != null) {
+      let sigma = empirical;
+      if (dq.staleReadings) sigma += 10;
+      if (dq.gapPresent) sigma += 8;
+      return Math.min(MAX_SIGMA_MGDL, sigma);
+    }
+  }
+
+  // ── Heuristic sigma (Milestone 1 fallback) ──
+  // Used when no empirical calibration is available. Marked as "uncalibrated"
+  // in the projection's uncertainty field so consumers know this is a
+  // heuristic estimate, not a measured error distribution.
   let sigma = BASE_SIGMA_MGDL + SIGMA_PER_SQRT_MIN * Math.sqrt(Math.max(0, minOffset));
 
   // Widen for data quality issues.
@@ -381,7 +492,13 @@ function computeSigmaAtOffset(minOffset: number, dq: DataQuality, netRate: numbe
   return Math.min(MAX_SIGMA_MGDL, sigma);
 }
 
-function computeConfidence(dq: DataQuality, hasActiveInputs: boolean, momentum: number): number {
+function computeConfidence(
+  dq: DataQuality,
+  hasActiveInputs: boolean,
+  momentum: number,
+  modelResolution?: ModelResolution | null,
+  uncertaintyCalibration?: UncertaintyCalibration | null
+): number {
   let confidence = 0.7;
   if (dq.staleReadings) confidence -= 0.3;
   if (dq.gapPresent) confidence -= 0.15;
@@ -390,6 +507,16 @@ function computeConfidence(dq: DataQuality, hasActiveInputs: boolean, momentum: 
   if (dq.confounders.includes("multiple_active_doses")) confidence -= 0.05;
   if (!hasActiveInputs && Math.abs(momentum) < 0.5) confidence -= 0.25; // nothing to project
   if (dq.readingCount < 3) confidence -= 0.1;
+
+  // Milestone 4: personalization without validation does NOT increase
+  // confidence. If personalization is active but we lack enough evaluation
+  // data to confirm it helps, reduce confidence slightly. This prevents
+  // overstating trust in an unvalidated personalized model.
+  const hasPersonalization = modelResolution?.general.eligible || modelResolution?.meal.eligible;
+  if (hasPersonalization && !uncertaintyCalibration?.calibrated) {
+    confidence -= 0.05; // unvalidated personalization
+  }
+
   return Math.max(MIN_CONFIDENCE, Math.min(1, confidence));
 }
 
@@ -402,31 +529,52 @@ export function projectGlucose(
     stepMin?: number;
     modelParams?: { rateAdjustmentFactor?: number } | null;
     mealModelParams?: { [key: string]: { speedFactor: number; magnitudeFactor: number } } | null;
+    modelResolution?: ModelResolution | null;
+    uncertaintyCalibration?: UncertaintyCalibration | null;
   } = {}
 ): ProjectionResult {
   const horizonMin = Math.max(5, Math.min(180, Number(opts.horizonMin) || DEFAULT_HORIZON_MIN));
   const stepMin = Math.max(1, Number(opts.stepMin) || STEP_MIN);
   const generatedAt = snapshot.now;
-  // rateAdjustmentFactor: a single learned correction for systematic prediction
-  // bias (Milestone 2). NOT a model of the individual's glucose physiology —
-  // it cannot distinguish absorption timing, magnitude, insulin action, or
-  // activity/stress causes. It describes what the baseline tended to get wrong
-  // on average; it never prescribes. Baseline = 1.0 (no correction).
-  const rateAdjustmentFactor = Number(opts.modelParams?.rateAdjustmentFactor) || 1.0;
-  const isPersonalized = Math.abs(rateAdjustmentFactor - 1.0) > 0.001;
-  const modelVersion = isPersonalized ? PERSONALIZED_MODEL_VERSION : BASELINE_MODEL_VERSION;
 
-  // Meal-response model version (Milestone 3). Separate from the general
-  // forecast model version. Reflects whether any per-class meal-response
-  // personalization is active.
-  const mealModelParams = opts.mealModelParams || null;
-  const hasMealPersonalization = mealModelParams != null &&
-    Object.values(mealModelParams).some((p: any) =>
-      p && (Math.abs(Number(p.speedFactor) - 1.0) > 0.001 || Math.abs(Number(p.magnitudeFactor) - 1.0) > 0.001)
-    );
-  const mealModelVersion = hasMealPersonalization
-    ? MEAL_RESPONSE_MODEL_VERSION_PERSONALIZED
-    : MEAL_RESPONSE_MODEL_VERSION_BASELINE;
+  // ── Model resolution (Milestone 4) ──
+  // When an explicit ModelResolution is provided, use it as the authoritative
+  // source of which components are eligible and what their effective values
+  // are. This is the recommended path for production projections.
+  //
+  // When no ModelResolution is provided (backward compatibility with
+  // Milestone 1-3 tests), fall back to the legacy modelParams / mealModelParams
+  // path with implicit truthy/falsy checks.
+  const modelResolution = opts.modelResolution ?? null;
+  const uncertaintyCalibration = opts.uncertaintyCalibration ?? null;
+
+  let rateAdjustmentFactor: number;
+  let mealModelParams: { [key: string]: { speedFactor: number; magnitudeFactor: number } } | null;
+  let modelVersion: string;
+  let mealModelVersion: string;
+
+  if (modelResolution) {
+    // Explicit path: use the resolved effective values.
+    rateAdjustmentFactor = modelResolution.general.eligible
+      ? modelResolution.general.effectiveValue
+      : 1.0;
+    mealModelParams = extractEffectiveMealParams(modelResolution);
+    modelVersion = modelResolution.modelVersion;
+    mealModelVersion = modelResolution.mealModelVersion;
+  } else {
+    // Legacy path (backward compatibility).
+    rateAdjustmentFactor = Number(opts.modelParams?.rateAdjustmentFactor) || 1.0;
+    const isPersonalized = Math.abs(rateAdjustmentFactor - 1.0) > 0.001;
+    modelVersion = isPersonalized ? PERSONALIZED_MODEL_VERSION : BASELINE_MODEL_VERSION;
+    mealModelParams = opts.mealModelParams || null;
+    const hasMealPersonalization = mealModelParams != null &&
+      Object.values(mealModelParams).some((p: any) =>
+        p && (Math.abs(Number(p.speedFactor) - 1.0) > 0.001 || Math.abs(Number(p.magnitudeFactor) - 1.0) > 0.001)
+      );
+    mealModelVersion = hasMealPersonalization
+      ? MEAL_RESPONSE_MODEL_VERSION_PERSONALIZED
+      : MEAL_RESPONSE_MODEL_VERSION_BASELINE;
+  }
 
   // Abstain if no valid anchor.
   if (!snapshot.anchor) {
@@ -448,7 +596,10 @@ export function projectGlucose(
   }
 
   const hasActiveInputs = snapshot.activeMeals.length > 0 || snapshot.activeDoses.length > 0;
-  const confidence = computeConfidence(snapshot.dataQuality, hasActiveInputs, snapshot.momentumMgDlPerMin);
+  const confidence = computeConfidence(
+    snapshot.dataQuality, hasActiveInputs, snapshot.momentumMgDlPerMin,
+    modelResolution, uncertaintyCalibration
+  );
 
   // Abstain if confidence is too low.
   if (confidence < ABSTAIN_CONFIDENCE_THRESHOLD) {
@@ -524,7 +675,7 @@ export function projectGlucose(
     // Clamp to a physiologically plausible range.
     currentValue = Math.max(20, Math.min(500, currentValue));
 
-    const sigma = computeSigmaAtOffset(offset, snapshot.dataQuality, netRate);
+    const sigma = computeSigmaAtOffset(offset, snapshot.dataQuality, netRate, uncertaintyCalibration);
     trajectory.push({
       time: futureTime,
       min_offset: offset,
@@ -589,5 +740,20 @@ export function projectGlucose(
       doseCount: snapshot.activeDoses.length,
       activeSpeedClasses,
     },
+    // Milestone 4: explicit model resolution provenance.
+    modelResolution,
+    effectiveParameters: {
+      rateAdjustmentFactor,
+      mealParams: mealModelParams,
+    },
+    uncertainty: uncertaintyCalibration
+      ? {
+          method: uncertaintyCalibration.method,
+          version: uncertaintyCalibration.version,
+          calibrated: uncertaintyCalibration.calibrated,
+          sampleCount: uncertaintyCalibration.sampleCount,
+          coverageObserved: uncertaintyCalibration.coverageObserved,
+        }
+      : null,
   };
 }

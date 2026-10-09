@@ -40,7 +40,17 @@ import {
   EVALUATION_VERSION,
   EVAL_BUFFER_MIN,
 } from "../../shared/forecastEvaluation.ts";
-import { BASELINE_MODEL_VERSION, PERSONALIZED_MODEL_VERSION } from "../../shared/insightEngine.ts";
+import {
+  BASELINE_MODEL_VERSION,
+  PERSONALIZED_MODEL_VERSION,
+  replayProjection,
+} from "../../shared/insightEngine.ts";
+import {
+  createBaselineResolution,
+  createGeneralOnlyResolution,
+  createMealOnlyResolution,
+  resolveModelComponents,
+} from "../../shared/modelResolution.ts";
 
 const MINUTE_MS = 60 * 1000;
 const BATCH_LIMIT = 20;
@@ -216,7 +226,127 @@ export default async function (req: Request): Promise<Response> {
       }
     }
 
-    console.log(`[evaluateProjections] processed=${eligible.length} evaluated=${evaluated} unscorable=${unscorable} stateUpdates=${stateUpdates} reverts=${reverts}`);
+    // ── Shadow evaluation (Milestone 4) ──────────────────────────────────────
+    // For each user with newly evaluated projections, replay the projection
+    // with alternative model configurations (baseline, general-only,
+    // meal-only, integrated) on the SAME historical inputs and score each
+    // against the SAME actual readings. This enables fair baseline-vs-
+    // personalized comparison without changing the historical forecast record.
+    //
+    // LIMITATION: The total glucose forecast error CANNOT isolate the
+    // meal-response or general-bias component — the forecast includes carb +
+    // insulin + momentum contributions. A difference in MAE may reflect
+    // changes in the user's overall glucose management, not just the
+    // parameter change. Results are stored for analysis, not for automatic
+    // model selection.
+    let shadowEvaluated = 0;
+    for (const [userId, _newEvals] of userEvaluationMap) {
+      try {
+        // Fetch the user's historical data for replay (once per user).
+        const [userMeals, userDoses, userSettingsList, userProjState, userMealState, userEvaluatedProjs] = await Promise.all([
+          sr.entities.CarbEntry.filter({ created_by_id: userId }, "-consumed_at", 500),
+          sr.entities.InsulinDose.filter({ created_by_id: userId }, "-administered_at", 500),
+          sr.entities.UserSettings.filter({ created_by_id: userId }, "-created_date", 1),
+          sr.entities.ProjectionModelState.filter({ user_id: userId }, "-created_date", 1),
+          sr.entities.MealResponseModelState.filter({ user_id: userId }, "-created_date", 1),
+          sr.entities.GlucoseProjection.filter(
+            { user_id: userId, status: "evaluated" },
+            "-generated_at", 50
+          ),
+        ]);
+
+        const userSettings = userSettingsList?.[0] || {};
+        const projState = userProjState?.[0] || null;
+        const mealState = userMealState?.[0] || null;
+
+        // Construct the 4 alternative model resolutions for shadow evaluation.
+        const userResolution = resolveModelComponents(projState, mealState);
+        const rateAdj = userResolution.general.eligible ? userResolution.general.effectiveValue : 1.0;
+        const mealParams = {};
+        if (mealState?.speed_class_parameters) {
+          for (const cls of ["fast", "mixed", "high_fat"]) {
+            const cp = mealState.speed_class_parameters[cls];
+            if (cp && (Math.abs(Number(cp.speed_factor) - 1.0) > 0.001 || Math.abs(Number(cp.magnitude_factor) - 1.0) > 0.001)) {
+              mealParams[cls] = { speedFactor: Number(cp.speed_factor), magnitudeFactor: Number(cp.magnitude_factor) };
+            }
+          }
+        }
+
+        const shadowConfigs = [
+          { name: "baseline", resolution: createBaselineResolution() },
+          { name: "general_personalized", resolution: createGeneralOnlyResolution(rateAdj) },
+          { name: "meal_personalized", resolution: createMealOnlyResolution(mealParams) },
+          { name: "integrated", resolution: userResolution },
+        ];
+
+        for (const proj of userEvaluatedProjs) {
+          try {
+            // Fetch actual readings for this projection (same as the original evaluation).
+            const readings = await sr.entities.GlucoseReading.filter(
+              { recorded_at: { $gte: proj.generated_at }, created_by_id: userId },
+              "recorded_at", 2000
+            );
+            const normalizedReadings = readings
+              .filter((r: any) => r && Number.isFinite(Number(r.value)))
+              .map((r: any) => ({
+                time: new Date(r.recorded_at).getTime(),
+                value: Number(r.value),
+                source: String(r.source || "manual"),
+              }));
+
+            const shadowResults: Record<string, any> = {};
+            for (const config of shadowConfigs) {
+              const replayed = replayProjection(
+                {
+                  anchor_time: proj.anchor_time,
+                  anchor_value: proj.anchor_value,
+                  generated_at: proj.generated_at,
+                  horizon_minutes: Number(proj.horizon_minutes) || 60,
+                },
+                readings,
+                userMeals,
+                userDoses,
+                userSettings,
+                config.resolution
+              );
+
+              if (replayed.abstained || replayed.trajectory.length === 0) {
+                shadowResults[config.name] = { mae: null, bias: null, coverage: null, valid_count: 0, abstained: true };
+                continue;
+              }
+
+              const replayedProjection = {
+                generated_at: new Date(proj.generated_at).getTime(),
+                model_version: replayed.modelVersion,
+                horizon_minutes: Number(proj.horizon_minutes) || 60,
+                trajectory: replayed.trajectory,
+                abstained: false,
+              };
+              const replayEval = evaluateProjection(replayedProjection, normalizedReadings, now);
+              shadowResults[config.name] = {
+                mae: replayEval.mae,
+                bias: replayEval.bias,
+                coverage: replayEval.coverage,
+                valid_count: replayEval.valid_count,
+                abstained: false,
+              };
+            }
+
+            // Persist shadow evaluation results on the projection record.
+            await sr.entities.GlucoseProjection.update(proj.id, {
+              shadow_evaluation: shadowResults,
+            });
+            shadowEvaluated++;
+          } catch (err: any) {
+            console.error(`[evaluateProjections] shadow eval error for ${proj.id}: ${err.message}`);
+          }
+        }
+      } catch (err: any) {
+        console.error(`[evaluateProjections] shadow eval error for user ${userId}: ${err.message}`);
+      }
+    }
+
+    console.log(`[evaluateProjections] processed=${eligible.length} evaluated=${evaluated} unscorable=${unscorable} stateUpdates=${stateUpdates} reverts=${reverts} shadowEvaluated=${shadowEvaluated}`);
 
     return Response.json({
       ok: true,
@@ -225,6 +355,7 @@ export default async function (req: Request): Promise<Response> {
       unscorable,
       stateUpdates,
       reverts,
+      shadowEvaluated,
     });
   } catch (error: any) {
     console.error('[evaluateProjections] fatal:', error.message);

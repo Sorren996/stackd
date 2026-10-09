@@ -56,6 +56,22 @@
       "type": "object",
       "description": "Summary of active carbs and insulin at generation time: total_active_carb_grams, total_active_insulin_units, meal_count, dose_count, active_speed_classes."
     },
+    "model_resolution": {
+      "type": "object",
+      "description": "Milestone 4: explicit model arbitration provenance. Records which model components (general forecast-bias correction, per-class meal-response correction) were eligible, their effective values, and the selection/rejection reason for each. Contains: general {eligible, effectiveValue, reason, source}, meal {eligible, classes, reason, eligibleClasses}, modelVersion, mealModelVersion, isIntegrated, resolutionReason."
+    },
+    "effective_parameters": {
+      "type": "object",
+      "description": "Milestone 4: the exact parameter values used to generate this projection. Contains: rateAdjustmentFactor (number), mealParams (per-class {speedFactor, magnitudeFactor} or null). Immutable once persisted \u2014 represents the model state at generation time."
+    },
+    "uncertainty_info": {
+      "type": "object",
+      "description": "Milestone 4: uncertainty method and calibration status. Contains: method ('heuristic' or 'empirical_calibrated'), version, calibrated (boolean), sampleCount (evaluated projections used for calibration), coverageObserved (measured interval coverage or null when insufficient). An interval is NOT claimed to be calibrated until coverage has been measured on suitable observations."
+    },
+    "shadow_evaluation": {
+      "type": "object",
+      "description": "Milestone 4: shadow evaluation results comparing alternative model configurations on the same eligible observations. Contains per-config metrics (baseline, general_personalized, meal_personalized, integrated) with mae, bias, coverage, valid_count. Only populated by the evaluation pipeline after the forecast window has elapsed. Does not modify the original trajectory."
+    },
     "confidence": {
       "type": "number",
       "description": "Overall confidence in the projection, 0 to 1. Low confidence widens the uncertainty band."
