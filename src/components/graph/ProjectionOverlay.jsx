@@ -16,6 +16,9 @@
 //   - The "now" reference line already separates observed from projected.
 //   - Tapping a projected point shows its value and time in a small bubble
 //     (Issue 3: tap-to-show-values for readability).
+//   - Tap-hold-drag scrubs through every forecast point; the popup updates
+//     continuously with projected values only and freezes on release.
+//   - Keyboard: arrow keys step through each forecast point; Escape dismisses.
 //
 // SAFETY: This is an informational wellness estimate, never a clinical
 // prediction. The dashed treatment and muted color ensure it never
@@ -27,6 +30,7 @@ import { AnimatePresence, motion } from "framer-motion";
 
 const MINUTE_MS = 60 * 1000;
 const MARGIN = 8;
+const TOUCH_SLOP = 8; // px — movement below this is a tap, above is a scrub
 
 function formatProjectionTime(time) {
   if (!Number.isFinite(time)) return "";
@@ -53,7 +57,13 @@ export default function ProjectionOverlay({
   getGlucoseY,
 }) {
   const [activePoint, setActivePoint] = useState(null);
+  const [scrubbing, setScrubbing] = useState(false);
+  const [focused, setFocused] = useState(false);
   const svgRef = useRef(null);
+  const pointerDownRef = useRef(false);
+  const scrubbingRef = useRef(false);
+  const downPosRef = useRef({ x: 0, y: 0 });
+  const svgRectRef = useRef(null);
   const [pos, setPos] = useState({ left: 0, top: 0, ready: false });
 
   const points = useMemo(() => {
@@ -83,11 +93,140 @@ export default function ProjectionOverlay({
       .filter(Boolean);
   }, [projection, domainStart, totalMs, chartWidth, getGlucoseY]);
 
-  const handlePointTap = useCallback((point) => {
-    setActivePoint((prev) =>
-      prev && prev.x === point.x && prev.minOffset === point.minOffset ? null : point
-    );
+  // Find the trajectory point nearest to a chart-local x coordinate.
+  // Points are sorted by x (time increases → x increases), so a binary
+  // search converges quickly. Clamps to the first/last point outside the range.
+  const findNearestPointByX = useCallback((localX) => {
+    if (!points.length) return null;
+    if (localX <= points[0].x) return points[0];
+    const last = points[points.length - 1];
+    if (localX >= last.x) return last;
+    let lo = 0;
+    let hi = points.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (points[mid].x < localX) lo = mid + 1;
+      else hi = mid;
+    }
+    const a = points[lo - 1];
+    const b = points[lo];
+    return Math.abs(localX - a.x) <= Math.abs(localX - b.x) ? a : b;
+  }, [points]);
+
+  // ── Pointer handlers: tap + hold-drag scrub ──────────────────────────
+  // Quick tap (no movement beyond TOUCH_SLOP) toggles the popup at the
+  // nearest point — same as the previous click behavior. Once the finger
+  // moves past TOUCH_SLOP, we enter scrub mode: the popup tracks the
+  // nearest forecast point to the finger's x-position, showing projected
+  // values only. On release, the popup freezes at the last position.
+  const handlePointerDown = useCallback((e) => {
+    if (!points.length || !e.isPrimary) return;
+    pointerDownRef.current = true;
+    scrubbingRef.current = false;
+    setScrubbing(false);
+    downPosRef.current = { x: e.clientX, y: e.clientY };
+    if (svgRef.current) svgRectRef.current = svgRef.current.getBoundingClientRect();
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      /* pointer capture not supported — events still fire on the rect */
+    }
+  }, [points]);
+
+  const handlePointerMove = useCallback((e) => {
+    if (!pointerDownRef.current) return;
+    const dx = e.clientX - downPosRef.current.x;
+    const dy = e.clientY - downPosRef.current.y;
+    const dist = Math.hypot(dx, dy);
+
+    // Enter scrub mode once the finger exceeds the touch-slop threshold.
+    if (!scrubbingRef.current && dist > TOUCH_SLOP) {
+      scrubbingRef.current = true;
+      setScrubbing(true);
+    }
+
+    if (scrubbingRef.current && svgRectRef.current) {
+      const localX = e.clientX - svgRectRef.current.left;
+      const nearest = findNearestPointByX(localX);
+      if (nearest) setActivePoint(nearest);
+    }
+  }, [findNearestPointByX]);
+
+  const handlePointerUp = useCallback((e) => {
+    if (!pointerDownRef.current) return;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      /* already released or not captured */
+    }
+
+    if (scrubbingRef.current) {
+      // Scrub ended — freeze at the current position (do not close).
+      scrubbingRef.current = false;
+      setScrubbing(false);
+    } else {
+      // Tap — toggle the popup at the nearest point to the touch position.
+      if (svgRectRef.current) {
+        const localX = downPosRef.current.x - svgRectRef.current.left;
+        const nearest = findNearestPointByX(localX);
+        if (nearest) {
+          setActivePoint((prev) =>
+            prev && prev.x === nearest.x && prev.minOffset === nearest.minOffset ? null : nearest
+          );
+        }
+      }
+    }
+    pointerDownRef.current = false;
+  }, [findNearestPointByX]);
+
+  const handlePointerCancel = useCallback(() => {
+    pointerDownRef.current = false;
+    if (scrubbingRef.current) {
+      scrubbingRef.current = false;
+      setScrubbing(false);
+    }
   }, []);
+
+  // ── Keyboard accessibility ───────────────────────────────────────────
+  // Arrow keys step through each forecast point individually so keyboard
+  // and screen-reader users can inspect every estimated value. Escape
+  // dismisses. Enter/Space toggles the popup at the first point.
+  const handleKeyDown = useCallback((e) => {
+    if (!points.length) return;
+    const currentIndex = activePoint
+      ? points.findIndex((p) => p.minOffset === activePoint.minOffset)
+      : -1;
+
+    switch (e.key) {
+      case "ArrowRight":
+      case "ArrowUp": {
+        e.preventDefault();
+        const next = currentIndex < 0 ? 0 : Math.min(currentIndex + 1, points.length - 1);
+        setActivePoint(points[next]);
+        break;
+      }
+      case "ArrowLeft":
+      case "ArrowDown": {
+        e.preventDefault();
+        const prev = currentIndex < 0 ? points.length - 1 : Math.max(currentIndex - 1, 0);
+        setActivePoint(points[prev]);
+        break;
+      }
+      case "Escape": {
+        e.preventDefault();
+        setActivePoint(null);
+        break;
+      }
+      case "Enter":
+      case " ": {
+        e.preventDefault();
+        setActivePoint((prev) => (prev ? null : points[0]));
+        break;
+      }
+      default:
+        break;
+    }
+  }, [points, activePoint]);
 
   // Tooltip dimensions and local (chart-relative) position.
   const tooltipW = 78;
@@ -118,12 +257,12 @@ export default function ProjectionOverlay({
   }, [activePoint, tooltipX, tooltipY, tooltipW, tooltipH]);
 
   // Dismiss the tooltip on outside tap, any scroll, Escape, or resize.
-  // Hit circles are marked with data-projection-hit so taps on them don't
-  // close the tooltip before the click handler can switch points.
+  // The scrub surface is marked with data-projection-scrub so taps on the
+  // projection don't close the popup (they start a new tap/scrub instead).
   useEffect(() => {
     if (!activePoint) return;
     const onDown = (e) => {
-      if (e.target?.closest?.("[data-projection-hit]")) return;
+      if (e.target?.closest?.("[data-projection-scrub]")) return;
       setActivePoint(null);
     };
     const onEsc = (e) => {
@@ -146,6 +285,14 @@ export default function ProjectionOverlay({
   }, [activePoint]);
 
   if (points.length < 2) return null;
+
+  // Accessible label for the SVG — describes the projection and current point.
+  const ariaLabel = activePoint
+    ? `Projected glucose ${activePoint.value} at ${formatProjectionTime(activePoint.time)}` +
+      (activePoint.upper != null ? `, high estimate ${activePoint.upper}` : "") +
+      (activePoint.lower != null ? `, low estimate ${activePoint.lower}` : "") +
+      `. Use arrow keys to step through forecast points.`
+    : "Projected glucose trajectory. Press Enter to open, then use arrow keys to step through forecast points.";
 
   // Build the dashed mean line path.
   const linePath = points
@@ -180,12 +327,38 @@ export default function ProjectionOverlay({
 
   return (
     <>
+      {/* Screen-reader live region — announces the current forecast point */}
+      <div className="sr-only" aria-live="polite">
+        {activePoint
+          ? `Projected glucose ${activePoint.value} at ${formatProjectionTime(activePoint.time)}`
+          : ""}
+      </div>
       <svg
         ref={svgRef}
         className="absolute top-0 left-0"
-        style={{ width: chartWidth, height: glucoseChartHeight, overflow: "visible" }}
-        aria-hidden="true"
+        style={{ width: chartWidth, height: glucoseChartHeight, overflow: "visible", outline: "none" }}
+        tabIndex={0}
+        role="button"
+        aria-label={ariaLabel}
+        onKeyDown={handleKeyDown}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
       >
+        {/* Focus indicator — dashed copper outline around the projection area */}
+        {focused && (
+          <rect
+            x={points[0].x - 6}
+            y={0}
+            width={Math.max(1, points[points.length - 1].x - points[0].x) + 12}
+            height={glucoseChartHeight}
+            fill="none"
+            stroke="#9c5228"
+            strokeWidth={1}
+            strokeOpacity={0.35}
+            strokeDasharray="4 4"
+            style={{ pointerEvents: "none" }}
+          />
+        )}
         {hasBand && (
           <path d={bandPath} fill="#af751b" fillOpacity={0.07} stroke="none" />
         )}
@@ -238,34 +411,39 @@ export default function ProjectionOverlay({
           strokeOpacity={0.4}
           style={{ pointerEvents: "none" }}
         />
-        {/* Active point marker */}
+        {/* Active point marker — tracks the current scrub/keyboard position.
+            Slightly larger and more opaque during scrub for emphasis. */}
         {activePoint && (
           <circle
             cx={activePoint.x}
             cy={activePoint.y}
-            r={4}
+            r={scrubbing ? 5 : 4}
             fill="#af751b"
-            fillOpacity={0.7}
+            fillOpacity={scrubbing ? 0.85 : 0.7}
             stroke="#fdf9f2"
             strokeWidth={1.5}
             style={{ pointerEvents: "none" }}
           />
         )}
-        {/* Invisible hit circles at each trajectory point — tap to show value.
-            data-projection-hit marks them so the dismiss handler can skip taps
-            that land on a point (the click handler toggles the point instead). */}
-        {points.map((p, i) => (
-          <circle
-            key={`hit-${i}`}
-            data-projection-hit
-            cx={p.x}
-            cy={p.y}
-            r={12}
-            fill="transparent"
-            style={{ cursor: "pointer", touchAction: "manipulation" }}
-            onClick={() => handlePointTap(p)}
-          />
-        ))}
+        {/* Scrub surface — transparent rect over the projection's x-range.
+            Handles tap (toggle popup) and hold-drag (scrub through forecast
+            points). data-projection-scrub marks it so the dismiss handler
+            skips taps that land on the projection. touch-action: pan-y lets
+            vertical page-scroll pass through while claiming horizontal drags
+            for scrubbing, so the chart's horizontal pan is not stolen. */}
+        <rect
+          data-projection-scrub
+          x={points[0].x}
+          y={0}
+          width={Math.max(1, points[points.length - 1].x - points[0].x)}
+          height={glucoseChartHeight}
+          fill="transparent"
+          style={{ cursor: "pointer", touchAction: "pan-y" }}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerCancel}
+        />
       </svg>
 
       {/* Tooltip bubble — portaled to document.body so it floats above all
@@ -276,7 +454,7 @@ export default function ProjectionOverlay({
           <motion.div
             initial={{ opacity: 0, y: 6, scale: 0.96 }}
             animate={{ opacity: pos.ready ? 1 : 0, y: pos.ready ? 0 : 6, scale: pos.ready ? 1 : 0.96 }}
-            transition={{ duration: 0.14 }}
+            transition={{ duration: scrubbing ? 0 : 0.14 }}
             className="fixed z-[300] pointer-events-none"
             style={{
               left: pos.left,
