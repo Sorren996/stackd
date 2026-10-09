@@ -136,10 +136,17 @@ function integrateGamma(toMin, peakMin, shapeExp, step = 2) {
   return area;
 }
 
+// Front-loaded dual-wave rate for high-fat/protein meals (pizza, pad thai
+// style). A sharp early wave carries most of the carbs — matching the
+// observed rapid rise — with a broad low prolonged tail for fat/protein-
+// delayed absorption over several hours. Weights and shapes chosen so
+// cumulative absorption reaches a large fraction by 60 min while still
+// extending across the full window. ESTIMATE derived from meal composition
+// and learned parameters — describes, never prescribes.
 function dualWaveRate(minOffset, peakMin) {
-  const firstPeak = Math.min(35, peakMin * 0.8);
-  const secondPeak = Math.max(Math.min(120, peakMin + 80), firstPeak + 25);
-  return gammaRate(minOffset, firstPeak, 2.2) * 0.35 + gammaRate(minOffset, secondPeak, 3.2) * 0.65;
+  const firstPeak = Math.max(20, Math.min(35, Math.round(peakMin * 0.625)));
+  const secondPeak = Math.max(firstPeak + 100, Math.min(180, peakMin + 90));
+  return gammaRate(minOffset, firstPeak, 1.0) * 0.65 + gammaRate(minOffset, secondPeak, 2.0) * 0.35;
 }
 
 function getClassPeakMinutes(speedClass, speedFactor) {
@@ -484,11 +491,25 @@ export function projectGlucose(snapshot, opts = {}) {
     const mealTime = new Date(m.consumed_at).getTime();
     const elapsed = (snapshot.now - mealTime) / MINUTE_MS;
     const speedClass = deriveSpeedClass(m);
-    const windowMin = getClassWindowMinutes(speedClass);
-    const peakMin = getClassPeakMinutes(speedClass);
-    const totalArea = integrateGamma(windowMin, peakMin, ABSORPTION_SHAPE_EXP);
+    const classParams = mealModelParams?.[speedClass];
+    const speedFactor = classParams?.speedFactor != null ? Number(classParams.speedFactor) : null;
+    const windowMin = getClassWindowMinutes(speedClass, speedFactor);
+    const peakMin = getClassPeakMinutes(speedClass, speedFactor);
+    const dualWave = speedClass === "high_fat";
+    const rateFn = dualWave
+      ? (t) => dualWaveRate(t, peakMin)
+      : (t) => gammaRate(t, peakMin, ABSORPTION_SHAPE_EXP);
+    const step = 2;
+    let totalArea = 0;
+    for (let t = 0; t < windowMin; t += step) {
+      totalArea += ((rateFn(t) + rateFn(t + step)) / 2) * step;
+    }
     if (totalArea <= 0) return s;
-    const elapsedArea = integrateGamma(Math.min(elapsed, windowMin), peakMin, ABSORPTION_SHAPE_EXP);
+    let elapsedArea = 0;
+    const cap = Math.min(elapsed, windowMin);
+    for (let t = 0; t < cap; t += step) {
+      elapsedArea += ((rateFn(t) + rateFn(t + step)) / 2) * step;
+    }
     const fraction = Math.max(0, Math.min(1, elapsedArea / totalArea));
     return s + Number(m.carbs) * (1 - fraction);
   }, 0);

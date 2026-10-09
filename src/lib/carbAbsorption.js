@@ -314,20 +314,37 @@ export const FOOD_DATABASE = [
 
 ];
 
-// ── Macro-aware absorption model ──────────────────────────────
-// FPU (fat-protein units): 1 FPU ≈ 100 kcal from fat+protein.
-//   FPU = (fat_g * 9 + protein_g * 4) / 100, floored at 0.
-// Window: 2 h base (carb-only) + 0.7 h per FPU, capped at 6 h.
-// Peak: ~40 % of window for high-FPU meals, ~35 % for carb-only,
-//   never before 30 min.
-// Curve: gamma-shaped rate (fast rise to peak, long gradual tail),
-//   matching published tracer glucose-rate-of-appearance curves.
-// % processed = cumulative grams absorbed ÷ total carb grams,
-//   computed as the area under the rate curve from meal time to
-//   now — NOT peak position. At the peak this lands well below
-//   100 %; 100 % only at the tail end of the window.
+// ── Class-based absorption timing (matches the projection engine) ────────
+// The display curve and the projection engine share ONE absorption model:
+// class-based peak/window timing (BASELINE_CLASS_PARAMS) adjusted by a
+// learned per-class speedFactor. This guarantees the "Xg absorbed so far"
+// shown in Meal Review is computed from the exact same curve the projection
+// pipeline uses — no separate simpler curve for display.
+//
+// FPU-based getMealWindowMinutes/getMealPeakMinutes below are kept ONLY for
+// the review/monitoring window duration (how long to keep watching a meal),
+// which is a separate concern from the absorption curve shape.
 
 const ABSORPTION_SHAPE_EXP = 3.0;
+
+// Mirrors base44/shared/carbAbsorptionProfile.ts BASELINE_CLASS_PARAMS so the
+// frontend display and backend projection use identical baseline timing.
+const BASELINE_CLASS_PARAMS = {
+  fast:     { peakMin: 30, windowMin: 120, secPeakMin: null },
+  mixed:    { peakMin: 60, windowMin: 210, secPeakMin: null },
+  high_fat: { peakMin: 40, windowMin: 300, secPeakMin: 120 },
+};
+
+function deriveSpeedClass(entry) {
+  const fat = Number(entry?.fat_grams ?? 0) || 0;
+  const protein = Number(entry?.protein_grams ?? 0) || 0;
+  const carbs = Number(entry?.carbs ?? 0) || 0;
+  const gi = Number(entry?.glycemic_index ?? entry?.gi ?? 0) || 0;
+  const profile = entry?.absorption_profile || "medium";
+  if (fat >= 40 || (protein >= 30 && carbs > 0) || (protein >= 75 && carbs === 0)) return "high_fat";
+  if (profile === "fast" || gi >= 70) return "fast";
+  return "mixed";
+}
 
 function gammaRate(elapsedMin, peakMin, shapeExp) {
   if (elapsedMin <= 0 || peakMin <= 0) return 0;
@@ -343,6 +360,8 @@ export function computeFPU(fatGrams, proteinGrams) {
   return Math.max(0, (fat * 9 + protein * 4) / 100);
 }
 
+// FPU-based window — used for the review/monitoring window DURATION only
+// (how long to keep watching a meal), NOT for the absorption curve shape.
 export function getMealWindowMinutes(fatGrams, proteinGrams) {
   const fpu = computeFPU(fatGrams, proteinGrams);
   const baseHours = 2;
@@ -358,23 +377,52 @@ export function getMealPeakMinutes(fatGrams, proteinGrams, windowMin) {
   return Math.max(30, Math.round(win * peakFraction));
 }
 
+// Front-loaded dual-wave rate for high-fat/protein meals (pizza, pad thai
+// style). A sharp early wave carries most of the carbs — matching the
+// observed rapid rise — with a broad low prolonged tail for fat/protein-
+// delayed absorption over several hours. Weights and shapes are chosen so
+// cumulative absorption reaches a large fraction by 60 min while still
+// extending across the full window. This is an ESTIMATE derived from meal
+// composition and learned parameters — never a measurement, never a dosing
+// recommendation. It describes, never prescribes.
+function dualWaveRate(minOffset, peakMin) {
+  const firstPeak = Math.max(20, Math.min(35, Math.round(peakMin * 0.625)));
+  const secondPeak = Math.max(firstPeak + 100, Math.min(180, peakMin + 90));
+  return gammaRate(minOffset, firstPeak, 1.0) * 0.65
+       + gammaRate(minOffset, secondPeak, 2.0) * 0.35;
+}
+
 export function getAbsorptionModel(entry, opts = {}) {
   const fat = Number(entry?.fat_grams ?? 0) || 0;
   const protein = Number(entry?.protein_grams ?? 0) || 0;
   const carbs = Number(entry?.carbs ?? 0) || 0;
-  let windowMin = getMealWindowMinutes(fat, protein);
-  let peakMin = getMealPeakMinutes(fat, protein, windowMin);
+
+  // Class-based timing — the SAME model the projection engine uses, so the
+  // display curve and the projection are always consistent.
+  const speedClass = entry?.speed_class || deriveSpeedClass(entry);
+  const base = BASELINE_CLASS_PARAMS[speedClass] || BASELINE_CLASS_PARAMS.mixed;
+  let windowMin = base.windowMin;
+  let peakMin = base.peakMin;
 
   // Per-user learned speed factor (per speed class) shifts the ESTIMATED
-  // timing curve — when the user's past meals of this class tended to run fast
-  // or slow, the peak and window follow. Area under the curve still integrates
-  // exactly to the logged carbs; only WHEN the grams are estimated to arrive
-  // is nudged. speedFactor < 1 = run fast, > 1 = run slow.
+  // timing curve — when the user's past meals of this class tended to run
+  // fast or slow, the peak and window follow. Area under the curve still
+  // integrates exactly to the logged carbs; only WHEN the grams are
+  // estimated to arrive is nudged. speedFactor < 1 = run fast, > 1 = slow.
   const factor = Number(opts?.speedFactor);
   if (Number.isFinite(factor) && factor > 0 && factor !== 1) {
     windowMin = Math.max(90, Math.min(360, Math.round(windowMin * factor)));
     peakMin = Math.max(20, Math.min(240, Math.round(peakMin * factor)));
   }
+
+  // dual-wave: high-fat/protein-rich meals absorb with a front-loaded sharp
+  // rise plus a prolonged tail (secPeakMin is set for the high_fat class).
+  // Also respect an explicit dual_wave flag from the entry or opts.
+  const dualWave = Boolean(
+    opts?.dualWave ??
+      (base.secPeakMin != null) ??
+      (Number.isFinite(entry?.dual_wave) ? entry.dual_wave : false)
+  );
 
   return {
     carbs,
@@ -383,22 +431,9 @@ export function getAbsorptionModel(entry, opts = {}) {
     windowMin,
     peakMin,
     fpu: computeFPU(fat, protein),
-    // dual-wave: fatty/protein-heavy meals listed in the FOOD_DATABASE and AI
-    // estimates (pizza, pad thai, fried dishes) — the user picked a "slow"
-    // absorption profile, or macros cross the delayed-rise threshold.
-    dualWave: Boolean(
-      opts?.dualWave ??
-        (Number.isFinite(entry?.dual_wave) ? entry.dual_wave : hasDelayedRiseLike(fat, protein, carbs))
-    ),
+    dualWave,
+    speedClass,
   };
-}
-
-// Mirrors mealMonitoring.hasDelayedRise so carbAbsorption stays self-contained.
-function hasDelayedRiseLike(fat, protein, carbs) {
-  if (fat >= 40) return true;
-  if (protein >= 30 && carbs > 0) return true;
-  if (protein >= 75 && carbs === 0) return true;
-  return false;
 }
 
 function integrateGamma(toMin, peakMin, shapeExp, step = 2) {
@@ -433,15 +468,21 @@ export function getCarbAbsorptionAt(entry, targetTime = Date.now(), opts = {}) {
     return { absorbedGrams: entry.carbs, remainingGrams: 0, absorptionRateGPerMin: 0, percentAbsorbed: 100, peakMin: model.peakMin, windowMin: model.windowMin };
   }
 
-  const totalArea = integrateGamma(model.windowMin, model.peakMin, ABSORPTION_SHAPE_EXP);
+  // Use the SAME rate function as generateCarbCurve and the projection engine
+  // so the display number, the curve, and the projection all agree.
+  const rateFn = model.dualWave
+    ? (t) => dualWaveRate(t, model.peakMin)
+    : (t) => gammaRate(t, model.peakMin, ABSORPTION_SHAPE_EXP);
+
+  const totalArea = integrateRate(model.windowMin, rateFn);
   if (totalArea <= 0) {
     return { absorbedGrams: 0, remainingGrams: entry.carbs, absorptionRateGPerMin: 0, percentAbsorbed: 0, peakMin: model.peakMin, windowMin: model.windowMin };
   }
 
-  const elapsedArea = integrateGamma(elapsedMin, model.peakMin, ABSORPTION_SHAPE_EXP);
+  const elapsedArea = integrateRate(elapsedMin, rateFn);
   const fraction = Math.max(0, Math.min(1, elapsedArea / totalArea));
   const absorbedGrams = entry.carbs * fraction;
-  const ratePerMin = (gammaRate(elapsedMin, model.peakMin, ABSORPTION_SHAPE_EXP) / totalArea) * entry.carbs;
+  const ratePerMin = (rateFn(elapsedMin) / totalArea) * entry.carbs;
 
   return {
     absorbedGrams,
@@ -451,19 +492,6 @@ export function getCarbAbsorptionAt(entry, targetTime = Date.now(), opts = {}) {
     peakMin: model.peakMin,
     windowMin: model.windowMin,
   };
-}
-
-// Dual-wave rate: a quick first wave plus a delayed second wave, each a gamma
-// bump. The two are weighted so their combined area still integrates to carbs
-// exactly. Used for high-fat / protein-rich meals (pizza, pad thai style).
-function dualWaveRate(minOffset, peakMin, windowMin) {
-  const firstPeak = Math.min(35, peakMin * 0.8);
-  const secondPeak = Math.max(Math.min(120, peakMin + 80), firstPeak + 25);
-  const firstShare = 0.35;
-  const secondShare = 0.65;
-  const first = gammaRate(minOffset, firstPeak, 2.2) * firstShare;
-  const second = gammaRate(minOffset, secondPeak, 3.2) * secondShare;
-  return { rate: first + second, firstPeak, secondPeak };
 }
 
 function integrateRate(toMin, rateFn, step = 2) {
@@ -486,7 +514,7 @@ export function generateCarbCurve(entry, opts = {}) {
 
   // Combined per-minute rate fn for this entry — single gamma, or dual-wave.
   const rateFn = model.dualWave
-    ? (t) => dualWaveRate(t, model.peakMin, model.windowMin).rate
+    ? (t) => dualWaveRate(t, model.peakMin)
     : (t) => gammaRate(t, model.peakMin, ABSORPTION_SHAPE_EXP);
 
   const totalArea = integrateRate(model.windowMin, rateFn);

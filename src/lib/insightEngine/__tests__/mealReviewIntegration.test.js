@@ -90,7 +90,9 @@ describe("A. Model propagation", () => {
     expect(speedFactor).toBeNull(); // no personalization
 
     const result = getCarbAbsorptionAt(entry, Date.now(), {});
-    expect(result.peakMin).toBe(getMealPeakMinutes(0, 0, getMealWindowMinutes(0, 0)));
+    // Class-based timing (matches the projection engine): a mixed meal with
+    // no fat/protein uses BASELINE_CLASS_PARAMS.mixed.peakMin = 60.
+    expect(result.peakMin).toBe(60);
     expect(result.absorbedGrams).toBeGreaterThan(0);
     expect(result.remainingGrams).toBeGreaterThan(0);
   });
@@ -200,7 +202,9 @@ describe("B. Absorption-curve integrity", () => {
   });
 
   test("B2: Changing timing alone does not change total modeled carbohydrate absorption", () => {
-    const entry = makeEntry({ carbs: 50, consumedAtMs: Date.now() - 300 * MINUTE });
+    // 400 min exceeds every possible class-based window (max 360 min even
+    // with speedFactor 1.45), so all variants are fully absorbed.
+    const entry = makeEntry({ carbs: 50, consumedAtMs: Date.now() - 400 * MINUTE });
     const baseline = getCarbAbsorptionAt(entry, Date.now(), {});
     const faster = getCarbAbsorptionAt(entry, Date.now(), { speedFactor: 0.7 });
     const slower = getCarbAbsorptionAt(entry, Date.now(), { speedFactor: 1.45 });

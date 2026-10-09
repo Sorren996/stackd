@@ -188,11 +188,12 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
   const tooEarlyToRead = minutesSinceMeal < 15;
 
   const absorptionPeakMin = (() => {
-    let p = getMealPeakMinutes(mealFatGrams, mealProteinGrams, dynamicWindowMin);
-    if (primarySpeedFactor != null && Number.isFinite(primarySpeedFactor) && primarySpeedFactor > 0) {
-      p = Math.max(20, Math.min(240, Math.round(p * primarySpeedFactor)));
-    }
-    return p;
+    const entry = carbEntries[0];
+    if (!entry) return 60;
+    const forCalc = !entry.absorption_profile || entry.is_custom
+      ? { ...entry, absorption_profile: entry.absorption_profile || "medium", is_custom: false, dual_wave: entry.dual_wave }
+      : entry;
+    return getCarbAbsorptionAt(forCalc, now, absorptionOpts).peakMin;
   })();
   const absorptionPeakTime = mealTime + absorptionPeakMin * 60000;
   const isDualWaveMeal = (carbEntries[0]?.dual_wave || deriveSpeedClass(carbEntries[0]) === "high_fat");
