@@ -33,13 +33,31 @@ export default async function (req) {
     // Fetch the user's data in parallel. Use the service role so we can set
     // user_id on the persisted projection record (RLS lets the owning user
     // read it back).
+    // Fetch ONLY the authenticated user's data. asServiceRole bypasses RLS, so
+    // every fetch must filter by the user's ID explicitly — otherwise readings,
+    // meals, doses, settings, and model state from OTHER users would contaminate
+    // this user's projection. GlucoseReading can be service-created (user_id)
+    // or manual (created_by_id), so both are matched.
     const [readings, meals, doses, settingsList, stateRows, mealStateRows] = await Promise.all([
-      base44.asServiceRole.entities.GlucoseReading.list("-recorded_at", 200),
-      base44.asServiceRole.entities.CarbEntry.list("-consumed_at", 100),
-      base44.asServiceRole.entities.InsulinDose.list("-administered_at", 100),
-      base44.asServiceRole.entities.UserSettings.list("-created_date", 1),
-      base44.asServiceRole.entities.ProjectionModelState.list("-created_date", 1),
-      base44.asServiceRole.entities.MealResponseModelState.list("-created_date", 1),
+      base44.asServiceRole.entities.GlucoseReading.filter(
+        { $or: [{ user_id: user.id }, { created_by_id: user.id }] },
+        "-recorded_at", 200
+      ),
+      base44.asServiceRole.entities.CarbEntry.filter(
+        { created_by_id: user.id }, "-consumed_at", 100
+      ),
+      base44.asServiceRole.entities.InsulinDose.filter(
+        { created_by_id: user.id }, "-administered_at", 100
+      ),
+      base44.asServiceRole.entities.UserSettings.filter(
+        { created_by_id: user.id }, "-created_date", 1
+      ),
+      base44.asServiceRole.entities.ProjectionModelState.filter(
+        { user_id: user.id }, "-created_date", 1
+      ),
+      base44.asServiceRole.entities.MealResponseModelState.filter(
+        { user_id: user.id }, "-created_date", 1
+      ),
     ]);
 
     const settings = (settingsList && settingsList.length > 0) ? settingsList[0] : {};
