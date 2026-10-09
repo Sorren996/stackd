@@ -1,0 +1,50 @@
+{
+  "name": "DiagnosticReport",
+  "type": "object",
+  "properties": {
+    "topic": {
+      "type": "string",
+      "description": "Short title of the diagnostic pass (e.g. 'Meal Response / Absorption UI \u2014 7 Issues')"
+    },
+    "report_text": {
+      "type": "string",
+      "description": "Full diagnostic report: per-issue findings in the actual code, root cause where identified, and proposed fix plan."
+    },
+    "report_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the diagnostic pass was completed."
+    },
+    "item_count": {
+      "type": "number",
+      "description": "Number of issues covered in this report."
+    }
+  },
+  "required": [
+    "topic",
+    "report_text",
+    "report_date"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
