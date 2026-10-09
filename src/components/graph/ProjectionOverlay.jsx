@@ -30,7 +30,9 @@ import { AnimatePresence, motion } from "framer-motion";
 
 const MINUTE_MS = 60 * 1000;
 const MARGIN = 8;
-const TOUCH_SLOP = 8; // px — movement below this is a tap, above is a scrub
+const TOUCH_SLOP = 8; // px — horizontal movement that confirms a scrub
+const HOLD_DELAY = 200; // ms — stationary hold before entering scrub mode
+const HIT_BAND = 54; // px — total height of the hit path stroke (27px each side of the line)
 
 function formatProjectionTime(time) {
   if (!Number.isFinite(time)) return "";
@@ -59,11 +61,14 @@ export default function ProjectionOverlay({
   const [activePoint, setActivePoint] = useState(null);
   const [scrubbing, setScrubbing] = useState(false);
   const svgRef = useRef(null);
-  const pointerDownRef = useRef(false);
+  const hitPathRef = useRef(null);
+  // Gesture state machine: "idle" | "pending" | "scrubbing" | "cancelled"
+  const gestureStateRef = useRef("idle");
   const scrubbingRef = useRef(false);
   const downPosRef = useRef({ x: 0, y: 0 });
+  const pointerIdRef = useRef(null);
   const svgRectRef = useRef(null);
-  const rectRef = useRef(null);
+  const holdTimerRef = useRef(null);
   const [pos, setPos] = useState({ left: 0, top: 0, ready: false });
 
   const points = useMemo(() => {
@@ -113,59 +118,122 @@ export default function ProjectionOverlay({
     return Math.abs(localX - a.x) <= Math.abs(localX - b.x) ? a : b;
   }, [points]);
 
-  // ── Pointer handlers: tap + hold-drag scrub ──────────────────────────
-  // Quick tap (no movement beyond TOUCH_SLOP) toggles the popup at the
-  // nearest point — same as the previous click behavior. Once the finger
-  // moves past TOUCH_SLOP, we enter scrub mode: the popup tracks the
-  // nearest forecast point to the finger's x-position, showing projected
-  // values only. On release, the popup freezes at the last position.
-  const handlePointerDown = useCallback((e) => {
-    if (!points.length || !e.isPrimary) return;
-    pointerDownRef.current = true;
-    scrubbingRef.current = false;
-    setScrubbing(false);
-    downPosRef.current = { x: e.clientX, y: e.clientY };
-    if (svgRef.current) svgRectRef.current = svgRef.current.getBoundingClientRect();
+  // ── Gesture disambiguation: tap / hold / scrub / scroll ─────────────
+  // The hit path is a 54px-tall transparent stroke along the projected line,
+  // so only touches within ~27px of the line engage scrub logic; everything
+  // else passes through to normal chart scrolling.
+  //
+  // State machine:
+  //   idle      — no touch active.
+  //   pending   — touch-down on the line; waiting for hold timer or movement
+  //               to disambiguate. No pointer capture, no preventDefault —
+  //               the browser may still scroll the dashboard vertically.
+  //   scrubbing — hold timer fired OR horizontal movement confirmed; pointer
+  //               captured, touchmove preventDefaulted, popup tracks finger.
+  //   cancelled — vertical movement detected first; release the gesture so
+  //               the browser scrolls the dashboard normally.
+  //
+  // Quick tap (pointer-up from pending with minimal movement) toggles the
+  // popup at the nearest forecast point — unchanged from before.
+
+  const clearHoldTimer = useCallback(() => {
+    if (holdTimerRef.current) {
+      clearTimeout(holdTimerRef.current);
+      holdTimerRef.current = null;
+    }
+  }, []);
+
+  const enterScrubMode = useCallback(() => {
+    if (gestureStateRef.current !== "pending") return;
+    gestureStateRef.current = "scrubbing";
+    scrubbingRef.current = true;
+    setScrubbing(true);
+    // Capture the pointer so horizontal movement anywhere continues scrubbing.
     try {
-      e.currentTarget.setPointerCapture(e.pointerId);
+      if (hitPathRef.current && pointerIdRef.current != null) {
+        hitPathRef.current.setPointerCapture(pointerIdRef.current);
+      }
     } catch {
-      /* pointer capture not supported — events still fire on the rect */
+      /* pointer capture not supported — events still fire on the hit path */
     }
-  }, [points]);
-
-  const handlePointerMove = useCallback((e) => {
-    if (!pointerDownRef.current) return;
-    const dx = e.clientX - downPosRef.current.x;
-    const dy = e.clientY - downPosRef.current.y;
-    const dist = Math.hypot(dx, dy);
-
-    // Enter scrub mode once the finger exceeds the touch-slop threshold.
-    if (!scrubbingRef.current && dist > TOUCH_SLOP) {
-      scrubbingRef.current = true;
-      setScrubbing(true);
-    }
-
-    if (scrubbingRef.current && svgRectRef.current) {
-      const localX = e.clientX - svgRectRef.current.left;
+    // Snap the popup to the nearest point at the down position.
+    if (svgRectRef.current) {
+      const localX = downPosRef.current.x - svgRectRef.current.left;
       const nearest = findNearestPointByX(localX);
       if (nearest) setActivePoint(nearest);
     }
   }, [findNearestPointByX]);
 
+  const handlePointerDown = useCallback((e) => {
+    if (!points.length || !e.isPrimary) return;
+    // The hit path already filters touches to within ~27px of the line.
+    // Start in pending state — do NOT capture or preventDefault yet, so
+    // the browser can still scroll the dashboard if the finger moves vertically.
+    gestureStateRef.current = "pending";
+    downPosRef.current = { x: e.clientX, y: e.clientY };
+    pointerIdRef.current = e.pointerId;
+    if (svgRef.current) svgRectRef.current = svgRef.current.getBoundingClientRect();
+    scrubbingRef.current = false;
+    setScrubbing(false);
+    clearHoldTimer();
+    holdTimerRef.current = setTimeout(() => {
+      // Finger stayed put for the hold delay → enter scrub mode.
+      if (gestureStateRef.current === "pending") enterScrubMode();
+    }, HOLD_DELAY);
+  }, [points, clearHoldTimer, enterScrubMode]);
+
+  const handlePointerMove = useCallback((e) => {
+    const state = gestureStateRef.current;
+    if (state === "idle" || state === "cancelled") return;
+
+    const dx = e.clientX - downPosRef.current.x;
+    const dy = e.clientY - downPosRef.current.y;
+
+    if (state === "pending") {
+      // Disambiguate direction before claiming the gesture.
+      if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > TOUCH_SLOP) {
+        // Vertical movement first → let the browser scroll the dashboard.
+        clearHoldTimer();
+        gestureStateRef.current = "cancelled";
+        return;
+      }
+      if (Math.abs(dx) >= Math.abs(dy) && Math.abs(dx) > TOUCH_SLOP) {
+        // Horizontal movement → enter scrub mode.
+        clearHoldTimer();
+        enterScrubMode();
+      }
+      // Movement below slop — stay pending (hold timer may still fire).
+      return;
+    }
+
+    // Scrubbing — track the nearest forecast point.
+    if (svgRectRef.current) {
+      const localX = e.clientX - svgRectRef.current.left;
+      const nearest = findNearestPointByX(localX);
+      if (nearest) setActivePoint(nearest);
+    }
+  }, [findNearestPointByX, clearHoldTimer, enterScrubMode]);
+
   const handlePointerUp = useCallback((e) => {
-    if (!pointerDownRef.current) return;
+    clearHoldTimer();
     try {
-      e.currentTarget.releasePointerCapture(e.pointerId);
+      if (hitPathRef.current && pointerIdRef.current != null) {
+        hitPathRef.current.releasePointerCapture(pointerIdRef.current);
+      }
     } catch {
       /* already released or not captured */
     }
 
-    if (scrubbingRef.current) {
-      // Scrub ended — freeze at the current position (do not close).
+    const state = gestureStateRef.current;
+    gestureStateRef.current = "idle";
+    pointerIdRef.current = null;
+
+    if (state === "scrubbing") {
+      // Scrub ended — freeze the popup at the last position (do not close).
       scrubbingRef.current = false;
       setScrubbing(false);
-    } else {
-      // Tap — toggle the popup at the nearest point to the touch position.
+    } else if (state === "pending") {
+      // Quick tap — toggle the popup at the nearest point.
       if (svgRectRef.current) {
         const localX = downPosRef.current.x - svgRectRef.current.left;
         const nearest = findNearestPointByX(localX);
@@ -176,16 +244,18 @@ export default function ProjectionOverlay({
         }
       }
     }
-    pointerDownRef.current = false;
-  }, [findNearestPointByX]);
+    // "cancelled" → browser handled the scroll; nothing to do.
+  }, [findNearestPointByX, clearHoldTimer]);
 
   const handlePointerCancel = useCallback(() => {
-    pointerDownRef.current = false;
+    clearHoldTimer();
+    gestureStateRef.current = "idle";
+    pointerIdRef.current = null;
     if (scrubbingRef.current) {
       scrubbingRef.current = false;
       setScrubbing(false);
     }
-  }, []);
+  }, [clearHoldTimer]);
 
   // ── Keyboard accessibility ───────────────────────────────────────────
   // Arrow keys step through each forecast point individually so keyboard
@@ -228,15 +298,15 @@ export default function ProjectionOverlay({
     }
   }, [points, activePoint]);
 
-  // Native touch listener (non-passive) — prevents iOS Safari from hijacking
-  // the horizontal drag for page/scroll-container scrolling while the finger
-  // is down on the scrub surface. Pointer events handle the actual scrub
-  // logic; this just claims the gesture so move events keep firing.
+  // Native touch listener (non-passive) — only locks down scrolling AFTER
+  // scrub mode is confirmed. In the pending state the browser is free to
+  // scroll the dashboard vertically, so swipes over the projection region
+  // that start as vertical movement pass through naturally.
   useEffect(() => {
-    const el = rectRef.current;
+    const el = hitPathRef.current;
     if (!el) return;
     const onTouchMove = (e) => {
-      if (pointerDownRef.current) e.preventDefault();
+      if (gestureStateRef.current === "scrubbing") e.preventDefault();
     };
     el.addEventListener("touchmove", onTouchMove, { passive: false });
     return () => el.removeEventListener("touchmove", onTouchMove);
@@ -422,21 +492,23 @@ export default function ProjectionOverlay({
             style={{ pointerEvents: "none" }}
           />
         )}
-        {/* Scrub surface — transparent rect over the projection's x-range.
-            Handles tap (toggle popup) and hold-drag (scrub through forecast
-            points). data-projection-scrub marks it so the dismiss handler
-            skips taps that land on the projection. touch-action: pan-y lets
-            vertical page-scroll pass through while claiming horizontal drags
-            for scrubbing, so the chart's horizontal pan is not stolen. */}
-        <rect
-          ref={rectRef}
+        {/* Scrub hit path — a 54px-tall transparent stroke along the projected
+            line. Only touches within ~27px of the line engage scrub logic;
+            touches outside this band pass through to normal chart scrolling.
+            touch-action: pan-y lets vertical dashboard scrolling pass through
+            while the gesture is still pending; the native touchmove listener
+            locks it down (preventDefault) only after scrub mode is confirmed. */}
+        <path
+          ref={hitPathRef}
           data-projection-scrub
-          x={points[0].x}
-          y={0}
-          width={Math.max(1, points[points.length - 1].x - points[0].x)}
-          height={glucoseChartHeight}
-          fill="transparent"
-          style={{ cursor: "pointer", touchAction: "none" }}
+          d={linePath}
+          fill="none"
+          stroke="#af751b"
+          strokeOpacity={0.001}
+          strokeWidth={HIT_BAND}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          style={{ cursor: "pointer", touchAction: "pan-y", pointerEvents: "stroke" }}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
