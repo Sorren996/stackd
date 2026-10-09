@@ -8,29 +8,93 @@
     },
     "model_version": {
       "type": "string",
-      "description": "Version of the meal-response model backing this user's state. Separate from the general forecast model version."
+      "description": "Version of the meal-response model backing this user's state. '1.0.0-meal-baseline' when no personalization has been applied; '1.1.0-meal-personalized' when a learned per-class parameter is active. Separate from the general forecast model version."
     },
     "speed_class_parameters": {
       "type": "object",
-      "description": "Per speed-class learned parameters (speed factors for fast, mixed, high_fat). Each entry has { speed_factor, sample_count }. Separate from the general forecast model's rateAdjustmentFactor. Empty for baseline."
+      "description": "Per speed-class learned meal-response parameters. Each class key (fast, mixed, high_fat) maps to { speed_factor, magnitude_factor, sample_count }. speed_factor adjusts absorption timing (peak time and window duration); magnitude_factor adjusts glucose excursion magnitude per gram of carbs. Both are EMPIRICAL corrections derived from the user's observed meal responses \u2014 NOT direct measurements of carbohydrate absorption physiology. They describe what the baseline model tended to get wrong for this user's meals of a given class; they never prescribe or recommend any clinical action. Separate from the general forecast model's rateAdjustmentFactor. Empty for baseline.",
+      "properties": {
+        "fast": {
+          "type": "object",
+          "properties": {
+            "speed_factor": {
+              "type": "number",
+              "description": "Learned multiplier on absorption timing for fast-absorbing meals. <1 = faster peak, >1 = slower peak. Baseline = 1.0. Clamped [0.7, 1.45]."
+            },
+            "magnitude_factor": {
+              "type": "number",
+              "description": "Learned multiplier on glucose excursion magnitude for fast-absorbing meals. <1 = smaller excursion, >1 = larger excursion. Baseline = 1.0. Clamped [0.7, 1.3]."
+            },
+            "sample_count": {
+              "type": "number",
+              "description": "Number of distinct valid meal observations contributing to this class's parameters."
+            }
+          }
+        },
+        "mixed": {
+          "type": "object",
+          "properties": {
+            "speed_factor": {
+              "type": "number",
+              "description": "Learned multiplier on absorption timing for mixed meals. <1 = faster peak, >1 = slower peak. Baseline = 1.0. Clamped [0.7, 1.45]."
+            },
+            "magnitude_factor": {
+              "type": "number",
+              "description": "Learned multiplier on glucose excursion magnitude for mixed meals. <1 = smaller excursion, >1 = larger excursion. Baseline = 1.0. Clamped [0.7, 1.3]."
+            },
+            "sample_count": {
+              "type": "number",
+              "description": "Number of distinct valid meal observations contributing to this class's parameters."
+            }
+          }
+        },
+        "high_fat": {
+          "type": "object",
+          "properties": {
+            "speed_factor": {
+              "type": "number",
+              "description": "Learned multiplier on absorption timing for high-fat & protein-rich meals. <1 = faster peak, >1 = slower peak. Baseline = 1.0. Clamped [0.7, 1.45]."
+            },
+            "magnitude_factor": {
+              "type": "number",
+              "description": "Learned multiplier on glucose excursion magnitude for high-fat & protein-rich meals. <1 = smaller excursion, >1 = larger excursion. Baseline = 1.0. Clamped [0.7, 1.3]."
+            },
+            "sample_count": {
+              "type": "number",
+              "description": "Number of distinct valid meal observations contributing to this class's parameters."
+            }
+          }
+        }
+      }
     },
     "sample_counts_by_class": {
       "type": "object",
-      "description": "Sample counts per speed class: { fast: number, mixed: number, high_fat: number }. Zero means no learned timing for that class yet."
+      "description": "Sample counts per speed class: { fast: number, mixed: number, high_fat: number }. Zero means no learned parameters for that class yet.",
+      "properties": {
+        "fast": {
+          "type": "number"
+        },
+        "mixed": {
+          "type": "number"
+        },
+        "high_fat": {
+          "type": "number"
+        }
+      }
     },
     "evaluation_summary": {
       "type": "object",
-      "description": "Aggregate meal-response evaluation metrics filled in future milestones when meal-specific learning is activated."
+      "description": "Aggregate meal-response evaluation metrics from the most recent update cycle: speedClass, sampleCount, excludedCount, meanSpeedRatio, meanMagnitudeRatio, meanTimingDeviationMin, meanMagnitudeDeviationMgdl, exclusions."
     },
     "last_updated_at": {
       "type": "string",
       "format": "date-time",
-      "description": "When the meal-response state was last updated."
+      "description": "When the meal-response state was last updated by the learning pipeline."
     },
     "baseline_locked": {
       "type": "boolean",
       "default": true,
-      "description": "Whether the meal-response state is still at baseline (no per-class personalization applied). True until future milestones activate meal-specific learning with sufficient evidence."
+      "description": "Whether the meal-response state is still at baseline (no per-class personalization applied, or personalization was reverted). True = baseline is the active model."
     },
     "update_history": {
       "type": "array",
@@ -38,7 +102,7 @@
         "type": "object"
       },
       "default": [],
-      "description": "Chronological log of every accepted meal-response parameter update: timestamp, speed_class, previous_factor, new_factor, sample_count, reason."
+      "description": "Chronological log of every accepted meal-response parameter update or reversion: timestamp, speed_class, previous_params, new_params, sample_count, reason, model_version, evaluation_version, evaluation_summary."
     }
   },
   "required": [

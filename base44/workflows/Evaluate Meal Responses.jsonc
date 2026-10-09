@@ -1,0 +1,45 @@
+{
+  "name": "Evaluate Meal Responses",
+  "description": "Periodically evaluates completed meal-response analyses to learn per-speed-class meal-response parameters (speedFactor and magnitudeFactor) from the user's observed CGM responses, updating MealResponseModelState when sufficient evidence supports it.",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "interval",
+      "cron_expression": null,
+      "one_time_date": null,
+      "timezone": "UTC",
+      "interval_value": 2,
+      "interval_unit": "hours",
+      "interval_anchor": "2026-10-09T02:00:00Z",
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "evaluate_meal_responses",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "evaluate": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "evaluateMealResponses",
+            "args": {}
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Evaluate meal responses",
+            "description": "Learn per-class meal-response parameters from completed analyses"
+          }
+        }
+      }
+    ]
+  }
+}

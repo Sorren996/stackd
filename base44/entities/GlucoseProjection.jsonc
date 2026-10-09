@@ -15,6 +15,10 @@
       "type": "string",
       "description": "Version of the projection model that produced this prediction: '1.0.0-baseline' or '1.1.0-personalized'. Used to compare baseline vs personalized performance."
     },
+    "meal_response_model_version": {
+      "type": "string",
+      "description": "Version of the meal-response model active when this prediction was made: '1.0.0-meal-baseline' or '1.1.0-meal-personalized'. Separate from the general forecast model version so meal-response personalization can be evaluated independently."
+    },
     "anchor_time": {
       "type": "string",
       "format": "date-time",
@@ -50,7 +54,7 @@
     },
     "active_inputs": {
       "type": "object",
-      "description": "Summary of active carbs and insulin at generation time: total_active_carb_grams, total_active_insulin_units, meal_count, dose_count."
+      "description": "Summary of active carbs and insulin at generation time: total_active_carb_grams, total_active_insulin_units, meal_count, dose_count, active_speed_classes."
     },
     "confidence": {
       "type": "number",
