@@ -25,6 +25,7 @@ import CandlestickView from "@/components/graph/CandlestickView";
 import ReferenceLabels from "@/components/graph/ReferenceLabels";
 import MealEditOverlay from "@/components/insulin/MealEditOverlay";
 import ProjectionOverlay from "@/components/graph/ProjectionOverlay";
+import { buildMealEventGroups, getActiveMealGroups } from "@/lib/concurrentMeals";
 
 const STEP_MS = 3 * 60 * 1000;
 const HALF_HOUR_MS = 30 * 60 * 1000;
@@ -407,6 +408,11 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const [graphHeight, setGraphHeight] = useState(readGraphHeight);
   const [highReference, setHighReference] = useState(readHighReference);
   const [glucoseUnits, setGlucoseUnitsState] = useState(getGlucoseUnits());
+  const [mealOutcomeWindowMin, setMealOutcomeWindowMin] = useState(() => {
+    if (typeof window === "undefined") return 240;
+    const v = Number(window.localStorage.getItem("meal_outcome_window_minutes"));
+    return Number.isFinite(v) && v > 0 ? v : 240;
+  });
 
   useEffect(() => {
     const target = graphViewportRef.current || containerRef.current;
@@ -429,6 +435,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       setGraphHeight(readGraphHeight());
       setHighReference(readHighReference());
       setGlucoseUnitsState(getGlucoseUnits());
+      const ow = Number(window.localStorage.getItem("meal_outcome_window_minutes"));
+      setMealOutcomeWindowMin(Number.isFinite(ow) && ow > 0 ? ow : 240);
     };
 
     window.addEventListener("target-range-updated", updateSettings);
@@ -877,6 +885,15 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     }).
     filter(Boolean);
   }, [filteredDoses, allCurvesMeta, maxBolusUnits, maxBasalUnits, maxVisibleUnits, domainStart, domainEnd, totalMs, chartWidth, dynamicInsulinMarginTop, stableNow]);
+
+  // Whether at least one meal is still within its glucose-response window.
+  // The future projection only renders when there is an open meal — once all
+  // meals close, the projection is hidden entirely (no flat/stale line).
+  const hasActiveMeals = useMemo(() => {
+    const groups = buildMealEventGroups(carbEntries, doses, {}, glucoseReadings, targetLow);
+    const active = getActiveMealGroups(groups, { outcomeWindowMinutes: mealOutcomeWindowMin }, stableNow);
+    return active.length > 0;
+  }, [carbEntries, doses, glucoseReadings, targetLow, mealOutcomeWindowMin, stableNow]);
 
   const getGlucoseY = useCallback((value) => {
     const clamped = Math.min(Math.max(value, effectiveMin), effectiveMax);
@@ -1398,7 +1415,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           </div>
 
           {/* ── Projection overlay (future trajectory) ── */}
-          {projection && !isCandlestick && (
+          {projection && hasActiveMeals && !isCandlestick && (
             <ProjectionOverlay
               projection={projection}
               domainStart={domainStart}
@@ -1581,7 +1598,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             <div className="h-[2.5px] w-3 rounded-full" style={{ background: "#9c5228" }} />
             <span className="text-[10px] font-medium" style={{ color: "#6b6153" }}>Glucose</span>
           </div>
-          {projection && (
+          {projection && hasActiveMeals && (
             <>
               <div className="flex items-center gap-1.5">
                 <div className="h-[2.5px] w-3 border-t-2 border-dashed" style={{ borderColor: "#af751b", opacity: 0.6 }} />
