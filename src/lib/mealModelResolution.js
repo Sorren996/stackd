@@ -9,7 +9,13 @@ export function deriveSpeedClass(entry) {
   const carbs = Number(entry?.carbs ?? 0) || 0;
   const gi = Number(entry?.glycemic_index ?? entry?.gi ?? 0) || 0;
   const profile = entry?.absorption_profile || "medium";
-  if (fat >= 40 || (protein >= 30 && carbs > 0) || (protein >= 75 && carbs === 0)) return "high_fat";
+  // Same graduated dual-wave blend as carbAbsorption / carbAbsorptionProfile:
+  // blend >= 0.5 (e.g. 20g+ fat, or 15g+ protein with carbs) → high_fat.
+  const blend = Math.max(
+    Math.min(1, fat / 40),
+    carbs > 0 ? Math.min(1, protein / 30) : Math.min(1, protein / 45)
+  );
+  if (blend >= 0.5) return "high_fat";
   if (profile === "fast" || gi >= 70) return "fast";
   return "mixed";
 }

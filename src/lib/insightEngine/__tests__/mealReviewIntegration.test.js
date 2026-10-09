@@ -321,7 +321,7 @@ describe("C. Pizza and delayed-response behavior", () => {
       const min = i * 5;
       if (min <= 30) readings[i].value = 120 + (15 * min / 30);
       else if (min <= 180) readings[i].value = 135 + 40 * (min - 30) / 150;
-      else readings[i].value = 175 - 5 * (min - 180) / 120;
+      else readings[i].value = 175 - 20 * (min - 180) / 120;
     }
     const analysis = analyzeGlucoseResponse(readings, mealTime, 70, 180, Date.now(), 120);
     // The peak is the late rise
@@ -525,7 +525,12 @@ describe("E. Narrative integrity", () => {
     // "Estimated from your meal[ and history]: the absorption curve [rose in two waves|peaked]. Your glucose peaked [ahead of|in line with|behind] the estimation."
     // This separates the model estimate from the glucose observation.
     const mealTime = Date.now() - 2 * HOUR;
-    const readings = makeReadings(mealTime, 24, 5 * MINUTE, 120, 1);
+    const readings = makeReadings(mealTime, 24, 5 * MINUTE, 120, 0);
+    // Rise to 160 at 50 min, then decline — a valid observed peak.
+    for (let i = 0; i < 24; i++) {
+      const min = i * 5;
+      readings[i].value = min <= 50 ? 120 + (40 * min) / 50 : 160 - (30 * (min - 50)) / 65;
+    }
     const analysis = analyzeGlucoseResponse(readings, mealTime, 70, 180, Date.now(), 120);
 
     // The observation (timeToPeakMin) is derived from actual readings

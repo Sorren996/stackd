@@ -253,7 +253,7 @@ describe("1. Composition-driven curve shape", () => {
 
 describe("2. Continuous composition response", () => {
   test("2a: varying fat from 0 to 55g produces progressively different curves", () => {
-    const fatLevels = [0, 10, 20, 30, 39, 40, 50, 55];
+    const fatLevels = [0, 10, 19, 20, 30, 40, 50, 55];
     const curves = fatLevels.map((fat) => {
       const entry = makeEntry({
         name: `Fat-${fat}g`,
@@ -270,12 +270,10 @@ describe("2. Continuous composition response", () => {
       };
     });
 
-    // Below 40g fat: mixed class. At 40g+: high_fat class.
-    // The class boundary is at 40g fat, but the CURVE should respond
-    // continuously — the jump from 39g to 40g should not produce a
-    // wildly different curve.
-    const justBelow = curves.find((c) => c.fat === 39);
-    const justAbove = curves.find((c) => c.fat === 40);
+    // Below 20g fat (blend < 0.5): mixed class. At 20g+: high_fat class.
+    // The CURVE should still respond continuously across the boundary.
+    const justBelow = curves.find((c) => c.fat === 19);
+    const justAbove = curves.find((c) => c.fat === 20);
 
     // The class changes at the boundary
     expect(justBelow.class).toBe("mixed");
@@ -295,7 +293,7 @@ describe("2. Continuous composition response", () => {
 
   test("2b: varying protein with carbs shifts the class continuously", () => {
     // protein >= 30 with carbs > 0 → high_fat
-    const proteinLevels = [0, 10, 20, 29, 30, 40, 50];
+    const proteinLevels = [0, 10, 14, 15, 20, 30, 40, 50];
     const results = proteinLevels.map((protein) => {
       const entry = makeEntry({
         name: `Protein-${protein}g`,
@@ -311,17 +309,17 @@ describe("2. Continuous composition response", () => {
       };
     });
 
-    // Below 30g protein: mixed. At 30g+: high_fat.
-    expect(results.find((r) => r.protein === 29).class).toBe("mixed");
-    expect(results.find((r) => r.protein === 30).class).toBe("high_fat");
+    // Below 15g protein (blend < 0.5): mixed. At 15g+: high_fat.
+    expect(results.find((r) => r.protein === 14).class).toBe("mixed");
+    expect(results.find((r) => r.protein === 15).class).toBe("high_fat");
 
     // The curve at 60 min should shift gradually, not a binary cliff
-    const justBelow = results.find((r) => r.protein === 29);
-    const justAbove = results.find((r) => r.protein === 30);
+    const justBelow = results.find((r) => r.protein === 14);
+    const justAbove = results.find((r) => r.protein === 15);
     expect(Math.abs(justBelow.at60 - justAbove.at60)).toBeLessThan(15);
   });
 
-  test("2c: a meal with moderate fat (25g) and moderate protein (15g) is mixed, not high_fat", () => {
+  test("2c: a meal with moderate fat (25g) and moderate protein (15g) gets a partial dual-wave blend", () => {
     const moderate = makeEntry({
       name: "Balanced Bowl",
       carbs: 50,
@@ -329,8 +327,8 @@ describe("2. Continuous composition response", () => {
       protein: 15,
       consumedAtMs: Date.now() - 10 * MINUTE,
     });
-    // fat < 40, protein < 30 → mixed
-    expect(deriveSpeedClass(moderate)).toBe("mixed");
+    // blend = 25/40 = 0.625 → high_fat class with a partial (not full) blend
+    expect(deriveSpeedClass(moderate)).toBe("high_fat");
 
     // Its curve should differ from both a pure fast carb and a pizza
     const fast = makeEntry({ name: "Rice", carbs: 50, profile: "fast", consumedAtMs: Date.now() - 10 * MINUTE });
@@ -345,9 +343,9 @@ describe("2. Continuous composition response", () => {
     expect(fast60 / 50).toBeGreaterThan(moderate60 / 50);
     // Pizza is front-loaded so fraction at 60 may be similar to moderate
     // but the window is much longer
-    const moderateResult = getCarbAbsorptionAt(moderate, Date.now(), {});
-    const pizzaResult = getCarbAbsorptionAt(pizza, Date.now(), {});
-    expect(moderateResult.windowMin).toBeLessThan(pizzaResult.windowMin);
+    // Same class window, but the moderate meal's curve differs from pizza's
+    // because its dual-wave blend is partial.
+    expect(moderate60).not.toBeCloseTo(pizza60, 1);
   });
 });
 

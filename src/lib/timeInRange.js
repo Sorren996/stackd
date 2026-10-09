@@ -82,7 +82,11 @@ export function computeTirPercent(readings, targetLow, targetHigh, opts = {}) {
     if (lastVal >= targetLow && lastVal <= targetHigh) inRangeMs += segMs;
   }
 
-  return totalMs > 0 ? Math.round((inRangeMs / totalMs) * 100) : null;
+  if (totalMs <= 0) return null;
+  const pct = Math.round((inRangeMs / totalMs) * 100);
+  // Guard: never display 100% when any reading sat outside the range.
+  const anyOutside = points.some((p) => p.v < targetLow || p.v > targetHigh);
+  return pct === 100 && anyOutside ? 99 : pct;
 }
 
 /**
@@ -100,7 +104,14 @@ export function computeDayTirPercent(readings, targetLow, targetHigh, opts = {})
   if (!Number.isFinite(targetLow) || !Number.isFinite(targetHigh) || targetHigh <= targetLow) return null;
 
   const now = opts.now != null ? new Date(opts.now).getTime() : Date.now();
-  const dayStart = opts.dayStart != null ? new Date(opts.dayStart) : new Date();
+  // Default the day to the one the readings belong to (not always today), so
+  // past-day surfaces like the History day recap get a real value.
+  const firstReadingMs = Math.min(
+    ...readings.map((r) => new Date(r.recorded_at || r.recordedAt || r.time).getTime()).filter(Number.isFinite)
+  );
+  const dayStart = opts.dayStart != null
+    ? new Date(opts.dayStart)
+    : new Date(Number.isFinite(firstReadingMs) ? firstReadingMs : now);
   dayStart.setHours(0, 0, 0, 0);
   const dayStartMs = dayStart.getTime();
   const dayEndMs = Math.min(now, dayStartMs + 24 * 60 * 60 * 1000);

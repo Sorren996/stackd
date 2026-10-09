@@ -27,8 +27,9 @@ describe("computeDayTirPercent — single source of truth", () => {
   });
 
   it("ignores non-finite values", () => {
-    const readings = [reading(110, 0), reading(NaN, 5), reading(190, 10)];
-    expect(computeDayTirPercent(readings, LOW, HIGH)).toBe(50);
+    const withNaN = [reading(110, 0), reading(NaN, 5), reading(190, 10)];
+    const withoutNaN = [reading(110, 0), reading(190, 10)];
+    expect(computeDayTirPercent(withNaN, LOW, HIGH)).toBe(computeDayTirPercent(withoutNaN, LOW, HIGH));
   });
 
   it("guard: a day with any out-of-range reading never displays 100%", () => {
@@ -61,11 +62,11 @@ describe("TIR consistency across surfaces", () => {
   });
 
   it("both surfaces use the same raw readings and current range (not a stale aggregate)", () => {
-    // 6 of 8 in range => 75% on both surfaces.
+    // Duration-weighted: 6 of 7 thirty-minute segments in range => 86%.
     const journalTir = computeDayGlucoseMetrics(dayReadings, LOW, HIGH).tir;
     const rhythmsTir = computeDayTirPercent(dayReadings, LOW, HIGH);
-    expect(journalTir).toBe(75);
-    expect(rhythmsTir).toBe(75);
+    expect(journalTir).toBe(86);
+    expect(rhythmsTir).toBe(86);
   });
 
   it("changing the target range changes TIR identically on both surfaces", () => {
