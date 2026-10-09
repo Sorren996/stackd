@@ -899,18 +899,20 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
     const stackNow = nowMinute * MINUTE_MS;
     const groups = buildMealEventGroups(safeCarbEntries, safeDoses, insulinSettings, safeGlucoseReadings, insulinSettings.targetLow);
     const active = getActiveMealGroups(groups, insulinSettings, stackNow);
-    return active.map((group) => {
-      const rawInsight = computeMealAlignmentInsight(safeDoses, safeCarbEntries, safeGlucoseReadings, latestGlucose, insulinSettings, group);
-      const mealId = rawInsight?.details?.meal?.id;
-      const resolved = mealId && resolvedMealIds.includes(mealId);
-      const insight = resolved && rawInsight?.details
-        ? { ...rawInsight, details: { ...rawInsight.details, mealStillUnderReview: false } }
-        : rawInsight;
-      const name = group.carbEntries[0]?.food_name || group.carbEntries[0]?.name || "Meal";
-      const carbs = group.carbs;
-      const units = (group.doses || []).reduce((s, d) => s + (Number(d.units) || 0), 0);
-      return { group, insight, name, mealTime: group.mealTime, carbs, units };
-    });
+    return active
+      .map((group) => {
+        const rawInsight = computeMealAlignmentInsight(safeDoses, safeCarbEntries, safeGlucoseReadings, latestGlucose, insulinSettings, group);
+        const mealId = rawInsight?.details?.meal?.id;
+        const resolved = mealId && resolvedMealIds.includes(mealId);
+        const insight = resolved && rawInsight?.details
+          ? { ...rawInsight, details: { ...rawInsight.details, mealStillUnderReview: false } }
+          : rawInsight;
+        const name = group.carbEntries[0]?.food_name || group.carbEntries[0]?.name || "Meal";
+        const carbs = group.carbs;
+        const units = (group.doses || []).reduce((s, d) => s + (Number(d.units) || 0), 0);
+        return { group, insight, name, mealTime: group.mealTime, carbs, units, _resolved: Boolean(resolved) };
+      })
+      .filter((meal) => !meal._resolved);
   }, [safeDoses, safeCarbEntries, safeGlucoseReadings, latestGlucose, insulinSettings, nowMinute, resolvedMealIds]);
 
   const netActiveCarbs = worstPoint?.net ?? 0;

@@ -2,14 +2,19 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import MealReviewAtAGlance from "./MealReviewAtAGlance";
 
-// On-teal text colors — WCAG AA against the #4c6770 page background.
-const ON_TEAL_INK = "#f7f1e8"; // 5.47:1 — primary text on teal
-const ON_TEAL_MUTED = "#e8dfd2"; // 4.65:1 — secondary text on teal
+// Editorial palette — high-contrast colors for the sandstone (#f7f1e8) canvas.
+const INK = "#3f3830";       // espresso ink — primary text
+const SEC = "#6b6153";      // warm taupe — secondary text
+const FAINT = "#746959";    // muted text — labels, captions
+const HAIRLINE = "#eadccf"; // hairline border
+const SURFACE = "#fdf9f2";  // elevated cream surface
+const CANVAS = "#f7f1e8";   // sandstone canvas
+const COPPER = "#9c5228";   // copper accent — selected chip
 
 const PALETTE = {
-  cream: "#fdf9f2",
-  ink: "#3f3830",
-  sec: "#6b6153",
+  cream: SURFACE,
+  ink: INK,
+  sec: SEC,
 };
 
 function formatClock(time) {
@@ -66,13 +71,13 @@ export default function StackedMealCards({
       <div
         className="rounded-[16px] px-3 py-3"
         style={{
-          background: "rgba(247,241,232,0.06)",
-          border: "1px solid rgba(247,241,232,0.14)",
+          background: SURFACE,
+          border: `1px solid ${HAIRLINE}`,
         }}
       >
         <div
           className="mb-2 text-[10px] font-bold uppercase tracking-wider"
-          style={{ color: ON_TEAL_MUTED }}
+          style={{ color: FAINT }}
         >
           Active meals
         </div>
@@ -91,14 +96,14 @@ export default function StackedMealCards({
                 className="flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 transition-colors"
                 style={{
                   background: selected
-                    ? PALETTE.cream
-                    : "rgba(247,241,232,0.12)",
+                    ? COPPER
+                    : CANVAS,
                   border: selected
-                    ? `1px solid ${PALETTE.cream}`
-                    : "1px solid rgba(247,241,232,0.22)",
-                  color: selected ? PALETTE.ink : ON_TEAL_INK,
+                    ? `1px solid ${COPPER}`
+                    : `1px solid ${HAIRLINE}`,
+                  color: selected ? "#f7f1e8" : INK,
                   boxShadow: selected
-                    ? "0 4px 14px rgba(0,0,0,0.18)"
+                    ? "0 4px 14px rgba(156,82,40,0.20)"
                     : "none",
                 }}
                 aria-pressed={selected}
@@ -109,7 +114,7 @@ export default function StackedMealCards({
                 <span
                   className="text-[11px] tabular-nums"
                   style={{
-                    color: selected ? PALETTE.sec : ON_TEAL_MUTED,
+                    color: selected ? "#f7f1e8" : SEC,
                   }}
                 >
                   {time ? `${time} · ` : ""}
@@ -119,8 +124,8 @@ export default function StackedMealCards({
                   <span
                     className="text-[11px] font-semibold tabular-nums"
                     style={{
-                      color: selected ? PALETTE.ink : ON_TEAL_MUTED,
-                      opacity: selected ? 0.7 : 0.85,
+                      color: selected ? "#f7f1e8" : FAINT,
+                      opacity: selected ? 0.85 : 1,
                     }}
                   >
                     · {remaining}
