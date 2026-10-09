@@ -53,10 +53,11 @@ export const MIN_SAMPLES_FOR_VALIDATION = 5;
 
 // ── Evaluation ──────────────────────────────────────────────────────────────
 
-export function evaluateProjection(projection, actualReadings, evalTime) {
+export function evaluateProjection(projection, actualReadings, evalTime, rescueCarbTimes) {
   if (projection.abstained || !projection.trajectory || projection.trajectory.length === 0) {
     return {
       status: "unscorable", reason: "abstained_projection",
+      confounders: [],
       horizons: [], mae: null, bias: null, coverage: null,
       valid_count: 0, excluded_count: 0, exclusions: [],
       evaluation_version: EVALUATION_VERSION, evaluated_at: evalTime,
@@ -158,6 +159,21 @@ export function evaluateProjection(projection, actualReadings, evalTime) {
     });
   }
 
+  // Check for rescue carbs ingested during the observation window. A rescue
+  // carb is an exogenous treatment event the baseline model could not have
+  // anticipated if it happened after the forecast was generated. Such
+  // forecasts are excluded from personalized learning so rescue treatment
+  // does not teach the model wrong parameters.
+  const confounders = [];
+  if (Array.isArray(rescueCarbTimes) && rescueCarbTimes.length > 0) {
+    const windowStart = generatedAt;
+    const windowEnd = generatedAt + (Number(projection.horizon_minutes) || 60) * MINUTE_MS;
+    const rescueInWindow = rescueCarbTimes.some(
+      (t) => Number.isFinite(t) && t >= windowStart && t <= windowEnd
+    );
+    if (rescueInWindow) confounders.push("rescue_carb_in_window");
+  }
+
   const scoredHorizons = horizons.filter(h => h.scored);
   const validCount = scoredHorizons.length;
   const excludedCount = horizons.length - validCount;
@@ -165,6 +181,7 @@ export function evaluateProjection(projection, actualReadings, evalTime) {
   if (validCount === 0) {
     return {
       status: "unscorable", reason: "no_horizons_scored",
+      confounders,
       horizons, mae: null, bias: null, coverage: null,
       valid_count: 0, excluded_count: excludedCount,
       exclusions: horizons.map(h => ({ horizon_min: h.horizon_min, reason: h.exclusion_reason })),
@@ -182,6 +199,7 @@ export function evaluateProjection(projection, actualReadings, evalTime) {
 
   return {
     status: "evaluated", reason: null,
+    confounders,
     horizons,
     mae: Math.round(mae * 100) / 100,
     bias: Math.round(bias * 100) / 100,
@@ -195,7 +213,14 @@ export function evaluateProjection(projection, actualReadings, evalTime) {
 // ── Aggregation ────────────────────────────────────────────────────────────
 
 export function aggregateMetrics(evaluated) {
-  const valid = evaluated.filter(p => p.evaluation && p.evaluation.status === "evaluated");
+  // Exclude projections with a rescue-carb-in-window confounder from the
+  // aggregate metrics used for personalized learning. The rescue carb is an
+  // exogenous treatment the baseline model could not anticipate — including
+  // it would teach the model wrong parameters.
+  const valid = evaluated.filter(p =>
+    p.evaluation && p.evaluation.status === "evaluated" &&
+    !(p.evaluation.confounders || []).includes("rescue_carb_in_window")
+  );
 
   if (valid.length === 0) {
     return { sampleCount: 0, mae: 0, bias: 0, coverage: null, byHorizon: {}, byModelVersion: {} };

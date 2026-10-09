@@ -181,13 +181,15 @@ export function carbAppearanceRateGPerMin(entry, atTime, mealModelParams) {
   const elapsedMin = (atTime - mealTime) / MINUTE_MS;
   if (elapsedMin <= 0) return 0;
 
-  const speedClass = deriveSpeedClass(entry);
-  const dualWave = speedClass === "high_fat";
-  const blend = deriveDualWaveBlend(entry);
+  const rescue = isRescueCarb(entry);
+  const speedClass = rescue ? "fast" : deriveSpeedClass(entry);
+  const dualWave = rescue ? false : speedClass === "high_fat";
+  const blend = rescue ? 0 : deriveDualWaveBlend(entry);
   // Apply learned speed factor for this meal's class (Milestone 3). The speed
   // factor adjusts the peak time and window duration — it shapes WHEN the
   // carbs are estimated to hit the bloodstream, never the total amount.
-  const classParams = mealModelParams?.[speedClass];
+  // Rescue carbs skip personalization — treatment events, not meals to learn.
+  const classParams = rescue ? null : mealModelParams?.[speedClass];
   const speedFactor = classParams?.speedFactor != null ? Number(classParams.speedFactor) : null;
   const peakMin = getClassPeakMinutes(speedClass, speedFactor);
   const windowMin = getClassWindowMinutes(speedClass, speedFactor);
@@ -245,6 +247,15 @@ export function insulinActivityRateUnitsPerMin(dose, atTime) {
 }
 
 // ── Data normalization ──────────────────────────────────────────────────────
+
+// Rescue carbs: fast-acting glucose to treat/prevent lows. Modeled with the
+// "fast" speed-class profile — never counted as meals for confounding or
+// meal-response learning. Informational inputs to a forecast only.
+const RESCUE_WINDOW_MIN = 120;
+
+function isRescueCarb(entry) {
+  return entry?.is_rescue_carb === true || entry?.classification === "rescue_carbs";
+}
 
 function parseReadings(raw) {
   if (!Array.isArray(raw)) return [];
@@ -305,12 +316,22 @@ export function normalizeInputs(rawReadings, rawMeals, rawDoses, settings, now) 
   const anchor = stale ? null : { time: latestReading.time, value: latestReading.value };
 
   const activeMeals = (Array.isArray(rawMeals) ? rawMeals : []).filter((m) => {
-    if (!m || !Number.isFinite(Number(m.carbs)) || Number(m.carbs) <= 0) return false;
+    if (!m || isRescueCarb(m)) return false;
+    if (!Number.isFinite(Number(m.carbs)) || Number(m.carbs) <= 0) return false;
     const mealTime = new Date(m.consumed_at).getTime();
     if (!Number.isFinite(mealTime)) return false;
     const speedClass = deriveSpeedClass(m);
     const windowMin = getClassWindowMinutes(speedClass);
     return mealTime <= now && mealTime + windowMin * MINUTE_MS > now;
+  });
+
+  // Active rescue carbs: rapid absorption window (fast-class: 120 min).
+  const activeRescueCarbs = (Array.isArray(rawMeals) ? rawMeals : []).filter((m) => {
+    if (!m || !isRescueCarb(m)) return false;
+    if (!Number.isFinite(Number(m.carbs)) || Number(m.carbs) <= 0) return false;
+    const mealTime = new Date(m.consumed_at).getTime();
+    if (!Number.isFinite(mealTime)) return false;
+    return mealTime <= now && mealTime + RESCUE_WINDOW_MIN * MINUTE_MS > now;
   });
 
   const activeDoses = (Array.isArray(rawDoses) ? rawDoses : []).filter((d) => {
@@ -332,15 +353,16 @@ export function normalizeInputs(rawReadings, rawMeals, rawDoses, settings, now) 
   if (!calibrated) confounders.push("uncalibrated_settings");
   if (activeMeals.length > 1) confounders.push("overlapping_meals");
   if (activeDoses.length > 2) confounders.push("multiple_active_doses");
+  if (activeRescueCarbs.length > 0) confounders.push("active_rescue_carb");
 
   return {
-    now, readings, activeMeals, activeDoses,
+    now, readings, activeMeals, activeRescueCarbs, activeDoses,
     settings: { isf, unitsPer5g, targetLow, targetHigh },
     anchor, momentumMgDlPerMin: momentum,
     dataQuality: {
       staleReadings: stale, gapPresent, readingCount: readings.length,
-      activeMealCount: activeMeals.length, activeDoseCount: activeDoses.length,
-      calibrated, confounders,
+      activeMealCount: activeMeals.length, activeRescueCarbCount: activeRescueCarbs.length,
+      activeDoseCount: activeDoses.length, calibrated, confounders,
     },
   };
 }
@@ -353,7 +375,7 @@ export function normalizeInputs(rawReadings, rawMeals, rawDoses, settings, now) 
 //   - No meals, active insulin: 30 min (close window).
 //   - No meals, no insulin: 20 min (very close — momentum only, decays ~20 min).
 export function resolveHorizonMin(snapshot) {
-  if (snapshot.activeMeals.length > 0) return 60;
+  if (snapshot.activeMeals.length > 0 || snapshot.activeRescueCarbs.length > 0) return 60;
   if (snapshot.activeDoses.length > 0) return 30;
   return 20;
 }
@@ -398,6 +420,7 @@ function computeSigmaAtOffset(minOffset, dq, netRate, uncertaintyCalibration) {
   if (!dq.calibrated) sigma += 6 * dqRamp;
   if (dq.confounders.includes("overlapping_meals")) sigma += 5 * dqRamp;
   if (dq.confounders.includes("multiple_active_doses")) sigma += 4 * dqRamp;
+  if (dq.confounders.includes("active_rescue_carb")) sigma += 3 * dqRamp;
   sigma += Math.min(15, Math.abs(netRate) * 3) * dqRamp;
   return Math.min(MAX_SIGMA_MGDL, sigma);
 }
@@ -467,7 +490,7 @@ export function projectGlucose(snapshot, opts = {}) {
     };
   }
 
-  const hasActiveInputs = snapshot.activeMeals.length > 0 || snapshot.activeDoses.length > 0;
+  const hasActiveInputs = snapshot.activeMeals.length > 0 || snapshot.activeRescueCarbs.length > 0 || snapshot.activeDoses.length > 0;
   const confidence = computeConfidence(
     snapshot.dataQuality, hasActiveInputs, snapshot.momentumMgDlPerMin,
     modelResolution, uncertaintyCalibration
@@ -509,6 +532,10 @@ export function projectGlucose(snapshot, opts = {}) {
         ? Number(mealClassParams.magnitudeFactor)
         : 1.0;
       carbRiseRate += carbAppearanceRateGPerMin(meal, futureTime, mealModelParams) * mgPerGram * magnitudeFactor;
+    }
+    // Rescue carbs: rapid absorption (fast-class profile), no personalization.
+    for (const rescue of snapshot.activeRescueCarbs) {
+      carbRiseRate += carbAppearanceRateGPerMin(rescue, futureTime, null) * mgPerGram;
     }
 
     let insulinDropRate = 0;
@@ -564,6 +591,28 @@ export function projectGlucose(snapshot, opts = {}) {
     return s + Number(m.carbs) * (1 - fraction);
   }, 0);
 
+  // Rescue carb grams still on board (remaining, using the fast-class profile).
+  const totalActiveRescueCarbGrams = snapshot.activeRescueCarbs.reduce((s, m) => {
+    const mealTime = new Date(m.consumed_at).getTime();
+    const elapsed = (snapshot.now - mealTime) / MINUTE_MS;
+    const peakMin = getClassPeakMinutes("fast");
+    const windowMin = getClassWindowMinutes("fast");
+    const rateFn = (t) => gammaRate(t, peakMin, ABSORPTION_SHAPE_EXP);
+    const step = 2;
+    let totalArea = 0;
+    for (let t = 0; t < windowMin; t += step) {
+      totalArea += ((rateFn(t) + rateFn(t + step)) / 2) * step;
+    }
+    if (totalArea <= 0) return s;
+    let elapsedArea = 0;
+    const cap = Math.min(elapsed, windowMin);
+    for (let t = 0; t < cap; t += step) {
+      elapsedArea += ((rateFn(t) + rateFn(t + step)) / 2) * step;
+    }
+    const fraction = Math.max(0, Math.min(1, elapsedArea / totalArea));
+    return s + Number(m.carbs) * (1 - fraction);
+  }, 0);
+
   const totalActiveInsulinUnits = snapshot.activeDoses.reduce((s, d) => {
     const units = Number(d?.units) || 0;
     const doseTime = new Date(d?.administered_at || d?.created_at).getTime();
@@ -585,14 +634,20 @@ export function projectGlucose(snapshot, opts = {}) {
     inputProvenance: {
       readingCount: snapshot.dataQuality.readingCount,
       mealCount: snapshot.dataQuality.activeMealCount,
+      rescueCarbCount: snapshot.dataQuality.activeRescueCarbCount,
       doseCount: snapshot.dataQuality.activeDoseCount,
       anchorAgeMin: Math.round((generatedAt - anchorTime) / MINUTE_MS),
       settingsCalibrated: snapshot.dataQuality.calibrated,
     },
     activeInputs: {
-      totalActiveCarbGrams: Math.round(totalActiveCarbGrams),
+      totalActiveCarbGrams: Math.round(totalActiveCarbGrams + totalActiveRescueCarbGrams),
       totalActiveInsulinUnits: Math.round(totalActiveInsulinUnits * 10) / 10,
       mealCount: snapshot.activeMeals.length,
+      rescueCarbGrams: Math.round(totalActiveRescueCarbGrams),
+      rescueCarbCount: snapshot.activeRescueCarbs.length,
+      rescueTiming: snapshot.activeRescueCarbs.length > 0
+        ? new Date(Math.max(...snapshot.activeRescueCarbs.map((r) => new Date(r.consumed_at).getTime()))).toISOString()
+        : null,
       doseCount: snapshot.activeDoses.length,
       activeSpeedClasses,
     },

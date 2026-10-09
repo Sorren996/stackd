@@ -142,6 +142,29 @@ export default async function (req: Request): Promise<Response> {
             source: String(r.source || "manual"),
           }));
 
+        // Fetch rescue carbs for this user to check for treatment events
+        // during the forecast's observation window. A rescue carb ingested
+        // mid-window is an exogenous event the baseline model could not have
+        // anticipated — such forecasts are excluded from personalized learning.
+        let rescueCarbTimes: number[] = [];
+        try {
+          const [byFlag, byClass] = await Promise.all([
+            sr.entities.CarbEntry.filter({ created_by_id: userId, is_rescue_carb: true }, "-consumed_at", 100),
+            sr.entities.CarbEntry.filter({ created_by_id: userId, classification: "rescue_carbs" }, "-consumed_at", 100),
+          ]);
+          const seen = new Set<string>();
+          for (const c of [...(byFlag || []), ...(byClass || [])]) {
+            if (!c) continue;
+            const cid = c.id || c._id || `${c.consumed_at}`;
+            if (seen.has(cid)) continue;
+            seen.add(cid);
+            const t = new Date(c.consumed_at).getTime();
+            if (Number.isFinite(t)) rescueCarbTimes.push(t);
+          }
+        } catch (err: any) {
+          console.error(`[evaluateProjections] rescue carb fetch error for ${userId}: ${err.message}`);
+        }
+
         const normalizedProjection = {
           id: projection.id,
           user_id: userId,
@@ -157,7 +180,7 @@ export default async function (req: Request): Promise<Response> {
           abstained: Boolean(projection.abstained),
         };
 
-        const result = evaluateProjection(normalizedProjection, normalizedReadings, now);
+        const result = evaluateProjection(normalizedProjection, normalizedReadings, now, rescueCarbTimes);
 
         // Persist the evaluation and clear the lock atomically.
         await sr.entities.GlucoseProjection.update(projection.id, {

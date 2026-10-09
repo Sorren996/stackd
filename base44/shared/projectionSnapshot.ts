@@ -45,6 +45,7 @@ export interface InputSnapshot {
     absorption_profile: string;
     speed_class: string | null;
     dual_wave: boolean;
+    is_rescue_carb: boolean;
   }>;
   doses: Array<{
     administered_at: string;
@@ -121,6 +122,7 @@ export function buildInputSnapshot(
       absorption_profile: String(m.absorption_profile || "medium"),
       speed_class: m.speed_class || null,
       dual_wave: Boolean(m.dual_wave),
+      is_rescue_carb: Boolean(m.is_rescue_carb) || m.classification === "rescue_carbs",
     }));
 
   // Filter doses by created_date (when the user logged the dose).
