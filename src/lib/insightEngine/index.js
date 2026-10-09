@@ -27,6 +27,12 @@ export const PROJECTION_MODEL_VERSION = "1.0.0-baseline";
 export const BASELINE_MODEL_VERSION = "1.0.0-baseline";
 export const PERSONALIZED_MODEL_VERSION = "1.1.0-personalized";
 
+// Meal-response model versions (Milestone 3). Separate from the general
+// forecast model version so meal-response personalization can be evaluated
+// independently.
+export const MEAL_RESPONSE_MODEL_VERSION_BASELINE = "1.0.0-meal-baseline";
+export const MEAL_RESPONSE_MODEL_VERSION_PERSONALIZED = "1.1.0-meal-personalized";
+
 // Speed-class derivation (inlined from absorptionLearning to keep the engine
 // self-contained and testable without pulling in the base44 client).
 function deriveSpeedClass(entry) {
@@ -100,7 +106,7 @@ function getClassWindowMinutes(speedClass) {
 }
 
 // Carb appearance rate (g/min) for a meal at a future time.
-export function carbAppearanceRateGPerMin(entry, atTime) {
+export function carbAppearanceRateGPerMin(entry, atTime, mealModelParams) {
   const carbs = Number(entry?.carbs) || 0;
   if (carbs <= 0) return 0;
   const mealTime = new Date(entry.consumed_at).getTime();
@@ -110,8 +116,13 @@ export function carbAppearanceRateGPerMin(entry, atTime) {
 
   const speedClass = deriveSpeedClass(entry);
   const dualWave = speedClass === "high_fat";
-  const peakMin = getClassPeakMinutes(speedClass);
-  const windowMin = getClassWindowMinutes(speedClass);
+  // Apply learned speed factor for this meal's class (Milestone 3). The speed
+  // factor adjusts the peak time and window duration — it shapes WHEN the
+  // carbs are estimated to hit the bloodstream, never the total amount.
+  const classParams = mealModelParams?.[speedClass];
+  const speedFactor = classParams?.speedFactor != null ? Number(classParams.speedFactor) : null;
+  const peakMin = getClassPeakMinutes(speedClass, speedFactor);
+  const windowMin = getClassWindowMinutes(speedClass, speedFactor);
   if (elapsedMin >= windowMin) return 0;
 
   const rateFn = dualWave
@@ -306,9 +317,21 @@ export function projectGlucose(snapshot, opts = {}) {
   const isPersonalized = Math.abs(rateAdjustmentFactor - 1.0) > 0.001;
   const modelVersion = isPersonalized ? PERSONALIZED_MODEL_VERSION : BASELINE_MODEL_VERSION;
 
+  // Meal-response model version (Milestone 3). Separate from the general
+  // forecast model version. Reflects whether any per-class meal-response
+  // personalization is active.
+  const mealModelParams = opts.mealModelParams || null;
+  const hasMealPersonalization = mealModelParams != null &&
+    Object.values(mealModelParams).some((p) =>
+      p && (Math.abs(Number(p.speedFactor) - 1.0) > 0.001 || Math.abs(Number(p.magnitudeFactor) - 1.0) > 0.001)
+    );
+  const mealModelVersion = hasMealPersonalization
+    ? MEAL_RESPONSE_MODEL_VERSION_PERSONALIZED
+    : MEAL_RESPONSE_MODEL_VERSION_BASELINE;
+
   if (!snapshot.anchor) {
     return {
-      trajectory: [], anchor: null, modelVersion,
+      trajectory: [], anchor: null, modelVersion, mealModelVersion,
       generatedAt, horizonMinutes: horizonMin, confidence: 0,
       abstained: true, abstainReason: "No valid CGM reading within the freshness window.",
       dataQuality: snapshot.dataQuality, uncertaintySummary: null,
@@ -321,7 +344,7 @@ export function projectGlucose(snapshot, opts = {}) {
 
   if (confidence < ABSTAIN_CONFIDENCE_THRESHOLD) {
     return {
-      trajectory: [], anchor: snapshot.anchor, modelVersion,
+      trajectory: [], anchor: snapshot.anchor, modelVersion, mealModelVersion,
       generatedAt, horizonMinutes: horizonMin, confidence,
       abstained: true, abstainReason: "Insufficient evidence to project.",
       dataQuality: snapshot.dataQuality, uncertaintySummary: null,
@@ -342,9 +365,19 @@ export function projectGlucose(snapshot, opts = {}) {
   for (let offset = 0; offset <= horizonMin; offset += stepMin) {
     const futureTime = anchorTime + offset * MINUTE_MS;
 
+    // Carb-driven rise (mg/dL/min).
+    // The speed factor is applied inside carbAppearanceRateGPerMin (timing).
+    // The magnitude factor is applied here per-meal (excursion magnitude).
+    // These are SEPARATE corrections: speedFactor shapes WHEN carbs hit,
+    // magnitudeFactor shapes HOW MUCH glucose rise they produce.
     let carbRiseRate = 0;
     for (const meal of snapshot.activeMeals) {
-      carbRiseRate += carbAppearanceRateGPerMin(meal, futureTime) * mgPerGram;
+      const mealSpeedClass = deriveSpeedClass(meal);
+      const mealClassParams = mealModelParams?.[mealSpeedClass];
+      const magnitudeFactor = mealClassParams?.magnitudeFactor != null
+        ? Number(mealClassParams.magnitudeFactor)
+        : 1.0;
+      carbRiseRate += carbAppearanceRateGPerMin(meal, futureTime, mealModelParams) * mgPerGram * magnitudeFactor;
     }
 
     let insulinDropRate = 0;
@@ -368,6 +401,9 @@ export function projectGlucose(snapshot, opts = {}) {
       upper: Math.round(Math.min(500, currentValue + sigma)),
     });
   }
+
+  // Active speed classes (for meal-response evaluation grouping).
+  const activeSpeedClasses = [...new Set(snapshot.activeMeals.map((m) => deriveSpeedClass(m)))];
 
   const totalActiveCarbGrams = snapshot.activeMeals.reduce((s, m) => {
     const mealTime = new Date(m.consumed_at).getTime();
@@ -394,7 +430,7 @@ export function projectGlucose(snapshot, opts = {}) {
   }, 0);
 
   return {
-    trajectory, anchor: snapshot.anchor, modelVersion,
+    trajectory, anchor: snapshot.anchor, modelVersion, mealModelVersion,
     generatedAt, horizonMinutes: horizonMin,
     confidence: Math.round(confidence * 100) / 100,
     abstained: false, abstainReason: null,
@@ -412,6 +448,7 @@ export function projectGlucose(snapshot, opts = {}) {
       totalActiveInsulinUnits: Math.round(totalActiveInsulinUnits * 10) / 10,
       mealCount: snapshot.activeMeals.length,
       doseCount: snapshot.activeDoses.length,
+      activeSpeedClasses,
     },
   };
 }
