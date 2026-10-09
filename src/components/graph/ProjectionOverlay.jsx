@@ -69,6 +69,8 @@ export default function ProjectionOverlay({
           yLower: Number.isFinite(lower) ? getGlucoseY(lower) : null,
           yUpper: Number.isFinite(upper) ? getGlucoseY(upper) : null,
           value: Math.round(value),
+          upper: Number.isFinite(upper) ? Math.round(upper) : null,
+          lower: Number.isFinite(lower) ? Math.round(lower) : null,
           time: t,
           minOffset: Number(p.min_offset) || 0,
         };
@@ -84,9 +86,22 @@ export default function ProjectionOverlay({
 
   if (points.length < 2) return null;
 
-  // Build the dashed line path.
+  // Build the dashed mean line path.
   const linePath = points
     .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
+    .join(" ");
+
+  // Build faint high (upper bound) and low (lower bound) line paths so the
+  // range reads as lines, not only as a shaded fill. Amber for the high
+  // line, sage for the low line — tuned to the app's muted palette and
+  // fainter than the mean line so the mean stays visually dominant.
+  const upperPoints = points.filter((p) => p.yUpper != null);
+  const lowerPoints = points.filter((p) => p.yLower != null);
+  const upperLinePath = upperPoints
+    .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.yUpper.toFixed(1)}`)
+    .join(" ");
+  const lowerLinePath = lowerPoints
+    .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.yLower.toFixed(1)}`)
     .join(" ");
 
   // Build the uncertainty band path (lower edge L→R, upper edge R→L).
@@ -103,8 +118,8 @@ export default function ProjectionOverlay({
   }
 
   // Tooltip positioning — clamp within chart bounds.
-  const tooltipW = 64;
-  const tooltipH = 36;
+  const tooltipW = 78;
+  const tooltipH = 64;
   const tooltipX = activePoint
     ? Math.max(4, Math.min(chartWidth - tooltipW - 4, activePoint.x - tooltipW / 2))
     : 0;
@@ -122,12 +137,39 @@ export default function ProjectionOverlay({
         {hasBand && (
           <path d={bandPath} fill="#af751b" fillOpacity={0.07} stroke="none" />
         )}
+        {/* Faint high (upper bound) line — muted amber, thinner than the mean */}
+        {upperLinePath && (
+          <path
+            d={upperLinePath}
+            stroke="#8a5a12"
+            strokeWidth={1}
+            strokeDasharray="3 3"
+            strokeOpacity={0.42}
+            fill="none"
+            strokeLinecap="round"
+            style={{ pointerEvents: "none" }}
+          />
+        )}
+        {/* Faint low (lower bound) line — muted sage, thinner than the mean */}
+        {lowerLinePath && (
+          <path
+            d={lowerLinePath}
+            stroke="#4d5742"
+            strokeWidth={1}
+            strokeDasharray="3 3"
+            strokeOpacity={0.42}
+            fill="none"
+            strokeLinecap="round"
+            style={{ pointerEvents: "none" }}
+          />
+        )}
+        {/* Mean projected trajectory — visually dominant */}
         <path
           d={linePath}
           stroke="#af751b"
           strokeWidth={1.5}
           strokeDasharray="5 4"
-          strokeOpacity={0.45}
+          strokeOpacity={0.5}
           fill="none"
           strokeLinecap="round"
           style={{ pointerEvents: "none" }}
@@ -190,17 +232,36 @@ export default function ProjectionOverlay({
             }}
           >
             <div
-              className="text-[14px] font-semibold tabular-nums leading-tight"
-              style={{ color: "#8a5a12" }}
-            >
-              {activePoint.value}
-            </div>
-            <div
               className="text-[9px] font-medium leading-tight"
               style={{ color: "#746959" }}
             >
               {formatProjectionTime(activePoint.time)}
             </div>
+            {/* Mean estimate */}
+            <div className="flex items-center justify-between gap-2 mt-0.5">
+              <span className="text-[9px] font-medium" style={{ color: "#746959" }}>Est.</span>
+              <span className="text-[14px] font-semibold tabular-nums leading-tight" style={{ color: "#8a5a12" }}>
+                {activePoint.value}
+              </span>
+            </div>
+            {/* Highest estimated value (upper bound) — same trajectory point */}
+            {activePoint.upper != null && (
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[9px] font-medium" style={{ color: "#746959" }}>High</span>
+                <span className="text-[11px] font-semibold tabular-nums leading-tight" style={{ color: "#8a5a12" }}>
+                  ~{activePoint.upper}
+                </span>
+              </div>
+            )}
+            {/* Lowest estimated value (lower bound) — same trajectory point */}
+            {activePoint.lower != null && (
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[9px] font-medium" style={{ color: "#746959" }}>Low</span>
+                <span className="text-[11px] font-semibold tabular-nums leading-tight" style={{ color: "#4d5742" }}>
+                  ~{activePoint.lower}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       )}

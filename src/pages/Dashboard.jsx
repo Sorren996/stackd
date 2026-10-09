@@ -66,7 +66,6 @@ export default function Dashboard() {
   useVisibilityRefresh();
   const { requestRefresh } = useDexcomRefresh();
   const stackingAlertsEnabled = localStorage.getItem("stacking_alerts_enabled") !== "false";
-  const projection = useLatestProjection();
 
   useEffect(() => {
     const interval = setInterval(() => setTick((t) => t + 1), 60000);
@@ -128,6 +127,18 @@ export default function Dashboard() {
     queryFn: () => base44.entities.CarbEntry.list("-consumed_at", 100),
     staleTime: FRESH_DATA_MS,
     gcTime: GRAPH_DATA_MS,
+  });
+
+  // ── Continuous-learning projection ─────────────────────────────────────
+  // The projection re-anchors on every new glucose reading and refreshes its
+  // active inputs on every new meal/insulin log. The latest timestamps act
+  // as signals: when any changes, the hook triggers a background generation
+  // through the existing insight-engine pipeline and refetches promptly so
+  // the rendered cone reflects the latest reading and latest logged support.
+  const projection = useLatestProjection({
+    latestReadingTime: latestGlucoseRows[0]?.recorded_at || null,
+    latestMealTime: carbEntries[0]?.consumed_at || null,
+    latestDoseTime: doses[0]?.administered_at || null,
   });
 
   const { data: graphCarbsSource = [] } = useQuery({

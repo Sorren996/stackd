@@ -1571,34 +1571,50 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         </div>
       </div>
       </div>
-      <div className="px-3 mt-2 flex items-center gap-x-3 gap-y-1 flex-wrap">
-        <div className="flex items-center gap-1.5">
-          <div className="h-[2.5px] w-3 rounded-full" style={{ background: "#9c5228" }} />
-          <span className="text-[10px] font-medium" style={{ color: "#6b6153" }}>Glucose</span>
-        </div>
-        {projection && (
+      <div className="px-3 mt-2 space-y-1">
+        {/* Row 1: glucose, projection (mean / high / low), meals */}
+        <div className="flex items-center gap-x-3 gap-y-1 flex-wrap">
           <div className="flex items-center gap-1.5">
-            <div className="h-[2.5px] w-3 border-t-2 border-dashed" style={{ borderColor: "#af751b", opacity: 0.5 }} />
-            <span className="text-[10px] font-medium" style={{ color: "#6b6153" }}>Projection</span>
+            <div className="h-[2.5px] w-3 rounded-full" style={{ background: "#9c5228" }} />
+            <span className="text-[10px] font-medium" style={{ color: "#6b6153" }}>Glucose</span>
           </div>
-        )}
-        <div className="flex items-center gap-1.5">
-          <div className="h-2 w-2 rounded-full" style={{ border: "1.5px solid #3f3830", background: "#f7f1e8" }} />
-          <span className="text-[10px] font-medium" style={{ color: "#6b6153" }}>Meals</span>
+          {projection && (
+            <>
+              <div className="flex items-center gap-1.5">
+                <div className="h-[2.5px] w-3 border-t-2 border-dashed" style={{ borderColor: "#af751b", opacity: 0.6 }} />
+                <span className="text-[10px] font-medium" style={{ color: "#6b6153" }}>Projection</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="h-0 w-3 border-t border-dashed" style={{ borderColor: "#8a5a12", opacity: 0.55 }} />
+                <span className="text-[10px] font-medium" style={{ color: "#6b6153" }}>High</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="h-0 w-3 border-t border-dashed" style={{ borderColor: "#4d5742", opacity: 0.55 }} />
+                <span className="text-[10px] font-medium" style={{ color: "#6b6153" }}>Low</span>
+              </div>
+            </>
+          )}
+          <div className="flex items-center gap-1.5">
+            <div className="h-2 w-2 rounded-full" style={{ border: "1.5px solid #3f3830", background: "#f7f1e8" }} />
+            <span className="text-[10px] font-medium" style={{ color: "#6b6153" }}>Meals</span>
+          </div>
         </div>
-        {activeDoseKeys.length > 0 ? (
-          activeDoseKeys.map((k) =>
-            <div key={k.label} className="flex items-center gap-1.5">
-              <div className="h-2 w-2 rounded-full" style={{ background: k.color }} />
-              <span className="text-[10px] font-medium" style={{ color: "#6b6153" }}>{k.label} {k.totalUnits}u</span>
+        {/* Row 2: insulin entries (separate row) */}
+        <div className="flex items-center gap-x-3 gap-y-1 flex-wrap">
+          {activeDoseKeys.length > 0 ? (
+            activeDoseKeys.map((k) =>
+              <div key={k.label} className="flex items-center gap-1.5">
+                <div className="h-2 w-2 rounded-full" style={{ background: k.color }} />
+                <span className="text-[10px] font-medium" style={{ color: "#6b6153" }}>{k.label} {k.totalUnits}u</span>
+              </div>
+            )
+          ) : (
+            <div className="flex items-center gap-1.5">
+              <div className="h-2 w-2 rounded-full" style={{ background: "#5b6550" }} />
+              <span className="text-[10px] font-medium" style={{ color: "#6b6153" }}>Insulin</span>
             </div>
-          )
-        ) : (
-          <div className="flex items-center gap-1.5">
-            <div className="h-2 w-2 rounded-full" style={{ background: "#5b6550" }} />
-            <span className="text-[10px] font-medium" style={{ color: "#6b6153" }}>Insulin</span>
-          </div>
-        )}
+          )}
+        </div>
       </div>
       <DelayedRiseCautionCard carbEntries={carbEntries} />
       </div>
