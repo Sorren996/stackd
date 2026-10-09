@@ -12,11 +12,11 @@
     },
     "parameters": {
       "type": "object",
-      "description": "Personalized model parameters. Contains rateAdjustmentFactor (multiplicative adjustment to the net glucose rate, baseline 1.0) when personalization is active. Empty for baseline.",
+      "description": "Personalized model parameters. Contains rateAdjustmentFactor when personalization is active. Empty for baseline. rateAdjustmentFactor is a single learned correction for systematic prediction bias \u2014 not a model of the individual's glucose physiology. It cannot distinguish absorption timing, magnitude, insulin action, or activity/stress causes.",
       "properties": {
         "rateAdjustmentFactor": {
           "type": "number",
-          "description": "Multiplicative factor applied to the net glucose rate (carbRise - insulinDrop + momentum). Baseline = 1.0. Clamped to [0.7, 1.3]. <1.0 slows the projected change; >1.0 accelerates it."
+          "description": "A single learned correction for systematic prediction bias \u2014 nothing more. Multiplicative factor applied to the net glucose rate (carbRise - insulinDrop + momentum). Baseline = 1.0. Clamped to [0.7, 1.3]. <1.0 slows the projected change; >1.0 accelerates it. It describes what the baseline model tended to get wrong on average; it never prescribes or recommends any clinical action."
         }
       }
     },

@@ -297,6 +297,11 @@ export function projectGlucose(snapshot, opts = {}) {
   const horizonMin = Math.max(5, Math.min(180, Number(opts.horizonMin) || DEFAULT_HORIZON_MIN));
   const stepMin = Math.max(1, Number(opts.stepMin) || STEP_MIN);
   const generatedAt = snapshot.now;
+  // rateAdjustmentFactor: a single learned correction for systematic prediction
+  // bias (Milestone 2). NOT a model of the individual's glucose physiology —
+  // it cannot distinguish absorption timing, magnitude, insulin action, or
+  // activity/stress causes. It describes what the baseline tended to get wrong
+  // on average; it never prescribes. Baseline = 1.0 (no correction).
   const rateAdjustmentFactor = Number(opts.modelParams?.rateAdjustmentFactor) || 1.0;
   const isPersonalized = Math.abs(rateAdjustmentFactor - 1.0) > 0.001;
   const modelVersion = isPersonalized ? PERSONALIZED_MODEL_VERSION : BASELINE_MODEL_VERSION;

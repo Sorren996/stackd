@@ -36,8 +36,10 @@ export default async function (req) {
     const settings = (settingsList && settingsList.length > 0) ? settingsList[0] : {};
 
     // Read the user's model state for personalized parameters (Milestone 2).
-    // If the evaluation pipeline has learned a rateAdjustmentFactor, it shapes
-    // the projection. Baseline (1.0) is used when no personalization exists.
+    // rateAdjustmentFactor is a single learned correction for systematic
+    // prediction bias — not a model of the individual's glucose physiology.
+    // If the evaluation pipeline has learned one, it shapes the projection.
+    // Baseline (1.0) is used when no personalization exists.
     const stateRows = await base44.asServiceRole.entities.ProjectionModelState.list("-created_date", 1);
     const modelState = (stateRows && stateRows.length > 0) ? stateRows[0] : null;
     const rateAdjustmentFactor = Number(modelState?.parameters?.rateAdjustmentFactor) || 1.0;

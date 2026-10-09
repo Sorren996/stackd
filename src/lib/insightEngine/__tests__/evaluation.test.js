@@ -17,6 +17,7 @@ import {
   MIN_FACTOR_CHANGE,
   BASELINE_TOLERANCE_MGDL,
   MIN_SAMPLES_FOR_VALIDATION,
+  EVAL_BUFFER_MIN,
 } from "../evaluation";
 import { projectGlucose, normalizeInputs, BASELINE_MODEL_VERSION, PERSONALIZED_MODEL_VERSION } from "../index";
 
@@ -73,23 +74,53 @@ const baselineState = {
 // ───────────────────────────────────────────────────────────────────────────
 
 describe("1. Forecasts remain pending before their observation windows mature", () => {
-  it("does not score a projection whose forecast window has not elapsed", () => {
+  it("does not score a horizon before its target time + buffer has elapsed", () => {
     const generatedAt = 0;
     const horizonMin = 60;
     const projection = makeProjection({ generatedAt, anchorValue: 120, horizonMin });
 
-    // Evaluate at 30 min — only halfway through the forecast window.
-    // Readings exist at 15 and 30 min, but 60 min hasn't arrived yet.
+    // Evaluate at 30 min — well within the forecast window.
+    // Readings exist at 15 and 30 min, but the buffer hasn't elapsed for
+    // the 30-min horizon (needs 30 + 10 = 40 min) or the 60-min horizon
+    // (needs 60 + 10 = 70 min).
     const readings = [
       makeReading(125, 15),
       makeReading(130, 30),
     ];
     const result = evaluateProjection(projection, readings, 30 * MINUTE_MS);
 
-    // The 60-min horizon should be unscorable (no observation yet).
+    // 15-min horizon: target=15, buffer=10, 30 >= 25 → scored (reading exists).
+    const h15 = result.horizons.find(h => h.horizon_min === 15);
+    expect(h15.scored).toBe(true);
+
+    // 30-min horizon: target=30, buffer=10, 30 < 40 → buffer_not_elapsed.
+    const h30 = result.horizons.find(h => h.horizon_min === 30);
+    expect(h30.scored).toBe(false);
+    expect(h30.exclusion_reason).toBe("buffer_not_elapsed");
+
+    // 60-min horizon: target=60, buffer=10, 30 < 70 → buffer_not_elapsed.
     const h60 = result.horizons.find(h => h.horizon_min === 60);
     expect(h60.scored).toBe(false);
-    expect(h60.exclusion_reason).toBe("no_observation_in_window");
+    expect(h60.exclusion_reason).toBe("buffer_not_elapsed");
+  });
+
+  it("excludes a horizon as buffer_not_elapsed even when a reading exists, if the buffer hasn't elapsed", () => {
+    const generatedAt = 0;
+    const projection = makeProjection({ generatedAt, anchorValue: 120, horizonMin: 60 });
+
+    // Reading at 60 min exists, but evalTime is 65 — buffer needs 70.
+    const readings = [makeReading(125, 15), makeReading(135, 30), makeReading(145, 60)];
+    const result = evaluateProjection(projection, readings, 65 * MINUTE_MS);
+
+    const h60 = result.horizons.find(h => h.horizon_min === 60);
+    expect(h60.scored).toBe(false);
+    expect(h60.exclusion_reason).toBe("buffer_not_elapsed");
+
+    // 15 and 30 ARE scored (their buffers have elapsed at 65 min).
+    const h15 = result.horizons.find(h => h.horizon_min === 15);
+    expect(h15.scored).toBe(true);
+    const h30 = result.horizons.find(h => h.horizon_min === 30);
+    expect(h30.scored).toBe(true);
   });
 
   it("scores horizons as their observation windows mature", () => {
@@ -101,7 +132,7 @@ describe("1. Forecasts remain pending before their observation windows mature", 
       makeReading(130, 30),
       makeReading(135, 60),
     ];
-    const result = evaluateProjection(projection, readings, 65 * MINUTE_MS);
+    const result = evaluateProjection(projection, readings, 70 * MINUTE_MS);
 
     expect(result.status).toBe("evaluated");
     const scored = result.horizons.filter(h => h.scored);
@@ -123,7 +154,7 @@ describe("2. Correct timestamp matching and horizon scoring", () => {
       makeReading(135, 30),   // matches 30-min horizon
       makeReading(145, 60),   // matches 60-min horizon
     ];
-    const result = evaluateProjection(projection, readings, 65 * MINUTE_MS);
+    const result = evaluateProjection(projection, readings, 70 * MINUTE_MS);
 
     expect(result.status).toBe("evaluated");
     const h15 = result.horizons.find(h => h.horizon_min === 15);
@@ -147,7 +178,7 @@ describe("2. Correct timestamp matching and horizon scoring", () => {
       makeReading(140, 32),
       makeReading(145, 60),
     ];
-    const result = evaluateProjection(projection, readings, 65 * MINUTE_MS);
+    const result = evaluateProjection(projection, readings, 70 * MINUTE_MS);
     const h30 = result.horizons.find(h => h.horizon_min === 30);
 
     // 28 min is 2 min from target; 32 min is also 2 min. The reduce picks the
@@ -164,7 +195,7 @@ describe("2. Correct timestamp matching and horizon scoring", () => {
     });
     // Actual at 15 min is 125 — model predicted 135, so error = +10 (overprediction).
     const readings = [makeReading(125, 15), makeReading(130, 30), makeReading(135, 60)];
-    const result = evaluateProjection(projection, readings, 65 * MINUTE_MS);
+    const result = evaluateProjection(projection, readings, 70 * MINUTE_MS);
     const h15 = result.horizons.find(h => h.horizon_min === 15);
 
     expect(h15.error).toBe(10);
@@ -186,7 +217,7 @@ describe("3. MAE, signed bias, and interval coverage calculations", () => {
     });
     // Actuals: 125, 130, 135 → errors at 15/30/60 min are +10, +20, +25.
     const readings = [makeReading(125, 15), makeReading(130, 30), makeReading(135, 60)];
-    const result = evaluateProjection(projection, readings, 65 * MINUTE_MS);
+    const result = evaluateProjection(projection, readings, 70 * MINUTE_MS);
 
     const errors = result.horizons.filter(h => h.scored).map(h => h.abs_error);
     const expectedMAE = errors.reduce((s, e) => s + e, 0) / errors.length;
@@ -201,7 +232,7 @@ describe("3. MAE, signed bias, and interval coverage calculations", () => {
     });
     // Actuals lower than predicted → positive bias (overprediction).
     const readings = [makeReading(125, 15), makeReading(130, 30), makeReading(135, 60)];
-    const result = evaluateProjection(projection, readings, 65 * MINUTE_MS);
+    const result = evaluateProjection(projection, readings, 70 * MINUTE_MS);
 
     expect(result.bias).toBeGreaterThan(0);
   });
@@ -217,7 +248,7 @@ describe("3. MAE, signed bias, and interval coverage calculations", () => {
     // At 30 min: predicted 150, interval [140, 160]. Actual 135 → outside.
     // At 60 min: predicted 180, interval [170, 190]. Actual 175 → in interval.
     const readings = [makeReading(130, 15), makeReading(135, 30), makeReading(175, 60)];
-    const result = evaluateProjection(projection, readings, 65 * MINUTE_MS);
+    const result = evaluateProjection(projection, readings, 70 * MINUTE_MS);
 
     // 2 of 3 in interval → coverage = 0.667
     expect(result.coverage).toBeCloseTo(2 / 3, 2);
@@ -232,7 +263,7 @@ describe("3. MAE, signed bias, and interval coverage calculations", () => {
     const projection = makeProjection({ generatedAt, horizonMin: 60, trajectory });
 
     const readings = [makeReading(125, 15), makeReading(130, 30), makeReading(135, 60)];
-    const result = evaluateProjection(projection, readings, 65 * MINUTE_MS);
+    const result = evaluateProjection(projection, readings, 70 * MINUTE_MS);
 
     expect(result.coverage).toBe(null);
   });
@@ -249,7 +280,7 @@ describe("4. Missing, duplicate, delayed, and invalid CGM observations", () => {
 
     // Only readings at 15 and 60 min — 30 min is missing.
     const readings = [makeReading(125, 15), makeReading(145, 60)];
-    const result = evaluateProjection(projection, readings, 65 * MINUTE_MS);
+    const result = evaluateProjection(projection, readings, 70 * MINUTE_MS);
 
     const h30 = result.horizons.find(h => h.horizon_min === 30);
     expect(h30.scored).toBe(false);
@@ -263,7 +294,7 @@ describe("4. Missing, duplicate, delayed, and invalid CGM observations", () => {
 
     const dup = makeReading(125, 15);
     const readings = [dup, dup, dup, makeReading(135, 30), makeReading(145, 60)];
-    const result = evaluateProjection(projection, readings, 65 * MINUTE_MS);
+    const result = evaluateProjection(projection, readings, 70 * MINUTE_MS);
 
     // Should still score correctly — duplicates don't corrupt the result.
     expect(result.status).toBe("evaluated");
@@ -281,7 +312,7 @@ describe("4. Missing, duplicate, delayed, and invalid CGM observations", () => {
       { time: 30 * MINUTE_MS, value: 130, source: "dexcom" },
       { time: 60 * MINUTE_MS, value: 145, source: "dexcom" },
     ];
-    const result = evaluateProjection(projection, readings, 65 * MINUTE_MS);
+    const result = evaluateProjection(projection, readings, 70 * MINUTE_MS);
 
     // 15-min horizon has no valid reading → excluded.
     const h15 = result.horizons.find(h => h.horizon_min === 15);
@@ -299,7 +330,7 @@ describe("4. Missing, duplicate, delayed, and invalid CGM observations", () => {
       makeReading(135, 30),
       makeReading(125, 15),
     ];
-    const result = evaluateProjection(projection, readings, 65 * MINUTE_MS);
+    const result = evaluateProjection(projection, readings, 70 * MINUTE_MS);
 
     expect(result.status).toBe("evaluated");
     const h15 = result.horizons.find(h => h.horizon_min === 15);
@@ -311,7 +342,7 @@ describe("4. Missing, duplicate, delayed, and invalid CGM observations", () => {
     const projection = makeProjection({ generatedAt, anchorValue: 120, horizonMin: 60 });
 
     // No readings at all after generation.
-    const result = evaluateProjection(projection, [], 65 * MINUTE_MS);
+    const result = evaluateProjection(projection, [], 70 * MINUTE_MS);
 
     expect(result.status).toBe("unscorable");
     expect(result.reason).toBe("no_horizons_scored");
@@ -321,7 +352,7 @@ describe("4. Missing, duplicate, delayed, and invalid CGM observations", () => {
   it("marks abstained projections as unscorable", () => {
     const projection = makeProjection({ generatedAt: 0, abstained: true, trajectory: [] });
     const readings = [makeReading(125, 15)];
-    const result = evaluateProjection(projection, readings, 65 * MINUTE_MS);
+    const result = evaluateProjection(projection, readings, 70 * MINUTE_MS);
 
     expect(result.status).toBe("unscorable");
     expect(result.reason).toBe("abstained_projection");
@@ -351,8 +382,8 @@ describe("5. Idempotent evaluation and safe retries", () => {
     const projection = makeProjection({ generatedAt, anchorValue: 120, horizonMin: 60 });
     const readings = [makeReading(125, 15), makeReading(135, 30), makeReading(145, 60)];
 
-    const result1 = evaluateProjection(projection, readings, 65 * MINUTE_MS);
-    const result2 = evaluateProjection(projection, readings, 65 * MINUTE_MS);
+    const result1 = evaluateProjection(projection, readings, 70 * MINUTE_MS);
+    const result2 = evaluateProjection(projection, readings, 70 * MINUTE_MS);
 
     expect(result1).toEqual(result2);
   });
@@ -362,9 +393,9 @@ describe("5. Idempotent evaluation and safe retries", () => {
     const projection = makeProjection({ generatedAt, anchorValue: 120, horizonMin: 60 });
     const readings = [makeReading(125, 15), makeReading(135, 30), makeReading(145, 60)];
 
-    const first = evaluateProjection(projection, readings, 65 * MINUTE_MS);
-    // Simulate a re-evaluation with the same data.
-    const second = evaluateProjection(projection, readings, 70 * MINUTE_MS);
+    const first = evaluateProjection(projection, readings, 70 * MINUTE_MS);
+    // Simulate a re-evaluation with the same data at a later time.
+    const second = evaluateProjection(projection, readings, 75 * MINUTE_MS);
 
     // The scores (mae, bias, horizons) are identical — only evaluated_at changes.
     expect(second.mae).toBe(first.mae);
@@ -391,7 +422,7 @@ describe("6. No future-data leakage", () => {
       readingAt(135, 130 * MINUTE_MS),  // 30 min after
       readingAt(145, 160 * MINUTE_MS),  // 60 min after
     ];
-    const result = evaluateProjection(projection, readings, 165 * MINUTE_MS);
+    const result = evaluateProjection(projection, readings, 170 * MINUTE_MS);
 
     const h15 = result.horizons.find(h => h.horizon_min === 15);
     expect(h15.actual).toBe(125);  // not 999
@@ -404,9 +435,9 @@ describe("6. No future-data leakage", () => {
     const readings = [
       readingAt(100, 40 * MINUTE_MS),  // before — ignored
       readingAt(110, 45 * MINUTE_MS),  // before — ignored
-      readingAt(125, 65 * MINUTE_MS),  // 15 min after
+      readingAt(125, 70 * MINUTE_MS),  // 15 min after
     ];
-    const result = evaluateProjection(projection, readings, 115 * MINUTE_MS);
+    const result = evaluateProjection(projection, readings, 120 * MINUTE_MS);
 
     // Only the 15-min horizon should be scored; 30 and 60 have no valid readings.
     const h15 = result.horizons.find(h => h.horizon_min === 15);
@@ -617,8 +648,8 @@ describe("10. User isolation, RLS behavior, and concurrent updates", () => {
     // User B's readings (different values).
     const readingsB = [makeReading(140, 15), makeReading(145, 30), makeReading(150, 60)];
 
-    const resultA = evaluateProjection(projA, readingsA, 65 * MINUTE_MS);
-    const resultB = evaluateProjection(projB, readingsB, 65 * MINUTE_MS);
+    const resultA = evaluateProjection(projA, readingsA, 70 * MINUTE_MS);
+    const resultB = evaluateProjection(projB, readingsB, 70 * MINUTE_MS);
 
     // Results are independent — no cross-contamination.
     expect(resultA.horizons.find(h => h.horizon_min === 15).actual).toBe(125);
@@ -635,8 +666,8 @@ describe("10. User isolation, RLS behavior, and concurrent updates", () => {
     // User B's readings that are very different.
     const readingsB = [makeReading(200, 15), makeReading(210, 30), makeReading(220, 60)];
 
-    const resultWithA = evaluateProjection(projA, readingsA, 65 * MINUTE_MS);
-    const resultWithB = evaluateProjection(projA, readingsB, 65 * MINUTE_MS);
+    const resultWithA = evaluateProjection(projA, readingsA, 70 * MINUTE_MS);
+    const resultWithB = evaluateProjection(projA, readingsB, 70 * MINUTE_MS);
 
     // Different readings → different scores.
     expect(resultWithA.horizons.find(h => h.horizon_min === 15).actual).not.toBe(
@@ -781,7 +812,7 @@ describe("12. Learned parameter changes and affects a subsequent forecast", () =
         readingAt(120, projGeneratedAt + 60 * MINUTE_MS),
       ];
 
-      const evalResult = evaluateProjection(projection, actualReadings, projGeneratedAt + 65 * MINUTE_MS);
+      const evalResult = evaluateProjection(projection, actualReadings, projGeneratedAt + 70 * MINUTE_MS);
       if (evalResult.status === "evaluated") {
         evaluatedProjections.push({ model_version: projection.model_version, evaluation: evalResult });
       }

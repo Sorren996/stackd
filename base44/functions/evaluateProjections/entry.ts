@@ -22,6 +22,12 @@
 //
 // SAFETY: Never recommends, prescribes, or calculates insulin doses. Only
 // adjusts a multiplicative rate factor that shapes future glucose projections.
+//
+// SCOPE: rateAdjustmentFactor is a single learned correction for systematic
+// prediction bias — not a model of the individual's glucose physiology. It
+// cannot distinguish absorption timing, magnitude, insulin action, or
+// activity/stress causes. It describes what the baseline tended to get wrong
+// on average; it never prescribes.
 
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.52";
 import {
@@ -32,13 +38,12 @@ import {
   validatePersonalization,
   revertToBaseline,
   EVALUATION_VERSION,
+  EVAL_BUFFER_MIN,
 } from "../../shared/forecastEvaluation.ts";
 import { BASELINE_MODEL_VERSION, PERSONALIZED_MODEL_VERSION } from "../../shared/insightEngine.ts";
 
 const MINUTE_MS = 60 * 1000;
 const BATCH_LIMIT = 20;
-// Buffer after the forecast horizon before evaluating (lets readings arrive).
-const EVAL_BUFFER_MIN = 10;
 
 export default async function (req: Request): Promise<Response> {
   try {

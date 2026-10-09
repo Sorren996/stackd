@@ -7,6 +7,15 @@
 // update a single model parameter (rateAdjustmentFactor) when sufficient
 // evidence supports it.
 //
+// SCOPE OF THE LEARNED PARAMETER:
+//   rateAdjustmentFactor is a single learned correction for systematic
+//   prediction bias — nothing more. It cannot distinguish the many causes
+//   of prediction error (incorrect absorption timing, wrong absorption
+//   magnitude, insulin-action differences, missing readings, activity/stress
+//   changes). It is NOT a model of the individual's glucose physiology. It
+//   describes what the baseline model tended to get wrong on average; it does
+//   not prescribe or recommend any clinical action.
+//
 // SAFETY: This module never recommends, prescribes, or calculates insulin
 // doses. It only adjusts a multiplicative rate factor that shapes future
 // glucose projections — never any clinical parameter. The baseline model
@@ -31,6 +40,15 @@ export const EVAL_HORIZONS = [15, 30, 60, 120] as const;
 // Matching tolerance: an actual reading within ±N minutes of the target time
 // is considered a valid match for that horizon.
 export const MATCH_TOLERANCE_MIN = 5;
+
+// Buffer (minutes) that must elapse after a horizon's target time before it
+// is eligible for scoring. This lets late-arriving CGM readings land before
+// the horizon is evaluated. A horizon is excluded as "buffer_not_elapsed"
+// until targetTime + EVAL_BUFFER_MIN has passed. The scheduled evaluator
+// (every 15 min) and this buffer work together: the pipeline's projection-
+// level filter is a coarse pre-filter, but this per-horizon check is the
+// authoritative guarantee that no horizon is scored prematurely.
+export const EVAL_BUFFER_MIN = 10;
 
 // ── Learning thresholds ──────────────────────────────────────────────────────
 // Minimum number of evaluated forecasts before any parameter update.
@@ -57,8 +75,11 @@ export const MAX_RATE_FACTOR = 1.3;
 // Minimum change in the rate factor to justify an update (avoids noise).
 export const MIN_FACTOR_CHANGE = 0.02;
 
-// Tolerance: if the personalized model's MAE exceeds the baseline's by more
-// than this (mg/dL), revert to baseline.
+// Tolerance for the baseline-fallback comparison: if the personalized model's
+// MAE exceeds the baseline's by more than this (mg/dL), revert to baseline.
+// UNVALIDATED ENGINEERING DEFAULT — not a clinically validated boundary.
+// Chosen to require a clear, non-noise improvement before personalization
+// is kept; adjust based on observed real-world performance.
 export const BASELINE_TOLERANCE_MGDL = 2;
 
 // Minimum personalized projections to validate against baseline.
@@ -256,6 +277,23 @@ export function evaluateProjection(
     const targetTime = generatedAt + targetHorizon * MINUTE_MS;
     const toleranceMs = MATCH_TOLERANCE_MIN * MINUTE_MS;
 
+    // Per-horizon buffer: don't score until targetTime + buffer has elapsed.
+    // This is the authoritative timing check — the pipeline's projection-level
+    // filter is only a coarse pre-filter. No horizon is scored on interpolated
+    // or stale data: only actual readings within ±MATCH_TOLERANCE_MIN of the
+    // target time are used; missing readings exclude the horizon.
+    const bufferMs = EVAL_BUFFER_MIN * MINUTE_MS;
+    if (evalTime < targetTime + bufferMs) {
+      horizons.push({
+        horizon_min: targetHorizon, scored: false,
+        predicted, actual: null, actual_time: null,
+        error: null, abs_error: null, in_interval: null,
+        match_offset_min: null,
+        exclusion_reason: "buffer_not_elapsed",
+      });
+      continue;
+    }
+
     const candidates = validReadings.filter(r =>
       r.time >= targetTime - toleranceMs && r.time <= targetTime + toleranceMs
     );
@@ -399,11 +437,18 @@ export function aggregateMetrics(evaluated: EvaluatedProjection[]): AggregateMet
 
 // ── Guarded adaptive learning ──────────────────────────────────────────────
 //
-// The learned parameter is `rateAdjustmentFactor`, a multiplicative factor
+// The learned parameter is `rateAdjustmentFactor` — a single learned
+// correction for systematic prediction bias. It is a multiplicative factor
 // applied to the net glucose rate (carbRise - insulinDrop + momentum) in the
 // projection engine. Baseline = 1.0. If the model systematically overpredicts
 // (positive bias), the factor decreases below 1.0 to slow the projected
 // change. If it underpredicts (negative bias), the factor increases above 1.0.
+//
+// This parameter CANNOT distinguish the many causes of prediction error
+// (absorption timing, absorption magnitude, insulin action, missing
+// readings, activity/stress). It is not a model of the individual's glucose
+// physiology — it is a single bias correction, nothing more. It describes
+// what the baseline tended to get wrong on average; it never prescribes.
 //
 // Guards:
 //   1. Minimum sample count (MIN_SAMPLES_FOR_PERSONALIZATION = 10).
@@ -513,6 +558,21 @@ export function applyGuardedUpdate(
   return { updatedState, provenance };
 }
 
+// ── Baseline comparison ────────────────────────────────────────────────────
+//
+// FAIR COMPARISON: Both the baseline and personalized models are evaluated
+// against the same eligible observations using identical rules — the same
+// horizons (EVAL_HORIZONS), the same matching tolerance
+// (MATCH_TOLERANCE_MIN), the same buffer (EVAL_BUFFER_MIN), and the same
+// exclusion criteria. No filter favors one model with easier observations.
+//
+// LIMITATION: Because the engine generates one projection per call using
+// whichever model state is active, baseline and personalized projections
+// cover different time periods. The comparison is between the baseline era
+// and the personalized era, not a controlled A/B test on the same moments.
+// If conditions differ systematically between eras (e.g. more meals in one),
+// the comparison may be confounded. This is inherent to the sequential
+// design and should be considered when interpreting the result.
 export function validatePersonalization(metrics: AggregateMetrics): ValidationDecision {
   const baselineMetrics = metrics.byModelVersion[BASELINE_MODEL_VERSION];
   const personalizedMetrics = metrics.byModelVersion[PERSONALIZED_MODEL_VERSION];
