@@ -58,12 +58,12 @@ export default function ProjectionOverlay({
 }) {
   const [activePoint, setActivePoint] = useState(null);
   const [scrubbing, setScrubbing] = useState(false);
-  const [focused, setFocused] = useState(false);
   const svgRef = useRef(null);
   const pointerDownRef = useRef(false);
   const scrubbingRef = useRef(false);
   const downPosRef = useRef({ x: 0, y: 0 });
   const svgRectRef = useRef(null);
+  const rectRef = useRef(null);
   const [pos, setPos] = useState({ left: 0, top: 0, ready: false });
 
   const points = useMemo(() => {
@@ -228,6 +228,20 @@ export default function ProjectionOverlay({
     }
   }, [points, activePoint]);
 
+  // Native touch listener (non-passive) — prevents iOS Safari from hijacking
+  // the horizontal drag for page/scroll-container scrolling while the finger
+  // is down on the scrub surface. Pointer events handle the actual scrub
+  // logic; this just claims the gesture so move events keep firing.
+  useEffect(() => {
+    const el = rectRef.current;
+    if (!el) return;
+    const onTouchMove = (e) => {
+      if (pointerDownRef.current) e.preventDefault();
+    };
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    return () => el.removeEventListener("touchmove", onTouchMove);
+  }, [points]);
+
   // Tooltip dimensions and local (chart-relative) position.
   const tooltipW = 78;
   const tooltipH = 64;
@@ -341,24 +355,7 @@ export default function ProjectionOverlay({
         role="button"
         aria-label={ariaLabel}
         onKeyDown={handleKeyDown}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
       >
-        {/* Focus indicator — dashed copper outline around the projection area */}
-        {focused && (
-          <rect
-            x={points[0].x - 6}
-            y={0}
-            width={Math.max(1, points[points.length - 1].x - points[0].x) + 12}
-            height={glucoseChartHeight}
-            fill="none"
-            stroke="#9c5228"
-            strokeWidth={1}
-            strokeOpacity={0.35}
-            strokeDasharray="4 4"
-            style={{ pointerEvents: "none" }}
-          />
-        )}
         {hasBand && (
           <path d={bandPath} fill="#af751b" fillOpacity={0.07} stroke="none" />
         )}
@@ -432,13 +429,14 @@ export default function ProjectionOverlay({
             vertical page-scroll pass through while claiming horizontal drags
             for scrubbing, so the chart's horizontal pan is not stolen. */}
         <rect
+          ref={rectRef}
           data-projection-scrub
           x={points[0].x}
           y={0}
           width={Math.max(1, points[points.length - 1].x - points[0].x)}
           height={glucoseChartHeight}
           fill="transparent"
-          style={{ cursor: "pointer", touchAction: "pan-y" }}
+          style={{ cursor: "pointer", touchAction: "none" }}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
