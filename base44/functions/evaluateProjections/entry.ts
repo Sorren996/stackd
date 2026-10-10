@@ -23,6 +23,7 @@
 // prediction bias — not a model of the individual's glucose physiology.
 
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.52";
+import { requireBatchCaller } from "../../shared/batchAuth.ts";
 import {
   evaluateProjection,
   aggregateMetrics,
@@ -61,6 +62,8 @@ const STALE_MODEL_LOCK_MS = 5 * MINUTE_MS;
 export default async function (req: Request): Promise<Response> {
   try {
     const base44 = createClientFromRequest(req);
+    const denied = await requireBatchCaller(base44);
+    if (denied) return denied;
     let body: any = {};
     try { body = await req.json(); } catch { /* scheduler may send empty body */ }
     const limit = Math.min(Number(body.limit) || BATCH_LIMIT, BATCH_LIMIT);

@@ -26,6 +26,7 @@
 // they never prescribe or recommend any clinical action.
 
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.52";
+import { requireBatchCaller } from "../../shared/batchAuth.ts";
 import {
   buildMealTrainingObservation,
   aggregateMealClassObservations,
@@ -45,6 +46,8 @@ const SPEED_CLASSES = ["fast", "mixed", "high_fat"] as const;
 export default async function (req: Request): Promise<Response> {
   try {
     const base44 = createClientFromRequest(req);
+    const denied = await requireBatchCaller(base44);
+    if (denied) return denied;
     let body: any = {};
     try { body = await req.json(); } catch { /* scheduler may send empty body */ }
     const limit = Math.min(Number(body.limit) || 200, 500);

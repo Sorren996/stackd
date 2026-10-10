@@ -2,14 +2,6 @@
   "name": "DexcomConnection",
   "type": "object",
   "properties": {
-    "share_username": {
-      "type": "string",
-      "description": "The user's Dexcom Share account username or email, stored ENCRYPTED at rest (AES-256-GCM). Only the automated sync service can decrypt it transiently in memory to call Dexcom. Never returned in any API response in plaintext."
-    },
-    "share_password": {
-      "type": "string",
-      "description": "The user's Dexcom Share account password, stored ENCRYPTED at rest (AES-256-GCM). Only the automated sync service can decrypt it transiently in memory to call Dexcom. Never returned in any API response in plaintext."
-    },
     "connected_at": {
       "type": "string",
       "format": "date-time",
@@ -36,7 +28,7 @@
         "error"
       ],
       "default": "connected",
-      "description": "Current state of the Dexcom Share connection"
+      "description": "Current state of the Dexcom Share connection. Credentials are NOT stored here \u2014 they live encrypted in the server-only DexcomCredential vault."
     }
   },
   "required": [

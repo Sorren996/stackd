@@ -1,18 +1,10 @@
-// Validates a user's Dexcom Share credentials and saves them to their
-// DexcomConnection record — ENCRYPTED at rest with AES-256-GCM.
-//
-// The credentials are authenticated against the Dexcom Share service
-// before being stored, so invalid credentials are rejected immediately.
-// The encryption key lives only in an environment secret, never in code
-// or the database. The stored ciphertext is useless without the key.
-//
-// Runs as the authenticated user — the DexcomConnection is created under
-// the user's own created_by_id, and RLS ensures only they can read it.
-// Even if read, the credentials are encrypted and unreadable.
+// Validates a user's Dexcom Share credentials, then stores them ENCRYPTED
+// (AES-256-GCM) in the server-only DexcomCredential vault. The user-visible
+// DexcomConnection record holds status only — never credentials.
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 import { getShareSessionId } from '../../shared/dexcomShareSync.ts';
-import { encryptCredential } from '../../shared/credentialCrypto.ts';
+import { saveDexcomCredentials } from '../../shared/dexcomCredentials.ts';
 import { writeAuditLog } from '../../shared/auditLog.ts';
 
 export default async function(req: Request): Promise<Response> {
@@ -30,8 +22,6 @@ export default async function(req: Request): Promise<Response> {
       return Response.json({ error: 'Please enter your Dexcom username and password.' }, { status: 400 });
     }
 
-    // Validate credentials by attempting a Share authentication. If this
-    // succeeds, the credentials are correct and we can safely store them.
     try {
       await getShareSessionId(username, password);
     } catch (error: any) {
@@ -41,31 +31,27 @@ export default async function(req: Request): Promise<Response> {
       return Response.json({ error: friendly, code: error.shareCode || 'auth_failed' }, { status: 400 });
     }
 
-    // Encrypt credentials before storing — the key is in an env secret.
-    const encryptedUsername = await encryptCredential(username);
-    const encryptedPassword = await encryptCredential(password);
+    const sr = base44.asServiceRole;
 
-    // Replace any existing connection (handles re-connect with new credentials)
     await base44.entities.DexcomConnection.deleteMany({});
-    await base44.entities.DexcomConnection.create({
-      share_username: encryptedUsername,
-      share_password: encryptedPassword,
+    const conn = await base44.entities.DexcomConnection.create({
       status: 'connected',
       connected_at: new Date().toISOString(),
       last_sync_status: null,
       last_sync_error: null,
     });
 
-    // Audit log — never logs the credentials themselves.
-    await writeAuditLog(base44.asServiceRole, {
+    await saveDexcomCredentials(sr, user.id, conn.id, username, password);
+
+    await writeAuditLog(sr, {
       action: 'dexcom_connect',
       affected_user_id: user.id,
-      affected_user_email: user.email,
-      metadata: { status: 'connected' },
+      metadata: { connection_id: conn.id },
     });
 
     return Response.json({ ok: true, status: 'connected' });
   } catch (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+    console.error('[connectDexcomShare]', error?.message);
+    return Response.json({ error: 'Unable to connect right now. Please try again.' }, { status: 500 });
   }
 }

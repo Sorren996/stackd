@@ -1,6 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.41';
 import { computeMealResponse, DEFAULT_SETTINGS } from '../../shared/mealResponseAnalysis.ts';
 import { hasDelayedRise } from '../../shared/delayedRiseDetection.ts';
+import { requireBatchCaller } from '../../shared/batchAuth.ts';
 import {
   getCarbSpeedClass,
   updateSpeedFactor,
@@ -23,6 +24,8 @@ const MAX_PER_RUN = 25;
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
+    const denied = await requireBatchCaller(base44);
+    if (denied) return denied;
     const sr = base44.asServiceRole;
 
     const now = Date.now();

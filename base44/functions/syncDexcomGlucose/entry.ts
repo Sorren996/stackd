@@ -13,7 +13,7 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.40";
 import { requestDexcomRefreshIfNeeded } from "../../shared/dexcomShareSync.ts";
 import { dayKeyFromTimezone, recomputeDailySummary } from "../../shared/dailySummary.ts";
-import { decryptCredential } from "../../shared/credentialCrypto.ts";
+import { loadDexcomCredentials } from "../../shared/dexcomCredentials.ts";
 import { writeAuditLog } from "../../shared/auditLog.ts";
 
 export default async function (req: Request): Promise<Response> {
@@ -60,15 +60,19 @@ export default async function (req: Request): Promise<Response> {
 
     for (const conn of connections) {
       const owner = conn.created_by_id;
-      if (!owner || !conn.share_username || !conn.share_password) {
-        results.push({ owner, status: "skipped_no_share_credentials" });
+      if (!owner) {
+        results.push({ owner, status: "skipped_no_owner" });
         continue;
       }
 
       try {
         // Decrypt credentials transiently in memory — only for this Dexcom call.
-        const username = await decryptCredential(conn.share_username);
-        const password = await decryptCredential(conn.share_password);
+        const creds = await loadDexcomCredentials(sr, owner);
+        if (!creds) {
+          results.push({ owner, status: "skipped_no_share_credentials" });
+          continue;
+        }
+        const { username, password } = creds;
 
         // The scheduled pass always force-fetches. The 5-min workflow
         // cadence is already conservative enough to protect the Share API;
@@ -135,7 +139,14 @@ export default async function (req: Request): Promise<Response> {
       }
     }
 
-    return Response.json({ processed: connections.length, results });
+    const counts: Record<string, number> = {};
+    for (const r of results) counts[r?.status || "unknown"] = (counts[r?.status || "unknown"] || 0) + 1;
+    await writeAuditLog(sr, {
+      action: "batch_dexcom_sync_run",
+      metadata: { connections: connections.length, ...counts },
+    });
+
+    return Response.json({ processed: connections.length, results: results.map((r) => ({ status: r?.status, records_inserted: r?.records_inserted || 0 })) });
   } catch (error: any) {
     return Response.json({ error: error.message }, { status: 500 });
   }

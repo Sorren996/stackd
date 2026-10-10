@@ -11,13 +11,14 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.42";
 import { requestDexcomRefreshIfNeeded } from "../../shared/dexcomShareSync.ts";
 import { dayKeyFromTimezone, recomputeDailySummary } from "../../shared/dailySummary.ts";
-import { decryptCredential } from "../../shared/credentialCrypto.ts";
+import { loadDexcomCredentials } from "../../shared/dexcomCredentials.ts";
 
 export default async function (req: Request): Promise<Response> {
   const fnStart = Date.now();
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me().catch(() => null);
+    if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
     // Parse force flag from request body (default false).
     let force = false;
@@ -54,7 +55,10 @@ export default async function (req: Request): Promise<Response> {
       return Response.json({ status: "not_connected" });
     }
 
-    if (!conn.share_username || !conn.share_password) {
+    const sr = base44.asServiceRole;
+    // Decrypt credentials transiently in memory — only for this Dexcom call.
+    const creds = await loadDexcomCredentials(sr, user.id);
+    if (!creds) {
       console.log(JSON.stringify({
         diagStage: "FUNCTION_RESPONSE",
         trigger: "manual",
@@ -66,12 +70,8 @@ export default async function (req: Request): Promise<Response> {
       return Response.json({ status: "no_credentials" });
     }
 
-    // Decrypt credentials transiently in memory — only for this Dexcom call.
-    const username = await decryptCredential(conn.share_username);
-    const password = await decryptCredential(conn.share_password);
-
+    const { username, password } = creds;
     const now = new Date();
-    const sr = base44.asServiceRole;
 
     // ── Centralized reading-age gate ──────────────────────
     const result = await requestDexcomRefreshIfNeeded(
