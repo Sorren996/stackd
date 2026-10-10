@@ -21,16 +21,7 @@ export default async function (req: Request): Promise<Response> {
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me().catch(() => null);
-    const _diagHeaders = [...req.headers.keys()].sort();
-    console.log(JSON.stringify({ diagStage: "CALLER_HEADERS", headers: _diagHeaders }));
     if (!user || user.role !== "admin") {
-      console.log(JSON.stringify({
-        diagStage: "FUNCTION_RESPONSE",
-        trigger: "scheduled",
-        function: "syncDexcomGlucose",
-        httpStatus: 403,
-        status: "forbidden",
-      }));
       return Response.json({ error: "Forbidden" }, { status: 403 });
     }
     const sr = base44.asServiceRole;
@@ -54,7 +45,7 @@ export default async function (req: Request): Promise<Response> {
         reason: "no_connected_dexcom_accounts",
         totalDurationMs: Date.now() - fnStart,
       }));
-      return Response.json({ skipped: "no_connected_dexcom_accounts", _diagHeaders });
+      return Response.json({ skipped: "no_connected_dexcom_accounts" });
     }
 
     const now = new Date();
@@ -148,7 +139,7 @@ export default async function (req: Request): Promise<Response> {
       metadata: { connections: connections.length, ...counts },
     });
 
-    return Response.json({ _diagHeaders, processed: connections.length, results: results.map((r) => ({ status: r?.status, records_inserted: r?.records_inserted || 0 })) });
+    return Response.json({ processed: connections.length, results: results.map((r) => ({ status: r?.status, records_inserted: r?.records_inserted || 0 })) });
   } catch (error: any) {
     return Response.json({ error: error.message }, { status: 500 });
   }
