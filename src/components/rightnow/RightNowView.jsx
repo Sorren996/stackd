@@ -44,10 +44,10 @@ export default function RightNowView({
     <div className="relative">
       {/* Eyebrow + title */}
       <div className="px-1 pt-1">
-        <span className="section-label mt-2">
+        <span className="section-label mt-2" style={{ color: "#fcf8ef" }}>
           At a Glance
         </span>
-        <h1 className="hdr mt-2">
+        <h1 className="hdr mt-2" style={{ color: "#a36136" }}>
           Right <em>Now</em>
         </h1>
       </div>
