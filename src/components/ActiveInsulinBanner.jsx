@@ -1000,6 +1000,15 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
   GLUCOSE_STATUS_COLORS.inRange;
 
   const inRange = glucoseValue == null ? null : glucoseValue >= targetLow && glucoseValue <= targetHigh;
+  const glucoseReadingAgeMinutes = latestGlucose?.recorded_at ?
+  Math.floor((Date.now() - new Date(latestGlucose.recorded_at).getTime()) / MINUTE_MS) :
+  null;
+  // When the latest reading is older than 15 minutes, the in-range status is
+  // no longer reliable — show a neutral "Waiting for data" label instead of
+  // "In comfort zone" so a stale stream never reads as reassurance.
+  const STALE_COMFORT_MINUTES = 15;
+  const comfortLabelStale =
+  glucoseReadingAgeMinutes != null && glucoseReadingAgeMinutes > STALE_COMFORT_MINUTES;
   const rangeCardLabel =
   glucoseValue == null ?
   "No data" :
@@ -1007,6 +1016,8 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
   "Below comfort zone" :
   glucoseValue > targetHigh ?
   "Above comfort zone" :
+  comfortLabelStale ?
+  "Waiting for data" :
   "In comfort zone";
   const rangeSparkColor =
   glucoseValue == null ?
@@ -1016,9 +1027,6 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
   glucoseValue > targetHigh ?
   `${GLUCOSE_STATUS_COLORS.high}88` :
   `${GLUCOSE_STATUS_COLORS.inRange}88`;
-  const glucoseReadingAgeMinutes = latestGlucose?.recorded_at ?
-  Math.floor((Date.now() - new Date(latestGlucose.recorded_at).getTime()) / MINUTE_MS) :
-  null;
   const supportiveGlucoseInsight = useMemo(
     () =>
     getSupportiveGlucoseMessage({

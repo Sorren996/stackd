@@ -31,7 +31,6 @@ export default function PrivacyConsent() {
         base44.entities.MealResponseAnalysis.deleteMany({}),
         base44.entities.MealMatchFeedback.deleteMany({}),
         base44.entities.UserPatternProfile.deleteMany({}),
-        base44.entities.CoachInsight.deleteMany({}),
         base44.entities.AnalysisJob.deleteMany({}),
         base44.entities.UserAcknowledgment.deleteMany({}),
         base44.entities.SupportTicket.deleteMany({}),
