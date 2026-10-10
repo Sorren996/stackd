@@ -3,6 +3,7 @@ import { useCreateCarbs } from "@/hooks/useLogMutations";
 import { hasDelayedRise } from "@/lib/mealMonitoring";
 import { toast } from "sonner";
 import LogSheetShell from "@/components/forms/LogSheetShell";
+import MealEstimateChip from "@/components/forms/MealEstimateChip";
 import {
   TapStepper,
   TripleSegmented,
@@ -132,6 +133,15 @@ export default function LogMealForm({ open, onClose }) {
           value={foodName}
           onChange={setFoodName}
           placeholder="Meal name (optional)"
+        />
+
+        <MealEstimateChip
+          description={foodName}
+          onEstimate={(est) => {
+            if (est?.carbs_grams > 0) setCarbs(String(est.carbs_grams));
+            if (est?.protein_level) setProteinLevel(est.protein_level);
+            if (est?.fat_level) setFatLevel(est.fat_level);
+          }}
         />
 
         <TapStepper

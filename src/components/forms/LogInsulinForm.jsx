@@ -78,6 +78,11 @@ export default function LogInsulinForm({ open, onClose }) {
     [insulinLibrary]
   );
 
+  // Auto-select when the user has exactly one insulin in their library.
+  useEffect(() => {
+    if (open && !insulinType && typeOptions.length === 1) setInsulinType(typeOptions[0].value);
+  }, [open, insulinType, typeOptions]);
+
   const isBasal = insulinType ? isBasalInsulinType(insulinType) : false;
 
   const totalUnits = Number(units) || 0;
@@ -143,7 +148,9 @@ export default function LogInsulinForm({ open, onClose }) {
         >
           {logging
             ? "Logging..."
-            : totalUnits
+            : !insulinType
+              ? "Choose insulin first"
+              : totalUnits
               ? `Log ${totalUnits % 1 === 0 ? totalUnits : totalUnits.toFixed(1)} units`
               : "Add insulin units"}
         </button>
