@@ -47,7 +47,7 @@ export default function RightNowView({
         <span className="section-label mt-2" style={{ color: "#fcf8ef" }}>
           At a Glance
         </span>
-        <h1 className="hdr mt-2" style={{ color: "#a36136" }}>
+        <h1 className="hdr mt-2" style={{ color: "#f7f1e8" }}>
           Right <em>Now</em>
         </h1>
       </div>
