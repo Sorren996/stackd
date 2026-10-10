@@ -24,6 +24,7 @@ const LOCAL_KEYS = [
   "cgm_model",
   "sensor_session_started_at",
   "manual_glucose_logging_enabled",
+  "settings_confirmed",
 ];
 
 // Identifies which account currently owns the local settings cache.

@@ -12,6 +12,7 @@ import StackingSheet from "@/components/settings/insulin/StackingSheet";
 import LibraryPicker from "@/components/settings/insulin/LibraryPicker";
 import SubsetPicker from "@/components/settings/insulin/SubsetPicker";
 import { toast } from "sonner";
+import { ShieldCheck, Lock } from "lucide-react";
 
 function getDefaultMealInsulinTypes() {
   return Object.entries(INSULIN_PROFILES)
@@ -128,6 +129,10 @@ export default function InsulinSettings() {
     return localStorage.getItem("meal_outcome_window_minutes") || "240";
   });
 
+  const [settingsConfirmed, setSettingsConfirmed] = useState(() => {
+    return localStorage.getItem("settings_confirmed") === "true";
+  });
+
   // Load settings from server when available — server is authoritative.
   useEffect(() => {
     if (!serverSettings) return;
@@ -176,6 +181,10 @@ export default function InsulinSettings() {
       setStackingAlerts(serverSettings.stacking_alerts_enabled);
       localStorage.setItem("stacking_alerts_enabled", serverSettings.stacking_alerts_enabled ? "true" : "false");
     }
+    if (typeof serverSettings.settings_confirmed === "boolean") {
+      setSettingsConfirmed(serverSettings.settings_confirmed);
+      localStorage.setItem("settings_confirmed", serverSettings.settings_confirmed ? "true" : "false");
+    }
 
     window.dispatchEvent(new Event("target-range-updated"));
     window.dispatchEvent(new Event("insulin-settings-updated"));
@@ -198,7 +207,34 @@ export default function InsulinSettings() {
     target_range_low: targetLow,
     target_range_high: targetHigh,
     stacking_alerts_enabled: stackingAlerts,
+    settings_confirmed: settingsConfirmed,
   });
+
+  // Confirm the user's insulin plan as their own, prescribed by their
+  // healthcare professional. Unlocks dose-derived math across the app.
+  const handleConfirmPlan = () => {
+    const canConfirm =
+      Number(insulinSensitivity) > 0 && Number(unitsPer5g) > 0;
+    if (!canConfirm) {
+      toast.error("Enter your insulin sensitivity and carb ratio first.");
+      return;
+    }
+    setSettingsConfirmed(true);
+    localStorage.setItem("settings_confirmed", "true");
+    dirtyRef.current = true;
+    saveRef.current({ ...valuesRef.current, settings_confirmed: true });
+    window.dispatchEvent(new Event("insulin-settings-updated"));
+    toast.success("Your plan is confirmed. Dose insights are now active.");
+  };
+
+  const handleUnconfirmPlan = () => {
+    setSettingsConfirmed(false);
+    localStorage.setItem("settings_confirmed", "false");
+    dirtyRef.current = true;
+    saveRef.current({ ...valuesRef.current, settings_confirmed: false });
+    window.dispatchEvent(new Event("insulin-settings-updated"));
+    toast.success("Plan confirmation removed. Dose insights are paused.");
+  };
 
   valuesRef.current = buildPayload();
 
@@ -215,6 +251,14 @@ export default function InsulinSettings() {
     dirtyRef.current = true;
   };
 
+  // Core dose-math fields — changing any of these invalidates a prior
+  // confirmation so the user re-confirms their updated plan.
+  const PLAN_FIELDS = new Set([
+    "insulin_sensitivity_mgdl_per_unit",
+    "meal_insulin_units_per_5g",
+    "correction_target_glucose",
+  ]);
+
   const handleValue = (key, setValue) => (value) => {
     setValue(value);
     markDirty();
@@ -222,6 +266,11 @@ export default function InsulinSettings() {
       localStorage.removeItem(key);
     } else {
       localStorage.setItem(key, value);
+    }
+    if (PLAN_FIELDS.has(key) && settingsConfirmed) {
+      setSettingsConfirmed(false);
+      localStorage.setItem("settings_confirmed", "false");
+      toast.info("Plan changed — please re-confirm your updated settings.");
     }
     window.dispatchEvent(new Event("insulin-settings-updated"));
   };
@@ -455,7 +504,57 @@ export default function InsulinSettings() {
               value={`${toDisplayGlucose(correctionTargetGlucose) || "—"} ${glucoseUnitLabel()}`}
               onPress={() => setActiveSheet("correction")}
             />
+            <RowDivider />
+            {/* Confirmation gate — blocks dose-derived math app-wide until
+                the user confirms these are their own prescribed settings. */}
+            {settingsConfirmed ? (
+              <div className="flex items-center justify-between px-4 py-3.5">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4" style={{ color: "#4d5742" }} />
+                  <span className="text-[13px] font-semibold" style={{ color: "#3f3830" }}>
+                    Plan confirmed
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleUnconfirmPlan}
+                  className="text-[11px] font-medium transition hover:opacity-70"
+                  style={{ color: "#746959" }}
+                >
+                  Remove
+                </button>
+              </div>
+            ) : (
+              <div className="px-4 py-4">
+                <div className="flex items-start gap-2.5">
+                  <Lock className="mt-0.5 h-4 w-4 shrink-0" style={{ color: "#9c5228" }} />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[12px] font-semibold leading-snug" style={{ color: "#3f3830" }}>
+                      Confirm your plan to unlock dose insights
+                    </p>
+                    <p className="mt-1 text-[11px] leading-relaxed" style={{ color: "#746959" }}>
+                      Dose math stays paused until you confirm these are your own settings,
+                      prescribed by your healthcare professional.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleConfirmPlan}
+                  className="mt-3 w-full rounded-xl py-2.5 text-[13px] font-semibold transition active:scale-[0.98]"
+                  style={{ background: "#3f3830", color: "#f7f1e8" }}
+                >
+                  Confirm my plan
+                </button>
+              </div>
+            )}
           </GroupCard>
+          {!settingsConfirmed && (
+            <p className="px-1 text-[11px] leading-relaxed" style={{ color: "#746959" }}>
+              Enter only insulin settings prescribed or confirmed by your licensed healthcare
+              professional, then tap "Confirm my plan" to activate dose insights.
+            </p>
+          )}
         </div>
 
         {/* ── INSULIN LIBRARY ───────────────────────────── */}

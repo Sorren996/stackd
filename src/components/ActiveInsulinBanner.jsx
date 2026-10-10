@@ -114,6 +114,7 @@ function readInsulinSettings() {
   );
   const targetLow = Number(localStorage.getItem("target_range_low") || 70);
   const targetHigh = Number(localStorage.getItem("target_range_high") || 180);
+  const settingsConfirmed = localStorage.getItem("settings_confirmed") === "true";
 
   return {
     insulinSensitivityMgDlPerUnit,
@@ -126,7 +127,12 @@ function readInsulinSettings() {
     targetHigh,
     correctionTargetGlucose: correctionTargetGlucose > 0 ? correctionTargetGlucose : 110,
     targetGlucose: correctionTargetGlucose > 0 ? correctionTargetGlucose : 110,
+    settingsConfirmed,
+    // Dose-derived math is blocked until the user explicitly confirms their
+    // insulin settings as their own prescribed plan. Unconfirmed users see a
+    // "Setup needed" prompt instead of default/placeholder numbers.
     isComplete:
+    settingsConfirmed &&
     insulinSensitivityMgDlPerUnit > 0 &&
     mealInsulinUnitsPer5g > 0
   };
