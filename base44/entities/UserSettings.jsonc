@@ -132,6 +132,11 @@
       "type": "boolean",
       "default": false,
       "description": "Whether the user has explicitly confirmed their insulin settings as their own plan, established with their healthcare professional. When false, all dose-derived math is suppressed and the user sees a prompt to enter their prescribed settings instead of default numbers."
+    },
+    "onboarding_completed": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the user has completed the post-signup onboarding walkthrough. When true, the onboarding flow is never shown again on any device. Existing accounts are auto-marked true on first login after this feature is deployed."
     }
   },
   "rls": {

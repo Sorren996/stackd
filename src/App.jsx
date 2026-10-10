@@ -37,6 +37,7 @@ import SplashScreen from "@/components/SplashScreen";
 import { AnimatePresence } from "framer-motion";
 import { base44 } from "@/api/base44Client";
 import RequiredAcknowledgments from "@/pages/RequiredAcknowledgments";
+import Onboarding from "@/pages/Onboarding";
 import SplitPlanReview from "@/pages/SplitPlanReview";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { ACKNOWLEDGMENT_VERSIONS, CHECKBOX_KEYS } from "@/lib/acknowledgmentConfig";
@@ -194,6 +195,36 @@ const AuthenticatedApp = () => {
     return false;
   }, [user, latestAck, isAuthenticated, dataReady, ackLoading]);
 
+  // Onboarding check — only runs after acknowledgment is complete.
+  // Existing accounts (with any health data) are auto-marked as onboarded.
+  const { data: onboardingData, isLoading: onboardingChecking } = useQuery({
+    queryKey: ["onboarding-check"],
+    queryFn: async () => {
+      const settings = queryClientInstance.getQueryData(["user-settings"]);
+      if (settings?.onboarding_completed === true) return { needsOnboarding: false };
+
+      // Check for existing health data — existing users skip onboarding.
+      const [readings, carbs, doses] = await Promise.all([
+        base44.entities.GlucoseReading.list("-created_date", 1),
+        base44.entities.CarbEntry.list("-created_date", 1),
+        base44.entities.InsulinDose.list("-created_date", 1),
+      ]);
+
+      const hasData = (readings?.length > 0) || (carbs?.length > 0) || (doses?.length > 0);
+      if (hasData) {
+        if (settings?.id) {
+          await base44.entities.UserSettings.update(settings.id, { onboarding_completed: true }).catch(() => {});
+        }
+        await queryClientInstance.invalidateQueries({ queryKey: ["user-settings"] });
+        return { needsOnboarding: false };
+      }
+
+      return { needsOnboarding: true };
+    },
+    enabled: needsAcknowledgment === false,
+    staleTime: 0,
+  });
+
   // Still checking auth
   if (isLoadingPublicSettings || isLoadingAuth) {
     return (
@@ -241,6 +272,19 @@ const AuthenticatedApp = () => {
   // Acknowledgment flow required
   if (needsAcknowledgment) {
     return <RequiredAcknowledgments />;
+  }
+
+  // Onboarding walkthrough — only for new users who haven't completed it.
+  if (onboardingChecking || onboardingData == null) {
+    return (
+      <AnimatePresence>
+        <SplashScreen />
+      </AnimatePresence>
+    );
+  }
+
+  if (onboardingData?.needsOnboarding) {
+    return <Onboarding />;
   }
 
   // Render the main app

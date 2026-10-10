@@ -25,6 +25,7 @@ const LOCAL_KEYS = [
   "sensor_session_started_at",
   "manual_glucose_logging_enabled",
   "settings_confirmed",
+  "onboarding_completed",
 ];
 
 // Identifies which account currently owns the local settings cache.
@@ -136,6 +137,10 @@ function validateSettings(raw) {
 
   if (typeof raw.settings_confirmed === "boolean") {
     sanitized.settings_confirmed = raw.settings_confirmed;
+  }
+
+  if (typeof raw.onboarding_completed === "boolean") {
+    sanitized.onboarding_completed = raw.onboarding_completed;
   }
 
   if (raw.glucose_units === "mg/dL" || raw.glucose_units === "mmol/L") {
