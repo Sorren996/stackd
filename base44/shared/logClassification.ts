@@ -74,7 +74,7 @@ function glucoseAtTime(readings: { value: number; recorded_at: string }[], targe
   return { value: nearest.value, trend };
 }
 
-function isQuickSugar(foodName: string): boolean {
+export function isQuickSugar(foodName: string): boolean {
   const lower = String(foodName || "").toLowerCase();
   return QUICK_SUGAR_KEYWORDS.some((kw) => lower.includes(kw));
 }

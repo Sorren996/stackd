@@ -13,6 +13,8 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.40";
 import { requestDexcomRefreshIfNeeded } from "../../shared/dexcomShareSync.ts";
 import { dayKeyFromTimezone, recomputeDailySummary } from "../../shared/dailySummary.ts";
+import { decryptCredential } from "../../shared/credentialCrypto.ts";
+import { writeAuditLog } from "../../shared/auditLog.ts";
 
 export default async function (req: Request): Promise<Response> {
   const fnStart = Date.now();
@@ -64,6 +66,10 @@ export default async function (req: Request): Promise<Response> {
       }
 
       try {
+        // Decrypt credentials transiently in memory — only for this Dexcom call.
+        const username = await decryptCredential(conn.share_username);
+        const password = await decryptCredential(conn.share_password);
+
         // The scheduled pass always force-fetches. The 5-min workflow
         // cadence is already conservative enough to protect the Share API;
         // the reading-age gate only needs to guard the frontend's 60s poll.
@@ -73,8 +79,8 @@ export default async function (req: Request): Promise<Response> {
           sr,
           base44,
           conn,
-          conn.share_username,
-          conn.share_password,
+          username,
+          password,
           now,
           "scheduled",
           true

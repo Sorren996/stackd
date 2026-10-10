@@ -133,6 +133,10 @@ function validateSettings(raw) {
     sanitized.manual_glucose_logging_enabled = raw.manual_glucose_logging_enabled;
   }
 
+  if (typeof raw.settings_confirmed === "boolean") {
+    sanitized.settings_confirmed = raw.settings_confirmed;
+  }
+
   if (raw.glucose_units === "mg/dL" || raw.glucose_units === "mmol/L") {
     sanitized.glucose_units = raw.glucose_units;
   }

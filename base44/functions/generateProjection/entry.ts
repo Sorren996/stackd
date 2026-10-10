@@ -28,8 +28,15 @@ export default async function (req) {
 
     // Resolve the user: workflow calls pass user_id in the body (no user
     // session); frontend calls authenticate via auth.me().
+    // Security: when user_id is passed in the body, the caller MUST be an
+    // admin — this prevents a crafted request from generating projections
+    // for another user's data.
     let userId: string;
     if (body.user_id) {
+      const caller = await base44.auth.me().catch(() => null);
+      if (!caller || caller.role !== "admin") {
+        return Response.json({ error: "Forbidden" }, { status: 403 });
+      }
       userId = body.user_id;
     } else {
       const authenticatedUser = await base44.auth.me();

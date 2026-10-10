@@ -1,14 +1,14 @@
-// Deterministic-first classification of carb and insulin logs.
+// Deterministic classification of carb and insulin logs.
 // Triggered by entity automations when a CarbEntry or InsulinDose is created.
-// Tries deterministic classification based on structured context first (carb
-// amount, glucose level, timing, nearby logs) and only calls InvokeLLM when
-// the case is genuinely ambiguous. This dramatically reduces integration-credit
-// consumption while preserving the exact same classification categories.
-// Writes the classification back onto the record so the Meal Balance card can
-// use it instead of relying solely on time-based heuristics.
+// Uses structured context (carb amount, glucose level, timing, nearby logs)
+// to classify entries without any external API calls. Ambiguous cases get
+// a sensible deterministic default. No user health data ever leaves the
+// user's own records. Writes the classification back onto the record so the
+// Meal Balance card can use it instead of relying solely on time-based
+// heuristics.
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
-import { classifyCarbDeterministic, classifyInsulinDeterministic } from '../../shared/logClassification.ts';
+import { classifyCarbDeterministic, classifyInsulinDeterministic, isQuickSugar } from '../../shared/logClassification.ts';
 import { getCarbSpeedClass, getCarbDualWave } from '../../shared/carbAbsorptionProfile.ts';
 
 const MINUTE_MS = 60 * 1000;
@@ -139,50 +139,43 @@ export default async function(req: Request): Promise<Response> {
       return Response.json({ ok: true, entityName, entityId, classification: deterministic.classification, source: 'deterministic' });
     }
 
-    // ── AI fallback for ambiguous cases ────────────────────────────
-    const prompt = `You are a warm, uplifting wellness companion for a glucose monitoring app. Your role is to classify a user's log entry so the app can understand their nourishment and support rhythm in a supportive, non-judgmental way.
+    // ── Deterministic fallback for ambiguous cases ──────────────
+    // No external API calls — user health data never leaves their records.
+    // Apply sensible defaults based on the structured context available.
+    let classification: string;
+    let reasoning: string;
 
-Classify this ${isCarb ? 'food entry' : 'insulin dose'} into exactly one of these categories:
-${isCarb
-  ? '- "meal": A substantial eating occasion, such as breakfast, lunch, dinner, or a large combo of real foods (e.g. "wings and popcorn", "spaghetti", "chicken sandwich and fries"). Typically 30g+ carbs with real food.\n- "snack": A lighter bite between meals (e.g. a small treat, fruit, handful of something). Typically under 30g carbs.\n- "rescue_carbs": Quick-sugar carbs taken to lift a dipping glucose trend, such as gummies, juice, or glucose tablets, when glucose is trending down or already low. Always small amounts (typically ≤15g).'
-  : '- "meal": Insulin timed to support a food occasion.\n- "correction": Insulin given to gently bring glucose back toward a comfortable range, not tied to food.\n- "rescue_insulin": An urgent or unplanned dose when glucose is unexpectedly well above the comfortable range.'}
-
-Context: recent glucose readings (mg/dL, minutes from this log; negative = before, positive = after):
-${JSON.stringify(glucoseContext)}
-
-Recent food entries nearby (minutes from this log):
-${JSON.stringify(carbContext)}
-
-Recent insulin doses nearby (minutes from this log):
-${JSON.stringify(doseContext)}
-
-The entry to classify:
-${JSON.stringify(logEntry)}
-
-Guidance:
-- For food: if glucose was trending down or near/below ~70 mg/dL when the food was logged, and it is quick-sugar (gummies, juice, candy), lean toward "rescue_carbs". IMPORTANT: rescue_carbs is always small (typically ≤15g). A large carb amount (25g+) is a meal or snack, never rescue_carbs, even if insulin was dosed first and glucose is trending down. If it is a real food combo or a substantial amount, lean toward "meal". Small treats between meals are "snack".
-- For insulin: if a food entry was logged within ~90 minutes, lean toward "meal". If glucose was high with no nearby food, lean toward "correction" or "rescue_insulin" (use "rescue_insulin" for more urgent/very-high situations).
-
-Respond as JSON with:
-- "classification": one of ${JSON.stringify(classes)}
-- "reasoning": one supportive, wellness-focused sentence explaining why (non-medical, encouraging tone)`;
-
-    const result = await sr.integrations.Core.InvokeLLM({
-      prompt,
-      response_json_schema: {
-        type: 'object',
-        properties: {
-          classification: { type: 'string' },
-          reasoning: { type: 'string' },
-        },
-      },
-    });
-
-    let classification: string = result.classification;
-    if (!classes.includes(classification)) {
-      classification = isCarb ? 'snack' : 'correction';
+    if (isCarb) {
+      // Ambiguous carb: default by amount and quick-sugar status
+      if (carbs >= 20) {
+        classification = 'meal';
+        reasoning = 'A nourishing occasion to note on your wellness journey.';
+      } else if (isQuickSugar(data.food_name)) {
+        classification = 'snack';
+        reasoning = 'A small sweet moment, logged with care.';
+      } else {
+        classification = 'snack';
+        reasoning = 'A lighter bite between meals, a small moment of nourishment.';
+      }
+    } else {
+      // Ambiguous insulin: default by glucose level
+      if (glucoseContext.length > 0) {
+        const latest = glucoseContext[0];
+        if (latest.value > 250) {
+          classification = 'rescue_insulin';
+          reasoning = 'An unplanned dose when glucose was well above your comfortable range, a gentle nudge back toward balance.';
+        } else if (latest.value > 180) {
+          classification = 'correction';
+          reasoning = 'A gentle correction to guide glucose back toward your comfortable range.';
+        } else {
+          classification = 'correction';
+          reasoning = 'A supportive dose to help guide your glucose journey.';
+        }
+      } else {
+        classification = 'correction';
+        reasoning = 'A supportive dose to help guide your glucose journey.';
+      }
     }
-    const reasoning: string = (result.reasoning || '').slice(0, 500);
 
     if (isCarb) {
       await sr.entities.CarbEntry.update(entityId, {
@@ -195,7 +188,7 @@ Respond as JSON with:
       await sr.entities.InsulinDose.update(entityId, { classification, classification_reasoning: reasoning });
     }
 
-    return Response.json({ ok: true, entityName, entityId, classification });
+    return Response.json({ ok: true, entityName, entityId, classification, source: 'deterministic_fallback' });
   } catch (error) {
     console.error('[classifyLogEntry] error:', error.message);
     return Response.json({ error: error.message }, { status: 500 });

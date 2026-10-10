@@ -1,13 +1,19 @@
 // Validates a user's Dexcom Share credentials and saves them to their
-// DexcomConnection record. The credentials are authenticated against the
-// Dexcom Share service before being stored, so invalid credentials are
-// rejected immediately rather than saved and discovered by the next sync.
+// DexcomConnection record — ENCRYPTED at rest with AES-256-GCM.
+//
+// The credentials are authenticated against the Dexcom Share service
+// before being stored, so invalid credentials are rejected immediately.
+// The encryption key lives only in an environment secret, never in code
+// or the database. The stored ciphertext is useless without the key.
 //
 // Runs as the authenticated user — the DexcomConnection is created under
 // the user's own created_by_id, and RLS ensures only they can read it.
+// Even if read, the credentials are encrypted and unreadable.
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 import { getShareSessionId } from '../../shared/dexcomShareSync.ts';
+import { encryptCredential } from '../../shared/credentialCrypto.ts';
+import { writeAuditLog } from '../../shared/auditLog.ts';
 
 export default async function(req: Request): Promise<Response> {
   try {
@@ -35,15 +41,27 @@ export default async function(req: Request): Promise<Response> {
       return Response.json({ error: friendly, code: error.shareCode || 'auth_failed' }, { status: 400 });
     }
 
+    // Encrypt credentials before storing — the key is in an env secret.
+    const encryptedUsername = await encryptCredential(username);
+    const encryptedPassword = await encryptCredential(password);
+
     // Replace any existing connection (handles re-connect with new credentials)
     await base44.entities.DexcomConnection.deleteMany({});
     await base44.entities.DexcomConnection.create({
-      share_username: username,
-      share_password: password,
+      share_username: encryptedUsername,
+      share_password: encryptedPassword,
       status: 'connected',
       connected_at: new Date().toISOString(),
       last_sync_status: null,
       last_sync_error: null,
+    });
+
+    // Audit log — never logs the credentials themselves.
+    await writeAuditLog(base44.asServiceRole, {
+      action: 'dexcom_connect',
+      affected_user_id: user.id,
+      affected_user_email: user.email,
+      metadata: { status: 'connected' },
     });
 
     return Response.json({ ok: true, status: 'connected' });

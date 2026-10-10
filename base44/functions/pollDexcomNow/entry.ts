@@ -11,6 +11,7 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.42";
 import { requestDexcomRefreshIfNeeded } from "../../shared/dexcomShareSync.ts";
 import { dayKeyFromTimezone, recomputeDailySummary } from "../../shared/dailySummary.ts";
+import { decryptCredential } from "../../shared/credentialCrypto.ts";
 
 export default async function (req: Request): Promise<Response> {
   const fnStart = Date.now();
@@ -65,6 +66,10 @@ export default async function (req: Request): Promise<Response> {
       return Response.json({ status: "no_credentials" });
     }
 
+    // Decrypt credentials transiently in memory — only for this Dexcom call.
+    const username = await decryptCredential(conn.share_username);
+    const password = await decryptCredential(conn.share_password);
+
     const now = new Date();
     const sr = base44.asServiceRole;
 
@@ -73,8 +78,8 @@ export default async function (req: Request): Promise<Response> {
       sr,
       base44,
       conn,
-      conn.share_username,
-      conn.share_password,
+      username,
+      password,
       now,
       "manual",
       force

@@ -4,11 +4,11 @@
   "properties": {
     "share_username": {
       "type": "string",
-      "description": "The user's Dexcom Share (publisher) account username or email. Used to authenticate with the Dexcom Share service for near-real-time glucose readings."
+      "description": "The user's Dexcom Share account username or email, stored ENCRYPTED at rest (AES-256-GCM). Only the automated sync service can decrypt it transiently in memory to call Dexcom. Never returned in any API response in plaintext."
     },
     "share_password": {
       "type": "string",
-      "description": "The user's Dexcom Share (publisher) account password. Stored securely via row-level security so only the owning user and the background sync service can access it."
+      "description": "The user's Dexcom Share account password, stored ENCRYPTED at rest (AES-256-GCM). Only the automated sync service can decrypt it transiently in memory to call Dexcom. Never returned in any API response in plaintext."
     },
     "connected_at": {
       "type": "string",

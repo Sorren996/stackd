@@ -186,8 +186,9 @@ export default function DexcomConnect() {
         <div className="flex items-start gap-2">
           <Lock className="h-3.5 w-3.5 shrink-0 mt-0.5" style={{ color: "#746959" }} />
           <p className="text-xs leading-relaxed" style={{ color: "#746959" }}>
-            Your Dexcom username and password are stored privately and used only to read your glucose readings.
-            They are never visible to other users, admins, or support staff. Disconnecting permanently deletes them.
+            Your Dexcom credentials are stored encrypted and are accessible only by the automated sync service
+            that reads your glucose readings. They cannot be read by anyone — not other users, not admins, not
+            support staff. You can disconnect and permanently delete them at any time.
           </p>
         </div>
       </SectionCard>
