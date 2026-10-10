@@ -4,9 +4,16 @@ import { toast } from "sonner";
 
 const LATEST_GLUCOSE_CACHE_KEY = "latest_glucose_cache";
 
+function asList(value) {
+  if (Array.isArray(value)) return value;
+  if (Array.isArray(value?.items)) return value.items;
+  return [];
+}
+
 function prependUnique(entries, current = []) {
+  const list = asList(current);
   const ids = new Set(entries.map((entry) => entry.id).filter(Boolean));
-  return [...entries, ...current.filter((entry) => !ids.has(entry.id))];
+  return [...entries, ...list.filter((entry) => !ids.has(entry.id))];
 }
 
 function writeCachedLatestGlucose(reading) {
@@ -33,16 +40,17 @@ export function useCreateDoses() {
     onSuccess: (createdDoses, variables, context) => {
       const optimisticIds = new Set(context?.optimisticIds || []);
       const savedDoses = Array.isArray(createdDoses) && createdDoses.length ? createdDoses : variables.submittedDoses;
-      queryClient.setQueryData(["insulin-doses"], (current = []) => prependUnique(savedDoses, current.filter((dose) => !optimisticIds.has(dose.id))));
-      queryClient.setQueryData(["insulin-doses", "graph"], (current = []) => prependUnique(savedDoses, current.filter((dose) => !optimisticIds.has(dose.id))));
+      queryClient.setQueryData(["insulin-doses"], (current = []) => prependUnique(savedDoses, asList(current).filter((dose) => !optimisticIds.has(dose.id))));
+      queryClient.setQueryData(["insulin-doses", "graph"], (current = []) => prependUnique(savedDoses, asList(current).filter((dose) => !optimisticIds.has(dose.id))));
       queryClient.invalidateQueries({ queryKey: ["insulin-doses"] });
       queryClient.invalidateQueries({ queryKey: ["insulin-doses", "graph"] });
       toast.success("Support logged, tracking its gentle activity");
     },
-    onError: (_error, _variables, context) => {
+    onError: (error, _variables, context) => {
       queryClient.setQueryData(["insulin-doses"], context?.previousDoses ?? []);
       queryClient.setQueryData(["insulin-doses", "graph"], context?.previousGraphDoses ?? []);
-      toast.error("Unable to log support. Please try again.");
+      console.error("Unable to log insulin", error);
+      toast.error(error?.response?.data?.message || error?.message || "Unable to log support. Please try again.");
     },
   });
 }

@@ -92,7 +92,7 @@ export default function LogInsulinForm({ open, onClose }) {
     }
     const dt = date ? new Date(`${date}T00:00:00`) : new Date();
     dt.setHours(hours, minutes, 0, 0);
-    if (dt.getTime() > Date.now()) {
+    if (dt.getTime() > Date.now() + 60 * 1000) {
       toast.error("Choose a time that is not in the future.");
       return;
     }
@@ -123,7 +123,6 @@ export default function LogInsulinForm({ open, onClose }) {
         },
         onError: () => {
           setLogging(false);
-          toast.error("Unable to log. Please try again.");
         },
       }
     );

@@ -20,7 +20,7 @@ export default async function (req: Request): Promise<Response> {
   const fnStart = Date.now();
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
+    const user = await base44.auth.me().catch(() => null);
     if (!user || user.role !== "admin") {
       console.log(JSON.stringify({
         diagStage: "FUNCTION_RESPONSE",
