@@ -26,7 +26,7 @@ export default function PrivacyPage() {
           {doc.title}
         </h1>
         <p className="mt-2 text-sm" style={{ color: "#6b6153" }}>
-          Last updated July 4, 2026 · Version {doc.version}
+          Last updated October 17, 2026 · Version {doc.version}
         </p>
 
         <div

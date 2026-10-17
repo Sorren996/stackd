@@ -4,6 +4,7 @@ import { hasDelayedRise } from "@/lib/mealMonitoring";
 import { toast } from "sonner";
 import LogSheetShell from "@/components/forms/LogSheetShell";
 import MealEstimateChip from "@/components/forms/MealEstimateChip";
+import MealPhotoChip from "@/components/forms/MealPhotoChip";
 import {
   TapStepper,
   TripleSegmented,
@@ -135,14 +136,24 @@ export default function LogMealForm({ open, onClose }) {
           placeholder="Meal name (optional)"
         />
 
-        <MealEstimateChip
-          description={foodName}
-          onEstimate={(est) => {
-            if (est?.carbs_grams > 0) setCarbs(String(est.carbs_grams));
-            if (est?.protein_level) setProteinLevel(est.protein_level);
-            if (est?.fat_level) setFatLevel(est.fat_level);
-          }}
-        />
+        <div className="flex flex-wrap gap-2">
+          <MealEstimateChip
+            description={foodName}
+            onEstimate={(est) => {
+              if (est?.carbs_grams > 0) setCarbs(String(est.carbs_grams));
+              if (est?.protein_level) setProteinLevel(est.protein_level);
+              if (est?.fat_level) setFatLevel(est.fat_level);
+            }}
+          />
+          <MealPhotoChip
+            onEstimate={(est) => {
+              if (est?.meal_name) setFoodName(est.meal_name);
+              if (est?.carbs_grams > 0) setCarbs(String(est.carbs_grams));
+              if (est?.protein_level) setProteinLevel(est.protein_level);
+              if (est?.fat_level) setFatLevel(est.fat_level);
+            }}
+          />
+        </div>
 
         <TapStepper
           label="Carbs"

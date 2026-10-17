@@ -1,7 +1,7 @@
 export const ACKNOWLEDGMENT_VERSIONS = {
-  acknowledgment_bundle_version: "1.1",
+  acknowledgment_bundle_version: "1.2",
   terms_version: "1.0",
-  privacy_notice_version: "1.1",
+  privacy_notice_version: "1.2",
   medical_disclaimer_version: "1.0",
   emergency_notice_version: "1.0",
   insulin_estimate_notice_version: "1.0",
@@ -101,9 +101,9 @@ export const ACKNOWLEDGMENT_STEPS = [
       },
       {
         title: "Sensitive Health-Data Consent",
-        notice: "Stackd may collect and process user-provided health information, including:\n\n\u2022 Glucose values\n\u2022 Insulin doses and timing\n\u2022 Insulin types and profiles\n\u2022 Carbohydrate intake\n\u2022 Meal information\n\u2022 Health-related notes\n\u2022 Imported health-device data, if connected\n\u2022 App-generated estimates and trends\n\nStackd may also use AI-assisted processing on the meal descriptions you enter to estimate carbohydrate content. Only your meal description text is used for this estimate. Your data is never sold or shared with third parties for marketing or advertising.",
+        notice: "Stackd may collect and process user-provided health information, including:\n\n\u2022 Glucose values\n\u2022 Insulin doses and timing\n\u2022 Insulin types and profiles\n\u2022 Carbohydrate intake\n\u2022 Meal information\n\u2022 Health-related notes\n\u2022 Imported health-device data, if connected\n\u2022 App-generated estimates and trends\n\nStackd may also use AI-assisted processing on the meal descriptions and meal photos you provide to estimate carbohydrate, protein, and fat content. Only your meal description text or meal photo is used for this estimate, and nothing else is shared. Your data is never sold or shared with third parties for marketing or advertising.",
         checkboxId: "health_data_consent_accepted",
-        checkboxLabel: "I consent to Stackd collecting and processing the health information I choose to enter or connect, including AI-assisted meal description processing, for the purpose of providing the app's features.",
+        checkboxLabel: "I consent to Stackd collecting and processing the health information I choose to enter or connect, including AI-assisted meal description and photo processing, for the purpose of providing the app's features.",
       },
     ],
   },
@@ -156,7 +156,7 @@ For questions about these Terms, please contact Stackd support.`,
   privacy: {
     title: "Privacy Notice",
     version: ACKNOWLEDGMENT_VERSIONS.privacy_notice_version,
-    content: `Last updated: October 10, 2026 (Version ${ACKNOWLEDGMENT_VERSIONS.privacy_notice_version})
+    content: `Last updated: October 17, 2026 (Version ${ACKNOWLEDGMENT_VERSIONS.privacy_notice_version})
 
 1: Information We Collect
 Stackd collects and processes health information you choose to enter, including:
@@ -172,7 +172,7 @@ Stackd collects and processes health information you choose to enter, including:
 We also collect technical metadata such as device type, locale, and timezone when you complete acknowledgment requirements.
 
 2: AI-Assisted Meal Processing
-When you enter a meal description, Stackd may use AI-assisted processing on the description text you provide to estimate carbohydrate content for your convenience. Only the meal description text is used for this estimate. This processing happens to help you log meals more easily and is not a medical assessment. You may log carbohydrate values manually at any time without using this feature.
+When you enter a meal description or provide a meal photo, Stackd may use AI-assisted processing on the description text or photo you provide to estimate carbohydrate, protein, and fat content for your convenience. Only your meal description text or meal photo is used for this estimate, and nothing else is shared alongside it. This processing happens to help you log meals more easily and is not a medical assessment. You may log values manually at any time without using this feature.
 
 3: How We Use Your Information
 Your health information is used to provide the Service's features, including displaying glucose trends, insulin activity estimates, and meal balance insights.
