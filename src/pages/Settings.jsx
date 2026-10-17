@@ -7,6 +7,7 @@ import PageHeader from "@/components/editorial/PageHeader";
 import SectionCard from "@/components/editorial/SectionCard";
 import LedgerRow from "@/components/editorial/LedgerRow";
 import SensorSessionCard from "@/components/settings/SensorSessionCard";
+import { isNativeIOS } from "@/lib/nativeShell";
 
 function readGraphHeight() {
   const v = Number(window.localStorage.getItem("graph_height"));
@@ -19,6 +20,7 @@ export default function Settings() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const { connected: dexcomConnected, connection } = useDexcomConnection();
   const graphHeight = readGraphHeight();
+  const nativeIOS = isNativeIOS();
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -63,14 +65,14 @@ export default function Settings() {
 
       <SectionCard label="App">
         <LedgerRow label="Display" value={`Chart scale: ${graphHeight}`} to="/settings/display" />
-        <LedgerRow label="Add to Home Screen" value="Install" to="/install" />
+        {!nativeIOS && <LedgerRow label="Add to Home Screen" value="Install" to="/install" />}
       </SectionCard>
 
       <SectionCard label="Help & Account">
         <LedgerRow label="Profile" value={user?.email || "Name & email"} to="/settings/profile" />
         <LedgerRow label="Privacy & Consent" value="Consent & controls" to="/settings/privacy-consent" />
         <LedgerRow label="Contact & Support" value="Help & feedback" to="/settings/contact-support" />
-        <LedgerRow label="Support the Creator" value="Optional gifts" to="/settings/support-creator" />
+        {!nativeIOS && <LedgerRow label="Support the Creator" value="Optional gifts" to="/settings/support-creator" />}
         <LedgerRow
           label={isLoggingOut ? "Logging out..." : "Log Out"}
           onClick={handleLogout}
