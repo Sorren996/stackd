@@ -98,8 +98,11 @@ Deno.serve(async (req) => {
 
         // Fetch this user's logs around the window once.
         const [glucose, doses, carbs, settingsList] = await Promise.all([
+          // Dexcom-synced readings carry user_id (service-role created), not
+          // created_by_id — filter by user_id so the response window actually
+          // contains the user's CGM trace for peak detection.
           sr.entities.GlucoseReading.filter({
-            created_by_id: userId,
+            user_id: userId,
             recorded_at: { $gte: fetchStart, $lte: fetchEnd },
           }, '-recorded_at', 500),
           sr.entities.InsulinDose.filter({

@@ -98,8 +98,11 @@ export default async function(req: Request): Promise<Response> {
         const insulinWindowISO = new Date(now.getTime() - 5 * DAY_MS).toISOString();
 
         const [glucose, carbs, insulin] = await Promise.all([
+          // Dexcom-synced readings carry user_id (set by the service role),
+          // not created_by_id — filter by user_id so imported readings are
+          // included in event detection.
           sr.entities.GlucoseReading.filter(
-            { recorded_at: { $gte: windowStartISO }, created_by_id: userId },
+            { recorded_at: { $gte: windowStartISO }, user_id: userId },
             '-recorded_at', 2000
           ),
           sr.entities.CarbEntry.filter(

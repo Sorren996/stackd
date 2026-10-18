@@ -30,6 +30,15 @@ function proteinFatFromLevels(proteinLevel, fatLevel) {
   };
 }
 
+// Map a continuous gram value back to the closest Low/Med/High level for the
+// UI selector. The stored grams still come from the estimate when present —
+// this is only so the selector reflects the estimate after it's applied.
+function levelFromGrams(grams) {
+  if (grams <= 5) return "low";
+  if (grams >= 35) return "high";
+  return "med";
+}
+
 /**
  * Log Meal — custom meal entry only.
  * Name, carbs stepper (5g steps + 15/30/45/60 pills), protein and fat
@@ -46,6 +55,10 @@ export default function LogMealForm({ open, onClose }) {
   const [time, setTime] = useState(() => new Date().toTimeString().slice(0, 5));
   const [notes, setNotes] = useState("");
   const [logging, setLogging] = useState(false);
+  // Continuous estimate fields from the AI estimator. When present these
+  // override the Low/Med/High preset grams so the stored curve reflects the
+  // food's real composition. Cleared when the user manually changes a level.
+  const [estMacros, setEstMacros] = useState(null);
 
   const createCarb = useCreateCarbs();
 
@@ -59,10 +72,19 @@ export default function LogMealForm({ open, onClose }) {
     setNotes("");
     setDate(getTodayDateValue());
     setTime(new Date().toTimeString().slice(0, 5));
+    setEstMacros(null);
   }, [open]);
 
   const carbsNum = Number(carbs) || 0;
-  const { protein_grams, fat_grams } = proteinFatFromLevels(proteinLevel, fatLevel);
+  const levelGrams = proteinFatFromLevels(proteinLevel, fatLevel);
+  // Prefer the estimate's continuous grams when available; fall back to the
+  // Low/Med/High preset grams for manual entry.
+  const fat_grams = estMacros?.fat_grams ?? levelGrams.fat_grams;
+  const protein_grams = estMacros?.protein_grams ?? levelGrams.protein_grams;
+  const glycemic_index = estMacros?.glycemic_index ?? null;
+  const absorption_profile = estMacros?.absorption_profile ?? null;
+  const speed_class = estMacros?.speed_class ?? null;
+  const dual_wave = estMacros?.dual_wave ?? null;
   const qualifiesDelayed = hasDelayedRise({ fat_grams, protein_grams, carbs: carbsNum });
 
   const canSubmit = carbsNum > 0 && !logging;
@@ -92,6 +114,10 @@ export default function LogMealForm({ open, onClose }) {
       is_rescue_carb: isRescue,
       fat_grams,
       protein_grams,
+      glycemic_index,
+      absorption_profile,
+      speed_class,
+      dual_wave,
       notes: notes || undefined,
     };
     const submittedEntries = [entry];
@@ -141,16 +167,36 @@ export default function LogMealForm({ open, onClose }) {
             description={foodName}
             onEstimate={(est) => {
               if (est?.carbs_grams > 0) setCarbs(String(est.carbs_grams));
-              if (est?.protein_level) setProteinLevel(est.protein_level);
-              if (est?.fat_level) setFatLevel(est.fat_level);
+              if (Number.isFinite(est?.fat_grams) || Number.isFinite(est?.protein_grams)) {
+                setEstMacros({
+                  fat_grams: Number(est.fat_grams) || 0,
+                  protein_grams: Number(est.protein_grams) || 0,
+                  glycemic_index: Number.isFinite(est?.glycemic_index) ? Number(est.glycemic_index) : null,
+                  absorption_profile: est.absorption_profile || null,
+                  speed_class: est.speed_class || null,
+                  dual_wave: Boolean(est.dual_wave),
+                });
+                setProteinLevel(levelFromGrams(Number(est.protein_grams) || 0));
+                setFatLevel(levelFromGrams(Number(est.fat_grams) || 0));
+              }
             }}
           />
           <MealPhotoChip
             onEstimate={(est) => {
               if (est?.meal_name) setFoodName(est.meal_name);
               if (est?.carbs_grams > 0) setCarbs(String(est.carbs_grams));
-              if (est?.protein_level) setProteinLevel(est.protein_level);
-              if (est?.fat_level) setFatLevel(est.fat_level);
+              if (Number.isFinite(est?.fat_grams) || Number.isFinite(est?.protein_grams)) {
+                setEstMacros({
+                  fat_grams: Number(est.fat_grams) || 0,
+                  protein_grams: Number(est.protein_grams) || 0,
+                  glycemic_index: Number.isFinite(est?.glycemic_index) ? Number(est.glycemic_index) : null,
+                  absorption_profile: est.absorption_profile || null,
+                  speed_class: est.speed_class || null,
+                  dual_wave: Boolean(est.dual_wave),
+                });
+                setProteinLevel(levelFromGrams(Number(est.protein_grams) || 0));
+                setFatLevel(levelFromGrams(Number(est.fat_grams) || 0));
+              }
             }}
           />
         </div>
@@ -165,8 +211,22 @@ export default function LogMealForm({ open, onClose }) {
           presets={[15, 30, 45, 60]}
         />
 
-        <TripleSegmented label="Protein" value={proteinLevel} onChange={setProteinLevel} />
-        <TripleSegmented label="Fat" value={fatLevel} onChange={setFatLevel} />
+        <TripleSegmented
+          label="Protein"
+          value={proteinLevel}
+          onChange={(v) => {
+            setProteinLevel(v);
+            setEstMacros((prev) => prev ? { ...prev, protein_grams: MACRO_GRAMS[v] ?? 0 } : prev);
+          }}
+        />
+        <TripleSegmented
+          label="Fat"
+          value={fatLevel}
+          onChange={(v) => {
+            setFatLevel(v);
+            setEstMacros((prev) => prev ? { ...prev, fat_grams: MACRO_GRAMS[v] ?? 0 } : prev);
+          }}
+        />
 
         {qualifiesDelayed && (
           <p className="text-xs leading-relaxed" style={{ color: "#8a5a12" }}>
