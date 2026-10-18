@@ -81,54 +81,48 @@ export function deriveCurveParams(entry: any, speedFactor?: number | null): Curv
   const protein = Number(entry?.protein_grams ?? entry?.protein ?? 0) || 0;
   const gi = Math.max(0, Math.min(100, Number(entry?.glycemic_index ?? entry?.gi ?? 0) || 0));
   const fiber = Number(entry?.fiber_grams ?? 0) || 0;
-  const processed = entry?.processed_state; // "raw" | "cooked" | "processed"
+  const processed = entry?.processed_state;
 
-  // ── Base timing from glycemic index (the primary driver) ──
-  // Pure glucose (GI 100) → peak ~22 min, window ~110 min.
-  // Moderate starchy (GI 50) → peak ~76 min, window ~175 min.
-  // Very low GI / legumes (GI 15) → peak ~114 min, window ~221 min.
-  const basePeak = 130 - (gi / 100) * 108;
-  const baseWindow = 240 - (gi / 100) * 130;
+  // GI fallback: when GI is unknown (0), infer from the absorption profile.
+  // "fast" profile → assume high GI (80); otherwise moderate-low (0 → maps
+  // to the documented mixed default: peak 60, window 210).
+  const effectiveGi = gi > 0 ? gi : (entry?.absorption_profile === "fast" ? 80 : 0);
 
-  // ── Fat delays gastric emptying and extends the window ──
-  // Fat is the dominant extender: ~3.5 min of window per gram.
-  const fatDelay = fat * 0.9;    // modest delay on the first wave
-  const fatExtend = fat * 3.5;  // substantial window extension
+  // First-wave peak: GI-driven base. Fat FRONT-LOADS the first peak (brings
+  // it earlier) — high-fat meals get a sharp early rise from fast carbs,
+  // then a prolonged tail from fat/protein digestion. This is the
+  // front-loaded dual-wave model.
+  const basePeak = 60 - (effectiveGi / 100) * 35;
+  const fatFrontLoad = Math.min(25, fat * 0.5);
 
-  // Protein (with carbs) extends ~1.2 min/g; protein alone ~0.8 min/g.
-  const proteinDelay = carbs > 0 ? protein * 0.3 : 0;
-  const proteinExtend = carbs > 0 ? protein * 1.2 : protein * 0.8;
-
-  // Fiber slows absorption (soluble fiber delays gastric emptying).
-  const fiberDelay = fiber * 1.0;
+  // Overall window: GI-driven base, extended by fat/protein/fiber.
+  const baseWindow = 210 - (effectiveGi / 100) * 90;
+  const fatExtend = fat * 1.27;
+  const proteinExtend = carbs > 0 ? protein * 0.8 : protein * 0.5;
   const fiberExtend = fiber * 2.0;
+  let procExtend = 0;
+  if (processed === "raw") procExtend = 15;
+  else if (processed === "processed") procExtend = -12;
 
-  // ── Processing state ──
-  // Raw food digests slowest; cooked is the baseline; processed/refined faster.
-  let procDelay = 0, procExtend = 0;
-  if (processed === "raw") { procDelay = 8; procExtend = 15; }
-  else if (processed === "processed") { procDelay = -6; procExtend = -12; }
+  // Delayed second-wave peak (fat/protein-driven). Fat/protein delay this.
+  const fatDelay = fat * 0.9;
+  const proteinDelay = carbs > 0 ? protein * 0.3 : 0;
+  const fiberDelay = fiber * 1.0;
+  let procDelay = 0;
+  if (processed === "raw") procDelay = 8;
+  else if (processed === "processed") procDelay = -6;
 
-  // First-wave peak (carb-driven). Fat/fiber add a modest delay, but the
-  // first wave stays relatively early — it's the carbs absorbing.
-  let firstPeak = basePeak + Math.min(25, fatDelay * 0.35 + fiberDelay * 0.5) + procDelay;
-  // Overall window — extended substantially by fat/protein/fiber.
+  let firstPeak = basePeak - fatFrontLoad;
   let windowMin = baseWindow + fatExtend + proteinExtend + fiberExtend + procExtend;
-  // Delayed second-wave peak (fat/protein-driven slow digestion + gluconeogenesis).
-  let secondPeak = firstPeak + 60 + fatDelay + proteinDelay + fiberDelay;
+  let secondPeak = firstPeak + 60 + fatDelay + proteinDelay + fiberDelay + procDelay;
 
-  // Clamp to physiological ranges.
-  firstPeak = Math.max(20, Math.min(120, Math.round(firstPeak)));
+  firstPeak = Math.max(20, Math.min(60, Math.round(firstPeak)));
   windowMin = Math.max(90, Math.min(360, Math.round(windowMin)));
   secondPeak = Math.max(firstPeak + 50, Math.min(windowMin - 20, Math.round(secondPeak)));
 
-  // Dual-wave blend (continuous, from fat/protein).
   const blend = getDualWaveBlend(entry);
   const dualWave = blend >= 0.5;
 
-  // Apply learned speed factor (per speed class) — scales timing together.
-  // speedFactor < 1 = runs fast, > 1 = runs slow. The learned factor nudges
-  // the composition-derived curve toward the user's observed responses.
   const s = Number.isFinite(speedFactor) && (speedFactor as number) > 0
     ? (speedFactor as number)
     : 1;

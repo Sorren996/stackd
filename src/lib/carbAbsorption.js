@@ -367,8 +367,9 @@ export function deriveCurveParams(entry, speedFactor) {
   const fiber = Number(entry?.fiber_grams ?? 0) || 0;
   const processed = entry?.processed_state;
 
-  const basePeak = 130 - (gi / 100) * 108;
-  const baseWindow = 240 - (gi / 100) * 130;
+  // First-wave peak (front-loaded): GI-driven, no fat delay on the first wave.
+  const basePeak = 60 - (gi / 100) * 35;
+  const baseWindow = 210 - (gi / 100) * 90;
 
   const fatDelay = fat * 0.9;
   const fatExtend = fat * 3.5;
@@ -380,11 +381,11 @@ export function deriveCurveParams(entry, speedFactor) {
   if (processed === "raw") { procDelay = 8; procExtend = 15; }
   else if (processed === "processed") { procDelay = -6; procExtend = -12; }
 
-  let firstPeak = basePeak + Math.min(25, fatDelay * 0.35 + fiberDelay * 0.5) + procDelay;
+  let firstPeak = basePeak + fiberDelay * 0.4 + procDelay;
   let windowMin = baseWindow + fatExtend + proteinExtend + fiberExtend + procExtend;
   let secondPeak = firstPeak + 60 + fatDelay + proteinDelay + fiberDelay;
 
-  firstPeak = Math.max(20, Math.min(120, Math.round(firstPeak)));
+  firstPeak = Math.max(20, Math.min(60, Math.round(firstPeak)));
   windowMin = Math.max(90, Math.min(360, Math.round(windowMin)));
   secondPeak = Math.max(firstPeak + 50, Math.min(windowMin - 20, Math.round(secondPeak)));
 
