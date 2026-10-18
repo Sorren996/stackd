@@ -122,6 +122,28 @@ export default async function (req: Request): Promise<Response> {
           } catch {
             // DailySummary failure is non-fatal
           }
+
+          // Scheduled staleness check: if readings are flowing but no
+          // projection has been generated in the last 15 min, log a
+          // DiagnosticReport so the outage is visible. This catches the
+          // silent-failure pattern that caused the Oct 10-17 outage where
+          // the re-anchor workflow stopped triggering but readings kept
+          // syncing. Runs on every scheduled sync (every 5 min).
+          try {
+            const recentProj = await sr.entities.GlucoseProjection.filter(
+              { user_id: owner }, "-generated_at", 1
+            );
+            const lastProjTime = recentProj[0] ? new Date(recentProj[0].generated_at).getTime() : 0;
+            const staleMin = Math.round((Date.now() - lastProjTime) / 60000);
+            if (staleMin > 15) {
+              await sr.entities.DiagnosticReport.create({
+                topic: `Projection stale — readings flowing but no projection for ${staleMin} min`,
+                report_text: `User ${owner.slice(0, 8)}… has readings flowing (last sync inserted ${result.records_inserted} records) but no projection generated since ${lastProjTime ? new Date(lastProjTime).toISOString() : "never"}. The re-anchor workflow may not be triggering. This is the silent-failure pattern that caused the Oct 10-17 outage.`,
+                report_date: new Date().toISOString(),
+                item_count: 1,
+              });
+            }
+          } catch { /* staleness check is non-fatal */ }
         }
       } catch (error: any) {
         results.push({ owner, status: "error", error: error.message });

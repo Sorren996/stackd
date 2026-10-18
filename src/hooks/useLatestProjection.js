@@ -88,8 +88,17 @@ export function useLatestProjection({ latestReadingTime, latestMealTime, latestD
     }
   }, [projection?.generated_at]);
 
-  // Only return usable projections — abstained or empty ones show nothing.
+  // Only return usable projections whose anchor is recent (within 15 min).
+  // A stale projection's trajectory doesn't extend into the current future
+  // window — rendering it would show a partial dashed line that ends at the
+  // current reading instead of extending ahead, which is visually misleading.
+  // Show nothing instead so the user sees an honest "no projection" state.
+  const PROJECTION_STALE_MS = 15 * 60 * 1000;
   if (projection && !projection.abstained && Array.isArray(projection.trajectory) && projection.trajectory.length > 0) {
+    const anchorTime = projection.anchor_time ? new Date(projection.anchor_time).getTime() : 0;
+    if (anchorTime > 0 && Date.now() - anchorTime > PROJECTION_STALE_MS) {
+      return null; // stale — don't draw a misleading partial line
+    }
     return projection;
   }
   return null;

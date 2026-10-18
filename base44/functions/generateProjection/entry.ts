@@ -35,8 +35,19 @@ export default async function (req) {
     if (body.user_id) {
       const caller = await base44.auth.me().catch(() => null);
       if (!caller || caller.role !== "admin") {
-        return Response.json({ error: "Forbidden" }, { status: 403 });
-      }
+      // Silent-failure guard: log auth failures so an 8-day outage is never
+      // invisible. The workflow runs as admin; if auth.me() returns null or
+      // non-admin, the re-anchor pipeline is broken and must be surfaced.
+      try {
+        await base44.asServiceRole.entities.DiagnosticReport.create({
+          topic: `Projection auth failed — ${new Date().toISOString()}`,
+          report_text: `Workflow/frontend call passed user_id but caller is not admin (role: ${caller?.role || "none"}). The re-anchor workflow may be invoking generateProjection without proper admin context. This is the silent-failure pattern that caused the Oct 10-17 outage.`,
+          report_date: new Date().toISOString(),
+          item_count: 1,
+        });
+      } catch { /* logging must never crash the function */ }
+      return Response.json({ error: "Forbidden" }, { status: 403 });
+    }
       userId = body.user_id;
     } else {
       const authenticatedUser = await base44.auth.me();
@@ -156,6 +167,27 @@ export default async function (req) {
       status: "active",
     });
 
+    // Silent-failure guard: log persistent abstention so an 8-day outage is
+    // never invisible. Only log when no successful projection exists in the
+    // last 15 min — transient abstention (one reading with insufficient
+    // evidence) is normal and shouldn't flood the diagnostic log.
+    if (result.abstained) {
+      try {
+        const lastOk = await base44.asServiceRole.entities.GlucoseProjection.filter(
+          { user_id: userId, abstained: false }, "-generated_at", 1
+        );
+        const lastOkTime = lastOk[0] ? new Date(lastOk[0].generated_at).getTime() : 0;
+        if (now - lastOkTime > 15 * 60 * 1000) {
+          await base44.asServiceRole.entities.DiagnosticReport.create({
+            topic: `Projection abstained — ${new Date(now).toISOString()}`,
+            report_text: `User: ${userId.slice(0, 8)}…\nReason: ${result.abstainReason || "insufficient evidence"}\nData quality: ${JSON.stringify(result.dataQuality)}\nLast successful projection: ${lastOk[0] ? new Date(lastOkTime).toISOString() : "never"}`,
+            report_date: new Date(now).toISOString(),
+            item_count: 1,
+          });
+        }
+      } catch { /* logging must never crash the function */ }
+    }
+
     // Ensure a ProjectionModelState record exists (baseline scaffolding).
     if (!modelState) {
       await base44.asServiceRole.entities.ProjectionModelState.create({
@@ -199,6 +231,17 @@ export default async function (req) {
       data_quality: result.dataQuality,
     });
   } catch (error) {
+    // Silent-failure guard: log every unhandled exception to DiagnosticReport
+    // so an 8-day silent outage is impossible. Without this, the catch
+    // swallows the error and returns a 500 that nobody checks.
+    try {
+      await base44.asServiceRole.entities.DiagnosticReport.create({
+        topic: `Projection generation failed — ${new Date().toISOString()}`,
+        report_text: `User: ${userId || "unknown"}\nError: ${error.message}\nStack: ${(error.stack || "").slice(0, 500)}`,
+        report_date: new Date().toISOString(),
+        item_count: 1,
+      });
+    } catch { /* logging must never crash the function */ }
     return Response.json({ error: error.message }, { status: 500 });
   }
 }
