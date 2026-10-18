@@ -18,6 +18,7 @@ import {
 } from '../../shared/glucoseEventDetection.ts';
 import { AnalysisSettings } from '../../shared/mealResponseAnalysis.ts';
 import { ANALYSIS_VERSION, MAX_JOB_ATTEMPTS, RETRY_BASE_SECONDS } from '../../shared/analysisVersion.ts';
+import { persistInsightsAndPatterns } from '../../shared/insightGeneration.ts';
 
 
 const MINUTE_MS = 60 * 1000;
@@ -155,6 +156,7 @@ export default async function(req: Request): Promise<Response> {
         );
 
         let created = 0;
+        let createdEvents: any[] = [];
         if (fresh.length) {
           const records = fresh.map((d) => ({
             user_id: userId,
@@ -185,18 +187,36 @@ export default async function(req: Request): Promise<Response> {
             analysis_version: ANALYSIS_VERSION,
             source_analysis_job_id: job.id,
           }));
-          await sr.entities.GlucoseEvent.bulkCreate(records);
-          created = records.length;
+          createdEvents = await sr.entities.GlucoseEvent.bulkCreate(records);
+          created = createdEvents.length;
         }
 
         eventsCreated += created;
 
+        // ── Stage 2: generate CoachInsight + UserPatternProfile from events ──
+        // Converts the detected glucose events into grounded, per-user-adapted
+        // wellness observations and recurring pattern profiles. Runs only when
+        // events were created or when prior events exist for this user.
+        let insightsCreated = 0;
+        let patternsCreated = 0;
+        if (createdEvents.length > 0) {
+          try {
+            const result = await persistInsightsAndPatterns(sr, userId, createdEvents, job.id, nowISO);
+            insightsCreated = result.insightsCreated;
+            patternsCreated = result.patternsCreated;
+          } catch (insightErr: any) {
+            console.error(`[runAnalysisJobs] insight generation failed for ${userId}: ${insightErr.message}`);
+          }
+        }
+
         await sr.entities.AnalysisJob.update(job.id, {
-          status: created > 0 ? 'completed' : 'completed_no_insight',
+          status: (created > 0 || insightsCreated > 0) ? 'completed' : 'completed_no_insight',
           completed_at: nowISO,
           analysis_version: ANALYSIS_VERSION,
           result_summary: {
             eventsCreated: created,
+            insightsCreated,
+            patternsCreated,
             drafts: drafts.length,
             byType: groupByType(drafts),
           },
