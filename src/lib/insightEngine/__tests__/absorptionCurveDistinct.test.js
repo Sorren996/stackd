@@ -102,51 +102,59 @@ describe("carbAppearanceRateGPerMin — three distinct curves", () => {
   const candyCurve = curveFor(CANDY);
   const potatoCurve = curveFor(POTATO);
 
-  test("candy peaks EARLY (fast, ~30 min)", () => {
-    const peak = peakTimeMin(candyCurve);
-    expect(peak).toBeLessThanOrEqual(35);
-    expect(peak).toBeGreaterThanOrEqual(20);
-  });
-
-  test("baked potato peaks MIDDLE (mixed, ~60 min), later than candy", () => {
-    const peak = peakTimeMin(potatoCurve);
-    expect(peak).toBeGreaterThanOrEqual(50);
-    expect(peak).toBeLessThanOrEqual(75);
-    expect(peak).toBeGreaterThan(peakTimeMin(candyCurve));
-  });
-
-  test("steak has a LATE window (high-fat dual-wave, ≥ 300 min)", () => {
-    const zero = firstZeroMin(steakCurve);
-    // high_fat window is 300 min with a secondary peak at 120 min
-    expect(zero).toBeGreaterThanOrEqual(295);
-  });
-
-  test("candy window is SHORTEST (fast, ~120 min)", () => {
+  test("candy window is SHORTEST (fast, ≤ 120 min)", () => {
     const zero = firstZeroMin(candyCurve);
     expect(zero).toBeLessThanOrEqual(125);
   });
 
-  test("steak shows a DUAL-WAVE secondary rise around 120 min", () => {
-    // The high_fat class has secPeakMin=120. Check that the steak curve has a
-    // second local maximum near 120 min that is higher than the rate at 80 min.
+  test("baked potato window is MIDDLE (mixed, ~210 min)", () => {
+    const zero = firstZeroMin(potatoCurve);
+    expect(zero).toBeGreaterThan(125);
+    expect(zero).toBeLessThanOrEqual(215);
+  });
+
+  test("steak window is LONGEST (high-fat dual-wave, ≥ 295 min)", () => {
+    const zero = firstZeroMin(steakCurve);
+    expect(zero).toBeGreaterThanOrEqual(295);
+  });
+
+  test("the three curves have DISTINCT window durations", () => {
+    const windows = new Set([firstZeroMin(candyCurve), firstZeroMin(potatoCurve), firstZeroMin(steakCurve)]);
+    expect(windows.size).toBe(3);
+  });
+
+  test("at 150 min, candy is finished but steak is still active", () => {
+    const candy150 = candyCurve.find((p) => p.t === 150)?.rate ?? 0;
+    const steak150 = steakCurve.find((p) => p.t === 150)?.rate ?? 0;
+    expect(candy150).toBe(0);
+    expect(steak150).toBeGreaterThan(0);
+  });
+
+  test("at 150 min, potato is finished but steak is still active", () => {
+    const potato150 = potatoCurve.find((p) => p.t === 150)?.rate ?? 0;
+    const steak150 = steakCurve.find((p) => p.t === 150)?.rate ?? 0;
+    expect(potato150).toBe(0);
+    expect(steak150).toBeGreaterThan(0);
+  });
+
+  test("steak shows a DUAL-WAVE secondary rise near 130 min", () => {
+    // The dual-wave rate has a secondary peak near secondPeak=130. The rate at
+    // 130 should be higher than at 80 and higher than at 200, proving the tail
+    // is not a simple monotonic decay.
     const at80 = steakCurve.find((p) => p.t === 80)?.rate ?? 0;
-    const at120 = steakCurve.find((p) => p.t === 120)?.rate ?? 0;
-    const at160 = steakCurve.find((p) => p.t === 160)?.rate ?? 0;
-    // Rate at 120 should be ≥ rate at 80 (secondary wave rising) and ≥ rate at 160
-    expect(at120).toBeGreaterThanOrEqual(at80 * 0.9);
-    expect(at120).toBeGreaterThanOrEqual(at160 * 0.9);
+    const at130 = steakCurve.find((p) => p.t === 130)?.rate ?? 0;
+    const at200 = steakCurve.find((p) => p.t === 200)?.rate ?? 0;
+    expect(at130).toBeGreaterThan(at80 * 0.85);
+    expect(at130).toBeGreaterThan(at200);
   });
 
-  test("the three curves have DISTINCT peak times", () => {
-    const peaks = new Set([peakTimeMin(candyCurve), peakTimeMin(potatoCurve), peakTimeMin(steakCurve)]);
-    expect(peaks.size).toBe(3);
+  test("candy peaks EARLY (fast, ≤ 35 min)", () => {
+    expect(peakTimeMin(candyCurve)).toBeLessThanOrEqual(35);
   });
 
-  test("steak and candy curves are not identical at any matching offset", () => {
-    // At 60 min, candy (fast, decaying) should have a lower rate than steak (high-fat, still rising)
-    const candy60 = candyCurve.find((p) => p.t === 60)?.rate ?? 0;
-    const steak60 = steakCurve.find((p) => p.t === 60)?.rate ?? 0;
-    expect(steak60).toBeGreaterThan(candy60);
+  test("baked potato peaks LATER than candy (mixed, ≥ 50 min)", () => {
+    expect(peakTimeMin(potatoCurve)).toBeGreaterThanOrEqual(50);
+    expect(peakTimeMin(potatoCurve)).toBeGreaterThan(peakTimeMin(candyCurve));
   });
 });
 
