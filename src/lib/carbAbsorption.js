@@ -432,18 +432,17 @@ export function getMealPeakMinutes(fatGrams, proteinGrams, windowMin) {
   return Math.max(30, Math.round(win * peakFraction));
 }
 
-// Front-loaded dual-wave rate for high-fat/protein meals. The `blend`
-// parameter (0-1, from deriveDualWaveBlend) controls the intensity: 1.0 =
-// full dual-wave, 0.5 = partial blend with a single-wave gamma. This gives
-// medium-fat/protein meals a graduated transition. ESTIMATE — describes,
-// never prescribes.
-function dualWaveRate(minOffset, peakMin, blend = 1.0) {
-  const firstPeak = Math.max(20, Math.min(35, Math.round(peakMin * 0.625)));
-  const secondPeak = Math.max(firstPeak + 100, Math.min(180, peakMin + 90));
-  const fullDual = gammaRate(minOffset, firstPeak, 1.0) * 0.65
-       + gammaRate(minOffset, secondPeak, 2.0) * 0.35;
+// Front-loaded dual-wave rate for high-fat/protein meals. firstPeakMin and
+// secondPeakMin are the continuous positions of the two waves (derived from
+// composition by deriveCurveParams). The `blend` (0-1) controls intensity.
+// ESTIMATE — describes, never prescribes.
+function dualWaveRate(minOffset, firstPeakMin, secondPeakMin, blend = 1.0) {
+  const fp = Math.max(20, firstPeakMin);
+  const sp = Math.max(fp + 40, secondPeakMin || fp + 90);
+  const fullDual = gammaRate(minOffset, fp, 1.0) * 0.65
+       + gammaRate(minOffset, sp, 2.0) * 0.35;
   if (blend >= 1.0) return fullDual;
-  const single = gammaRate(minOffset, peakMin, ABSORPTION_SHAPE_EXP);
+  const single = gammaRate(minOffset, fp, ABSORPTION_SHAPE_EXP);
   return single * (1 - blend) + fullDual * blend;
 }
 
@@ -452,44 +451,27 @@ export function getAbsorptionModel(entry, opts = {}) {
   const protein = Number(entry?.protein_grams ?? 0) || 0;
   const carbs = Number(entry?.carbs ?? 0) || 0;
 
-  // Class-based timing — the SAME model the projection engine uses, so the
-  // display curve and the projection are always consistent.
+  // Continuous curve — the SAME model the projection engine uses, so the
+  // display curve and the projection are always consistent. The curve comes
+  // from the meal's composition via deriveCurveParams, not a speed-class
+  // bucket. The learned speedFactor scales the composition-derived timing.
   const speedClass = entry?.speed_class || deriveSpeedClass(entry);
-  const base = BASELINE_CLASS_PARAMS[speedClass] || BASELINE_CLASS_PARAMS.mixed;
-  let windowMin = base.windowMin;
-  let peakMin = base.peakMin;
-
-  // Per-user learned speed factor (per speed class) shifts the ESTIMATED
-  // timing curve — when the user's past meals of this class tended to run
-  // fast or slow, the peak and window follow. Area under the curve still
-  // integrates exactly to the logged carbs; only WHEN the grams are
-  // estimated to arrive is nudged. speedFactor < 1 = run fast, > 1 = slow.
   const factor = Number(opts?.speedFactor);
-  if (Number.isFinite(factor) && factor > 0 && factor !== 1) {
-    windowMin = Math.max(90, Math.min(360, Math.round(windowMin * factor)));
-    peakMin = Math.max(20, Math.min(240, Math.round(peakMin * factor)));
-  }
+  const speedFactor = Number.isFinite(factor) && factor > 0 ? factor : null;
+  const params = deriveCurveParams(entry, speedFactor);
 
-  // dual-wave: high-fat/protein-rich meals absorb with a front-loaded sharp
-  // rise plus a prolonged tail (secPeakMin is set for the high_fat class).
-  // Also respect an explicit dual_wave flag from the entry or opts.
-  const dualWave = Boolean(
-    opts?.dualWave ??
-      (base.secPeakMin != null) ??
-      (Number.isFinite(entry?.dual_wave) ? entry.dual_wave : false)
-  );
-
-  // Graduated blend (0-1): how much dual-wave intensity to apply. Computed
-  // from fat/protein content so medium levels get a partial blend instead of
-  // a hard cliff. When opts.dualWave is explicitly false, blend is 0.
-  const blend = opts?.dualWave === false ? 0 : deriveDualWaveBlend(entry);
+  // Backward compat: respect an explicit dualWave=false override (rescue).
+  const dualWave = opts?.dualWave === false ? false : params.dualWave;
+  const blend = opts?.dualWave === false ? 0 : params.blend;
+  const secondPeakMin = dualWave ? params.secondPeakMinutes : null;
 
   return {
     carbs,
     fat,
     protein,
-    windowMin,
-    peakMin,
+    windowMin: params.durationMinutes,
+    peakMin: params.peakMinutes,
+    secondPeakMin,
     fpu: computeFPU(fat, protein),
     dualWave,
     blend,
@@ -531,8 +513,8 @@ export function getCarbAbsorptionAt(entry, targetTime = Date.now(), opts = {}) {
 
   // Use the SAME rate function as generateCarbCurve and the projection engine
   // so the display number, the curve, and the projection all agree.
-  const rateFn = model.dualWave
-    ? (t) => dualWaveRate(t, model.peakMin, model.blend ?? 1.0)
+  const rateFn = model.dualWave && model.secondPeakMin != null
+    ? (t) => dualWaveRate(t, model.peakMin, model.secondPeakMin, model.blend ?? 1.0)
     : (t) => gammaRate(t, model.peakMin, ABSORPTION_SHAPE_EXP);
 
   const totalArea = integrateRate(model.windowMin, rateFn);
@@ -574,8 +556,8 @@ export function generateCarbCurve(entry, opts = {}) {
   const stepMs = stepMin * 60000;
 
   // Combined per-minute rate fn for this entry — single gamma, or dual-wave.
-  const rateFn = model.dualWave
-    ? (t) => dualWaveRate(t, model.peakMin, model.blend ?? 1.0)
+  const rateFn = model.dualWave && model.secondPeakMin != null
+    ? (t) => dualWaveRate(t, model.peakMin, model.secondPeakMin, model.blend ?? 1.0)
     : (t) => gammaRate(t, model.peakMin, ABSORPTION_SHAPE_EXP);
 
   const totalArea = integrateRate(model.windowMin, rateFn);
