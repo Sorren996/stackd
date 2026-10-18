@@ -113,6 +113,61 @@ const BASELINE_CLASS_PARAMS = {
 
 const MINUTE_MS = 60 * 1000;
 
+// ── Continuous curve parameter generation ──────────────────────────────────
+// Mirrors base44/shared/carbAbsorptionProfile.ts deriveCurveParams. The
+// absorption curve is generated from the food's continuous composition —
+// peak_minutes and duration_minutes are continuous functions of glycemic_index,
+// fat, protein, and fiber. The dual-wave blend scales continuously with
+// fat/protein. Two foods with the same speed_class label but different
+// compositions get different curves; changing composition moves the curve
+// continuously (no bucket jumps).
+export function deriveCurveParams(entry, speedFactor) {
+  const carbs = Number(entry?.carbs ?? 0) || 0;
+  const fat = Number(entry?.fat_grams ?? entry?.fat ?? 0) || 0;
+  const protein = Number(entry?.protein_grams ?? entry?.protein ?? 0) || 0;
+  const gi = Math.max(0, Math.min(100, Number(entry?.glycemic_index ?? entry?.gi ?? 0) || 0));
+  const fiber = Number(entry?.fiber_grams ?? 0) || 0;
+  const processed = entry?.processed_state;
+
+  // Base timing from GI (primary driver).
+  const basePeak = 130 - (gi / 100) * 108;
+  const baseWindow = 240 - (gi / 100) * 130;
+
+  // Fat delays gastric emptying and extends the window.
+  const fatDelay = fat * 0.9;
+  const fatExtend = fat * 3.5;
+  // Protein (with carbs) extends ~1.2 min/g; protein alone ~0.8 min/g.
+  const proteinDelay = carbs > 0 ? protein * 0.3 : 0;
+  const proteinExtend = carbs > 0 ? protein * 1.2 : protein * 0.8;
+  // Fiber slows absorption.
+  const fiberDelay = fiber * 1.0;
+  const fiberExtend = fiber * 2.0;
+  // Processing state.
+  let procDelay = 0, procExtend = 0;
+  if (processed === "raw") { procDelay = 8; procExtend = 15; }
+  else if (processed === "processed") { procDelay = -6; procExtend = -12; }
+
+  let firstPeak = basePeak + Math.min(25, fatDelay * 0.35 + fiberDelay * 0.5) + procDelay;
+  let windowMin = baseWindow + fatExtend + proteinExtend + fiberExtend + procExtend;
+  let secondPeak = firstPeak + 60 + fatDelay + proteinDelay + fiberDelay;
+
+  firstPeak = Math.max(20, Math.min(120, Math.round(firstPeak)));
+  windowMin = Math.max(90, Math.min(360, Math.round(windowMin)));
+  secondPeak = Math.max(firstPeak + 50, Math.min(windowMin - 20, Math.round(secondPeak)));
+
+  const blend = deriveDualWaveBlend(entry);
+  const dualWave = blend >= 0.5;
+
+  const s = Number.isFinite(speedFactor) && speedFactor > 0 ? speedFactor : 1;
+  const peakMinutes = Math.max(20, Math.min(240, Math.round(firstPeak * s)));
+  const durationMinutes = Math.max(90, Math.min(360, Math.round(windowMin * s)));
+  const secondPeakMinutes = dualWave
+    ? Math.max(peakMinutes + 40, Math.min(durationMinutes - 20, Math.round(secondPeak * s)))
+    : null;
+
+  return { peakMinutes, durationMinutes, blend, secondPeakMinutes, dualWave, derivedGi: gi };
+}
+
 // ── Tunable constants ───────────────────────────────────────────────────────
 const STALE_THRESHOLD_MIN = 15;
 const MIN_READINGS_FOR_MOMENTUM = 2;
@@ -147,32 +202,23 @@ function integrateGamma(toMin, peakMin, shapeExp, step = 2) {
   return area;
 }
 
-// Front-loaded dual-wave rate for high-fat/protein meals. The `blend`
-// parameter (0-1) controls the intensity: 1.0 = full dual-wave, 0.5 =
-// partial blend with a single-wave gamma. ESTIMATE — describes, never
-// prescribes.
-function dualWaveRate(minOffset, peakMin, blend = 1.0) {
-  const firstPeak = Math.max(20, Math.min(35, Math.round(peakMin * 0.625)));
-  const secondPeak = Math.max(firstPeak + 100, Math.min(180, peakMin + 90));
-  const fullDual = gammaRate(minOffset, firstPeak, 1.0) * 0.65 + gammaRate(minOffset, secondPeak, 2.0) * 0.35;
+// Front-loaded dual-wave rate for high-fat/protein meals. firstPeakMin and
+// secondPeakMin are the continuous positions of the two waves (derived from
+// composition by deriveCurveParams). The `blend` (0-1) controls intensity.
+// ESTIMATE — describes, never prescribes.
+function dualWaveRate(minOffset, firstPeakMin, secondPeakMin, blend = 1.0) {
+  const fp = Math.max(20, firstPeakMin);
+  const sp = Math.max(fp + 40, secondPeakMin || fp + 90);
+  const fullDual = gammaRate(minOffset, fp, 1.0) * 0.65 + gammaRate(minOffset, sp, 2.0) * 0.35;
   if (blend >= 1.0) return fullDual;
-  const single = gammaRate(minOffset, peakMin, ABSORPTION_SHAPE_EXP);
+  const single = gammaRate(minOffset, fp, ABSORPTION_SHAPE_EXP);
   return single * (1 - blend) + fullDual * blend;
 }
 
-function getClassPeakMinutes(speedClass, speedFactor) {
-  const s = Number.isFinite(speedFactor) && speedFactor > 0 ? speedFactor : 1;
-  const base = BASELINE_CLASS_PARAMS[speedClass] || BASELINE_CLASS_PARAMS.mixed;
-  return Math.max(20, Math.min(240, Math.round(base.peakMin * s)));
-}
-
-function getClassWindowMinutes(speedClass, speedFactor) {
-  const s = Number.isFinite(speedFactor) && speedFactor > 0 ? speedFactor : 1;
-  const base = BASELINE_CLASS_PARAMS[speedClass] || BASELINE_CLASS_PARAMS.mixed;
-  return Math.max(90, Math.min(360, Math.round(base.windowMin * s)));
-}
-
-// Carb appearance rate (g/min) for a meal at a future time.
+// Carb appearance rate (g/min) for a meal at a future time. The curve is
+// generated from the meal's continuous composition via deriveCurveParams —
+// NOT from a speed-class bucket. The learned per-class speedFactor scales the
+// composition-derived timing. Area always integrates to the logged carbs.
 export function carbAppearanceRateGPerMin(entry, atTime, mealModelParams) {
   const carbs = Number(entry?.carbs) || 0;
   if (carbs <= 0) return 0;
@@ -182,26 +228,24 @@ export function carbAppearanceRateGPerMin(entry, atTime, mealModelParams) {
   if (elapsedMin <= 0) return 0;
 
   const rescue = isRescueCarb(entry);
-  const speedClass = rescue ? "fast" : deriveSpeedClass(entry);
-  const dualWave = rescue ? false : speedClass === "high_fat";
-  const blend = rescue ? 0 : deriveDualWaveBlend(entry);
-  // Apply learned speed factor for this meal's class (Milestone 3). The speed
-  // factor adjusts the peak time and window duration — it shapes WHEN the
-  // carbs are estimated to hit the bloodstream, never the total amount.
-  // Rescue carbs skip personalization — treatment events, not meals to learn.
-  const classParams = rescue ? null : mealModelParams?.[speedClass];
-  const speedFactor = classParams?.speedFactor != null ? Number(classParams.speedFactor) : null;
-  const peakMin = getClassPeakMinutes(speedClass, speedFactor);
-  const windowMin = getClassWindowMinutes(speedClass, speedFactor);
-  if (elapsedMin >= windowMin) return 0;
+  const params = rescue
+    ? { peakMinutes: BASELINE_CLASS_PARAMS.fast.peakMin, durationMinutes: BASELINE_CLASS_PARAMS.fast.windowMin, blend: 0, secondPeakMinutes: null, dualWave: false }
+    : (() => {
+        const speedClass = deriveSpeedClass(entry);
+        const classParams = mealModelParams?.[speedClass];
+        const speedFactor = classParams?.speedFactor != null ? Number(classParams.speedFactor) : null;
+        return deriveCurveParams(entry, speedFactor);
+      })();
 
-  const rateFn = dualWave
-    ? (t) => dualWaveRate(t, peakMin, blend)
-    : (t) => gammaRate(t, peakMin, ABSORPTION_SHAPE_EXP);
+  if (elapsedMin >= params.durationMinutes) return 0;
+
+  const rateFn = params.dualWave && params.secondPeakMinutes != null
+    ? (t) => dualWaveRate(t, params.peakMinutes, params.secondPeakMinutes, params.blend)
+    : (t) => gammaRate(t, params.peakMinutes, ABSORPTION_SHAPE_EXP);
 
   let totalArea = 0;
   const step = 2;
-  for (let t = 0; t < windowMin; t += step) {
+  for (let t = 0; t < params.durationMinutes; t += step) {
     totalArea += ((rateFn(t) + rateFn(t + step)) / 2) * step;
   }
   if (totalArea <= 0) return 0;
@@ -320,8 +364,7 @@ export function normalizeInputs(rawReadings, rawMeals, rawDoses, settings, now) 
     if (!Number.isFinite(Number(m.carbs)) || Number(m.carbs) <= 0) return false;
     const mealTime = new Date(m.consumed_at).getTime();
     if (!Number.isFinite(mealTime)) return false;
-    const speedClass = deriveSpeedClass(m);
-    const windowMin = getClassWindowMinutes(speedClass);
+    const windowMin = deriveCurveParams(m).durationMinutes;
     return mealTime <= now && mealTime + windowMin * MINUTE_MS > now;
   });
 
@@ -569,21 +612,18 @@ export function projectGlucose(snapshot, opts = {}) {
     const speedClass = deriveSpeedClass(m);
     const classParams = mealModelParams?.[speedClass];
     const speedFactor = classParams?.speedFactor != null ? Number(classParams.speedFactor) : null;
-    const windowMin = getClassWindowMinutes(speedClass, speedFactor);
-    const peakMin = getClassPeakMinutes(speedClass, speedFactor);
-    const dualWave = speedClass === "high_fat";
-    const mealBlend = deriveDualWaveBlend(m);
-    const rateFn = dualWave
-      ? (t) => dualWaveRate(t, peakMin, mealBlend)
-      : (t) => gammaRate(t, peakMin, ABSORPTION_SHAPE_EXP);
+    const params = deriveCurveParams(m, speedFactor);
+    const rateFn = params.dualWave && params.secondPeakMinutes != null
+      ? (t) => dualWaveRate(t, params.peakMinutes, params.secondPeakMinutes, params.blend)
+      : (t) => gammaRate(t, params.peakMinutes, ABSORPTION_SHAPE_EXP);
     const step = 2;
     let totalArea = 0;
-    for (let t = 0; t < windowMin; t += step) {
+    for (let t = 0; t < params.durationMinutes; t += step) {
       totalArea += ((rateFn(t) + rateFn(t + step)) / 2) * step;
     }
     if (totalArea <= 0) return s;
     let elapsedArea = 0;
-    const cap = Math.min(elapsed, windowMin);
+    const cap = Math.min(elapsed, params.durationMinutes);
     for (let t = 0; t < cap; t += step) {
       elapsedArea += ((rateFn(t) + rateFn(t + step)) / 2) * step;
     }
@@ -591,12 +631,12 @@ export function projectGlucose(snapshot, opts = {}) {
     return s + Number(m.carbs) * (1 - fraction);
   }, 0);
 
-  // Rescue carb grams still on board (remaining, using the fast-class profile).
+  // Rescue carb grams still on board (remaining, using the fixed fast profile).
   const totalActiveRescueCarbGrams = snapshot.activeRescueCarbs.reduce((s, m) => {
     const mealTime = new Date(m.consumed_at).getTime();
     const elapsed = (snapshot.now - mealTime) / MINUTE_MS;
-    const peakMin = getClassPeakMinutes("fast");
-    const windowMin = getClassWindowMinutes("fast");
+    const peakMin = BASELINE_CLASS_PARAMS.fast.peakMin;
+    const windowMin = BASELINE_CLASS_PARAMS.fast.windowMin;
     const rateFn = (t) => gammaRate(t, peakMin, ABSORPTION_SHAPE_EXP);
     const step = 2;
     let totalArea = 0;

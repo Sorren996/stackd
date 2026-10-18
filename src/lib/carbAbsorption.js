@@ -356,6 +356,51 @@ function deriveSpeedClass(entry) {
   return "mixed";
 }
 
+// ── Continuous curve parameter generation ──────────────────────────────────
+// Mirrors base44/shared/carbAbsorptionProfile.ts deriveCurveParams. The curve
+// is generated from continuous composition, not a 3-bucket preset.
+export function deriveCurveParams(entry, speedFactor) {
+  const carbs = Number(entry?.carbs ?? 0) || 0;
+  const fat = Number(entry?.fat_grams ?? entry?.fat ?? 0) || 0;
+  const protein = Number(entry?.protein_grams ?? entry?.protein ?? 0) || 0;
+  const gi = Math.max(0, Math.min(100, Number(entry?.glycemic_index ?? entry?.gi ?? 0) || 0));
+  const fiber = Number(entry?.fiber_grams ?? 0) || 0;
+  const processed = entry?.processed_state;
+
+  const basePeak = 130 - (gi / 100) * 108;
+  const baseWindow = 240 - (gi / 100) * 130;
+
+  const fatDelay = fat * 0.9;
+  const fatExtend = fat * 3.5;
+  const proteinDelay = carbs > 0 ? protein * 0.3 : 0;
+  const proteinExtend = carbs > 0 ? protein * 1.2 : protein * 0.8;
+  const fiberDelay = fiber * 1.0;
+  const fiberExtend = fiber * 2.0;
+  let procDelay = 0, procExtend = 0;
+  if (processed === "raw") { procDelay = 8; procExtend = 15; }
+  else if (processed === "processed") { procDelay = -6; procExtend = -12; }
+
+  let firstPeak = basePeak + Math.min(25, fatDelay * 0.35 + fiberDelay * 0.5) + procDelay;
+  let windowMin = baseWindow + fatExtend + proteinExtend + fiberExtend + procExtend;
+  let secondPeak = firstPeak + 60 + fatDelay + proteinDelay + fiberDelay;
+
+  firstPeak = Math.max(20, Math.min(120, Math.round(firstPeak)));
+  windowMin = Math.max(90, Math.min(360, Math.round(windowMin)));
+  secondPeak = Math.max(firstPeak + 50, Math.min(windowMin - 20, Math.round(secondPeak)));
+
+  const blend = deriveDualWaveBlend(entry);
+  const dualWave = blend >= 0.5;
+
+  const s = Number.isFinite(speedFactor) && speedFactor > 0 ? speedFactor : 1;
+  const peakMinutes = Math.max(20, Math.min(240, Math.round(firstPeak * s)));
+  const durationMinutes = Math.max(90, Math.min(360, Math.round(windowMin * s)));
+  const secondPeakMinutes = dualWave
+    ? Math.max(peakMinutes + 40, Math.min(durationMinutes - 20, Math.round(secondPeak * s)))
+    : null;
+
+  return { peakMinutes, durationMinutes, blend, secondPeakMinutes, dualWave, derivedGi: gi };
+}
+
 function gammaRate(elapsedMin, peakMin, shapeExp) {
   if (elapsedMin <= 0 || peakMin <= 0) return 0;
   const ratio = elapsedMin / peakMin;
