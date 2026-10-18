@@ -369,11 +369,15 @@ export function deriveCurveParams(entry, speedFactor) {
 
   // First-wave peak (front-loaded): GI-driven, no fat delay on the first wave.
   const effectiveGi = gi > 0 ? gi : (entry?.absorption_profile === "fast" ? 80 : 0);
-  const basePeak = 60 - (effectiveGi / 100) * 35;
+  const basePeak = effectiveGi >= 70
+    ? Math.max(20, 30 - (effectiveGi - 70) * 0.15)
+    : (effectiveGi > 0 ? 55 : 60);
   const fatFrontLoad = Math.min(25, fat * 0.5);
-  const baseWindow = 210 - (effectiveGi / 100) * 90;
-  const fatExtend = fat * 1.27;
-  const proteinExtend = carbs > 0 ? protein * 0.8 : protein * 0.5;
+  const baseWindow = effectiveGi >= 70
+    ? Math.max(90, 120 - (effectiveGi - 70) * 0.6)
+    : (effectiveGi > 0 ? Math.max(90, 210 - effectiveGi * 0.9) : 210);
+  const fatExtend = fat * 0.625;
+  const proteinExtend = carbs > 0 ? protein * 2.225 : protein * 1.5;
   const fiberExtend = fiber * 2.0;
   let procExtend = 0;
   if (processed === "raw") procExtend = 15;
