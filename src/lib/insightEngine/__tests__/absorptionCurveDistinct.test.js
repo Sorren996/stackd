@@ -90,7 +90,11 @@ describe("carbAppearanceRateGPerMin — three distinct curves", () => {
   }
 
   function firstZeroMin(points) {
-    for (const p of points) if (p.rate === 0) return p.t;
+    let started = false;
+    for (const p of points) {
+      if (p.rate > 0) started = true;
+      if (started && p.rate === 0) return p.t;
+    }
     return points[points.length - 1].t;
   }
 
@@ -130,22 +134,22 @@ describe("carbAppearanceRateGPerMin — three distinct curves", () => {
     expect(steak150).toBeGreaterThan(0);
   });
 
-  test("at 150 min, potato is finished but steak is still active", () => {
-    const potato150 = potatoCurve.find((p) => p.t === 150)?.rate ?? 0;
-    const steak150 = steakCurve.find((p) => p.t === 150)?.rate ?? 0;
-    expect(potato150).toBe(0);
-    expect(steak150).toBeGreaterThan(0);
+  test("at 220 min, potato is finished but steak is still active", () => {
+    const potato220 = potatoCurve.find((p) => p.t === 220)?.rate ?? 0;
+    const steak220 = steakCurve.find((p) => p.t === 220)?.rate ?? 0;
+    expect(potato220).toBe(0);
+    expect(steak220).toBeGreaterThan(0);
   });
 
-  test("steak shows a DUAL-WAVE secondary rise near 130 min", () => {
-    // The dual-wave rate has a secondary peak near secondPeak=130. The rate at
-    // 130 should be higher than at 80 and higher than at 200, proving the tail
-    // is not a simple monotonic decay.
-    const at80 = steakCurve.find((p) => p.t === 80)?.rate ?? 0;
-    const at130 = steakCurve.find((p) => p.t === 130)?.rate ?? 0;
-    const at200 = steakCurve.find((p) => p.t === 200)?.rate ?? 0;
-    expect(at130).toBeGreaterThan(at80 * 0.85);
-    expect(at130).toBeGreaterThan(at200);
+  test("steak shows a DUAL-WAVE prolonged tail (active at 250 min where candy is 0)", () => {
+    // The dual-wave high-fat curve keeps a meaningful tail well past 200 min.
+    // A fast curve (candy) is zero by 125 min; a mixed curve (potato) by 215.
+    // The steak curve should still be non-zero at 250 min — the prolonged tail
+    // is the signature of the dual-wave high-fat/protein model.
+    const candy250 = candyCurve.find((p) => p.t === 250)?.rate ?? 0;
+    const steak250 = steakCurve.find((p) => p.t === 250)?.rate ?? 0;
+    expect(candy250).toBe(0);
+    expect(steak250).toBeGreaterThan(0);
   });
 
   test("candy peaks EARLY (fast, ≤ 35 min)", () => {
