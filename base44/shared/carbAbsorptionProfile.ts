@@ -92,13 +92,16 @@ export function deriveCurveParams(entry: any, speedFactor?: number | null): Curv
   // it earlier) — high-fat meals get a sharp early rise from fast carbs,
   // then a prolonged tail from fat/protein digestion. This is the
   // front-loaded dual-wave model.
-  const basePeak = 60 - (effectiveGi / 100) * 35;
+  const basePeak = effectiveGi >= 70
+    ? Math.max(20, 30 - (effectiveGi - 70) * 0.15)
+    : (effectiveGi > 0 ? 55 : 60);
   const fatFrontLoad = Math.min(25, fat * 0.5);
 
-  // Overall window: GI-driven base, extended by fat/protein/fiber.
-  const baseWindow = 210 - (effectiveGi / 100) * 90;
-  const fatExtend = fat * 1.27;
-  const proteinExtend = carbs > 0 ? protein * 0.8 : protein * 0.5;
+  const baseWindow = effectiveGi >= 70
+    ? Math.max(90, 120 - (effectiveGi - 70) * 0.6)
+    : (effectiveGi > 0 ? Math.max(90, 210 - effectiveGi * 0.9) : 210);
+  const fatExtend = fat * 0.625;
+  const proteinExtend = carbs > 0 ? protein * 2.225 : protein * 1.5;
   const fiberExtend = fiber * 2.0;
   let procExtend = 0;
   if (processed === "raw") procExtend = 15;
