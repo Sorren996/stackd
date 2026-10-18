@@ -130,22 +130,26 @@ export function deriveCurveParams(entry, speedFactor) {
   const processed = entry?.processed_state;
 
   // First-wave peak (front-loaded): GI-driven, NO fat delay on the first wave.
-  const basePeak = 60 - (gi / 100) * 35;
-  const baseWindow = 210 - (gi / 100) * 90;
-
-  const fatDelay = fat * 0.9;
-  const fatExtend = fat * 3.5;
-  const proteinDelay = carbs > 0 ? protein * 0.3 : 0;
-  const proteinExtend = carbs > 0 ? protein * 1.2 : protein * 0.8;
-  const fiberDelay = fiber * 1.0;
+  const effectiveGi = gi > 0 ? gi : (entry?.absorption_profile === "fast" ? 80 : 0);
+  const basePeak = 60 - (effectiveGi / 100) * 35;
+  const fatFrontLoad = Math.min(25, fat * 0.5);
+  const baseWindow = 210 - (effectiveGi / 100) * 90;
+  const fatExtend = fat * 1.27;
+  const proteinExtend = carbs > 0 ? protein * 0.8 : protein * 0.5;
   const fiberExtend = fiber * 2.0;
-  let procDelay = 0, procExtend = 0;
-  if (processed === "raw") { procDelay = 8; procExtend = 15; }
-  else if (processed === "processed") { procDelay = -6; procExtend = -12; }
+  let procExtend = 0;
+  if (processed === "raw") procExtend = 15;
+  else if (processed === "processed") procExtend = -12;
+  const fatDelay = fat * 0.9;
+  const proteinDelay = carbs > 0 ? protein * 0.3 : 0;
+  const fiberDelay = fiber * 1.0;
+  let procDelay = 0;
+  if (processed === "raw") procDelay = 8;
+  else if (processed === "processed") procDelay = -6;
 
-  let firstPeak = basePeak + fiberDelay * 0.4 + procDelay;
+  let firstPeak = basePeak - fatFrontLoad;
   let windowMin = baseWindow + fatExtend + proteinExtend + fiberExtend + procExtend;
-  let secondPeak = firstPeak + 60 + fatDelay + proteinDelay + fiberDelay;
+  let secondPeak = firstPeak + 60 + fatDelay + proteinDelay + fiberDelay + procDelay;
 
   firstPeak = Math.max(20, Math.min(60, Math.round(firstPeak)));
   windowMin = Math.max(90, Math.min(360, Math.round(windowMin)));
