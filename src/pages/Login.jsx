@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
+import { appParams } from "@/lib/app-params";
+import { safeReturnTo } from "@/lib/authReturnTo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,11 +31,37 @@ export default function Login() {
     setLoading(true);
     const cleanEmail = email.trim().toLowerCase();
     try {
+      // Use a raw fetch to the same login endpoint instead of
+      // base44.auth.loginViaEmailPassword. The SDK's implementation calls
+      // logout() on a 401, which sets window.location.href to the server
+      // logout URL — that reloads the page and silently swallows the error,
+      // leaving the user with no feedback. A direct call lets us surface
+      // the error inline and keep the user on the login page.
       localStorage.setItem("stackd_auth_provider", "email");
-      await base44.auth.loginViaEmailPassword(cleanEmail, password);
-      window.location.href = "/";
+      const response = await fetch(`/api/apps/${appParams.appId}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: cleanEmail, password }),
+      });
+      if (!response.ok) {
+        let message = response.status === 401
+          ? "Invalid email or password"
+          : "Login failed. Please try again.";
+        try {
+          const errorData = await response.json();
+          if (errorData?.detail) message = errorData.detail;
+          else if (errorData?.message) message = errorData.message;
+        } catch { /* response body wasn't JSON — use default message */ }
+        setError(message);
+        return;
+      }
+      const data = await response.json();
+      if (data.access_token) {
+        base44.auth.setToken(data.access_token);
+      }
+      window.location.href = safeReturnTo();
     } catch (err) {
-      setError(err.message || "Invalid email or password");
+      setError(err.message || "Unable to connect. Please check your network and try again.");
     } finally {
       setLoading(false);
     }

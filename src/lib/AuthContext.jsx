@@ -88,28 +88,25 @@ export const AuthProvider = ({ children }) => {
     try {
       setIsLoadingPublicSettings(true);
       setAuthError(null);
-      
-      const appClient = createAxiosClient({
-        baseURL: `/api/apps/public`,
-        headers: {
-          'X-App-Id': appParams.appId
-        },
-        token: appParams.token,
-        interceptResponses: true
-      });
-      
+
+      // Fetch public settings — non-fatal. Auth restoration runs
+      // independently below so a flaky settings endpoint can never strand a
+      // logged-in user on the marketing page (the Oct 19 PWA cold-start race:
+      // a public-settings failure used to skip checkUserAuth entirely,
+      // leaving isAuthenticated=false and isLoadingAuth=false, which
+      // rendered Landing permanently).
       try {
+        const appClient = createAxiosClient({
+          baseURL: `/api/apps/public`,
+          headers: {
+            'X-App-Id': appParams.appId
+          },
+          token: appParams.token,
+          interceptResponses: true
+        });
+
         const publicSettings = await appClient.get(`/prod/public-settings/by-id/${appParams.appId}`);
         setAppPublicSettings(publicSettings);
-        
-        if (appParams.token) {
-          await checkUserAuth();
-        } else {
-          setIsLoadingAuth(false);
-          setIsAuthenticated(false);
-          setAuthChecked(true);
-        }
-        setIsLoadingPublicSettings(false);
       } catch (appError) {
         if (appError.status === 403 && appError.data?.extra_data?.reason) {
           const reason = appError.data.extra_data.reason;
@@ -120,12 +117,24 @@ export const AuthProvider = ({ children }) => {
           } else {
             setAuthError({ type: reason, message: appError.message });
           }
-        } else {
-          setAuthError({ type: 'unknown', message: appError.message || 'Failed to load app' });
         }
+      } finally {
         setIsLoadingPublicSettings(false);
-        setIsLoadingAuth(false);
       }
+
+      // Always restore the session. The SDK's me() reads the token from its
+      // own storage (getAccessToken in createClient), so it succeeds even
+      // when appParams.token was null at import time. This eliminates the
+      // race where a cold PWA start_url ("/") load strands a logged-in user
+      // on the marketing page: appParams.token gated checkUserAuth, and when
+      // it was null (token not yet in localStorage at module-import time, or
+      // the public-settings fetch failed first) the auth check was skipped
+      // entirely — isAuthenticated stayed false, the app rendered Landing,
+      // and nothing re-ran the decision when the session finished restoring.
+      // Now me() is always called; isLoadingAuth stays true until it resolves,
+      // so the first render shows Splash (never Landing), and re-renders to
+      // the correct page the moment auth resolves.
+      await checkUserAuth();
     } catch (error) {
       setAuthError({ type: 'unknown', message: error.message || 'An unexpected error occurred' });
       setIsLoadingPublicSettings(false);
