@@ -226,6 +226,9 @@ export default function MealReviewContent({ mealInsight, monitoringStatus, gluco
         {(() => {
           const absorbedStr = absorption.absorbed;
           const remainingStr = absorption.remaining;
+          if (absorption.pct >= 99 && absorption.remaining === 0) {
+            return <>Absorption <em className="font-serif-italic" style={{ color: PALETTE.ink }}>complete</em>.</>;
+          }
           if (absorption.pct >= 90) {
             return <>Absorption nearly complete, <em className="font-serif-italic" style={{ color: PALETTE.ink }}>settling</em> toward your range.</>;
           }

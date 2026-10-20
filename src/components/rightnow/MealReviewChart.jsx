@@ -150,11 +150,15 @@ export default function MealReviewChart({
   const startBadge = showStartBadge && sy != null
     ? { left: clamp(sx - START_W + 6, PAD_L, W - PAD_R - START_W), top: clamp(sy + 8, PAD_T, CHART_H - PAD_B - BADGE_H) }
     : null;
+  // Peak + rise badges: offset further from the peak point so the now-dot
+  // (trend indicator at the last reading) never visually overlaps the badge.
+  // Peak badge sits left of the peak; rise badge sits right. The 8px gap
+  // clears the now-dot's 4px radius + 2px stroke.
   const peakBadge = showPeakBadge && px != null && py != null
-    ? { left: clamp(px - PEAK_W - 2, PAD_L, W - PAD_R - PEAK_W), top: clamp(py - 8 - BADGE_H, 0, CHART_H - BADGE_H) }
+    ? { left: clamp(px - PEAK_W - 8, PAD_L, W - PAD_R - PEAK_W), top: clamp(py - 14 - BADGE_H, 0, CHART_H - BADGE_H) }
     : null;
   const riseBadge = showRiseBadge && px != null && py != null
-    ? { left: clamp(px + 2, PAD_L, W - PAD_R - RISE_W), top: clamp(py - 8 - BADGE_H, 0, CHART_H - BADGE_H) }
+    ? { left: clamp(px + 8, PAD_L, W - PAD_R - RISE_W), top: clamp(py - 14 - BADGE_H, 0, CHART_H - BADGE_H) }
     : null;
 
   const startClock = formatClock(start);
@@ -259,7 +263,7 @@ function Badge({ children, style, tone = "neutral" }) {
         border: `1px solid ${PALETTE.hairline}`,
         color,
         boxShadow: "0 2px 6px rgba(63,56,48,0.08)",
-        zIndex: 2,
+        zIndex: 10,
       }}
     >
       {children}

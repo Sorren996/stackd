@@ -9,7 +9,8 @@ import SwipeableRow from "@/components/SwipeableRow";
 import { base44 } from "@/api/base44Client";
 import { generateMealGlucoseResponse, analyzeGlucoseResponse } from "@/lib/mealGlucoseResponse";
 import MealEditOverlay from "@/components/insulin/MealEditOverlay";
-import { getCarbAbsorptionAt, getMealWindowMinutes, getMealPeakMinutes, deriveDualWaveBlend } from "@/lib/carbAbsorption";
+import { getCarbAbsorptionAt, getMealWindowMinutes, getMealPeakMinutes, deriveDualWaveBlend, getAbsorptionModel } from "@/lib/carbAbsorption";
+import { reconcileMealNarrative } from "@/lib/mealNarrativeReconciler";
 import { useMealModelResolution, entrySpeedFactorFromResolution, hasLearnedTimingFromResolution, learnedTimingCaptionFromResolution, deriveSpeedClass } from "@/hooks/useMealModelResolution";
 import { getDoseTimingInfo, isBasalInsulinType } from "@/lib/insulinPharmacology";
 import { formatIOBValue, IOB_FLOOR } from "@/lib/iobModel";
@@ -187,21 +188,49 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
   const gPerHour = rateGPerMin * 60;
   const tooEarlyToRead = minutesSinceMeal < 15;
 
-  const absorptionPeakMin = (() => {
+  // For dual-wave (high-fat/protein) meals, the glucose peak arrives at the
+  // SECOND wave, not the first. Using the first-wave peak as the "estimated
+  // peak" makes the reconciliation miss huge (e.g. est 40m vs actual 222m).
+  // The second-wave peak is much closer, so the estimation miss shrinks for
+  // such meals. The first-wave peak is still used for the "first wave passed"
+  // caption check.
+  const absorptionModelResult = (() => {
     const entry = carbEntries[0];
-    if (!entry) return 60;
+    if (!entry) return { peakMin: 60, secondPeakMin: null };
     const forCalc = !entry.absorption_profile || entry.is_custom
       ? { ...entry, absorption_profile: entry.absorption_profile || "medium", is_custom: false, dual_wave: entry.dual_wave }
       : entry;
-    return getCarbAbsorptionAt(forCalc, now, absorptionOpts).peakMin;
+    return getAbsorptionModel(forCalc, absorptionOpts);
   })();
-  const absorptionPeakTime = mealTime + absorptionPeakMin * 60000;
+  const firstWavePeakMin = absorptionModelResult.peakMin;
+  const estimatedPeakMin = absorptionModelResult.secondPeakMin || absorptionModelResult.peakMin;
+  const absorptionPeakTime = mealTime + firstWavePeakMin * 60000;
   const isDualWaveMeal = (carbEntries[0]?.dual_wave || deriveSpeedClass(carbEntries[0]) === "high_fat");
   const firstWavePassed = absorptionPeakTime <= now;
   const peakMinAgo = firstWavePassed ? Math.round((now - absorptionPeakTime) / 60000) : null;
-  const absorptionCaption = firstWavePassed
-    ? (absorptionPct >= 90 ? "Absorption nearly complete" : (isDualWaveMeal && glucoseAnalysis.secondRise ? `First wave peaked ${peakMinAgo}m ago — a second wave appeared` : isDualWaveMeal ? `First wave peaked ${peakMinAgo}m ago — watching for a second` : `Absorption peaked ${peakMinAgo}m ago`))
-    : (absorptionPct < 5 ? "Just starting to absorb" : (isDualWaveMeal ? "Rising through the first wave" : "Rising toward peak"));
+  // Absorption caption from the reconciler's status tier. The reconciler
+  // handles the terminal case (>= 99% AND absorbed == total → "complete")
+  // and keeps "nearly complete" ONLY for 90-98%. The first-wave caption
+  // (peaked X min ago) is appended when the first wave has passed but
+  // absorption isn't terminal yet.
+  const absorptionCaption = (() => {
+    if (firstWavePassed && absorptionPct < 99) {
+      if (isDualWaveMeal && glucoseAnalysis.secondRise) {
+        return `${verdict.absorptionStatus}. First wave peaked ${peakMinAgo}m ago — a second wave appeared.`;
+      }
+      if (isDualWaveMeal) {
+        return `${verdict.absorptionStatus}. First wave peaked ${peakMinAgo}m ago — watching for a second.`;
+      }
+      return `${verdict.absorptionStatus}. Absorption peaked ${peakMinAgo}m ago.`;
+    }
+    if (!firstWavePassed && absorptionPct < 5) {
+      return "Just starting to absorb";
+    }
+    if (!firstWavePassed) {
+      return isDualWaveMeal ? "Rising through the first wave" : "Rising toward peak";
+    }
+    return verdict.absorptionStatus;
+  })();
 
   // ---- Glucose now + trend ----
   const glucoseNow = Number.isFinite(d.latestGlucoseValue) ? d.latestGlucoseValue
@@ -259,42 +288,45 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
   // activity graph.
   const mealHasDelayedRise = carbEntries.length > 0 && carbEntries.some((e) => deriveDualWaveBlend(e) >= 0.5);
 
-  // ---- One insight line (qualitative only — never restates a number) ----
-  // All narrative derives from the meal-state machine (Issue 4) so
-  // contradictions are impossible.
-  let insightLine = null;
-  if (waitingForReadings) {
-    insightLine = "Your glucose response isn't available yet — still watching.";
-  } else if (glucoseAnalysis.secondRise) {
-    insightLine = "A second gentle climb appeared after the first peak.";
-  } else if (mealHasDelayedRise && glucoseAnalysis.phase === "rising") {
-    insightLine = "High in fat and protein — glucose may climb later in the window.";
-  } else if (mealHasDelayedRise && !glucoseAnalysis.validPeak) {
-    insightLine = "Watching for a possible delayed wave.";
-  } else {
-    insightLine = "Steady through the window so far.";
-  }
+  // ---- Meal narrative reconciler (single source of truth) ----
+  // Every meal-card summary string derives from ONE verdict object, never
+  // from the latest reading alone. The reconciler takes the full window
+  // (start, peak, max rise, curve shape, doses, elapsed) and returns a
+  // verdict. This eliminates contradictions like "Steady through the
+  // window" next to a +49 mg/dL rise, or "Absorption nearly complete" next
+  // to "100% processed / 75 of 75 g absorbed".
+  const maxRise = Number.isFinite(glucoseAnalysis.deltaFromBaseline)
+    ? glucoseAnalysis.deltaFromBaseline
+    : (Number.isFinite(peakOutcome) && Number.isFinite(glucoseAtStart)
+      ? peakOutcome - glucoseAtStart
+      : 0);
+  const hasInsulinDose = taken > 0;
+  const settingsConfirmed = localStorage.getItem("settings_confirmed") === "true";
 
-  // ---- Reconciliation (Issue 4 + 5) ----
-  // Only compare observed vs model peak when a VALID observed peak exists
-  // (the state machine has reached peaked_and_declining or later). Before
-  // that, reconciliation is absent — we don't compare against an invalid
-  // max-of-readings value. Only mention "from your history" when
-  // personalization is active (learnedTiming). Only mention "two waves"
-  // when the model estimates a dual-wave curve (isDualWaveMeal).
-  const reconciliation = !waitingForReadings && glucoseAnalysis.validPeak && glucoseAnalysis.timeToPeakMin != null
-    ? (() => {
-        const source = learnedTiming ? "Estimated from your meal and history" : "Estimated from your meal";
-        const estimatePart = isDualWaveMeal ? "the absorption curve rose in two waves" : "the absorption curve peaked";
-        const timingDiff = glucoseAnalysis.timeToPeakMin - absorptionPeakMin;
-        const obsPart = Math.abs(timingDiff) <= 40
-          ? "Your glucose peaked in line with the estimation."
-          : timingDiff < 0
-            ? "Your glucose peaked ahead of the estimation."
-            : "Your glucose peaked behind the estimation.";
-        return `${source}: ${estimatePart}. ${obsPart}`;
-      })()
-    : null;
+  const verdict = reconcileMealNarrative({
+    waitingForReadings,
+    secondRise: glucoseAnalysis.secondRise,
+    mealHasDelayedRise,
+    phase: glucoseAnalysis.phase,
+    validPeak: glucoseAnalysis.validPeak,
+    startGlucose: glucoseAtStart,
+    peakGlucose: peakOutcome,
+    peakTime: d.peakOutcomeTime,
+    mealTime,
+    maxRise,
+    isDualWave: isDualWaveMeal,
+    targetHigh,
+    hasInsulinDose,
+    settingsConfirmed,
+    absorbedGrams: totalAbsorbed,
+    totalCarbs,
+    absorptionPct,
+    estimatedPeakMin,
+    glucoseAnalysis,
+  });
+
+  const insightLine = verdict.glucoseVerdict;
+  const reconciliation = verdict.reconciliation;
 
   const mealName = d.meal?.food_name || d.meal?.name || "Meal";
 
@@ -405,8 +437,12 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
             </div>
           </MealCollapsibleRow>
 
-          {/* Dose vs the math */}
-          {hasPlan && (
+          {/* Dose vs the math — gated by the reconciler.
+              If no insulin dose is logged, do not run the comparison at all.
+              Render a neutral state. If settings are unconfirmed, show the
+              dose-math-paused message. Never compute "Xu over/under" from a
+              null dose against default settings. */}
+          {hasPlan && verdict.doseVerdict.show && (
             <MealCollapsibleRow
               label="Dose vs the math"
               preview={
@@ -448,6 +484,22 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
                   <span className="text-[11px] tabular-nums" style={{ color: PALETTE.muted }}>I:C {ratioLabel}, ISF 1:{isfLabel}, target {targetLabel} {unitLabel}</span>
                 </div>
               </div>
+            </MealCollapsibleRow>
+          )}
+
+          {/* Dose vs the math — neutral state (no insulin logged or settings unconfirmed) */}
+          {hasPlan && !verdict.doseVerdict.show && (
+            <MealCollapsibleRow
+              label="Dose vs the math"
+              preview={
+                <span className="text-[10px] font-medium" style={{ color: PALETTE.faint }}>
+                  {verdict.doseVerdict.neutralLabel}
+                </span>
+              }
+            >
+              <p className="text-[12px] leading-relaxed" style={{ color: PALETTE.muted }}>
+                {verdict.doseVerdict.neutralLabel}
+              </p>
             </MealCollapsibleRow>
           )}
 

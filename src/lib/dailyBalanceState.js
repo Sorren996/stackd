@@ -12,11 +12,15 @@ export function getDailyBalanceState(percentage) {
   if (percentage == null || !Number.isFinite(percentage)) {
     return { label: "Waiting for today" };
   }
+  // Rule-based verdict tied to the same in-range percentage shown above the
+  // breakdown. >= 95% → Excellent, 80-94% → Looking good, 60-79% → Mixed day,
+  // < 60% → Rough day. The label is always consistent with the time-in-range
+  // breakdown it sits above because it derives from the same percentage.
   const p = Math.round(percentage);
+  if (p >= 95) return { label: "Excellent" };
   if (p >= 80) return { label: "Looking good" };
-  if (p >= 65) return { label: "Looking steady" };
-  if (p >= 45) return { label: "A little uneven" };
-  return { label: "Needs care" };
+  if (p >= 60) return { label: "Mixed day" };
+  return { label: "Rough day" };
 }
 
 // Named periods of the day, used for the "What shaped today" observation.
