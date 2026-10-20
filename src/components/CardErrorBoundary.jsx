@@ -1,4 +1,5 @@
 import React from "react";
+import { queryClientInstance } from "@/lib/query-client";
 
 /**
  * CardErrorBoundary — a local, per-card safety net.
@@ -14,6 +15,11 @@ import React from "react";
  * siblings keep rendering normally. The boundary also resets itself when the
  * wrapped content changes (e.g. switching tabs remounts it via the tab key),
  * so it recovers on the next interaction without any user action.
+ *
+ * Retry also invalidates the react-query caches the meal-review card reads
+ * (history-summary, carb-entries) so a deterministic render error caused by
+ * stale or malformed cached data refetches before the card re-renders —
+ * otherwise "Try again" would re-throw against the same data instantly.
  */
 export default class CardErrorBoundary extends React.Component {
   constructor(props) {
@@ -39,6 +45,12 @@ export default class CardErrorBoundary extends React.Component {
   }
 
   handleRetry() {
+    // Invalidate the meal-review card's react-query caches so data refetches
+    // before the card re-renders. Without this, a render error rooted in
+    // cached data re-throws on every retry attempt.
+    queryClientInstance.invalidateQueries({ queryKey: ["history-summary"] });
+    queryClientInstance.invalidateQueries({ queryKey: ["carb-entries"] });
+    queryClientInstance.invalidateQueries({ queryKey: ["carb-entries", "graph"] });
     this.setState({ hasError: false });
   }
 
