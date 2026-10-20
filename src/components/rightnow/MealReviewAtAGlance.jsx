@@ -230,6 +230,12 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
   // verdict. This eliminates contradictions like "Steady through the
   // window" next to a +49 mg/dL rise, or "Absorption nearly complete" next
   // to "100% processed / 75 of 75 g absorbed".
+  //
+  // ORDERING INVARIANT: verdict (and its absorptionStatus) MUST be computed
+  // before absorptionCaption, because the caption string reads verdict
+  // fields in the past-peak branches. If the caption is hoisted above the
+  // verdict call, the past-peak path throws a TDZ ReferenceError and the
+  // CardErrorBoundary renders its fallback. Do not reorder.
   const maxRise = Number.isFinite(glucoseAnalysis.deltaFromBaseline)
     ? glucoseAnalysis.deltaFromBaseline
     : (Number.isFinite(peakOutcome) && Number.isFinite(glucoseAtStart)
