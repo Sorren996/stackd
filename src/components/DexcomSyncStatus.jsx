@@ -105,15 +105,16 @@ export default function DexcomSyncStatus() {
           <p className="mt-0.5 text-[11px] leading-relaxed text-white/40">
             {isOverdue
               ? "It's been over 3 hours. Let's make sure everything is set up correctly."
-              : "This usually takes 1 to 3 hours as your readings gently flow in from the cloud."}
+              : "This usually takes 1 to 3 hours as your readings begin to appear."}
           </p>
           <div className="mt-1.5 flex items-center gap-1.5">
             <Clock className="h-2.5 w-2.5 text-white/25" />
             <span className="text-[10px] text-white/30">
-              {elapsedHours > 0
-                ? `${elapsedHours}h ${elapsedMinutes}m`
-                : `${elapsedMinutes}m`}{" "}
-              since last sync
+              {elapsedMs < 60_000
+                ? "Dexcom sync just now"
+                : `Dexcom sync ${elapsedHours > 0
+                  ? `${elapsedHours}h ${elapsedMinutes}m`
+                  : `${elapsedMinutes}m`} ago`}
             </span>
           </div>
         </div>

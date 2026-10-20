@@ -6,9 +6,9 @@ import { isInGracePeriod, isFullyExpired } from "@/lib/sensorSession";
 
 /**
  * Slim banner shown at the top of the Dashboard when the current CGM sensor
- * session has less than 24 hours of wear time left. It is sticky to the top
- * of the page (just under the header) so it stays planted while the page
- * scrolls. Tapping it opens Settings to log a new session start.
+ * session has less than 24 hours of wear time left. Renders in normal flow
+ * as a sibling card ABOVE the Today card, pushing it down with real
+ * vertical space. Tapping it opens Settings to log a new session start.
  */
 export default function SensorSessionBanner() {
   const { showBanner, remainingMs } = useSensorSession();
@@ -30,8 +30,7 @@ export default function SensorSessionBanner() {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
           transition={{ duration: 0.25, ease: "easeOut" }}
-          className="sticky z-40 flex justify-center px-4"
-          style={{ top: "calc(3.5rem + env(safe-area-inset-top))" }}
+          className="flex justify-center px-4 pb-3"
         >
           <Link
             to="/settings"

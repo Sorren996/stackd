@@ -173,7 +173,7 @@ export default function Layout() {
             className="min-w-0 w-full"
             style={{
               paddingTop: "calc(3.5rem + env(safe-area-inset-top))",
-              paddingBottom: "calc(60px + 60px + env(safe-area-inset-bottom))",
+              paddingBottom: "calc(72px + 96px + env(safe-area-inset-bottom))",
             }}
           >
             <div hidden={!isDashboardRoute}>
