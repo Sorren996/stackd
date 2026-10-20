@@ -208,11 +208,65 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
   const isDualWaveMeal = (carbEntries[0]?.dual_wave || deriveSpeedClass(carbEntries[0]) === "high_fat");
   const firstWavePassed = absorptionPeakTime <= now;
   const peakMinAgo = firstWavePassed ? Math.round((now - absorptionPeakTime) / 60000) : null;
+  // ---- Glucose reference values needed by the reconciler ----
+  const glucoseAtStart = d.glucoseValue;
+  const peakOutcome = d.peakOutcome;
+  const hasPostMealReading = (glucoseReadings || []).some((r) => new Date(r.recorded_at).getTime() > mealTime);
+  const waitingForReadings = !hasPostMealReading && windowRemaining > 0;
+
+  // ---- Per-meal delayed-rise check (no global flag leak) ----
+  // Check the CURRENT meal's carbEntries, not the global monitoringStatus.
+  const mealHasDelayedRise = carbEntries.length > 0 && carbEntries.some((e) => deriveDualWaveBlend(e) >= 0.5);
+
+  // ---- Insulin taken (needed by verdict.hasInsulinDose) ----
+  const taken = Number.isFinite(d.loggedTotalUnits) ? d.loggedTotalUnits : 0;
+  const hasInsulinDose = taken > 0;
+  const settingsConfirmed = localStorage.getItem("settings_confirmed") === "true";
+
+  // ---- Meal narrative reconciler (single source of truth) ----
+  // Every meal-card summary string derives from ONE verdict object, never
+  // from the latest reading alone. The reconciler takes the full window
+  // (start, peak, max rise, curve shape, doses, elapsed) and returns a
+  // verdict. This eliminates contradictions like "Steady through the
+  // window" next to a +49 mg/dL rise, or "Absorption nearly complete" next
+  // to "100% processed / 75 of 75 g absorbed".
+  const maxRise = Number.isFinite(glucoseAnalysis.deltaFromBaseline)
+    ? glucoseAnalysis.deltaFromBaseline
+    : (Number.isFinite(peakOutcome) && Number.isFinite(glucoseAtStart)
+      ? peakOutcome - glucoseAtStart
+      : 0);
+
+  const verdict = reconcileMealNarrative({
+    waitingForReadings,
+    secondRise: glucoseAnalysis.secondRise,
+    mealHasDelayedRise,
+    phase: glucoseAnalysis.phase,
+    validPeak: glucoseAnalysis.validPeak,
+    startGlucose: glucoseAtStart,
+    peakGlucose: peakOutcome,
+    peakTime: d.peakOutcomeTime,
+    mealTime,
+    maxRise,
+    isDualWave: isDualWaveMeal,
+    targetHigh,
+    hasInsulinDose,
+    settingsConfirmed,
+    absorbedGrams: totalAbsorbed,
+    totalCarbs,
+    absorptionPct,
+    estimatedPeakMin,
+    glucoseAnalysis,
+  });
+
+  const insightLine = verdict.glucoseVerdict;
+  const reconciliation = verdict.reconciliation;
+
   // Absorption caption from the reconciler's status tier. The reconciler
   // handles the terminal case (>= 99% AND absorbed == total → "complete")
   // and keeps "nearly complete" ONLY for 90-98%. The first-wave caption
   // (peaked X min ago) is appended when the first wave has passed but
-  // absorption isn't terminal yet.
+  // absorption isn't terminal yet. verdict is declared above this IIFE so
+  // the past-peak branches resolve without a TDZ ReferenceError.
   const absorptionCaption = (() => {
     if (firstWavePassed && absorptionPct < 99) {
       if (isDualWaveMeal && glucoseAnalysis.secondRise) {
@@ -232,19 +286,13 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
     return verdict.absorptionStatus;
   })();
 
-  // ---- Glucose now + trend ----
+  // ---- Glucose now + trend (display values) ----
   const glucoseNow = Number.isFinite(d.latestGlucoseValue) ? d.latestGlucoseValue
     : (Number.isFinite(d.windowEndGlucoseValue) ? d.windowEndGlucoseValue : d.glucoseValue);
-  const glucoseAtStart = d.glucoseValue;
-  const peakOutcome = d.peakOutcome;
   const trendPhrase = glucoseTrend?.label ? (TREND_PHRASE[glucoseTrend.label] || glucoseTrend.label.toLowerCase()) : null;
 
-  const hasPostMealReading = (glucoseReadings || []).some((r) => new Date(r.recorded_at).getTime() > mealTime);
-  const waitingForReadings = !hasPostMealReading && windowRemaining > 0;
-
-  // ---- Insulin / math ----
+  // ---- Insulin / math (display values) ----
   const activeNow = Number.isFinite(d.activeIOB) ? d.activeIOB : (Number.isFinite(d.bolusIOB) ? d.bolusIOB : 0);
-  const taken = Number.isFinite(d.loggedTotalUnits) ? d.loggedTotalUnits : 0;
   const hasPlan = Number.isFinite(d.insulinSensitivityMgDlPerUnit) && d.insulinSensitivityMgDlPerUnit > 0
     && Number.isFinite(d.mealInsulinUnitsPer5g) && d.mealInsulinUnitsPer5g > 0;
   const foodUnits = Number.isFinite(d.expectedMealUnits) ? d.expectedMealUnits : 0;
@@ -281,52 +329,6 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
 
   const rescueGrams = Number.isFinite(d.rescueCarbs) && d.rescueCarbs > 0 ? Math.round(d.rescueCarbs) : 0;
   const rescueEntries = Array.isArray(d.rescueCarbEntries) ? d.rescueCarbEntries : [];
-
-  // ---- Per-meal delayed-rise check (Issue 1: no global flag leak) ----
-  // Check the CURRENT meal's carbEntries, not the global monitoringStatus.
-  // The global monitoringStatus remains only for the caution card under the
-  // activity graph.
-  const mealHasDelayedRise = carbEntries.length > 0 && carbEntries.some((e) => deriveDualWaveBlend(e) >= 0.5);
-
-  // ---- Meal narrative reconciler (single source of truth) ----
-  // Every meal-card summary string derives from ONE verdict object, never
-  // from the latest reading alone. The reconciler takes the full window
-  // (start, peak, max rise, curve shape, doses, elapsed) and returns a
-  // verdict. This eliminates contradictions like "Steady through the
-  // window" next to a +49 mg/dL rise, or "Absorption nearly complete" next
-  // to "100% processed / 75 of 75 g absorbed".
-  const maxRise = Number.isFinite(glucoseAnalysis.deltaFromBaseline)
-    ? glucoseAnalysis.deltaFromBaseline
-    : (Number.isFinite(peakOutcome) && Number.isFinite(glucoseAtStart)
-      ? peakOutcome - glucoseAtStart
-      : 0);
-  const hasInsulinDose = taken > 0;
-  const settingsConfirmed = localStorage.getItem("settings_confirmed") === "true";
-
-  const verdict = reconcileMealNarrative({
-    waitingForReadings,
-    secondRise: glucoseAnalysis.secondRise,
-    mealHasDelayedRise,
-    phase: glucoseAnalysis.phase,
-    validPeak: glucoseAnalysis.validPeak,
-    startGlucose: glucoseAtStart,
-    peakGlucose: peakOutcome,
-    peakTime: d.peakOutcomeTime,
-    mealTime,
-    maxRise,
-    isDualWave: isDualWaveMeal,
-    targetHigh,
-    hasInsulinDose,
-    settingsConfirmed,
-    absorbedGrams: totalAbsorbed,
-    totalCarbs,
-    absorptionPct,
-    estimatedPeakMin,
-    glucoseAnalysis,
-  });
-
-  const insightLine = verdict.glucoseVerdict;
-  const reconciliation = verdict.reconciliation;
 
   const mealName = d.meal?.food_name || d.meal?.name || "Meal";
 
