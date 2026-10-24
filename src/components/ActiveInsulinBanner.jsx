@@ -39,8 +39,8 @@ import DashboardCard from "@/components/dashboard/DashboardCard";
 import RightNowView from "@/components/rightnow/RightNowView";
 import ComfortZoneCard from "./ComfortZoneCard";
 import DailyBalanceSection from "./dailybalance/DailyBalanceSection";
+import CurrentGlucoseNote from "./glucose/CurrentGlucoseNote";
 import CurrentGlucoseCard from "./graph/CurrentGlucoseCard";
-import { getSupportiveGlucoseMessage } from "@/lib/supportiveMessages";
 import { filterReadingsForStats, computeTimeInRangeFromReadings } from "@/lib/timeInRange";
 import { computeGlucoseTrend, mapDexcomTrend } from "@/lib/glucoseTrend";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
@@ -48,7 +48,7 @@ import { useGlucoseStaleness } from "@/hooks/useGlucoseStaleness";
 import { getLatestDexcomReading } from "@/lib/glucoseStaleness";
 import StaleReadingBanner from "@/components/StaleReadingBanner";
 import { isRescueCarbEntry } from "@/lib/rescueCarbDetection";
-import { GLUCOSE_STATUS_COLORS, classifyGlucose, readHighReference, FIXED_LOW_REFERENCE } from "@/lib/glucoseStatus";
+import { GLUCOSE_STATUS_COLORS, classifyGlucose, readHighReference, FIXED_LOW_REFERENCE, getCurrentGlucoseZone, computeGlucoseDirection, describeDirection, getCurrentGlucoseNote } from "@/lib/glucoseStatus";
 import AnchorNumber from "@/components/editorial/AnchorNumber";
 import HairlineSection from "@/components/editorial/HairlineSection";
 import CardErrorBoundary from "@/components/CardErrorBoundary";
@@ -725,25 +725,6 @@ const TREND_ICONS = {
   "double_down": ChevronsDown
 };
 
-function SupportiveGlucoseMessage({ insight, trend, TrendIcon }) {
-  if (!insight?.message) return null;
-
-  return null;
-
-
-
-
-
-
-
-
-
-
-
-
-
-}
-
 export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucoseReadings = [], carbEntries = [], graphSlot = null, onEditGlucose = null, onEditDose = null, onDeleteDose = null, connectBanner = null }) {
   const [insulinSettings, setInsulinSettings] = useState(readInsulinSettings);
   const [targetRange, setTargetRange] = useState(readTargetRange);
@@ -1003,22 +984,25 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
   const glucoseReadingAgeMinutes = latestGlucose?.recorded_at ?
   Math.floor((Date.now() - new Date(latestGlucose.recorded_at).getTime()) / MINUTE_MS) :
   null;
-  // When the latest reading is older than 15 minutes, the in-range status is
-  // no longer reliable — show a neutral "Waiting for data" label instead of
-  // "In comfort zone" so a stale stream never reads as reassurance.
+  // When the latest reading is older than 15 minutes the in-range status is no
+  // longer reassurance, so it falls back to a neutral label.
   const STALE_COMFORT_MINUTES = 15;
   const comfortLabelStale =
   glucoseReadingAgeMinutes != null && glucoseReadingAgeMinutes > STALE_COMFORT_MINUTES;
+  // Zone, direction, and note copy are all withheld whenever the data is old —
+  // by the CGM stale flag or the 15-minute age gate — so nothing reads as
+  // current when it isn't.
+  const statusCopyStale = isGlucoseStale || comfortLabelStale;
+
+  const glucoseZone = getCurrentGlucoseZone(glucoseValue, targetLow, targetHigh, comfortLabelStale);
+  // Direction is read from the last 3–4 readings (~15–20 min), never a single
+  // reading, and is omitted entirely when the data is thin or old.
+  const rawDirection = computeGlucoseDirection(safeGlucoseReadings, { stale: statusCopyStale });
+  const displayDirection =
+  glucoseZone.zone === "urgentLow" ? null : describeDirection(rawDirection, glucoseZone.zone);
   const rangeCardLabel =
-  glucoseValue == null ?
-  "No data" :
-  glucoseValue < targetLow ?
-  "Below comfort zone" :
-  glucoseValue > targetHigh ?
-  "Above comfort zone" :
-  comfortLabelStale ?
-  "Waiting for data" :
-  "In comfort zone";
+  displayDirection ? `${glucoseZone.label}, ${displayDirection}` : glucoseZone.label;
+  const glucoseNote = getCurrentGlucoseNote(glucoseZone.zone, rawDirection, statusCopyStale);
   const rangeSparkColor =
   glucoseValue == null ?
   `${GLUCOSE_STATUS_COLORS.inRange}88` :
@@ -1027,20 +1011,6 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
   glucoseValue > targetHigh ?
   `${GLUCOSE_STATUS_COLORS.high}88` :
   `${GLUCOSE_STATUS_COLORS.inRange}88`;
-  const supportiveGlucoseInsight = useMemo(
-    () =>
-    getSupportiveGlucoseMessage({
-      glucose: latestGlucose,
-      targetLow,
-      targetHigh,
-      trend,
-      activeInsulin: activeUnits,
-      activeCarbs,
-      readingAgeMinutes: glucoseReadingAgeMinutes,
-      seed: latestGlucose?.id || latestGlucose?.recorded_at || `${Math.floor(Date.now() / (30 * MINUTE_MS))}`
-    }),
-    [latestGlucose, targetLow, targetHigh, trend, activeUnits, activeCarbs, glucoseReadingAgeMinutes]
-  );
   const TrendIcon = TREND_ICONS[trend.icon] || ArrowRight;
 
   const stackingAlertsEnabled =
@@ -1146,7 +1116,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
         {isGlucoseStale ?
         <StaleReadingBanner visible={isGlucoseStale} /> :
 
-        <SupportiveGlucoseMessage insight={supportiveGlucoseInsight} trend={trend} TrendIcon={TrendIcon} />
+        <CurrentGlucoseNote note={glucoseNote} tone={glucoseZone.zone} />
         }
 
         <DailyBalanceSection
