@@ -203,9 +203,6 @@ export default function Analytics() {
               </>
             }
           />
-          <p className="mt-3 text-xs" style={{ color: "#746959" }}>
-            {stats.sufficiency.daysCovered} day{stats.sufficiency.daysCovered === 1 ? "" : "s"} logged · {stats.total} readings, {PERIOD_LONG[rangeDays] || `${rangeDays} days`}
-          </p>
         </div>
       </SectionCard>
 
