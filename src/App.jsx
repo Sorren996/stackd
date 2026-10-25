@@ -30,7 +30,9 @@ import DisplaySettingsPage from './pages/DisplaySettingsPage';
 import SupportCreatorPage from './pages/SupportCreatorPage';
 import DexcomSettingsPage from './pages/DexcomSettingsPage';
 import SharingPage from './pages/SharingPage';
-import SharedWithMe from './pages/SharedWithMe';
+import FollowingHome from './pages/FollowingHome';
+import FollowerSettings from './pages/FollowerSettings';
+import FollowerLayout from '@/components/follower/FollowerLayout';
 import FollowInvite from './pages/FollowInvite';
 import ContactSupportPage from './pages/ContactSupportPage';
 import SupportInbox from './pages/SupportInbox';
@@ -47,10 +49,19 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import { ACKNOWLEDGMENT_VERSIONS, CHECKBOX_KEYS } from "@/lib/acknowledgmentConfig";
 import { loadUserSettings, migrateLocalSettingsIfNeeded, cacheSettingsLocally } from "@/lib/userSettings";
 import { fetchAllGlucoseReadings } from "@/lib/fetchAllGlucose";
+import useAccessProfile from "@/hooks/useAccessProfile";
 
 const AuthenticatedApp = () => {
   const { user, isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, isAuthenticated, handleSessionExpired } = useAuth();
   const [dataReady, setDataReady] = useState(false);
+
+  // What this account IS — resolved server-side from invitation and
+  // relationship data before any patient gate or patient query runs. Someone
+  // who only follows another person is a viewer, and never mounts the patient
+  // acknowledgments, set-up, dashboard or logging UI.
+  const profile = useAccessProfile();
+  const profileSettled = profile.resolved || Boolean(profile.error);
+  const viewerMode = profileSettled && profile.mode === "follower";
 
   // Wire global auth-failure handler so any 401/403 during a query or mutation
   // triggers the centralized session-expiration flow.
@@ -65,11 +76,13 @@ const AuthenticatedApp = () => {
   const { data: latestAck, isLoading: ackLoading } = useQuery({
     queryKey: ["latest-acknowledgment"],
     queryFn: () => base44.entities.UserAcknowledgment.list("-accepted_at", 1),
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && profileSettled && !viewerMode,
   });
 
   useEffect(() => {
-    if (!isAuthenticated || authError) {
+    // Hold every patient read until the capability is known, so a viewer's
+    // device never starts fetching a patient set it will not use.
+    if (!isAuthenticated || authError || !profileSettled || viewerMode) {
       setDataReady(false);
       return;
     }
@@ -176,9 +189,12 @@ const AuthenticatedApp = () => {
     };
     prefetchData();
     return () => { cancelled = true; };
-  }, [isAuthenticated, authError]);
+  }, [isAuthenticated, authError, profileSettled, viewerMode]);
 
   const needsAcknowledgment = useMemo(() => {
+    // A viewer is not a patient. The medical acknowledgments are never applied
+    // to them, and nothing is ever recorded as accepted on their behalf.
+    if (viewerMode) return false;
     if (!isAuthenticated || !dataReady || ackLoading) return null;
 
     if (user?.required_reconsent) return true;
@@ -197,7 +213,7 @@ const AuthenticatedApp = () => {
     if (CHECKBOX_KEYS.some((flag) => !record[flag])) return true;
 
     return false;
-  }, [user, latestAck, isAuthenticated, dataReady, ackLoading]);
+  }, [user, latestAck, isAuthenticated, dataReady, ackLoading, viewerMode]);
 
   // Onboarding check — only runs after acknowledgment is complete.
   // Existing accounts (with any health data) are auto-marked as onboarded.
@@ -225,12 +241,13 @@ const AuthenticatedApp = () => {
 
       return { needsOnboarding: true };
     },
-    enabled: needsAcknowledgment === false,
+    enabled: needsAcknowledgment === false && !viewerMode,
     staleTime: 0,
   });
 
-  // Still checking auth
-  if (isLoadingPublicSettings || isLoadingAuth) {
+  // Still checking auth, or still resolving what this account is. A neutral
+  // splash — never a patient empty state for someone who only follows along.
+  if (isLoadingPublicSettings || isLoadingAuth || profile.resolving) {
     return (
       <AnimatePresence>
         <SplashScreen />
@@ -266,6 +283,26 @@ const AuthenticatedApp = () => {
   // structure) paints now and data fills in as the prefetch resolves. Only
   // the acknowledgment flow is gated on the ack record loading, so we briefly
   // hold the splash until the ack check has resolved (it's a tiny list call).
+  // A viewer gets the follower shell: following on the home screen, a bar with
+  // no logging action, and no patient set-up or acknowledgments anywhere.
+  if (viewerMode) {
+    return (
+      <ErrorBoundary>
+        <Routes>
+          <Route element={<FollowerLayout />}>
+            <Route path="/" element={<FollowingHome />} />
+            <Route path="/following/settings" element={<FollowerSettings />} />
+            {/* Kept so an existing bookmark still lands on something real. */}
+            <Route path="/shared" element={<FollowingHome />} />
+            <Route path="/follow" element={<FollowInvite />} />
+          </Route>
+          <Route path="/install" element={<Install />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </ErrorBoundary>
+    );
+  }
+
   if (ackLoading) {
     return (
       <AnimatePresence>
@@ -312,7 +349,7 @@ const AuthenticatedApp = () => {
             <Route path="/settings/support-creator" element={<SupportCreatorPage />} />
             <Route path="/settings/dexcom" element={<DexcomSettingsPage />} />
             <Route path="/settings/sharing" element={<SharingPage />} />
-            <Route path="/shared" element={<SharedWithMe />} />
+            <Route path="/shared" element={<FollowingHome />} />
             <Route path="/follow" element={<FollowInvite />} />
             <Route path="/settings/contact-support" element={<ContactSupportPage />} />
             <Route path="/settings/support-inbox" element={<SupportInbox />} />

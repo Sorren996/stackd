@@ -8,6 +8,7 @@ import RelationshipRow from "@/components/sharing/RelationshipRow";
 import RelationshipSheet from "@/components/sharing/RelationshipSheet";
 import ShareInviteSheet from "@/components/sharing/ShareInviteSheet";
 import ContactNumberCard from "@/components/sharing/ContactNumberCard";
+import SharedNameCard from "@/components/sharing/SharedNameCard";
 import LocationPublishCard from "@/components/sharing/LocationPublishCard";
 import { getSharingRelationships } from "@/lib/sharing/sharingApi";
 import { summaryLine } from "@/lib/sharing/sharingCopy";
@@ -52,6 +53,10 @@ export default function SharingPage() {
           </div>
         </SectionCard>
       )}
+
+      <SectionCard label="Your shared name">
+        <SharedNameCard currentName={relationships[0]?.sharer_display_name} onSaved={refetch} />
+      </SectionCard>
 
       <SectionCard label="People who follow you">
         {isLoading ? (
@@ -111,7 +116,7 @@ export default function SharingPage() {
         open={inviteOpen}
         onClose={() => setInviteOpen(false)}
         onInvited={refetch}
-        displayName={undefined}
+        displayName={relationships[0]?.sharer_display_name}
       />
 
       <RelationshipSheet

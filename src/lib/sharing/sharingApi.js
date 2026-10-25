@@ -33,6 +33,14 @@ export const getSharedWithMe = () => call("getSharedWithMe", {});
 export const setFollowerPrefs = (accessId, followerPrefs) =>
   call("getSharedWithMe", { action: "set_prefs", access_id: accessId, follower_prefs: followerPrefs });
 
+/** The sharer correcting the name their followers see. Nothing about access. */
+export const setSharerDisplayName = (name) =>
+  call("updateSharingScopes", { action: "set_display_name", sharer_display_name: name });
+
+/** The follower's own decision to stop following. Narrowing, never widening. */
+export const stopFollowing = (accessId) =>
+  call("getSharedWithMe", { action: "stop_following", access_id: accessId });
+
 export const getSharedView = (accessId) => call("getSharedView", { access_id: accessId });
 
 export const publishSharerLocation = (latitude, longitude, accuracyM) =>

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { HeartHandshake, Users } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import SectionCard from "@/components/editorial/SectionCard";
@@ -16,6 +17,7 @@ import { redeemSharingInvitation, describeSharingError } from "@/lib/sharing/sha
  */
 export default function FollowInvite() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { isAuthenticated } = useAuth();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -29,6 +31,9 @@ export default function FollowInvite() {
     setError("");
     try {
       const data = await redeemSharingInvitation(token);
+      // The relationship exists now, so refresh what this account is allowed to
+      // see and the app routes straight to the dashboard it just unlocked.
+      await queryClient.invalidateQueries({ queryKey: ["access-profile"] });
       setAccepted(data.relationship);
     } catch (err) {
       setError(describeSharingError(err));
@@ -64,9 +69,9 @@ export default function FollowInvite() {
           Nothing is being shared yet. They choose what to share and can change or withdraw it at any time. You can
           only ever see what they have switched on.
         </p>
-        <Button className="w-full rounded-full" onClick={() => navigate("/shared")}>
+        <Button className="w-full rounded-full" onClick={() => navigate("/")}>
           <Users className="mr-2 h-4 w-4" />
-          Go to people you follow
+          See what they share
         </Button>
       </SectionCard>
     );

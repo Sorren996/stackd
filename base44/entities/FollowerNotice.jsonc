@@ -1,0 +1,38 @@
+{
+  "name": "FollowerNotice",
+  "type": "object",
+  "properties": {
+    "notice_version": {
+      "type": "string",
+      "description": "Version of the follower-facing account and privacy notice that was accepted. Separate from the patient medical acknowledgments, which a viewer never has to accept."
+    },
+    "accepted_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the viewer accepted this notice."
+    },
+    "withdrawn_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the acceptance was withdrawn. A withdrawn notice is treated as not accepted."
+    }
+  },
+  "required": [
+    "notice_version",
+    "accepted_at"
+  ],
+  "rls": {
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

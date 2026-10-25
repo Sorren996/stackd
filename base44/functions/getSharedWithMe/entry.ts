@@ -30,6 +30,35 @@ export default async function (req: Request): Promise<Response> {
     const body = await readBody(req);
     const now = Date.now();
 
+    // A follower may stop following at any time. This is the follower's own
+    // write on their own relationship — it can only ever narrow what they
+    // receive, never widen it, and it never touches the sharer's records.
+    if (body.action === 'stop_following') {
+      const loaded = await loadFollowedRelationship(base44, user.id, body.access_id);
+      if (loaded.error) return fail(loaded.error, loaded.status || 400);
+      const access = loaded.access;
+      if (access.status === 'revoked') return fail('revoked', 409);
+
+      await sr.entities.SharedAccess.update(access.id, {
+        status: 'revoked',
+        revoked_at: new Date(now).toISOString(),
+        scopes: { glucose: false, insulin: false, location: false, urgent_low_call: false },
+        alert_scopes: { urgent_low_email: false, urgent_low_sms: false },
+        contact_shared: false,
+        permission_version: (Number(access.permission_version) || 1) + 1,
+        last_scope_change_at: new Date(now).toISOString(),
+      });
+      await audit(base44, {
+        action: 'sharing.follower_stopped',
+        actor_user_id: user.id,
+        actor_email: user.email,
+        subject_user_id: access.sharer_user_id,
+        metadata: { access_id: access.id },
+      });
+      const updated = await sr.entities.SharedAccess.get(access.id);
+      return ok({ relationship: publicRelationship(updated, now) });
+    }
+
     if (body.action === 'set_prefs') {
       const loaded = await loadFollowedRelationship(base44, user.id, body.access_id);
       if (loaded.error) return fail(loaded.error, loaded.status || 400);

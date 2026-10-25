@@ -18,6 +18,7 @@ import {
   publicRelationship,
   scopePatch,
   alertScopePatch,
+  readDisplayName,
   audit,
 } from '../../shared/sharingAccess.ts';
 
@@ -40,7 +41,11 @@ export default async function (req: Request): Promise<Response> {
     // Saving a number on its own is a setting on the owner's account, not a
     // change to any one relationship, so it needs no access id. Everything else
     // changes a relationship and is verified against the caller first.
-    const needsRelationship = action !== 'set_contact' || typeof body.release === 'boolean';
+    // Correcting your own shared name is account-level too, not a change to any
+    // one relationship.
+    const accountLevel =
+      action === 'set_display_name' || (action === 'set_contact' && typeof body.release !== 'boolean');
+    const needsRelationship = !accountLevel;
     let access: any = null;
     if (needsRelationship) {
       const loaded = await loadOwnedRelationship(base44, user.id, body.access_id);
@@ -52,6 +57,26 @@ export default async function (req: Request): Promise<Response> {
     const db = base44.entities;
     let patch: Record<string, any> = {};
     let extra: Record<string, any> = {};
+
+    // The name a follower sees. It is the sharer's own label on their own
+    // relationships: it grants nothing, reveals nothing, and cannot change what
+    // anyone is allowed to see.
+    if (action === 'set_display_name') {
+      const displayName = readDisplayName(body.sharer_display_name, '');
+      if (!displayName) return fail('invalid_display_name', 400);
+      await db.SharedAccess.updateMany(
+        { sharer_user_id: user.id },
+        { $set: { sharer_display_name: displayName } }
+      );
+      await audit(base44, {
+        action: 'sharing.set_display_name',
+        actor_user_id: user.id,
+        actor_email: user.email,
+        reason: 'display_name',
+        metadata: { corrected: true },
+      });
+      return ok({ sharer_display_name: displayName });
+    }
 
     if (action === 'set_scopes') {
       if (access.status === 'revoked') return fail('revoked', 409);
