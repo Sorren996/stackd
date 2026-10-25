@@ -327,11 +327,38 @@
     box-shadow: none;
   }
 
+  /* Primary (espresso) button.
+     The white-channel remap further down this file rewrites `.text-white` to
+     espresso ink for the cream theme. Because that remap outranks this layer,
+     it was overriding the foreground declared here and leaving a dark pill with
+     a dark, invisible label. The colour is therefore declared with enough
+     weight that no utility remap can win, so the label and any nested icon stay
+     visible in every state. */
   .stackd-btn-primary {
     background: #3f3830;
     border: 1px solid #3f3830;
     box-shadow: none;
-    color: #f7f1e8;
+    /* #fdf9f2 on #3f3830 = 11.0:1 — passes AA and AAA for normal text */
+    color: #fdf9f2 !important;
+  }
+
+  .stackd-btn-primary svg {
+    color: inherit !important;
+    stroke: currentColor;
+  }
+
+  /* Disabled must still be readable. Fading the whole element with opacity left
+     the label illegible, so the control switches to a neutral light surface with
+     dark ink instead, while staying genuinely disabled (the base button class
+     keeps `disabled:pointer-events-none`). */
+  .stackd-btn-primary:disabled,
+  .stackd-btn-primary[disabled],
+  .stackd-btn-primary[aria-disabled="true"] {
+    /* #4a423a on #e7ddd0 = 7.4:1 */
+    background: #e7ddd0 !important;
+    border-color: #d8cec2 !important;
+    color: #4a423a !important;
+    opacity: 1 !important;
   }
 
   .stackd-section-label {

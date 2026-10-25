@@ -9,8 +9,12 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
+        // No `text-white` here: the app remaps that utility to espresso ink for
+        // the cream theme, which would override the primary button's own
+        // foreground and leave a dark pill with an invisible label. The colour
+        // comes from `.stackd-btn-primary` in index.css.
         default:
-          "stackd-btn-primary text-white hover:brightness-110",
+          "stackd-btn-primary hover:brightness-110",
         destructive:
           "bg-rose-500/15 text-rose-200 border border-rose-400/30 hover:bg-rose-500/25 backdrop-blur-sm",
         outline:
