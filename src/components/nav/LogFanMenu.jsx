@@ -45,7 +45,7 @@ export default function LogFanMenu({ open, actions, onSelect, onClose, reduce })
               <motion.button
                 key={id}
                 type="button"
-                onClick={() => onSelect(mode, "fan")}
+                onClick={() => onSelect(mode)}
                 aria-label={label}
                 className="absolute"
                 style={{

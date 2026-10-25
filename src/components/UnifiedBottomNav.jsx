@@ -1,24 +1,34 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { motion, AnimatePresence, animate } from "framer-motion";
-import { Home, BookOpen, Activity, CircleUser, Plus, X, Droplets, Wheat, Syringe } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { Home, BarChart3, BookOpen, CircleUser, Plus, Droplets, Syringe, Utensils } from "lucide-react";
 import LogInsulinForm from "@/components/forms/LogInsulinForm";
 import LogMealForm from "@/components/forms/LogMealForm";
 import LogGlucoseForm from "@/components/forms/LogGlucoseForm";
 import LogInsulinMealForm from "@/components/forms/LogInsulinMealForm";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
+import NavItem from "@/components/nav/NavItem";
+import LogFanMenu from "@/components/nav/LogFanMenu";
+import NavNotchSurface, { useMeasuredWidth } from "@/components/nav/NavNotchSurface";
+import {
+  BAR_HEIGHT,
+  BAR_PADDING_X,
+  CENTER_SLOT,
+  LOG_CENTER_Y,
+  LOG_RING,
+  LOG_SIZE,
+  SIDE_INSET,
+} from "@/components/nav/navGeometry";
 
-// ── Design tokens (cream cards, copper accent, espresso ink) ─────────────
-const INK = "#3f3830";
-const COPPER = "#9c5228";
-const TAUPE = "#6b6153";
-const FAINT = "#746959"; // ≥ 4.5:1 on cream — AA compliant for labels
-const CREAM = "#fdf9f2";
+const EASE_OUT = [0.16, 1, 0.3, 1];
 
+// Four destinations with the primary Log action between them.
+// `key` values are unchanged from the previous bar, so each tab's saved
+// sub-path (Journal month/day, Settings sub-page) still restores exactly.
 const navItems = [
   { key: "dashboard", path: "/", label: "Home", Icon: Home },
+  { key: "analytics", path: "/analytics", label: "Insights", Icon: BarChart3 },
   { key: "history", path: "/history", label: "Journal", Icon: BookOpen },
-  { key: "analytics", path: "/analytics", label: "Rhythm", Icon: Activity },
   { key: "settings", path: "/settings", label: "Profile", Icon: CircleUser },
 ];
 
@@ -43,18 +53,16 @@ function saveSubpath(key, pathname) {
   }
 }
 
-// Three log actions, bottom-to-top: Reading closest to thumb, then Meal, then Insulin.
 function readManualGlucoseEnabled() {
   if (typeof window === "undefined") return true;
   const raw = window.localStorage.getItem("manual_glucose_logging_enabled");
   return raw === null ? true : raw === "true";
 }
 
-const EASE = [0.22, 1, 0.36, 1];
-
 export default function UnifiedBottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
+  const reduce = useReducedMotion();
 
   const activeIndex = (() => {
     if (location.pathname.startsWith("/settings")) return 3;
@@ -67,7 +75,9 @@ export default function UnifiedBottomNav() {
   })();
   const activeTabKey = navItems[activeIndex]?.key || "dashboard";
 
-  // ── Log pill state ──────────────────────────────────────────
+  // The bar's own width drives the contour path, so the notch stays centred.
+  const [barRef, barWidth] = useMeasuredWidth();
+
   const [expanded, setExpanded] = useState(false);
   const [selectedMode, setSelectedMode] = useState(null);
   const [doseFormOpen, setDoseFormOpen] = useState(false);
@@ -76,15 +86,16 @@ export default function UnifiedBottomNav() {
   const [manualGlucoseEnabled, setManualGlucoseEnabled] = useState(readManualGlucoseEnabled);
   const { connected: dexcomConnected } = useDexcomConnection();
 
-  // Three actions: bottom (closest to thumb) = Reading, middle = Meal, top = Insulin.
-  // Rendered bottom-to-top so the order in the array matches stacking.
+  // Fanned options, ordered left (Glucose) → centre (Insulin) → right (Carbs).
+  // Glucose stays gated exactly as before: hidden when manual logging is off,
+  // or when a CGM is already supplying readings.
   const actions = useMemo(() => {
     const list = [
-      { id: "insulin", label: "Log Insulin", Icon: Syringe, mode: "insulin" },
-      { id: "carbs", label: "Log Meal", Icon: Wheat, mode: "carbs" },
+      { id: "insulin", label: "Insulin", Icon: Syringe, mode: "insulin" },
+      { id: "carbs", label: "Carbs", Icon: Utensils, mode: "carbs" },
     ];
     if (manualGlucoseEnabled && !dexcomConnected) {
-      list.unshift({ id: "glucose", label: "Log Reading", Icon: Droplets, mode: "glucose" });
+      list.unshift({ id: "glucose", label: "Glucose", Icon: Droplets, mode: "glucose" });
     }
     return list;
   }, [manualGlucoseEnabled, dexcomConnected]);
@@ -135,7 +146,8 @@ export default function UnifiedBottomNav() {
     return () => window.clearTimeout(id);
   }, []);
 
-  // Allow other parts of the app to open the log sheet directly.
+  // Allow other parts of the app to open a logging sheet directly, or to open
+  // the fan itself.
   useEffect(() => {
     const handler = (e) => {
       const mode = e?.detail?.mode;
@@ -173,7 +185,9 @@ export default function UnifiedBottomNav() {
     setExpanded((v) => !v);
   }, []);
 
-  // Close on Escape when the stack is open (no sheet mounted yet).
+  const closeFan = useCallback(() => setExpanded(false), []);
+
+  // Escape closes the fan.
   useEffect(() => {
     if (!expanded) return undefined;
     const onKey = (e) => {
@@ -183,7 +197,7 @@ export default function UnifiedBottomNav() {
     return () => window.removeEventListener("keydown", onKey);
   }, [expanded]);
 
-  // Lock background scroll while the action stack is open (no sheet mounted).
+  // Lock background scroll while the fan is open (no sheet mounted yet).
   useEffect(() => {
     if (!expanded || doseFormOpen || combinedSheetOpen) return undefined;
     const prev = document.body.style.overflow;
@@ -193,7 +207,6 @@ export default function UnifiedBottomNav() {
     };
   }, [expanded, doseFormOpen, combinedSheetOpen]);
 
-  // The action stack clears when a sheet opens.
   const stackVisible = expanded && !doseFormOpen && !combinedSheetOpen;
 
   return (
@@ -212,178 +225,143 @@ export default function UnifiedBottomNav() {
         <LogInsulinMealForm open={combinedSheetOpen} onClose={() => setCombinedSheetOpen(false)} />
       )}
 
-      {/* Scrim dims the page while the action stack is open */}
+      {/* Page dimming — kept below the bar, so the bar and the Log button stay
+          crisp and tappable above it. */}
       <AnimatePresence>
         {stackVisible && (
           <motion.div
+            key="scrim"
+            aria-hidden="true"
+            className="fixed inset-0"
+            style={{ background: "rgba(76,103,112,0.45)", zIndex: 40 }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0"
-            style={{ background: "rgba(63,56,48,0.25)", zIndex: 40 }}
-            onClick={() => setExpanded(false)}
+            transition={{ duration: reduce ? 0 : 0.2 }}
+            onClick={closeFan}
           />
         )}
       </AnimatePresence>
 
-      {/* ── Floating pill nav — 16px side insets, 28px radius, soft shadow ── */}
+      {/* ── The bar: contour, four destinations, and the Log label ── */}
       <nav
+        aria-label="Primary"
         className="fixed inset-x-0"
         style={{
           bottom: "calc(0px + env(safe-area-inset-bottom))",
-          paddingLeft: "16px",
-          paddingRight: "16px",
+          paddingLeft: SIDE_INSET,
+          paddingRight: SIDE_INSET,
           zIndex: 50,
         }}
       >
         <div
-          className="mx-auto flex items-center justify-between"
-          style={{
-            maxWidth: "30rem",
-            background: "rgba(253,249,242,0.62)",
-            backdropFilter: "blur(20px) saturate(180%)",
-            WebkitBackdropFilter: "blur(20px) saturate(180%)",
-            border: "1px solid rgba(253,249,242,0.55)",
-            borderRadius: "28px",
-            boxShadow: "0 8px 28px rgba(63,56,48,0.16), 0 2px 8px rgba(63,56,48,0.08)",
-            padding: "8px",
-            height: "60px",
-          }}
+          ref={barRef}
+          className="relative mx-auto w-full overflow-visible"
+          style={{ maxWidth: "30rem", height: BAR_HEIGHT }}
         >
-          {navItems.map((item) => {
-            const isActive = navItems.indexOf(item) === activeIndex;
-            const { Icon, label } = item;
-            return (
-              <Link
+          <NavNotchSurface width={barWidth} />
+
+          <div
+            className="relative flex items-end"
+            style={{
+              height: BAR_HEIGHT,
+              paddingLeft: BAR_PADDING_X,
+              paddingRight: BAR_PADDING_X,
+              paddingBottom: 4,
+              zIndex: 51,
+            }}
+          >
+            {navItems.slice(0, 2).map((item) => (
+              <NavItem
                 key={item.path}
-                to={item.path}
-                onClick={(e) => handleTabPress(e, item)}
-                className="relative flex flex-col items-center justify-center gap-1 rounded-[20px] transition-colors"
-                style={{
-                  flex: "1 1 0",
-                  minWidth: "44px",
-                  minHeight: "44px",
-                  color: isActive ? COPPER : FAINT,
-                }}
-                aria-label={label}
-                aria-current={isActive ? "page" : undefined}
+                item={item}
+                active={navItems.indexOf(item) === activeIndex}
+                onPress={(e) => handleTabPress(e, item)}
+              />
+            ))}
+
+            {/* Centre slot — holds the notch and the Log label. It is a call to
+                action, never a destination, so it is never marked selected. */}
+            <div className="flex flex-col items-center gap-[3px]" style={{ flex: `0 0 ${CENTER_SLOT}px` }}>
+              <span
+                className="text-[10px] font-semibold uppercase leading-none"
+                style={{ letterSpacing: "0.06em", color: "var(--nav-label)" }}
               >
-                <Icon
-                  className="h-5 w-5"
-                  strokeWidth={isActive ? 2.4 : 1.7}
-                  style={{ color: isActive ? COPPER : FAINT }}
-                />
-                <span
-                  className="text-[10px] font-semibold uppercase tracking-wide leading-none"
-                  style={{ color: isActive ? INK : FAINT }}
-                >
-                  {label}
-                </span>
-              </Link>
-            );
-          })}
+                Log
+              </span>
+              <span aria-hidden="true" style={{ width: 16, height: 2 }} />
+            </div>
+
+            {navItems.slice(2).map((item) => (
+              <NavItem
+                key={item.path}
+                item={item}
+                active={navItems.indexOf(item) === activeIndex}
+                onPress={(e) => handleTabPress(e, item)}
+              />
+            ))}
+          </div>
         </div>
       </nav>
 
-      {/* ── Copper "Log" pill — bottom-right, above the nav ── */}
-      {/* Actions rise vertically upward: Reading (closest), Meal, Insulin (top). */}
+      {/* ── Log button + fanned options ──
+          A separate fixed layer above the bar: the button is never clipped by
+          the bar's masked surface, and no transformed ancestor can trap a
+          fixed overlay. */}
       <div
-        className="fixed"
+        className="pointer-events-none fixed inset-x-0"
         style={{
-          right: "calc(20px + env(safe-area-inset-right))",
-          bottom: "calc(74px + env(safe-area-inset-bottom))",
-          zIndex: 55,
+          bottom: "calc(0px + env(safe-area-inset-bottom))",
+          paddingLeft: SIDE_INSET,
+          paddingRight: SIDE_INSET,
+          zIndex: 54,
         }}
       >
-        {/* Action stack — bottom-to-top staggered rise */}
-        <AnimatePresence>
-          {stackVisible && (
-            <div className="absolute right-0 bottom-[88px] flex flex-col items-end gap-3">
-              {actions.map((action, i) => {
-                const ActionIcon = action.Icon;
-                // i=0 is the bottommost (first to rise, closest to thumb).
-                return (
-                  <motion.button
-                    key={action.id}
-                    type="button"
-                    onClick={() => openAction(action.mode)}
-                    initial={{ opacity: 0, y: 16, scale: 0.92 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 16, scale: 0.92 }}
-                    transition={{ duration: 0.24, ease: EASE, delay: i * 0.05 }}
-                    whileTap={{ scale: 0.96 }}
-                    className="flex items-center gap-2.5 pl-4 pr-5"
-                    style={{
-                      background: CREAM,
-                      color: INK,
-                      borderRadius: "9999px",
-                      height: "48px",
-                      boxShadow: "0 8px 24px rgba(63,56,48,0.18), 0 2px 6px rgba(63,56,48,0.10)",
-                    }}
-                    aria-label={action.label}
-                  >
-                    <span
-                      className="flex h-7 w-7 items-center justify-center rounded-full"
-                      style={{ background: "rgba(156,82,40,0.12)" }}
-                    >
-                      <ActionIcon className="h-4 w-4" style={{ color: COPPER }} />
-                    </span>
-                    <span className="text-sm font-semibold leading-none whitespace-nowrap">
-                      {action.label}
-                    </span>
-                  </motion.button>
-                );
-              })}
-            </div>
-          )}
-        </AnimatePresence>
+        <div className="relative mx-auto w-full" style={{ maxWidth: "30rem", height: 0 }}>
+          <div
+            className="pointer-events-auto absolute"
+            style={{
+              left: `calc(50% - ${LOG_SIZE / 2}px)`,
+              top: LOG_CENTER_Y - LOG_SIZE / 2,
+              width: LOG_SIZE,
+              height: LOG_SIZE,
+            }}
+          >
+            <LogFanMenu
+              open={stackVisible}
+              actions={actions}
+              onSelect={openAction}
+              onClose={closeFan}
+              reduce={reduce}
+            />
 
-        {/* The Log pill itself — copper, morphs to × when open */}
-        <motion.button
-          type="button"
-          onClick={togglePill}
-          aria-label={expanded ? "Close log menu" : "Log a moment"}
-          whileTap={{ scale: 0.95 }}
-          className="flex items-center gap-2 pl-5 pr-6"
-          style={{
-            height: "52px",
-            background: "rgba(156,82,40,0.82)",
-            backdropFilter: "blur(16px) saturate(160%)",
-            WebkitBackdropFilter: "blur(16px) saturate(160%)",
-            border: "1px solid rgba(253,249,242,0.22)",
-            color: CREAM,
-            borderRadius: "9999px",
-            boxShadow: "0 8px 24px rgba(156,82,40,0.32), 0 2px 6px rgba(63,56,48,0.16)",
-          }}
-        >
-          <AnimatePresence mode="wait" initial={false}>
-            {expanded ? (
+            <motion.button
+              type="button"
+              onClick={togglePill}
+              aria-label={expanded ? "Close log menu" : "Log"}
+              aria-expanded={expanded}
+              className="absolute left-0 top-0 flex items-center justify-center rounded-full"
+              style={{
+                width: LOG_SIZE,
+                height: LOG_SIZE,
+                background: "linear-gradient(180deg, #ab5c2d 0%, #9c5228 58%, #8a4720 100%)",
+                border: "1px solid rgba(63,56,48,0.20)",
+                boxShadow: `0 0 0 ${LOG_RING}px var(--nav-ring), 0 8px 20px rgba(63,56,48,0.30)`,
+                color: "#fdf9f2",
+                zIndex: 53,
+              }}
+              whileTap={reduce ? undefined : { scale: 0.94 }}
+            >
               <motion.span
-                key="x"
-                initial={{ rotate: -90, opacity: 0 }}
-                animate={{ rotate: 0, opacity: 1 }}
-                exit={{ rotate: 90, opacity: 0 }}
-                transition={{ duration: 0.2, ease: EASE }}
-                className="flex items-center"
+                className="flex items-center justify-center"
+                animate={{ rotate: expanded ? 45 : 0 }}
+                transition={reduce ? { duration: 0 } : { duration: 0.2, ease: EASE_OUT }}
               >
-                <X className="h-5 w-5" />
+                <Plus className="h-6 w-6" strokeWidth={2.4} aria-hidden="true" />
               </motion.span>
-            ) : (
-              <motion.span
-                key="plus"
-                initial={{ rotate: 90, opacity: 0 }}
-                animate={{ rotate: 0, opacity: 1 }}
-                exit={{ rotate: -90, opacity: 0 }}
-                transition={{ duration: 0.2, ease: EASE }}
-                className="flex items-center gap-2"
-              >
-                <Plus className="h-5 w-5" />
-                <span className="text-sm font-bold leading-none tracking-wide">Log</span>
-              </motion.span>
-            )}
-          </AnimatePresence>
-        </motion.button>
+            </motion.button>
+          </div>
+        </div>
       </div>
     </>
   );
