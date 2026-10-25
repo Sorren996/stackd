@@ -14,7 +14,8 @@ import {
   BAR_HEIGHT,
   BAR_PADDING_X,
   CENTER_SLOT,
-  LOG_CENTER_Y,
+  LOG_LAYER_BOTTOM,
+  LOG_RAISE,
   LOG_RING,
   LOG_SIZE,
   SIDE_INSET,
@@ -305,62 +306,55 @@ export default function UnifiedBottomNav() {
       </nav>
 
       {/* ── Log button + fanned options ──
-          A separate fixed layer above the bar: the button is never clipped by
-          the bar's masked surface, and no transformed ancestor can trap a
-          fixed overlay. */}
+          Its own fixed layer: above the bar, below the modal sheets (z 70/90).
+          The layer is anchored to the BUTTON's bottom edge with the raise
+          reserved as padding, so its box always contains the whole raised
+          button and the button always lands centred on the notch. */}
       <div
         className="pointer-events-none fixed inset-x-0"
         style={{
-          bottom: "calc(0px + env(safe-area-inset-bottom))",
+          bottom: `calc(${LOG_LAYER_BOTTOM}px + env(safe-area-inset-bottom))`,
+          paddingTop: LOG_RAISE,
           paddingLeft: SIDE_INSET,
           paddingRight: SIDE_INSET,
           zIndex: 54,
         }}
       >
-        <div className="relative mx-auto w-full" style={{ maxWidth: "30rem", height: 0 }}>
-          <div
-            className="pointer-events-auto absolute"
+        {/* Centred on the bar's centre line — directly under the notch. */}
+        <div className="pointer-events-auto relative mx-auto" style={{ width: LOG_SIZE, height: LOG_SIZE }}>
+          <LogFanMenu
+            open={stackVisible}
+            actions={actions}
+            onSelect={openAction}
+            onClose={closeFan}
+            reduce={reduce}
+          />
+
+          <motion.button
+            type="button"
+            onClick={togglePill}
+            aria-label={expanded ? "Close log menu" : "Log"}
+            aria-expanded={expanded}
+            className="absolute left-0 top-0 flex items-center justify-center rounded-full"
             style={{
-              left: `calc(50% - ${LOG_SIZE / 2}px)`,
-              top: LOG_CENTER_Y - LOG_SIZE / 2,
               width: LOG_SIZE,
               height: LOG_SIZE,
+              background: "linear-gradient(180deg, #ab5c2d 0%, #9c5228 58%, #8a4720 100%)",
+              border: "1px solid rgba(63,56,48,0.20)",
+              boxShadow: `0 0 0 ${LOG_RING}px var(--nav-ring), 0 8px 20px rgba(63,56,48,0.30)`,
+              color: "#fdf9f2",
+              zIndex: 53,
             }}
+            whileTap={reduce ? undefined : { scale: 0.94 }}
           >
-            <LogFanMenu
-              open={stackVisible}
-              actions={actions}
-              onSelect={openAction}
-              onClose={closeFan}
-              reduce={reduce}
-            />
-
-            <motion.button
-              type="button"
-              onClick={togglePill}
-              aria-label={expanded ? "Close log menu" : "Log"}
-              aria-expanded={expanded}
-              className="absolute left-0 top-0 flex items-center justify-center rounded-full"
-              style={{
-                width: LOG_SIZE,
-                height: LOG_SIZE,
-                background: "linear-gradient(180deg, #ab5c2d 0%, #9c5228 58%, #8a4720 100%)",
-                border: "1px solid rgba(63,56,48,0.20)",
-                boxShadow: `0 0 0 ${LOG_RING}px var(--nav-ring), 0 8px 20px rgba(63,56,48,0.30)`,
-                color: "#fdf9f2",
-                zIndex: 53,
-              }}
-              whileTap={reduce ? undefined : { scale: 0.94 }}
+            <motion.span
+              className="flex items-center justify-center"
+              animate={{ rotate: expanded ? 45 : 0 }}
+              transition={reduce ? { duration: 0 } : { duration: 0.2, ease: EASE_OUT }}
             >
-              <motion.span
-                className="flex items-center justify-center"
-                animate={{ rotate: expanded ? 45 : 0 }}
-                transition={reduce ? { duration: 0 } : { duration: 0.2, ease: EASE_OUT }}
-              >
-                <Plus className="h-6 w-6" strokeWidth={2.4} aria-hidden="true" />
-              </motion.span>
-            </motion.button>
-          </div>
+              <Plus className="h-6 w-6" strokeWidth={2.4} aria-hidden="true" />
+            </motion.span>
+          </motion.button>
         </div>
       </div>
     </>

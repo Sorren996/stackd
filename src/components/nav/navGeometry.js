@@ -22,6 +22,26 @@ export const NOTCH_RADIUS = 34;
 // Where the notch meets the top edge, measured from the bar's centre.
 export const NOTCH_HALF_WIDTH = Math.sqrt(NOTCH_RADIUS ** 2 - LOG_CENTER_Y ** 2);
 
+// --- Anchoring the button's own layer ---------------------------------------
+// The Log button is drawn in a separate fixed layer (a sibling of the bar's
+// masked contour) so the notch can never clip it. Every constant above is
+// measured from the bar's TOP edge; a fixed layer is not, so the two numbers
+// below convert them into a distance up from the BOTTOM of the bar.
+//
+// In the bar's coordinates (y positive downwards from the top edge):
+//   button centre = LOG_CENTER_Y                → -8  (  8px above the edge)
+//   button top    = LOG_CENTER_Y - LOG_SIZE / 2 → -36 ( 36px above the edge)
+//   button bottom = LOG_CENTER_Y + LOG_SIZE / 2 → +20 ( 20px below the edge)
+//
+// Anchoring on the button's own bottom edge is what keeps the button centred
+// on the notch: the layer's box then contains the entire raised button.
+
+// Headroom reserved above the button's top edge (36px).
+export const LOG_RAISE = LOG_SIZE / 2 - LOG_CENTER_Y;
+
+// Distance from the bottom of the bar up to the button's bottom edge (48px).
+export const LOG_LAYER_BOTTOM = BAR_HEIGHT - (LOG_SIZE / 2 + LOG_CENTER_Y);
+
 /**
  * The bar's outline as ONE continuous path: a rounded pill whose top edge dips
  * in and back out around the Log button. Because it is a single stroked path,
