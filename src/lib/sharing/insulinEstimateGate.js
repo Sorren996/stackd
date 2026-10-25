@@ -3,8 +3,14 @@
 //
 // This is presentation logic, not a security control: the server already
 // decides `dose_math_available` from the sharer's confirmed plan. What this
-// gate guarantees is that an unknown, unconfirmed or non-computable estimate
-// is reported as UNAVAILABLE — it is never floored to a misleading 0.0 u.
+// gate guarantees is that an unconfirmed plan, an unrecognised product or a
+// figure that could not be worked out is reported as UNAVAILABLE — it is never
+// floored to a misleading 0.0 u.
+//
+// A genuine zero is the one case that is NOT unavailable: when the model runs
+// on the complete set of doses and everything has cleared, the answer really is
+// "none active". That is a different statement from "we could not tell", and
+// the two are reported separately.
 //
 // It lives under src/lib so the browser bundle can use it (frontend code
 // cannot import from base44/, which is server-side) and so the Node test
@@ -13,19 +19,14 @@
 /**
  * @param {unknown} value — the computed active insulin, or null when none could be computed
  * @param {boolean} doseMathAvailable — the sharer's plan is confirmed
- * @param {unknown} rapidDoseCount — how many rapid-acting doses the estimate rests on
  * @returns {{ available: boolean, reason: string|null, value: number|null, isZero: boolean }}
  */
-export function describeActiveInsulinEstimate(value, doseMathAvailable, rapidDoseCount) {
+export function describeActiveInsulinEstimate(value, doseMathAvailable) {
   if (!doseMathAvailable) {
     return { available: false, reason: "unconfirmed_plan", value: null, isZero: false };
   }
-  const count = Number(rapidDoseCount);
-  if (!Number.isFinite(count) || count <= 0) {
-    return { available: false, reason: "no_rapid_doses", value: null, isZero: false };
-  }
   const v = Number(value);
-  if (!Number.isFinite(v) || v < 0) {
+  if (value === null || value === undefined || !Number.isFinite(v) || v < 0) {
     return { available: false, reason: "not_computable", value: null, isZero: false };
   }
   const rounded = Math.round(v * 10) / 10;

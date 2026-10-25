@@ -46,6 +46,20 @@ export const INVITE_RESEND_COOLDOWN_SECONDS = 60;
 export const MAX_INVITE_ATTEMPTS = 5;
 export const GLUCOSE_WINDOW_HOURS = 24;
 export const INSULIN_WINDOW_HOURS = 24;
+
+/**
+ * How far back the insulin projection reaches when it collects doses for the
+ * follower's ACTIVE-insulin view.
+ *
+ * A dose can only be judged active or finished against its own action
+ * duration, and the follower must be able to see a basal dose that is still
+ * running long after the 24 hour window has passed. This lookback therefore
+ * has to cover the longest supported duration, not a rolling day. It is
+ * asserted against the patient pharmacology module's own profiles by test, so
+ * adding a longer-acting insulin there fails the test rather than silently
+ * truncating someone's active insulin.
+ */
+export const INSULIN_ACTIVE_LOOKBACK_HOURS = 168;
 export const STALE_READING_MINUTES = 15;
 export const URGENT_LOW_THRESHOLD = 55;
 export const MIN_READINGS_FOR_DIRECTION = 3;
@@ -721,13 +735,17 @@ export function projectResource(resource: Resource, ctx: ProjectionContext): Pro
   }
 
   if (resource === "insulin") {
-    const doses = selectInsulinWindow(ctx.doses, now, INSULIN_WINDOW_HOURS);
-    const last = doses.length ? doses[doses.length - 1] : null;
+    // Every dose that could still be acting, so the follower's view can judge
+    // each one against its own duration and show only what is genuinely active.
+    // There is deliberately no "last dose", no window count and no dose history
+    // in this payload: the active figure is the whole of what the scope now
+    // conveys, so a presentation built from it cannot drift back into a dose
+    // log.
+    const doses = selectInsulinWindow(ctx.doses, now, INSULIN_ACTIVE_LOOKBACK_HOURS);
     return {
       ok: true,
       data: {
-        window_hours: INSULIN_WINDOW_HOURS,
-        window_start: new Date(now - INSULIN_WINDOW_HOURS * 3600000).toISOString(),
+        lookback_hours: INSULIN_ACTIVE_LOOKBACK_HOURS,
         window_end: new Date(now).toISOString(),
         // Dose math is only valid against a confirmed plan — the same gate the
         // patient side uses. The follower client shows "Unavailable" otherwise.
@@ -737,13 +755,6 @@ export function projectResource(resource: Resource, ctx: ProjectionContext): Pro
           units: Number(d.units),
           administered_at: d.administered_at,
         })),
-        last_dose: last
-          ? {
-              insulin_type: last.insulin_type,
-              units: Number(last.units),
-              administered_at: last.administered_at,
-            }
-          : null,
       },
     };
   }
