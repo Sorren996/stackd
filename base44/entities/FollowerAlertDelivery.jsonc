@@ -1,0 +1,82 @@
+{
+  "name": "FollowerAlertDelivery",
+  "type": "object",
+  "properties": {
+    "sharer_user_id": {
+      "type": "string",
+      "description": "The person whose glucose event triggered this notice."
+    },
+    "follower_user_id": {
+      "type": "string",
+      "description": "The follower this notice was evaluated for."
+    },
+    "shared_access_id": {
+      "type": "string",
+      "description": "The SharedAccess relationship the evaluation ran against."
+    },
+    "event_key": {
+      "type": "string",
+      "description": "Idempotency key for the triggering glucose event and channel. A duplicate event key never produces a second notice."
+    },
+    "channel": {
+      "type": "string",
+      "enum": [
+        "email",
+        "sms"
+      ],
+      "description": "Delivery channel evaluated."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "sent",
+        "skipped",
+        "failed",
+        "not_configured"
+      ],
+      "description": "Outcome of the delivery attempt. 'not_configured' means no delivery capability exists for that channel \u2014 it is never reported as active."
+    },
+    "reason": {
+      "type": "string",
+      "description": "Short, non-clinical reason for the outcome (for example quiet_hours, scope_revoked, duplicate)."
+    },
+    "glucose_value": {
+      "type": "number",
+      "description": "The reading value that triggered the evaluation, retained for audit."
+    },
+    "attempts": {
+      "type": "number",
+      "default": 0,
+      "description": "Delivery attempts made so far, bounded by the evaluator."
+    },
+    "permission_version": {
+      "type": "number",
+      "description": "The relationship's permission version at evaluation time, so a later revoke can be shown to have preceded any pending send."
+    },
+    "delivered_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the notice was handed to the delivery channel."
+    }
+  },
+  "required": [
+    "shared_access_id",
+    "event_key",
+    "channel",
+    "status"
+  ],
+  "rls": {
+    "read": false,
+    "delete": false,
+    "create": {
+      "user_condition": {
+        "role": "__server_only__"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "__server_only__"
+      }
+    }
+  }
+}

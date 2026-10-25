@@ -1,0 +1,166 @@
+{
+  "name": "SharedAccess",
+  "type": "object",
+  "properties": {
+    "sharer_user_id": {
+      "type": "string",
+      "description": "Immutable account ID of the person sharing their data. Written once at invitation time and never reassigned."
+    },
+    "sharer_display_name": {
+      "type": "string",
+      "description": "Sharer's display name, copied at invitation time so the follower can label the relationship without a user-directory lookup."
+    },
+    "invited_email": {
+      "type": "string",
+      "description": "Normalized (trimmed, lowercased) email the invitation was sent to. The follower's verified account email must match this exactly before any access is granted."
+    },
+    "follower_user_id": {
+      "type": "string",
+      "description": "Immutable account ID of the verified follower who accepted the invitation. Empty while the invitation is pending."
+    },
+    "scopes": {
+      "type": "object",
+      "description": "Independent per-follower permissions. All default to false; nothing is shared until the sharer explicitly turns it on.",
+      "properties": {
+        "glucose": {
+          "type": "boolean",
+          "default": false,
+          "description": "Read the sharer's glucose readings for the rolling 24 hour window and today's daily balance."
+        },
+        "insulin": {
+          "type": "boolean",
+          "default": false,
+          "description": "Read the sharer's recent insulin doses (name, amount, time, type) and an estimated active rapid-acting insulin figure when one can be validly computed."
+        },
+        "location": {
+          "type": "boolean",
+          "default": false,
+          "description": "Read the sharer's latest known location (coordinates, accuracy, timestamp). Never a movement history."
+        },
+        "urgent_low_call": {
+          "type": "boolean",
+          "default": false,
+          "description": "Permission to place a person-to-person call when the sharer is in a permitted urgent-low context. This grants no data scope on its own and is independent of the sharer's contact-number sharing."
+        }
+      }
+    },
+    "alert_scopes": {
+      "type": "object",
+      "description": "Owner-authorized alert channels. Distinct from call permission. Only meaningful while the glucose scope is on.",
+      "properties": {
+        "urgent_low_email": {
+          "type": "boolean",
+          "default": false,
+          "description": "Sharer has authorized an urgent-low notice by email to this follower."
+        },
+        "urgent_low_sms": {
+          "type": "boolean",
+          "default": false,
+          "description": "Sharer has authorized an urgent-low notice by SMS to this follower. Requires an SMS provider to be configured."
+        }
+      }
+    },
+    "contact_shared": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the sharer has released their contact phone number to this specific follower. Stored separately from the sharer's ordinary profile and never served unless true."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "active",
+        "paused",
+        "expired",
+        "revoked"
+      ],
+      "default": "pending",
+      "description": "Relationship lifecycle. Only 'active' conveys health access. 'paused', 'expired' and 'revoked' block every subsequent request immediately."
+    },
+    "permission_version": {
+      "type": "number",
+      "default": 1,
+      "description": "Incremented on every scope, alert or consent change so a follower client can detect that its cached data is stale and clear it."
+    },
+    "invitation_id": {
+      "type": "string",
+      "description": "The SharedInvitation that created this relationship, for auditing and resend handling."
+    },
+    "invitation_expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the invitation stops being redeemable. A pending relationship past this time is treated as expired."
+    },
+    "accepted_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the follower redeemed the invitation and this relationship became active."
+    },
+    "paused_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the sharer paused this relationship."
+    },
+    "revoked_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the sharer revoked this relationship, or the follower stopped following."
+    },
+    "last_scope_change_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When scopes were last changed by either party."
+    },
+    "follower_prefs": {
+      "type": "object",
+      "description": "The follower's own notification preferences for this relationship. A follower may narrow what they receive but can never widen what the sharer granted.",
+      "properties": {
+        "notify_email": {
+          "type": "boolean",
+          "default": false
+        },
+        "notify_sms": {
+          "type": "boolean",
+          "default": false
+        },
+        "quiet_hours_start": {
+          "type": "number",
+          "default": 21,
+          "description": "Local hour (0-23, sharer's timezone) after which non-urgent notices are held."
+        },
+        "quiet_hours_end": {
+          "type": "number",
+          "default": 7,
+          "description": "Local hour (0-23, sharer's timezone) at which non-urgent notices resume."
+        }
+      }
+    }
+  },
+  "required": [
+    "sharer_user_id",
+    "invited_email",
+    "status",
+    "permission_version"
+  ],
+  "rls": {
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.follower_user_id": "{{user.id}}"
+        }
+      ]
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

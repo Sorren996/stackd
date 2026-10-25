@@ -1,0 +1,47 @@
+{
+  "name": "LatestLocation",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "Owner of this location. Set only by the server."
+    },
+    "location_enc": {
+      "type": "string",
+      "description": "Encrypted coordinate payload (v1:base64(iv|ciphertext|tag)) containing { latitude, longitude, accuracy_m }. AES-256-GCM under SHARING_DATA_ENCRYPTION_KEY. Coordinates are never stored in plaintext and the key is never stored alongside the ciphertext."
+    },
+    "accuracy_m": {
+      "type": "number",
+      "description": "Reported horizontal accuracy in metres, when the browser supplied it."
+    },
+    "captured_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the coordinates were captured. Shown to the follower as the location's own timestamp \u2014 never conflated with a glucose reading time."
+    },
+    "key_version": {
+      "type": "string",
+      "default": "v1",
+      "description": "Encryption format/key version."
+    }
+  },
+  "required": [
+    "user_id",
+    "location_enc",
+    "captured_at"
+  ],
+  "rls": {
+    "read": false,
+    "delete": false,
+    "create": {
+      "user_condition": {
+        "role": "__server_only__"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "__server_only__"
+      }
+    }
+  }
+}

@@ -1,0 +1,95 @@
+{
+  "name": "SharedInvitation",
+  "type": "object",
+  "properties": {
+    "sharer_user_id": {
+      "type": "string",
+      "description": "Immutable account ID of the person who created this invitation. Redemption is always bound to this sharer."
+    },
+    "sharer_display_name": {
+      "type": "string",
+      "description": "Display name shown on the invite welcome screen. Never carries any health data."
+    },
+    "invited_email": {
+      "type": "string",
+      "description": "Normalized intended recipient email, fixed before the invitation is sent. A forwarded link redeemed with a different verified email is rejected."
+    },
+    "token_hash": {
+      "type": "string",
+      "description": "Keyed hash (HMAC-SHA256) of the opaque invitation token. The raw token is never stored and never logged; it exists only inside the emailed link."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "accepted",
+        "canceled",
+        "expired"
+      ],
+      "default": "pending",
+      "description": "Invitation lifecycle. Only 'pending' can be redeemed; successful redemption is atomic and idempotent."
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Finite expiry (48 hours by default). Past this time the invitation is refused."
+    },
+    "accepted_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the invitation was successfully redeemed."
+    },
+    "accepted_by_user_id": {
+      "type": "string",
+      "description": "Immutable account ID that redeemed the invitation, recorded for audit."
+    },
+    "shared_access_id": {
+      "type": "string",
+      "description": "The SharedAccess relationship this invitation belongs to."
+    },
+    "resend_count": {
+      "type": "number",
+      "default": 0,
+      "description": "How many times the sharer has re-sent this invitation. Each resend replaces the token hash so the previous link stops working."
+    },
+    "last_sent_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the invitation was last emailed."
+    },
+    "delivery_status": {
+      "type": "string",
+      "enum": [
+        "sent",
+        "not_configured",
+        "failed"
+      ],
+      "description": "Honest record of whether the invitation email was actually handed to a configured mail capability. Never reported as sent when it was not."
+    },
+    "delivery_detail": {
+      "type": "string",
+      "description": "Short, non-sensitive note about delivery status (for example the reason an email could not be sent)."
+    }
+  },
+  "required": [
+    "sharer_user_id",
+    "invited_email",
+    "token_hash",
+    "status",
+    "expires_at"
+  ],
+  "rls": {
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

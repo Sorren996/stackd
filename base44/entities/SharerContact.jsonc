@@ -1,0 +1,41 @@
+{
+  "name": "SharerContact",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "Owner of this contact number. Set only by the server."
+    },
+    "country_code": {
+      "type": "string",
+      "description": "Dialling country code with leading '+', entered once by the sharer (for example +1). Not sensitive on its own."
+    },
+    "phone_enc": {
+      "type": "string",
+      "description": "Contact number, AES-256-GCM ciphertext (v1:base64(iv|ciphertext|tag)). Key lives only in the SHARING_DATA_ENCRYPTION_KEY server secret and is never stored alongside the ciphertext."
+    },
+    "key_version": {
+      "type": "string",
+      "default": "v1",
+      "description": "Encryption format/key version."
+    }
+  },
+  "required": [
+    "user_id",
+    "phone_enc"
+  ],
+  "rls": {
+    "read": false,
+    "delete": false,
+    "create": {
+      "user_condition": {
+        "role": "__server_only__"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "__server_only__"
+      }
+    }
+  }
+}
