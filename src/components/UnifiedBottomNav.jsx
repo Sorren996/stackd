@@ -8,11 +8,11 @@ import LogGlucoseForm from "@/components/forms/LogGlucoseForm";
 import LogInsulinMealForm from "@/components/forms/LogInsulinMealForm";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 import NavItem from "@/components/nav/NavItem";
-import NavLabel from "@/components/nav/NavLabel";
 import LogFanMenu from "@/components/nav/LogFanMenu";
 import NavNotchSurface, { useMeasuredWidth } from "@/components/nav/NavNotchSurface";
 import {
   BAR_HEIGHT,
+  BAR_PADDING_BOTTOM,
   BAR_PADDING_X,
   LOG_LAYER_BOTTOM,
   LOG_RAISE,
@@ -245,7 +245,7 @@ export default function UnifiedBottomNav() {
         )}
       </AnimatePresence>
 
-      {/* ── The bar: contour, four destinations, and the Log label ── */}
+      {/* ── The bar: the cream contour, the four destinations, empty centre ── */}
       <nav
         aria-label="Primary"
         className="fixed inset-x-0"
@@ -263,11 +263,11 @@ export default function UnifiedBottomNav() {
         >
           <NavNotchSurface width={barWidth} />
 
-          {/* One shared grid: five equally sized slots. The four destinations keep
-              identical spacing, and the Log label sits in the centre slot on the
-              same baseline as theirs. The notch's widest point (±33px at the top
-              edge, 23px once the icon row starts) stays inside the centre slot,
-              so it never reaches a neighbouring icon or label. */}
+          {/* One shared grid: five equally sized slots, the centre one left empty
+              under the FAB so the four destinations stay symmetric about it and
+              every page item keeps identical width, gap and end padding. Raising
+              the row's bottom padding lifts the whole icon/label/underline group
+              clear of the silhouette's curve without moving the FAB or the bar. */}
           <div
             className="relative grid"
             style={{
@@ -275,7 +275,7 @@ export default function UnifiedBottomNav() {
               gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
               paddingLeft: BAR_PADDING_X,
               paddingRight: BAR_PADDING_X,
-              paddingBottom: 4,
+              paddingBottom: BAR_PADDING_BOTTOM,
               zIndex: 51,
             }}
           >
@@ -288,15 +288,10 @@ export default function UnifiedBottomNav() {
               />
             ))}
 
-            {/* Centre slot — the Log label only. The FAB floats above it in its
-                own layer, so this slot is a label, never a destination. */}
-            <div
-              className="flex h-full min-w-0 flex-col items-center justify-end gap-[3px]"
-              aria-hidden="true"
-            >
-              <NavLabel color="var(--nav-label)">Log</NavLabel>
-              <span style={{ width: 16, height: 2 }} />
-            </div>
+            {/* Centre slot — reserved and empty. The raised + / X control floats
+                above it in its own layer and carries the accessible name itself,
+                so the bar shows no Log text, badge or placeholder of any kind. */}
+            <div aria-hidden="true" />
 
             {navItems.slice(2).map((item) => (
               <NavItem

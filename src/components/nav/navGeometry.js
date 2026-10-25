@@ -11,6 +11,12 @@ export const BAR_RADIUS = 34; // half the height — a true pill
 export const SIDE_INSET = 16; // bar inset from the screen edges
 export const BAR_PADDING_X = 6; // symmetric inner padding around the five slots
 
+// Space kept between the underline's bottom edge and the pill's bottom edge, so
+// the active tab never crowds the silhouette's curve. Applied as the row's own
+// bottom padding — the safe-area inset is handled below the pill by the nav, so
+// the two can never double up.
+export const BAR_PADDING_BOTTOM = 12;
+
 export const LOG_SIZE = 56;
 export const LOG_CENTER_Y = -8;
 export const LOG_RING = 3; // thin light outer ring, drawn outside the button
