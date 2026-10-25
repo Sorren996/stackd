@@ -61,6 +61,11 @@ export default function Settings() {
         <LedgerRow label="Dexcom connection" value={dexcomStatus} to="/settings/dexcom" />
       </SectionCard>
 
+      <SectionCard label="Sharing">
+        <LedgerRow label="Sharing with others" value="Who follows you" to="/settings/sharing" />
+        <LedgerRow label="People you follow" value="Invitations you accepted" to="/shared" />
+      </SectionCard>
+
       <SensorSessionCard />
 
       <SectionCard label="App">

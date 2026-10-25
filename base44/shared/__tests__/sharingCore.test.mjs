@@ -369,6 +369,21 @@ describe("glucose projection", () => {
     assert.equal(r.data.today_start, "2026-10-24T05:00:00.000Z");
   });
 
+  test("the day boundary is exact, not skewed by the clock's milliseconds", () => {
+    const skewed = new Date("2026-10-24T18:00:00.747Z").getTime();
+    assert.equal(
+      new Date(startOfLocalDayMs(skewed, "America/Chicago")).toISOString(),
+      "2026-10-24T05:00:00.000Z"
+    );
+  });
+
+  test("a reading in the very first moment of the sharer's day is included", () => {
+    const start = startOfLocalDayMs(NOW, "America/Chicago");
+    const justAfterMidnight = { id: "first", value: 120, recorded_at: new Date(start).toISOString() };
+    const r = projectResource("glucose", ctx([justAfterMidnight]));
+    assert.equal(r.data.readings.length, 1);
+  });
+
   test("an unknown time zone degrades safely instead of throwing", () => {
     assert.equal(isValidTimeZone("Not/AZone"), false);
     assert.equal(startOfLocalDayMs(NOW, "Not/AZone"), null);

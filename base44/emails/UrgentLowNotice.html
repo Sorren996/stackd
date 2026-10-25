@@ -1,0 +1,64 @@
+<mjml>
+  <mj-head>
+    <mj-title>{{sharer_name}}'s glucose is lower than the range they asked you to be told about</mj-title>
+    <mj-preview>{{sharer_name}} asked to be told when a reading lands here. Reaching out is the useful part.</mj-preview>
+    <mj-attributes>
+      <mj-all font-family="Montserrat, Arial, sans-serif" />
+      <mj-section background-color="#fdf9f2" padding="0 36px" />
+      <mj-text color="#3f3830" font-size="15px" line-height="1.65" padding="0" />
+      <mj-button background-color="#9c5228" color="#ffffff" border-radius="24px" font-weight="600" inner-padding="15px 30px" align="left" font-size="15px" />
+      <mj-class name="h" font-weight="700" />
+      <mj-class name="muted" color="#746959" font-size="13px" line-height="1.6" />
+    </mj-attributes>
+  </mj-head>
+  <mj-body background-color="#f7f1e8">
+    <mj-section background-color="#9c5228" padding="26px 36px">
+      <mj-column>
+        <mj-image src="https://media.base44.com/images/public/6a1b93f234a8611ee1595134/1b816d1eb_stackdappiconver3.png" alt="Stackd" width="42px" align="left" padding="0 0 10px 0" />
+        <mj-text color="#ffffff" font-size="17px" font-weight="700" padding="0">Stackd</mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section padding="40px 36px 8px">
+      <mj-column>
+        <mj-text mj-class="h" font-size="28px" line-height="1.25" padding="0 0 12px 0">A reading {{sharer_name}} wanted you to know about</mj-text>
+        <mj-text color="#746959" font-size="16px" line-height="1.6" padding="0">
+          {{sharer_name}} chose to tell you when a reading lands in their lower range. One just did.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section padding="24px 36px 8px">
+      <mj-column>
+        <mj-table>
+          <tr><td style="padding:0 0 10px 0; font-size:13px; color:#746959;">Reading</td><td style="padding:0 0 10px 0; font-size:15px; color:#3f3830; font-weight:700;">{{glucose_value}} {{glucose_units}}</td></tr>
+          <tr><td style="padding:0 0 10px 0; font-size:13px; color:#746959;">Taken</td><td style="padding:0 0 10px 0; font-size:15px; color:#3f3830;">{{reading_time}}</td></tr>
+          <tr><td style="padding:0; font-size:13px; color:#746959;">Person</td><td style="padding:0; font-size:15px; color:#3f3830;">{{sharer_name}}</td></tr>
+        </mj-table>
+      </mj-column>
+    </mj-section>
+
+    <mj-section padding="20px 36px 8px">
+      <mj-column>
+        <mj-button href="{{action_url}}">See the latest in Stackd</mj-button>
+      </mj-column>
+    </mj-section>
+
+    <mj-section padding="16px 36px 36px">
+      <mj-column>
+        <mj-divider border-color="#e5e7eb" padding="0 0 20px 0" />
+        <mj-text mj-class="muted">
+          This notice is just information, and reaching out to {{sharer_name}} directly is the most useful thing you can do. How they look after it is their plan and their decision, made with their own care team.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#fdf9f2" padding="26px 36px">
+      <mj-column>
+        <mj-text mj-class="muted">
+          You are receiving this because {{sharer_name}} switched it on for you. They can switch it off again at any time, and you can turn your own notifications off from your Stackd settings.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>

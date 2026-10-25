@@ -1,0 +1,40 @@
+{
+  "name": "Notify followers of urgent lows",
+  "description": "When a new glucose reading is logged, evaluate urgent-low notices for the sharer's followers. The condition keeps the step from running for readings that cannot be urgent, and the backend function ignores stale, filled-in and already-notified events.",
+  "trigger": {
+    "config": {
+      "trigger_type": "entity",
+      "entity_name": "GlucoseReading",
+      "events": [
+        "create"
+      ]
+    },
+    "condition": "${ .trigger.data.value != null and .trigger.data.value < 70 and (.trigger.data.source // \"\") != \"system\" }"
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "notify_followers_urgent_low",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "evaluate_notices": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "deliverFollowerAlerts",
+            "args": {
+              "reading_id": "${ .trigger.entity_id }"
+            }
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Evaluate urgent low notices",
+            "description": "Fresh readings only"
+          }
+        }
+      }
+    ]
+  }
+}

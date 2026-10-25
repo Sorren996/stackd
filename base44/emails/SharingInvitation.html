@@ -1,0 +1,62 @@
+<mjml>
+  <mj-head>
+    <mj-title>{{sharer_name}} invited you to follow their Stackd updates</mj-title>
+    <mj-preview>Nothing is shared until they switch it on. Open the invitation to accept.</mj-preview>
+    <mj-attributes>
+      <mj-all font-family="Montserrat, Arial, sans-serif" />
+      <mj-section background-color="#fdf9f2" padding="0 36px" />
+      <mj-text color="#3f3830" font-size="15px" line-height="1.65" padding="0" />
+      <mj-button background-color="#9c5228" color="#ffffff" border-radius="24px" font-weight="600" inner-padding="15px 30px" align="left" font-size="15px" />
+      <mj-class name="h" font-weight="700" />
+      <mj-class name="muted" color="#746959" font-size="13px" line-height="1.6" />
+    </mj-attributes>
+  </mj-head>
+  <mj-body background-color="#f7f1e8">
+    <mj-section background-color="#9c5228" padding="26px 36px">
+      <mj-column>
+        <mj-image src="https://media.base44.com/images/public/6a1b93f234a8611ee1595134/1b816d1eb_stackdappiconver3.png" alt="Stackd" width="42px" align="left" padding="0 0 10px 0" />
+        <mj-text color="#ffffff" font-size="17px" font-weight="700" padding="0">Stackd</mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section padding="40px 36px 8px">
+      <mj-column>
+        <mj-text mj-class="h" font-size="30px" line-height="1.2" padding="0 0 12px 0">{{sharer_name}} would like you to follow along</mj-text>
+        <mj-text color="#746959" font-size="16px" line-height="1.6" padding="0">
+          You have been invited to see {{sharer_name}}'s Stackd updates. A follow-along can be a genuinely encouraging thing to have, and it takes one tap to accept.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section padding="24px 36px 8px">
+      <mj-column>
+        <mj-button href="{{action_url}}">Open your invitation</mj-button>
+      </mj-column>
+    </mj-section>
+
+    <mj-section padding="16px 36px 8px">
+      <mj-column>
+        <mj-text mj-class="muted">
+          This link is personal to you and stops working after {{expires_hours}} hours, or sooner if it is replaced.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section padding="8px 36px 32px">
+      <mj-column>
+        <mj-divider border-color="#e5e7eb" padding="0 0 20px 0" />
+        <mj-text mj-class="muted">
+          Nothing is shared until {{sharer_name}} chooses what to share, and they can change or withdraw it at any time. You are never shown anything they have not switched on.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#fdf9f2" padding="26px 36px">
+      <mj-column>
+        <mj-text mj-class="muted">
+          If you were not expecting this invitation you can safely ignore it. No account is created for you unless you accept.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>

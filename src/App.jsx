@@ -29,6 +29,9 @@ import PrivacyConsentPage from './pages/PrivacyConsentPage';
 import DisplaySettingsPage from './pages/DisplaySettingsPage';
 import SupportCreatorPage from './pages/SupportCreatorPage';
 import DexcomSettingsPage from './pages/DexcomSettingsPage';
+import SharingPage from './pages/SharingPage';
+import SharedWithMe from './pages/SharedWithMe';
+import FollowInvite from './pages/FollowInvite';
 import ContactSupportPage from './pages/ContactSupportPage';
 import SupportInbox from './pages/SupportInbox';
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -252,6 +255,7 @@ const AuthenticatedApp = () => {
         <Route path="/install" element={<Install />} />
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/contact" element={<PublicContactPage />} />
+        <Route path="/follow" element={<FollowInvite />} />
         <Route path="*" element={<SplashScreen showAuth />} />
       </Routes>
     );
@@ -307,6 +311,9 @@ const AuthenticatedApp = () => {
             <Route path="/settings/display" element={<DisplaySettingsPage />} />
             <Route path="/settings/support-creator" element={<SupportCreatorPage />} />
             <Route path="/settings/dexcom" element={<DexcomSettingsPage />} />
+            <Route path="/settings/sharing" element={<SharingPage />} />
+            <Route path="/shared" element={<SharedWithMe />} />
+            <Route path="/follow" element={<FollowInvite />} />
             <Route path="/settings/contact-support" element={<ContactSupportPage />} />
             <Route path="/settings/support-inbox" element={<SupportInbox />} />
             <Route path="/split-plan/:planId" element={<SplitPlanReview />} />

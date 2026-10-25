@@ -27,6 +27,7 @@ import { getDailyBalanceState } from "../dailyBalanceState.js";
 export function computeSharedDailyBalance(readings, targetLow, targetHigh, todayStartIso, now = Date.now()) {
   if (!Array.isArray(readings) || readings.length === 0) return null;
 
+  if (targetLow == null || targetHigh == null) return null;
   const low = Number(targetLow);
   const high = Number(targetHigh);
   if (!Number.isFinite(low) || !Number.isFinite(high) || high <= low) return null;

@@ -525,7 +525,10 @@ export function startOfLocalDayMs(date: unknown, timeZone: unknown): number | nu
   if (!isValidTimeZone(timeZone)) return null;
   const d = date instanceof Date ? date : new Date(nowMs(date));
   if (!Number.isFinite(d.getTime())) return null;
-  const offset = timeZoneOffsetMs(d, timeZone as string);
+  // A zone offset is always a whole number of minutes, and rounding it here
+  // keeps the boundary exact: a reading taken in the first millisecond of the
+  // sharer's day still counts towards it.
+  const offset = Math.round(timeZoneOffsetMs(d, timeZone as string) / 60000) * 60000;
   const shifted = new Date(d.getTime() + offset);
   return Date.UTC(shifted.getUTCFullYear(), shifted.getUTCMonth(), shifted.getUTCDate()) - offset;
 }
