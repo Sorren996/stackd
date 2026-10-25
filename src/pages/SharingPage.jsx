@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { UserPlus, ShieldAlert } from "lucide-react";
 import SettingsSubPage from "@/components/settings/SettingsSubPage";
@@ -12,6 +12,7 @@ import SharedNameCard from "@/components/sharing/SharedNameCard";
 import LocationPublishCard from "@/components/sharing/LocationPublishCard";
 import { getSharingRelationships } from "@/lib/sharing/sharingApi";
 import { summaryLine } from "@/lib/sharing/sharingCopy";
+import { reconcileSelection } from "@/lib/sharing/relationshipSelection";
 
 /**
  * The owner's sharing dashboard: who follows them, what each person can see,
@@ -29,6 +30,13 @@ export default function SharingPage() {
   const relationships = data?.relationships || [];
   const selected = relationships.find((r) => r.id === selectedId) || null;
   const missingSecrets = data?.missing_secrets || [];
+
+  // A relationship that is no longer in the list must not stay selected, or the
+  // sheet would sit open on an id that no longer exists.
+  useEffect(() => {
+    const next = reconcileSelection(relationships, selectedId);
+    if (next !== selectedId) setSelectedId(next);
+  }, [relationships, selectedId]);
 
   const subtitleFor = (relationship) => {
     if (relationship.status === "pending") {
@@ -124,6 +132,7 @@ export default function SharingPage() {
         open={Boolean(selected)}
         onClose={() => setSelectedId(null)}
         onChanged={refetch}
+        onRevoked={() => setSelectedId(null)}
       />
     </SettingsSubPage>
   );

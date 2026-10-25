@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Sheet from "@/components/Sheet";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -19,6 +19,7 @@ import {
   describeProjectionReason,
 } from "@/lib/sharing/sharingCopy";
 import { updateSharingScopes, describeSharingError } from "@/lib/sharing/sharingApi";
+import { createSubmissionGate } from "@/lib/sharing/pendingAction";
 
 /**
  * Manage one relationship.
@@ -27,15 +28,27 @@ import { updateSharingScopes, describeSharingError } from "@/lib/sharing/sharing
  * relationship's permission version so the follower's screen clears anything
  * that is no longer shared.
  */
-export default function RelationshipSheet({ relationship, open, onClose, onChanged }) {
+export default function RelationshipSheet({ relationship, open, onClose, onChanged, onRevoked }) {
   const [local, setLocal] = useState(relationship);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [pendingAction, setPendingAction] = useState("");
   const [confirmRevoke, setConfirmRevoke] = useState(false);
+
+  // One submission at a time: a second tap while a change is in flight is
+  // ignored rather than queued, so a slow connection can never apply it twice.
+  const gateRef = useRef(null);
+  if (!gateRef.current) gateRef.current = createSubmissionGate();
+
+  // Which relationship the sheet is showing. A reply that arrives after the
+  // sheet has moved on to someone else is discarded instead of painting the
+  // wrong person's state into it.
+  const activeIdRef = useRef(relationship?.id || null);
 
   useEffect(() => {
     setLocal(relationship);
     setError("");
+    activeIdRef.current = relationship?.id || null;
   }, [relationship]);
 
   if (!local) return null;
@@ -45,20 +58,38 @@ export default function RelationshipSheet({ relationship, open, onClose, onChang
   const terminal = local.status === "revoked";
 
   const apply = async (action, extra) => {
+    if (!gateRef.current.enter()) return; // a second tap while one is in flight
     setBusy(true);
+    setPendingAction(action);
     setError("");
+    const idAtSubmit = local.id;
     try {
       const data = await updateSharingScopes(local.id, action, extra);
+      // Nothing is reported as done until the server has confirmed it.
+      if (activeIdRef.current !== idAtSubmit) return;
       setLocal(data.relationship);
-      if (data.alerts_cleared) {
+      if (action === "revoke") {
+        // Withdrawn for good: the sheet closes and the list shows the state.
+        onRevoked?.();
+      } else if (data.alerts_cleared) {
         setError("Notices were switched off because glucose sharing is now off.");
       }
       onChanged?.();
     } catch (err) {
-      setError(describeSharingError(err));
+      // A failed or stalled request always comes back: the reason is shown and
+      // every switch stays usable, so nothing has to be reloaded to recover.
+      if (activeIdRef.current === idAtSubmit) setError(describeSharingError(err));
     } finally {
+      gateRef.current.exit();
       setBusy(false);
+      setPendingAction("");
     }
+  };
+
+  // Closing the sheet must never leave a confirmation stranded over it.
+  const closeSheet = () => {
+    setConfirmRevoke(false);
+    onClose?.();
   };
 
   const toggleScope = (key, value) => apply("set_scopes", { scopes: { ...scopes, [key]: value } });
@@ -66,7 +97,7 @@ export default function RelationshipSheet({ relationship, open, onClose, onChang
 
   return (
     <>
-      <Sheet open={open} onClose={onClose}>
+      <Sheet open={open} onClose={closeSheet}>
         <div className="flex-1 overflow-y-auto px-6 pb-8">
           <h2 className="break-all text-lg font-semibold" style={{ color: "#3f3830" }}>
             {local.invited_email}
@@ -159,12 +190,12 @@ export default function RelationshipSheet({ relationship, open, onClose, onChang
           <div className="space-y-2 pt-6">
             {local.status === "active" && (
               <Button variant="outline" className="w-full rounded-full" disabled={busy} onClick={() => apply("pause")}>
-                Pause sharing
+                {pendingAction === "pause" ? "Pausing…" : "Pause sharing"}
               </Button>
             )}
             {local.status === "paused" && (
               <Button variant="outline" className="w-full rounded-full" disabled={busy} onClick={() => apply("resume")}>
-                Resume sharing
+                {pendingAction === "resume" ? "Resuming…" : "Resume sharing"}
               </Button>
             )}
             {!terminal && (
@@ -175,15 +206,22 @@ export default function RelationshipSheet({ relationship, open, onClose, onChang
                 disabled={busy}
                 onClick={() => setConfirmRevoke(true)}
               >
-                Revoke sharing
+                {pendingAction === "revoke" ? "Withdrawing…" : "Revoke sharing"}
               </Button>
             )}
           </div>
         </div>
       </Sheet>
 
+      {/* Radix's alert dialog is always modal: while it is open it disables
+          pointer events on everything else. That is fine for a confirmation —
+          but only as long as the confirmation is actually ON TOP. Its own layer
+          is z-50 and the sheet's is z-[70], so untargeted it opened *behind* the
+          sheet: the page went inert with nothing visible, which is the freeze.
+          The content is therefore layered above the sheet explicitly, and it is
+          closed whenever the sheet closes so it can never be left stranded. */}
       <AlertDialog open={confirmRevoke} onOpenChange={setConfirmRevoke}>
-        <AlertDialogContent>
+        <AlertDialogContent style={{ zIndex: 95 }}>
           <AlertDialogHeader>
             <AlertDialogTitle>Revoke sharing?</AlertDialogTitle>
             <AlertDialogDescription>

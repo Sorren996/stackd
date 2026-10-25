@@ -35,6 +35,9 @@ export default function SharerDashboard({ relationship, onOpenPrefs }) {
     queryFn: () => getSharedView(relationship.id),
     enabled: isActive,
     gcTime: 0,
+    // A pause or withdrawal made elsewhere is re-checked the moment the viewer
+    // returns to the app, instead of leaving old figures on screen.
+    refetchOnWindowFocus: true,
   });
 
   const label = sharerName(relationship.sharer_display_name);
