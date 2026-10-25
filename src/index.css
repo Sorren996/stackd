@@ -46,17 +46,20 @@
     --copper: #9c5228;         /* 5.1:1 — interaction accent */
 
     /* ── Bottom navigation ─────────────────────────────────── */
-    /* The pill's surface is a pale grey-cream; the item colours below are
-       measured against THAT surface, not the sandstone canvas — which is why
-       the active and inactive inks are one step deeper than the page tokens
-       so both stay at or above 4.5:1 for the small uppercase labels. */
-    --nav-surface: #d9ded9;    /* pale grey-cream pill */
-    --nav-border: #c5cbc5;     /* very subtle warm-grey contour */
-    --nav-label: #5f5549;      /* 5.2:1 on the pill — inactive items */
-    --nav-accent: #8a4720;     /* 5.1:1 on the pill — active item + underline */
-    --nav-log: #9c5228;        /* clay — the Log button, as on the current FAB */
+    /* The bar's surface is the app's warm off-white card colour, so the notch
+       reads as one continuous shape with the rest of the UI. Item colours are
+       measured against THAT surface (#fdf9f2), not the sandstone canvas.
+       The contour is a decorative hairline on the surface itself: the bar is
+       separated from the page by the surface-vs-canvas contrast (5.8:1). */
+    --nav-surface: #fdf9f2;    /* warm off-white — matches card surfaces */
+    --nav-border: #eadccf;     /* warm hairline — matches card borders */
+    --nav-label: #3f3830;      /* 11.0:1 on the surface — labels */
+    --nav-icon: #746959;       /*  5.1:1 on the surface — inactive icons */
+    --nav-accent: #9c5228;     /*  5.5:1 on the surface — active item, underline, disc glyphs */
+    --nav-log: #9c5228;        /* clay — the Log button */
     --nav-ring: #fdf9f2;       /* thin light ring around the Log button */
-    --nav-ink: #3f3830;        /* ink for the option labels on cream discs */
+    --nav-ink: #3f3830;        /* 11.0:1 on the surface — option labels */
+    --nav-disc: #fdf9f2;       /* warm cream — option discs and label pills */
 
     /* Chart / data colors */
     --chart-1: 88 8% 35%;               /* sage — in range */
@@ -111,14 +114,16 @@
 
     --copper: #d99a5b;
 
-    /* Bottom navigation — same geometry and roles, dark surfaces */
+    /* Bottom navigation — same geometry and roles, dark surfaces. Never cream. */
     --nav-surface: #1f242a;
     --nav-border: #333941;
     --nav-label: #9a968c;      /* 5.3:1 on the dark pill */
+    --nav-icon: #9a968c;       /* 5.3:1 on the dark pill */
     --nav-accent: #d99a5b;     /* 6.5:1 on the dark pill */
     --nav-log: #9c5228;
     --nav-ring: #2b3138;
     --nav-ink: #f2ede4;
+    --nav-disc: #2b3138;       /* dark discs — 5.5:1 for the clay glyph */
 
     --chart-1: 88 12% 46%;
     --chart-2: 34 66% 62%;

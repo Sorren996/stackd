@@ -1,12 +1,18 @@
 import { Link } from "react-router-dom";
+import NavLabel from "@/components/nav/NavLabel";
 
 /**
- * One destination in the bar. The selected item keeps the bar's existing
- * treatment: clay icon and label plus a small clay underline.
+ * One destination. Each item fills its own grid slot, so the four page items are
+ * spaced identically by the bar's shared grid rather than by per-item offsets.
+ *
+ * The whole slot is the touch target (>=44px in both axes). The icon, label and
+ * underline are always rendered in the same order with the same gaps, so every
+ * item shares one label baseline and one underline position.
  */
 export default function NavItem({ item, active, onPress }) {
   const { Icon, label, path } = item;
-  const ink = active ? "var(--nav-accent)" : "var(--nav-label)";
+  const iconColor = active ? "var(--nav-accent)" : "var(--nav-icon)";
+  const labelColor = active ? "var(--nav-accent)" : "var(--nav-label)";
 
   return (
     <Link
@@ -14,17 +20,16 @@ export default function NavItem({ item, active, onPress }) {
       onClick={onPress}
       aria-label={label}
       aria-current={active ? "page" : undefined}
-      className="flex min-w-0 flex-1 flex-col items-center gap-[3px]"
-      style={{ color: ink }}
+      className="flex h-full min-w-0 flex-col items-center justify-end gap-[3px]"
     >
-      <Icon className="h-[22px] w-[22px] shrink-0" strokeWidth={active ? 2.3 : 1.7} aria-hidden="true" />
-      <span
-        className="w-full truncate text-center text-[10px] font-semibold uppercase leading-none"
-        style={{ letterSpacing: "0.06em", color: ink }}
-      >
-        {label}
-      </span>
-      {/* Always rendered so nothing shifts when the selection moves. */}
+      <Icon
+        className="h-[22px] w-[22px] shrink-0"
+        strokeWidth={active ? 2.3 : 1.7}
+        style={{ color: iconColor }}
+        aria-hidden="true"
+      />
+      <NavLabel color={labelColor}>{label}</NavLabel>
+      {/* Always rendered so the shared baseline never shifts. */}
       <span
         aria-hidden="true"
         className="rounded-full"

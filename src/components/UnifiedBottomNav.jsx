@@ -8,12 +8,12 @@ import LogGlucoseForm from "@/components/forms/LogGlucoseForm";
 import LogInsulinMealForm from "@/components/forms/LogInsulinMealForm";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 import NavItem from "@/components/nav/NavItem";
+import NavLabel from "@/components/nav/NavLabel";
 import LogFanMenu from "@/components/nav/LogFanMenu";
 import NavNotchSurface, { useMeasuredWidth } from "@/components/nav/NavNotchSurface";
 import {
   BAR_HEIGHT,
   BAR_PADDING_X,
-  CENTER_SLOT,
   LOG_LAYER_BOTTOM,
   LOG_RAISE,
   LOG_RING,
@@ -226,15 +226,16 @@ export default function UnifiedBottomNav() {
         <LogInsulinMealForm open={combinedSheetOpen} onClose={() => setCombinedSheetOpen(false)} />
       )}
 
-      {/* Page dimming — kept below the bar, so the bar and the Log button stay
-          crisp and tappable above it. */}
+      {/* Page dimming only. It sits below both the bar and the Log layer, so it
+          darkens the page behind the bar without tinting or washing out the bar,
+          the button, the discs or their labels. */}
       <AnimatePresence>
         {stackVisible && (
           <motion.div
             key="scrim"
             aria-hidden="true"
             className="fixed inset-0"
-            style={{ background: "rgba(76,103,112,0.45)", zIndex: 40 }}
+            style={{ background: "rgba(63,56,48,0.32)", zIndex: 40 }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -262,10 +263,16 @@ export default function UnifiedBottomNav() {
         >
           <NavNotchSurface width={barWidth} />
 
+          {/* One shared grid: five equally sized slots. The four destinations keep
+              identical spacing, and the Log label sits in the centre slot on the
+              same baseline as theirs. The notch's widest point (±33px at the top
+              edge, 23px once the icon row starts) stays inside the centre slot,
+              so it never reaches a neighbouring icon or label. */}
           <div
-            className="relative flex items-end"
+            className="relative grid"
             style={{
               height: BAR_HEIGHT,
+              gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
               paddingLeft: BAR_PADDING_X,
               paddingRight: BAR_PADDING_X,
               paddingBottom: 4,
@@ -281,16 +288,14 @@ export default function UnifiedBottomNav() {
               />
             ))}
 
-            {/* Centre slot — holds the notch and the Log label. It is a call to
-                action, never a destination, so it is never marked selected. */}
-            <div className="flex flex-col items-center gap-[3px]" style={{ flex: `0 0 ${CENTER_SLOT}px` }}>
-              <span
-                className="text-[10px] font-semibold uppercase leading-none"
-                style={{ letterSpacing: "0.06em", color: "var(--nav-label)" }}
-              >
-                Log
-              </span>
-              <span aria-hidden="true" style={{ width: 16, height: 2 }} />
+            {/* Centre slot — the Log label only. The FAB floats above it in its
+                own layer, so this slot is a label, never a destination. */}
+            <div
+              className="flex h-full min-w-0 flex-col items-center justify-end gap-[3px]"
+              aria-hidden="true"
+            >
+              <NavLabel color="var(--nav-label)">Log</NavLabel>
+              <span style={{ width: 16, height: 2 }} />
             </div>
 
             {navItems.slice(2).map((item) => (

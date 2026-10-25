@@ -9,8 +9,7 @@
 export const BAR_HEIGHT = 68;
 export const BAR_RADIUS = 34; // half the height — a true pill
 export const SIDE_INSET = 16; // bar inset from the screen edges
-export const BAR_PADDING_X = 6; // inner padding around the five slots
-export const CENTER_SLOT = 46; // reserved width for the notch + Log label
+export const BAR_PADDING_X = 6; // symmetric inner padding around the five slots
 
 export const LOG_SIZE = 56;
 export const LOG_CENTER_Y = -8;
@@ -41,6 +40,10 @@ export const LOG_RAISE = LOG_SIZE / 2 - LOG_CENTER_Y;
 
 // Distance from the bottom of the bar up to the button's bottom edge (48px).
 export const LOG_LAYER_BOTTOM = BAR_HEIGHT - (LOG_SIZE / 2 + LOG_CENTER_Y);
+
+// How far the button's CENTRE sits above the bottom of the bar (76px). The fan
+// uses it to work out how much room its arc has on a short viewport.
+export const LOG_CENTRE_ABOVE_BOTTOM = BAR_HEIGHT + Math.abs(LOG_CENTER_Y);
 
 /**
  * The bar's outline as ONE continuous path: a rounded pill whose top edge dips

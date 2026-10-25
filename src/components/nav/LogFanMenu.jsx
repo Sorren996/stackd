@@ -1,36 +1,80 @@
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { LOG_CENTRE_ABOVE_BOTTOM, LOG_SIZE } from "@/components/nav/navGeometry";
 
-const DISC = 52;
-const ARC_RADIUS = 74;
+const DISC = LOG_SIZE;
+const DISC_RADIUS = DISC / 2;
+const LABEL_GAP = 6;
 const EASE_OUT = [0.16, 1, 0.3, 1];
 const DISMISS_PX = 36;
 
-// Angles measured from straight up. The centre disc rides higher than the two
-// outside it, so the three read as a short arc above the notch.
-const ARC_ANGLES = { 1: [0], 2: [-38, 38], 3: [-54, 0, 54] };
+// Every offset below is measured from the FAB's CENTRE, which is exactly what
+// this component's root box is: it is sized to the FAB and sits at its origin, so
+// "50% 50%" inside it IS the FAB centre. The arc therefore cannot drift with the
+// bar's height or with the padding of the layer the FAB is rendered in.
+//
+// Up is negative. In FAB-centre coordinates:
+//   sides  (±x, -120) → disc -148…-92, its label -86…-70
+//   middle (0,  -182) → disc -210…-154, its label -148…-132
+//
+// The FAB's own upper edge is -28, so the closest thing in the arc (a side
+// label) still clears it by 42px, and no disc, label or touch box overlaps
+// another at any of the widths the bar supports.
+const SIDE_Y = -120;
+const MIDDLE_Y = -182;
+const ARC_TOP = MIDDLE_Y - DISC_RADIUS; // the arc's highest reach above the FAB centre
 
-const positionFor = (angleDeg) => {
-  const rad = (angleDeg * Math.PI) / 180;
-  return { x: Math.round(ARC_RADIUS * Math.sin(rad)), y: Math.round(-ARC_RADIUS * Math.cos(rad)) };
+// The spread grows with the viewport, bounded so the outer options never reach
+// the screen edge and the middle label never touches the side labels.
+const spreadFor = (width) => Math.max(84, Math.min(112, width * 0.26));
+
+// Approved order: left, centre-higher, right.
+const slotFor = (index, count, spread) => {
+  if (count === 3) {
+    if (index === 0) return { x: -spread, y: SIDE_Y };
+    if (index === 1) return { x: 0, y: MIDDLE_Y };
+    return { x: spread, y: SIDE_Y };
+  }
+  if (count === 2) return index === 0 ? { x: -spread, y: SIDE_Y } : { x: spread, y: SIDE_Y };
+  return { x: 0, y: SIDE_Y };
 };
 
+function useViewport() {
+  const [size, setSize] = useState({ width: 0, height: 0 });
+  useEffect(() => {
+    const read = () => setSize({ width: window.innerWidth, height: window.innerHeight });
+    read();
+    window.addEventListener("resize", read);
+    window.addEventListener("orientationchange", read);
+    return () => {
+      window.removeEventListener("resize", read);
+      window.removeEventListener("orientationchange", read);
+    };
+  }, []);
+  return size;
+}
+
 /**
- * The three logging options, fanned out above the Log button.
+ * The logging options, fanned out above the Log button.
  *
- * Rendered inside the button's own layer so each disc orbits the button's
- * centre. The scrim belongs to the bar, not here, so that this layer can sit
- * above it without lifting the page dimming along with it.
+ * On a viewport too short to hold the whole arc the fan scales down about the
+ * FAB centre rather than clipping or dropping an option; the floor keeps every
+ * disc at 44px so it stays comfortably tappable. Nothing else changes.
  */
 export default function LogFanMenu({ open, actions, onSelect, onClose, reduce }) {
-  const angles = ARC_ANGLES[actions.length] || ARC_ANGLES[3];
+  const { width, height } = useViewport();
+  const spread = spreadFor(width || 375);
+
+  const available = (height || 800) - LOG_CENTRE_ABOVE_BOTTOM - 16;
+  const scale = Math.max(0.8, Math.min(1, available / Math.abs(ARC_TOP)));
 
   return (
     <AnimatePresence>
       {open && (
         <motion.div
           key="fan"
-          className="absolute left-1/2 top-1/2"
-          style={{ zIndex: 52 }}
+          className="absolute left-0 top-0"
+          style={{ width: LOG_SIZE, height: LOG_SIZE, zIndex: 52, scale }}
           drag="y"
           dragConstraints={{ top: 0, bottom: 0 }}
           dragElastic={{ top: 0, bottom: 0.5 }}
@@ -39,7 +83,7 @@ export default function LogFanMenu({ open, actions, onSelect, onClose, reduce })
           }}
         >
           {actions.map((action, i) => {
-            const { x, y } = positionFor(angles[i] ?? 0);
+            const { x, y } = slotFor(i, actions.length, spread);
             const { Icon, label, id, mode } = action;
             return (
               <motion.button
@@ -53,8 +97,8 @@ export default function LogFanMenu({ open, actions, onSelect, onClose, reduce })
                   top: "50%",
                   width: DISC,
                   height: DISC,
-                  marginLeft: -DISC / 2,
-                  marginTop: -DISC / 2,
+                  marginLeft: -DISC_RADIUS,
+                  marginTop: -DISC_RADIUS,
                 }}
                 initial={reduce ? { opacity: 0, x, y } : { opacity: 0, x: 0, y: -10, scale: 0.55 }}
                 animate={{ opacity: 1, x, y, scale: 1 }}
@@ -65,16 +109,26 @@ export default function LogFanMenu({ open, actions, onSelect, onClose, reduce })
                 <span
                   className="flex h-full w-full items-center justify-center rounded-full"
                   style={{
-                    background: "#fdf9f2",
-                    border: "1px solid var(--nav-log)",
+                    background: "var(--nav-disc)",
+                    border: "1px solid var(--nav-border)",
                     boxShadow: "0 6px 18px rgba(63,56,48,0.22)",
                   }}
                 >
-                  <Icon className="h-[22px] w-[22px]" strokeWidth={1.9} style={{ color: "var(--nav-log)" }} aria-hidden="true" />
+                  <Icon
+                    className="h-[22px] w-[22px]"
+                    strokeWidth={1.9}
+                    style={{ color: "var(--nav-accent)" }}
+                    aria-hidden="true"
+                  />
                 </span>
                 <span
-                  className="absolute left-1/2 top-full mt-1 -translate-x-1/2 whitespace-nowrap rounded-full px-2 py-[3px] text-[10px] font-semibold leading-none"
-                  style={{ background: "#fdf9f2", color: "var(--nav-ink)", boxShadow: "0 2px 8px rgba(63,56,48,0.16)" }}
+                  className="absolute left-1/2 top-full -translate-x-1/2 whitespace-nowrap rounded-full px-2 py-[3px] text-[10px] font-semibold leading-none"
+                  style={{
+                    marginTop: LABEL_GAP,
+                    background: "var(--nav-disc)",
+                    color: "var(--nav-ink)",
+                    boxShadow: "0 2px 8px rgba(63,56,48,0.16)",
+                  }}
                 >
                   {label}
                 </span>
