@@ -69,7 +69,9 @@ export function describeProjectionReason(reason) {
     case "none_published":
       return "Nothing has been published yet.";
     case "no_rapid_doses":
-      return "No rapid-acting doses in the last 24 hours.";
+      // Not about a 24 hour window any more: it means nothing rapid-acting is
+      // logged at all, so no figure can be worked out.
+      return "Nothing rapid-acting has been logged, so this cannot be estimated yet.";
     case "unconfirmed_plan":
       return "Their insulin plan has not been confirmed yet.";
     case "unknown_type":

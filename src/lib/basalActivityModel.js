@@ -18,7 +18,7 @@
 // is intentionally simple: "Building", "Stabilizing", "Steady", "Active",
 // "Gradually declining" — never pharmacokinetic jargon.
 
-import { getInsulinProfile, isBasalInsulinType, getDoseRelativeActivity } from "./insulinPharmacology";
+import { getInsulinProfile, isBasalInsulinType, getDoseRelativeActivity } from "./insulinPharmacology.js";
 
 const MINUTE_MS = 60 * 1000;
 const DAY_MS = 24 * 60 * MINUTE_MS;

@@ -3,7 +3,12 @@
 // Coordinates are encrypted before they touch the database and are only ever
 // stored while at least one follower actually has the location scope switched
 // on — the app does not accumulate location data that nobody is allowed to see.
-// The capture timestamp is set by the server, never taken from the client.
+//
+// The stored time is the position's OWN observation time. A device fix may
+// supply it, but only inside a bounded sanity window: a time in the future, or
+// one older than a current fix could be, is discarded and the server's own time
+// is used instead. The server therefore always decides what is stored, and a
+// client cannot relabel an old position as a new one.
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.54';
 import { encryptSharingValue, isSharingCryptoConfigured } from '../../shared/sharingCrypto.ts';
@@ -46,7 +51,18 @@ export default async function (req: Request): Promise<Response> {
       return ok({ published: false, reason: 'no_active_location_scope' });
     }
 
-    const capturedAt = new Date(now).toISOString();
+    // How the fix was obtained, recorded for audit only. Never a reason to
+    // publish, and never able to widen what any follower may read.
+    const source = body.source === 'foreground_auto' ? 'foreground_auto' : 'manual';
+
+    // The position's own observation time, bounded. Anything unusable falls back
+    // to the server's time rather than being trusted as-is.
+    const MAX_OBSERVED_AGE_MS = 5 * 60 * 1000;
+    const observedRaw = body.observed_at ? new Date(String(body.observed_at)).getTime() : NaN;
+    const capturedAt =
+      Number.isFinite(observedRaw) && observedRaw > 0 && observedRaw <= now && now - observedRaw <= MAX_OBSERVED_AGE_MS
+        ? new Date(observedRaw).toISOString()
+        : new Date(now).toISOString();
     const locationEnc = await encryptSharingValue(JSON.stringify(payload));
     const existing = asArray(await sr.entities.LatestLocation.filter({ user_id: user.id }))[0];
 
@@ -71,7 +87,7 @@ export default async function (req: Request): Promise<Response> {
       action: 'sharing.location_published',
       actor_user_id: user.id,
       actor_email: user.email,
-      metadata: { follower_count: rows.length },
+      metadata: { follower_count: rows.length, source, observed_at: capturedAt },
     });
 
     return ok({ published: true, captured_at: capturedAt });

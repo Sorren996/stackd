@@ -8,6 +8,7 @@
 
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 
 import {
   SCOPE_KEYS,
@@ -15,6 +16,7 @@ import {
   URGENT_LOW_THRESHOLD,
   STALE_READING_MINUTES,
   GLUCOSE_WINDOW_HOURS,
+  INSULIN_ACTIVE_LOOKBACK_HOURS,
   sanitizeScopes,
   sanitizeAlertScopes,
   sanitizeFollowerPrefs,
@@ -422,14 +424,49 @@ describe("insulin projection", () => {
     { insulin_type: "Humalog", units: 4, administered_at: iso(-30 * HOUR) },
   ];
 
-  test("only the rolling 24 hour window is sent", () => {
-    const r = projectResource("insulin", { access: accessWith({ insulin: true }), now: NOW, doses });
-    assert.deepEqual(r.data.doses.map((d) => d.units), [18, 6]);
+  test("every dose that could still be acting is sent, and nothing older than that", () => {
+    // The reach is the longest supported action duration, NOT a rolling day: a
+    // basal dose logged yesterday can genuinely still be acting now.
+    const withOld = [...doses, { insulin_type: "NovoLog", units: 9, administered_at: iso(-400 * HOUR) }];
+    const r = projectResource("insulin", { access: accessWith({ insulin: true }), now: NOW, doses: withOld });
+    assert.deepEqual(r.data.doses.map((d) => d.units).sort((a, b) => a - b), [4, 6, 18]);
+    assert.equal(
+      r.data.doses.some((d) => d.units === 9),
+      false,
+      "a 400 hour old dose must be outside the lookback"
+    );
+  });
+
+  test("the reach covers the longest action duration the patient module defines", () => {
+    // Read from the patient pharmacology module's own source rather than a
+    // number copied here, so adding a longer-acting insulin there fails THIS
+    // test instead of quietly truncating someone's active insulin.
+    const source = readFileSync(
+      new URL("../../../src/lib/insulinPharmacology.js", import.meta.url),
+      "utf8"
+    );
+    const durations = [...source.matchAll(/duration:\s*(\d+)/g)].map((m) => Number(m[1]));
+    assert.ok(durations.length > 10, "the patient insulin profiles must have been read");
+    const longestMinutes = Math.max(...durations);
+    assert.ok(
+      INSULIN_ACTIVE_LOOKBACK_HOURS * 60 >= longestMinutes,
+      `a ${INSULIN_ACTIVE_LOOKBACK_HOURS}h lookback must cover the longest ${longestMinutes} minutes of action`
+    );
   });
 
   test("doses carry no meal, note or prediction fields", () => {
     const r = projectResource("insulin", { access: accessWith({ insulin: true }), now: NOW, doses });
     assert.deepEqual(Object.keys(r.data.doses[0]).sort(), ["administered_at", "insulin_type", "units"]);
+  });
+
+  test("the payload carries no dose history, no window count and no last dose", () => {
+    // The projected payload itself must not offer a dose log for a presentation
+    // to fall back into: the active figure is the whole of what it conveys.
+    const r = projectResource("insulin", { access: accessWith({ insulin: true }), now: NOW, doses });
+    assert.equal("last_dose" in r.data, false);
+    assert.equal("window_hours" in r.data, false);
+    assert.equal("window_start" in r.data, false);
+    assert.deepEqual(Object.keys(r.data).sort(), ["dose_math_available", "doses", "lookback_hours", "window_end"]);
   });
 
   test("dose math is unavailable unless the sharer's plan is confirmed", () => {
@@ -447,12 +484,7 @@ describe("insulin projection", () => {
   test("an empty period is described as an empty period, never as 'no insulin taken'", () => {
     const r = projectResource("insulin", { access: accessWith({ insulin: true }), now: NOW, doses: [] });
     assert.deepEqual(r.data.doses, []);
-    assert.equal(r.data.last_dose, null);
-  });
-
-  test("the last dose is the most recent inside the window", () => {
-    const r = projectResource("insulin", { access: accessWith({ insulin: true }), now: NOW, doses });
-    assert.equal(r.data.last_dose.insulin_type, "NovoLog");
+    assert.equal(r.data.dose_math_available, false, "an empty period cannot support dose math");
   });
 
   test("selectInsulinWindow ignores rows without a usable units value", () => {

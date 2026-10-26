@@ -38,6 +38,7 @@ export function shouldPublishLocation({
   visible = false,
   geolocationAvailable = true,
   permissionState = "unknown",
+  permissionPrompted = false,
   online = true,
   inFlight = false,
   lastPublishedAt = null,
@@ -49,6 +50,10 @@ export function shouldPublishLocation({
   if (!visible) return { publish: false, reason: "hidden" };
   if (!online) return { publish: false, reason: "offline" };
   if (permissionState === "denied") return { publish: false, reason: "permission_denied" };
+  // Asked once and no answer given: never keep prompting the same person.
+  if (permissionPrompted && permissionState !== "granted") {
+    return { publish: false, reason: "permission_pending" };
+  }
   if (inFlight) return { publish: false, reason: "already_running" };
 
   const last = Number(lastPublishedAt);

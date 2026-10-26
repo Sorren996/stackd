@@ -7,10 +7,11 @@
 // figure that could not be worked out is reported as UNAVAILABLE — it is never
 // floored to a misleading 0.0 u.
 //
-// A genuine zero is the one case that is NOT unavailable: when the model runs
-// on the complete set of doses and everything has cleared, the answer really is
-// "none active". That is a different statement from "we could not tell", and
-// the two are reported separately.
+// Two cases that look alike are kept apart:
+//   - nothing rapid-acting logged in the period we can see is NOT a measured
+//     zero, so it reads Unavailable;
+//   - doses logged and every one of them cleared IS a real zero, so it reads
+//     "None active".
 //
 // It lives under src/lib so the browser bundle can use it (frontend code
 // cannot import from base44/, which is server-side) and so the Node test
@@ -19,11 +20,17 @@
 /**
  * @param {unknown} value — the computed active insulin, or null when none could be computed
  * @param {boolean} doseMathAvailable — the sharer's plan is confirmed
+ * @param {number|null} rapidDoseCount — how many rapid-acting doses were visible, null when unknown
  * @returns {{ available: boolean, reason: string|null, value: number|null, isZero: boolean }}
  */
-export function describeActiveInsulinEstimate(value, doseMathAvailable) {
+export function describeActiveInsulinEstimate(value, doseMathAvailable, rapidDoseCount = null) {
   if (!doseMathAvailable) {
     return { available: false, reason: "unconfirmed_plan", value: null, isZero: false };
+  }
+  // No rapid-acting dose visible at all is not the same statement as "none is
+  // active": it may simply never have been recorded.
+  if (rapidDoseCount === 0) {
+    return { available: false, reason: "no_rapid_doses", value: null, isZero: false };
   }
   const v = Number(value);
   if (value === null || value === undefined || !Number.isFinite(v) || v < 0) {

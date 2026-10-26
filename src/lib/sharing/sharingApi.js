@@ -48,8 +48,23 @@ export const stopFollowing = (accessId) =>
 
 export const getSharedView = (accessId) => call("getSharedView", { access_id: accessId });
 
-export const publishSharerLocation = (latitude, longitude, accuracyM) =>
-  call("publishSharerLocation", { latitude, longitude, accuracy_m: accuracyM });
+/**
+ * Publish the sharer's own position.
+ *
+ * `observedAt` is the position's own observation time from the device fix, so
+ * the follower sees when someone was actually there rather than when the app
+ * happened to send it. The server bounds it and falls back to its own time.
+ * `source` records how the fix was obtained ("manual" or "foreground_auto") and
+ * cannot widen anything.
+ */
+export const publishSharerLocation = (latitude, longitude, accuracyM, { observedAt = null, source = "manual" } = {}) =>
+  call("publishSharerLocation", {
+    latitude,
+    longitude,
+    accuracy_m: accuracyM,
+    observed_at: observedAt,
+    source,
+  });
 
 // The wording lives in ./sharingErrorCopy.js so it can be exercised directly.
 export { describeSharingError } from "./sharingErrorCopy";

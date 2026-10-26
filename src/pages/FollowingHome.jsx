@@ -126,20 +126,6 @@ export default function FollowingHome() {
           </SectionCard>
         )}
 
-        <SectionCard>
-          <p className="text-xs leading-relaxed" style={{ color: "#746959" }}>
-            Following is a viewer's place in Stackd. If you ever want to record your own glucose as well, you can{" "}
-            <button
-              type="button"
-              className="font-semibold underline"
-              style={{ color: "#9c5228" }}
-              onClick={() => navigate("/following/settings")}
-            >
-              switch that on in your settings
-            </button>
-            .
-          </p>
-        </SectionCard>
       </div>
     );
   }

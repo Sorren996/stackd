@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronRight, MapPin, Phone, Settings2, Syringe } from "lucide-react";
+import { ChevronRight, MapPin, Phone, Settings2 } from "lucide-react";
 import SectionCard from "@/components/editorial/SectionCard";
 import { Button } from "@/components/ui/button";
 import SharedGlucoseChart from "@/components/follower/SharedGlucoseChart";
@@ -115,21 +115,13 @@ export default function SharerDashboard({ relationship, onOpenPrefs }) {
 
           {scopes.insulin && (
             <SectionCard label="Insulin">
-              <SharedInsulinPanel insulin={data.insulin} reason={data.insulin_reason} />
-              {data.insulin && (
-                <button
-                  type="button"
-                  onClick={() => setInsulinOpen(true)}
-                  className="mt-3 flex w-full items-center gap-2 border-t pt-3 text-left"
-                  style={{ borderColor: "#eadccf" }}
-                >
-                  <Syringe className="h-4 w-4 shrink-0" style={{ color: "#746959" }} />
-                  <span className="min-w-0 flex-1 text-sm" style={{ color: "#3f3830" }}>
-                    See their recent doses
-                  </span>
-                  <ChevronRight className="h-4 w-4 shrink-0" style={{ color: "#746959" }} />
-                </button>
-              )}
+              {/* The hero itself opens the active-insulin view: there is no dose
+                  history and no dose count on this screen. */}
+              <SharedInsulinPanel
+                insulin={data.insulin}
+                reason={data.insulin_reason}
+                onOpenDetail={() => setInsulinOpen(true)}
+              />
             </SectionCard>
           )}
 

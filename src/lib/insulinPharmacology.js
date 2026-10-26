@@ -25,7 +25,7 @@ import {
   betaActivityNormalized,
   IOB_FLOOR,
   getFloorTimeMinutes,
-} from "./iobModel";
+} from "./iobModel.js";
 
 // Detects rapid-acting SC analogs (aspart / lispro / glulisine and their
 // faster-acting variants) — the insulins that use the finite-DIA beta curve.

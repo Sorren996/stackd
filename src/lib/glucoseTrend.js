@@ -23,6 +23,22 @@ const RATE_SLOW = 1;
 const RATE_SLOW_NEG = -1;
 const RATE_FAST_NEG = -3;
 
+/**
+ * Every arrow this mapping can produce, and the complete set a glucose card may
+ * draw. Both the derived-rate mapping and the CGM's own reported trend resolve
+ * to these names, so one arrow component can draw them all — and a test asserts
+ * that no direction can ever come back without an arrow to show it.
+ */
+export const TREND_ICON_KEYS = [
+  "double_up",
+  "up",
+  "up-right",
+  "right",
+  "down-right",
+  "down",
+  "double_down",
+];
+
 function interpolateValueAt(points, time) {
   if (time <= points[0].t) return points[0].v;
   const last = points[points.length - 1];

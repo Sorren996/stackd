@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { BellRing, HeartHandshake, LogOut, Users } from "lucide-react";
+import { BellRing, HeartHandshake, LogOut } from "lucide-react";
 import SectionCard from "@/components/editorial/SectionCard";
 import { Button } from "@/components/ui/button";
 import FollowerPrefsSheet from "@/components/sharing/FollowerPrefsSheet";
@@ -9,7 +9,6 @@ import useAccessProfile from "@/hooks/useAccessProfile";
 import { useAuth } from "@/lib/AuthContext";
 import { sharerName } from "@/lib/sharing/sharerName";
 import { stopFollowing, describeSharingError } from "@/lib/sharing/sharingApi";
-import { enableSelfTracking } from "@/lib/access/profileApi";
 
 /**
  * A viewer's settings.
@@ -21,12 +20,11 @@ export default function FollowerSettings() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user, logout } = useAuth();
-  const { following, selfTrackingEnabled } = useAccessProfile();
+  const { following } = useAccessProfile();
   const [prefsFor, setPrefsFor] = useState(null);
   const [confirmStopFor, setConfirmStopFor] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [enabling, setEnabling] = useState(false);
 
   const people = following.filter((r) => r.status === "active" || r.status === "paused");
 
@@ -47,20 +45,6 @@ export default function FollowerSettings() {
       setError(describeSharingError(err));
     } finally {
       setBusy(false);
-    }
-  };
-
-  const enableOwnTracking = async () => {
-    setEnabling(true);
-    setError("");
-    try {
-      await enableSelfTracking();
-      // A full reload so the app re-resolves the account and applies the
-      // patient set-up exactly as it is, unchanged.
-      window.location.href = "/";
-    } catch {
-      setError("That did not save. Please try again.");
-      setEnabling(false);
     }
   };
 
@@ -139,21 +123,6 @@ export default function FollowerSettings() {
           <p className="text-sm" style={{ color: "#a2564a" }}>
             {error}
           </p>
-        </SectionCard>
-      )}
-
-      {!selfTrackingEnabled && (
-        <SectionCard label="For you as well">
-          <div className="flex gap-3">
-            <Users className="mt-0.5 h-4 w-4 shrink-0" style={{ color: "#9c5228" }} />
-            <p className="text-sm" style={{ color: "#746959" }}>
-              Want to record your own readings too? That switches on the full Stackd experience for you, including the
-              set-up steps it needs.
-            </p>
-          </div>
-          <Button className="mt-4 w-full rounded-full" disabled={enabling} onClick={enableOwnTracking}>
-            {enabling ? "Switching on…" : "Track my own glucose as well"}
-          </Button>
         </SectionCard>
       )}
 

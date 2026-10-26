@@ -1,5 +1,7 @@
+import TrendArrow from "@/components/glucose/TrendArrow";
+import { computeGlucoseTrend, mapDexcomTrend } from "@/lib/glucoseTrend";
 import { computeSharedDailyBalance } from "@/lib/sharing/sharedDailyBalance";
-import { describeDirection, describeProjectionReason, describeReadingAge, describeZone } from "@/lib/sharing/sharingCopy";
+import { describeProjectionReason, describeReadingAge, describeZone } from "@/lib/sharing/sharingCopy";
 
 /**
  * The follower's glucose panel.
@@ -25,7 +27,23 @@ export default function SharedGlucosePanel({ glucose, reason }) {
     glucose.target_high,
     glucose.today_start
   );
-  const direction = glucose.stale ? null : describeDirection(glucose.direction);
+  // One computation drives BOTH the arrow and the written direction, so the two
+  // can never contradict each other. It is the same least-squares mapping the
+  // patient's own hero uses, over the same readings, and it is only drawn at all
+  // when the projection itself describes a direction — a stale reading makes no
+  // claim in either form, and neither does a window with too few readings to
+  // derive one from. "We cannot tell" is drawn as a neutral mark, never as the
+  // steady arrow.
+  const realReadings = Array.isArray(glucose.readings) ? glucose.readings : [];
+  // The CGM's own reported arrow is preferred where the source supplies one,
+  // exactly as the patient's own hero does; otherwise the rate is derived from
+  // the readings with the same mapping. Below two readings nothing is derived,
+  // so no steady arrow is ever implied from thin data.
+  const cgmTrend = latest?.source === "dexcom" ? mapDexcomTrend(latest?.trend) : null;
+  const trend =
+    !glucose.stale && glucose.direction != null
+      ? cgmTrend || (realReadings.length >= 2 ? computeGlucoseTrend(realReadings) : null)
+      : null;
   const zone = describeZone(glucose.zone);
 
   const zoneColor =
@@ -44,6 +62,10 @@ export default function SharedGlucosePanel({ glucose, reason }) {
         <span className="text-xs" style={{ color: "#746959" }}>
           mg/dL
         </span>
+        {/* The direction is written out below, so the arrow itself is
+            decorative when one exists; with no direction it announces that
+            instead of staying silent. */}
+        <TrendArrow icon={trend?.icon} className="self-center" size={20} style={{ color: "#3f3830" }} />
         {!glucose.stale && zone && (
           <span
             className="ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em]"
@@ -57,7 +79,7 @@ export default function SharedGlucosePanel({ glucose, reason }) {
       <p className="text-xs" style={{ color: "#746959" }}>
         {describeReadingAge(glucose.latest_age_minutes)}
         {glucose.stale && " · the newest reading is older than usual"}
-        {direction && ` · ${direction}`}
+        {trend?.label && ` · ${trend.label}`}
       </p>
 
       {glucose.stale && (

@@ -10,6 +10,7 @@ import ShareInviteSheet from "@/components/sharing/ShareInviteSheet";
 import ContactNumberCard from "@/components/sharing/ContactNumberCard";
 import SharedNameCard from "@/components/sharing/SharedNameCard";
 import LocationPublishCard from "@/components/sharing/LocationPublishCard";
+import LocationLiveUpdatesCard from "@/components/sharing/LocationLiveUpdatesCard";
 import { getSharingRelationships } from "@/lib/sharing/sharingApi";
 import { summaryLine } from "@/lib/sharing/sharingCopy";
 import { reconcileSelection } from "@/lib/sharing/relationshipSelection";
@@ -103,6 +104,9 @@ export default function SharingPage() {
 
       <SectionCard label="Your latest location">
         <LocationPublishCard location={data?.location} onPublished={refetch} />
+        <div className="mt-4 border-t pt-4" style={{ borderColor: "#eadccf" }}>
+          <LocationLiveUpdatesCard relationships={relationships} />
+        </div>
       </SectionCard>
 
       <SectionCard label="Notices">

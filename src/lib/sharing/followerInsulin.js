@@ -99,7 +99,10 @@ export function computeSharedActiveInsulin(doses, now = Date.now(), { doseMathAv
   if (unknown) return { available: false, reason: "unknown_type", value: null, isZero: false };
 
   const modellable = list.filter((dose) => isModellableDose(dose, now));
-  return describeActiveInsulinEstimate(getTotalBolusIOB(modellable, now), true);
+  // The count of rapid-acting doses actually visible is part of the answer: with
+  // none logged at all, "none active" would be a claim we cannot make.
+  const rapidDoseCount = modellable.filter((dose) => isBolusInsulinType(dose.insulin_type)).length;
+  return describeActiveInsulinEstimate(getTotalBolusIOB(modellable, now), true, rapidDoseCount);
 }
 
 /**

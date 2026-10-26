@@ -57,7 +57,11 @@ export default async function (req: Request): Promise<Response> {
         ? sr.entities.GlucoseReading.filter({ user_id: sharerId }, { sort: '-recorded_at', limit: 400 })
         : Promise.resolve([]),
       scopes.insulin
-        ? sr.entities.InsulinDose.filter({ created_by_id: sharerId }, { sort: '-administered_at', limit: 200 })
+        // Enough to cover the whole active lookback even when someone logs
+        // densely: the follower's active figure is judged dose-by-dose against
+        // each dose's own duration, so dropping the oldest ones would silently
+        // understate it.
+        ? sr.entities.InsulinDose.filter({ created_by_id: sharerId }, { sort: '-administered_at', limit: 400 })
         : Promise.resolve([]),
       scopes.location ? sr.entities.LatestLocation.filter({ user_id: sharerId }) : Promise.resolve([]),
       scopes.urgent_low_call ? sr.entities.SharerContact.filter({ user_id: sharerId }) : Promise.resolve([]),

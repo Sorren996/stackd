@@ -9,6 +9,7 @@ import UnifiedBottomNav from "./UnifiedBottomNav";
 import { useRealtimeLogSync } from "@/hooks/useRealtimeLogSync";
 import { useDexcomRefresh } from "@/hooks/useDexcomRefresh";
 import PullToRefresh from "@/components/PullToRefresh";
+import LocationForegroundUpdater from "@/components/LocationForegroundUpdater";
 
 // iOS repaint bug after backgrounding: WebKit sometimes fails to repaint
 // scrolled content when the WebView returns from the background, leaving
@@ -198,6 +199,11 @@ export default function Layout() {
           </div>
         </PullToRefresh>
       </main>
+
+      {/* Refreshes the sharer's own shared position while this app is open and
+          in front of them — only when they have opted in and someone actually
+          has the location scope switched on. */}
+      <LocationForegroundUpdater />
 
       <UnifiedBottomNav />
     </div>

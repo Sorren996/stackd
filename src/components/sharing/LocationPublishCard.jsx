@@ -3,6 +3,7 @@ import { MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { publishSharerLocation, describeSharingError } from "@/lib/sharing/sharingApi";
 import { describeLocationAge } from "@/lib/sharing/sharingCopy";
+import { observedAtFromFix } from "@/lib/sharing/liveLocation";
 
 /**
  * Publish the latest known location.
@@ -31,7 +32,11 @@ export default function LocationPublishCard({ location, onPublished }) {
           const data = await publishSharerLocation(
             position.coords.latitude,
             position.coords.longitude,
-            position.coords.accuracy
+            position.coords.accuracy,
+            // The position's own observation time, so whoever is following sees
+            // when someone was actually there. The server bounds it and falls
+            // back to its own time when it is unusable.
+            { observedAt: observedAtFromFix(position.timestamp), source: "manual" }
           );
           if (data.published) {
             setMessage("Latest location shared.");
