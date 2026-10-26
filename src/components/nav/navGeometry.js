@@ -30,6 +30,30 @@ export const NAVBAR_INSET = "var(--navbar-inset, 10px)";
 export const BAR_SIDE_PADDING = `calc(${SIDE_INSET}px + ${NAVBAR_INSET})`;
 export const BAR_MAX_WIDTH = `calc(${CARD_COLUMN_MAX} - ${SIDE_INSET * 2}px - 2 * ${NAVBAR_INSET})`;
 
+// --- The sliding selection chip ---------------------------------------------
+// One chip that travels between destinations instead of each item owning its
+// own highlight. Its horizontal slot maths mirror the grid the items are laid
+// out in, so the chip can never drift from the item it belongs to.
+export const NAV_SLOT_COUNT = 5; // four destinations plus the reserved centre
+export const PILL_TOP = 8; // from the bar's top edge
+export const PILL_HEIGHT = 54; // a true pill: the radius is half the height
+export const PILL_SIDE_GAP = 4; // clear of each slot's own edges
+export const PILL_RADIUS = PILL_HEIGHT / 2;
+
+/**
+ * Where a destination's chip sits, in the bar's own coordinates. Mirrors the
+ * bar's grid exactly: NAV_SLOT_COUNT equal slots with BAR_PADDING_X at each
+ * end, the centre slot reserved for the Log button (so item 2 sits in slot 3).
+ */
+export function navSlotRect(itemIndex, barWidth) {
+  const slotWidth = Math.max(0, (barWidth - BAR_PADDING_X * 2) / NAV_SLOT_COUNT);
+  const slot = itemIndex < 2 ? itemIndex : itemIndex + 1;
+  return {
+    left: BAR_PADDING_X + slot * slotWidth + PILL_SIDE_GAP,
+    width: Math.max(0, slotWidth - PILL_SIDE_GAP * 2),
+  };
+}
+
 // Space kept between the underline's bottom edge and the pill's bottom edge, so
 // the active tab never crowds the silhouette's curve. Applied as the row's own
 // bottom padding — the safe-area inset is handled below the pill by the nav, so

@@ -10,6 +10,7 @@ import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 import NavItem from "@/components/nav/NavItem";
 import LogFanMenu from "@/components/nav/LogFanMenu";
 import NavNotchSurface, { useMeasuredWidth } from "@/components/nav/NavNotchSurface";
+import NavSelectionPill from "@/components/nav/NavSelectionPill";
 import {
   BAR_HEIGHT,
   BAR_MAX_WIDTH,
@@ -263,6 +264,10 @@ export default function UnifiedBottomNav() {
           style={{ maxWidth: BAR_MAX_WIDTH, height: BAR_HEIGHT }}
         >
           <NavNotchSurface width={barWidth} />
+
+          {/* The chip travels between destinations, drawn on the bar's sheet —
+              beneath the items, so the icons and labels stay crisp on top. */}
+          <NavSelectionPill itemIndex={activeIndex} barWidth={barWidth} reduce={reduce} />
 
           {/* One shared grid: five equally sized slots, the centre one left empty
               under the FAB so the four destinations stay symmetric about it and
