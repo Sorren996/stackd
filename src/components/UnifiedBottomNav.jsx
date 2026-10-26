@@ -12,13 +12,14 @@ import LogFanMenu from "@/components/nav/LogFanMenu";
 import NavNotchSurface, { useMeasuredWidth } from "@/components/nav/NavNotchSurface";
 import {
   BAR_HEIGHT,
+  BAR_MAX_WIDTH,
   BAR_PADDING_BOTTOM,
   BAR_PADDING_X,
+  BAR_SIDE_PADDING,
   LOG_LAYER_BOTTOM,
   LOG_RAISE,
   LOG_RING,
   LOG_SIZE,
-  SIDE_INSET,
 } from "@/components/nav/navGeometry";
 
 const EASE_OUT = [0.16, 1, 0.3, 1];
@@ -251,15 +252,15 @@ export default function UnifiedBottomNav() {
         className="fixed inset-x-0"
         style={{
           bottom: "calc(0px + env(safe-area-inset-bottom))",
-          paddingLeft: SIDE_INSET,
-          paddingRight: SIDE_INSET,
+          paddingLeft: BAR_SIDE_PADDING,
+          paddingRight: BAR_SIDE_PADDING,
           zIndex: 50,
         }}
       >
         <div
           ref={barRef}
           className="relative mx-auto w-full overflow-visible"
-          style={{ maxWidth: "30rem", height: BAR_HEIGHT }}
+          style={{ maxWidth: BAR_MAX_WIDTH, height: BAR_HEIGHT }}
         >
           <NavNotchSurface width={barWidth} />
 
@@ -315,8 +316,8 @@ export default function UnifiedBottomNav() {
         style={{
           bottom: `calc(${LOG_LAYER_BOTTOM}px + env(safe-area-inset-bottom))`,
           paddingTop: LOG_RAISE,
-          paddingLeft: SIDE_INSET,
-          paddingRight: SIDE_INSET,
+          paddingLeft: BAR_SIDE_PADDING,
+          paddingRight: BAR_SIDE_PADDING,
           zIndex: 54,
         }}
       >

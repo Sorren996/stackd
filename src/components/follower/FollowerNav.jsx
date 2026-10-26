@@ -1,7 +1,13 @@
 import { useLocation } from "react-router-dom";
 import { CircleUser, HeartHandshake } from "lucide-react";
 import NavItem from "@/components/nav/NavItem";
-import { BAR_HEIGHT, BAR_PADDING_BOTTOM, BAR_PADDING_X, SIDE_INSET } from "@/components/nav/navGeometry";
+import {
+  BAR_HEIGHT,
+  BAR_MAX_WIDTH,
+  BAR_PADDING_BOTTOM,
+  BAR_PADDING_X,
+  BAR_SIDE_PADDING,
+} from "@/components/nav/navGeometry";
 
 // A viewer has two things to do: look at the person they follow, and manage
 // their own choices. No logging, so the bar is a plain pill — no notch and no
@@ -21,11 +27,11 @@ export default function FollowerNav() {
       className="fixed inset-x-0 z-50"
       style={{
         bottom: "calc(0px + env(safe-area-inset-bottom))",
-        paddingLeft: SIDE_INSET,
-        paddingRight: SIDE_INSET,
+        paddingLeft: BAR_SIDE_PADDING,
+        paddingRight: BAR_SIDE_PADDING,
       }}
     >
-      <div className="relative mx-auto w-full overflow-visible" style={{ maxWidth: "30rem" }}>
+      <div className="relative mx-auto w-full overflow-visible" style={{ maxWidth: BAR_MAX_WIDTH }}>
         <div
           aria-hidden="true"
           className="absolute inset-0"

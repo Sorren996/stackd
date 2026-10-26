@@ -11,6 +11,25 @@ export const BAR_RADIUS = 34; // half the height — a true pill
 export const SIDE_INSET = 16; // bar inset from the screen edges
 export const BAR_PADDING_X = 6; // symmetric inner padding around the five slots
 
+// --- The bar's own box, measured against the page's card column --------------
+// The cards always live in one column: `main` is px-4 and every page root is
+// max-w-md, so the cards are at most 28rem wide (SIDE_INSET is the same 16px as
+// px-4). The bar is drawn in that same column, pulled in by NAVBAR_INSET on each
+// side, so it sits exactly that much narrower than the cards above it — on a
+// narrow phone as much as on a wide screen.
+export const CARD_COLUMN_MAX = "28rem"; // max-w-md — the widest the cards get
+
+// The single value to tweak. It lives in src/index.css so it can be changed
+// without touching this file; the inline fallback keeps the bar correct if the
+// token is ever missing.
+export const NAVBAR_INSET = "var(--navbar-inset, 10px)";
+
+// Both derived from that one value, so the gap per side stays identical at every
+// viewport width: the padding grows by the inset while the width cap shrinks by
+// twice the inset.
+export const BAR_SIDE_PADDING = `calc(${SIDE_INSET}px + ${NAVBAR_INSET})`;
+export const BAR_MAX_WIDTH = `calc(${CARD_COLUMN_MAX} - ${SIDE_INSET * 2}px - 2 * ${NAVBAR_INSET})`;
+
 // Space kept between the underline's bottom edge and the pill's bottom edge, so
 // the active tab never crowds the silhouette's curve. Applied as the row's own
 // bottom padding — the safe-area inset is handled below the pill by the nav, so

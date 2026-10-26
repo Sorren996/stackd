@@ -61,6 +61,11 @@
     --nav-ink: #3f3830;        /* 11.0:1 on the surface — option labels */
     --nav-disc: #fdf9f2;       /* warm cream — option discs and label pills */
 
+    /* How far the floating bar sits inside the page's card column, per side.
+       Geometry, not colour — identical in both themes. The single value to
+       tweak: 0 makes the bar match the cards exactly, larger pulls it in. */
+    --navbar-inset: 10px;
+
     /* Chart / data colors */
     --chart-1: 88 8% 35%;               /* sage — in range */
     --chart-2: 30 16% 22%;              /* espresso — ink curve */
