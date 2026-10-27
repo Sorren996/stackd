@@ -17,6 +17,9 @@ import Landing from './pages/Landing';
 import Install from './pages/Install';
 import PrivacyPage from './pages/PrivacyPage';
 import PublicContactPage from './pages/PublicContactPage';
+import HowItWorks from './pages/HowItWorks';
+import SharingExplained from './pages/SharingExplained';
+import TermsPage from './pages/TermsPage';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import History from './pages/History';
@@ -271,7 +274,10 @@ const AuthenticatedApp = () => {
         <Route path="/" element={<Landing />} />
         <Route path="/install" element={<Install />} />
         <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/terms" element={<TermsPage />} />
         <Route path="/contact" element={<PublicContactPage />} />
+        <Route path="/how-it-works" element={<HowItWorks />} />
+        <Route path="/sharing" element={<SharingExplained />} />
         <Route path="/follow" element={<FollowInvite />} />
         <Route path="*" element={<SplashScreen showAuth />} />
       </Routes>

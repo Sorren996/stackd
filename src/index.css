@@ -69,6 +69,23 @@
     --nav-pill-border: rgba(255, 255, 255, 0.90);
     --nav-pill-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 2px 10px rgba(63, 56, 48, 0.10);
 
+    /* ── Public website ────────────────────────────────────── */
+    /* One palette for the public pages and the account screens: a muted
+       slate-blue field with warm cream reading surfaces, so the site and the
+       app read as one product. Measured contrast, on the field: cream 5.75:1
+       and mist 4.72:1; on cream: ink 11.0:1, muted 5.78:1, copper 5.48:1. */
+    --site-field: #4c6770;        /* the slate field the site opens on */
+    --site-field-deep: #3a4f57;   /* footer band — cream text 8.21:1 */
+    --site-surface: #fdf9f2;      /* reading surfaces: ink 11.0:1 */
+    --site-surface-sunk: #f4ece1; /* second surface, for tinted bands */
+    --site-ink: #3f3830;          /* 11.0:1 on cream */
+    --site-muted: #6b6153;        /*  5.78:1 on cream */
+    --site-line: #eadccf;         /* warm hairline for dividers and borders */
+    --site-accent: #9c5228;       /* copper: 5.48:1 on cream, 5.48:1 for cream text on it */
+    --site-accent-ink: #fdf9f2;
+    --site-on-field: #fdf9f2;     /* 5.75:1 on the field — headings and body */
+    --site-on-field-muted: #dde5e8; /* 4.72:1 on the field — secondary text */
+
     /* How far the floating bar sits inside the page's card column, per side.
        Geometry, not colour — identical in both themes. The single value to
        tweak: 0 makes the bar match the cards exactly, larger pulls it in. */

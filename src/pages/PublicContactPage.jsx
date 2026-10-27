@@ -1,90 +1,119 @@
 import { Link } from "react-router-dom";
-import LandingNav from "@/components/landing/LandingNav";
-import LandingFooter from "@/components/landing/LandingFooter";
-import { ChevronLeft, MessageCircle, Bug, ShieldCheck, CircleHelp } from "lucide-react";
+import { ArrowRight, KeyRound, MailCheck, Smartphone, LifeBuoy, Trash2 } from "lucide-react";
+import PublicShell from "@/components/public/PublicShell";
+import PublicPageHeader from "@/components/public/PublicPageHeader";
+import PublicSection from "@/components/public/PublicSection";
+import useSiteMeta from "@/hooks/useSiteMeta";
 
-const HELP_OPTIONS = [
+const HELP = [
   {
-    icon: CircleHelp,
-    title: "Ask a question",
-    body: "Wondering how a reading, estimate, or review works? Open the help (?) icons throughout the app or reach out from Settings.",
+    icon: KeyRound,
+    title: "I cannot sign in",
+    body: "Use Forgot password to set a new one. If you originally signed up with Apple or Google, use that same button on the sign in screen instead of a password. Check you are using the address you registered with.",
+    action: { label: "Reset your password", to: "/forgot-password" },
   },
   {
-    icon: Bug,
-    title: "Report a problem",
-    body: "If something looks off or a moment didn't save, tell us what you saw. Detail helps us find and gently fix it.",
+    icon: MailCheck,
+    title: "My invitation will not open",
+    body: "Invitations are tied to the email address they were sent to, so sign in with that address. If the link is incomplete or has expired, ask the person who invited you to send a new one from their sharing screen.",
+    action: { label: "How sharing works", to: "/sharing" },
   },
   {
-    icon: ShieldCheck,
-    title: "Privacy & data",
-    body: "Your health data stays yours. You can review how it's handled on the Privacy Notice page, and delete it any time from Settings.",
+    icon: Smartphone,
+    title: "Installing is not working",
+    body: "Installation is per browser. iPhone and iPad need Safari for the full app experience, Android and desktop browsers have their own install menu. All the steps are on the install page.",
+    action: { label: "Install instructions", to: "/install" },
+  },
+  {
+    icon: LifeBuoy,
+    title: "Something looks wrong in the app",
+    body: "Signed-in accounts have a support request screen under Settings, which records what you saw and, if you agree, a little diagnostic detail such as connection status. That is the fastest way to get it looked at.",
+  },
+  {
+    icon: Trash2,
+    title: "I want my data removed",
+    body: "Account and data deletion is available from Settings while signed in. The Privacy Notice explains what is stored and how long it is kept.",
+    action: { label: "Privacy Notice", to: "/privacy" },
   },
 ];
 
+/**
+ * Public help. Everything on this page works before signing in, and nothing
+ * here pretends to be a support channel that does not exist yet.
+ */
 export default function PublicContactPage() {
+  useSiteMeta(
+    "Stackd support and self help",
+    "Help before you sign in: password reset, invitation problems, installing Stackd, reporting a problem and removing your data.",
+  );
+
   return (
-    <div id="top" className="min-h-screen" style={{ background: "#f7f1e8" }}>
-      <LandingNav />
-      <main className="mx-auto max-w-2xl px-4 py-12">
-        <Link
-          to="/"
-          className="mb-6 inline-flex items-center gap-1 text-sm font-semibold transition-colors hover:opacity-70"
-          style={{ color: "#5a5048" }}
-        >
-          <ChevronLeft className="h-4 w-4" /> Back
-        </Link>
+    <PublicShell>
+      <PublicPageHeader
+        eyebrow="Contact and self help"
+        title="Help, before you sign in."
+        lede="Most questions people have about Stackd are answered below, without an account and without waiting."
+      />
 
-        <h1 className="text-3xl font-bold tracking-tight md:text-4xl" style={{ color: "#3f3830" }}>
-          Contact <span className="font-serif-italic" style={{ fontWeight: 400 }}>support</span>
-        </h1>
-        <p className="mt-3 max-w-xl text-sm leading-relaxed" style={{ color: "#6b6153" }}>
-          We're here to help you feel at ease with Stackd. The fastest way to reach us is from inside
-          the app: <span className="font-semibold">Settings → Contact &amp; Support</span>. That flow
-          shares the details we need to look into things alongside you.
-        </p>
-
-        <div className="mt-8 space-y-4">
-          {HELP_OPTIONS.map((option) => {
-            const Icon = option.icon;
-            return (
-              <div
-                key={option.title}
-                className="flex items-start gap-4 rounded-2xl p-5"
-                style={{ background: "#fdf9f2", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}
-              >
+      <PublicSection tone="field" width="narrow" className="!pt-0">
+        <div className="space-y-4">
+          {HELP.map((item) => (
+            <div key={item.title} className="rounded-3xl bg-paper p-6" style={{ border: "1px solid #eadccf" }}>
+              <div className="flex items-start gap-4">
                 <span
-                  className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
-                  style={{ background: "rgba(91,101,80,0.12)" }}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+                  style={{ background: "rgba(76, 103, 112, 0.10)" }}
+                  aria-hidden="true"
                 >
-                  <Icon className="h-4 w-4" style={{ color: "#5b6550" }} />
+                  <item.icon className="h-5 w-5" style={{ color: "#3f5760" }} strokeWidth={1.8} />
                 </span>
                 <div>
-                  <h2 className="text-sm font-semibold" style={{ color: "#3f3830" }}>{option.title}</h2>
-                  <p className="mt-1 text-sm leading-relaxed" style={{ color: "#4a423a" }}>{option.body}</p>
+                  <h2 className="text-[15px] font-semibold text-ink">{item.title}</h2>
+                  <p className="mt-1.5 text-sm leading-relaxed text-ink-muted">{item.body}</p>
+                  {item.action && (
+                    <Link
+                      to={item.action.to}
+                      className="mt-3 inline-flex min-h-[36px] items-center gap-2 text-sm font-semibold underline decoration-[#9c5228]/40 underline-offset-4"
+                      style={{ color: "#8a4a24" }}
+                    >
+                      {item.action.label}
+                      <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+                    </Link>
+                  )}
                 </div>
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
 
-        <div
-          className="mt-8 flex items-start gap-3 rounded-2xl p-5"
-          style={{ background: "#fdf9f2", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}
-        >
-          <MessageCircle className="mt-0.5 h-4 w-4 shrink-0" style={{ color: "#5b6550" }} />
-          <div>
-            <h2 className="text-sm font-semibold" style={{ color: "#3f3830" }}>Already have an account?</h2>
-            <p className="mt-1 text-sm leading-relaxed" style={{ color: "#4a423a" }}>
-              Sign in and head to{" "}
-              <Link to="/login" className="font-semibold underline" style={{ color: "#3f3830" }}>
-                Settings → Contact &amp; Support
-              </Link>{" "}
-              to send a request directly.
-            </p>
+        <div className="mt-6 rounded-3xl bg-paper-sunk p-6" style={{ border: "1px solid #eadccf" }}>
+          <h2 className="text-[15px] font-semibold text-ink">Reaching a person</h2>
+          <p className="mt-2 text-sm leading-relaxed text-ink-muted">
+            Support for Stackd currently starts inside the app: sign in and open Settings, then Contact and Support, to
+            send a request and follow its progress. There is no public phone line, mailbox or web form attached to this
+            page, so this page does not collect messages or store anything you write here.
+          </p>
+          <p className="mt-3 text-sm leading-relaxed text-ink-muted">
+            If you cannot get into your account at all, the password reset and invitation steps above are the way back
+            in. If none of them work, ask the person who invited you to raise it with us on your behalf.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <Link
+              to="/login"
+              className="inline-flex min-h-[44px] items-center justify-center rounded-full px-5 text-sm font-semibold transition-transform hover:opacity-95 active:scale-[0.98]"
+              style={{ background: "#3f3830", color: "#fdf9f2" }}
+            >
+              Sign in
+            </Link>
+            <Link
+              to="/register"
+              className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-[#d8cec2] px-5 text-sm font-semibold text-ink transition-colors hover:bg-black/[0.03]"
+            >
+              Create an account
+            </Link>
           </div>
         </div>
-      </main>
-      <LandingFooter />
-    </div>
+      </PublicSection>
+    </PublicShell>
   );
 }

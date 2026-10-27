@@ -1,58 +1,87 @@
 import { Link } from "react-router-dom";
-import LandingNav from "@/components/landing/LandingNav";
-import LandingFooter from "@/components/landing/LandingFooter";
-import { LEGAL_DOCUMENTS } from "@/lib/acknowledgmentConfig";
-import { ChevronLeft } from "lucide-react";
+import PublicShell from "@/components/public/PublicShell";
+import PublicPageHeader from "@/components/public/PublicPageHeader";
+import PublicSection from "@/components/public/PublicSection";
+import LegalDocument from "@/components/public/LegalDocument";
+import { LEGAL_DOCUMENTS, ACKNOWLEDGMENT_VERSIONS } from "@/lib/acknowledgmentConfig";
+import useSiteMeta from "@/hooks/useSiteMeta";
 
+const SUMMARY = [
+  {
+    title: "What is collected",
+    body: "The glucose values, insulin doses, meals, notes and connected device data you choose to enter, plus the estimates the app derives from them. Technical details such as device type and timezone are recorded when you complete the acknowledgment steps.",
+  },
+  {
+    title: "Who can see it",
+    body: "You, and only you, by default. If you invite someone to follow you, they can see the parts you switch on for them, and nothing else. People who operate the app can process it as needed to run the service; it is not sold, and it is not used for advertising.",
+  },
+  {
+    title: "Optional meal estimates",
+    body: "If you use the optional estimate from a meal description or photo, that text or image is sent to an AI service to produce the suggestion. Manual logging never uses it, and you can leave the feature unused entirely.",
+  },
+  {
+    title: "Removing it",
+    body: "You can delete your account and its data from Settings. Withdrawing health-data consent restricts the health features without deleting what is already stored, which the notice below explains in full.",
+  },
+];
+
+/**
+ * The Privacy Notice, readable without an account, in the same words the app
+ * asks people to acknowledge. The plain-language summary above it is a summary,
+ * not a replacement, and the version shown here is the version that applies.
+ */
 export default function PrivacyPage() {
   const doc = LEGAL_DOCUMENTS.privacy;
+  useSiteMeta(
+    "Stackd Privacy Notice",
+    "How Stackd collects, uses, stores and shares the information you enter or connect, including optional AI-assisted meal estimates and who can see your records.",
+  );
 
   return (
-    <div id="top" className="min-h-screen" style={{ background: "#f7f1e8" }}>
-      <LandingNav />
-      <main className="mx-auto max-w-2xl px-4 py-12">
-        <Link
-          to="/"
-          className="mb-6 inline-flex items-center gap-1 text-sm font-semibold transition-colors hover:opacity-70"
-          style={{ color: "#5a5048" }}
-        >
-          <ChevronLeft className="h-4 w-4" /> Back
-        </Link>
+    <PublicShell>
+      <PublicPageHeader
+        eyebrow="Privacy"
+        title="Privacy Notice"
+        lede="What Stackd collects, why, who can see it and how to remove it, in the same words the app asks you to acknowledge."
+      />
 
-        <h1
-          className="text-3xl font-bold tracking-tight md:text-4xl"
-          style={{ color: "#3f3830" }}
-        >
-          {doc.title}
-        </h1>
-        <p className="mt-2 text-sm" style={{ color: "#6b6153" }}>
-          Last updated October 17, 2026 · Version {doc.version}
-        </p>
-
-        <div
-          className="mt-8 rounded-2xl p-6"
-          style={{ background: "#fdf9f2", boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)" }}
-        >
-          <div className="space-y-4 text-sm leading-relaxed" style={{ color: "#3f3830" }}>
-            {doc.content
-              .split("\n\n")
-              .filter((block) => block.trim())
-              .map((block, i) => {
-                const isHeading = /^\d:/.test(block.trim());
-                return (
-                  <div key={i}>
-                    {isHeading ? (
-                      <h2 className="mb-1 text-base font-semibold" style={{ color: "#3f3830" }}>{block.trim()}</h2>
-                    ) : (
-                      <div className="whitespace-pre-wrap" style={{ color: "#4a423a" }}>{block.trim()}</div>
-                    )}
-                  </div>
-                );
-              })}
-          </div>
+      <PublicSection tone="field" width="narrow" className="!pt-0">
+        <div className="grid gap-4 sm:grid-cols-2">
+          {SUMMARY.map((item) => (
+            <div key={item.title} className="rounded-3xl p-5" style={{ background: "rgba(253, 249, 242, 0.06)", border: "1px solid rgba(253, 249, 242, 0.22)" }}>
+              <h2 className="text-[15px] font-semibold text-field-ink">{item.title}</h2>
+              <p className="mt-2 text-sm leading-relaxed text-field-ink">{item.body}</p>
+            </div>
+          ))}
         </div>
-      </main>
-      <LandingFooter />
-    </div>
+
+        <div className="mt-5 rounded-3xl bg-paper-sunk p-5" style={{ border: "1px solid #eadccf" }}>
+          <h2 className="text-[15px] font-semibold text-ink">A note on versions</h2>
+          <p className="mt-2 text-sm leading-relaxed text-ink-muted">
+            This notice is version {ACKNOWLEDGMENT_VERSIONS.privacy_notice_version} and last updated on 27 October 2026.
+            The wording about who can access your records, and about what the optional AI-assisted meal estimate sends,
+            has been corrected so it matches what the app actually does. Nothing about what is shared has been widened.
+            If you acknowledged an earlier version, Stackd asks you to review and acknowledge this one the next time you
+            sign in, and your earlier acknowledgment records are kept as they were.
+          </p>
+        </div>
+
+        <div className="mt-8">
+          <LegalDocument doc={doc} />
+        </div>
+
+        <p className="mt-6 text-sm leading-relaxed text-field-muted">
+          The{" "}
+          <Link to="/terms" className="font-semibold underline decoration-[#fdf9f2]/40 underline-offset-4" style={{ color: "#fdf9f2" }}>
+            Terms of Use
+          </Link>{" "}
+          cover what Stackd is and is not. If you have a question about any of this, the{" "}
+          <Link to="/contact" className="font-semibold underline decoration-[#fdf9f2]/40 underline-offset-4" style={{ color: "#fdf9f2" }}>
+            help page
+          </Link>{" "}
+          explains how to reach us.
+        </p>
+      </PublicSection>
+    </PublicShell>
   );
 }

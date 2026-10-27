@@ -49,6 +49,25 @@ module.exports = {
   			'mustard-text': '#8a5a12',
   			'red-text': '#9c3f2e',
   			copper: '#9c5228',
+  			/* Public website palette — values live in src/index.css. */
+  			field: {
+  				DEFAULT: 'var(--site-field)',
+  				deep: 'var(--site-field-deep)',
+  				ink: 'var(--site-on-field)',
+  				muted: 'var(--site-on-field-muted)'
+  			},
+  			paper: {
+  				DEFAULT: 'var(--site-surface)',
+  				sunk: 'var(--site-surface-sunk)'
+  			},
+  			ink: {
+  				DEFAULT: 'var(--site-ink)',
+  				muted: 'var(--site-muted)'
+  			},
+  			brand: {
+  				DEFAULT: 'var(--site-accent)',
+  				ink: 'var(--site-accent-ink)'
+  			},
   			chart: {
   				'1': 'hsl(var(--chart-1))',
   				'2': 'hsl(var(--chart-2))',
