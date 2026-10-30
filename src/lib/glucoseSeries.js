@@ -102,3 +102,52 @@ export function nowScrollOffset({ maxScrollLeft, futureMs, chartWidth, totalMs }
   const futurePx = (futureMs / totalMs) * chartWidth;
   return Math.max(0, Math.min(maxScrollLeft, Math.round(maxScrollLeft - futurePx)));
 }
+
+/** A CGM normally reports about every five minutes. */
+export const GLUCOSE_CADENCE_MS = 5 * 60 * 1000;
+
+/**
+ * How long the silence between two readings has to be before it counts as a
+ * genuinely missing sample rather than ordinary transmission jitter. The
+ * cadence is five minutes, so anything up to 8 minutes still joins up: a
+ * slightly early or late reading never draws a false gap, while an actually
+ * missed sample (the next one lands at ~10 minutes) does.
+ */
+export const GLUCOSE_GAP_BREAK_MS = 8 * 60 * 1000;
+
+/**
+ * Split real readings into contiguous runs.
+ *
+ * Each run is drawn as one smooth line through its own samples. A run ends
+ * only where a sample is genuinely missing — the next reading is more than
+ * `maxGapMs` after the previous one — so the drawn path breaks exactly where
+ * no data exists, and nothing is bridged or extrapolated across that hole.
+ *
+ * @param {Array<{time:number,value:number}>} points — real readings only
+ * @param {{maxGapMs?:number}} [options]
+ * @returns {Array<Array<{time:number,value:number}>>} runs, ascending in time
+ */
+export function buildGlucoseSegments(points, { maxGapMs = GLUCOSE_GAP_BREAK_MS } = {}) {
+  const gap = Number.isFinite(maxGapMs) && maxGapMs > 0 ? maxGapMs : GLUCOSE_GAP_BREAK_MS;
+
+  const sorted = (Array.isArray(points) ? points : [])
+    .map((point) => ({ time: Number(point?.time), value: Number(point?.value ?? point?.glucose) }))
+    .filter((point) => Number.isFinite(point.time) && Number.isFinite(point.value))
+    .sort((a, b) => a.time - b.time);
+
+  const segments = [];
+  let current = [];
+  let previousTime = null;
+
+  for (const point of sorted) {
+    if (previousTime !== null && point.time - previousTime > gap) {
+      if (current.length) segments.push(current);
+      current = [];
+    }
+    current.push(point);
+    previousTime = point.time;
+  }
+  if (current.length) segments.push(current);
+
+  return segments;
+}
