@@ -1,6 +1,6 @@
 import { useMemo, useRef, useEffect, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { Area, XAxis, YAxis, Line, ComposedChart, ReferenceLine, ReferenceArea } from "recharts";
+import { Area, XAxis, YAxis, Line, ComposedChart, ReferenceLine, ReferenceArea, ReferenceDot } from "recharts";
 import { generateActivityCurve, getDoseIOB, getInsulinProfile, isBasalInsulinType } from "@/lib/insulinPharmacology";
 import { IOB_FLOOR } from "@/lib/iobModel";
 import { PROFILE_COLORS } from "@/lib/carbAbsorption";
@@ -1209,6 +1209,9 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   // How many filters are off (to show indicator dot)
   const activeFilterCount = Object.values(filters).filter(Boolean).length;
 
+  // The newest real reading — the point the marker always sits on.
+  const latestGlucosePoint = glucoseLinePoints.length ? glucoseLinePoints[glucoseLinePoints.length - 1] : null;
+
   return (
     <div ref={containerRef} className="relative overflow-visible">
       <div ref={monitoringA11yRef} className="sr-only" aria-live="polite" role="status" />
@@ -1402,7 +1405,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               {filters.glucose && filteredGlucoseReadings.length > 0 &&
                     <Line
                       yAxisId="glucose"
-                      type="linear"
+                      type="monotoneX"
                       dataKey="glucose"
                       name="Glucose"
                       className="stackd-glucose-trend"
@@ -1410,10 +1413,25 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                       strokeWidth={2.5}
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      dot={{ r: 2.1, fill: "#c9c2a4", stroke: "none" }}
+                      dot={false}
                       activeDot={false}
                       connectNulls={false}
                       isAnimationActive={false} />
+                    }
+
+              {/* The newest reading always carries a marker, so the current
+                  reading stays visible even when it lands after a gap in the
+                  readings. Missing readings simply leave the line broken. */}
+              {filters.glucose && latestGlucosePoint &&
+                    <ReferenceDot
+                      yAxisId="glucose"
+                      x={latestGlucosePoint.time}
+                      y={Math.min(latestGlucosePoint.value, effectiveMax)}
+                      r={3.4}
+                      fill="#9c5228"
+                      stroke="#fdf9f2"
+                      strokeWidth={1.5}
+                      isFront />
                     }
             </ComposedChart>
           </div>
