@@ -40,7 +40,7 @@ export function isRescueCarbEntry(entry, glucoseReadings = [], doses = [], targe
       .map((p) => ({ recorded_at: new Date(p.t).toISOString(), value: p.v }))
   );
 
-  const isTrendingDown = trend.icon === "down" || trend.icon === "down-right";
+  const isTrendingDown = trend?.icon === "down" || trend?.icon === "down-right";
 
   const bolusIOB = getTotalBolusIOB(doses, entryTime);
   const basalActive = getTotalBasalActivity(doses, entryTime);

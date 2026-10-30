@@ -42,7 +42,7 @@ import DailyBalanceSection from "./dailybalance/DailyBalanceSection";
 import CurrentGlucoseNote from "./glucose/CurrentGlucoseNote";
 import CurrentGlucoseCard from "./graph/CurrentGlucoseCard";
 import { filterReadingsForStats, computeTimeInRangeFromReadings } from "@/lib/timeInRange";
-import { computeGlucoseTrend, mapDexcomTrend } from "@/lib/glucoseTrend";
+import { resolveGlucoseTrend } from "@/lib/glucoseTrend";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 import { useGlucoseStaleness } from "@/hooks/useGlucoseStaleness";
 import { getLatestDexcomReading } from "@/lib/glucoseStaleness";
@@ -962,12 +962,11 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
     return computeTimeInRangeFromReadings(readingsToday, insulinSettings.targetLow, insulinSettings.targetHigh);
   }, [safeGlucoseReadings, insulinSettings.targetLow, insulinSettings.targetHigh, dexcomConnected]);
 
-  const trend = useMemo(() => {
-    if (latestGlucose?.source === "dexcom" && latestGlucose?.trend) {
-      return mapDexcomTrend(latestGlucose.trend) || computeGlucoseTrend(safeGlucoseReadings);
-    }
-    return computeGlucoseTrend(safeGlucoseReadings);
-  }, [latestGlucose, safeGlucoseReadings]);
+  // The sensor's own arrow wins when the source supplies one — that is what
+  // makes a genuine Dexcom double-down draw as a double-down. Both Dexcom
+  // sources are honoured (the API and Share, which is what a connected Share
+  // account writes), and when nothing is known no arrow is drawn.
+  const trend = useMemo(() => resolveGlucoseTrend(latestGlucose, safeGlucoseReadings), [latestGlucose, safeGlucoseReadings]);
 
   const glucoseValue = latestGlucose?.value;
   const targetLow = targetRange.low;

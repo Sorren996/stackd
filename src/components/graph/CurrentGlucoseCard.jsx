@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from "react";
-import { ArrowUp, ArrowUpRight, ArrowRight, ArrowDownRight, ArrowDown, ChevronsUp, ChevronsDown, Droplet } from "lucide-react";
+import { ArrowUp, ArrowUpRight, ArrowDownRight, ArrowDown, ChevronsUp, ChevronsDown, Droplet } from "lucide-react";
 import { motion } from "framer-motion";
 import GlucoseTicker from "./GlucoseTicker";
 import { formatReadingAge } from "@/lib/glucoseStaleness";
@@ -36,7 +36,7 @@ export default function CurrentGlucoseCard({
   const tickerRef = useRef(null);
   const [, setUnitsTick] = useState(0);
   useEffect(() => onGlucoseUnitsChange(() => setUnitsTick((t) => t + 1)), []);
-  const TrendIcon = TREND_ICONS[trend?.icon] || ArrowRight;
+  const TrendIcon = trend?.icon ? TREND_ICONS[trend.icon] : null;
 
   const displayColor = isStale ? STALE_COLOR : glucoseColor;
   const displayLabel = isStale ? STALE_LABEL : rangeCardLabel;
@@ -90,8 +90,13 @@ export default function CurrentGlucoseCard({
         <span className="text-4xl font-black leading-none tabular-nums" style={{ color: "#3f3830" }}>--</span>
         }
         <span className="mb-1 text-[11px] font-medium" style={{ color: "#746959" }}>{glucoseUnitLabel()}</span>
-        {latestGlucose && !isStale &&
-        <TrendIcon className="self-center h-6 w-6" style={{ color: "#3f3830" }} />
+        {/* Only a trend we actually know is drawn: a supplied sensor arrow, or a
+            rate derived from real readings. Unknown data shows no arrow at all
+            rather than a steady glyph nobody measured. */}
+        {latestGlucose && !isStale && TrendIcon &&
+        <span role="img" aria-label={trend.label} title={trend.label} className="self-center inline-flex">
+          <TrendIcon className="h-6 w-6" style={{ color: "#3f3830" }} aria-hidden="true" />
+        </span>
         }
       </div>
 

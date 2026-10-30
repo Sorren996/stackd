@@ -90,7 +90,8 @@ export default function Dashboard() {
   });
 
   useEffect(() => {
-    writeCachedLatestGlucose(latestGlucoseRows[0]);
+    // Only a real measurement is cached for the next cold start.
+    if (latestGlucoseRows[0]?.source !== "system") writeCachedLatestGlucose(latestGlucoseRows[0]);
   }, [latestGlucoseRows]);
 
   const { data: glucoseReadings = [] } = useQuery({
@@ -342,7 +343,14 @@ export default function Dashboard() {
     return age < FOURTEEN_DAYS_MS;
   }), [graphCarbsSource, now]);
 
-  const latestGlucose = latestGlucoseRows[0] || glucoseReadings[0] || null;
+  // The current reading is the newest REAL measurement. A carry-forward
+  // `system` row (which only bridges a gap) is never presented as a current
+  // reading, and a cached row is refreshed by the live query on mount.
+  const latestGlucose = useMemo(() => {
+    const newest = latestGlucoseRows[0];
+    if (newest && newest.source !== "system") return newest;
+    return glucoseReadings.find((r) => r && r.source !== "system") || newest || null;
+  }, [latestGlucoseRows, glucoseReadings]);
 
   const activeRapidCount = useMemo(() => {
     const activeDoses = recentDoses

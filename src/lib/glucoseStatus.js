@@ -21,10 +21,41 @@ export const HIGH_REFERENCE_STEP = 10;
 // Fixed low glucose reference line.
 export const FIXED_LOW_REFERENCE = 40;
 
+// ── Exact boundaries, in one place ─────────────────────────────────────────
+// Every surface (hero, chart, daily balance, follower view) asks these
+// functions instead of re-writing a comparison, so the same configured rule
+// always produces the same status and colour.
+//
+// The configured comfort range is INCLUSIVE at both ends: with a comfort low of
+// 70, a reading of exactly 70 is in range, not low. Urgent low is STRICTLY
+// below 55. A sensor's own low-alert setting (for example Dexcom's shaded
+// region) is a separate personal alert and is never used as this range.
+
+/** A reading strictly below the personal comfort low. */
+export function isBelowRange(value, targetLow) {
+  return Number.isFinite(value) && Number.isFinite(targetLow) && value < targetLow;
+}
+
+/** A reading strictly above the personal comfort high. */
+export function isAboveRange(value, targetHigh) {
+  return Number.isFinite(value) && Number.isFinite(targetHigh) && value > targetHigh;
+}
+
+/** A reading inside the configured comfort range (both ends inclusive). */
+export function isInComfortRange(value, targetLow, targetHigh) {
+  return Number.isFinite(value) && Number.isFinite(targetLow) && Number.isFinite(targetHigh) &&
+    value >= targetLow && value <= targetHigh;
+}
+
+/** Clinically urgent low: strictly below 55 mg/dL. */
+export function isUrgentLow(value) {
+  return Number.isFinite(value) && value < URGENT_LOW_THRESHOLD;
+}
+
 export function classifyGlucose(value, targetLow, targetHigh) {
   if (!Number.isFinite(value)) return "unknown";
-  if (value < targetLow) return "low";
-  if (value > targetHigh) return "high";
+  if (isBelowRange(value, targetLow)) return "low";
+  if (isAboveRange(value, targetHigh)) return "high";
   return "inRange";
 }
 
@@ -61,9 +92,9 @@ const DIRECTION_WINDOW_MINUTES = 20;
 // falls back to a neutral label.
 export function getCurrentGlucoseZone(value, targetLow, targetHigh, stale = false) {
   if (!Number.isFinite(value)) return { zone: "none", label: "No data" };
-  if (!stale && value < URGENT_LOW_THRESHOLD) return { zone: "urgentLow", label: "Urgent low" };
-  if (value < targetLow) return { zone: "below", label: "Below comfort zone" };
-  if (value > targetHigh) return { zone: "above", label: "Above comfort zone" };
+  if (!stale && isUrgentLow(value)) return { zone: "urgentLow", label: "Urgent low" };
+  if (isBelowRange(value, targetLow)) return { zone: "below", label: "Below comfort zone" };
+  if (isAboveRange(value, targetHigh)) return { zone: "above", label: "Above comfort zone" };
   if (stale) return { zone: "inRange", label: "Waiting for data" };
   return { zone: "inRange", label: "In comfort zone" };
 }

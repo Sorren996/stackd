@@ -1,5 +1,5 @@
 import TrendArrow from "@/components/glucose/TrendArrow";
-import { computeGlucoseTrend, mapDexcomTrend } from "@/lib/glucoseTrend";
+import { resolveGlucoseTrend } from "@/lib/glucoseTrend";
 import { computeSharedDailyBalance } from "@/lib/sharing/sharedDailyBalance";
 import { describeProjectionReason, describeReadingAge, describeZone } from "@/lib/sharing/sharingCopy";
 
@@ -39,10 +39,9 @@ export default function SharedGlucosePanel({ glucose, reason }) {
   // exactly as the patient's own hero does; otherwise the rate is derived from
   // the readings with the same mapping. Below two readings nothing is derived,
   // so no steady arrow is ever implied from thin data.
-  const cgmTrend = latest?.source === "dexcom" ? mapDexcomTrend(latest?.trend) : null;
   const trend =
     !glucose.stale && glucose.direction != null
-      ? cgmTrend || (realReadings.length >= 2 ? computeGlucoseTrend(realReadings) : null)
+      ? resolveGlucoseTrend(latest, realReadings)
       : null;
   const zone = describeZone(glucose.zone);
 

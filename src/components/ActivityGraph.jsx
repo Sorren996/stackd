@@ -9,6 +9,7 @@ import { CornerUpRight, SlidersHorizontal, Check, Wheat, Pencil, Trash2, Info } 
 import { HIGH_PROTEIN_FAT_MONITORING_HOURS, mergeMonitoringIntervals, hasDelayedRise } from "@/lib/mealMonitoring";
 import DelayedRiseCautionCard from "@/components/graph/DelayedRiseCautionCard";
 import { GLUCOSE_STATUS_COLORS, readHighReference, FIXED_LOW_REFERENCE } from "@/lib/glucoseStatus";
+import { canonicalGlucoseSeries, nowScrollOffset } from "@/lib/glucoseSeries";
 import { motion, AnimatePresence } from "framer-motion";
 import InfoPopover from "@/components/graph/InfoPopover";
 import { useQuery } from "@tanstack/react-query";
@@ -489,22 +490,11 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const filteredDoses = filters.insulin ? doses : [];
   const filteredCarbEntries = filters.carbs ? carbEntries.map(normalizeCarbEntry).filter((entry) => entry.carbs > 0 && entry.consumed_at) : [];
 
+  // One canonical real-reading series feeds the current marker, the selected
+  // reading and the chart: ordered by sensor time, one point per sensor
+  // timestamp, carry-forward rows excluded.
   const sortedGlucoseReadings = useMemo(() =>
-  glucoseReadings.
-  filter((reading) => {
-    if (reading.source === "system") return false;
-    // When connected to Dexcom, use CGM data exclusively for a smooth,
-    // continuous line — just like Oura's reporting style.
-    if (dexcomConnected && reading.source !== "dexcom" && reading.source !== "dexcom_share") return false;
-    return true;
-  }).
-  map((reading) => ({
-    ...reading,
-    time: getReadingTime(reading),
-    value: Number(getReadingValue(reading))
-  })).
-  filter((reading) => Number.isFinite(reading.time) && Number.isFinite(reading.value)).
-  sort((a, b) => a.time - b.time),
+  canonicalGlucoseSeries(glucoseReadings, { cgmOnly: dexcomConnected }),
   [glucoseReadings, dexcomConnected]
   );
 
@@ -758,6 +748,19 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const chartWidth = Math.max(containerWidth, Math.round(totalMs / 60000 * pxPerMin));
   const latestGlucoseX = (latestGlucoseBucket - domainStart) / totalMs * chartWidth;
   const maxScrollLeft = Math.max(0, Math.min(chartWidth - containerWidth, latestGlucoseX - containerWidth / 2));
+
+  // The future area (active insulin tails, an open meal's projection) is drawn
+  // to the RIGHT of the newest reading and carries no measured glucose. The
+  // selected history window therefore ends AT the newest reading: a 3h / 6h /
+  // 12h view is that much preceding history, never half empty future. The
+  // future stays reachable by scrolling, and the Now control returns here.
+  const futureSpanMs = futureHours * HOUR_MS;
+  const nowScrollLeft = nowScrollOffset({
+    maxScrollLeft,
+    futureMs: futureSpanMs,
+    chartWidth,
+    totalMs,
+  });
   const plotHeight = GLUCOSE_PLOT_HEIGHT;
 
   const mergedMonitoringIntervals = useMemo(() => {
@@ -1171,26 +1174,28 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     return () => clearInterval(interval);
   }, [maxScrollLeft, glucoseLinePoints, isGlucoseStale, latestDexcomReading]);
 
+  // Back to the present: the right edge of the viewport lands on the newest
+  // real reading (the end of the selected history window).
   const scrollToLatestGlucose = () => {
     if (!scrollRef.current) return;
 
-    scrollRef.current.scrollTo({ left: maxScrollLeft, behavior: "smooth" });
-    scheduleCenterGlucoseUpdate(maxScrollLeft);
+    scrollRef.current.scrollTo({ left: nowScrollLeft, behavior: "smooth" });
+    scheduleCenterGlucoseUpdate(nowScrollLeft);
   };
 
   useEffect(() => {
     if (!scrollRef.current) return;
-    scrollRef.current.scrollLeft = maxScrollLeft;
+    scrollRef.current.scrollLeft = nowScrollLeft;
     const latestValue = glucoseLinePoints.length > 0 ? glucoseLinePoints[glucoseLinePoints.length - 1].value : null;
     const shouldAnimate = prevLatestValueRef.current !== null && latestValue !== null && latestValue !== prevLatestValueRef.current;
     prevLatestValueRef.current = latestValue;
-    drawCenterGlucose(maxScrollLeft, shouldAnimate);
-    updateMonitoringOverlay(maxScrollLeft);
+    drawCenterGlucose(nowScrollLeft, shouldAnimate);
+    updateMonitoringOverlay(nowScrollLeft);
 
     return () => {
       if (scrollFrameRef.current) cancelAnimationFrame(scrollFrameRef.current);
     };
-  }, [maxScrollLeft, latestGlucoseBucket, filters.glucose, glucoseLinePoints.length, positionedMonitoringIntervals, isGlucoseStale, glucoseUnits]);
+  }, [nowScrollLeft, latestGlucoseBucket, filters.glucose, glucoseLinePoints.length, positionedMonitoringIntervals, isGlucoseStale, glucoseUnits]);
 
   if (!doses.length && !glucoseReadings.length && !carbEntries.length) return null;
 
@@ -1246,10 +1251,11 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       <button
           type="button"
           onClick={scrollToLatestGlucose}
-          className="absolute right-2 top-0 z-30 flex h-8 w-8 items-center justify-center rounded-full border shadow-lg transition hover:opacity-70"
-          style={{ borderColor: "#eadccf", background: "#fdf9f2", color: "#6b6153" }}
-          aria-label="Scroll to latest glucose">
+          className="absolute right-2 top-0 z-30 flex h-8 items-center gap-1 border px-2 transition hover:opacity-70"
+          style={{ borderColor: "#eadccf", background: "#fdf9f2", color: "#4c6770", borderRadius: 0 }}
+          aria-label="Back to now">
           <CornerUpRight className="h-4 w-4" />
+          <span className="text-[11px] font-semibold">Now</span>
         </button>
       <div
           ref={graphViewportRef}
@@ -1398,17 +1404,17 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               {filters.glucose && filteredGlucoseReadings.length > 0 &&
                     <Line
                       yAxisId="glucose"
-                      type="monotoneX"
+                      type="linear"
                       dataKey="glucose"
                       name="Glucose"
                       className="stackd-glucose-trend"
                       stroke="#d6d0b5ff"
-                      strokeWidth={2.75}
+                      strokeWidth={2.5}
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      dot={false}
+                      dot={{ r: 2.1, fill: "#c9c2a4", stroke: "none" }}
                       activeDot={false}
-                      connectNulls={true}
+                      connectNulls={false}
                       isAnimationActive={false} />
                     }
             </ComposedChart>

@@ -54,9 +54,12 @@ function interpolateValueAt(points, time) {
   return last.v;
 }
 
+// Returns null when a rate cannot be computed from the readings available.
+// "We cannot tell" is never flattened into the steady arrow — a stable glyph
+// has to be earned by a measured near-zero rate.
 export function computeGlucoseTrend(readings) {
   if (!Array.isArray(readings) || readings.length < 2) {
-    return { icon: "right", label: "Stable" };
+    return null;
   }
 
   const points = readings
@@ -64,7 +67,7 @@ export function computeGlucoseTrend(readings) {
     .filter((p) => Number.isFinite(p.t) && Number.isFinite(p.v))
     .sort((a, b) => a.t - b.t);
 
-  if (points.length < 2) return { icon: "right", label: "Stable" };
+  if (points.length < 2) return null;
 
   // Acute change override: when the last two readings show a meaningful move,
   // surface it immediately so the card reflects what just happened rather than
@@ -88,11 +91,11 @@ export function computeGlucoseTrend(readings) {
   const newest = recent[recent.length - 1].t;
   let inSpan = recent.filter((p) => p.t >= newest - MAX_SPAN_MS);
   if (inSpan.length < 2) inSpan = recent.slice(-2);
-  if (inSpan.length < 2) return { icon: "right", label: "Stable" };
+  if (inSpan.length < 2) return null;
 
   const start = inSpan[0].t;
   const end = inSpan[inSpan.length - 1].t;
-  if (end <= start) return { icon: "right", label: "Stable" };
+  if (end <= start) return null;
 
   const samples = [];
   for (let t = start; t <= end; t += STEP_MS) {
@@ -102,7 +105,7 @@ export function computeGlucoseTrend(readings) {
     samples.length = 0;
     inSpan.forEach((p) => samples.push({ t: p.t, v: p.v }));
   }
-  if (samples.length < 2) return { icon: "right", label: "Stable" };
+  if (samples.length < 2) return null;
 
   const n = samples.length;
   const meanX = samples.reduce((s, p) => s + p.t, 0) / n;
@@ -145,4 +148,27 @@ export function mapDexcomTrend(rawTrend) {
   if (t === "double_down" || t === "down_down") return { icon: "double_down", label: "Falling quickly" };
 
   return null;
+}
+
+/**
+ * The one trend result a glucose surface may display.
+ *
+ * A sensor's OWN reported arrow is authoritative when the source supplies one,
+ * so a genuine Dexcom DoubleDown renders as a double-down arrow labelled
+ * "Falling quickly" instead of being re-derived from the numbers. Only when no
+ * supplied arrow exists is a rate derived from the real readings, and when
+ * there is not enough evidence for either the answer is null — never the steady
+ * arrow, which would assert something nobody measured.
+ *
+ * Both Dexcom sources count: the official API ("dexcom") and the Share service
+ * ("dexcom_share"), which is what a Share-connected account writes.
+ */
+export function resolveGlucoseTrend(latestReading, readings) {
+  const source = latestReading?.source;
+  const isSensor = source === "dexcom" || source === "dexcom_share";
+  const supplied = isSensor ? mapDexcomTrend(latestReading?.trend) : null;
+  if (supplied) return { ...supplied, origin: "sensor" };
+
+  const derived = computeGlucoseTrend(readings);
+  return derived ? { ...derived, origin: "derived" } : null;
 }
