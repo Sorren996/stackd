@@ -1,4 +1,6 @@
 import { useEffect, useRef } from "react";
+import { buildGlucoseSegments } from "@/lib/glucoseSeries";
+import { monotoneXPath } from "@/lib/monotonePath";
 
 const ROW_HEIGHT = 168;
 const TOP = 14;
@@ -49,9 +51,18 @@ export default function SharedGlucoseChart({ readings, targetLow, targetHigh }) 
   const xFor = (i) => i * SPACING + SPACING / 2;
   const width = points.length * SPACING;
 
-  const line = points
-    .map((p, i) => `${i === 0 ? "M" : "L"} ${xFor(i)} ${yFor(Number(p.value))}`)
-    .join(" ");
+  const segmentPaths = buildGlucoseSegments(
+    points.
+    map((p, i) => ({
+      time: new Date(p.recorded_at || p.created_at || p.created_date).getTime(),
+      value: Number(p.value),
+      index: i
+    })).
+    filter((s) => Number.isFinite(s.time) && Number.isFinite(s.value))
+  ).
+  filter((segment) => segment.length > 1).
+  map((segment) => monotoneXPath(segment.map((sample) => ({ x: xFor(sample.index), y: yFor(sample.value) })))).
+  filter(Boolean);
 
   // One tick each time their local hour changes, so the strip stays readable
   // even when readings arrive irregularly.
@@ -102,7 +113,17 @@ export default function SharedGlucoseChart({ readings, targetLow, targetHigh }) 
           </g>
         ))}
 
-        <path d={line} fill="none" stroke={INK} strokeWidth={1.7} strokeLinejoin="round" strokeLinecap="round" />
+        {segmentPaths.map((d, i) => (
+          <path
+            key={`trace_${i}`}
+            d={d}
+            fill="none"
+            stroke={INK}
+            strokeWidth={1.7}
+            strokeLinejoin="round"
+            strokeLinecap="round"
+          />
+        ))}
 
         {points.map((p, i) => {
           const v = Number(p.value);

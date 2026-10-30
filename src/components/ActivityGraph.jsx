@@ -9,7 +9,7 @@ import { CornerUpRight, SlidersHorizontal, Check, Pencil, Trash2, Info } from "l
 import { HIGH_PROTEIN_FAT_MONITORING_HOURS, mergeMonitoringIntervals, hasDelayedRise } from "@/lib/mealMonitoring";
 import DelayedRiseCautionCard from "@/components/graph/DelayedRiseCautionCard";
 import { GLUCOSE_STATUS_COLORS, readHighReference, FIXED_LOW_REFERENCE } from "@/lib/glucoseStatus";
-import { canonicalGlucoseSeries, nowScrollOffset } from "@/lib/glucoseSeries";
+import { canonicalGlucoseSeries, nowScrollOffset, buildGlucoseSegments } from "@/lib/glucoseSeries";
 import { motion, AnimatePresence } from "framer-motion";
 import InfoPopover from "@/components/graph/InfoPopover";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
@@ -567,6 +567,38 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   [glucoseMap]
   );
 
+  // ── One smooth glucose trace, broken only at genuine gaps ──────────────
+  // Readings arrive about every five minutes, so they join into one
+  // continuous line; a slightly early or late reading never splits it. The
+  // path breaks only where a sample is actually missing, and resumes as a
+  // new smooth line when readings come back. Nothing is bridged across that
+  // hole and no value is ever invented between samples.
+  const glucoseSegments = useMemo(() => {
+    const samples = filteredGlucoseReadings.
+    map((reading) => ({ time: getReadingTime(reading), value: Number(getReadingValue(reading)) })).
+    filter((sample) => Number.isFinite(sample.time) && Number.isFinite(sample.value));
+    return buildGlucoseSegments(samples);
+  }, [filteredGlucoseReadings]);
+
+  // Which run of readings each chart bucket belongs to, so every sample lands
+  // on its own run's line.
+  const glucoseBucketSegments = useMemo(() => {
+    const byBucket = new Map();
+    glucoseSegments.forEach((segment, index) => {
+      segment.forEach((sample) => {
+        byBucket.set(Math.round(sample.time / STEP_MS) * STEP_MS, `glucose_seg_${index}`);
+      });
+    });
+    return byBucket;
+  }, [glucoseSegments]);
+
+  // A run that holds a single reading has no line to draw, so it keeps a
+  // visible marker instead of disappearing.
+  const glucoseIsolatedPoints = useMemo(
+    () => glucoseSegments.filter((segment) => segment.length === 1).map((segment) => segment[0]),
+    [glucoseSegments]
+  );
+
   const maxBolusUnits = useMemo(
     () => Math.max(...filteredDoses.filter((d) => !isBasalInsulinType(d.insulin_type)).map(getDoseUnits), 1),
     [filteredDoses]
@@ -684,11 +716,13 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       });
       if (glucoseMap[t] !== undefined) {
         point.glucose = Math.min(glucoseMap[t], effectiveMax);
+        const segmentKey = glucoseBucketSegments.get(t);
+        if (segmentKey) point[segmentKey] = Math.min(glucoseMap[t], effectiveMax);
       }
       result.push(point);
     }
     return result;
-  }, [doses, glucoseReadings, carbEntries, filters, domainStart, domainEnd, allCurvesMeta, glucoseMap, maxBolusUnits, maxBasalUnits, effectiveMax, effectiveMin]);
+  }, [doses, glucoseReadings, carbEntries, filters, domainStart, domainEnd, allCurvesMeta, glucoseMap, glucoseBucketSegments, maxBolusUnits, maxBasalUnits, effectiveMax, effectiveMin]);
 
   const doseKeys = useMemo(() => {
     const typeCount = new Map();
@@ -1041,18 +1075,26 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     // Marker Y still samples the ACTUAL rendered glucose <path> so the dot
     // stays glued to the smooth line (visual only). The NUMBER above is
     // always the real reading — it is never derived from this pixel Y.
+    // Each run of readings is its own path, so sample them all and keep the
+    // one nearest the viewport centre.
     const targetSvgX = scrollLeft + containerWidth / 2;
-    const pathEl = scrollRef.current?.querySelector("path.stackd-glucose-trend");
+    const pathEls = scrollRef.current?.querySelectorAll("path.stackd-glucose-trend") || [];
     let markerY = null;
+    let markerDistance = Infinity;
 
-    if (pathEl) {
+    pathEls.forEach((pathEl) => {
       const sample = sampleGlucosePathAtX(pathEl, targetSvgX);
-      if (sample) {
+      if (!sample || !Number.isFinite(sample.y)) return;
+      const distance = Math.abs(sample.x - targetSvgX);
+      if (distance < markerDistance) {
+        markerDistance = distance;
         markerY = sample.y;
       }
-    }
+    });
 
-    if (markerY == null || !Number.isFinite(markerY)) {
+    // Standing inside a genuine gap there is no line to sit on, so the marker
+    // uses the selected reading's own value.
+    if (markerY == null || !Number.isFinite(markerY) || markerDistance > 6) {
       markerY = getGlucoseY(selectedValue);
     }
 
@@ -1402,11 +1444,17 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                 </>
                     }
 
+              {/* One smooth line per contiguous run of readings. Readings on
+                  their normal cadence flow through as a single curve; a
+                  genuinely missing sample ends its run, leaving real blank
+                  space until readings resume and a new smooth line starts. */}
               {filters.glucose && filteredGlucoseReadings.length > 0 &&
+                    glucoseSegments.map((segment, index) =>
                     <Line
+                      key={`glucose_seg_${index}`}
                       yAxisId="glucose"
                       type="monotoneX"
-                      dataKey="glucose"
+                      dataKey={`glucose_seg_${index}`}
                       name="Glucose"
                       className="stackd-glucose-trend"
                       stroke="#d6d0b5ff"
@@ -1415,13 +1463,29 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                       strokeLinejoin="round"
                       dot={false}
                       activeDot={false}
-                      connectNulls={false}
+                      connectNulls
                       isAnimationActive={false} />
+
+                    )
                     }
 
-              {/* The newest reading always carries a marker, so the current
-                  reading stays visible even when it lands after a gap in the
-                  readings. Missing readings simply leave the line broken. */}
+              {/* A lone reading between two gaps has no line to draw, and the
+                  newest reading always carries a marker, so nothing real ever
+                  disappears from the trace. */}
+              {filters.glucose && glucoseIsolatedPoints.map((point) =>
+              <ReferenceDot
+                      key={`glucose_lone_${point.time}`}
+                      yAxisId="glucose"
+                      x={point.time}
+                      y={Math.min(point.value, effectiveMax)}
+                      r={2.6}
+                      fill="#8d8672"
+                      stroke="#fdf9f2"
+                      strokeWidth={1.2}
+                      isFront />
+
+              )
+              }
               {filters.glucose && latestGlucosePoint &&
                     <ReferenceDot
                       yAxisId="glucose"
