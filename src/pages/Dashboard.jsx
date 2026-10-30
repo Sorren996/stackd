@@ -5,9 +5,6 @@ import ActivityGraph from "../components/ActivityGraph";
 import ActiveInsulinBanner from "../components/ActiveInsulinBanner";
 import SplitPlanCard from "@/components/splitdose/SplitPlanCard";
 import { isActivePlan, cancelSplitPlansForMeal, cleanupSplitPlansForDose } from "@/lib/splitDoseUtils";
-import DoseCard from "../components/DoseCard";
-import GlucoseCard from "../components/GlucoseCard";
-import CarbCard from "../components/CarbCard";
 import { getDoseStatus, getInsulinCategory } from "@/lib/insulinPharmacology";
 import { Activity } from "lucide-react";
 import { toast } from "sonner";
@@ -19,7 +16,6 @@ import { useLatestProjection } from "@/hooks/useLatestProjection";
 import DexcomSyncStatus from "@/components/DexcomSyncStatus";
 import ConnectGlucoseSourcePrompt from "@/components/ConnectGlucoseSourcePrompt";
 import SensorSessionBanner from "@/components/SensorSessionBanner";
-import PageHeader from "@/components/editorial/PageHeader";
 import AmbientInscription from "@/components/dashboard/AmbientInscription";
 
 const FRESH_DATA_MS = 60 * 1000;

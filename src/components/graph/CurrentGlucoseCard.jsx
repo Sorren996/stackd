@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from "react";
-import { ArrowUp, ArrowUpRight, ArrowDownRight, ArrowDown, ChevronsUp, ChevronsDown, Droplet } from "lucide-react";
+import { ArrowUp, ArrowUpRight, ArrowRight, ArrowDownRight, ArrowDown, ChevronsUp, ChevronsDown } from "lucide-react";
 import { motion } from "framer-motion";
 import GlucoseTicker from "./GlucoseTicker";
 import { formatReadingAge } from "@/lib/glucoseStaleness";
