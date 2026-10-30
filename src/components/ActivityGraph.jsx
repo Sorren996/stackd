@@ -9,7 +9,7 @@ import { CornerUpRight, SlidersHorizontal, Check, Pencil, Trash2, Info } from "l
 import { HIGH_PROTEIN_FAT_MONITORING_HOURS, mergeMonitoringIntervals, hasDelayedRise } from "@/lib/mealMonitoring";
 import DelayedRiseCautionCard from "@/components/graph/DelayedRiseCautionCard";
 import { GLUCOSE_STATUS_COLORS, readHighReference, FIXED_LOW_REFERENCE } from "@/lib/glucoseStatus";
-import { canonicalGlucoseSeries, nowScrollOffset, buildGlucoseSegments } from "@/lib/glucoseSeries";
+import { canonicalGlucoseSeries, buildGlucoseSegments } from "@/lib/glucoseSeries";
 import { motion, AnimatePresence } from "framer-motion";
 import InfoPopover from "@/components/graph/InfoPopover";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
@@ -781,18 +781,11 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const latestGlucoseX = (latestGlucoseBucket - domainStart) / totalMs * chartWidth;
   const maxScrollLeft = Math.max(0, Math.min(chartWidth - containerWidth, latestGlucoseX - containerWidth / 2));
 
-  // The future area (active insulin tails, an open meal's projection) is drawn
-  // to the RIGHT of the newest reading and carries no measured glucose. The
-  // selected history window therefore ends AT the newest reading: a 3h / 6h /
-  // 12h view is that much preceding history, never half empty future. The
-  // future stays reachable by scrolling, and the Now control returns here.
-  const futureSpanMs = futureHours * HOUR_MS;
-  const nowScrollLeft = nowScrollOffset({
-    maxScrollLeft,
-    futureMs: futureSpanMs,
-    chartWidth,
-    totalMs,
-  });
+  // Back to now: the newest real reading is centred in the viewport, so the
+  // marker and the large number sit on the freshest value instead of on a
+  // reading from hours earlier. maxScrollLeft IS that centring offset, capped
+  // so the chart never scrolls past the newest reading.
+  const nowScrollLeft = maxScrollLeft;
   const plotHeight = GLUCOSE_PLOT_HEIGHT;
 
   const mergedMonitoringIntervals = useMemo(() => {
@@ -1214,8 +1207,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     return () => clearInterval(interval);
   }, [maxScrollLeft, glucoseLinePoints, isGlucoseStale, latestDexcomReading]);
 
-  // Back to the present: the right edge of the viewport lands on the newest
-  // real reading (the end of the selected history window).
+  // Back to the present: the viewport centres the newest real reading, so the
+  // marker and the large number land on the freshest value.
   const scrollToLatestGlucose = () => {
     if (!scrollRef.current) return;
 
@@ -1294,8 +1287,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       <button
           type="button"
           onClick={scrollToLatestGlucose}
-          className="absolute right-2 top-0 z-30 flex h-8 items-center gap-1 border px-2 transition hover:opacity-70"
-          style={{ borderColor: "#eadccf", background: "#fdf9f2", color: "#4c6770", borderRadius: 0 }}
+          className="absolute right-2 top-0 z-30 flex h-8 items-center gap-1 px-2 transition hover:opacity-70"
+          style={{ background: "#fdf9f2", color: "#4c6770", borderRadius: 0 }}
           aria-label="Back to now">
           <CornerUpRight className="h-4 w-4" />
           <span className="text-[11px] font-semibold">Now</span>

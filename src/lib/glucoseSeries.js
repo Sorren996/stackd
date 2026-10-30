@@ -82,27 +82,6 @@ export function isInsideHistoryWindow(ms, window) {
   return ms >= window.startMs && ms <= window.endMs;
 }
 
-/**
- * How far the scroll container must be scrolled so the history window's right
- * edge (the newest reading) sits at the viewport's right edge, leaving the
- * future area — active insulin tails, an open meal's projection — outside the
- * selected window rather than inside it.
- *
- * @param {Object} args
- * @param {number} args.maxScrollLeft — scroll offset that centres the newest reading
- * @param {number} args.futureMs — width of the future area drawn to the right
- * @param {number} args.chartWidth — full scrollable render width in px
- * @param {number} args.totalMs — full rendered time span in ms
- */
-export function nowScrollOffset({ maxScrollLeft, futureMs, chartWidth, totalMs }) {
-  if (!Number.isFinite(maxScrollLeft) || maxScrollLeft <= 0) return 0;
-  if (!Number.isFinite(futureMs) || !Number.isFinite(chartWidth) || !Number.isFinite(totalMs) || totalMs <= 0) {
-    return maxScrollLeft;
-  }
-  const futurePx = (futureMs / totalMs) * chartWidth;
-  return Math.max(0, Math.min(maxScrollLeft, Math.round(maxScrollLeft - futurePx)));
-}
-
 /** A CGM normally reports about every five minutes. */
 export const GLUCOSE_CADENCE_MS = 5 * 60 * 1000;
 
