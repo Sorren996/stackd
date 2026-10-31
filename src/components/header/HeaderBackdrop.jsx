@@ -1,55 +1,64 @@
 /**
- * The sticky top header's backdrop.
+ * Progressive backdrop blur for a sticky header. NOTHING but blur.
  *
- * Two stacked layers, both painted BELOW the logo row (the logo keeps its own
- * z-10 layer), and both transparent to pointers:
+ * A small stack of transparent sibling layers, each carrying ONLY a
+ * backdrop-filter blur of a different radius and a gradient MASK that controls
+ * how far down that layer's blur survives. Because each stronger layer fades
+ * out earlier while the weakest reaches the bottom, the effect is at full
+ * strength directly under the status area and the logo, and tapers smoothly to
+ * nothing below — no rectangular band, no lower horizontal seam.
  *
- *  1. Blur — a graduated backdrop blur, at full strength along the top edge and
- *     fading to a tenth at the bottom, so the bar reads as out-of-focus page
- *     rather than a panel across the screen.
- *  2. Tint — a slate veil in the header's own slate field (#4C6770). This is
- *     what keeps the bar slate while cream cards scroll underneath: blurring
- *     cream produces cream, so the veil is what stops the header washing out
- *     into white. It carries NO white or cream stop anywhere, starts almost
- *     solid at the very top (status area included) and settles to a light veil
- *     at the bottom edge so it blends into the page.
+ * There is deliberately no background colour, tint, gradient fill, saturation,
+ * brightness, contrast, highlight, border or shadow anywhere in here. The colour
+ * you see comes from the page pixels passing underneath (slate field, cream
+ * cards), which the blur simply takes out of focus. The gradient is used as a
+ * mask, never painted as colour.
+ *
+ * The container and every layer are pointer-events:none, and none of them sets
+ * opacity, filter or a mask on an ancestor of the others, so the backdrop root
+ * is never isolated from the content scrolling beneath.
  */
 
-// #4C6770 as channels, so the veil can be graduated by alpha alone.
-const SLATE = "76, 103, 112";
+// Strongest blur at the top, weakest reaching furthest down. `fadeStart` is the
+// percentage of the effect's height where that layer begins to fall away; every
+// layer reaches fully transparent at 100%, so the taper ends at zero.
+const LAYERS = [
+  { blur: 2, fadeStart: 58 },
+  { blur: 5, fadeStart: 40 },
+  { blur: 9, fadeStart: 25 },
+  { blur: 15, fadeStart: 12 },
+];
 
-// Nearly solid at the top edge, fading to a light veil where the bar meets the
-// page. Slate at every stop — never white, never cream.
-const HEADER_TINT = [
-  `linear-gradient(to bottom`,
-  `rgba(${SLATE}, 0.92) 0%`,
-  `rgba(${SLATE}, 0.72) 42%`,
-  `rgba(${SLATE}, 0.38) 74%`,
-  `rgba(${SLATE}, 0.14) 100%)`,
-].join(", ");
+// How far below the safe-area inset the effect takes to reach zero. Tall enough
+// that the taper reads as a soft gradient rather than an edge.
+const FADE_DEPTH_PX = 130;
 
-// Full blur at the top, a tenth at the bottom.
-const HEADER_BLUR_MASK =
-  "linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.1) 100%)";
+function maskFor(fadeStart) {
+  return `linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) ${fadeStart}%, rgba(0,0,0,0) 100%)`;
+}
 
 export default function HeaderBackdrop() {
   return (
-    <>
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0"
-        style={{
-          backdropFilter: "blur(16px)",
-          WebkitBackdropFilter: "blur(16px)",
-          maskImage: HEADER_BLUR_MASK,
-          WebkitMaskImage: HEADER_BLUR_MASK,
-        }}
-      />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0"
-        style={{ backgroundImage: HEADER_TINT }}
-      />
-    </>
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-x-0 top-0"
+      style={{ height: `calc(env(safe-area-inset-top) + ${FADE_DEPTH_PX}px)` }}
+    >
+      {LAYERS.map(({ blur, fadeStart }) => {
+        const mask = maskFor(fadeStart);
+        return (
+          <div
+            key={blur}
+            className="header-progressive-blur pointer-events-none absolute inset-0"
+            style={{
+              backdropFilter: `blur(${blur}px)`,
+              WebkitBackdropFilter: `blur(${blur}px)`,
+              maskImage: mask,
+              WebkitMaskImage: mask,
+            }}
+          />
+        );
+      })}
+    </div>
   );
 }

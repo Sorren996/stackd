@@ -2,6 +2,7 @@ import { useNavigate, Outlet } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import PullToRefresh from "@/components/PullToRefresh";
 import FollowerNav from "@/components/follower/FollowerNav";
+import HeaderBackdrop from "@/components/header/HeaderBackdrop";
 
 /**
  * The viewer shell.
@@ -28,7 +29,9 @@ export default function FollowerLayout() {
         className="fixed inset-x-0 top-0 z-50"
         style={{ paddingTop: "env(safe-area-inset-top)", background: "transparent" }}
       >
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-center px-4">
+        {/* Same progressive blur-only effect as the patient header. */}
+        <HeaderBackdrop />
+        <div className="relative z-10 mx-auto flex h-14 max-w-6xl items-center justify-center px-4">
           <button
             type="button"
             onClick={() => navigate("/")}

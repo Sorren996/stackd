@@ -136,7 +136,8 @@ export default function Layout() {
         className="fixed inset-x-0 top-0 z-50"
         style={{ paddingTop: "env(safe-area-inset-top)", background: "transparent" }}
       >
-        {/* Blur and slate veil only — behind the logo, never on it. */}
+        {/* Progressive blur only — behind the logo, never on it. The logo row
+            is its own z-10 foreground layer, so it stays sharp and fixed. */}
         <HeaderBackdrop />
         <div
           className="relative z-10 mx-auto flex h-14 max-w-6xl items-center justify-center px-4"
