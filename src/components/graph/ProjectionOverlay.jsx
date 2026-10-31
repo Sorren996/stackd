@@ -383,18 +383,9 @@ export default function ProjectionOverlay({
     .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
     .join(" ");
 
-  // Build faint high (upper bound) and low (lower bound) line paths so the
-  // range reads as lines, not only as a shaded fill. Amber for the high
-  // line, sage for the low line — tuned to the app's muted palette and
-  // fainter than the mean line so the mean stays visually dominant.
-  const upperPoints = points.filter((p) => p.yUpper != null);
-  const lowerPoints = points.filter((p) => p.yLower != null);
-  const upperLinePath = upperPoints
-    .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.yUpper.toFixed(1)}`)
-    .join(" ");
-  const lowerLinePath = lowerPoints
-    .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.yLower.toFixed(1)}`)
-    .join(" ");
+  // The uncertainty range is carried by the soft band alone (see the render
+  // below). Only one dashed centre guide is drawn, so nothing competes with
+  // the observed glucose line.
 
   // Build the uncertainty band path (lower edge L→R, upper edge R→L).
   const hasBand = points.every((p) => p.yLower != null && p.yUpper != null);
@@ -427,41 +418,17 @@ export default function ProjectionOverlay({
         onKeyDown={handleKeyDown}
       >
         {hasBand && (
-          <path d={bandPath} fill="#af751b" fillOpacity={0.07} stroke="none" />
+          <path d={bandPath} fill="#c4965a" fillOpacity={0.16} stroke="none" />
         )}
-        {/* Faint high (upper bound) line — muted amber, thinner than the mean */}
-        {upperLinePath && (
-          <path
-            d={upperLinePath}
-            stroke="#8a5a12"
-            strokeWidth={1}
-            strokeDasharray="3 3"
-            strokeOpacity={0.42}
-            fill="none"
-            strokeLinecap="round"
-            style={{ pointerEvents: "none" }}
-          />
-        )}
-        {/* Faint low (lower bound) line — muted sage, thinner than the mean */}
-        {lowerLinePath && (
-          <path
-            d={lowerLinePath}
-            stroke="#4d5742"
-            strokeWidth={1}
-            strokeDasharray="3 3"
-            strokeOpacity={0.42}
-            fill="none"
-            strokeLinecap="round"
-            style={{ pointerEvents: "none" }}
-          />
-        )}
-        {/* Mean projected trajectory — visually dominant */}
+        {/* Mean projected trajectory — the ONE dashed guide through the cone.
+            The uncertainty is carried by the soft band alone, with no extra
+            boundary strokes competing with the observed line. */}
         <path
           d={linePath}
-          stroke="#af751b"
+          stroke="#c4965a"
           strokeWidth={1.5}
           strokeDasharray="5 4"
-          strokeOpacity={0.5}
+          strokeOpacity={0.85}
           fill="none"
           strokeLinecap="round"
           style={{ pointerEvents: "none" }}
@@ -471,9 +438,9 @@ export default function ProjectionOverlay({
           cx={points[0].x}
           cy={points[0].y}
           r={3}
-          fill="#af751b"
+          fill="#c4965a"
           fillOpacity={0.3}
-          stroke="#af751b"
+          stroke="#c4965a"
           strokeWidth={1}
           strokeOpacity={0.4}
           style={{ pointerEvents: "none" }}

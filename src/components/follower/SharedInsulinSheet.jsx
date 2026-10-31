@@ -3,10 +3,10 @@ import Sheet from "@/components/Sheet";
 import { activeInsulinDoses, computeSharedActiveInsulin, sharedBasalSummary } from "@/lib/sharing/followerInsulin";
 import { describeProjectionReason } from "@/lib/sharing/sharingCopy";
 
-const INK = "#3f3830";
-const MUTED = "#746959";
-const ACCENT = "#4C6770";
-const HAIRLINE = "#eadccf";
+const INK = "#3a2f28";
+const MUTED = "#7a6b5d";
+const ACCENT = "#a0522d";
+const HAIRLINE = "#e6dccd";
 
 function timeLabel(value) {
   const date = value ? new Date(value) : null;

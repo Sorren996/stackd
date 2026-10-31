@@ -8,11 +8,11 @@ export default function AnchorNumber({ value, unit, caption, dot, dotColor = "#5
   return (
     <div className="py-3 px-1">
       <div className="flex items-baseline gap-1.5">
-        <span className="anchor-number" style={{ color: "#3f3830", ...(gathering ? { fontSize: 28, fontWeight: 400, opacity: 0.65 } : {}) }}>
+        <span className="anchor-number" style={{ color: "#3a2f28", ...(gathering ? { fontSize: 28, fontWeight: 400, opacity: 0.65 } : {}) }}>
           {value}
         </span>
         {unit &&
-        <span className="text-sm font-medium" style={{ color: "#6b6153" }}>
+        <span className="text-sm font-normal" style={{ color: "#7a6b5d" }}>
             {unit}
           </span>
         }
@@ -30,13 +30,13 @@ export default function AnchorNumber({ value, unit, caption, dot, dotColor = "#5
           style={{ background: dotColor }} />
 
         }
-          <span className="text-sm font-medium" style={{ color: "#6b6153" }}>
+          <span className="text-sm font-medium" style={{ color: "#7a6b5d" }}>
             {caption}
           </span>
         </div>
       }
       {subcaption &&
-      <p className="mt-1 text-xs" style={{ color: "#746959" }}>
+      <p className="mt-1 text-xs" style={{ color: "#7a6b5d" }}>
           {subcaption}
         </p>
       }

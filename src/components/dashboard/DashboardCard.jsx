@@ -8,8 +8,9 @@ export default function DashboardCard({ children, className = "" }) {
     <div
       className={`rounded-[24px] my-5 ${className}`}
       style={{
-        background: "#fdf9f2",
-        boxShadow: "0 8px 28px rgba(63,56,48,0.10)"
+        background: "#fdf8f1",
+        border: "1px solid #e6dccd",
+        boxShadow: "0 6px 20px rgba(58,47,40,0.07)"
       }}>
       
       {children}

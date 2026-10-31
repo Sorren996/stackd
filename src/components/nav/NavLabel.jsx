@@ -5,8 +5,8 @@
 export default function NavLabel({ children, color }) {
   return (
     <span
-      className="w-full truncate text-center font-semibold uppercase leading-none"
-      style={{ fontSize: "10px", letterSpacing: "0.02em", color }}
+      className="w-full truncate text-center font-medium leading-none"
+      style={{ fontSize: "11px", letterSpacing: 0, color }}
     >
       {children}
     </span>

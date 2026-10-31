@@ -7,11 +7,11 @@ const ROW_HEIGHT = 168;
 const TOP = 14;
 const BOTTOM = 22;
 const SPACING = 9; // px per reading — the strip scrolls, points are never squashed
-const INK = "#3f3830";
-const MUTED = "#746959";
-const RANGE = "#5b6550";
-const HIGH = "#9a6f2f";
-const LOW = "#a2564a";
+const INK = "#8c4a28"; // deep rust — the glucose trace
+const MUTED = "#7a6b5d";
+const RANGE = "#5f8460"; // sage line
+const HIGH = "#d9a441"; // amber
+const LOW = "#d98a78"; // salmon
 
 /**
  * The followed person's glucose, as a scrollable strip.
@@ -96,20 +96,24 @@ export default function SharedGlucoseChart({ readings, targetLow, targetHigh }) 
       <svg width={width} height={ROW_HEIGHT} style={{ display: "block" }}>
         {/* Today's target band, taken from THEIR plan */}
         {Number.isFinite(Number(targetLow)) && Number.isFinite(Number(targetHigh)) && (
-          <rect
-            x={0}
-            y={yFor(Number(targetHigh))}
-            width={width}
-            height={Math.max(1, yFor(Number(targetLow)) - yFor(Number(targetHigh)))}
-            fill={RANGE}
-            opacity={0.1}
-          />
+          <>
+            <rect
+              x={0}
+              y={yFor(Number(targetHigh))}
+              width={width}
+              height={Math.max(1, yFor(Number(targetLow)) - yFor(Number(targetHigh)))}
+              fill="#8fa68c"
+              opacity={0.14}
+            />
+            <line x1={0} y1={yFor(Number(targetHigh))} x2={width} y2={yFor(Number(targetHigh))} stroke={RANGE} strokeWidth={1} opacity={0.35} />
+            <line x1={0} y1={yFor(Number(targetLow))} x2={width} y2={yFor(Number(targetLow))} stroke={RANGE} strokeWidth={1} opacity={0.35} />
+          </>
         )}
 
         {ticks.map((tick) => (
           <g key={`${tick.x}-${tick.label}`}>
             <line x1={tick.x} y1={TOP} x2={tick.x} y2={TOP + plotH} stroke={MUTED} strokeWidth={1} opacity={0.18} />
-            <text x={tick.x + 3} y={ROW_HEIGHT - 6} fontSize={9} fill={MUTED}>
+            <text x={tick.x + 3} y={ROW_HEIGHT - 6} fontSize={10} fill={MUTED}>
               {tick.label}
             </text>
           </g>
@@ -121,7 +125,7 @@ export default function SharedGlucoseChart({ readings, targetLow, targetHigh }) 
             d={d}
             fill="none"
             stroke={INK}
-            strokeWidth={1.7}
+            strokeWidth={2.75}
             strokeLinejoin="round"
             strokeLinecap="round"
           />
@@ -130,8 +134,22 @@ export default function SharedGlucoseChart({ readings, targetLow, targetHigh }) 
         {points.map((p, i) => {
           const v = Number(p.value);
           const colour = inRange(v) ? RANGE : v > Number(targetHigh) ? HIGH : LOW;
-          return <circle key={p.id || i} cx={xFor(i)} cy={yFor(v)} r={1.6} fill={colour} />;
+          return <circle key={p.id || i} cx={xFor(i)} cy={yFor(v)} r={1.4} fill={colour} />;
         })}
+
+        {/* Their newest reading — rust dot, cream ring, soft halo */}
+        {(() => {
+          const lastIndex = points.length - 1;
+          const v = Number(points[lastIndex].value);
+          const cx = xFor(lastIndex);
+          const cy = yFor(v);
+          return (
+            <>
+              <circle cx={cx} cy={cy} r={7} fill="#8c4a28" opacity={0.14} />
+              <circle cx={cx} cy={cy} r={3} fill="#8c4a28" stroke="#fdf8f1" strokeWidth={1.5} />
+            </>
+          );
+        })()}
       </svg>
     </div>
   );

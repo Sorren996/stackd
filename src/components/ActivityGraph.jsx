@@ -1409,8 +1409,17 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
               {filters.glucose && filteredGlucoseReadings.length > 0 &&
                     <>
-                  <ReferenceLine yAxisId="glucose" y={targetHigh} stroke={gTheme.refLineStroke} strokeWidth={1} strokeDasharray="3 4" />
-                  <ReferenceLine yAxisId="glucose" y={targetLow} stroke={gTheme.refLineStroke} strokeWidth={1} strokeDasharray="3 4" />
+                  {/* The comfort zone as a status band: quiet sage wash with two
+                      thin solid sage edges, using the user's own thresholds. */}
+                  <ReferenceArea
+                        yAxisId="glucose"
+                        y1={targetLow}
+                        y2={targetHigh}
+                        fill="#8fa68c"
+                        fillOpacity={0.14}
+                        stroke="none" />
+                  <ReferenceLine yAxisId="glucose" y={targetHigh} stroke="#5f8460" strokeWidth={1} strokeOpacity={0.55} />
+                  <ReferenceLine yAxisId="glucose" y={targetLow} stroke="#5f8460" strokeWidth={1} strokeOpacity={0.55} />
                   <ReferenceLine
                         yAxisId="glucose"
                         y={highReference}
@@ -1427,12 +1436,14 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                         strokeWidth={1}
                         strokeDasharray="6 5" />
                       
+                  {/* Now — a faint dotted vertical through the measured area. */}
                   <ReferenceLine
                         x={stableNow}
                         yAxisId="glucose"
-                        stroke="#8a7b6bff"
+                        stroke="#8a7b6b"
                         strokeWidth={1}
-                        strokeOpacity={0.3} />
+                        strokeDasharray="2 4"
+                        strokeOpacity={0.35} />
                       
                 </>
                     }
@@ -1450,8 +1461,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                       dataKey={`glucose_seg_${index}`}
                       name="Glucose"
                       className="stackd-glucose-trend"
-                      stroke="#d6d0b5ff"
-                      strokeWidth={2.5}
+                      stroke="#8c4a28"
+                      strokeWidth={2.75}
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       dot={false}
@@ -1479,16 +1490,28 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
               )
               }
+              {/* Current reading — rust dot, cream ring, soft halo. */}
               {filters.glucose && latestGlucosePoint &&
-                    <ReferenceDot
-                      yAxisId="glucose"
-                      x={latestGlucosePoint.time}
-                      y={Math.min(latestGlucosePoint.value, effectiveMax)}
-                      r={3.4}
-                      fill="#9c5228"
-                      stroke="#fdf9f2"
-                      strokeWidth={1.5}
-                      isFront />
+                    <>
+                  <ReferenceDot
+                        yAxisId="glucose"
+                        x={latestGlucosePoint.time}
+                        y={Math.min(latestGlucosePoint.value, effectiveMax)}
+                        r={9}
+                        fill="#8c4a28"
+                        fillOpacity={0.12}
+                        stroke="none"
+                        isFront />
+                  <ReferenceDot
+                        yAxisId="glucose"
+                        x={latestGlucosePoint.time}
+                        y={Math.min(latestGlucosePoint.value, effectiveMax)}
+                        r={3.6}
+                        fill="#8c4a28"
+                        stroke="#fdf8f1"
+                        strokeWidth={1.6}
+                        isFront />
+                </>
                     }
             </ComposedChart>
           </div>
@@ -1532,7 +1555,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               {filters.insulin && doseKeys.map((k) => {
                     const dimmed = highlightedDoseKey && highlightedDoseKey !== k.key;
                     const stroke = k.isSpent ? "#b8aea0" : k.color;
-                    const fillOpacity = (k.isBasal ? 0.10 : 0.16) * (dimmed ? 0.25 : 1);
+                    const fillOpacity = (k.isSpent ? 0.07 : k.isBasal ? 0.10 : 0.16) * (dimmed ? 0.25 : 1);
                     return (
                       <Area
                         key={`area_${k.key}`}
@@ -1552,7 +1575,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               {filters.insulin && doseKeys.map((k) => {
                     const dimmed = highlightedDoseKey && highlightedDoseKey !== k.key;
                     const stroke = k.isSpent ? "#b8aea0" : k.color;
-                    const baseOpacity = k.isSpent ? 0.4 : k.isBasal ? 0.55 : k.opacity;
+                    const baseOpacity = k.isSpent ? 0.45 : k.isBasal ? 0.55 : k.opacity;
                     const strokeOpacity = baseOpacity * (dimmed ? 0.22 : 1);
                     return (
                       <Line
@@ -1562,7 +1585,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                         dataKey={k.key}
                         name={k.label}
                         stroke={stroke}
-                        strokeWidth={k.isBasal ? 1.1 : 1.4}
+                        strokeWidth={k.isSpent ? 1.75 : k.isBasal ? 1.75 : 2.5}
                         strokeOpacity={strokeOpacity}
                         fill="none"
                         dot={false}
@@ -1670,26 +1693,18 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         </div>
       </div>
       </div>
-      <div className="px-3 mt-2 space-y-1">
+      <div className="px-3 mt-1.5 space-y-1">
         {/* Row 1: glucose, projection (mean / high / low), meals */}
         <div className="flex items-center gap-x-3 gap-y-1 flex-wrap">
           <div className="flex items-center gap-1.5">
-            <div className="h-[2.5px] w-3 rounded-full" style={{ background: "#9c5228" }} />
-            <span className="text-[10px] font-medium" style={{ color: "#6b6153" }}>Glucose</span>
+            <div className="h-[2.75px] w-3 rounded-full" style={{ background: "#8c4a28" }} />
+            <span className="text-[10px] font-medium" style={{ color: "#7a6b5d" }}>Glucose</span>
           </div>
           {projection && hasActiveMeals && (
             <>
               <div className="flex items-center gap-1.5">
-                <div className="h-[2.5px] w-3 border-t-2 border-dashed" style={{ borderColor: "#af751b", opacity: 0.6 }} />
-                <span className="text-[10px] font-medium" style={{ color: "#6b6153" }}>Projection</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="h-0 w-3 border-t border-dashed" style={{ borderColor: "#8a5a12", opacity: 0.55 }} />
-                <span className="text-[10px] font-medium" style={{ color: "#6b6153" }}>High</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="h-0 w-3 border-t border-dashed" style={{ borderColor: "#4d5742", opacity: 0.55 }} />
-                <span className="text-[10px] font-medium" style={{ color: "#6b6153" }}>Low</span>
+                <div className="h-[2.5px] w-3 border-t-2 border-dashed" style={{ borderColor: "#c4965a", opacity: 0.9 }} />
+                <span className="text-[10px] font-medium" style={{ color: "#7a6b5d" }}>Projection</span>
               </div>
             </>
           )}

@@ -34,21 +34,24 @@ export default function DailyBalanceSection({
 
         <div className="mt-2 flex items-baseline gap-2 px-1">
           <span
-            className="anchor-number"
+            className="tabular-nums"
             style={{
-              color: "#3f3830",
-              ...(isGathering ? { fontSize: 28, fontWeight: 400, opacity: 0.65 } : {}),
+              color: "#3a2f28",
+              fontSize: isGathering ? 22 : 26,
+              fontWeight: 300,
+              letterSpacing: "-0.01em",
+              lineHeight: 1.1,
             }}
           >
             {displayValue}
           </span>
           {hasData && !isGathering && (
-            <span className="text-sm font-medium" style={{ color: "#6b6153" }}>
+            <span className="text-sm font-medium" style={{ color: "#7a6b5d" }}>
               {state.label}
             </span>
           )}
           {isGathering && (
-            <span className="text-sm font-medium" style={{ color: "#746959" }}>
+            <span className="text-sm font-medium" style={{ color: "#7a6b5d" }}>
               Still gathering today
             </span>
           )}
@@ -61,8 +64,19 @@ export default function DailyBalanceSection({
         )}
 
         {breakdown && (
-          <div className="mt-3 px-1 text-xs" style={{ color: "#746959" }}>
-            {breakdown.inRange} in range · {breakdown.above} above · {breakdown.below} below
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 px-1 text-xs" style={{ color: "#7a6b5d" }}>
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: "#5f8460" }} />
+              {breakdown.inRange} in range
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: "#d9a441" }} />
+              {breakdown.above} above
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: "#d98a78" }} />
+              {breakdown.below} below
+            </span>
           </div>
         )}
       </button>

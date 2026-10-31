@@ -14,8 +14,8 @@ import NavLabel from "@/components/nav/NavLabel";
  */
 export default function NavItem({ item, active, onPress }) {
   const { Icon, label, path } = item;
-  const iconColor = active ? "var(--nav-active)" : "var(--nav-icon)";
-  const labelColor = active ? "var(--nav-active)" : "var(--nav-label)";
+  const iconColor = active ? "var(--nav-accent)" : "var(--nav-icon)";
+  const labelColor = active ? "var(--nav-accent)" : "var(--nav-label)";
 
   return (
     <Link
@@ -36,7 +36,7 @@ export default function NavItem({ item, active, onPress }) {
           an underline, not a rounded pill. */}
       <span
         aria-hidden="true"
-        style={{ width: 20, height: 2, background: "var(--nav-active)", opacity: active ? 1 : 0 }}
+        style={{ width: 20, height: 2, background: "var(--nav-accent)", opacity: active ? 1 : 0 }}
       />
     </Link>
   );

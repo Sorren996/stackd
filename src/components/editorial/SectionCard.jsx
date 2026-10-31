@@ -8,10 +8,10 @@ import DashboardCard from "@/components/dashboard/DashboardCard";
  */
 export default function SectionCard({ label, title, children, className = "" }) {
   return (
-    <DashboardCard className={`p-5 ${className}`}>
+    <DashboardCard className={`p-[18px] ${className}`}>
       {label && <div className="section-label">{label}</div>}
       {title && (
-        <h2 className={`text-base font-semibold ${label ? "mt-2" : ""}`} style={{ color: "#3f3830" }}>
+        <h2 className={`text-base font-medium ${label ? "mt-2" : ""}`} style={{ color: "#3a2f28" }}>
           {title}
         </h2>
       )}

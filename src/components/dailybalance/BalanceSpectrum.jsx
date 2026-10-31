@@ -10,7 +10,7 @@ import { useReducedMotion } from "framer-motion";
 // indicator; real glucose risk continues to use Stackd's existing warning
 // treatment elsewhere.
 
-const GRADIENT = "linear-gradient(90deg, #c69a78 0%, #b3a594 50%, #8a9789 100%)";
+const GRADIENT = "linear-gradient(90deg, #d9b48f 0%, #8fa68c 100%)";
 
 export default function BalanceSpectrum({ percentage, markerSize = 18, trackHeight = 8 }) {
   const prefersReducedMotion = useReducedMotion();
@@ -29,18 +29,16 @@ export default function BalanceSpectrum({ percentage, markerSize = 18, trackHeig
         className="absolute left-0 right-0 rounded-full"
         style={{ top: half - trackHeight / 2, height: trackHeight, background: GRADIENT, opacity: 0.9 }}
       />
-      {/* Marker */}
+      {/* Marker — a slim status tick, not a grab handle */}
       <div
         className="absolute rounded-full"
         style={{
-          top: 0,
-          width: markerSize,
-          height: markerSize,
+          top: half - markerSize / 2 + 1,
+          width: 3,
+          height: markerSize - 2,
           left,
           transform: "translate(-50%, 0)",
-          background: "hsl(var(--foreground))",
-          border: "2px solid hsl(var(--card))",
-          boxShadow: "0 1px 4px rgba(0,0,0,0.18)",
+          background: "#8a4a2a",
           transition: prefersReducedMotion ? "none" : "left 0.5s cubic-bezier(0.32, 0.72, 0.25, 1)",
         }}
       />

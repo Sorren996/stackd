@@ -46,28 +46,26 @@
     --copper: #9c5228;         /* 5.1:1 — interaction accent */
 
     /* ── Bottom navigation ─────────────────────────────────── */
-    /* The bar's surface is the app's warm off-white card colour, so the notch
-       reads as one continuous shape with the rest of the UI. Item colours are
-       measured against THAT surface (#fdf9f2), not the sandstone canvas.
-       The contour is a decorative hairline on the surface itself: the bar is
-       separated from the page by the surface-vs-canvas contrast (5.8:1). */
-    --nav-surface: #fdf9f2;    /* warm off-white — matches card surfaces */
-    --nav-border: #eadccf;     /* warm hairline — matches card borders */
-    --nav-label: #3f3830;      /* 11.0:1 on the surface — labels */
-    --nav-icon: #746959;       /*  5.1:1 on the surface — inactive icons */
-    --nav-accent: #9c5228;     /*  5.5:1 on the surface — active item, underline, disc glyphs */
-    --nav-log: #9c5228;        /* clay — the Log button */
-    --nav-ring: #fdf9f2;       /* thin light ring around the Log button */
-    --nav-ink: #3f3830;        /* 11.0:1 on the surface — option labels */
-    --nav-disc: #fdf9f2;       /* warm cream — option discs and label pills */
+    /* Espresso #2e2420: a calm, warm dark band that belongs to the cream/sand
+       palette instead of the old navy. Labels sit at 11px in sentence case,
+       sand #b9a897 (6.7:1 on the espresso surface); the active destination
+       takes a cream wash and cream ink. */
+    --nav-surface: #2e2420;    /* espresso band */
+    --nav-border: #3d3129;     /* barely-there warm edge */
+    --nav-label: #b9a897;      /* 6.7:1 on espresso — inactive labels */
+    --nav-icon: #b9a897;       /* inactive icons */
+    --nav-accent: #fdf8f1;     /* cream — active item and its underline */
+    --nav-log: #a0522d;        /* rust — the Log button */
+    --nav-ring: #fdf8f1;       /* cream ring around the Log button */
+    --nav-ink: #fdf8f1;        /* option labels on the dark bar */
+    --nav-disc: #fdf8f1;       /* warm cream — option discs and label pills */
 
-    /* The selection chip that slides between destinations. A frosted warm-glass
-       surface: a translucent tint the bar reads through, a lit hairline, an
-       inner top highlight and a soft lift. The active accent is 4.9:1 on this
-       chip (5.5:1 on the bare surface), so the chip never costs legibility. */
-    --nav-pill: rgba(156, 82, 40, 0.08);
-    --nav-pill-border: rgba(255, 255, 255, 0.90);
-    --nav-pill-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 2px 10px rgba(63, 56, 48, 0.10);
+    /* The selection chip that slides between destinations: a quiet cream wash
+       on the espresso band, so the active destination reads without a lit
+       bubble. */
+    --nav-pill: rgba(245, 235, 220, 0.14);
+    --nav-pill-border: rgba(253, 248, 241, 0.16);
+    --nav-pill-shadow: inset 0 1px 0 rgba(253, 248, 241, 0.10), 0 2px 10px rgba(20, 14, 10, 0.30);
 
     /* ── Public website ────────────────────────────────────── */
     /* One palette for the public pages and the account screens: a muted
@@ -270,9 +268,9 @@
     letter-spacing: 0.16em;
     font-weight: 700;
     font-size: 10px;
-    color: #746959;
+    color: #7a6b5d;
     padding-bottom: 6px;
-    border-bottom: 1px solid #eadccf;
+    border-bottom: 1px solid #e6dccd;
   }
 
   /* Dotted leader line for ledger rows */

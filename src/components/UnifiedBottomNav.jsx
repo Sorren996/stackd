@@ -258,6 +258,18 @@ export default function UnifiedBottomNav() {
           zIndex: 50,
         }}
       >
+        {/* A soft fade of the page's own sand tone sits under the dock, so a
+            card scrolling past never shows through the gap beneath the pill. */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 bottom-0"
+          style={{
+            height: 104,
+            zIndex: -1,
+            background:
+              "linear-gradient(to top, #f7f1e8 0%, rgba(247,241,232,0.94) 46%, rgba(247,241,232,0) 100%)",
+          }}
+        />
         <div
           ref={barRef}
           className="relative mx-auto w-full overflow-visible"

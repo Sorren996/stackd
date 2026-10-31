@@ -2,9 +2,9 @@ import { ChevronRight } from "lucide-react";
 import { computeSharedActiveInsulin, sharedBasalSummary } from "@/lib/sharing/followerInsulin";
 import { describeProjectionReason } from "@/lib/sharing/sharingCopy";
 
-const INK = "#3f3830";
-const MUTED = "#746959";
-const ACCENT = "#4C6770";
+const INK = "#3a2f28";
+const MUTED = "#7a6b5d";
+const ACCENT = "#a0522d";
 
 /**
  * The follower's active-insulin hero.
@@ -43,14 +43,12 @@ export default function SharedInsulinPanel({ insulin, reason, onOpenDetail }) {
       className="w-full text-left"
       aria-label="See what insulin is active now"
     >
-      <span className="block text-[10px] font-bold uppercase tracking-[0.12em]" style={{ color: MUTED }}>
-        Estimated active rapid-acting
-      </span>
+      <span className="section-label block">Estimated active rapid-acting</span>
 
-      <span className="flex items-baseline gap-1.5 pt-1">
+      <span className="flex items-baseline gap-1.5 pt-2">
         <span
-          className="text-3xl font-semibold tabular-nums"
-          style={{ color: estimate.available ? ACCENT : MUTED }}
+          className="text-[30px] tabular-nums"
+          style={{ color: estimate.available ? INK : MUTED, fontWeight: 300, lineHeight: 1.05, letterSpacing: "-0.02em" }}
         >
           {estimate.available ? (estimate.isZero ? "None" : estimate.value.toFixed(1)) : "Unavailable"}
         </span>

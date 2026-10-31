@@ -31,6 +31,18 @@ export default function FollowerNav() {
         paddingRight: BAR_SIDE_PADDING,
       }}
     >
+      {/* Same soft fade as the patient dock, in the viewer's own slate, so a
+          card scrolling beneath the pill never shows through the gap. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 bottom-0"
+        style={{
+          height: 104,
+          zIndex: -1,
+          background:
+            "linear-gradient(to top, #4C6770 0%, rgba(76,103,112,0.94) 46%, rgba(76,103,112,0) 100%)",
+        }}
+      />
       <div className="relative mx-auto w-full overflow-visible" style={{ maxWidth: BAR_MAX_WIDTH }}>
         <div
           aria-hidden="true"

@@ -50,15 +50,15 @@ export default function SharedGlucosePanel({ glucose, reason }) {
       ? "#a2564a"
       : glucose.zone === "above"
         ? "#9a6f2f"
-        : "#5b6550";
+        : "#5f8460";
 
   return (
     <div className="space-y-3">
       <div className="flex items-baseline gap-2">
-        <span className="text-2xl font-semibold tabular-nums" style={{ color: "#3f3830" }}>
+        <span className="text-[30px] tabular-nums" style={{ color: "#3a2f28", fontWeight: 300, lineHeight: 1.05, letterSpacing: "-0.02em" }}>
           {latest ? Math.round(latest.value) : "—"}
         </span>
-        <span className="text-xs" style={{ color: "#746959" }}>
+        <span className="text-xs font-normal" style={{ color: "#7a6b5d" }}>
           mg/dL
         </span>
         {/* The direction is written out below, so the arrow itself is

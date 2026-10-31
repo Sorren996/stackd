@@ -3,10 +3,10 @@ import { ExternalLink, RotateCw } from "lucide-react";
 import Sheet from "@/components/Sheet";
 import { describeProjectionReason, describeLocationAge } from "@/lib/sharing/sharingCopy";
 
-const INK = "#3f3830";
-const MUTED = "#746959";
-const ACCENT = "#4C6770";
-const HAIRLINE = "#eadccf";
+const INK = "#3a2f28";
+const MUTED = "#7a6b5d";
+const ACCENT = "#a0522d";
+const HAIRLINE = "#e6dccd";
 const BBOX_SPAN = 0.004; // roughly 400 m each way — a small, local map
 const MAP_HEIGHT = 200;
 // The frame is created only once the sheet has settled: a frame built while the
@@ -80,7 +80,7 @@ function LocationMap({ latitude, longitude }) {
   return (
     <div
       className="relative overflow-hidden rounded-2xl border"
-      style={{ borderColor: HAIRLINE, height: MAP_HEIGHT, background: "#fdf9f2" }}
+      style={{ borderColor: HAIRLINE, height: MAP_HEIGHT, background: "#fdf8f1" }}
     >
       {showFrame && (
         <iframe
