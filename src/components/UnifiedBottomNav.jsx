@@ -256,14 +256,16 @@ export default function UnifiedBottomNav() {
           paddingLeft: BAR_SIDE_PADDING,
           paddingRight: BAR_SIDE_PADDING,
           zIndex: 50,
-          // The dock is a neutral frost: no fill, no cream tint. Its labels, chip
-          // and hairline therefore take their own values, chosen to stay legible
-          // on the blurred page that now shows through the bar.
+          // The dock is out-of-focus background and nothing else: no fill, no
+          // tint, no frost. Its labels and hairline take their own values so
+          // they stay legible over the blurred page, and the active destination
+          // is shown by simply going further out of focus — never by a colour.
           "--nav-label": "var(--dock-ink-muted)",
           "--nav-icon": "var(--dock-ink-muted)",
           "--nav-accent": "var(--dock-ink)",
-          "--nav-pill": "var(--dock-chip)",
-          "--nav-pill-border": "var(--dock-chip-border)",
+          "--nav-pill": "transparent",
+          "--nav-pill-border": "transparent",
+          "--nav-pill-blur": "calc(var(--dock-blur, 18px) * 1.8)",
           "--nav-border": "var(--dock-line)",
         }}
       >

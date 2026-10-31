@@ -76,8 +76,6 @@
     --dock-ink: #4a423a;          /* active destination label + icon */
     --dock-ink-muted: #6b6153;    /* inactive destinations */
     --dock-line: rgba(63, 56, 48, 0.16);
-    --dock-chip: rgba(255, 255, 255, 0.66);
-    --dock-chip-border: rgba(63, 56, 48, 0.10);
 
     /* ── Public website ────────────────────────────────────── */
     /* One palette for the public pages and the account screens: a muted
@@ -180,8 +178,6 @@
     --dock-ink: #f0e9dc;
     --dock-ink-muted: #b9b0a2;
     --dock-line: rgba(255, 255, 255, 0.16);
-    --dock-chip: rgba(255, 255, 255, 0.10);
-    --dock-chip-border: rgba(255, 255, 255, 0.12);
 
     --chart-1: 88 12% 46%;
     --chart-2: 34 66% 62%;

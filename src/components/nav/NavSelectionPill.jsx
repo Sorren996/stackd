@@ -17,8 +17,9 @@ const SETTLE = { duration: 0.36, times: [0, 0.45, 1], ease: "easeInOut" };
 const GLIDE = { type: "spring", stiffness: 420, damping: 34, mass: 0.7 };
 
 /**
- * The destination chip: one frosted-glass surface that slides between the four
- * destinations as they are chosen.
+ * The destination marker: a colourless lens that slides between the four
+ * destinations. It adds no fill of its own — it only pushes the background
+ * behind it further out of focus, so the marker is pure blur and no colour.
  *
  * Drawn on the bar's own sheet rather than on top of it — it carries the same
  * notch mask and rounded ends, so it can never be seen floating inside the
@@ -85,10 +86,13 @@ export default function NavSelectionPill({ itemIndex, barWidth, reduce }) {
           height: PILL_HEIGHT,
           width: rect.width,
           borderRadius: PILL_RADIUS,
-          // A quiet wash on the frost: flat, with no blur, no backdrop filter
-          // and no lift, so it never reads as a raised disc.
-          background: "var(--nav-pill)",
-          border: "1px solid var(--nav-pill-border)",
+          // No fill, no border, no lift: the active destination is simply a
+          // patch of background that sits further out of focus than the rest of
+          // the bar. Pure blur — never a frost wash or any colour.
+          background: "var(--nav-pill, transparent)",
+          border: "1px solid var(--nav-pill-border, transparent)",
+          backdropFilter: "blur(var(--nav-pill-blur, 0px))",
+          WebkitBackdropFilter: "blur(var(--nav-pill-blur, 0px))",
           boxShadow: "none",
           willChange: "transform",
         }}
