@@ -24,11 +24,16 @@ import { HEADER_BAR_PX, HEADER_BLUR_TAIL_PX } from "@/lib/layoutMetrics";
 // Strongest blur at the top, weakest reaching furthest down. `fadeStart` is the
 // percentage of the effect's height where that layer begins to fall away; every
 // layer reaches fully transparent at 100%, so the taper ends at zero.
+//
+// Radii are HALF of the original approved set (2 / 5 / 9 / 15 → 1 / 2.5 / 4.5 /
+// 7.5). Only the strength changed: the layer count, their order, the fade stops,
+// the effect's height and everything else about the structure are untouched, so
+// the taper still ends at zero with no lower seam.
 const LAYERS = [
-  { blur: 2, fadeStart: 58 },
-  { blur: 5, fadeStart: 40 },
-  { blur: 9, fadeStart: 25 },
-  { blur: 15, fadeStart: 12 },
+  { blur: 1, fadeStart: 58 },
+  { blur: 2.5, fadeStart: 40 },
+  { blur: 4.5, fadeStart: 25 },
+  { blur: 7.5, fadeStart: 12 },
 ];
 
 // How far below the safe-area inset the effect takes to reach zero: the logo
