@@ -312,6 +312,63 @@
     border: none;
   }
 
+  /* ── Paper grain ────────────────────────────────────────────
+     One very faint fibrous noise that sits INSIDE the cream
+     surfaces, so a flat fill reads as paper instead of plastic.
+
+     It is a background LAYER, not an overlay element: nothing new
+     is positioned, no stacking context changes, and content is
+     never covered — text and controls stay perfectly crisp.
+
+     Coverage works two ways so every cream card picks it up:
+      1. the shared cream surface classes below, and
+      2. any element whose inline background resolves to a cream
+         value (the app renders most cards inline, e.g.
+         background: "#fdf9f2"), matched on the serialised colour.
+
+     Strength is a single number: the opacity of the noise rect in
+     --paper-grain. Lower it for even less texture. */
+  :root {
+    --paper-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='p' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23p)' opacity='0.08'/%3E%3C/svg%3E");
+    --paper-grain-size: 180px 180px;
+  }
+
+  .paper-grain,
+  .editorial-surface,
+  .editorial-overlay,
+  .stackd-glass,
+  .stackd-unified-glass,
+  .stackd-nav-glass,
+  .stackd-popover,
+  .stackd-sheet-surface,
+  .stackd-graph-canvas,
+  .stackd-top-control,
+  .stackd-filter-dropdown,
+  .bg-white,
+  [style*="rgb(253, 249, 242)"],
+  [style*="rgba(253, 249, 242"],
+  [style*="rgba(253,249,242"],
+  [style*="rgb(253, 248, 241)"],
+  [style*="rgba(253, 248, 241"],
+  [style*="rgb(251, 242, 226)"],
+  [style*="#fdf9f2"],
+  [style*="#fdf8f1"] {
+    background-image: var(--paper-grain) !important;
+    background-repeat: repeat !important;
+    background-size: var(--paper-grain-size) !important;
+    background-blend-mode: multiply !important;
+  }
+
+  /* Inputs keep a clean, untextured field so their content reads plainly. */
+  input[style*="253, 249, 242"],
+  textarea[style*="253, 249, 242"],
+  select[style*="253, 249, 242"],
+  input[style*="#fdf9f2"],
+  textarea[style*="#fdf9f2"],
+  select[style*="#fdf9f2"] {
+    background-image: none !important;
+  }
+
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
