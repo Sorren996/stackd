@@ -67,15 +67,17 @@
     --nav-pill-border: rgba(253, 248, 241, 0.16);
     --nav-pill-shadow: none;
 
-    /* ── Glass dock: a neutral frost, never a colour ────────────
-       The dock's surface carries no fill and no tint — it only
-       blurs whatever passes behind it. These values are the ones
-       that must stay readable ON that frost: the destination
-       labels, the selection chip and the hairline contour. */
+    /* ── Dock: frost + a low-alpha espresso wash ────────────────
+       The dock blurs what passes behind it and lays a translucent
+       espresso wash over that frost, so the surface is steady
+       whether a cream card or the slate field is underneath. Cream
+       inks sit on the wash: active 6.0:1, inactive 4.8:1 in the
+       worst case (a cream card directly behind the bar). */
     --dock-blur: 18px;
-    --dock-ink: #4a423a;          /* active destination label + icon */
-    --dock-ink-muted: #6b6153;    /* inactive destinations */
-    --dock-line: rgba(63, 56, 48, 0.16);
+    --dock-wash: rgba(46, 36, 32, 0.72);
+    --dock-ink: #fdf8f1;          /* active destination label + icon */
+    --dock-ink-muted: #e8ddd0;    /* inactive destinations */
+    --dock-line: rgba(253, 248, 241, 0.16);
 
     /* ── Public website ────────────────────────────────────── */
     /* One palette for the public pages and the account screens: a muted
@@ -172,12 +174,13 @@
     --nav-pill-border: rgba(253, 248, 241, 0.16);
     --nav-pill-shadow: none;
 
-    /* Glass dock — the same neutral frost in the dark theme, with light ink so
-       the labels stay readable over the blurred midnight canvas. */
+    /* Dock — the same frost and espresso wash in the dark theme; cream inks
+       read against it exactly as they do in the light theme. */
     --dock-blur: 18px;
-    --dock-ink: #f0e9dc;
-    --dock-ink-muted: #b9b0a2;
-    --dock-line: rgba(255, 255, 255, 0.16);
+    --dock-wash: rgba(46, 36, 32, 0.72);
+    --dock-ink: #fdf8f1;
+    --dock-ink-muted: #e8ddd0;
+    --dock-line: rgba(253, 248, 241, 0.16);
 
     --chart-1: 88 12% 46%;
     --chart-2: 34 66% 62%;

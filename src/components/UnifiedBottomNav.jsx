@@ -256,15 +256,15 @@ export default function UnifiedBottomNav() {
           paddingLeft: BAR_SIDE_PADDING,
           paddingRight: BAR_SIDE_PADDING,
           zIndex: 50,
-          // The dock is out-of-focus background and nothing else: no fill, no
-          // tint, no frost. Its labels and hairline take their own values so
-          // they stay legible over the blurred page, and the active destination
-          // is shown by simply going further out of focus — never by a colour.
+          // Frost plus a low-alpha espresso wash (painted by NavNotchSurface).
+          // Cream inks sit on that wash, so every label clears AA whichever
+          // colours happen to pass behind the bar; the active destination adds
+          // a faint cream chip and a deeper blur.
           "--nav-label": "var(--dock-ink-muted)",
           "--nav-icon": "var(--dock-ink-muted)",
           "--nav-accent": "var(--dock-ink)",
-          "--nav-pill": "transparent",
-          "--nav-pill-border": "transparent",
+          "--nav-pill": "rgba(245, 235, 220, 0.16)",
+          "--nav-pill-border": "rgba(253, 248, 241, 0.20)",
           "--nav-pill-blur": "calc(var(--dock-blur, 18px) * 1.8)",
           "--nav-border": "var(--dock-line)",
         }}

@@ -29,9 +29,13 @@ const LAYERS = [
   { blur: 15, fadeStart: 12 },
 ];
 
-// How far below the safe-area inset the effect takes to reach zero. Tall enough
-// that the taper reads as a soft gradient rather than an edge.
-const FADE_DEPTH_PX = 130;
+// How far below the safe-area inset the effect takes to reach zero: the logo
+// bar's own height (56px) plus a short 20px tail. The taper still finishes
+// gradually rather than at an edge, but it is done just under the bar, so the
+// first card's top edge stays sharp at rest.
+const HEADER_BAR_PX = 56;
+const TAIL_PX = 20;
+const FADE_DEPTH_PX = HEADER_BAR_PX + TAIL_PX;
 
 function maskFor(fadeStart) {
   return `linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) ${fadeStart}%, rgba(0,0,0,0) 100%)`;
