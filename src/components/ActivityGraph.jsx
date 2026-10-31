@@ -1291,8 +1291,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           left, its time and date and the way back to now on the right. It sits
           in normal flow above the trace, replacing the tall stacked block that
           used to float over the top of the chart and leave dead space. */}
-      <div className="flex flex-wrap items-end justify-between gap-x-2 gap-y-1 px-[18px] pb-1.5">
-        <div className="flex min-w-0 items-baseline gap-1.5">
+      <div className="flex items-center gap-2 px-[18px] pb-1.5">
+        <div className="flex min-w-0 items-end gap-2">
           {filters.glucose && glucoseLinePoints.length > 0 &&
             <>
               {(onSelectLog || onDeleteLog) && !dexcomConnected &&
@@ -1305,20 +1305,23 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                   ref={tickerRef}
                   className="text-[27px] font-light leading-none tabular-nums"
                   initialValue={formatGlucoseDisplay(glucoseLinePoints[glucoseLinePoints.length - 1].value)} />
-                <span className="text-[11px] font-medium" style={{ color: "#a39484" }}>{glucoseUnitLabel()}</span>
+                <span className="text-[11px] font-medium leading-none" style={{ color: "#a39484" }}>{glucoseUnitLabel()}</span>
               </span>
+              {/* Thin hairline divider between the reading and its timestamp. */}
+              <span aria-hidden="true" className="h-[18px] w-px shrink-0 self-center" style={{ background: "#e6dccd" }} />
             </>
             }
-        </div>
-        <div className="ml-auto flex shrink-0 items-end gap-2">
-          {/* Time stays on its own line on the right; the date sits directly
-              beneath it, both left-justified to each other. Because the row is
-              bottom-aligned and this column is its last item, the date's bottom
-              edge lands on the hero number's bottom edge. */}
-          <span className="flex min-w-0 flex-col items-start leading-none" style={{ color: "#7a6b5d" }}>
-            <span ref={tooltipTimeRef} className="text-[11px] font-medium tabular-nums" />
+          {/* Time over weekday/date, directly after the divider inside the same
+              left-aligned reading group. Both lines use leading-none and the
+              3px bottom padding lifts the stack so the date's bottom edge lands
+              on the same baseline as the glucose number and mg/dL, rather than
+              hanging below it. */}
+          <span className="flex min-w-0 flex-col pb-[3px]" style={{ color: "#7a6b5d" }}>
+            <span ref={tooltipTimeRef} className="text-[11px] font-medium leading-none tabular-nums" />
             <span ref={tooltipDateRef} className="mt-[3px] truncate text-[10px] leading-none" />
           </span>
+        </div>
+        <div className="ml-auto flex shrink-0 items-center">
           <button
               type="button"
               onClick={scrollToLatestGlucose}
