@@ -1291,7 +1291,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           left, its time and date and the way back to now on the right. It sits
           in normal flow above the trace, replacing the tall stacked block that
           used to float over the top of the chart and leave dead space. */}
-      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 px-[18px] pb-1.5">
+      <div className="flex flex-wrap items-end justify-between gap-x-2 gap-y-1 px-[18px] pb-1.5">
         <div className="flex min-w-0 items-baseline gap-1.5">
           {filters.glucose && glucoseLinePoints.length > 0 &&
             <>
@@ -1310,10 +1310,14 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             </>
             }
         </div>
-        <div className="ml-auto flex shrink-0 items-baseline gap-2">
-          <span className="flex items-baseline gap-1.5" style={{ color: "#7a6b5d" }}>
+        <div className="ml-auto flex shrink-0 items-end gap-2">
+          {/* Time stays on its own line on the right; the date sits directly
+              beneath it, both left-justified to each other. Because the row is
+              bottom-aligned and this column is its last item, the date's bottom
+              edge lands on the hero number's bottom edge. */}
+          <span className="flex min-w-0 flex-col items-start leading-none" style={{ color: "#7a6b5d" }}>
             <span ref={tooltipTimeRef} className="text-[11px] font-medium tabular-nums" />
-            <span ref={tooltipDateRef} className="truncate text-[10px]" />
+            <span ref={tooltipDateRef} className="mt-[3px] truncate text-[10px] leading-none" />
           </span>
           <button
               type="button"
