@@ -19,6 +19,8 @@
  * is never isolated from the content scrolling beneath.
  */
 
+import { HEADER_BAR_PX, HEADER_BLUR_TAIL_PX } from "@/lib/layoutMetrics";
+
 // Strongest blur at the top, weakest reaching furthest down. `fadeStart` is the
 // percentage of the effect's height where that layer begins to fall away; every
 // layer reaches fully transparent at 100%, so the taper ends at zero.
@@ -30,12 +32,9 @@ const LAYERS = [
 ];
 
 // How far below the safe-area inset the effect takes to reach zero: the logo
-// bar's own height (56px) plus a short 20px tail. The taper still finishes
-// gradually rather than at an edge, but it is done just under the bar, so the
-// first card's top edge stays sharp at rest.
-const HEADER_BAR_PX = 56;
-const TAIL_PX = 20;
-const FADE_DEPTH_PX = HEADER_BAR_PX + TAIL_PX;
+// bar's own height plus a short tail. Both come from the shared layout metrics,
+// so the blur footprint and the content's top clearance can never drift apart.
+const FADE_DEPTH_PX = HEADER_BAR_PX + HEADER_BLUR_TAIL_PX;
 
 function maskFor(fadeStart) {
   return `linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) ${fadeStart}%, rgba(0,0,0,0) 100%)`;

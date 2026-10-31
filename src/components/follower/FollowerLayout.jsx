@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import PullToRefresh from "@/components/PullToRefresh";
 import FollowerNav from "@/components/follower/FollowerNav";
 import HeaderBackdrop from "@/components/header/HeaderBackdrop";
+import { CONTENT_TOP_PADDING } from "@/lib/layoutMetrics";
 
 /**
  * The viewer shell.
@@ -52,7 +53,8 @@ export default function FollowerLayout() {
           <div
             className="min-w-0 w-full"
             style={{
-              paddingTop: "calc(3.5rem + env(safe-area-inset-top))",
+              // Same shared clearance as the patient shell: bar + blur tail + gap.
+              paddingTop: CONTENT_TOP_PADDING,
               // Clearance for the plain pill (68px) plus its own breathing gap.
               paddingBottom: "calc(72px + 32px + env(safe-area-inset-bottom))",
             }}

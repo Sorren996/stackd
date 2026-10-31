@@ -1,4 +1,5 @@
 import { useRef, useState, useCallback } from "react";
+import { HEADER_BAR_BOTTOM } from "@/lib/layoutMetrics";
 
 // Native-style pull-to-refresh wrapping the feed content, following the
 // Facebook / News Feed release pattern exactly:
@@ -108,7 +109,7 @@ export default function PullToRefresh({ onRefresh, children }) {
 
   return (
     <div style={{ position: "relative", height: "100%" }}>
-      <div ref={spinRef} style={{ position: "absolute", top: "calc(3.5rem + env(safe-area-inset-top) - 34px)", left: "50%", width: 30, height: 30,
+      <div ref={spinRef} style={{ position: "absolute", top: `calc(${HEADER_BAR_BOTTOM} - 34px)`, left: "50%", width: 30, height: 30,
         marginLeft: -15, opacity: 0, pointerEvents: "none", zIndex: 10,
         filter: "drop-shadow(0 1px 3px rgba(20,30,40,0.35))" }}>
         <svg width="30" height="30" viewBox="0 0 30 30" className={spin ? "animate-spin" : ""}>

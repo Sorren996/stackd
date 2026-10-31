@@ -11,6 +11,7 @@ import { useDexcomRefresh } from "@/hooks/useDexcomRefresh";
 import PullToRefresh from "@/components/PullToRefresh";
 import HeaderBackdrop from "@/components/header/HeaderBackdrop";
 import LocationForegroundUpdater from "@/components/LocationForegroundUpdater";
+import { CONTENT_TOP_PADDING } from "@/lib/layoutMetrics";
 
 // iOS repaint bug after backgrounding: WebKit sometimes fails to repaint
 // scrolled content when the WebView returns from the background, leaving
@@ -179,7 +180,12 @@ export default function Layout() {
           <div
             className="min-w-0 w-full"
             style={{
-              paddingTop: "calc(3.5rem + env(safe-area-inset-top))",
+              // One shared clearance for the whole stack: logo bar + the blur's
+              // own fade footprint + a consistent gap. Because it sits on the
+              // container, every first-thing card (Today, a connection prompt, a
+              // sensor notice, several notices) starts fully below the blur with
+              // no per-card offsets.
+              paddingTop: CONTENT_TOP_PADDING,
               paddingBottom: "calc(72px + 96px + env(safe-area-inset-bottom))",
             }}
           >
