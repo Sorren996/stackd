@@ -67,6 +67,18 @@
     --nav-pill-border: rgba(253, 248, 241, 0.16);
     --nav-pill-shadow: none;
 
+    /* ── Glass dock: a neutral frost, never a colour ────────────
+       The dock's surface carries no fill and no tint — it only
+       blurs whatever passes behind it. These values are the ones
+       that must stay readable ON that frost: the destination
+       labels, the selection chip and the hairline contour. */
+    --dock-blur: 18px;
+    --dock-ink: #4a423a;          /* active destination label + icon */
+    --dock-ink-muted: #6b6153;    /* inactive destinations */
+    --dock-line: rgba(63, 56, 48, 0.16);
+    --dock-chip: rgba(255, 255, 255, 0.66);
+    --dock-chip-border: rgba(63, 56, 48, 0.10);
+
     /* ── Public website ────────────────────────────────────── */
     /* One palette for the public pages and the account screens: a muted
        slate-blue field with warm cream reading surfaces, so the site and the
@@ -161,6 +173,15 @@
     --nav-pill: rgba(245, 235, 220, 0.14);
     --nav-pill-border: rgba(253, 248, 241, 0.16);
     --nav-pill-shadow: none;
+
+    /* Glass dock — the same neutral frost in the dark theme, with light ink so
+       the labels stay readable over the blurred midnight canvas. */
+    --dock-blur: 18px;
+    --dock-ink: #f0e9dc;
+    --dock-ink-muted: #b9b0a2;
+    --dock-line: rgba(255, 255, 255, 0.16);
+    --dock-chip: rgba(255, 255, 255, 0.10);
+    --dock-chip-border: rgba(255, 255, 255, 0.12);
 
     --chart-1: 88 12% 46%;
     --chart-2: 34 66% 62%;

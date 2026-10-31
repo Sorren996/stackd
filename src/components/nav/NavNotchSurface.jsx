@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { BAR_HEIGHT, barClip, buildContourPath, notchMask } from "@/components/nav/navGeometry";
+import { BAR_HEIGHT, barClip, buildContourPath } from "@/components/nav/navGeometry";
 
 /** Measure the bar's pixel width so the SVG contour can be drawn exactly. */
 export function useMeasuredWidth() {
@@ -20,39 +20,34 @@ export function useMeasuredWidth() {
  * The bar's background: a rounded pill with a symmetrical recessed notch at the
  * top centre that the raised Log button sits in.
  *
- * The fill and the 1px contour are built from the same geometry, so the notch
- * is a real void in the shape — no rectangular edge passes behind the button.
+ * The surface is a NEUTRAL FROST — no fill, no colour, no tint. All it does is
+ * blur whatever passes behind it, so the page keeps reading through it as soft,
+ * uncoloured focus. The silhouette and the 1px contour are built from the same
+ * geometry, so the notch is a real void in the shape.
  */
 export default function NavNotchSurface({ width }) {
-  const mask = notchMask();
-  const clip = barClip();
-  const shell = {
-    clipPath: clip,
-    WebkitClipPath: clip,
-    maskImage: mask,
-    WebkitMaskImage: mask,
-    pointerEvents: "none",
-  };
+  // Once measured, the contour itself is the clip, so the blur is cut to the
+  // notch shape rather than to a rectangle.
+  const clip = width > 0 ? `path("${buildContourPath(width)}")` : barClip();
 
   return (
     <>
-      {/* Soft shadow — a second copy of the contour, offset and blurred, so the
-          shadow follows the notch instead of tracing a plain rectangle. */}
+      {/* The material: nothing but blur. No background colour of any kind. */}
       <div
         aria-hidden="true"
         className="absolute inset-0"
         style={{
-          ...shell,
-          background: "rgba(63,56,48,0.22)",
-          transform: "translateY(6px)",
-          filter: "blur(12px)",
+          clipPath: clip,
+          WebkitClipPath: clip,
+          pointerEvents: "none",
+          background: "transparent",
+          backdropFilter: "blur(var(--dock-blur, 18px))",
+          WebkitBackdropFilter: "blur(var(--dock-blur, 18px))",
         }}
       />
 
-      {/* The surface itself */}
-      <div aria-hidden="true" className="absolute inset-0" style={{ ...shell, background: "var(--nav-surface)" }} />
-
-      {/* Inner border — one continuous stroked path */}
+      {/* Inner border — one continuous stroked path, so the outline follows the
+          notch and gives the frost a clean edge without adding any fill. */}
       {width > 0 && (
         <svg
           aria-hidden="true"

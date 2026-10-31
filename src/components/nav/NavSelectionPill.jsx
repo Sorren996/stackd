@@ -85,8 +85,8 @@ export default function NavSelectionPill({ itemIndex, barWidth, reduce }) {
           height: PILL_HEIGHT,
           width: rect.width,
           borderRadius: PILL_RADIUS,
-          // A quiet cream wash on the espresso band: flat, with no blur, no
-          // backdrop filter and no lift, so it never reads as a raised disc.
+          // A quiet wash on the frost: flat, with no blur, no backdrop filter
+          // and no lift, so it never reads as a raised disc.
           background: "var(--nav-pill)",
           border: "1px solid var(--nav-pill-border)",
           boxShadow: "none",

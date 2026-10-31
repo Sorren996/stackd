@@ -256,11 +256,20 @@ export default function UnifiedBottomNav() {
           paddingLeft: BAR_SIDE_PADDING,
           paddingRight: BAR_SIDE_PADDING,
           zIndex: 50,
+          // The dock is a neutral frost: no fill, no cream tint. Its labels, chip
+          // and hairline therefore take their own values, chosen to stay legible
+          // on the blurred page that now shows through the bar.
+          "--nav-label": "var(--dock-ink-muted)",
+          "--nav-icon": "var(--dock-ink-muted)",
+          "--nav-accent": "var(--dock-ink)",
+          "--nav-pill": "var(--dock-chip)",
+          "--nav-pill-border": "var(--dock-chip-border)",
+          "--nav-border": "var(--dock-line)",
         }}
       >
-        {/* No backing layer of any kind: no fade, no gradient, no blur, no
-            translucent sheet behind or beneath the dock. The pill is the only
-            surface, and the page's own background shows in the gaps around it. */}
+        {/* No backing sheet of any kind: no fade, no gradient, no translucent
+            panel behind or beneath the dock. The pill's own neutral blur is the
+            only surface, and the page's background shows in the gaps around it. */}
         <div
           ref={barRef}
           className="relative mx-auto w-full overflow-visible"
