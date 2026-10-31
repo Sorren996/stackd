@@ -258,18 +258,9 @@ export default function UnifiedBottomNav() {
           zIndex: 50,
         }}
       >
-        {/* A soft fade of the page's own sand tone sits under the dock, so a
-            card scrolling past never shows through the gap beneath the pill. */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 bottom-0"
-          style={{
-            height: 104,
-            zIndex: -1,
-            background:
-              "linear-gradient(to top, #f7f1e8 0%, rgba(247,241,232,0.94) 46%, rgba(247,241,232,0) 100%)",
-          }}
-        />
+        {/* No backing layer of any kind: no fade, no gradient, no blur, no
+            translucent sheet behind or beneath the dock. The pill is the only
+            surface, and the page's own background shows in the gaps around it. */}
         <div
           ref={barRef}
           className="relative mx-auto w-full overflow-visible"
@@ -357,10 +348,12 @@ export default function UnifiedBottomNav() {
             style={{
               width: LOG_SIZE,
               height: LOG_SIZE,
-              background: "linear-gradient(180deg, #ab5c2d 0%, #9c5228 58%, #8a4720 100%)",
-              border: "1px solid rgba(63,56,48,0.20)",
-              boxShadow: `0 0 0 ${LOG_RING}px var(--nav-ring), 0 8px 20px rgba(63,56,48,0.30)`,
-              color: "#fdf9f2",
+              // Flat rust disc with a cream ring — never a cream fill with a
+              // dark rim, and never a gradient that reads as a glossy bead.
+              background: "#a0522d",
+              border: "none",
+              boxShadow: `0 0 0 ${LOG_RING}px var(--nav-ring), 0 6px 16px rgba(24,17,12,0.28)`,
+              color: "#fdf8f1",
               zIndex: 53,
             }}
             whileTap={reduce ? undefined : { scale: 0.94 }}

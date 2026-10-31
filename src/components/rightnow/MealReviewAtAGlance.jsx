@@ -397,7 +397,7 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
         />
 
         {/* 4. One insight line */}
-        <div className="mt-3 rounded-[12px] px-3 py-2" style={{ background: PALETTE.canvas }}>
+        <div className="mt-3 rounded-[12px] px-3 py-2" style={{ background: "transparent" }}>
           <p className="text-[12px] leading-relaxed" style={{ color: PALETTE.ink }}>{insightLine}</p>
         </div>
 

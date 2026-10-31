@@ -40,7 +40,10 @@ const CHART_MARGIN_TOP = 70;
 const CHART_MARGIN_BOTTOM = 0;
 const X_AXIS_HEIGHT = 30;
 const GLUCOSE_CHART_HEIGHT = 234;
-const GLUCOSE_MARGIN_TOP = 72;
+// Small top margin: the reading row now lives above the chart in normal flow,
+// so the plot only needs enough headroom for the reference labels that sit
+// above the highest line.
+const GLUCOSE_MARGIN_TOP = 22;
 const GLUCOSE_PLOT_HEIGHT = GLUCOSE_CHART_HEIGHT - GLUCOSE_MARGIN_TOP;
 const CARB_LANE_HEIGHT = 34;
 const INSULIN_PLOT_HEIGHT = 46;
@@ -213,10 +216,10 @@ function TimeAxisTick({ x, y, payload }) {
       x={x}
       y={y + 11}
       textAnchor="middle"
-      fill="#746959"
-      fontSize={9}
+      fill="#7a6b5d"
+      fontSize={11}
       fontWeight={500}>
-      {format(date, "h a")}
+      {format(date, "h a").toLowerCase()}
     </text>
   );
 }
@@ -1284,15 +1287,45 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         return controlsPortalEl ? createPortal(controls, controlsPortalEl) : controls;
       })()}
       <div className="relative">
-      <button
-          type="button"
-          onClick={scrollToLatestGlucose}
-          className="absolute right-2 top-0 z-30 flex h-8 items-center gap-1 px-2 transition hover:opacity-70"
-          style={{ background: "#fdf9f2", color: "#4c6770", borderRadius: 0 }}
-          aria-label="Back to now">
-          <CornerUpRight className="h-4 w-4" />
-          <span className="text-[11px] font-semibold">Now</span>
-        </button>
+      {/* Compact reading row — the selected reading's number and unit on the
+          left, its time and date and the way back to now on the right. It sits
+          in normal flow above the trace, replacing the tall stacked block that
+          used to float over the top of the chart and leave dead space. */}
+      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 px-[18px] pb-1.5">
+        <div className="flex min-w-0 items-baseline gap-1.5">
+          {filters.glucose && glucoseLinePoints.length > 0 &&
+            <>
+              {(onSelectLog || onDeleteLog) && !dexcomConnected &&
+                <span className="flex h-4 w-4 shrink-0 items-center justify-center self-center rounded-full border" style={{ borderColor: "#e6dccd", background: "#fdf8f1", color: "#7a6b5d" }}>
+                  <Info className="h-2.5 w-2.5" />
+                </span>
+                }
+              <span className="flex items-baseline gap-1" style={{ color: "#3a2f28" }}>
+                <GlucoseTicker
+                  ref={tickerRef}
+                  className="text-[27px] font-light leading-none tabular-nums"
+                  initialValue={formatGlucoseDisplay(glucoseLinePoints[glucoseLinePoints.length - 1].value)} />
+                <span className="text-[11px] font-medium" style={{ color: "#a39484" }}>{glucoseUnitLabel()}</span>
+              </span>
+            </>
+            }
+        </div>
+        <div className="ml-auto flex shrink-0 items-baseline gap-2">
+          <span className="flex items-baseline gap-1.5" style={{ color: "#7a6b5d" }}>
+            <span ref={tooltipTimeRef} className="text-[11px] font-medium tabular-nums" />
+            <span ref={tooltipDateRef} className="truncate text-[10px]" />
+          </span>
+          <button
+              type="button"
+              onClick={scrollToLatestGlucose}
+              className="flex h-7 shrink-0 items-center gap-1 rounded-full px-2 transition hover:opacity-70 self-center"
+              style={{ background: "#f3ece0", color: "#8a4a2a" }}
+              aria-label="Back to now">
+              <CornerUpRight className="h-3.5 w-3.5" />
+              <span className="text-[11px] font-semibold">Now</span>
+            </button>
+        </div>
+      </div>
       <div
           ref={graphViewportRef}
           className="relative overflow-hidden"
@@ -1302,22 +1335,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           <span className="text-[12px]" style={{ color: "#746959" }}>Not much logged in this window yet</span>
         </div>
       )}
-      {!isCandlestick && filters.glucose && glucoseLinePoints.length > 0 &&
-          <div
-            className="absolute left-1/2 top-0 z-20 -translate-x-1/2 px-3 py-1 text-center pointer-events-none">
-            
-          <div className="flex items-center justify-center gap-1.5 text-2xl font-black leading-none" style={{ color: "#9f7d4eff" }}>
-            {(onSelectLog || onDeleteLog) && !dexcomConnected &&
-              <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border" style={{ borderColor: "#eadccf", background: "#fdf9f2", color: "#746959" }}>
-                <Info className="h-2.5 w-2.5" />
-              </span>
-              }
-            <GlucoseTicker ref={tickerRef} initialValue={formatGlucoseDisplay(glucoseLinePoints[glucoseLinePoints.length - 1].value)} /> <span className="text-xs font-medium" style={{ color: "#9f7d4eff" }}>{glucoseUnitLabel()}</span>
-          </div>
-          <div ref={tooltipTimeRef} className="mt-1 text-xs font-medium" style={{ color: "#9f7d4eff" }}>{format(new Date(glucoseLinePoints[glucoseLinePoints.length - 1].time), "h:mm a")}</div>
-          <div ref={tooltipDateRef} className="mt-0.5 text-[10px] font-medium" style={{ color: "#9f7d4eff" }}>{format(new Date(glucoseLinePoints[glucoseLinePoints.length - 1].time), "EEEE, MMM d")}</div>
-        </div>
-          }
       {!isCandlestick && filters.glucose && glucoseLinePoints.length > 0 &&
           <div
             ref={centerMarkerRef}
@@ -1552,6 +1569,21 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
               <YAxis yAxisId="insulin" domain={[0, insulinYMax]} allowDataOverflow hide />
 
+              {/* A neutral hairline under the traces, on the shared time axis. */}
+              <ReferenceLine yAxisId="insulin" y={0} stroke="#e6dccd" strokeWidth={1} />
+
+              {/* The same faint "now" marker as the glucose row, continued
+                  through the insulin lane on this chart's own coordinates. */}
+              {filters.glucose &&
+                <ReferenceLine
+                  x={stableNow}
+                  yAxisId="insulin"
+                  stroke="#8a7b6b"
+                  strokeWidth={1}
+                  strokeDasharray="2 4"
+                  strokeOpacity={0.35} />
+                }
+
               {filters.insulin && doseKeys.map((k) => {
                     const dimmed = highlightedDoseKey && highlightedDoseKey !== k.key;
                     const stroke = k.isSpent ? "#b8aea0" : k.color;
@@ -1728,6 +1760,12 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               <span className="text-[10px] font-medium" style={{ color: "#6b6153" }}>Insulin</span>
             </div>
           )}
+          {filters.insulin && doseKeys.some((k) => k.isSpent) &&
+            <div className="flex items-center gap-1.5">
+              <div className="h-2 w-2 rounded-full" style={{ background: "#b8aea0" }} />
+              <span className="text-[10px] font-medium" style={{ color: "#6b6153" }}>Finished dose</span>
+            </div>
+          }
         </div>
       </div>
       <DelayedRiseCautionCard carbEntries={carbEntries} />

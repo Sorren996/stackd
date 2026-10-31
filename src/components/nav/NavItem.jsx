@@ -32,12 +32,10 @@ export default function NavItem({ item, active, onPress }) {
         aria-hidden="true"
       />
       <NavLabel color={labelColor}>{label}</NavLabel>
-      {/* Always rendered so the shared baseline never shifts. Straight-edged:
-          an underline, not a rounded pill. */}
-      <span
-        aria-hidden="true"
-        style={{ width: 20, height: 2, background: "var(--nav-accent)", opacity: active ? 1 : 0 }}
-      />
+      {/* The selection chip already carries "active", so no underline or other
+          second highlight is drawn. The spacer keeps every item on the same
+          icon/label baseline it had before. */}
+      <span aria-hidden="true" style={{ height: 2 }} />
     </Link>
   );
 }

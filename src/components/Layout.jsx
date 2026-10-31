@@ -48,6 +48,14 @@ function useForegroundRepaint() {
   }, []);
 }
 
+// The header's own backdrop. Blur is applied to a separate layer that sits
+// behind the logo, and that layer is masked so it is at full strength along the
+// top edge and fades smoothly to a tenth at its bottom edge — the page reads as
+// frosted only under the logo, never as a panel across the screen. There is no
+// white tint and no colour of its own: only the blur, so nothing fogs the card
+// content scrolling beneath it.
+const HEADER_BLUR_MASK = "linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.1) 100%)";
+
 const CachedDashboard = memo(Dashboard);
 const CachedHistoryPage = memo(HistoryPage);
 const CachedSettingsPage = memo(SettingsPage);
@@ -133,8 +141,20 @@ export default function Layout() {
         className="fixed inset-x-0 top-0 z-50"
         style={{ paddingTop: "env(safe-area-inset-top)", background: "transparent" }}
       >
+        {/* The blur lives on this layer only — behind the logo, never on it.
+            Full strength at the top edge, a tenth at the bottom edge. */}
         <div
-          className="mx-auto flex h-14 max-w-6xl items-center justify-center px-4"
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0"
+          style={{
+            backdropFilter: "blur(14px)",
+            WebkitBackdropFilter: "blur(14px)",
+            maskImage: HEADER_BLUR_MASK,
+            WebkitMaskImage: HEADER_BLUR_MASK,
+          }}
+        />
+        <div
+          className="relative z-10 mx-auto flex h-14 max-w-6xl items-center justify-center px-4"
           style={{ background: "transparent" }}
         >
           <button

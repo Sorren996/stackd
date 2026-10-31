@@ -113,7 +113,7 @@ export default function LogFanMenu({ open, actions, onSelect, onClose, reduce })
                   <Icon
                     className="h-[22px] w-[22px]"
                     strokeWidth={1.9}
-                    style={{ color: "var(--nav-accent)" }}
+                    style={{ color: "var(--nav-log)" }}
                     aria-hidden="true"
                   />
                 </span>
