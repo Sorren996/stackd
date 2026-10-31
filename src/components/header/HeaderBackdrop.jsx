@@ -25,15 +25,16 @@ import { HEADER_BAR_PX, HEADER_BLUR_TAIL_PX } from "@/lib/layoutMetrics";
 // percentage of the effect's height where that layer begins to fall away; every
 // layer reaches fully transparent at 100%, so the taper ends at zero.
 //
-// Radii are HALF of the original approved set (2 / 5 / 9 / 15 → 1 / 2.5 / 4.5 /
-// 7.5). Only the strength changed: the layer count, their order, the fade stops,
-// the effect's height and everything else about the structure are untouched, so
-// the taper still ends at zero with no lower seam.
+// Radii now sit at 35% of the original approved set (2 / 5 / 9 / 15 → 0.7 / 1.75
+// / 3.15 / 5.25), i.e. 0.7× the previous half-strength values. Only the radius
+// changed: the layer count, their order, the fade stops, the effect's height and
+// everything else about the structure are untouched, so the taper still ends at
+// zero with no lower seam and no colour is added anywhere.
 const LAYERS = [
-  { blur: 1, fadeStart: 58 },
-  { blur: 2.5, fadeStart: 40 },
-  { blur: 4.5, fadeStart: 25 },
-  { blur: 7.5, fadeStart: 12 },
+  { blur: 0.7, fadeStart: 58 },
+  { blur: 1.75, fadeStart: 40 },
+  { blur: 3.15, fadeStart: 25 },
+  { blur: 5.25, fadeStart: 12 },
 ];
 
 // How far below the safe-area inset the effect takes to reach zero: the logo
