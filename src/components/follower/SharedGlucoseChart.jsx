@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { buildGlucoseSegments } from "@/lib/glucoseSeries";
 import { monotoneXPath } from "@/lib/monotonePath";
+import { formatSharedHourTick } from "@/lib/sharing/sharedTimeFormat";
 
 const ROW_HEIGHT = 168;
 const TOP = 14;
@@ -74,7 +75,8 @@ export default function SharedGlucoseChart({ readings, targetLow, targetHigh }) 
     const hour = at.getHours();
     if (hour !== lastHour) {
       lastHour = hour;
-      ticks.push({ x: xFor(i), label: `${String(hour).padStart(2, "0")}:00` });
+      // Written on a 12-hour clock ("1 PM", midnight "12 AM", noon "12 PM").
+      ticks.push({ x: xFor(i), label: formatSharedHourTick(at) });
     }
   });
 
