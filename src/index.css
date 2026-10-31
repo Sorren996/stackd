@@ -384,6 +384,21 @@
     background-blend-mode: multiply !important;
   }
 
+  /* The navigation bar's FULL-WIDTH wrapper is not a cream surface. It only
+     carries a cream custom property (--nav-pill-border) so the pill can use it,
+     but the attribute selectors above match on that substring and would tile
+     the whole wrapper with paper grain — a faint pale band across the entire
+     viewport, visible outside the pill's rounded ends and over any background.
+     The shell is therefore exempt and explicitly transparent: nothing but the
+     notched pill and the raised Log button paints anything. */
+  .stackd-nav-shell {
+    background: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
   /* Inputs keep a clean, untextured field so their content reads plainly. */
   input[style*="253, 249, 242"],
   textarea[style*="253, 249, 242"],

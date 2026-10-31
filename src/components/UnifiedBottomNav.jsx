@@ -250,8 +250,10 @@ export default function UnifiedBottomNav() {
       {/* ── The bar: the cream contour, the four destinations, empty centre ── */}
       <nav
         aria-label="Primary"
-        className="fixed inset-x-0"
+        className="fixed inset-x-0 stackd-nav-shell"
         style={{
+          background: "transparent",
+          boxShadow: "none",
           bottom: "calc(0px + env(safe-area-inset-bottom))",
           paddingLeft: BAR_SIDE_PADDING,
           paddingRight: BAR_SIDE_PADDING,
