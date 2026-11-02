@@ -1,11 +1,12 @@
 import { MR, CAPS, SERIF_ITALIC } from "./mealReviewTheme";
 
 /**
- * Hero for the expanded Meal Review. Sits directly on the slate ground:
- * eyebrow, one editorial headline with a single italic word, one sentence
- * built from values the card already shows, then three light numerals.
+ * Hero for the expanded Meal Review. Sits directly on the slate ground with no
+ * surface of its own: a context eyebrow, one editorial headline with a single
+ * italic serif phrase, one factual sentence, then the current measured reading
+ * as a compact line. The reading stays a line, never a second hero.
  *
- * Every string is passed in by MealReviewAtAGlance; nothing is derived here.
+ * Every string and value is passed in by the parent; nothing is derived here.
  */
 
 function Headline({ text, italic }) {
@@ -21,46 +22,22 @@ function Headline({ text, italic }) {
   );
 }
 
-function Numeral({ label, value, unit, divider }) {
-  return (
-    <div className="flex min-w-0 flex-1 items-stretch">
-      {divider && (
-        <span aria-hidden="true" className="mr-3 w-px shrink-0 self-stretch" style={{ background: MR.onGroundHairline }} />
-      )}
-      <div className="min-w-0">
-        <div className="flex items-baseline gap-1">
-          <span
-            className="tabular-nums"
-            style={{ fontSize: 30, fontWeight: 300, lineHeight: 1, letterSpacing: "-0.02em", color: MR.onGround }}
-          >
-            {value}
-          </span>
-          {unit && (
-            <span style={{ fontSize: 10, fontWeight: 600, color: MR.onGroundMuted }}>{unit}</span>
-          )}
-        </div>
-        <div className="mt-2" style={{ ...CAPS, fontSize: 10, color: MR.onGroundMuted }}>
-          {label}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default function MealReviewHero({ eyebrow, headline, headlineItalic, sentence, numerals, unit }) {
+export default function MealReviewHero({ eyebrow, headline, headlineItalic, sentence, reading }) {
   return (
     <div className="px-1">
       {eyebrow && (
-        <div style={{ ...CAPS, fontSize: 11, color: MR.onGroundMuted }}>{eyebrow}</div>
+        <div style={{ ...CAPS, fontSize: 10, letterSpacing: "0.18em", color: MR.onGroundMuted }}>
+          {eyebrow}
+        </div>
       )}
 
       <h2
-        className="mt-3"
+        className="mt-2.5"
         style={{
-          fontSize: 48,
-          fontWeight: 600,
-          lineHeight: 1.04,
-          letterSpacing: "-0.025em",
+          fontSize: 33,
+          fontWeight: 500,
+          lineHeight: 1.14,
+          letterSpacing: "-0.02em",
           color: MR.onGround,
         }}
       >
@@ -68,22 +45,23 @@ export default function MealReviewHero({ eyebrow, headline, headlineItalic, sent
       </h2>
 
       {sentence && (
-        <p className="mt-3" style={{ fontSize: 15, lineHeight: 1.5, color: MR.onGroundMuted }}>
+        <p className="mt-3" style={{ fontSize: 14.5, lineHeight: 1.55, color: MR.onGroundMuted }}>
           {sentence}
         </p>
       )}
 
-      <div className="mt-5 flex items-stretch" style={{ borderTop: `1px solid ${MR.onGroundHairline}`, paddingTop: 16 }}>
-        {numerals.map((numeral, index) => (
-          <Numeral
-            key={numeral.label}
-            label={numeral.label}
-            value={numeral.value}
-            unit={index === numerals.length - 1 ? unit : null}
-            divider={index > 0}
-          />
-        ))}
-      </div>
+      {reading && (
+        <p className="mt-3 flex flex-wrap items-baseline gap-x-1.5" style={{ fontSize: 13, color: MR.onGroundMuted }}>
+          <span
+            className="tabular-nums"
+            style={{ fontSize: 15, fontWeight: 600, color: MR.onGround }}
+          >
+            {reading.value} {reading.unit}
+          </span>
+          {reading.trend && <span>· {reading.trend}</span>}
+          {reading.freshness && <span>· {reading.freshness}</span>}
+        </p>
+      )}
     </div>
   );
 }

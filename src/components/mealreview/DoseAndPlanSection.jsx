@@ -1,13 +1,16 @@
+import DoseActivityChart from "./DoseActivityChart";
 import LedgerLine from "./LedgerLine";
-import { MR, SERIF_ITALIC, SECTION_HEAD } from "./mealReviewTheme";
+import { MR, SERIF_ITALIC } from "./mealReviewTheme";
 
 /**
- * Card 2, section A — "Your dose".
+ * "Your dose and your plan" — the same figures the card already computes, set
+ * as a statement: what the food worked out to, what the correction added, a
+ * rule, then the plan's total against what was actually taken. The difference
+ * is carried by one short sentence rather than a bar or a badge.
  *
- * The same figures the card already computes, set as a statement: what the
- * food worked out to, what the correction added, a rule, then the plan's total
- * against what was actually taken. No bars, no status pill — the difference is
- * carried by one short sentence underneath.
+ * The modeled dose curves that used to run under the glucose line live here,
+ * on their own activity scale, so a dose shape is never read as a glucose
+ * prediction.
  */
 export default function DoseAndPlanSection({
   show,
@@ -24,6 +27,10 @@ export default function DoseAndPlanSection({
   ratioLabel,
   difference,
   absDiff,
+  doses = [],
+  from,
+  to,
+  now,
 }) {
   const verdict =
     absDiff < 0.05
@@ -40,16 +47,12 @@ export default function DoseAndPlanSection({
       : `Correction, ${correctionInRange ? "in range" : "out of range"} at dose time`;
 
   return (
-    <section>
-      <div style={SECTION_HEAD}>Your dose</div>
-
+    <div>
       {!show ? (
-        <p className="mt-2" style={{ ...SERIF_ITALIC, fontSize: 13, lineHeight: 1.6, color: MR.sec }}>
-          {neutralLabel}
-        </p>
+        <p style={{ ...SERIF_ITALIC, fontSize: 13, lineHeight: 1.6, color: MR.sec }}>{neutralLabel}</p>
       ) : (
         <>
-          <div className="mt-3 space-y-1.5">
+          <div className="space-y-1.5">
             <LedgerLine label={foodLabel} value={`${foodUnits.toFixed(1)}u`} />
             <LedgerLine label={correctionNote} value={correctionValue} />
           </div>
@@ -64,11 +67,16 @@ export default function DoseAndPlanSection({
           <p className="mt-3" style={{ ...SERIF_ITALIC, fontSize: 13, lineHeight: 1.6, color: MR.ink }}>
             {verdict}.
           </p>
-          <p className="mt-1" style={{ fontSize: 11, lineHeight: 1.6, color: MR.sec }}>
-            Only ever your own plan's math. The dose is always yours.
-          </p>
         </>
       )}
-    </section>
+
+      <div className="mt-3">
+        <DoseActivityChart doses={doses} from={from} to={to} now={now} />
+      </div>
+
+      <p className="mt-3" style={{ fontSize: 11, lineHeight: 1.6, color: MR.sec }}>
+        This just shows your plan's math. The dose is always yours.
+      </p>
+    </div>
   );
 }

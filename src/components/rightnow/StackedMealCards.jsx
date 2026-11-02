@@ -1,53 +1,14 @@
-import { useState } from "react";
-import { motion } from "framer-motion";
+import { useMemo, useState } from "react";
 import MealReviewAtAGlance from "./MealReviewAtAGlance";
 
-// Editorial palette — high-contrast colors for the sandstone (#f7f1e8) canvas.
-const INK = "#3f3830";       // espresso ink — primary text
-const SEC = "#6b6153";      // warm taupe — secondary text
-const FAINT = "#746959";    // muted text — labels, captions
-const HAIRLINE = "#eadccf"; // hairline border
-const SURFACE = "#fdf9f2";  // elevated cream surface
-const CANVAS = "#f7f1e8";   // sandstone canvas
-const COPPER = "#9c5228";   // copper accent — selected chip
-
-const PALETTE = {
-  cream: SURFACE,
-  ink: INK,
-  sec: SEC,
-};
-
-function formatClock(time) {
-  if (!Number.isFinite(time)) return null;
-  return new Date(time).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-}
-
-// Readable "time left in window" label for each chip — replaces the tiny,
-// hard-to-read progress ring with useful, legible info.
-function formatRemaining(meal, now) {
-  const d = meal?.insight?.details;
-  const reviewWindowEnd = d?.reviewWindowEnd;
-  if (!Number.isFinite(reviewWindowEnd)) return null;
-  const ms = reviewWindowEnd - now;
-  if (ms <= 0) return "Closed";
-  const m = Math.round(ms / 60000);
-  if (m < 60) return `${m}m left`;
-  const h = Math.floor(m / 60);
-  const r = m % 60;
-  return r ? `${h}h ${r}m left` : `${h}h left`;
-}
-
 /**
- * Stacked Meal Cards — Chip Switcher variant.
+ * Several meals are still being reviewed at once.
  *
- * A labeled sub-strip of meal chips across the top; each chip is one active
- * meal (name · time · carbs · time-left). The selected chip inverts to a
- * solid cream pill with ink text; below it the selected meal's full Meal
- * Review card renders. Tapping a chip jumps to that meal.
- *
- * Used only when 2+ meals are still within their glucose-response window.
- *
- * Copy rule: describes, never prescribes.
+ * They now share ONE measured timeline and one set of estimates: the meal rows
+ * inside the review choose which meal's numbers the estimates describe, while
+ * the glucose picture above stays the whole represented window. This replaces
+ * the truncated chip carousel; the selection index is the same state the chips
+ * used, and no per-meal value is combined with another.
  */
 export default function StackedMealCards({
   meals,
@@ -58,112 +19,63 @@ export default function StackedMealCards({
 }) {
   const [selectedIndex, setSelectedIndex] = useState(0);
 
+  const sharedWindow = useMemo(() => {
+    if (!Array.isArray(meals) || meals.length < 2) return null;
+    const starts = meals.map((m) => m.mealTime ?? m.group?.mealTime).filter(Number.isFinite);
+    if (!starts.length) return null;
+    const ends = meals.map((m) => m.insight?.details?.reviewWindowEnd).filter(Number.isFinite);
+    const from = Math.min(...starts);
+
+    // The window's start anchor is the first meal's own measured glucose before
+    // it was eaten — an existing value, plotted at the existing time. No new
+    // reading is derived for the shared span.
+    const earliest = meals.reduce((best, meal) => {
+      const time = meal?.mealTime ?? meal?.group?.mealTime;
+      if (!Number.isFinite(time)) return best;
+      const bestTime = best ? best.mealTime ?? best.group?.mealTime : Infinity;
+      return time < bestTime ? meal : best;
+    }, null);
+    const startValue = Number(earliest?.insight?.details?.glucoseValue);
+
+    return {
+      from,
+      to: ends.length ? Math.max(...ends) : Date.now(),
+      startValue: Number.isFinite(startValue) ? startValue : null,
+    };
+  }, [meals]);
+
+  const sharedMeals = useMemo(() => {
+    if (!Array.isArray(meals) || meals.length < 2) return null;
+    const safe = Math.min(selectedIndex, meals.length - 1);
+    return meals.map((meal, index) => {
+      const details = meal?.insight?.details;
+      return {
+        key: (meal?.group && meal?.group?.mealTime) || `meal-${index}`,
+        name: meal?.name || "Meal",
+        mealTime: meal?.mealTime ?? details?.meal?.time,
+        carbs: meal?.carbs ?? details?.mealGroup?.carbs ?? 0,
+        reviewWindowEnd: details?.reviewWindowEnd ?? null,
+        underReview: details?.mealStillUnderReview,
+        selected: index === safe,
+      };
+    });
+  }, [meals, selectedIndex]);
+
   if (!Array.isArray(meals) || meals.length < 2) return null;
 
-  // Clamp the selection if meals shifted (e.g. one left its window).
   const safeIndex = Math.min(selectedIndex, meals.length - 1);
   const selectedMeal = meals[safeIndex];
-  const now = Date.now();
 
   return (
-    <div className="space-y-4">
-      {/* Sub-strip — label + chip row, framed as deliberate sub-navigation */}
-      <div
-        className="rounded-[16px] px-3 py-3"
-        style={{
-          background: SURFACE,
-          border: `1px solid ${HAIRLINE}`,
-        }}
-      >
-        <div
-          className="mb-2 text-[10px] font-bold uppercase tracking-wider"
-          style={{ color: FAINT }}
-        >
-          Active meals
-        </div>
-        <div className="no-scrollbar -mx-1 flex items-center gap-2 overflow-x-auto px-1">
-          {meals.map((meal, i) => {
-            const selected = i === safeIndex;
-            const name = meal?.name || "Meal";
-            const time = formatClock(meal?.mealTime);
-            const carbs = Math.round(meal?.carbs ?? 0);
-            const remaining = formatRemaining(meal, now);
-            return (
-              <button
-                key={(meal?.group && meal?.group?.mealTime) || `chip-${i}`}
-                type="button"
-                onClick={() => setSelectedIndex(i)}
-                className="flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 transition-colors"
-                style={{
-                  background: selected
-                    ? COPPER
-                    : CANVAS,
-                  border: selected
-                    ? `1px solid ${COPPER}`
-                    : `1px solid ${HAIRLINE}`,
-                  color: selected ? "#f7f1e8" : INK,
-                  boxShadow: selected
-                    ? "0 4px 14px rgba(156,82,40,0.20)"
-                    : "none",
-                }}
-                aria-pressed={selected}
-              >
-                <span className="max-w-[110px] truncate text-[12px] font-semibold">
-                  {name}
-                </span>
-                <span
-                  className="text-[11px] tabular-nums"
-                  style={{
-                    color: selected ? "#f7f1e8" : SEC,
-                  }}
-                >
-                  {time ? `${time} · ` : ""}
-                  {carbs}g
-                </span>
-                {remaining && (
-                  <span
-                    className="text-[11px] font-semibold tabular-nums"
-                    style={{
-                      color: selected ? "#f7f1e8" : FAINT,
-                      opacity: selected ? 0.85 : 1,
-                    }}
-                  >
-                    · {remaining}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Selected meal — swipeable carousel card.
-          Swipe left/right to move between meals; chips update as indicators. */}
-      <motion.div
-        key={(selectedMeal?.group && selectedMeal?.group?.mealTime) || `meal-${safeIndex}`}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.32, ease: [0.32, 0.72, 0.25, 1] }}
-        drag="x"
-        dragConstraints={{ left: 0, right: 0 }}
-        dragElastic={0.18}
-        onDragEnd={(_, info) => {
-          const SWIPE_THRESHOLD = 50;
-          if (info.offset.x < -SWIPE_THRESHOLD && safeIndex < meals.length - 1) {
-            setSelectedIndex(safeIndex + 1);
-          } else if (info.offset.x > SWIPE_THRESHOLD && safeIndex > 0) {
-            setSelectedIndex(safeIndex - 1);
-          }
-        }}
-      >
-        <MealReviewAtAGlance
-          mealInsight={selectedMeal?.insight}
-          monitoringStatus={monitoringStatus}
-          glucoseTrend={glucoseTrend}
-          onResolve={onResolve}
-          glucoseReadings={glucoseReadings}
-        />
-      </motion.div>
-    </div>
+    <MealReviewAtAGlance
+      mealInsight={selectedMeal?.insight}
+      monitoringStatus={monitoringStatus}
+      glucoseTrend={glucoseTrend}
+      onResolve={onResolve}
+      glucoseReadings={glucoseReadings}
+      sharedMeals={sharedMeals}
+      sharedWindow={sharedWindow}
+      onSelectMeal={(index) => setSelectedIndex(index)}
+    />
   );
 }

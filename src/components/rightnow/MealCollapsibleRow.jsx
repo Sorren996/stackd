@@ -2,10 +2,10 @@ import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 
 const PALETTE = {
-  ink: "#3f3830",
-  muted: "#6b6153",
-  faint: "#746959",
-  hairline: "#eadccf",
+  ink: "#3A3430",
+  muted: "#6B5F57",
+  faint: "#8A7F70",
+  hairline: "#E6DCCF",
 };
 
 /**
@@ -26,6 +26,7 @@ export default function MealCollapsibleRow({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
         className="flex min-h-[44px] w-full items-center justify-between py-3 text-left"
       >
         <span className={labelClassName} style={{ color: PALETTE.ink }}>{label}</span>

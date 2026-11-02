@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import MealReviewCard from "@/components/mealreview/MealReviewCard";
 import MealReviewHero from "@/components/mealreview/MealReviewHero";
-import HowItWentCard from "@/components/mealreview/HowItWentCard";
+import TimelineCard from "@/components/mealreview/TimelineCard";
 import DosePlanCard from "@/components/mealreview/DosePlanCard";
 import { MR } from "@/components/mealreview/mealReviewTheme";
 import { base44 } from "@/api/base44Client";
@@ -15,6 +15,7 @@ import { useMealModelResolution, entrySpeedFactorFromResolution, hasLearnedTimin
 import { getDoseTimingInfo, isBasalInsulinType } from "@/lib/insulinPharmacology";
 import { formatIOBValue, IOB_FLOOR } from "@/lib/iobModel";
 import { formatGlucose, glucoseUnitLabel } from "@/lib/glucoseUnits";
+import { formatReadingAge } from "@/lib/glucoseStaleness";
 
 const TREND_PHRASE = {
   "Rising quickly": "rising quickly",
@@ -26,29 +27,34 @@ const TREND_PHRASE = {
   "Falling quickly": "falling quickly",
 };
 
-// Short hero headlines, one per outcome state the reconciler can return.
-// Presentation only: each key is an existing state, so a headline can never
-// describe something the window did not show. Anything unmapped falls back to
-// the existing summary sentence.
-const HEADLINES = {
-  waiting: { text: "Still watching.", italic: "watching" },
-  second_rise: { text: "A second, gentler wave.", italic: "second" },
-  delayed_rise_expected: { text: "Taking its time.", italic: "time" },
-  delayed_wave_watch: { text: "Taking its time.", italic: "time" },
-  rose_high_multi: { text: "Rose in two waves.", italic: "two waves" },
-  rose_high_clearing: { text: "Rose and settled.", italic: "settled" },
-  rose_high_easing: { text: "Rose, now easing.", italic: "easing" },
-  gentle_multi: { text: "A gentle rise, in two parts.", italic: "gentle" },
-  gentle: { text: "A gentle rise.", italic: "gentle" },
-  steady_multi: { text: "Steady through it.", italic: "Steady" },
-  steady: { text: "A steady one.", italic: "steady" },
-};
+// Period-of-day word for the card heading, using the same clock boundaries as
+// src/lib/mealSlot.js (morning 5-11, afternoon 11-17, evening 17-21). It names
+// the hour the window started at, never the meal itself; late night falls back
+// to the neutral heading.
+function periodLabel(time) {
+  if (!Number.isFinite(time)) return null;
+  const hour = new Date(time).getHours();
+  if (hour >= 5 && hour < 11) return "morning";
+  if (hour >= 11 && hour < 17) return "afternoon";
+  if (hour >= 17 && hour < 21) return "evening";
+  return null;
+}
 
-function headlineFor(key, phase) {
-  if (key === "rose_high") {
-    return phase === "clearing" ? HEADLINES.rose_high_clearing : HEADLINES.rose_high_easing;
+// The headline counts the meals actually being reviewed and says whether that
+// story is still running. It never calls one meal two, or a finished window
+// unfolding.
+const COUNT_WORDS = { 2: "Two", 3: "Three", 4: "Four" };
+
+function headlineForCount(count, ongoing) {
+  if (count > 1) {
+    const word = COUNT_WORDS[count] || String(count);
+    return ongoing
+      ? { text: `${word} meals. One unfolding story.`, italic: "unfolding story" }
+      : { text: `${word} meals, one story settled.`, italic: "settled" };
   }
-  return HEADLINES[key] || null;
+  return ongoing
+    ? { text: "One meal, still unfolding.", italic: "still unfolding" }
+    : { text: "One meal, now settled.", italic: "now settled" };
 }
 
 // The warm version of the peak-timing comparison. The exact minutes stay in
@@ -99,7 +105,17 @@ function formatRemaining(min) {
   return r ? `${h}h ${r}m` : `${h}h`;
 }
 
-export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glucoseTrend, onResolve, glucoseReadings, hideIdentity = false }) {
+export default function MealReviewAtAGlance({
+  mealInsight,
+  monitoringStatus,
+  glucoseTrend,
+  onResolve,
+  glucoseReadings,
+  hideIdentity = false,
+  sharedMeals = null,
+  sharedWindow = null,
+  onSelectMeal = null,
+}) {
   const [editEntries, setEditEntries] = useState(null);
   const [openEntryId, setOpenEntryId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
@@ -357,34 +373,63 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
   // The meal's own logged doses, drawn softly under the glucose curve.
   const mealDoses = Array.isArray(d.mealGroup?.doses) ? d.mealGroup.doses : [];
 
-  const eyebrow = [
-    hideIdentity ? null : mealName,
-    `${Math.round(totalCarbs)} g`,
-    formatClock(mealTime),
-  ].filter(Boolean).join(" · ");
+  // The window actually drawn: one meal's own review window, or the shared
+  // span of every meal still being reviewed.
+  const chartFrom = Number.isFinite(sharedWindow?.from) ? sharedWindow.from : mealTime;
+  const chartTo = Number.isFinite(sharedWindow?.to) ? sharedWindow.to : reviewWindowEnd;
 
-  // Headline comes from the state the reconciler already chose; when there is
-  // no mapped state the existing summary sentence is the headline instead.
-  const headline = headlineFor(verdict.glucoseVerdictKey, glucoseAnalysis.phase);
-  const heroSentence =
+  const mealsUnderReview = Array.isArray(sharedMeals) && sharedMeals.length > 1 ? sharedMeals : null;
+  const mealCount = mealsUnderReview?.length || 1;
+
+  // "Still running" reads only existing fields: the represented review windows
+  // and the resolved flag. Nothing new is classified.
+  const ongoing = mealsUnderReview
+    ? mealsUnderReview.some(
+        (m) => m.underReview !== false && Number.isFinite(m.reviewWindowEnd) && m.reviewWindowEnd > now
+      )
+    : d.mealStillUnderReview !== false && windowRemaining > 0;
+
+  const headline = headlineForCount(mealCount, ongoing);
+  const period = periodLabel(chartFrom);
+
+  const rangeWord = !Number.isFinite(glucoseNow)
+    ? null
+    : glucoseNow > targetHigh
+      ? "above your range"
+      : glucoseNow < targetLow
+        ? "below your range"
+        : "within your range";
+
+  // One factual sentence. A single meal keeps the reconciler's own summary; a
+  // shared timeline describes only what is true of the whole window (where the
+  // reading sits against the configured range, and its current trend), so no
+  // rise is ever attributed to one meal.
+  const singleSentence =
     verdict.glucoseVerdictKey === "steady" || verdict.glucoseVerdictKey === "steady_multi"
       ? `Your sugar moved ${Math.round(maxRise)} points and stayed close to where it started.`
       : insightLine;
+  const heroSentence = mealsUnderReview
+    ? rangeWord
+      ? `Glucose is ${rangeWord}${trendPhrase ? ` and ${trendPhrase} now` : " right now"}.`
+      : insightLine
+    : singleSentence;
 
-  const numerals = [
-    { label: "Started", value: Number.isFinite(glucoseAtStart) ? formatGlucose(glucoseAtStart) : "-" },
-    {
-      label: "Peaked",
-      value:
-        Number.isFinite(glucoseAnalysis.timeToPeakMin) && Number.isFinite(peakOutcome)
-          ? formatGlucose(peakOutcome)
-          : "-",
-    },
-    {
-      label: trendPhrase ? `Now · ${trendPhrase}` : "Now",
-      value: Number.isFinite(glucoseNow) ? formatGlucose(glucoseNow) : "-",
-    },
-  ];
+  // The compact reading line under the sentence: the same current reading,
+  // the same trend label, and the age of the reading it came from.
+  const latestReadingTime = (Array.isArray(glucoseReadings) ? glucoseReadings : []).reduce((best, reading) => {
+    const t = new Date(reading?.recorded_at).getTime();
+    if (!Number.isFinite(t) || t > now) return best;
+    return best == null || t > best ? t : best;
+  }, null);
+
+  const heroReading = Number.isFinite(glucoseNow)
+    ? {
+        value: formatGlucose(glucoseNow),
+        unit: unitLabel,
+        trend: trendPhrase,
+        freshness: latestReadingTime != null ? formatReadingAge(latestReadingTime) : null,
+      }
+    : null;
 
   const showWindowStats = !waitingForReadings && glucoseAnalysis.timeInRangePct != null;
   const returnLabel = glucoseAnalysis.backInRangeMin != null ? "Back in range" : "Still elevated";
@@ -397,6 +442,74 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
   const returnAside = glucoseAnalysis.backInRangeMin != null ? "after eating" : null;
 
   const comparison = comparisonFor(verdict.reconciliationTiming, reconciliation);
+
+  const recovery = returnAside
+    ? `${returnValue} back in range, ${returnAside}`
+    : returnValue && returnValue !== "-"
+      ? `${returnLabel.toLowerCase()} after ${returnValue}`
+      : null;
+
+  // A shared timeline's statistics are only printed when they describe the
+  // window they sit under. With several meals on one chart the per-meal figures
+  // stay with that meal's own details instead of being relabelled as shared.
+  const scopedStats =
+    mealsUnderReview && showWindowStats
+      ? `${mealName}: ${glucoseAnalysis.timeInRangePct}% in range since you ate${recovery ? `, ${recovery}` : ""}.`
+      : null;
+
+  // On a shared timeline the chart's markers belong to the whole window, so
+  // this meal's own observed summary and its start/peak values are stated
+  // here, explicitly scoped to that meal.
+  const numbersTail = [
+    Number.isFinite(glucoseAtStart) ? `Started ${formatGlucose(glucoseAtStart)}` : null,
+    Number.isFinite(glucoseAnalysis.timeToPeakMin) && Number.isFinite(peakOutcome)
+      ? `peaked ${formatGlucose(peakOutcome)} after ${Math.round(glucoseAnalysis.timeToPeakMin)} min`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(", ");
+  const verdictAlreadyQuotesNumbers =
+    verdict.glucoseVerdictKey === "rose_high" || verdict.glucoseVerdictKey === "rose_high_multi";
+  const scopedNumbers = mealsUnderReview
+    ? `${mealName}: ${insightLine}${!verdictAlreadyQuotesNumbers && numbersTail ? ` ${numbersTail}.` : ""}`
+    : null;
+
+  // The remaining review window, kept from the meal selector but stated as the
+  // estimate it is, inside the meal's own details.
+  const windowLeft = windowRemaining > 0 ? formatRemaining(windowRemaining) : null;
+  const windowLeftLabel = windowLeft
+    ? mealsUnderReview
+      ? `${mealName} review window closes in ${windowLeft}.`
+      : `Review window closes in ${windowLeft}.`
+    : null;
+
+  const mealRows = mealsUnderReview
+    ? mealsUnderReview.map((m, index) => ({
+        key: m.key || `meal-${index}`,
+        index,
+        name: m.name,
+        time: formatClock(m.mealTime),
+        carbs: Math.round(m.carbs ?? 0),
+        selected: Boolean(m.selected),
+      }))
+    : hideIdentity
+      ? []
+      : [
+          {
+            key: "meal",
+            index: 0,
+            name: mealName,
+            time: formatClock(mealTime),
+            carbs: Math.round(totalCarbs),
+            selected: false,
+          },
+        ];
+
+  const sharedNote = mealsUnderReview
+    ? mealsUnderReview.length === 2
+      ? "Both meals share this timeline."
+      : `All ${mealsUnderReview.length} meals share this timeline.`
+    : null;
 
   const handleDeleteEntry = async (entry) => {
     if (!entry?.id || deletingId) return;
@@ -416,58 +529,58 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
   };
 
   return (
-    <div className="space-y-4 pb-2">
+    <div className="space-y-4 pb-6">
       <MealReviewHero
-        eyebrow={eyebrow}
-        headline={headline ? headline.text : insightLine}
-        headlineItalic={headline ? headline.italic : null}
-        sentence={headline ? heroSentence : null}
-        numerals={numerals}
-        unit={unitLabel}
+        eyebrow={period ? `Meal review · ${period}` : "Meal review"}
+        headline={headline.text}
+        headlineItalic={headline.italic}
+        sentence={heroSentence}
+        reading={heroReading}
       />
 
-      <HowItWentCard
+      <TimelineCard
+        title={period ? `The ${period}, so far` : "The story so far"}
+        titleAccent="so far"
         chartProps={{
           glucoseReadings,
-          mealTime,
-          reviewWindowEnd,
+          from: chartFrom,
+          to: chartTo,
           now,
           targetLow,
           targetHigh,
-          startValue: glucoseAtStart,
-          peakValue: peakOutcome,
-          timeToPeakMin: glucoseAnalysis.timeToPeakMin,
-          doses: mealDoses,
+          markers: mealsUnderReview
+            ? mealsUnderReview.map((m) => ({ time: m.mealTime, name: m.name }))
+            : [],
+          startValue: mealsUnderReview ? (Number.isFinite(sharedWindow?.startValue) ? sharedWindow.startValue : null) : glucoseAtStart,
+          peakValue: mealsUnderReview ? null : peakOutcome,
+          timeToPeakMin: mealsUnderReview ? null : glucoseAnalysis.timeToPeakMin,
+          allowHighest: Boolean(mealsUnderReview),
+          peakMode: ongoing ? "highest" : "peak",
         }}
-        showStats={showWindowStats}
-        inRangePct={glucoseAnalysis.timeInRangePct}
-        returnLabel={returnLabel}
-        returnValue={returnValue}
-        returnAside={returnAside}
+        statSentence={
+          mealsUnderReview || !showWindowStats ? null : (
+            <>
+              <span className="tabular-nums" style={{ fontWeight: 600, color: MR.ink }}>
+                {glucoseAnalysis.timeInRangePct}%
+              </span>{" "}
+              in range since you ate
+              {recovery && (
+                <>
+                  <span style={{ color: MR.tan }}> · </span>
+                  {recovery}
+                </>
+              )}
+            </>
+          )
+        }
+        meals={mealRows}
+        onSelectMeal={mealsUnderReview ? onSelectMeal : null}
+        sharedNote={sharedNote}
       />
 
       <DosePlanCard
-        dosePlan={
-          hasPlan
-            ? {
-                show: verdict.doseVerdict.show,
-                neutralLabel: verdict.doseVerdict.neutralLabel,
-                planned: suggested,
-                taken,
-                foodUnits,
-                correctionValue,
-                correctionLabel,
-                correctionUnits,
-                correctionAvailable,
-                correctionInRange,
-                carbs: Math.round(totalCarbs),
-                ratioLabel,
-                difference,
-                absDiff,
-              }
-            : null
-        }
-        bestGuess={{
+        stillInPlay={{
+          mealName,
           tooEarly: tooEarlyToRead,
           absorbed: Math.round(totalAbsorbed),
           total: Math.round(totalCarbs),
@@ -480,6 +593,9 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
             reconciliation,
             learnedTiming,
             timingCaption,
+            scopedStats,
+            scopedNumbers,
+            windowLeftLabel,
           },
           curve: {
             entries: carbEntries,
@@ -489,7 +605,7 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
             opts: absorptionOpts,
           },
         }}
-        stillWorking={{
+        insulin={{
           iob: activeNow.toFixed(1),
           children: (
             <div className="space-y-2.5">
@@ -532,6 +648,30 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
             </div>
           ),
         }}
+        dose={
+          hasPlan
+            ? {
+                show: verdict.doseVerdict.show,
+                neutralLabel: verdict.doseVerdict.neutralLabel,
+                planned: suggested,
+                taken,
+                foodUnits,
+                correctionValue,
+                correctionLabel,
+                correctionUnits,
+                correctionAvailable,
+                correctionInRange,
+                carbs: Math.round(totalCarbs),
+                ratioLabel,
+                difference,
+                absDiff,
+                doses: mealDoses,
+                from: mealTime,
+                to: chartTo,
+                now,
+              }
+            : null
+        }
         footer={{
           entries: carbEntries,
           rescueEntries,
