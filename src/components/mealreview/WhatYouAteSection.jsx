@@ -1,5 +1,5 @@
 import SwipeableRow from "@/components/SwipeableRow";
-import { MR, CAPS } from "./mealReviewTheme";
+import { MR, SERIF_ITALIC, SECTION_HEAD } from "./mealReviewTheme";
 
 /**
  * Card 2 footer — "What you ate". The same swipeable rows (edit / remove) and
@@ -17,10 +17,10 @@ export default function WhatYouAteSection({
   rescueGrams = 0,
 }) {
   return (
-    <div className="px-6 pb-6 pt-5">
-      <div style={{ ...CAPS, fontSize: 11, color: MR.sec }}>What you ate</div>
+    <div className="px-5 pb-5 pt-4">
+      <div style={SECTION_HEAD}>What you ate</div>
 
-      <div className="mt-3 space-y-2">
+      <div className="mt-2.5 space-y-2">
         {entries.map((entry) => {
           const name = entry.food_name || entry.name || "Food";
           const detail = entry.absorption_profile
@@ -68,20 +68,7 @@ export default function WhatYouAteSection({
               <div className="flex w-full items-baseline gap-2 text-left">
                 <span className="flex min-w-0 flex-1 items-baseline gap-1.5 break-words">
                   <span style={{ fontSize: 13, fontWeight: 500, color: MR.ink }}>{name}</span>
-                  <span
-                    className="shrink-0 rounded-full px-2 py-0.5"
-                    style={{
-                      background: "rgba(160,82,45,0.14)",
-                      color: MR.rustDeep,
-                      border: "1px solid rgba(160,82,45,0.22)",
-                      fontSize: 9,
-                      fontWeight: 700,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.08em",
-                    }}
-                  >
-                    Rescue
-                  </span>
+                  <span style={{ ...SERIF_ITALIC, fontSize: 12, color: MR.rustDeep }}>rescue</span>
                 </span>
                 <span className="shrink-0 tabular-nums" style={{ fontSize: 13, fontWeight: 600, color: MR.rustDeep }}>
                   {Math.round(entry.carbs)} g
@@ -99,15 +86,14 @@ export default function WhatYouAteSection({
       )}
 
       {planLine && (
-        <div
-          className="mt-4 flex items-baseline justify-between gap-3 border-t pt-3"
-          style={{ borderColor: MR.hairline }}
+        <p
+          className="mt-4 border-t pt-2.5 tabular-nums"
+          style={{ borderColor: MR.hairline, fontSize: 11, lineHeight: 1.6, color: MR.sec }}
         >
-          <span style={{ ...CAPS, fontSize: 9, color: MR.sec }}>Your plan</span>
-          <span className="text-right tabular-nums" style={{ fontSize: 11, color: MR.sec }}>
-            {planLine}
-          </span>
-        </div>
+          <span style={{ ...SERIF_ITALIC, color: MR.ink }}>Your plan</span>
+          {" · "}
+          {planLine}
+        </p>
       )}
     </div>
   );

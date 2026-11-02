@@ -1,44 +1,41 @@
 import AbsorptionProgressCurve from "@/components/rightnow/AbsorptionProgressCurve";
 import MealCollapsibleRow from "@/components/rightnow/MealCollapsibleRow";
-import { MR, CAPS, SERIF_ITALIC } from "./mealReviewTheme";
+import LedgerLine from "./LedgerLine";
+import { MR, SERIF_ITALIC, SECTION_HEAD } from "./mealReviewTheme";
 
 /**
  * Card 2, section B — "Our best guess".
  *
- * Modeled absorption, clearly framed as a guess. The headline figures are the
- * same values the card already computed; the exact modeled numbers (percent
- * processed, g/hour, the peak-timing difference in minutes, the learned-timing
- * caption and the absorption curve itself) live inside the disclosure so
- * nothing is lost.
+ * Modeled absorption, clearly framed as a guess. The two headline figures sit
+ * as ledger lines instead of a progress bar; the exact modeled numbers
+ * (percent processed, g/hour, the peak-timing difference in minutes, the
+ * learned-timing caption and the absorption curve itself) stay inside the
+ * disclosure, so nothing is lost.
  */
 export default function BestGuessSection({
   tooEarly,
   absorbed,
   total,
-  progress,
   comparison,
   aside,
   details,
   curve,
 }) {
+  const toCome = Math.max(0, Math.round(total) - Math.round(absorbed));
+
   return (
     <section>
-      <div style={{ ...CAPS, color: MR.sec }}>Our best guess</div>
+      <div style={SECTION_HEAD}>Our best guess</div>
 
       {tooEarly ? (
-        <p className="mt-3" style={{ fontSize: 13, color: MR.sec }}>Too early to read absorption.</p>
+        <p className="mt-2" style={{ ...SERIF_ITALIC, fontSize: 13, color: MR.sec }}>
+          Too early to read absorption.
+        </p>
       ) : (
         <>
-          <div className="mt-3">
-            <div className="tabular-nums" style={{ fontSize: 20, fontWeight: 300, color: MR.ink }}>
-              {absorbed} of {total} g absorbed
-            </div>
-            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full" style={{ background: MR.band }}>
-              <div
-                className="h-full rounded-full"
-                style={{ width: `${Math.max(0, Math.min(100, progress))}%`, background: MR.tan }}
-              />
-            </div>
+          <div className="mt-3 space-y-1.5">
+            <LedgerLine label="Absorbed so far" value={`${absorbed} g`} tone={MR.ink} />
+            <LedgerLine label="Still to come" value={`${toCome} g`} />
           </div>
 
           {comparison && (
@@ -48,13 +45,13 @@ export default function BestGuessSection({
           )}
 
           {aside && (
-            <p className="mt-1.5" style={{ ...SERIF_ITALIC, fontSize: 12, lineHeight: 1.5, color: MR.sec }}>
+            <p className="mt-1" style={{ fontSize: 11.5, lineHeight: 1.6, color: MR.sec }}>
               {aside}
             </p>
           )}
 
-          <div className="mt-2">
-            <MealCollapsibleRow label="See how we guessed">
+          <div className="mt-1">
+            <MealCollapsibleRow label={<span style={{ ...SERIF_ITALIC, fontSize: 13, color: MR.sec }}>See how we guessed</span>}>
               <div className="space-y-1.5">
                 <p className="tabular-nums" style={{ fontSize: 12, color: MR.sec }}>
                   {details.pct}% processed, {details.gPerHour} g/hour

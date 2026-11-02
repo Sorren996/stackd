@@ -1,32 +1,12 @@
 import MealReviewCard from "./MealReviewCard";
 import GlucoseResponseChart from "./GlucoseResponseChart";
-import { MR, CAPS, SERIF_ITALIC } from "./mealReviewTheme";
-
-function Stat({ value, label, aside }) {
-  return (
-    <div className="min-w-0 flex-1 py-4">
-      <div className="tabular-nums" style={{ fontSize: 26, fontWeight: 300, lineHeight: 1, color: MR.ink }}>
-        {value}
-      </div>
-      <div className="mt-2" style={{ ...CAPS, fontSize: 10, color: MR.sec }}>
-        {label}
-        {aside && (
-          <>
-            {" "}
-            <span style={{ ...SERIF_ITALIC, letterSpacing: 0, textTransform: "none", color: MR.sec }}>
-              {aside}
-            </span>
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
+import { MR, SECTION_HEAD } from "./mealReviewTheme";
 
 /**
- * Card 1 — "How it went". Edge-to-edge glucose chart and the two measured
- * window stats. Both stats keep their existing visibility rule: they render
- * only when the window has readings to measure.
+ * Card 1 — "How it went". Edge-to-edge glucose chart, then the two measured
+ * window stats set as one running sentence rather than two equal columns
+ * divided by a rule. Both stats keep their existing visibility rule: they
+ * render only when the window has readings to measure.
  */
 export default function HowItWentCard({
   chartProps,
@@ -36,28 +16,41 @@ export default function HowItWentCard({
   returnValue,
   returnAside,
 }) {
+  const recovery = returnAside
+    ? `${returnValue} back in range, ${returnAside}`
+    : returnValue && returnValue !== "-"
+      ? `${returnLabel.toLowerCase()} after ${returnValue}`
+      : null;
+
   return (
     <MealReviewCard>
-      <div className="px-6 pt-6">
-        <div style={{ ...CAPS, color: MR.sec }}>How it went</div>
+      <div className="px-5 pt-5">
+        <div style={SECTION_HEAD}>How it went</div>
       </div>
 
-      <div className="pt-2">
+      <div className="pt-1">
         <GlucoseResponseChart {...chartProps} />
       </div>
 
       {showStats && (
-        <div
-          className="mx-6 flex items-stretch border-t"
-          style={{ borderColor: MR.hairline }}
+        <p
+          className="px-5 pb-5 pt-1"
+          style={{ fontSize: 12.5, lineHeight: 1.65, color: MR.sec }}
         >
-          <Stat value={`${inRangePct}%`} label="In range" aside="since you ate" />
-          <span aria-hidden="true" className="w-px shrink-0 self-stretch" style={{ background: MR.hairline }} />
-          <div className="min-w-0 flex-1 pl-5">
-            <Stat value={returnValue} label={returnLabel} aside={returnAside} />
-          </div>
-        </div>
+          <span className="tabular-nums" style={{ fontWeight: 600, color: MR.ink }}>
+            {inRangePct}%
+          </span>{" "}
+          in range since you ate
+          {recovery && (
+            <>
+              <span style={{ color: MR.tan }}> · </span>
+              {recovery}
+            </>
+          )}
+        </p>
       )}
+
+      {!showStats && <div style={{ height: 14 }} />}
     </MealReviewCard>
   );
 }
