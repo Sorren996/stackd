@@ -1,16 +1,15 @@
 import MealReviewCard from "./MealReviewCard";
 import MealWindowChart from "./MealWindowChart";
-import MealRow from "./MealRow";
 import { MR, SERIF, SERIF_ITALIC, splitItalic } from "./mealReviewTheme";
 
 /**
- * Card 1 — the shared measured picture for the meals being reviewed.
+ * The one shared card: the measured timeline for the window being reviewed,
+ * the window's own figures as quiet labelled lines, then every represented meal
+ * as an expandable row (passed in as children, so each meal's detail opens
+ * inside this card rather than in a second one).
  *
- * One glucose timeline for the whole represented window, the window's own
- * statistics underneath (only when they describe that same window), then every
- * included meal as a readable row. With more than one meal the rows are the
- * switcher: picking one moves the estimates below to that meal without losing
- * the shared context above.
+ * The figures only ever describe the window they sit under — with more than one
+ * meal they are labelled as the window's, never as one meal's.
  */
 
 function Heading({ text, accent }) {
@@ -24,15 +23,7 @@ function Heading({ text, accent }) {
   );
 }
 
-export default function TimelineCard({
-  title,
-  titleAccent,
-  chartProps,
-  statSentence,
-  meals = [],
-  onSelectMeal,
-  sharedNote,
-}) {
+export default function TimelineCard({ title, titleAccent, chartProps, stats = [], note, children }) {
   return (
     <MealReviewCard>
       <div className="px-5 pt-5">
@@ -43,39 +34,36 @@ export default function TimelineCard({
         <MealWindowChart {...chartProps} />
       </div>
 
-      {statSentence && (
-        <p className="px-5 pt-1.5" style={{ fontSize: 12.5, lineHeight: 1.65, color: MR.sec }}>
-          {statSentence}
-        </p>
-      )}
-
-      {meals.length > 0 && (
-        <div className="mt-3">
-          {meals.map((meal, index) => (
+      {(stats.length > 0 || note) && (
+        <div className="px-5 pt-2.5">
+          {stats.map((stat, index) => (
             <div
-              key={meal.key || `meal-${index}`}
-              className={index > 0 ? "border-t" : ""}
-              style={index > 0 ? { borderColor: MR.hairline } : undefined}
+              key={stat.label}
+              className={index === 0 ? "flex items-baseline justify-between gap-3 py-1.5" : "flex items-baseline justify-between gap-3 border-t py-1.5"}
+              style={index === 0 ? undefined : { borderColor: MR.hairline }}
             >
-              <MealRow
-                name={meal.name}
-                time={meal.time}
-                carbs={meal.carbs}
-                selected={meal.selected}
-                onSelect={onSelectMeal ? () => onSelectMeal(meal.index) : null}
-              />
+              <span style={{ fontSize: 12, color: MR.sec }}>{stat.label}</span>
+              <span className="tabular-nums" style={{ fontSize: 12.5, fontWeight: 500, color: MR.ink }}>
+                {stat.value}
+              </span>
             </div>
           ))}
+
+          {note && (
+            <p className="pt-1.5" style={{ fontSize: 11.5, lineHeight: 1.6, color: MR.sec }}>
+              {note}
+            </p>
+          )}
         </div>
       )}
 
-      {sharedNote && (
-        <p className="px-5 pt-2.5 pb-5" style={{ fontSize: 11.5, lineHeight: 1.6, color: MR.sec }}>
-          {sharedNote}
-        </p>
+      {children && (
+        <div className="mt-3 border-t" style={{ borderColor: MR.hairline }}>
+          {children}
+        </div>
       )}
 
-      {!sharedNote && <div style={{ height: 18 }} />}
+      <div style={{ height: 14 }} />
     </MealReviewCard>
   );
 }

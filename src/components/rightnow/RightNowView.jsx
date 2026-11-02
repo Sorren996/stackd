@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import IobAtAGlance from "./IobAtAGlance";
-import MealReviewAtAGlance from "./MealReviewAtAGlance";
-import StackedMealCards from "./StackedMealCards";
+import MealReviewView from "@/components/mealreview/MealReviewView";
 import CardErrorBoundary from "@/components/CardErrorBoundary";
 
 const TABS = [
@@ -103,23 +102,12 @@ export default function RightNowView({
                   onDeleteDose={onDeleteDose}
                 />
               </CardErrorBoundary>
-            ) : hasStack ? (
-              <CardErrorBoundary>
-                <StackedMealCards
-                  meals={activeMeals}
-                  monitoringStatus={monitoringStatus}
-                  glucoseTrend={glucoseTrend}
-                  onResolve={onResolve}
-                  glucoseReadings={glucoseReadings}
-                />
-              </CardErrorBoundary>
             ) : (
               <CardErrorBoundary>
-                <MealReviewAtAGlance
+                <MealReviewView
+                  meals={hasStack ? activeMeals : null}
                   mealInsight={mealInsight}
-                  monitoringStatus={monitoringStatus}
                   glucoseTrend={glucoseTrend}
-                  onResolve={onResolve}
                   glucoseReadings={glucoseReadings}
                 />
               </CardErrorBoundary>
