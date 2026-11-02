@@ -34,7 +34,7 @@ function useContainerWidth() {
 
 function formatClock(time) {
   if (!Number.isFinite(time)) return null;
-  return new Date(time).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  return new Date(time).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", hour12: true });
 }
 
 function clipName(name) {

@@ -44,7 +44,7 @@ function formatSpanWords(min) {
 
 function formatClock(time) {
   if (!Number.isFinite(time)) return null;
-  return new Date(time).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  return new Date(time).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", hour12: true });
 }
 
 // Same clock boundaries as src/lib/mealSlot.js: morning 5-11, afternoon 11-17,

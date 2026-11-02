@@ -54,6 +54,8 @@ export default function MealAccordionRow({ name, time, carbs, open, onToggle, ch
         id={panelId}
         role="region"
         aria-labelledby={buttonId}
+        aria-hidden={!open}
+        inert={!open ? "" : undefined}
         hidden={!open && reduceMotion ? true : undefined}
         style={{
           display: "grid",

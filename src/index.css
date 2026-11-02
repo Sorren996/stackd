@@ -399,6 +399,15 @@
     -webkit-backdrop-filter: none !important;
   }
 
+  /* Cream text on the slate is not a cream surface. Exclude this hero and
+     its descendants from the broad inline-colour paper-grain selectors. */
+  .stackd-on-field,
+  .stackd-on-field * {
+    background: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
+  }
+
   /* Inputs keep a clean, untextured field so their content reads plainly. */
   input[style*="253, 249, 242"],
   textarea[style*="253, 249, 242"],

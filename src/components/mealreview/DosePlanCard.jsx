@@ -1,4 +1,3 @@
-import MealReviewCard from "./MealReviewCard";
 import MealCollapsibleRow from "@/components/rightnow/MealCollapsibleRow";
 import StillInPlaySection from "./StillInPlaySection";
 import EstimatedInsulinRow from "./EstimatedInsulinRow";
@@ -16,7 +15,7 @@ import { MR, SERIF, SERIF_ITALIC } from "./mealReviewTheme";
  */
 export default function DosePlanCard({ stillInPlay, insulin, dose, footer }) {
   return (
-    <MealReviewCard>
+    <div>
       <div className="px-5 pt-5">
         <h3 style={{ ...SERIF, fontSize: 17, lineHeight: 1.3, color: MR.ink }}>
           Still in <em style={SERIF_ITALIC}>play</em>
@@ -54,6 +53,6 @@ export default function DosePlanCard({ stillInPlay, insulin, dose, footer }) {
 
       <div className="mx-5 mt-1 border-t" style={{ borderColor: MR.hairline }} />
       <WhatYouAteSection {...footer} />
-    </MealReviewCard>
+    </div>
   );
 }
