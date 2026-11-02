@@ -9,27 +9,12 @@ import { MR } from "@/components/mealreview/mealReviewTheme";
 import { base44 } from "@/api/base44Client";
 import { generateMealGlucoseResponse, analyzeGlucoseResponse } from "@/lib/mealGlucoseResponse";
 import MealEditOverlay from "@/components/insulin/MealEditOverlay";
-import { getCarbAbsorptionAt, getMealWindowMinutes, getMealPeakMinutes, deriveDualWaveBlend, getAbsorptionModel } from "@/lib/carbAbsorption";
+import { getCarbAbsorptionAt, getMealWindowMinutes, deriveDualWaveBlend, getAbsorptionModel } from "@/lib/carbAbsorption";
 import { reconcileMealNarrative } from "@/lib/mealNarrativeReconciler";
 import { useMealModelResolution, entrySpeedFactorFromResolution, hasLearnedTimingFromResolution, learnedTimingCaptionFromResolution, deriveSpeedClass } from "@/hooks/useMealModelResolution";
 import { getDoseTimingInfo, isBasalInsulinType } from "@/lib/insulinPharmacology";
 import { formatIOBValue, IOB_FLOOR } from "@/lib/iobModel";
-import { formatGlucose, formatGlucoseDelta, glucoseUnitLabel } from "@/lib/glucoseUnits";
-
-const PALETTE = {
-  ink: "#3f3830",
-  muted: "#6b6153",
-  faint: "#746959",
-  green: "#4d5742",
-  amber: "#8a5a12",
-  red: "#9c3f2e",
-  copper: "#9c5228",
-  beige: "#e4dccf",
-  track: "rgba(63,56,48,0.08)",
-  hairline: "#eadccf",
-  canvas: "#f7f1e8",
-  card: "#fdf9f2",
-};
+import { formatGlucose, glucoseUnitLabel } from "@/lib/glucoseUnits";
 
 const TREND_PHRASE = {
   "Rising quickly": "rising quickly",
@@ -83,15 +68,6 @@ function formatClock(time) {
 function formatDuration(min) {
   if (!Number.isFinite(min) || min <= 0) return "-";
   const m = Math.round(min);
-  if (m < 60) return `${m}m`;
-  const h = Math.floor(m / 60);
-  const r = m % 60;
-  return r ? `${h}h ${r}m` : `${h}h`;
-}
-
-function formatCountdownValue(ms) {
-  if (!Number.isFinite(ms) || ms <= 0) return "Closed";
-  const m = Math.round(ms / 60000);
   if (m < 60) return `${m}m`;
   const h = Math.floor(m / 60);
   const r = m % 60;
@@ -404,7 +380,10 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
           ? formatGlucose(peakOutcome)
           : "-",
     },
-    { label: "Now", value: Number.isFinite(glucoseNow) ? formatGlucose(glucoseNow) : "-" },
+    {
+      label: trendPhrase ? `Now · ${trendPhrase}` : "Now",
+      value: Number.isFinite(glucoseNow) ? formatGlucose(glucoseNow) : "-",
+    },
   ];
 
   const showWindowStats = !waitingForReadings && glucoseAnalysis.timeInRangePct != null;
