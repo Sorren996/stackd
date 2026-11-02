@@ -157,6 +157,11 @@ export default function MealWindowChart({
   const startLabelText = Number.isFinite(startValue) ? formatGlucose(startValue) : null;
   const nowLabelText = formatGlucose(lastPoint.value);
   const nowLabelX = Math.min(Math.max(x(lastPoint.time), 22), W - 22);
+  const nowLabelY = Math.max(y(lastPoint.value) - 11, PAD_T + 8);
+  // The current value sits in a cream pill so it stays readable wherever the
+  // reading lands — including right on a target-band edge, where a bare label
+  // would collide with the range figure at the axis end.
+  const nowPillW = nowLabelText.length * 6 + 12;
   const startLabelX = Math.min(Math.max(x(from), 22), W - 22);
 
   return (
@@ -251,7 +256,16 @@ export default function MealWindowChart({
         )}
 
         {/* Current value, above its dot */}
-        <text x={nowLabelX} y={Math.max(y(lastPoint.value) - 11, PAD_T + 8)} textAnchor="middle" fontSize={10} fontWeight={600} fill={MR.rust}>
+        <rect
+          x={nowLabelX - nowPillW / 2}
+          y={nowLabelY - 11}
+          width={nowPillW}
+          height={14}
+          rx={7}
+          fill={MR.card}
+          opacity={0.94}
+        />
+        <text x={nowLabelX} y={nowLabelY} textAnchor="middle" fontSize={10} fontWeight={600} fill={MR.rust}>
           {nowLabelText}
         </text>
 

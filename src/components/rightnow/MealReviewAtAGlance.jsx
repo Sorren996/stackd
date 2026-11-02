@@ -555,7 +555,7 @@ export default function MealReviewAtAGlance({
           peakValue: mealsUnderReview ? null : peakOutcome,
           timeToPeakMin: mealsUnderReview ? null : glucoseAnalysis.timeToPeakMin,
           allowHighest: Boolean(mealsUnderReview),
-          peakMode: ongoing ? "highest" : "peak",
+          peakMode: mealsUnderReview ? "highest" : "peak",
         }}
         statSentence={
           mealsUnderReview || !showWindowStats ? null : (
