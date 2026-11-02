@@ -13,16 +13,22 @@ const PALETTE = {
  * left, a right-side preview, and expands in place to reveal children. A
  * hairline divider sits between rows. Describes, never prescribes.
  */
-export default function MealCollapsibleRow({ label, preview, children, defaultOpen = false }) {
+export default function MealCollapsibleRow({
+  label,
+  preview,
+  children,
+  defaultOpen = false,
+  labelClassName = "text-[13px] font-semibold",
+}) {
   const [open, setOpen] = useState(defaultOpen);
   return (
     <div className="border-t" style={{ borderColor: PALETTE.hairline }}>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center justify-between py-3 text-left"
+        className="flex min-h-[44px] w-full items-center justify-between py-3 text-left"
       >
-        <span className="text-[13px] font-semibold" style={{ color: PALETTE.ink }}>{label}</span>
+        <span className={labelClassName} style={{ color: PALETTE.ink }}>{label}</span>
         <div className="flex items-center gap-2">
           {preview}
           <ChevronDown

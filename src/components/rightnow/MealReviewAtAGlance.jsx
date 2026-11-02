@@ -1,11 +1,11 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import DashboardCard from "@/components/dashboard/DashboardCard";
-import AbsorptionProgressCurve from "./AbsorptionProgressCurve";
-import MealReviewChart from "./MealReviewChart";
-import MealCollapsibleRow from "./MealCollapsibleRow";
-import SwipeableRow from "@/components/SwipeableRow";
+import MealReviewCard from "@/components/mealreview/MealReviewCard";
+import MealReviewHero from "@/components/mealreview/MealReviewHero";
+import HowItWentCard from "@/components/mealreview/HowItWentCard";
+import DosePlanCard from "@/components/mealreview/DosePlanCard";
+import { MR } from "@/components/mealreview/mealReviewTheme";
 import { base44 } from "@/api/base44Client";
 import { generateMealGlucoseResponse, analyzeGlucoseResponse } from "@/lib/mealGlucoseResponse";
 import MealEditOverlay from "@/components/insulin/MealEditOverlay";
@@ -40,6 +40,40 @@ const TREND_PHRASE = {
   "Falling": "falling",
   "Falling quickly": "falling quickly",
 };
+
+// Short hero headlines, one per outcome state the reconciler can return.
+// Presentation only: each key is an existing state, so a headline can never
+// describe something the window did not show. Anything unmapped falls back to
+// the existing summary sentence.
+const HEADLINES = {
+  waiting: { text: "Still watching.", italic: "watching" },
+  second_rise: { text: "A second, gentler wave.", italic: "second" },
+  delayed_rise_expected: { text: "Taking its time.", italic: "time" },
+  delayed_wave_watch: { text: "Taking its time.", italic: "time" },
+  rose_high_multi: { text: "Rose in two waves.", italic: "two waves" },
+  rose_high_clearing: { text: "Rose and settled.", italic: "settled" },
+  rose_high_easing: { text: "Rose, now easing.", italic: "easing" },
+  gentle_multi: { text: "A gentle rise, in two parts.", italic: "gentle" },
+  gentle: { text: "A gentle rise.", italic: "gentle" },
+  steady_multi: { text: "Steady through it.", italic: "Steady" },
+  steady: { text: "A steady one.", italic: "steady" },
+};
+
+function headlineFor(key, phase) {
+  if (key === "rose_high") {
+    return phase === "clearing" ? HEADLINES.rose_high_clearing : HEADLINES.rose_high_easing;
+  }
+  return HEADLINES[key] || null;
+}
+
+// The warm version of the peak-timing comparison. The exact minutes stay in
+// the "See how we guessed" disclosure, unchanged.
+function comparisonFor(timing, fallback) {
+  if (timing === "earlier") return "We guessed a later peak. This meal moved faster than we thought.";
+  if (timing === "later") return "We guessed an earlier peak. This meal moved slower than we thought.";
+  if (timing === "in_line") return fallback;
+  return null;
+}
 
 function formatClock(time) {
   if (!Number.isFinite(time)) return null;
@@ -125,31 +159,37 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
 
   if (!mealInsight) {
     return (
-      <DashboardCard className="p-4 space-y-1">
-        <p className="text-[14px] font-semibold" style={{ color: PALETTE.ink }}>Meal review is gathering</p>
-        <p className="text-[12px] leading-relaxed" style={{ color: PALETTE.muted }}>
-          Once your most recent nourishment and support are in, the review opens here.
-        </p>
-      </DashboardCard>
+      <MealReviewCard className="my-4">
+        <div className="space-y-1 px-6 py-5">
+          <p style={{ fontSize: 14, fontWeight: 600, color: MR.ink }}>Meal review is gathering</p>
+          <p style={{ fontSize: 12, lineHeight: 1.6, color: MR.sec }}>
+            Once your most recent nourishment and support are in, the review opens here.
+          </p>
+        </div>
+      </MealReviewCard>
     );
   }
 
   if (!d || d.noActiveMeal) {
     return (
-      <DashboardCard className="p-4">
-        <p className="text-[13px]" style={{ color: PALETTE.muted }}>No meal to review yet. Log nourishment to open a window.</p>
-      </DashboardCard>
+      <MealReviewCard className="my-4">
+        <p className="px-6 py-5" style={{ fontSize: 13, color: MR.sec }}>
+          No meal to review yet. Log nourishment to open a window.
+        </p>
+      </MealReviewCard>
     );
   }
 
   if (!d.meal) {
     return (
-      <DashboardCard className="p-4 space-y-1">
-        <p className="text-[14px] font-semibold" style={{ color: PALETTE.ink }}>{mealInsight.value}</p>
-        <p className="text-[12px] leading-relaxed" style={{ color: PALETTE.muted }}>
-          Add your insulin-to-carb ratio and sensitivity in Settings to see meal balance.
-        </p>
-      </DashboardCard>
+      <MealReviewCard className="my-4">
+        <div className="space-y-1 px-6 py-5">
+          <p style={{ fontSize: 14, fontWeight: 600, color: MR.ink }}>{mealInsight.value}</p>
+          <p style={{ fontSize: 12, lineHeight: 1.6, color: MR.sec }}>
+            Add your insulin-to-carb ratio and sensitivity in Settings to see meal balance.
+          </p>
+        </div>
+      </MealReviewCard>
     );
   }
 
@@ -276,10 +316,10 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
   const absorptionCaption = (() => {
     if (firstWavePassed && absorptionPct < 99) {
       if (isDualWaveMeal && glucoseAnalysis.secondRise) {
-        return `${verdict.absorptionStatus}. First wave peaked ${peakMinAgo}m ago — a second wave appeared.`;
+        return `${verdict.absorptionStatus}. First wave peaked ${peakMinAgo}m ago, a second wave appeared.`;
       }
       if (isDualWaveMeal) {
-        return `${verdict.absorptionStatus}. First wave peaked ${peakMinAgo}m ago — watching for a second.`;
+        return `${verdict.absorptionStatus}. First wave peaked ${peakMinAgo}m ago, watching for a second.`;
       }
       return `${verdict.absorptionStatus}. Absorption peaked ${peakMinAgo}m ago.`;
     }
@@ -311,10 +351,10 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
   const isfLabel = Math.round(d.insulinSensitivityMgDlPerUnit);
   const targetLabel = formatGlucose(d.correctionTargetGlucose);
   const unitLabel = glucoseUnitLabel();
-  const activeFraction = taken > 0 ? Math.max(0, Math.min(1, activeNow / taken)) : 0;
 
   const correctionAvailable = Number.isFinite(d.correctionGlucoseValue);
   const startingGlucose = correctionAvailable ? formatGlucose(d.correctionGlucoseValue) : null;
+  const correctionInRange = correctionAvailable && startingGlucose >= targetLow && startingGlucose <= targetHigh;
   let correctionLabel;
   let correctionValue;
   if (!correctionAvailable) {
@@ -324,8 +364,7 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
     correctionLabel = `Correction, start ${startingGlucose} / target ${targetLabel} ${unitLabel}`;
     correctionValue = `${correctionUnits.toFixed(1)}u`;
   } else {
-    const inRange = startingGlucose >= targetLow && startingGlucose <= targetHigh;
-    correctionLabel = `Correction, ${inRange ? "in range" : "out of range"} at dose time`;
+    correctionLabel = `Correction, ${correctionInRange ? "in range" : "out of range"} at dose time`;
     correctionValue = "0u";
   }
 
@@ -337,6 +376,48 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
   const rescueEntries = Array.isArray(d.rescueCarbEntries) ? d.rescueCarbEntries : [];
 
   const mealName = d.meal?.food_name || d.meal?.name || "Meal";
+
+  // ---- Presentation values (display only, nothing recalculated) ----
+  // The meal's own logged doses, drawn softly under the glucose curve.
+  const mealDoses = Array.isArray(d.mealGroup?.doses) ? d.mealGroup.doses : [];
+
+  const eyebrow = [
+    hideIdentity ? null : mealName,
+    `${Math.round(totalCarbs)} g`,
+    formatClock(mealTime),
+  ].filter(Boolean).join(" · ");
+
+  // Headline comes from the state the reconciler already chose; when there is
+  // no mapped state the existing summary sentence is the headline instead.
+  const headline = headlineFor(verdict.glucoseVerdictKey, glucoseAnalysis.phase);
+  const heroSentence =
+    verdict.glucoseVerdictKey === "steady" || verdict.glucoseVerdictKey === "steady_multi"
+      ? `Your sugar moved ${Math.round(maxRise)} points and stayed close to where it started.`
+      : insightLine;
+
+  const numerals = [
+    { label: "Started", value: Number.isFinite(glucoseAtStart) ? formatGlucose(glucoseAtStart) : "-" },
+    {
+      label: "Peaked",
+      value:
+        Number.isFinite(glucoseAnalysis.timeToPeakMin) && Number.isFinite(peakOutcome)
+          ? formatGlucose(peakOutcome)
+          : "-",
+    },
+    { label: "Now", value: Number.isFinite(glucoseNow) ? formatGlucose(glucoseNow) : "-" },
+  ];
+
+  const showWindowStats = !waitingForReadings && glucoseAnalysis.timeInRangePct != null;
+  const returnLabel = glucoseAnalysis.backInRangeMin != null ? "Back in range" : "Still elevated";
+  const returnValue =
+    glucoseAnalysis.backInRangeMin != null
+      ? formatDuration(glucoseAnalysis.backInRangeMin)
+      : glucoseAnalysis.elevatedDurationMin > 0
+        ? formatDuration(glucoseAnalysis.elevatedDurationMin)
+        : "-";
+  const returnAside = glucoseAnalysis.backInRangeMin != null ? "after eating" : null;
+
+  const comparison = comparisonFor(verdict.reconciliationTiming, reconciliation);
 
   const handleDeleteEntry = async (entry) => {
     if (!entry?.id || deletingId) return;
@@ -356,272 +437,135 @@ export default function MealReviewAtAGlance({ mealInsight, monitoringStatus, glu
   };
 
   return (
-    <div className="space-y-3">
-      <DashboardCard className="p-4">
-        {/* 1. Header — meal name + timestamp only */}
-        {!hideIdentity && (
-          <div className="flex items-baseline justify-between gap-2">
-            <span className="min-w-0 truncate text-[15px] font-semibold" style={{ color: PALETTE.ink }}>{mealName}</span>
-            <span className="shrink-0 text-[11px] tabular-nums" style={{ color: PALETTE.faint }}>{formatClock(mealTime)}</span>
-          </div>
-        )}
+    <div className="space-y-4 pb-2">
+      <MealReviewHero
+        eyebrow={eyebrow}
+        headline={headline ? headline.text : insightLine}
+        headlineItalic={headline ? headline.italic : null}
+        sentence={headline ? heroSentence : null}
+        numerals={numerals}
+        unit={unitLabel}
+      />
 
-        {/* 2. Anchor row — glucose now (left) + active insulin (right) */}
-        <div className="mt-3 flex items-end justify-between gap-3">
-          <div className="min-w-0">
-            <span className="text-4xl font-bold tabular-nums leading-none" style={{ color: PALETTE.ink }}>
-              {Number.isFinite(glucoseNow) ? formatGlucose(glucoseNow) : "-"}
-            </span>
-            <span className="mt-1 block text-[11px]" style={{ color: PALETTE.faint }}>
-              {unitLabel} · now{trendPhrase ? ` · ${trendPhrase}` : ""}
-            </span>
-          </div>
-          <div className="shrink-0 text-right">
-            <span className="text-lg font-semibold tabular-nums" style={{ color: PALETTE.ink }}>{activeNow.toFixed(1)}u</span>
-            <span className="block text-[11px]" style={{ color: PALETTE.faint }}>active insulin</span>
-          </div>
-        </div>
+      <HowItWentCard
+        chartProps={{
+          glucoseReadings,
+          mealTime,
+          reviewWindowEnd,
+          now,
+          targetLow,
+          targetHigh,
+          startValue: glucoseAtStart,
+          peakValue: peakOutcome,
+          timeToPeakMin: glucoseAnalysis.timeToPeakMin,
+          doses: mealDoses,
+        }}
+        showStats={showWindowStats}
+        inRangePct={glucoseAnalysis.timeInRangePct}
+        returnLabel={returnLabel}
+        returnValue={returnValue}
+        returnAside={returnAside}
+      />
 
-        {/* 3. Glucose chart hero */}
-        <MealReviewChart
-          glucoseReadings={glucoseReadings}
-          mealTime={mealTime}
-          reviewWindowEnd={reviewWindowEnd}
-          now={now}
-          targetLow={targetLow}
-          targetHigh={targetHigh}
-          startValue={glucoseAtStart}
-          peakValue={peakOutcome}
-          timeToPeakMin={glucoseAnalysis.timeToPeakMin}
-          deltaFromBaseline={glucoseAnalysis.deltaFromBaseline}
-        />
-
-        {/* 4. One insight line */}
-        <div className="mt-3 rounded-[12px] px-3 py-2" style={{ background: "transparent" }}>
-          <p className="text-[12px] leading-relaxed" style={{ color: PALETTE.ink }}>{insightLine}</p>
-        </div>
-
-        {/* 5. Collapsed rows */}
-        <div className="mt-2">
-          {/* Active insulin */}
-          <MealCollapsibleRow
-            label="Active insulin"
-            preview={
-              <div className="flex items-center gap-2">
-                <span className="text-[13px] font-semibold tabular-nums" style={{ color: PALETTE.ink }}>{activeNow.toFixed(1)}u</span>
-                <span className="block h-1.5 w-16 overflow-hidden rounded-full" style={{ background: PALETTE.track }}>
-                  <span className="block h-full rounded-full" style={{ width: `${activeFraction * 100}%`, background: PALETTE.copper }} />
-                </span>
-              </div>
-            }
-          >
+      <DosePlanCard
+        dosePlan={
+          hasPlan
+            ? {
+                show: verdict.doseVerdict.show,
+                neutralLabel: verdict.doseVerdict.neutralLabel,
+                planned: suggested,
+                taken,
+                foodUnits,
+                correctionValue,
+                correctionLabel,
+                correctionUnits,
+                correctionAvailable,
+                correctionInRange,
+                carbs: Math.round(totalCarbs),
+                ratioLabel,
+                difference,
+                absDiff,
+              }
+            : null
+        }
+        bestGuess={{
+          tooEarly: tooEarlyToRead,
+          absorbed: Math.round(totalAbsorbed),
+          total: Math.round(totalCarbs),
+          progress: absorptionPct,
+          comparison,
+          aside: absorptionCaption,
+          details: {
+            pct: Math.round(absorptionPct),
+            gPerHour: gPerHour.toFixed(1),
+            reconciliation,
+            learnedTiming,
+            timingCaption,
+          },
+          curve: {
+            entries: carbEntries,
+            mealTime,
+            now,
+            peakTime: absorptionPeakTime,
+            opts: absorptionOpts,
+          },
+        }}
+        stillWorking={{
+          iob: activeNow.toFixed(1),
+          children: (
             <div className="space-y-2.5">
               {activeDoses.length > 0 ? (
                 activeDoses.map((dose) => {
-                  const doseObj = { insulin_type: dose.type, units: dose.units, administered_at: new Date(dose.time).toISOString() };
+                  const doseObj = {
+                    insulin_type: dose.type,
+                    units: dose.units,
+                    administered_at: new Date(dose.time).toISOString(),
+                  };
                   const timing = getDoseTimingInfo(doseObj, now);
                   const remaining = formatRemaining(timing.remainingMin);
                   const shortName = dose.type?.split(" ")[0] || "Insulin";
                   return (
                     <div key={dose.id} className="flex items-center gap-2.5">
                       <div className="min-w-0 flex-1">
-                        <span className="text-[13px] font-semibold" style={{ color: PALETTE.ink }}>{shortName}, {fmtUnits(dose.units)}u dose</span>
-                        <span className="block text-[11px] tabular-nums" style={{ color: PALETTE.muted }}>{formatIOBValue(dose.iob)}u left</span>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: MR.ink }}>
+                          {shortName}, {fmtUnits(dose.units)}u dose
+                        </span>
+                        <span className="block tabular-nums" style={{ fontSize: 11, color: MR.sec }}>
+                          {formatIOBValue(dose.iob)}u left
+                        </span>
                       </div>
                       {remaining && (
-                        <span className="shrink-0 text-[10px] tabular-nums" style={{ color: PALETTE.faint }}>clears in {remaining}</span>
+                        <span className="shrink-0 tabular-nums" style={{ fontSize: 10, color: MR.sec }}>
+                          clears in {remaining}
+                        </span>
                       )}
                     </div>
                   );
                 })
               ) : (
-                <p className="text-[12px]" style={{ color: PALETTE.muted }}>No bolus insulin active right now.</p>
+                <p style={{ fontSize: 12, color: MR.sec }}>No bolus insulin active right now.</p>
               )}
               {Number.isFinite(d.priorActiveIOB) && d.priorActiveIOB > IOB_FLOOR && d.topPriorDose && (
-                <p className="text-[11px] leading-relaxed" style={{ color: PALETTE.faint }}>
+                <p style={{ fontSize: 11, lineHeight: 1.5, color: MR.sec }}>
                   {d.priorActiveIOB.toFixed(1)}u still active from your {formatDoseClockTime(d.topPriorDose.time)} dose.
                 </p>
               )}
             </div>
-          </MealCollapsibleRow>
-
-          {/* Dose vs the math — gated by the reconciler.
-              If no insulin dose is logged, do not run the comparison at all.
-              Render a neutral state. If settings are unconfirmed, show the
-              dose-math-paused message. Never compute "Xu over/under" from a
-              null dose against default settings. */}
-          {hasPlan && verdict.doseVerdict.show && (
-            <MealCollapsibleRow
-              label="Dose vs the math"
-              preview={
-                <span
-                  className="rounded-full px-2 py-0.5 text-[10px] font-semibold tabular-nums"
-                  style={
-                    absDiff < 0.05
-                      ? { background: "rgba(77,87,66,0.12)", color: PALETTE.green, border: `1px solid rgba(77,87,66,0.22)` }
-                      : difference > 0
-                        ? { background: "rgba(156,82,40,0.12)", color: PALETTE.copper, border: `1px solid rgba(156,82,40,0.22)` }
-                        : { background: "rgba(77,87,66,0.12)", color: PALETTE.green, border: `1px solid rgba(77,87,66,0.22)` }
-                  }
-                >
-                  {absDiff < 0.05 ? "lines up" : `${absDiff.toFixed(1)}u ${difference > 0 ? "over" : "under"}`}
-                </span>
-              }
-            >
-              <div className="space-y-1.5">
-                <div className="flex items-baseline">
-                  <span className="text-[12px]" style={{ color: PALETTE.muted }}>Food, {Math.round(totalCarbs)}g at {ratioLabel}</span>
-                  <span className="mx-2 flex-1 dotted-leader" />
-                  <span className="text-[12px] font-semibold tabular-nums" style={{ color: PALETTE.ink }}>{foodUnits.toFixed(1)}u</span>
-                </div>
-                <div className="flex items-baseline">
-                  <span className="text-[12px]" style={{ color: PALETTE.muted }}>{correctionLabel}</span>
-                  <span className="mx-2 flex-1 dotted-leader" />
-                  <span className="text-[12px] font-semibold tabular-nums" style={{ color: PALETTE.ink }}>{correctionValue}</span>
-                </div>
-                <div className="flex items-baseline">
-                  <span className="text-[12px]" style={{ color: PALETTE.muted }}>You took</span>
-                  <span className="mx-2 flex-1 dotted-leader" />
-                  <span className="text-[12px] font-semibold tabular-nums" style={{ color: PALETTE.ink }}>{taken.toFixed(1)}u</span>
-                </div>
-                <p className="pt-1 text-[10px] leading-relaxed" style={{ color: PALETTE.faint }}>
-                  Describes your plan's math. Not a dose recommendation.
-                </p>
-                <div className="flex items-baseline justify-between border-t pt-2" style={{ borderColor: PALETTE.hairline }}>
-                  <span className="text-[10px] uppercase tracking-wider" style={{ color: PALETTE.faint }}>Your plan</span>
-                  <span className="text-[11px] tabular-nums" style={{ color: PALETTE.muted }}>I:C {ratioLabel}, ISF 1:{isfLabel}, target {targetLabel} {unitLabel}</span>
-                </div>
-              </div>
-            </MealCollapsibleRow>
-          )}
-
-          {/* Dose vs the math — neutral state (no insulin logged or settings unconfirmed) */}
-          {hasPlan && !verdict.doseVerdict.show && (
-            <MealCollapsibleRow
-              label="Dose vs the math"
-              preview={
-                <span className="text-[10px] font-medium" style={{ color: PALETTE.faint }}>
-                  {verdict.doseVerdict.neutralLabel}
-                </span>
-              }
-            >
-              <p className="text-[12px] leading-relaxed" style={{ color: PALETTE.muted }}>
-                {verdict.doseVerdict.neutralLabel}
-              </p>
-            </MealCollapsibleRow>
-          )}
-
-          {/* Response & context */}
-          <MealCollapsibleRow label="Response & context" preview={null}>
-            <div className="space-y-3">
-              {tooEarlyToRead ? (
-                <p className="text-[12px]" style={{ color: PALETTE.muted }}>Too early to read absorption.</p>
-              ) : (
-                <>
-                  <div>
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-[22px] font-light tabular-nums" style={{ color: PALETTE.ink }}>{Math.round(absorptionPct)}</span>
-                      <span className="text-[13px] font-light" style={{ color: PALETTE.muted }}>% processed, {gPerHour.toFixed(1)} g/hour</span>
-                    </div>
-                    <p className="text-[11px]" style={{ color: PALETTE.faint }}>{Math.round(totalAbsorbed)} of {Math.round(totalCarbs)} g absorbed</p>
-                    <div className="mt-2">
-                      <AbsorptionProgressCurve entries={carbEntries} mealTime={mealTime} now={now} peakTime={absorptionPeakTime} opts={absorptionOpts} />
-                    </div>
-                    {reconciliation && (
-                      <p className="mt-1.5 text-[11px] leading-relaxed" style={{ color: PALETTE.muted }}>{reconciliation}</p>
-                    )}
-                    {learnedTiming && timingCaption && (
-                      <p className="mt-1 text-[11px] leading-relaxed" style={{ color: PALETTE.faint }}>{timingCaption} Your future estimates include this.</p>
-                    )}
-                    <p className="mt-1.5 text-[12px]" style={{ color: PALETTE.muted }}>{absorptionCaption}</p>
-                  </div>
-                </>
-              )}
-
-              {!waitingForReadings && glucoseAnalysis.timeInRangePct != null && (
-                <div className="grid grid-cols-2 gap-3 border-t pt-3" style={{ borderColor: PALETTE.hairline }}>
-                  <div>
-                    <span className="block text-[9px] uppercase tracking-wider" style={{ color: PALETTE.faint }}>Time in range</span>
-                    <span className="text-[16px] font-semibold tabular-nums" style={{ color: PALETTE.ink }}>{glucoseAnalysis.timeInRangePct}%</span>
-                  </div>
-                  <div>
-                    <span className="block text-[9px] uppercase tracking-wider leading-tight" style={{ color: PALETTE.faint }}>
-                      {glucoseAnalysis.backInRangeMin != null ? "Back to range" : "Still elevated"}
-                    </span>
-                    <span className="text-[16px] font-semibold tabular-nums" style={{ color: PALETTE.ink }}>
-                      {glucoseAnalysis.backInRangeMin != null
-                        ? formatDuration(glucoseAnalysis.backInRangeMin)
-                        : glucoseAnalysis.elevatedDurationMin > 0
-                          ? formatDuration(glucoseAnalysis.elevatedDurationMin)
-                          : "-"}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {rescueGrams > 0 && (
-                <p className="text-[11px] leading-relaxed" style={{ color: PALETTE.faint }}>{rescueGrams}g rescue carbs logged (not part of the math).</p>
-              )}
-            </div>
-          </MealCollapsibleRow>
-        </div>
-
-        {/* 6. Items — swipe to edit or remove (carb entries + rescue carbs) */}
-        <div className="mt-4">
-          <div className="section-label">Items</div>
-          <div className="mt-2 space-y-2">
-            {carbEntries.map((entry) => {
-              const name = entry.food_name || entry.name || "Food";
-              const detail = entry.absorption_profile
-                ? entry.absorption_profile.charAt(0).toUpperCase() + entry.absorption_profile.slice(1)
-                : "";
-              return (
-                <SwipeableRow
-                  key={entry.id || name}
-                  rowId={entry.id}
-                  isOpen={openEntryId === entry.id}
-                  onOpenChange={(o) => setOpenEntryId(o ? entry.id : null)}
-                  onEdit={() => setEditEntries(carbEntries)}
-                  onDelete={() => handleDeleteEntry(entry)}
-                  editLabel="Edit"
-                  deleteLabel="Remove"
-                  itemLabel={name}>
-                  <div className="flex w-full items-baseline gap-2 text-left">
-                    <span className="min-w-0 flex-1 break-words">
-                      <span className="text-[13px] font-medium" style={{ color: PALETTE.ink }}>{name}</span>
-                      {detail && <span className="text-[11px]" style={{ color: PALETTE.faint }}>, {detail}</span>}
-                    </span>
-                    <span className="shrink-0 text-[13px] font-semibold tabular-nums" style={{ color: PALETTE.muted }}>{Math.round(entry.carbs)} g</span>
-                  </div>
-                </SwipeableRow>
-              );
-            })}
-            {rescueEntries.map((entry) => {
-              const name = entry.food_name || entry.name || "Rescue carbs";
-              return (
-                <SwipeableRow
-                  key={entry.id || `rescue-${name}`}
-                  rowId={entry.id}
-                  isOpen={openEntryId === entry.id}
-                  onOpenChange={(o) => setOpenEntryId(o ? entry.id : null)}
-                  onEdit={() => setEditEntries(rescueEntries)}
-                  onDelete={() => handleDeleteEntry(entry)}
-                  editLabel="Edit"
-                  deleteLabel="Remove"
-                  itemLabel={name}>
-                  <div className="flex w-full items-baseline gap-2 text-left">
-                    <span className="flex min-w-0 flex-1 items-baseline gap-1.5 break-words">
-                      <span className="text-[13px] font-medium" style={{ color: PALETTE.ink }}>{name}</span>
-                      <span className="shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider" style={{ background: "rgba(156,63,46,0.14)", color: PALETTE.red, border: "1px solid rgba(156,63,46,0.22)" }}>Rescue</span>
-                    </span>
-                    <span className="shrink-0 text-[13px] font-semibold tabular-nums" style={{ color: PALETTE.red }}>{Math.round(entry.carbs)} g</span>
-                  </div>
-                </SwipeableRow>
-              );
-            })}
-          </div>
-        </div>
-      </DashboardCard>
+          ),
+        }}
+        footer={{
+          entries: carbEntries,
+          rescueEntries,
+          openEntryId,
+          onOpenChange: setOpenEntryId,
+          onEditItems: setEditEntries,
+          onDeleteEntry: handleDeleteEntry,
+          planLine: hasPlan
+            ? `I:C ${ratioLabel}, ISF 1:${isfLabel}, target ${targetLabel} ${unitLabel}`
+            : null,
+          rescueGrams,
+        }}
+      />
 
       {editEntries && <MealEditOverlay entries={editEntries} onClose={() => setEditEntries(null)} />}
     </div>

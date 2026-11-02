@@ -79,15 +79,23 @@ export function reconcileMealNarrative(opts) {
   // beyond target: describe the excursion. If curve rose in multiple
   // waves, include "in two waves" wording instead of "steady".
   let glucoseVerdict;
+  // Which branch produced the verdict. Additive metadata for presentation
+  // only: it names the state that was already chosen, so the meal card can
+  // pick a short headline without re-deriving any threshold.
+  let glucoseVerdictKey;
 
   if (waitingForReadings) {
     glucoseVerdict = "Your glucose response isn't available yet — still watching.";
+    glucoseVerdictKey = "waiting";
   } else if (secondRise) {
     glucoseVerdict = "A second gentle climb appeared after the first peak.";
+    glucoseVerdictKey = "second_rise";
   } else if (mealHasDelayedRise && phase === "rising") {
     glucoseVerdict = "High in fat and protein — glucose may climb later in the window.";
+    glucoseVerdictKey = "delayed_rise_expected";
   } else if (mealHasDelayedRise && !validPeak) {
     glucoseVerdict = "Watching for a possible delayed wave.";
+    glucoseVerdictKey = "delayed_wave_watch";
   } else {
     const rise = Math.round(maxRise);
     const peakBeyondTarget = Number.isFinite(peakGlucose) && peakGlucose > targetHigh;
@@ -97,17 +105,21 @@ export function reconcileMealNarrative(opts) {
       const peakTimeStr = formatPeakTime(peakTime, mealTime);
       if (multiWave) {
         glucoseVerdict = `Rose in two waves from ${Math.round(startGlucose)} to ${Math.round(peakGlucose)} (+${rise}), peaking at ${peakTimeStr}.`;
+        glucoseVerdictKey = "rose_high_multi";
       } else {
         glucoseVerdict = `Rose from ${Math.round(startGlucose)} to ${Math.round(peakGlucose)} (+${rise}), peaking at ${peakTimeStr}.`;
+        glucoseVerdictKey = "rose_high";
       }
     } else if (rise >= 20) {
       glucoseVerdict = multiWave
         ? "A gentle two-wave rise, nothing sharp."
         : "Gentle rise, nothing sharp.";
+      glucoseVerdictKey = multiWave ? "gentle_multi" : "gentle";
     } else {
       glucoseVerdict = multiWave
         ? "Steady in two waves through the window so far."
         : "Steady through the window so far.";
+      glucoseVerdictKey = multiWave ? "steady_multi" : "steady";
     }
   }
 
@@ -146,21 +158,30 @@ export function reconcileMealNarrative(opts) {
   // use plain language about the delta. Include the fat/protein
   // explanation when the actual peak is later.
   let reconciliation = null;
+  // Which of the three existing timing branches fired. Additive metadata for
+  // presentation only — the threshold, the numbers and the sentence are
+  // unchanged; this just names the comparison the card is already making.
+  let reconciliationTiming = null;
   if (glucoseAnalysis?.validPeak && glucoseAnalysis?.timeToPeakMin != null && Number.isFinite(estimatedPeakMin)) {
     const timingDiff = glucoseAnalysis.timeToPeakMin - estimatedPeakMin;
     if (Math.abs(timingDiff) <= 40) {
       reconciliation = "Your glucose peaked in line with the estimation.";
+      reconciliationTiming = "in_line";
     } else if (timingDiff < 0) {
       reconciliation = `Your glucose peaked about ${Math.round(Math.abs(timingDiff))} minutes earlier than our estimate.`;
+      reconciliationTiming = "earlier";
     } else {
       reconciliation = `Your glucose peaked about ${Math.round(timingDiff)} minutes later than our estimate. Fatty, protein-heavy meals often digest slower than our model assumes.`;
+      reconciliationTiming = "later";
     }
   }
 
   return {
     glucoseVerdict,
+    glucoseVerdictKey,
     doseVerdict,
     absorptionStatus,
     reconciliation,
+    reconciliationTiming,
   };
 }
