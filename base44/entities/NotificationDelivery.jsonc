@@ -3,24 +3,20 @@
   "type": "object",
   "properties": {
     "recipient_user_id": {
-      "type": "string",
-      "description": "The account this notification was for. Derived server-side; the only account that may read this record."
+      "type": "string"
     },
     "owner_user_id": {
-      "type": "string",
-      "description": "Whose readings the notification was about. Equal to the recipient for a personal notification."
+      "type": "string"
     },
     "shared_access_id": {
-      "type": "string",
-      "description": "The sharing relationship, when the recipient is a follower. Empty for personal notifications."
+      "type": "string"
     },
     "audience": {
       "type": "string",
       "enum": [
         "self",
         "follower"
-      ],
-      "description": "Whether this was the person's own notification or one about someone they follow."
+      ]
     },
     "category": {
       "type": "string",
@@ -28,30 +24,46 @@
         "urgent_low",
         "below_range",
         "above_range",
-        "missing_readings"
+        "missing_readings",
+        "custom_low",
+        "custom_high",
+        "falling_fast",
+        "rising_fast"
       ],
-      "description": "Which approved notification category this was."
+      "enumColors": [
+        "red",
+        "yellow",
+        "yellow",
+        "gray",
+        "blue",
+        "purple",
+        "pink",
+        "green"
+      ]
     },
     "channel": {
       "type": "string",
       "enum": [
         "push"
       ],
-      "default": "push",
-      "description": "Delivery channel. Email remains on its existing separate path and is not recorded here."
+      "default": "push"
     },
     "event_key": {
-      "type": "string",
-      "description": "Deterministic key: category, reading owner, recipient, episode and channel."
+      "type": "string"
     },
     "episode_key": {
-      "type": "string",
-      "description": "Identity of the glucose episode the notification belongs to, derived from real readings only."
+      "type": "string"
+    },
+    "covered_events": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "description": "Every category/episode event coalesced into this single attempt; no glucose values."
     },
     "occurred_at": {
       "type": "string",
-      "format": "date-time",
-      "description": "When the triggering reading was taken, or when the missing-reading condition began."
+      "format": "date-time"
     },
     "status": {
       "type": "string",
@@ -61,35 +73,28 @@
         "skipped",
         "failed",
         "unknown"
-      ],
-      "description": "How far this notification got. 'submitted' means the push service accepted it, never that it was delivered or seen. 'unknown' means an attempt may have been accepted but could not be confirmed."
+      ]
     },
     "reason": {
-      "type": "string",
-      "description": "Short, non-clinical reason for a skip or failure (preference_off, quiet_hours, access_revoked, expired, transport_failed...)."
+      "type": "string"
     },
     "detail_shown": {
       "type": "boolean",
-      "default": false,
-      "description": "Whether the preview was allowed to name the category and value. No glucose value is stored on this record."
+      "default": false
     },
     "destination": {
-      "type": "string",
-      "description": "Safe in-app destination, re-checked against current access when opened."
+      "type": "string"
     },
     "submitted_at": {
       "type": "string",
-      "format": "date-time",
-      "description": "When the push service was asked to send. Never described as delivery."
+      "format": "date-time"
     },
     "read_at": {
       "type": "string",
-      "format": "date-time",
-      "description": "When the recipient opened this entry. Read is not the same as resolved or acknowledged care."
+      "format": "date-time"
     },
     "permission_version": {
-      "type": "number",
-      "description": "The relationship's permission version at evaluation time, so a later revoke is provably later than this evaluation."
+      "type": "number"
     }
   },
   "required": [

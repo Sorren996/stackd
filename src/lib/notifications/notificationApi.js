@@ -33,6 +33,13 @@ export const markNotificationRead = (deliveryId) =>
   call("markNotificationRead", { delivery_id: deliveryId });
 
 const REASON_COPY = {
+  notification_threshold_separation: 'Keep at least 20 mg/dL between your notification low and high.',
+  notification_threshold_required: 'Choose a notification level before turning this on.',
+  velocity_rate_required: 'Choose a minimum pace before turning this on.',
+  invalid_custom_low_mgdl: 'Choose a notification low from 60 to 150 mg/dL.',
+  invalid_custom_high_mgdl: 'Choose a notification high from 100 to 400 mg/dL.',
+  invalid_velocity_rate: 'Choose a pace of 2 or 3 mg/dL per minute.',
+  invalid_repeat_minutes: 'Choose one of the repeat options.',
   above_range_minutes_required: "Choose how long a high has to last before saving.",
   missing_delay_minutes_required: "Choose how long readings must be quiet before saving.",
   invalid_above_range_minutes: "That timing is not one of the options.",

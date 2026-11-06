@@ -6,10 +6,8 @@ import SectionCard from "@/components/editorial/SectionCard";
 import useNotificationCenter from "@/hooks/useNotificationCenter";
 import PersonalNotificationSettings from "@/components/notifications/PersonalNotificationSettings";
 import FollowedPersonNotifications from "@/components/notifications/FollowedPersonNotifications";
-import RecentNotifications from "@/components/notifications/RecentNotifications";
 import {
   describeNotificationError,
-  markNotificationRead,
   saveFollowNotifications,
   savePersonalNotifications,
 } from "@/lib/notifications/notificationApi";
@@ -27,7 +25,6 @@ export default function NotificationsPage({ variant = "patient" }) {
   const navigate = useNavigate();
   const { data, isLoading, isError, refetch } = useNotificationCenter();
   const [saving, setSaving] = useState(false);
-  const [openingId, setOpeningId] = useState(null);
 
   const backTo = variant === "follower" ? "/following/settings" : "/settings";
 
@@ -55,20 +52,6 @@ export default function NotificationsPage({ variant = "patient" }) {
     } finally {
       setSaving(false);
     }
-  };
-
-  const openNotification = async (row) => {
-    setOpeningId(row.id);
-    try {
-      if (!row.read_at) await markNotificationRead(row.id);
-    } catch {
-      // Marking read is bookkeeping; the destination still opens.
-    } finally {
-      setOpeningId(null);
-      await refetch();
-    }
-    const destination = row.audience === "follower" ? "/shared" : "/";
-    navigate(destination);
   };
 
   const following = Array.isArray(data?.following) ? data.following : [];
@@ -163,10 +146,6 @@ export default function NotificationsPage({ variant = "patient" }) {
             </p>
           ))}
         </SectionCard>
-      )}
-
-      {data && (
-        <RecentNotifications recent={data.recent} onOpen={openNotification} openingId={openingId} />
       )}
 
       <SectionCard>

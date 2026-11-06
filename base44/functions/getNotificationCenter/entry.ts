@@ -8,42 +8,25 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.54";
 import { ok, fail, asArray, currentUser, readBody } from "../../shared/sharingAccess.ts";
 import {
-  EMPTY_FOLLOWER_PREFERENCES,
   EMPTY_PERSONAL_PREFERENCES,
   URGENT_LOW_MGDL,
   effectiveFollowerCategories,
   relationshipAllowsPush,
   sanitizePersonalPreferences,
+  sanitizeFollowerPreferences,
   sharerGrants,
   type FollowerPreferences,
   type PersonalPreferences,
 } from "../../shared/notificationCore.ts";
 
-const RECENT_LIMIT = 20;
 
 function personalPreferencesFrom(row: any): PersonalPreferences {
   const { value } = sanitizePersonalPreferences({}, row || {});
   return value;
 }
 
-function followerPreferencesFrom(row: any): FollowerPreferences {
-  if (!row) return { ...EMPTY_FOLLOWER_PREFERENCES, categories: { ...EMPTY_FOLLOWER_PREFERENCES.categories } };
-  return {
-    master_enabled: row.master_enabled === true,
-    categories: {
-      urgent_low: row.categories?.urgent_low === true,
-      below_range: row.categories?.below_range === true,
-      above_range: row.categories?.above_range === true,
-      missing_readings: row.categories?.missing_readings === true,
-    },
-    missing_delay_minutes: row.missing_delay_minutes ?? null,
-    show_health_details: row.show_health_details === true,
-    quiet_hours_enabled: row.quiet_hours_enabled === true,
-    quiet_start_hour: row.quiet_start_hour ?? null,
-    quiet_end_hour: row.quiet_end_hour ?? null,
-    quiet_timezone: row.quiet_timezone ?? null,
-    urgent_during_quiet: row.urgent_during_quiet === true,
-  };
+function followerPreferencesFrom(row: any, relationship: any): FollowerPreferences {
+  return sanitizeFollowerPreferences({}, row || {}, relationship).value;
 }
 
 export default async function (req: Request): Promise<Response> {
@@ -59,9 +42,9 @@ export default async function (req: Request): Promise<Response> {
     const now = Date.now();
 
     const [prefRows, settingsRows, relationshipRows] = await Promise.all([
-      sr.entities.NotificationPreference.filter({ user_id: user.id }, { sort: "-created_date", limit: 1 }).catch(() => []),
-      sr.entities.UserSettings.filter({ created_by_id: user.id }, { sort: "-updated_date", limit: 1 }).catch(() => []),
-      sr.entities.SharedAccess.filter({ follower_user_id: user.id }, { sort: "-created_date", limit: 100 }).catch(() => []),
+      sr.entities.NotificationPreference.filter({ user_id: user.id }, { sort: "-created_date", limit: 1 }),
+      sr.entities.UserSettings.filter({ created_by_id: user.id }, { sort: "-updated_date", limit: 1 }),
+      sr.entities.SharedAccess.filter({ follower_user_id: user.id }, { sort: "-created_date", limit: 100 }),
     ]);
 
     const ownPrefs = asArray(prefRows)[0] || null;
@@ -90,52 +73,32 @@ export default async function (req: Request): Promise<Response> {
       if (!prefsByAccess[row.shared_access_id]) prefsByAccess[row.shared_access_id] = row;
     }
 
+    const ownerIds = [...new Set(asArray(relationshipRows).filter(r => relationshipAllowsPush(r, now)).map(r => r.sharer_user_id))];
+    const [ownerSettingPage, ownerPreferencePage] = ownerIds.length ? await Promise.all([
+      sr.entities.UserSettings.filter({ created_by_id: { $in: ownerIds } }, { sort: '-updated_date', limit: 500 }),
+      sr.entities.NotificationPreference.filter({ user_id: { $in: ownerIds } }, { sort: '-created_date', limit: 500 }),
+    ]) : [[], []];
+    const ownerSettings = asArray(ownerSettingPage);
+    const ownerPreferences = asArray(ownerPreferencePage);
     const followingWithPrefs = following.map((person: any) => {
       const row = prefsByAccess[person.access_id] || null;
-      const follower = followerPreferencesFrom(row);
       const relationshipRow = asArray(relationshipRows).find((r: any) => r.id === person.access_id);
+      const authorized = relationshipAllowsPush(relationshipRow, now);
+      const inheritedMinutes = ownerPreferences.find(p => p.user_id === relationshipRow.sharer_user_id)?.above_range_minutes ?? null;
+      const follower = followerPreferencesFrom({ ...row, above_range_minutes: row?.above_range_minutes ?? inheritedMinutes }, relationshipRow);
+      const owner = authorized ? ownerSettings.find(s => s.created_by_id === relationshipRow.sharer_user_id) : null;
+      const effective = authorized ? effectiveFollowerCategories(relationshipRow, follower.categories) : Object.fromEntries(Object.keys(person.grants).map(key => [key, false]));
       return {
         ...person,
-        preferences: follower,
-        effective: effectiveFollowerCategories(relationshipRow, follower.categories),
+        preferences: { ...follower, categories: effective },
+        thresholds: { target_low: owner?.target_range_low ?? null, target_high: owner?.target_range_high ?? null, units: settings?.glucose_units || 'mg/dL', urgent_low: URGENT_LOW_MGDL },
+        grants: Object.fromEntries(Object.entries(person.grants).map(([key, value]) => [key, authorized && value === true])),
+        effective,
         has_saved_preferences: Boolean(row),
       };
     });
 
-    // Recent history: this account's own rows only. Follower rows survive only
-    // while the relationship is still active, so a revoke hides them here too.
-    const activeAccessIds = new Set(
-      followingWithPrefs.filter((p: any) => p.status === "active").map((p: any) => p.access_id)
-    );
-    const deliveryRows = asArray(
-      await sr.entities.NotificationDelivery.filter(
-        { recipient_user_id: user.id },
-        { sort: "-created_date", limit: RECENT_LIMIT }
-      )
-    );
-
-    const namesByAccess: Record<string, string> = {};
-    for (const person of followingWithPrefs) namesByAccess[person.access_id] = person.name;
-
-    const recent = deliveryRows
-      .filter((row: any) => {
-        if (row.audience !== "follower") return true;
-        return row.shared_access_id ? activeAccessIds.has(row.shared_access_id) : false;
-      })
-      .map((row: any) => ({
-        id: row.id,
-        category: row.category,
-        audience: row.audience,
-        status: row.status,
-        occurred_at: row.occurred_at || null,
-        submitted_at: row.submitted_at || null,
-        read_at: row.read_at || null,
-        detail_shown: row.detail_shown === true,
-        destination: row.destination || (row.audience === "follower" ? "/shared" : "/"),
-        person_name:
-          row.audience === "follower" ? namesByAccess[row.shared_access_id] || "Someone you follow" : null,
-      }));
-
+    // Delivery, episode and audit records stay internal; no history fetch.
     return ok({
       personal: ownPrefs ? personalPreferencesFrom(ownPrefs) : { ...EMPTY_PERSONAL_PREFERENCES },
       has_saved_preferences: Boolean(ownPrefs),
@@ -147,7 +110,6 @@ export default async function (req: Request): Promise<Response> {
         timezone: settings?.timezone || null,
       },
       following: followingWithPrefs,
-      recent,
       server_time: new Date(now).toISOString(),
     });
   } catch (error: any) {

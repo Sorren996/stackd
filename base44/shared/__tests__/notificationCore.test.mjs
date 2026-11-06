@@ -394,6 +394,7 @@ test("everything starts off", () => {
   const { value } = sanitizePersonalPreferences({}, null);
   assert.equal(value.master_enabled, false);
   assert.deepEqual(value.categories, {
+    custom_low: false, custom_high: false, falling_fast: false, rising_fast: false,
     urgent_low: false,
     below_range: false,
     above_range: false,
@@ -414,6 +415,7 @@ const relationship = {
 test("a follower can never widen what the sharer permitted", () => {
   const submitted = { urgent_low: true, below_range: true, above_range: true, missing_readings: true };
   assert.deepEqual(effectiveFollowerCategories(relationship, submitted), {
+    custom_low: false, custom_high: false, falling_fast: false, rising_fast: false,
     urgent_low: true,
     below_range: false,
     above_range: false,
@@ -422,6 +424,7 @@ test("a follower can never widen what the sharer permitted", () => {
 
   const { value } = sanitizeFollowerPreferences({ master_enabled: true, categories: submitted }, null, relationship);
   assert.deepEqual(value.categories, {
+    custom_low: false, custom_high: false, falling_fast: false, rising_fast: false,
     urgent_low: true,
     below_range: false,
     above_range: false,

@@ -14,9 +14,12 @@
 //    duplicate, future-dated and stale samples are dropped before anything is
 //    decided, and a sustained condition is never inferred across a gap.
 
+import { sanitizeNotificationOptions } from './notificationOptions.ts';
+
 // ── Categories and timings ────────────────────────────────────────────────
 
 export const CATEGORY_KEYS = [
+  "custom_low", "custom_high", "falling_fast", "rising_fast",
   "urgent_low",
   "below_range",
   "above_range",
@@ -26,6 +29,7 @@ export const CATEGORY_KEYS = [
 export type Category = (typeof CATEGORY_KEYS)[number];
 
 export const CATEGORY_LABELS: Record<Category, string> = {
+  custom_low: 'Custom low', custom_high: 'Custom high', falling_fast: 'Falling fast', rising_fast: 'Rising fast',
   urgent_low: "Urgent low",
   below_range: "Below comfort zone",
   above_range: "Above comfort zone",
@@ -73,7 +77,8 @@ export const MISSING_NOTICE_MAX_AGE_MINUTES = 180;
 
 export const SYNC_GRACE_MINUTES = 5;
 
-export const MGDL_PER_MMOL = 18.0182;
+// Match Stackd's display convention; persisted thresholds remain mg/dL.
+export const MGDL_PER_MMOL = 18;
 
 export const PUSH_CHANNEL = "push";
 
@@ -412,6 +417,11 @@ export function buildNotificationCopy(input: CopyInput): PushCopy {
         body: `${prefix}${value} ${units}${clock ? ` at ${clock}` : ""}${sustained}.`,
       };
     }
+    case 'custom_low':
+    case 'custom_high':
+    case 'falling_fast':
+    case 'rising_fast':
+      return { title: `${prefix}${CATEGORY_LABELS[input.category]}`, body: `${value} ${units}${clock ? ` at ${clock}` : ''}.${input.durationMinutes ? ` Sustained for ${input.durationMinutes} minutes.` : ''}` };
     case "missing_readings":
     default:
       return {
@@ -527,6 +537,8 @@ export function relationshipAllowsPush(row: RelationshipLike | null | undefined,
 export function sharerGrants(row: RelationshipLike | null | undefined): Record<Category, boolean> {
   const raw = (row?.push || {}) as Record<string, unknown>;
   return {
+    custom_low: raw.custom_low === true, custom_high: raw.custom_high === true,
+    falling_fast: raw.falling_fast === true, rising_fast: raw.rising_fast === true,
     urgent_low: raw.urgent_low === true,
     below_range: raw.below_range === true,
     above_range: raw.above_range === true,
@@ -545,6 +557,10 @@ export function effectiveFollowerCategories(
   const granted = sharerGrants(row);
   const chosen = (followerCategories || {}) as Record<string, unknown>;
   return {
+    custom_low: granted.custom_low && chosen.custom_low === true,
+    custom_high: granted.custom_high && chosen.custom_high === true,
+    falling_fast: granted.falling_fast && chosen.falling_fast === true,
+    rising_fast: granted.rising_fast && chosen.rising_fast === true,
     urgent_low: granted.urgent_low && chosen.urgent_low === true,
     below_range: granted.below_range && chosen.below_range === true,
     above_range: granted.above_range && chosen.above_range === true,
@@ -591,6 +607,7 @@ export interface PersonalPreferences {
 export const EMPTY_PERSONAL_PREFERENCES: PersonalPreferences = {
   master_enabled: false,
   categories: {
+    custom_low: false, custom_high: false, falling_fast: false, rising_fast: false,
     urgent_low: false,
     below_range: false,
     above_range: false,
@@ -611,6 +628,7 @@ function readBoolean(value: unknown, fallback: boolean): boolean {
 }
 
 function readHour(value: unknown): number | null {
+  if (value == null || value === '') return null;
   const hour = Number(value);
   if (!Number.isFinite(hour) || hour < 0 || hour > 23) return null;
   return Math.trunc(hour);
@@ -653,6 +671,8 @@ export function sanitizePersonalPreferences(
   }
 
   const master = readBoolean(input.master_enabled, base.master_enabled);
+  const options = sanitizeNotificationOptions(input, base, categories, master);
+  if (options.error) return { value: base, error: options.error };
 
   // A timing is only written when the person picks one of the offered values.
   let aboveMinutes = base.above_range_minutes ?? null;
@@ -702,6 +722,7 @@ export function sanitizePersonalPreferences(
 
   return {
     value: {
+      ...options.value,
       master_enabled: master,
       categories,
       above_range_minutes: aboveMinutes,
@@ -733,6 +754,7 @@ export interface FollowerPreferences {
 export const EMPTY_FOLLOWER_PREFERENCES: FollowerPreferences = {
   master_enabled: false,
   categories: {
+    custom_low: false, custom_high: false, falling_fast: false, rising_fast: false,
     urgent_low: false,
     below_range: false,
     above_range: false,
@@ -769,6 +791,9 @@ export function sanitizeFollowerPreferences(
     }
   }
   const categories = clampFollowerCategories(relationship, chosen);
+  const options = sanitizeNotificationOptions(input, base, categories, readBoolean(input.master_enabled, base.master_enabled));
+  if (options.error) return { value: base, error: options.error };
+  if (readBoolean(input.master_enabled, base.master_enabled) && categories.above_range && options.value.above_range_minutes == null && (base.master_enabled !== true || base.categories.above_range !== true)) return { value: base, error: 'above_range_minutes_required' };
 
   let quietTimezone = base.quiet_timezone ?? null;
   if ("quiet_timezone" in input) {
@@ -805,6 +830,7 @@ export function sanitizeFollowerPreferences(
 
   return {
     value: {
+      ...options.value,
       master_enabled: readBoolean(input.master_enabled, base.master_enabled),
       categories,
       missing_delay_minutes: missingDelay,

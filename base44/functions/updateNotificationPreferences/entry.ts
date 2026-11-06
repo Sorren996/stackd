@@ -6,6 +6,7 @@
 // refused rather than quietly defaulted.
 
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.54";
+import { categoryActivation } from '../../shared/notificationOptions.ts';
 import { ok, fail, asArray, currentUser, readBody, audit } from "../../shared/sharingAccess.ts";
 import {
   sanitizePersonalPreferences,
@@ -56,6 +57,8 @@ export default async function (req: Request): Promise<Response> {
 
 async function savePreferences(sr: any, existing: any, userId: string, value: PersonalPreferences) {
   const payload = {
+    ...value,
+    category_activation: categoryActivation(existing, value),
     user_id: userId,
     master_enabled: value.master_enabled,
     categories: value.categories,

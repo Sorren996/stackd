@@ -4,24 +4,30 @@
   "properties": {
     "user_id": {
       "type": "string",
-      "description": "The recipient this ledger belongs to. Server-written only."
+      "description": "Server-owned recipient."
     },
     "scope_key": {
       "type": "string",
-      "description": "Which scope the ledger covers: 'self' for the person's own notifications, or 'follow:<shared_access_id>' for one person they follow."
+      "description": "self or follow:<relationship id>."
     },
     "claimed_keys": {
       "type": "array",
       "items": {
         "type": "string"
       },
-      "default": [],
-      "description": "Event keys already claimed for this scope. Appended through one atomic conditional update, so a repeated or concurrent evaluation can never claim the same event twice. Bounded: the oldest keys are pulled as the list grows."
+      "default": []
     },
     "pruned_at": {
       "type": "string",
-      "format": "date-time",
-      "description": "When the oldest claim keys were last trimmed. History stays in NotificationDelivery."
+      "format": "date-time"
+    },
+    "episode_revision": {
+      "type": "number",
+      "description": "CAS revision serializing episode decisions across concurrent workflows."
+    },
+    "episode_state": {
+      "type": "object",
+      "description": "Server-only per-category state, sample watermark, recovery counts, episode and repeat identities; no glucose values."
     }
   },
   "required": [

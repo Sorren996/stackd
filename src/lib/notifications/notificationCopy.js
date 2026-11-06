@@ -3,29 +3,18 @@
 // care, and nothing promises delivery.
 
 export const CATEGORY_COPY = [
-  {
-    key: "urgent_low",
-    label: "Urgent low",
-    description: "When a reading is below your urgent level.",
-  },
-  {
-    key: "below_range",
-    label: "Below comfort zone",
-    description: "When a reading is below the range you set.",
-  },
-  {
-    key: "above_range",
-    label: "Above comfort zone",
-    description: "When readings stay above your range for a while.",
-  },
-  {
-    key: "missing_readings",
-    label: "Readings haven't updated",
-    description: "When readings stop arriving from your sensor.",
-  },
+  { key: 'custom_low', label: 'Custom low', description: 'At or below your selected notification level.' },
+  { key: 'below_range', label: 'Below comfort zone', description: 'Below the existing lower boundary.' },
+  { key: 'custom_high', label: 'Custom high', description: 'At or above your selected notification level.' },
+  { key: 'above_range', label: 'Above comfort zone', description: 'Sustained above the existing upper boundary.' },
+  { key: 'falling_fast', label: 'Falling fast', description: 'A measured downward pace, with an optional level condition.' },
+  { key: 'rising_fast', label: 'Rising fast', description: 'A measured upward pace, with an optional level condition.' },
+  { key: 'urgent_low', label: 'Urgent low', description: 'Below the existing urgent boundary, separate from your other choices.' },
+  { key: 'missing_readings', label: 'Missing readings', description: 'When readings stop arriving from your sensor.' },
 ];
 
 export const CATEGORY_LABEL = {
+  custom_low: 'Custom low', custom_high: 'Custom high', falling_fast: 'Falling fast', rising_fast: 'Rising fast',
   urgent_low: "Urgent low",
   below_range: "Below comfort zone",
   above_range: "Above comfort zone",

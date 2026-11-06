@@ -12,8 +12,8 @@
 // Verified against the live app: five simultaneous attempts at the same key
 // produced exactly one `updated: 1`. The ledger document is the recipient's own
 // preference record, which exists only after that person opted in, so the
-// anchor has a single deterministic identity and is never created by a
-// concurrent evaluator.
+// anchor is selected consistently and is never created by a concurrent
+// evaluator; per-stage compare-and-set state additionally serializes decisions.
 //
 // Everything after the claim is deliberately conservative. A send is attempted
 // once. If the push service clearly refused it, the outcome is "failed". If the
@@ -51,6 +51,7 @@ export interface DispatchInput {
   destination: string;
   quiet: QuietHours | null;
   permissionVersion?: number | null;
+  coveredEvents?: Array<{ category: string; episodeKey: string; repeatIndex?: number }>;
 }
 
 export interface DispatchDeps {
@@ -128,6 +129,7 @@ export async function dispatchNotification(
       detail_shown: input.detailShown,
       destination: input.destination,
       permission_version: input.permissionVersion ?? null,
+      covered_events: input.coveredEvents || [{ category: input.category, episodeKey: input.episodeKey }],
     });
   } catch (error: any) {
     // The claim is spent and nothing was sent. Recording the failure is not

@@ -3,17 +3,14 @@
   "type": "object",
   "properties": {
     "user_id": {
-      "type": "string",
-      "description": "Owner of these preferences. Written from the authenticated user on the server, never from a client-supplied id."
+      "type": "string"
     },
     "master_enabled": {
       "type": "boolean",
-      "default": false,
-      "description": "Master switch for this person's own native push notifications. Defaults to off; only an explicit opt-in turns it on."
+      "default": false
     },
     "categories": {
       "type": "object",
-      "description": "Per-category opt-ins. Every category defaults to off and is only turned on by the person themselves.",
       "properties": {
         "urgent_low": {
           "type": "boolean",
@@ -30,42 +27,105 @@
         "missing_readings": {
           "type": "boolean",
           "default": false
+        },
+        "custom_low": {
+          "type": "boolean",
+          "default": false
+        },
+        "custom_high": {
+          "type": "boolean",
+          "default": false
+        },
+        "falling_fast": {
+          "type": "boolean",
+          "default": false
+        },
+        "rising_fast": {
+          "type": "boolean",
+          "default": false
         }
       }
     },
-    "above_range_minutes": {
+    "category_activation": {
+      "type": "object",
+      "description": "Server-generated per-category explicit opt-in markers; not accepted from request input."
+    },
+    "custom_low_mgdl": {
       "type": "number",
-      "description": "How long a sustained high has to last before it notifies, chosen explicitly by the person (15, 30 or 60). Null until they choose; never silently defaulted."
+      "minimum": 60,
+      "maximum": 150,
+      "description": "Notification-only low; canonical mg/dL, never a calculation input."
+    },
+    "custom_high_mgdl": {
+      "type": "number",
+      "minimum": 100,
+      "maximum": 400,
+      "description": "Notification-only high; canonical mg/dL, never a calculation input."
+    },
+    "custom_high_minutes": {
+      "type": "number",
+      "enum": [
+        0,
+        15,
+        30,
+        60
+      ],
+      "default": 0
+    },
+    "falling_fast_rate": {
+      "type": "number",
+      "enum": [
+        2,
+        3
+      ]
+    },
+    "rising_fast_rate": {
+      "type": "number",
+      "enum": [
+        2,
+        3
+      ]
+    },
+    "falling_fast_level_mgdl": {
+      "type": "number",
+      "minimum": 40,
+      "maximum": 400
+    },
+    "rising_fast_level_mgdl": {
+      "type": "number",
+      "minimum": 40,
+      "maximum": 400
+    },
+    "repeat_minutes": {
+      "type": "object",
+      "description": "Explicit per-category repeats, 15/30/60/120 minutes; absent/null means once per episode."
+    },
+    "above_range_minutes": {
+      "type": "number"
     },
     "missing_delay_minutes": {
-      "type": "number",
-      "description": "How long readings have to be quiet before a missing-readings notice is considered, chosen explicitly by the person (15, 20 or 30). Null until they choose; never silently defaulted."
+      "type": "number"
     },
     "show_health_details": {
       "type": "boolean",
-      "default": false,
-      "description": "Whether previews may name the category, the measured value and the reading time. Off by default, so previews stay generic."
+      "default": false
     },
     "quiet_hours_enabled": {
       "type": "boolean",
       "default": false
     },
     "quiet_start_hour": {
-      "type": "number",
-      "description": "Local hour (0-23) that quiet hours begin."
+      "type": "number"
     },
     "quiet_end_hour": {
-      "type": "number",
-      "description": "Local hour (0-23) that quiet hours end. A window may wrap past midnight."
+      "type": "number"
     },
     "quiet_timezone": {
-      "type": "string",
-      "description": "IANA timezone confirmed by the person, used to resolve quiet hours across daylight-saving changes."
+      "type": "string"
     },
     "urgent_during_quiet": {
       "type": "boolean",
-      "default": false,
-      "description": "Separate, explicit option allowing urgent-low notifications inside this person's quiet hours. Defaults to off."
+      "default": false
     }
   },
   "required": [
