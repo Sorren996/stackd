@@ -7,6 +7,7 @@ import PageHeader from "@/components/editorial/PageHeader";
 import SectionCard from "@/components/editorial/SectionCard";
 import LedgerRow from "@/components/editorial/LedgerRow";
 import SensorSessionCard from "@/components/settings/SensorSessionCard";
+import AdminTestNotification from "@/components/settings/AdminTestNotification";
 import { isNativeIOS } from "@/lib/nativeShell";
 
 function readGraphHeight() {
@@ -88,6 +89,9 @@ export default function Settings() {
       {user?.role === "admin" && (
         <SectionCard label="Admin">
           <LedgerRow label="Support Inbox" value="Review requests" to="/settings/support-inbox" />
+          <div className="mt-3 border-t pt-3.5" style={{ borderColor: "#eadccf" }}>
+            <AdminTestNotification />
+          </div>
         </SectionCard>
       )}
 
