@@ -60,6 +60,7 @@ import {
 } from "@/lib/startupDiagnostics";
 import StartupRecovery from "@/components/StartupRecovery";
 import useAccessProfile from "@/hooks/useAccessProfile";
+import { acknowledgmentKey, onboardingKey, loadAcknowledgments, retryConsent, requestStatus } from '@/lib/consentStartup';
 
 const AuthenticatedApp = () => {
   const {
@@ -73,7 +74,8 @@ const AuthenticatedApp = () => {
     startupError,
     retryStartup,
   } = useAuth();
-  const [dataReady, setDataReady] = useState(false);
+  const [dataReadyUser, setDataReadyUser] = useState(null);
+  const dataReady = Boolean(user?.id) && dataReadyUser === user.id;
   const [retryingSurfaces, setRetryingSurfaces] = useState(false);
 
   // What this account IS — resolved server-side from invitation and
@@ -93,31 +95,53 @@ const AuthenticatedApp = () => {
     }
   }, [profile.error]);
 
-  // Wire global auth-failure handler so any 401/403 during a query or mutation
-  // triggers the centralized session-expiration flow.
+  // An independent operation (including notifications) cannot declare the
+  // whole session expired. Only a rejection from auth.me establishes that.
   useEffect(() => {
-    setOnAuthFailure(() => {
-      queryClientInstance.clear();
-      handleSessionExpired();
+    let active = true;
+    let checking = false;
+    setOnAuthFailure(async () => {
+      if (checking || !user?.id) return;
+      checking = true;
+      try {
+        const current = await withStartupDeadline(base44.auth.me());
+        if (active && current?.id !== user.id) await retryStartup();
+      } catch (error) {
+        if (!active) return;
+        if ([401, 403].includes(requestStatus(error))) handleSessionExpired();
+        else logStartup('session-check', { outcome: 'error', code: startupErrorCode(error) });
+      } finally {
+        checking = false;
+      }
     });
-    return () => setOnAuthFailure(null);
-  }, [handleSessionExpired]);
+    return () => { active = false; setOnAuthFailure(null); };
+  }, [user?.id, handleSessionExpired, retryStartup]);
 
   const {
     data: latestAck,
     isLoading: ackLoading,
     isError: ackError,
+    isSuccess: ackSuccess,
+    error: ackFailure,
+    refetch: refetchAcknowledgment,
   } = useQuery({
-    queryKey: ["latest-acknowledgment"],
-    queryFn: () => base44.entities.UserAcknowledgment.list("-accepted_at", 1),
-    enabled: isAuthenticated && profileSettled && !viewerMode,
+    queryKey: acknowledgmentKey(user?.id),
+    queryFn: () => loadAcknowledgments(base44, user.id),
+    enabled: isAuthenticated && Boolean(user?.id) && !isLoadingAuth && profile.resolved && !profile.error && !viewerMode,
+    staleTime: 0,
+    gcTime: 0,
+    retry: retryConsent,
   });
+
+  useEffect(() => {
+    if (ackFailure?.consentCode === 'ACCOUNT_CHANGED') retryStartup();
+  }, [ackFailure, retryStartup]);
 
   useEffect(() => {
     // Hold every patient read until the capability is known, so a viewer's
     // device never starts fetching a patient set it will not use.
-    if (!isAuthenticated || authError || !profileSettled || viewerMode) {
-      setDataReady(false);
+    if (!isAuthenticated || !user?.id || isLoadingAuth || authError || !profile.resolved || profile.error || viewerMode) {
+      setDataReadyUser(null);
       return;
     }
 
@@ -183,17 +207,17 @@ const AuthenticatedApp = () => {
         }
 
         logStartup("data", { durationMs: Date.now() - startedAt });
-        setDataReady(true);
+        setDataReadyUser(user.id);
       });
 
     return () => { cancelled = true; };
-  }, [isAuthenticated, authError, profileSettled, viewerMode]);
+  }, [isAuthenticated, user?.id, isLoadingAuth, authError, profile.resolved, profile.error, viewerMode]);
 
   const needsAcknowledgment = useMemo(() => {
     // A viewer is not a patient. The medical acknowledgments are never applied
     // to them, and nothing is ever recorded as accepted on their behalf.
     if (viewerMode) return false;
-    if (!isAuthenticated || !dataReady || ackLoading) return null;
+    if (!isAuthenticated || !dataReady || ackLoading || ackError || !ackSuccess) return null;
 
     if (user?.required_reconsent) return true;
     if (!user?.health_data_consent_active) return true;
@@ -211,7 +235,7 @@ const AuthenticatedApp = () => {
     if (CHECKBOX_KEYS.some((flag) => !record[flag])) return true;
 
     return false;
-  }, [user, latestAck, isAuthenticated, dataReady, ackLoading, viewerMode]);
+  }, [user, latestAck, isAuthenticated, dataReady, ackLoading, ackError, ackSuccess, viewerMode]);
 
   // Onboarding check — only runs after acknowledgment is complete.
   // Existing accounts (with any health data) are auto-marked as onboarded.
@@ -220,16 +244,16 @@ const AuthenticatedApp = () => {
     isLoading: onboardingChecking,
     isError: onboardingError,
   } = useQuery({
-    queryKey: ["onboarding-check"],
+    queryKey: onboardingKey(user?.id),
     queryFn: async () => {
-      const settings = queryClientInstance.getQueryData(["user-settings"]);
+      const [settings] = await base44.entities.UserSettings.filter({ created_by_id: user.id }, '-created_date', 1);
       if (settings?.onboarding_completed === true) return { needsOnboarding: false };
 
       // Check for existing health data — existing users skip onboarding.
       const [readings, carbs, doses] = await Promise.all([
-        base44.entities.GlucoseReading.list("-created_date", 1),
-        base44.entities.CarbEntry.list("-created_date", 1),
-        base44.entities.InsulinDose.list("-created_date", 1),
+        base44.entities.GlucoseReading.filter({ $or: [{ created_by_id: user.id }, { user_id: user.id }] }, '-created_date', 1),
+        base44.entities.CarbEntry.filter({ created_by_id: user.id }, '-created_date', 1),
+        base44.entities.InsulinDose.filter({ created_by_id: user.id }, '-created_date', 1),
       ]);
 
       const hasData = (readings?.length > 0) || (carbs?.length > 0) || (doses?.length > 0);
@@ -243,7 +267,7 @@ const AuthenticatedApp = () => {
 
       return { needsOnboarding: true };
     },
-    enabled: needsAcknowledgment === false && !viewerMode,
+    enabled: isAuthenticated && Boolean(user?.id) && !isLoadingAuth && ackSuccess && !ackError && needsAcknowledgment === false && !viewerMode,
     staleTime: 0,
   });
 
@@ -252,12 +276,12 @@ const AuthenticatedApp = () => {
   const retryAccountSurfaces = useCallback(() => {
     setRetryingSurfaces(true);
     Promise.allSettled([
-      queryClientInstance.invalidateQueries({ queryKey: ["latest-acknowledgment"] }),
-      queryClientInstance.invalidateQueries({ queryKey: ["onboarding-check"] }),
+      queryClientInstance.invalidateQueries({ queryKey: acknowledgmentKey(user?.id), exact: true }),
+      queryClientInstance.invalidateQueries({ queryKey: onboardingKey(user?.id), exact: true }),
       queryClientInstance.invalidateQueries({ queryKey: ["user-settings"] }),
-      queryClientInstance.invalidateQueries({ queryKey: ["access-profile"] }),
+      queryClientInstance.invalidateQueries({ queryKey: ["access-profile", user?.id], exact: true }),
     ]).finally(() => setRetryingSurfaces(false));
-  }, []);
+  }, [user?.id]);
 
   // Still checking auth, or still resolving what this account is. A neutral
   // splash — never a patient empty state for someone who only follows along.
@@ -376,7 +400,10 @@ const AuthenticatedApp = () => {
       <StartupRecovery
         title="We could not confirm your account status"
         message="Nothing has changed on your account. Try again in a moment."
-        onRetry={retryAccountSurfaces}
+        onRetry={() => {
+          setRetryingSurfaces(true);
+          refetchAcknowledgment().finally(() => setRetryingSurfaces(false));
+        }}
         retrying={retryingSurfaces}
       />
     );

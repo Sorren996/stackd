@@ -7,13 +7,13 @@ import {
   ACKNOWLEDGMENT_STEPS,
   CHECKBOX_KEYS,
   DOCUMENT_KEYS,
-  LEGAL_DOCUMENTS,
 } from "@/lib/acknowledgmentConfig";
 import NoticeSection from "@/components/acknowledgments/NoticeSection";
 import DocumentModal from "@/components/acknowledgments/DocumentModal";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, LogOut, Leaf, Check, AlertCircle, Loader2, RefreshCw } from "lucide-react";
 import { SUPPORTIVE_ERRORS } from "@/lib/supportiveErrors";
+import { acknowledgmentKey, loadAcknowledgments, retryConsent } from '@/lib/consentStartup';
 
 export default function RequiredAcknowledgments() {
   const { user, checkUserAuth, logout } = useAuth();
@@ -27,9 +27,12 @@ export default function RequiredAcknowledgments() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
 
-  const { data: existingAcks = [] } = useQuery({
-    queryKey: ["latest-acknowledgment"],
-    queryFn: () => base44.entities.UserAcknowledgment.list("-accepted_at", 1),
+  const { data: existingAcks = [], isSuccess: acknowledgmentsReady } = useQuery({
+    queryKey: acknowledgmentKey(user?.id),
+    queryFn: () => loadAcknowledgments(base44, user.id),
+    enabled: Boolean(user?.id),
+    retry: retryConsent,
+    gcTime: 0,
   });
 
   const consentSource = existingAcks.length > 0 ? "reconsent" : "initial_onboarding";
@@ -39,7 +42,7 @@ export default function RequiredAcknowledgments() {
 
   const allCheckboxesChecked = Object.values(checkboxes).every(Boolean);
   const allDocsOpened = DOCUMENT_KEYS.every((d) => openedDocs.has(d));
-  const canAccept = allCheckboxesChecked && allDocsOpened && !isSubmitting;
+  const canAccept = acknowledgmentsReady && allCheckboxesChecked && allDocsOpened && !isSubmitting;
 
   const stepCheckboxesChecked = useMemo(() => {
     if (!currentStepData.sections) return true;
@@ -112,7 +115,7 @@ export default function RequiredAcknowledgments() {
       });
 
       await checkUserAuth();
-      queryClient.invalidateQueries({ queryKey: ["latest-acknowledgment"] });
+      await queryClient.invalidateQueries({ queryKey: acknowledgmentKey(user?.id), exact: true });
     } catch {
       setSubmitError(SUPPORTIVE_ERRORS.submit);
       setIsSubmitting(false);

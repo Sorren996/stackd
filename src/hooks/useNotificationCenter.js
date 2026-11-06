@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { getNotificationCenter } from "@/lib/notifications/notificationApi";
+import { useAuth } from "@/lib/AuthContext";
 
 /**
  * The notifications screen's single read.
@@ -8,8 +9,10 @@ import { getNotificationCenter } from "@/lib/notifications/notificationApi";
  * follower narrowing) is never rendered from a stale cache.
  */
 export default function useNotificationCenter() {
+  const { user, isAuthenticated, isLoadingAuth } = useAuth();
   return useQuery({
-    queryKey: ["notification-center"],
+    queryKey: ["notification-center", user?.id],
+    enabled: isAuthenticated && Boolean(user?.id) && !isLoadingAuth,
     queryFn: getNotificationCenter,
     staleTime: 0,
     refetchOnMount: "always",

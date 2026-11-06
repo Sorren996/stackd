@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect, useRef, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
 import { appParams } from '@/lib/app-params';
+import { queryClientInstance } from '@/lib/query-client';
 import { createAxiosClient } from '@base44/sdk/dist/utils/axios-client';
 import { clearLocalSettingsCache, ensureLocalCacheOwnedBy } from '@/lib/userSettings';
 import {
@@ -33,6 +34,7 @@ export const AuthProvider = ({ children }) => {
   // Only the newest launch attempt may write state. A retry, an unmount or an
   // account change makes any late completion from an earlier attempt inert.
   const attemptRef = useRef(0);
+  const cacheUserRef = useRef(null);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -80,6 +82,9 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const performLocalLogout = (broadcast = true) => {
+    attemptRef.current += 1; // Retire an in-flight session check on logout.
+    cacheUserRef.current = null;
+    queryClientInstance.clear();
     // Clear all user-specific local state
     setUser(null);
     setIsAuthenticated(false);
@@ -172,6 +177,10 @@ export const AuthProvider = ({ children }) => {
         }
         // On a shared device, wipe the previous account's cached settings and
         // latest glucose before this session starts so no data crosses accounts.
+        if (cacheUserRef.current !== currentUser.id) {
+          queryClientInstance.clear();
+          cacheUserRef.current = currentUser.id;
+        }
         ensureLocalCacheOwnedBy(currentUser.id);
         setUser(currentUser);
         setIsAuthenticated(true);
@@ -185,7 +194,9 @@ export const AuthProvider = ({ children }) => {
         setAuthChecked(true);
 
         if (code === STARTUP_CODES.UNAUTHORIZED) {
-          // Session expired or invalid — clear stale local state.
+          // Only the auth endpoint's rejection establishes session expiry.
+          cacheUserRef.current = null;
+          queryClientInstance.clear();
           clearLocalSettingsCache();
           setAuthError({ type: 'auth_required', message: 'Authentication required' });
         } else {
@@ -217,12 +228,12 @@ export const AuthProvider = ({ children }) => {
    * Called when a protected request fails due to an expired session.
    * Clears all authenticated state, hides protected data, and redirects.
    */
-  const handleSessionExpired = () => {
+  const handleSessionExpired = useCallback(() => {
     setSessionExpired(true);
     performLocalLogout(true);
-    // Use href for full browser navigation to clear all in-memory state
-    window.location.href = '/';
-  };
+    // A confirmed expired session returns to sign-in, not the consent form.
+    window.location.href = '/login';
+  }, []);
 
   const logout = async (shouldRedirect = true) => {
     // Prevent duplicate logout requests

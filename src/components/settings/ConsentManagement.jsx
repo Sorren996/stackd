@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import SectionCard from "@/components/editorial/SectionCard";
 import LedgerRow from "@/components/editorial/LedgerRow";
 import { getFeedScroller, getScrollY } from "@/lib/feedScroll";
+import { acknowledgmentKey, loadAcknowledgments, retryConsent } from '@/lib/consentStartup';
 
 export default function ConsentManagement() {
   const { user, checkUserAuth } = useAuth();
@@ -37,8 +38,10 @@ export default function ConsentManagement() {
   }, [showWithdrawModal]);
 
   const { data: ackRecords = [], isLoading } = useQuery({
-    queryKey: ["acknowledgment-history"],
-    queryFn: () => base44.entities.UserAcknowledgment.list("-accepted_at", 50),
+    queryKey: ["acknowledgment-history", user?.id],
+    queryFn: () => loadAcknowledgments(base44, user.id, 50),
+    enabled: Boolean(user?.id),
+    retry: retryConsent,
   });
 
   const latestAck = ackRecords[0];
@@ -54,8 +57,8 @@ export default function ConsentManagement() {
         required_reconsent: true,
       });
       await checkUserAuth();
-      queryClient.invalidateQueries({ queryKey: ["latest-acknowledgment"] });
-      queryClient.invalidateQueries({ queryKey: ["acknowledgment-history"] });
+      queryClient.invalidateQueries({ queryKey: acknowledgmentKey(user?.id), exact: true });
+      queryClient.invalidateQueries({ queryKey: ["acknowledgment-history", user?.id], exact: true });
       toast.info("Health data consent withdrawn. Please review the required acknowledgments to continue.");
     } catch {
       toast.error("Unable to withdraw consent. Please try again.");

@@ -12,7 +12,8 @@ export function setOnAuthFailure(callback) {
 function isAuthError(error) {
   if (!error) return false;
   const status = error.status || error.response?.status;
-  return status === 401 || status === 403;
+  // A resource-level 403 is a permission failure, not proof of session expiry.
+  return status === 401;
 }
 
 export const queryClientInstance = new QueryClient({
@@ -21,7 +22,7 @@ export const queryClientInstance = new QueryClient({
       refetchOnWindowFocus: false,
       retry: (failureCount, error) => {
         // Don't retry auth failures — they won't succeed
-        if (isAuthError(error)) return false;
+        if (isAuthError(error) || (error?.status || error?.response?.status) === 403) return false;
         return failureCount < 1;
       },
     },
