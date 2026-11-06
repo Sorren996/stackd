@@ -10,7 +10,9 @@
 // After syncing, runs DailySummary updates for any days that received
 // new readings.
 
-import { createClientFromRequest } from "npm:@base44/sdk@0.8.40";
+// Pinned to the version the notification engine is exercised under: ingestion
+// now calls that engine in-process, so every caller must share one SDK version.
+import { createClientFromRequest } from "npm:@base44/sdk@0.8.54";
 import { requestDexcomRefreshIfNeeded } from "../../shared/dexcomShareSync.ts";
 import { dayKeyFromTimezone, recomputeDailySummary } from "../../shared/dailySummary.ts";
 import { loadDexcomCredentials } from "../../shared/dexcomCredentials.ts";

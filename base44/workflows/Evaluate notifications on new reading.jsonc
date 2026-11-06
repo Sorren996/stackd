@@ -2,7 +2,7 @@
   "name": "Evaluate notifications on new reading",
   "description": "After a real glucose reading is saved, evaluate the approved push categories for the person's own notifications and for each follower who has been permitted and has opted in. Carry-forward (system) readings are ignored, freshness and episodes are decided server-side, and each event is claimed once.",
   "trigger": {
-    "condition": "${ .trigger.data.value != null and (.trigger.data.source // \"\") != \"system\" }",
+    "condition": "${ .trigger.data.source != \"system\" }",
     "config": {
       "trigger_type": "entity",
       "entity_name": "GlucoseReading",
@@ -25,7 +25,7 @@
           "with": {
             "function_name": "evaluateNotifications",
             "args": {
-              "reading_id": "${ .trigger.entity_id }"
+              "reading_id": "${ .trigger.data.id // .trigger.entity_id }"
             }
           },
           "then": "end",

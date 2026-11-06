@@ -1,0 +1,78 @@
+{
+  "name": "NotificationDispatchJob",
+  "type": "object",
+  "properties": {
+    "owner_user_id": {
+      "type": "string",
+      "description": "The account whose stored readings still need a notification evaluation pass. Written only by server ingestion code, never from a request."
+    },
+    "reading_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "The stored readings whose hand-off failed, kept for audit only. A retry always re-evaluates from the newest stored measurement, so an old incident is never replayed."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "done",
+        "failed"
+      ],
+      "enumColors": [
+        "yellow",
+        "green",
+        "red"
+      ],
+      "default": "pending",
+      "description": "Lifecycle of the deferred evaluation. done means it eventually ran; failed means it exhausted its bounded attempts and needs a human look."
+    },
+    "attempts": {
+      "type": "number",
+      "default": 0,
+      "description": "Bounded attempt count so a permanently failing send cannot retry for ever."
+    },
+    "last_error_code": {
+      "type": "string",
+      "description": "Sanitized failure classification only. Never a message, a token, or a glucose value."
+    },
+    "last_error_name": {
+      "type": "string",
+      "description": "The error class name only (for example TypeError), so a recurring failure can be diagnosed without storing a message."
+    },
+    "next_attempt_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the sweep may try this owner again."
+    },
+    "last_attempt_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the most recent retry ran."
+    }
+  },
+  "required": [
+    "owner_user_id",
+    "status"
+  ],
+  "rls": {
+    "read": false,
+    "create": {
+      "user_condition": {
+        "role": "__server_only__"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "__server_only__"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "__server_only__"
+      }
+    }
+  }
+}

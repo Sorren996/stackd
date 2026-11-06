@@ -1,6 +1,8 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.54';
 import { secrets } from 'base44:runtime';
 import { DEXCOM_TOKEN_URL, DEXCOM_API_BASE } from "../../shared/dexcomConfig.ts";
+import { notifyAfterPersist } from "../../shared/notificationIngest.ts";
+import { appOrigin } from "../../shared/sharingAccess.ts";
 
 // ── Dexcom V3 Sync ──────────────────────────────────────────
 // Pulls new EGV readings from every connected Dexcom source.
@@ -383,6 +385,14 @@ export default async function(req) {
         }
 
         diag.status = toCreate.length > 0 ? "synced" : "no_new_records";
+
+        // Notifications: bulkCreate emits no per-record entity trigger, so the
+        // hand-off is awaited here. Isolated — it can never fail ingestion.
+        if (diag.records_inserted > 0) {
+          const notify = await notifyAfterPersist({ sr, ownerId: owner, origin: appOrigin(req) });
+          diag.notification_dispatch = notify.dispatched ? "evaluated" : notify.reason;
+        }
+
         results.push(diag);
       } catch (error) {
         diag.status = "error";

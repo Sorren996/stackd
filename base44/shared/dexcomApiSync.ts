@@ -3,6 +3,7 @@
 // Identical behavior to the original fetchDexcomReadings per-connection loop.
 
 import { DEXCOM_TOKEN_URL, DEXCOM_API_BASE } from "./dexcomConfig.ts";
+import { notifyAfterPersist } from "./notificationIngest.ts";
 
 const MAX_QUERY_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 const INITIAL_SYNC_WINDOW_MS = 24 * 60 * 60 * 1000;
@@ -289,6 +290,13 @@ export async function syncApiForConnection(
       await Promise.all(
         [...manualIdsToDelete].map((id) => sr.entities.GlucoseReading.delete(id))
       );
+    }
+
+    // Notifications: bulkCreate emits no per-record entity trigger, so the
+    // hand-off is awaited here. Isolated — it can never fail ingestion.
+    if (diag.records_inserted > 0) {
+      const notify = await notifyAfterPersist({ sr, ownerId: owner });
+      diag.notification_dispatch = notify.dispatched ? "evaluated" : notify.reason;
     }
 
     if (newestSystemTime) {

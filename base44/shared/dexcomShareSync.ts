@@ -2,6 +2,7 @@
 // syncDexcomGlucose function can run Share + API V3 in a single pass.
 // Identical behavior to the original fetchDexcomShareReadings per-connection loop.
 
+import { notifyAfterPersist } from "./notificationIngest.ts";
 import {
   DEXCOM_SHARE_BASE_URL_US,
   DEXCOM_SHARE_APPLICATION_ID_US,
@@ -464,6 +465,17 @@ export async function syncShareForConnection(
       recordsWritten: diag.records_inserted,
       durationMs: Date.now() - dbStart,
     }));
+
+    // ── Notifications run server-side, right after persistence ──────────
+    // These readings arrive through bulkCreate, which emits no per-record
+    // entity trigger, so the hand-off is made here. It is awaited (never a
+    // fire-and-forget call ingestion's lifetime could cut short) yet fully
+    // isolated: a notification failure can never roll back a stored reading.
+    if (dbWriteOk && diag.records_inserted > 0) {
+      const notify = await notifyAfterPersist({ sr, ownerId: owner, readingIds: insertedIds });
+      diag.notification_dispatch = notify.dispatched ? "evaluated" : notify.reason;
+      if (!notify.dispatched) diag.notification_dispatch_code = notify.code ?? null;
+    }
 
     if (latestTime) {
       diag.latest_glucose_timestamp = new Date(latestTime).toISOString();
