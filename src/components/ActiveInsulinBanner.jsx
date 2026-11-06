@@ -41,6 +41,7 @@ import ComfortZoneCard from "./ComfortZoneCard";
 import DailyBalanceSection from "./dailybalance/DailyBalanceSection";
 import CurrentGlucoseNote from "./glucose/CurrentGlucoseNote";
 import CurrentGlucoseCard from "./graph/CurrentGlucoseCard";
+import LiveReadingPlaceholder from "./graph/LiveReadingPlaceholder";
 import { filterReadingsForStats, computeTimeInRangeFromReadings } from "@/lib/timeInRange";
 import { resolveGlucoseTrend } from "@/lib/glucoseTrend";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
@@ -725,7 +726,7 @@ const TREND_ICONS = {
   "double_down": ChevronsDown
 };
 
-export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucoseReadings = [], carbEntries = [], graphSlot = null, onEditGlucose = null, onEditDose = null, onDeleteDose = null, connectBanner = null }) {
+export default function ActiveInsulinBanner({ doses = [], latestGlucose, liveReadingPending = false, liveReadingUnverified = false, glucoseReadings = [], carbEntries = [], graphSlot = null, onEditGlucose = null, onEditDose = null, onDeleteDose = null, connectBanner = null }) {
   const [insulinSettings, setInsulinSettings] = useState(readInsulinSettings);
   const [targetRange, setTargetRange] = useState(readTargetRange);
   const [centerGlucoseStatus, setCenterGlucoseStatus] = useState(null);
@@ -1095,6 +1096,9 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
         </div>
 
         <div className="section-label mt-5">Current Glucose</div>
+        {liveReadingPending ? (
+          <LiveReadingPlaceholder />
+        ) : (
         <AnchorNumber
           value={glucoseValue != null ? formatGlucose(glucoseValue) : "-"}
           unit={glucoseUnitLabel()}
@@ -1102,7 +1106,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
           trendIcon={glucoseValue != null ? <TrendIcon size={30} strokeWidth={2.5} /> : null}
           trendColor={inRange ? "#3f3830" : glucoseColor}
           subcaption={
-          <span className="font-serif-italic">reading {(() => {
+          <span className="font-serif-italic">{liveReadingUnverified ? "last known, " : "reading "}{(() => {
               if (!latestGlucose?.recorded_at) return "just now";
               const mins = Math.max(0, Math.round((nowMinute * MINUTE_MS - new Date(latestGlucose.recorded_at).getTime()) / 60000));
               if (mins < 1) return "just now";
@@ -1110,13 +1114,14 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, glucose
               return `${Math.floor(mins / 60)}h ${mins % 60}m ago`;
             })()}</span>
           } />
+        )}
         
 
-        {isGlucoseStale ?
+        {!liveReadingPending && (isGlucoseStale ?
         <StaleReadingBanner visible={isGlucoseStale} /> :
 
         <CurrentGlucoseNote note={glucoseNote} tone={glucoseZone.zone} />
-        }
+        )}
 
         <DailyBalanceSection
           percentage={comfortZonePercentage}

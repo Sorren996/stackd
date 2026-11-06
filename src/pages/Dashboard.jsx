@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import ActivityGraph from "../components/ActivityGraph";
@@ -17,35 +17,18 @@ import DexcomSyncStatus from "@/components/DexcomSyncStatus";
 import ConnectGlucoseSourcePrompt from "@/components/ConnectGlucoseSourcePrompt";
 import SensorSessionBanner from "@/components/SensorSessionBanner";
 import AmbientInscription from "@/components/dashboard/AmbientInscription";
+import {
+  readCachedLatestGlucose,
+  readCachedLatestGlucoseSavedAt,
+  writeCachedLatestGlucose,
+} from "@/lib/latestGlucoseCache";
+import { LIVE_READING, LIVE_READING_DEADLINE_MS, liveReadingState } from "@/lib/liveReadingGate";
 
 const FRESH_DATA_MS = 60 * 1000;
 const GRAPH_DATA_MS = 5 * 60 * 1000;
 const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 const TWO_DAYS_MS = 48 * 60 * 60 * 1000;
-const LATEST_GLUCOSE_CACHE_KEY = "latest_glucose_cache";
-
-function readCachedLatestGlucose() {
-  if (typeof window === "undefined") return [];
-
-  try {
-    const cached = window.localStorage.getItem(LATEST_GLUCOSE_CACHE_KEY);
-    return cached ? [JSON.parse(cached)] : [];
-  } catch {
-    return [];
-  }
-}
-
-function writeCachedLatestGlucose(reading) {
-  if (typeof window === "undefined" || !reading) return;
-
-  try {
-    window.localStorage.setItem(LATEST_GLUCOSE_CACHE_KEY, JSON.stringify(reading));
-    window.dispatchEvent(new Event("latest-glucose-updated"));
-  } catch {
-    // Ignore storage failures; the live query still owns the source of truth.
-  }
-}
 
 function replaceCachedItem(queryClient, queryKey, updatedItem) {
   queryClient.setQueryData(queryKey, (current = []) =>
@@ -59,9 +42,25 @@ export default function Dashboard() {
   const [showAllDoses, setShowAllDoses] = useState(false);
   const [editingLog, setEditingLog] = useState(null);
   const { connected: dexcomConnected, isLoading: dexcomLoading, connection: dexcomConnection } = useDexcomConnection();
-  useVisibilityRefresh();
   const { requestRefresh } = useDexcomRefresh();
   const stackingAlertsEnabled = localStorage.getItem("stacking_alerts_enabled") !== "false";
+
+  // ── Live reading confirmation ───────────────────────────────────────────
+  // A launch, or a return from behind the lock screen, begins without any
+  // proof this device has seen the newest saved reading. Until one lands the
+  // hero shows a neutral placeholder rather than the previous value dressed as
+  // current. `revalidatedAt` opens that window; the deadline only stops it
+  // waiting — after it, the last known reading returns, labelled as such.
+  const [revalidatedAt, setRevalidatedAt] = useState(() => Date.now());
+  const [readingDeadlinePassed, setReadingDeadlinePassed] = useState(false);
+
+  const markReadingUnconfirmed = useCallback(() => {
+    setReadingDeadlinePassed(false);
+    setRevalidatedAt(Date.now());
+  }, []);
+
+  // One coordinator for foreground returns (visibility, pageshow, online).
+  useVisibilityRefresh({ onRevalidate: markReadingUnconfirmed });
 
   useEffect(() => {
     const interval = setInterval(() => setNow(Date.now()), 60000);
@@ -75,13 +74,25 @@ export default function Dashboard() {
     gcTime: GRAPH_DATA_MS,
   });
 
-  const { data: latestGlucoseRows = [], isLoading: loadingLatestGlucose } = useQuery({
+  const {
+    data: latestGlucoseRows = [],
+    isLoading: loadingLatestGlucose,
+    dataUpdatedAt: latestGlucoseUpdatedAt,
+  } = useQuery({
     queryKey: ["latest-glucose"],
     queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", 1),
     staleTime: 30 * 1000,
     refetchInterval: dexcomConnected ? 60_000 : false,
     gcTime: GRAPH_DATA_MS,
-    initialData: readCachedLatestGlucose,
+    // A cold launch always re-reads the account's already-saved readings. This
+    // is a database read, not a Dexcom poll: it never waits for the sensor, and
+    // a same-as-before reading is a valid answer that keeps its true age.
+    refetchOnMount: "always",
+    // The cached reading carries the moment it was saved, so an old
+    // observation is immediately stale and revalidates instead of passing as
+    // fresh. Only the account that saved it can read it back.
+    initialData: () => readCachedLatestGlucose(),
+    initialDataUpdatedAt: () => readCachedLatestGlucoseSavedAt(),
     placeholderData: () => queryClient.getQueryData(["glucose-readings", "graph"])?.slice(0, 1) ?? [],
   });
 
@@ -89,6 +100,25 @@ export default function Dashboard() {
     // Only a real measurement is cached for the next cold start.
     if (latestGlucoseRows[0]?.source !== "system") writeCachedLatestGlucose(latestGlucoseRows[0]);
   }, [latestGlucoseRows]);
+
+  const readingState = liveReadingState({
+    dataUpdatedAt: latestGlucoseUpdatedAt,
+    revalidatedAt,
+    deadlineElapsed: readingDeadlinePassed,
+  });
+
+  useEffect(() => {
+    if (readingDeadlinePassed) return undefined;
+    if (readingState !== LIVE_READING.PENDING) return undefined;
+    const id = setTimeout(() => setReadingDeadlinePassed(true), LIVE_READING_DEADLINE_MS);
+    return () => clearTimeout(id);
+  }, [readingState, readingDeadlinePassed]);
+
+  useEffect(() => {
+    if (readingState === LIVE_READING.CURRENT && readingDeadlinePassed) {
+      setReadingDeadlinePassed(false);
+    }
+  }, [readingState, readingDeadlinePassed]);
 
   const { data: glucoseReadings = [] } = useQuery({
     queryKey: ["glucose-readings", "graph"],
@@ -195,19 +225,6 @@ export default function Dashboard() {
       cancelled = true;
       clearInterval(intervalId);
     };
-  }, [dexcomConnected, requestRefresh]);
-
-  // Foreground refresh — when the PWA returns to the foreground, check
-  // for new readings immediately (the OS may have suspended the timer).
-  useEffect(() => {
-    if (!dexcomConnected) return undefined;
-    const onVisible = () => {
-      if (document.visibilityState === "visible") {
-        requestRefresh(false).catch(() => {});
-      }
-    };
-    document.addEventListener("visibilitychange", onVisible);
-    return () => document.removeEventListener("visibilitychange", onVisible);
   }, [dexcomConnected, requestRefresh]);
 
   const { data: splitPlans = [] } = useQuery({
@@ -417,6 +434,8 @@ export default function Dashboard() {
             <ActiveInsulinBanner
               doses={recentDoses}
               latestGlucose={latestGlucose}
+              liveReadingPending={readingState === LIVE_READING.PENDING}
+              liveReadingUnverified={readingState === LIVE_READING.UNVERIFIED}
               glucoseReadings={heroGlucoseReadings}
               carbEntries={recentCarbs}
               connectBanner={!dexcomConnected && !dexcomLoading ? (

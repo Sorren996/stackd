@@ -205,6 +205,9 @@ export function clearLocalSettingsCache() {
     localStorage.removeItem(key);
   }
   localStorage.removeItem("latest_glucose_cache");
+  // The newest reading's owner and saved time go with it, so a cleared cache
+  // can never be read back as this account's.
+  localStorage.removeItem("latest_glucose_cache_meta");
   localStorage.removeItem(CACHE_OWNER_KEY);
 }
 

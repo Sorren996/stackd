@@ -1,16 +1,20 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useDexcomRefresh } from "./useDexcomRefresh";
 
-// Refresh key glucose queries when the PWA returns to the foreground.
-// Systems suspend JavaScript timers in backgrounded webviews, so interval-based
-// refetching alone isn't enough — this listener revalidates the freshest data
-// the moment the user sees the app again.
+// The one foreground refresh coordinator.
 //
-// It also triggers a Dexcom Share refresh via the centralized gate, so new
-// readings are pulled promptly after the app returns to the foreground
-// (the reading-age gate prevents unnecessary API calls if the cached
-// reading is still fresh).
+// Every reason the app comes back in front of someone — the document becoming
+// visible, a page restored from the back/forward cache, the network returning —
+// arrives here instead of in a listener per screen. Triggers that land together
+// (iOS fires several at once on resume) collapse into a single round of work,
+// so no two handlers ever race for the same refresh.
+//
+// It revalidates the freshest data the user can see and asks the centralized
+// Dexcom gate whether a new reading is likely available. The gate (and the
+// server's own freshness and rate limits) still decide whether an API call
+// happens at all, and a reading that has not changed is a valid answer.
+
 const FOREGROUND_REFRESH_KEYS = [
   ["latest-glucose"],
   ["glucose-readings", "graph"],
@@ -20,24 +24,63 @@ const FOREGROUND_REFRESH_KEYS = [
   ["unread-coach-insights"],
 ];
 
-export function useVisibilityRefresh() {
+// A resume fires several triggers within a few milliseconds (visibility, then
+// pageshow, then online). Only those bursts are collapsed; a genuinely separate
+// return still refreshes. Overlapping network work is deduped downstream by
+// React Query and by the Dexcom refresh singleton.
+const MIN_TRIGGER_GAP_MS = 400;
+
+export function useVisibilityRefresh({ onRevalidate } = {}) {
   const queryClient = useQueryClient();
   const { requestRefresh } = useDexcomRefresh();
 
+  // Kept in a ref so a new callback identity never re-registers the listeners.
+  const onRevalidateRef = useRef(onRevalidate);
+  onRevalidateRef.current = onRevalidate;
+
   useEffect(() => {
-    const handleVisibilityChange = () => {
+    let lastTriggerAt = 0;
+
+    const refresh = () => {
+      const now = Date.now();
+      if (now - lastTriggerAt < MIN_TRIGGER_GAP_MS) return;
+      lastTriggerAt = now;
+
+      // Anything the screen shows as "current" must be confirmed again before
+      // it is painted as current after a resume.
+      onRevalidateRef.current?.();
+
+      FOREGROUND_REFRESH_KEYS.forEach((key) => {
+        queryClient.invalidateQueries({ queryKey: key });
+      });
+
+      // The gate checks the newest reading's age and skips the API call when
+      // the cached reading is still fresh; the singleton inside collapses any
+      // simultaneous callers.
+      requestRefresh(false).catch(() => {});
+    };
+
+    const handleVisibility = () => {
+      // Leaving marks the live display as needing revalidation, so returning
+      // never paints the previous reading as current. Returning refreshes.
       if (document.visibilityState === "visible") {
-        FOREGROUND_REFRESH_KEYS.forEach((key) => {
-          queryClient.invalidateQueries({ queryKey: key });
-        });
-        // Ask the centralized gate whether a Dexcom fetch is needed.
-        // The gate checks the newest reading timestamp and skips the
-        // API call if the cached reading is still fresh.
-        requestRefresh(false).catch(() => {});
+        refresh();
+      } else {
+        onRevalidateRef.current?.();
       }
     };
 
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+    const handlePageShow = () => refresh();
+    const handleOnline = () => refresh();
+
+    document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("pageshow", handlePageShow);
+    window.addEventListener("online", handleOnline);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("pageshow", handlePageShow);
+      window.removeEventListener("online", handleOnline);
+    };
   }, [queryClient, requestRefresh]);
 }

@@ -5,12 +5,18 @@
 // Nothing here is authority: every shared read is re-checked server-side.
 
 import { base44 } from "@/api/base44Client";
+import { withStartupDeadline } from "@/lib/startupDiagnostics";
 
 /** The viewer notice version this build expects. Bump to re-ask everyone. */
 export const NOTICE_VERSION = "1.0";
 
 async function call(payload) {
-  const response = await base44.functions.invoke("getMyAccessProfile", payload);
+  // A bounded request: an unanswered capability check must never hold the
+  // launch on a splash. On a deadline the caller's existing fallback applies —
+  // it never silently becomes a viewer or a different account.
+  const response = await withStartupDeadline(
+    base44.functions.invoke("getMyAccessProfile", payload)
+  );
   const data = response?.data || {};
   if (data.ok !== true) {
     const error = new Error(data.reason || "request_failed");

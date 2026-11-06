@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Toaster } from "@/components/ui/toaster"
 import { Toaster as SonnerToaster } from "@/components/ui/sonner"
 import { QueryClientProvider, useQuery } from '@tanstack/react-query'
@@ -51,12 +51,29 @@ import SplitPlanReview from "@/pages/SplitPlanReview";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { ACKNOWLEDGMENT_VERSIONS, CHECKBOX_KEYS } from "@/lib/acknowledgmentConfig";
 import { loadUserSettings, migrateLocalSettingsIfNeeded, cacheSettingsLocally } from "@/lib/userSettings";
-import { fetchAllGlucoseReadings } from "@/lib/fetchAllGlucose";
+import {
+  STARTUP_DATA_DEADLINE_MS,
+  logStartup,
+  startupErrorCode,
+  withStartupDeadline,
+} from "@/lib/startupDiagnostics";
+import StartupRecovery from "@/components/StartupRecovery";
 import useAccessProfile from "@/hooks/useAccessProfile";
 
 const AuthenticatedApp = () => {
-  const { user, isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, isAuthenticated, handleSessionExpired } = useAuth();
+  const {
+    user,
+    isLoadingAuth,
+    isLoadingPublicSettings,
+    authError,
+    navigateToLogin,
+    isAuthenticated,
+    handleSessionExpired,
+    startupError,
+    retryStartup,
+  } = useAuth();
   const [dataReady, setDataReady] = useState(false);
+  const [retryingSurfaces, setRetryingSurfaces] = useState(false);
 
   // What this account IS — resolved server-side from invitation and
   // relationship data before any patient gate or patient query runs. Someone
@@ -65,6 +82,15 @@ const AuthenticatedApp = () => {
   const profile = useAccessProfile();
   const profileSettled = profile.resolved || Boolean(profile.error);
   const viewerMode = profileSettled && profile.mode === "follower";
+
+  // A capability check that never resolved is recorded once, by code only.
+  const profileErrorLogged = useRef(false);
+  useEffect(() => {
+    if (profile.error && !profileErrorLogged.current) {
+      profileErrorLogged.current = true;
+      logStartup("profile", { outcome: "error", code: "PROFILE_UNRESOLVED" });
+    }
+  }, [profile.error]);
 
   // Wire global auth-failure handler so any 401/403 during a query or mutation
   // triggers the centralized session-expiration flow.
@@ -76,7 +102,11 @@ const AuthenticatedApp = () => {
     return () => setOnAuthFailure(null);
   }, [handleSessionExpired]);
 
-  const { data: latestAck, isLoading: ackLoading } = useQuery({
+  const {
+    data: latestAck,
+    isLoading: ackLoading,
+    isError: ackError,
+  } = useQuery({
     queryKey: ["latest-acknowledgment"],
     queryFn: () => base44.entities.UserAcknowledgment.list("-accepted_at", 1),
     enabled: isAuthenticated && profileSettled && !viewerMode,
@@ -91,106 +121,70 @@ const AuthenticatedApp = () => {
     }
 
     let cancelled = false;
-    const prefetchData = async () => {
-      // Background prefetch for secondary pages — fired without awaiting so
-      // the splash can dismiss as soon as the Dashboard data is ready.
-      queryClientInstance
-        .prefetchQuery({
-          queryKey: ["history-summary"],
-          queryFn: async () => {
-            const res = await base44.functions.invoke("getHistorySummary", {
-              tzOffsetMinutes: new Date().getTimezoneOffset(),
-            });
-            return res.data;
-          },
-        })
-        .catch(() => {});
+    const startedAt = Date.now();
 
-      // Heavy multi-chunk analytics fetch — fire in the background so it
-      // doesn't delay the splash screen. The Analytics page also uses the
-      // already-prefetched graph readings for instant render.
-      queryClientInstance
-        .prefetchQuery({
-          queryKey: ["glucose-readings", "analytics"],
-          queryFn: () => fetchAllGlucoseReadings(270),
-        })
-        .catch(() => {});
+    // Only the two things the shell itself needs block the launch: the person's
+    // own settings (the confirmed-plan gate reads them) and the newest saved
+    // reading. Everything larger — graph history, meal and dose history,
+    // split plans, analytics and history summaries — is left to the page that
+    // asks for it, at its own exact ranges, so the shell never waits on
+    // thousands of rows and no history is truncated.
+    //
+    // The wait is bounded: a slow or unanswered settings read cannot hold the
+    // splash open, and a failure is reported, never mistaken for "no records".
+    const criticalWarmup = Promise.allSettled([
+      queryClientInstance.prefetchQuery({
+        queryKey: ["user-settings"],
+        queryFn: async () => {
+          try {
+            await migrateLocalSettingsIfNeeded();
+          } catch {
+            // Migration failure is non-fatal
+          }
+          return loadUserSettings();
+        },
+      }),
+      queryClientInstance.prefetchQuery({
+        queryKey: ["latest-glucose"],
+        queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", 1),
+      }),
+    ]);
 
-      await Promise.all([
-        queryClientInstance.prefetchQuery({
-          queryKey: ["user-settings"],
-          queryFn: async () => {
-            try {
-              await migrateLocalSettingsIfNeeded();
-            } catch {
-              // Migration failure is non-fatal
+    withStartupDeadline(criticalWarmup, STARTUP_DATA_DEADLINE_MS)
+      .catch((error) => {
+        logStartup("data", {
+          outcome: "error",
+          code: startupErrorCode(error),
+          durationMs: Date.now() - startedAt,
+        });
+      })
+      .finally(() => {
+        if (cancelled) return;
+
+        // Cache user settings into localStorage so all pages (Dashboard,
+        // ActiveInsulinBanner, etc.) can read them immediately on login.
+        try {
+          const settings = queryClientInstance.getQueryData(["user-settings"]);
+          if (settings && user?.id) {
+            cacheSettingsLocally(user.id, settings);
+            // Save the browser timezone so the AI Coach can reference local times.
+            const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            if (browserTz && settings.timezone !== browserTz) {
+              base44.entities.UserSettings.update(settings.id, { timezone: browserTz }).catch(() => {});
             }
-            return loadUserSettings();
-          },
-        }),
-        queryClientInstance.prefetchQuery({
-          queryKey: ["insulin-doses"],
-          queryFn: () => base44.entities.InsulinDose.list("-administered_at", 200),
-        }),
-        queryClientInstance.prefetchQuery({
-          queryKey: ["latest-glucose"],
-          queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", 1),
-        }),
-        queryClientInstance.prefetchQuery({
-          queryKey: ["glucose-readings", "graph"],
-          queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", 5000),
-        }),
-        queryClientInstance.prefetchQuery({
-          queryKey: ["glucose-readings"],
-          queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", 1000),
-        }),
-        queryClientInstance.prefetchQuery({
-          queryKey: ["carb-entries"],
-          queryFn: () => base44.entities.CarbEntry.list("-consumed_at", 300),
-        }),
-        queryClientInstance.prefetchQuery({
-          queryKey: ["carb-entries", "graph"],
-          queryFn: () => base44.entities.CarbEntry.list("-consumed_at", 1000),
-        }),
-        queryClientInstance.prefetchQuery({
-          queryKey: ["insulin-doses", "graph"],
-          queryFn: () => base44.entities.InsulinDose.list("-administered_at", 1000),
-        }),
-        queryClientInstance.prefetchQuery({
-          queryKey: ["split-plans"],
-          queryFn: () => base44.entities.SplitDosePlan.list("-created_date", 20),
-        }),
-        queryClientInstance.prefetchQuery({
-          queryKey: ["dexcom-connection"],
-          queryFn: () => base44.entities.DexcomConnection.list("-created_date", 1),
-        }),
-      ]);
-
-      // Cache user settings into localStorage so all pages (Dashboard,
-      // ActiveInsulinBanner, etc.) can read them immediately on login.
-      try {
-        const settings = queryClientInstance.getQueryData(["user-settings"]);
-        if (settings && user?.id) {
-          cacheSettingsLocally(user.id, settings);
-          // Save the browser timezone so the AI Coach can reference local times.
-          const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-          if (browserTz && settings.timezone !== browserTz) {
-            base44.entities.UserSettings.update(settings.id, { timezone: browserTz }).catch(() => {});
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(new Event("target-range-updated"));
+              window.dispatchEvent(new Event("insulin-settings-updated"));
+            }
           }
-          if (typeof window !== "undefined") {
-            window.dispatchEvent(new Event("target-range-updated"));
-            window.dispatchEvent(new Event("insulin-settings-updated"));
-          }
+        } catch {
+          // Settings cache failure is non-fatal — don't block the app.
         }
-      } catch {
-        // Settings cache failure is non-fatal — don't block the app.
-      }
 
-      if (!cancelled) {
+        logStartup("data", { durationMs: Date.now() - startedAt });
         setDataReady(true);
-      }
-    };
-    prefetchData();
+      });
+
     return () => { cancelled = true; };
   }, [isAuthenticated, authError, profileSettled, viewerMode]);
 
@@ -220,7 +214,11 @@ const AuthenticatedApp = () => {
 
   // Onboarding check — only runs after acknowledgment is complete.
   // Existing accounts (with any health data) are auto-marked as onboarded.
-  const { data: onboardingData, isLoading: onboardingChecking } = useQuery({
+  const {
+    data: onboardingData,
+    isLoading: onboardingChecking,
+    isError: onboardingError,
+  } = useQuery({
     queryKey: ["onboarding-check"],
     queryFn: async () => {
       const settings = queryClientInstance.getQueryData(["user-settings"]);
@@ -248,13 +246,46 @@ const AuthenticatedApp = () => {
     staleTime: 0,
   });
 
+  // Explicit, manual retry for the account surfaces. Nothing here reloads the
+  // app on its own — one press, one attempt.
+  const retryAccountSurfaces = useCallback(() => {
+    setRetryingSurfaces(true);
+    Promise.allSettled([
+      queryClientInstance.invalidateQueries({ queryKey: ["latest-acknowledgment"] }),
+      queryClientInstance.invalidateQueries({ queryKey: ["onboarding-check"] }),
+      queryClientInstance.invalidateQueries({ queryKey: ["user-settings"] }),
+      queryClientInstance.invalidateQueries({ queryKey: ["access-profile"] }),
+    ]).finally(() => setRetryingSurfaces(false));
+  }, []);
+
   // Still checking auth, or still resolving what this account is. A neutral
   // splash — never a patient empty state for someone who only follows along.
+  // Every step behind this splash is bounded, so it cannot spin forever.
   if (isLoadingPublicSettings || isLoadingAuth || profile.resolving) {
     return (
       <AnimatePresence>
         <SplashScreen />
       </AnimatePresence>
+    );
+  }
+
+  // A launch step did not answer inside its deadline. A calm bounded state with
+  // an explicit Retry: nothing is claimed as signed in, and a network blip
+  // never silently signs anyone out.
+  if (startupError && !isAuthenticated) {
+    return (
+      <StartupRecovery
+        title={
+          startupError.type === "timeout"
+            ? "This is taking longer than usual"
+            : "We could not reach Stackd just now"
+        }
+        message="Your data is safe. Check your connection, then try again."
+        onRetry={retryStartup}
+        retrying={isLoadingAuth || isLoadingPublicSettings}
+        showSignIn
+        onSignIn={() => { window.location.href = "/login"; }}
+      />
     );
   }
 
@@ -291,6 +322,24 @@ const AuthenticatedApp = () => {
   // hold the splash until the ack check has resolved (it's a tiny list call).
   // A viewer gets the follower shell: following on the home screen, a bar with
   // no logging action, and no patient set-up or acknowledgments anywhere.
+  // What this account is could not be confirmed. Nothing is guessed in either
+  // direction: a follower is never asked to accept a patient's medical notices,
+  // and a patient's own dashboard is never hidden, because a guess is not made
+  // at all. One press retries.
+  if (profile.error) {
+    return (
+      <StartupRecovery
+        title="We could not confirm your account set-up"
+        message="Your data is safe. Check your connection, then try again."
+        onRetry={() => {
+          profile.refetch();
+          retryAccountSurfaces();
+        }}
+        retrying={profile.isFetching || retryingSurfaces}
+      />
+    );
+  }
+
   if (viewerMode) {
     return (
       <ErrorBoundary>
@@ -317,12 +366,38 @@ const AuthenticatedApp = () => {
     );
   }
 
+  // The consent record could not be read. That is not "no consent given", so
+  // nobody is asked to accept anything again because of a network blip — and
+  // nothing is ever recorded as accepted on their behalf either.
+  if (ackError) {
+    return (
+      <StartupRecovery
+        title="We could not confirm your account status"
+        message="Nothing has changed on your account. Try again in a moment."
+        onRetry={retryAccountSurfaces}
+        retrying={retryingSurfaces}
+      />
+    );
+  }
+
   // Acknowledgment flow required
   if (needsAcknowledgment) {
     return <RequiredAcknowledgments />;
   }
 
   // Onboarding walkthrough — only for new users who haven't completed it.
+  // A failed check is not "onboarding required": it is reported with Retry.
+  if (onboardingError) {
+    return (
+      <StartupRecovery
+        title="We could not finish checking your set-up"
+        message="Nothing has changed on your account. Try again in a moment."
+        onRetry={retryAccountSurfaces}
+        retrying={retryingSurfaces}
+      />
+    );
+  }
+
   if (onboardingChecking || onboardingData == null) {
     return (
       <AnimatePresence>

@@ -1,8 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
-
-const LATEST_GLUCOSE_CACHE_KEY = "latest_glucose_cache";
+import { writeCachedLatestGlucose } from "@/lib/latestGlucoseCache";
 
 function asList(value) {
   if (Array.isArray(value)) return value;
@@ -16,15 +15,7 @@ function prependUnique(entries, current = []) {
   return [...entries, ...list.filter((entry) => !ids.has(entry.id))];
 }
 
-function writeCachedLatestGlucose(reading) {
-  if (typeof window === "undefined" || !reading) return;
-  try {
-    window.localStorage.setItem(LATEST_GLUCOSE_CACHE_KEY, JSON.stringify(reading));
-    window.dispatchEvent(new Event("latest-glucose-updated"));
-  } catch {
-    // Cache is optional; React Query still refreshes from the backend.
-  }
-}
+
 
 export function useCreateDoses() {
   const queryClient = useQueryClient();
