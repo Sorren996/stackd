@@ -67,7 +67,9 @@ export default function Settings() {
         <LedgerRow label="People you follow" value="Invitations you accepted" to="/shared" />
       </SectionCard>
 
-      <SensorSessionCard />
+      <SectionCard label="Notifications">
+        <LedgerRow label="Notifications" value="Push, privacy, quiet hours" to="/settings/notifications" />
+      </SectionCard>      <SensorSessionCard />
 
       <SectionCard label="App">
         <LedgerRow label="Display" value={`Chart scale: ${graphHeight}`} to="/settings/display" />

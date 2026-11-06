@@ -149,6 +149,15 @@ export function publicRelationship(access: any, now: number = Date.now()): Recor
     status: effectiveStatus(access, now),
     scopes: effectiveScopes(access, now),
     alert_scopes: effectiveAlertScopes(access, now),
+    // Push permissions the sharer has granted on this relationship. Read-only
+    // here and only meaningful while glucose is shared; the follower's own
+    // narrowing lives in FollowNotificationPreference.
+    push: {
+      urgent_low: access?.push?.urgent_low === true,
+      below_range: access?.push?.below_range === true,
+      above_range: access?.push?.above_range === true,
+      missing_readings: access?.push?.missing_readings === true,
+    },
     contact_shared: Boolean(access.contact_shared),
     permission_version: Number(access.permission_version) || 1,
     invitation_id: access.invitation_id ?? null,

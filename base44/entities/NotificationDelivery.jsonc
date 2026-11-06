@@ -1,0 +1,122 @@
+{
+  "name": "NotificationDelivery",
+  "type": "object",
+  "properties": {
+    "recipient_user_id": {
+      "type": "string",
+      "description": "The account this notification was for. Derived server-side; the only account that may read this record."
+    },
+    "owner_user_id": {
+      "type": "string",
+      "description": "Whose readings the notification was about. Equal to the recipient for a personal notification."
+    },
+    "shared_access_id": {
+      "type": "string",
+      "description": "The sharing relationship, when the recipient is a follower. Empty for personal notifications."
+    },
+    "audience": {
+      "type": "string",
+      "enum": [
+        "self",
+        "follower"
+      ],
+      "description": "Whether this was the person's own notification or one about someone they follow."
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "urgent_low",
+        "below_range",
+        "above_range",
+        "missing_readings"
+      ],
+      "description": "Which approved notification category this was."
+    },
+    "channel": {
+      "type": "string",
+      "enum": [
+        "push"
+      ],
+      "default": "push",
+      "description": "Delivery channel. Email remains on its existing separate path and is not recorded here."
+    },
+    "event_key": {
+      "type": "string",
+      "description": "Deterministic key: category, reading owner, recipient, episode and channel."
+    },
+    "episode_key": {
+      "type": "string",
+      "description": "Identity of the glucose episode the notification belongs to, derived from real readings only."
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the triggering reading was taken, or when the missing-reading condition began."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "claimed",
+        "submitted",
+        "skipped",
+        "failed",
+        "unknown"
+      ],
+      "description": "How far this notification got. 'submitted' means the push service accepted it, never that it was delivered or seen. 'unknown' means an attempt may have been accepted but could not be confirmed."
+    },
+    "reason": {
+      "type": "string",
+      "description": "Short, non-clinical reason for a skip or failure (preference_off, quiet_hours, access_revoked, expired, transport_failed...)."
+    },
+    "detail_shown": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the preview was allowed to name the category and value. No glucose value is stored on this record."
+    },
+    "destination": {
+      "type": "string",
+      "description": "Safe in-app destination, re-checked against current access when opened."
+    },
+    "submitted_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the push service was asked to send. Never described as delivery."
+    },
+    "read_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the recipient opened this entry. Read is not the same as resolved or acknowledged care."
+    },
+    "permission_version": {
+      "type": "number",
+      "description": "The relationship's permission version at evaluation time, so a later revoke is provably later than this evaluation."
+    }
+  },
+  "required": [
+    "recipient_user_id",
+    "category",
+    "channel",
+    "event_key",
+    "status"
+  ],
+  "rls": {
+    "read": {
+      "data.recipient_user_id": "{{user.id}}"
+    },
+    "create": {
+      "user_condition": {
+        "role": "__server_only__"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "__server_only__"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "__server_only__"
+      }
+    }
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "name": "NotificationLedger",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "The recipient this ledger belongs to. Server-written only."
+    },
+    "scope_key": {
+      "type": "string",
+      "description": "Which scope the ledger covers: 'self' for the person's own notifications, or 'follow:<shared_access_id>' for one person they follow."
+    },
+    "claimed_keys": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "Event keys already claimed for this scope. Appended through one atomic conditional update, so a repeated or concurrent evaluation can never claim the same event twice. Bounded: the oldest keys are pulled as the list grows."
+    },
+    "pruned_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the oldest claim keys were last trimmed. History stays in NotificationDelivery."
+    }
+  },
+  "required": [
+    "user_id",
+    "scope_key"
+  ],
+  "rls": {
+    "read": false,
+    "create": {
+      "user_condition": {
+        "role": "__server_only__"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "__server_only__"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "__server_only__"
+      }
+    }
+  }
+}

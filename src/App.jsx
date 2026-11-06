@@ -33,6 +33,7 @@ import DisplaySettingsPage from './pages/DisplaySettingsPage';
 import SupportCreatorPage from './pages/SupportCreatorPage';
 import DexcomSettingsPage from './pages/DexcomSettingsPage';
 import SharingPage from './pages/SharingPage';
+import NotificationsPage from './pages/NotificationsPage';
 import FollowingHome from './pages/FollowingHome';
 import FollowerSettings from './pages/FollowerSettings';
 import FollowerLayout from '@/components/follower/FollowerLayout';
@@ -347,6 +348,7 @@ const AuthenticatedApp = () => {
           <Route element={<FollowerLayout />}>
             <Route path="/" element={<FollowingHome />} />
             <Route path="/following/settings" element={<FollowerSettings />} />
+            <Route path="/following/notifications" element={<NotificationsPage variant="follower" />} />
             {/* Kept so an existing bookmark still lands on something real. */}
             <Route path="/shared" element={<FollowingHome />} />
             <Route path="/follow" element={<FollowInvite />} />
@@ -430,6 +432,7 @@ const AuthenticatedApp = () => {
             <Route path="/settings/support-creator" element={<SupportCreatorPage />} />
             <Route path="/settings/dexcom" element={<DexcomSettingsPage />} />
             <Route path="/settings/sharing" element={<SharingPage />} />
+            <Route path="/settings/notifications" element={<NotificationsPage />} />
             <Route path="/shared" element={<FollowingHome />} />
             <Route path="/follow" element={<FollowInvite />} />
             <Route path="/settings/contact-support" element={<ContactSupportPage />} />

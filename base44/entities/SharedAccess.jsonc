@@ -60,6 +60,32 @@
         }
       }
     },
+    "push": {
+      "type": "object",
+      "description": "What this sharer permits this follower to be notified about by push. Every category defaults to off and is independent of email notices and call permission. Only meaningful while the glucose scope is on.",
+      "properties": {
+        "urgent_low": {
+          "type": "boolean",
+          "default": false,
+          "description": "Sharer permits a push when their reading is below the urgent threshold."
+        },
+        "below_range": {
+          "type": "boolean",
+          "default": false,
+          "description": "Sharer permits a push when their reading is below their comfort range."
+        },
+        "above_range": {
+          "type": "boolean",
+          "default": false,
+          "description": "Sharer permits a push when their reading stays above their comfort range."
+        },
+        "missing_readings": {
+          "type": "boolean",
+          "default": false,
+          "description": "Sharer permits a push when their readings stop updating."
+        }
+      }
+    },
     "contact_shared": {
       "type": "boolean",
       "default": false,

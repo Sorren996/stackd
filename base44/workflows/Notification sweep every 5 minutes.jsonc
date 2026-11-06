@@ -1,0 +1,47 @@
+{
+  "description": "A periodic sweep for the notification conditions that a new reading cannot report: readings that have stopped updating, plus a re-check of the current sustained state. Recipients with notifications off cost one query and are skipped. It never syncs a glucose source and never polls a provider.",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "recurring",
+      "cron_expression": "*/5 * * * *",
+      "one_time_date": null,
+      "timezone": "UTC",
+      "interval_value": null,
+      "interval_unit": null,
+      "interval_anchor": null,
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
+  },
+  "name": "Notification sweep every 5 minutes",
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "notification_sweep",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "sweep_notifications": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "evaluateNotifications",
+            "args": {
+              "mode": "sweep"
+            }
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Sweep notifications",
+            "description": "Missing readings and current state"
+          }
+        }
+      }
+    ]
+  }
+}

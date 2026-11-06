@@ -19,6 +19,8 @@ import {
   describeProjectionReason,
 } from "@/lib/sharing/sharingCopy";
 import { updateSharingScopes, describeSharingError } from "@/lib/sharing/sharingApi";
+import { savePushGrants, describeNotificationError } from "@/lib/notifications/notificationApi";
+import { CATEGORY_COPY } from "@/lib/notifications/notificationCopy";
 import { createSubmissionGate } from "@/lib/sharing/pendingAction";
 
 /**
@@ -34,6 +36,7 @@ export default function RelationshipSheet({ relationship, open, onClose, onChang
   const [busy, setBusy] = useState(false);
   const [pendingAction, setPendingAction] = useState("");
   const [confirmRevoke, setConfirmRevoke] = useState(false);
+  const [pushBusy, setPushBusy] = useState(false);
 
   // One submission at a time: a second tap while a change is in flight is
   // ignored rather than queued, so a slow connection can never apply it twice.
@@ -94,6 +97,23 @@ export default function RelationshipSheet({ relationship, open, onClose, onChang
 
   const toggleScope = (key, value) => apply("set_scopes", { scopes: { ...scopes, [key]: value } });
   const toggleAlert = (key, value) => apply("set_alerts", { alert_scopes: { ...alerts, [key]: value } });
+
+  const pushGrants = local.push || {};
+  const togglePush = async (key, value) => {
+    if (pushBusy) return;
+    setPushBusy(true);
+    setError("");
+    try {
+      const data = await savePushGrants(local.id, { ...pushGrants, [key]: value });
+      // Nothing is reported as done until the server has confirmed it.
+      setLocal((current) => ({ ...current, push: data.grants }));
+      onChanged?.();
+    } catch (err) {
+      setError(describeNotificationError(err));
+    } finally {
+      setPushBusy(false);
+    }
+  };
 
   return (
     <>
@@ -163,8 +183,40 @@ export default function RelationshipSheet({ relationship, open, onClose, onChang
           </div>
 
           <div className="pt-6">
-            <p className="section-label pb-1">Your contact number</p>
-            <div className="flex items-start gap-3 py-3">
+            <p className="section-label pb-1">Notifications</p>
+            <p className="pb-1 text-xs leading-relaxed" style={{ color: "#746959" }}>
+              What they may be notified about by push. They still choose whether to receive any of it, and the email
+              notices above are separate.
+            </p>
+            <div className="divide-y" style={{ borderColor: "#eadccf" }}>
+              {CATEGORY_COPY.map((category) => (
+                <div key={category.key} className="flex items-start gap-3 py-3" style={{ borderColor: "#eadccf" }}>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium" style={{ color: scopes.glucose ? "#3f3830" : "#a89e8d" }}>
+                      {category.label}
+                    </p>
+                    <p className="text-xs" style={{ color: "#746959" }}>
+                      {category.description}
+                    </p>
+                  </div>
+                  <Switch
+                    checked={Boolean(pushGrants[category.key])}
+                    disabled={pushBusy || busy || terminal || !scopes.glucose}
+                    aria-label={category.label}
+                    onCheckedChange={(value) => togglePush(category.key, value)}
+                  />
+                </div>
+              ))}
+            </div>
+            {!scopes.glucose && (
+              <p className="pt-1 text-xs" style={{ color: "#8a6326" }}>
+                Glucose sharing is off, so nothing can be sent.
+              </p>
+            )}
+          </div>
+
+          <div className="pt-6">
+            <p className="section-label pb-1">Your contact number</p>            <div className="flex items-start gap-3 py-3">
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium" style={{ color: "#3f3830" }}>
                   {local.contact_shared ? "Released to them" : "Not released"}

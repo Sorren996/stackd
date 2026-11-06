@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { BellRing, HeartHandshake, LogOut } from "lucide-react";
 import SectionCard from "@/components/editorial/SectionCard";
@@ -53,6 +53,22 @@ export default function FollowerSettings() {
       <h1 className="px-1 text-lg font-semibold" style={{ color: "#fdf9f2" }}>
         Your <span className="font-serif-italic" style={{ fontWeight: 400 }}>settings</span>
       </h1>
+
+      <SectionCard label="Notifications">
+        <Link
+          to="/following/notifications"
+          className="flex items-center justify-between py-2 text-sm font-medium"
+          style={{ color: "#3f3830" }}
+        >
+          <span>
+            Your <span className="font-serif-italic" style={{ fontWeight: 400 }}>notifications</span>
+          </span>
+          <span style={{ color: "#746959" }}>›</span>
+        </Link>
+        <p className="pt-1 text-xs leading-relaxed" style={{ color: "#746959" }}>
+          Choose what reaches you about each person you follow, and how much a preview shows.
+        </p>
+      </SectionCard>
 
       <SectionCard label="People you follow">
         {people.length === 0 ? (
