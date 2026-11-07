@@ -99,7 +99,7 @@ test('follower previews use the recipient’s own units, without changing owner 
   const f = fixture({ follower: true });
   f.preferences.show_health_details = true;
   await f.invoke({ recipientSettings: { glucose_units: 'mmol/L', timezone: 'UTC' } });
-  assert.match(f.sends[0].content, /3\.0 mmol\/L/);
+  assert.match(f.sends[0].title, /3\.0 mmol\/L/);
   assert.equal(settings.target_range_low, 70);
 });
 

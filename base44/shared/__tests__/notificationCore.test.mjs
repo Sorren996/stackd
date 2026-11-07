@@ -243,9 +243,10 @@ test("each gap is its own episode", () => {
 // ── Privacy ───────────────────────────────────────────────────────────────
 
 test("previews are generic unless health details are explicitly enabled", () => {
+  // A private urgent low still tells the person it is urgent, and nothing else.
   const generic = buildNotificationCopy({ category: "urgent_low", value: 52, units: "mg/dL", readingAt: NOW, showDetails: false });
-  assert.equal(generic.title, "Stackd update");
-  assert.equal(generic.body, "Open Stackd for details.");
+  assert.equal(generic.title, "Urgent Stackd alert");
+  assert.equal(generic.body, "Open Stackd to review.");
   assert.ok(!generic.body.includes("52"));
 
   const detailed = buildNotificationCopy({
@@ -256,10 +257,8 @@ test("previews are generic unless health details are explicitly enabled", () => 
     timeZone: "UTC",
     showDetails: true,
   });
-  assert.match(detailed.title, /urgent low/i);
-  assert.match(detailed.body, /52 mg\/dL/);
-  assert.match(detailed.body, /at \d/);
-  assert.ok(!/right now|now!/i.test(detailed.body), "no freshness claim");
+  assert.equal(detailed.title, "Urgent low: 52 mg/dL");
+  assert.match(detailed.body, /critically low/);
 });
 
 test("a follower preview never names the person unless details are on", () => {
@@ -276,18 +275,20 @@ test("a follower preview never names the person unless details are on", () => {
     showDetails: true,
     personName: "Sam",
   });
-  assert.match(detailed.title, /^Sam: /);
+  assert.match(detailed.title, /^Sam · /);
 });
 
-test("the missing-readings wording states the receipt time and nothing more", () => {
+test("the missing-readings wording states the age and receipt time and nothing more", () => {
   const copy = buildNotificationCopy({
     category: "missing_readings",
     readingAt: NOW - 40 * 60_000,
     timeZone: "UTC",
+    nowMs: NOW,
     showDetails: true,
   });
-  assert.equal(copy.title, "Your readings haven’t updated");
-  assert.match(copy.body, /^Your last reading was received at /);
+  assert.equal(copy.title, "Readings haven't updated");
+  assert.match(copy.body, /^No new readings for 40 minutes\./);
+  assert.match(copy.body, /Your last reading arrived at /);
 });
 
 // ── Quiet hours and daylight saving ───────────────────────────────────────

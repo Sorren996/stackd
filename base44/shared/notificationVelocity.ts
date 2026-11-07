@@ -1,3 +1,5 @@
+import { normalizeTrendWord } from './notificationTrend.ts';
+
 // Stackd-only fallback, NOT the Dexcom arrow/alert algorithm. Ingested rows
 // contain categorical trend strings only; they cannot define numeric velocity.
 // Four real same-source CGM readings, 12–18 minutes overall, 3–7 min intervals.
@@ -40,7 +42,9 @@ export function episodeSamples(rows, nowMs) {
     if (ids.has(row.id) && row.id) { const prior = ids.get(row.id); if (prior.at !== at || prior.value !== value || prior.source !== source) conflict = true; continue; }
     if (row.id) ids.set(row.id, { at, value, source });
     if (byTime.has(at)) { if (byTime.get(at).value !== value || byTime.get(at).source !== source) conflict = true; continue; }
-    byTime.set(at, { id: row.id || String(at), at, value, source });
+    // The trend belongs to this measurement only; a manual row has none.
+    const trend = source === 'dexcom' || source === 'dexcom_share' ? normalizeTrendWord(row.trend) : null;
+    byTime.set(at, { id: row.id || String(at), at, value, source, trend });
   }
   return { samples: [...byTime.values()].sort((a, b) => a.at - b.at), conflict };
 }

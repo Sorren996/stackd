@@ -53,10 +53,13 @@ export async function evaluateRecipient({ sr, ownerId, prefs, relationship = nul
   if (!decision) return 'no_event';
   const audience = relationship ? 'follower' : 'self';
   const covered = decision.coveredEvents;
+  // Built from the triggering measurement itself: its value, its timestamp and
+  // its own source trend. A later fetch never substitutes for what fired it.
   const copy = buildNotificationCopy({ category: decision.category, value: decision.sample.value,
     readingAt: decision.sample.at, units: displaySettings?.glucose_units || 'mg/dL', timeZone: prefs.quiet_timezone || displaySettings?.timezone || 'UTC',
     showDetails: prefs.show_health_details === true, personName: relationship?.sharer_display_name,
-    durationMinutes: decision.durationMinutes });
+    durationMinutes: decision.durationMinutes, trend: decision.sample.trend ?? null, nowMs,
+    coveredCategories: covered.map(c => c.category) });
   const episodeEvent = `${decision.episodeKey}${decision.repeatIndex ? `:repeat:${decision.repeatIndex}` : ''}`;
   const eventKey = notificationEventKey(decision.category, ownerId, recipientId, episodeEvent);
   // Older code appended nested claim arrays. Honor those spent keys too, but

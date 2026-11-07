@@ -15,6 +15,7 @@
 //    decided, and a sustained condition is never inferred across a gap.
 
 import { sanitizeNotificationOptions } from './notificationOptions.ts';
+import { normalizeTrendWord, trendArrowFor } from './notificationTrend.ts';
 
 // ── Categories and timings ────────────────────────────────────────────────
 
@@ -90,6 +91,8 @@ export interface ReadingRow {
   recorded_at?: unknown;
   source?: unknown;
   user_id?: string;
+  /** The source's own trend for this measurement, when it reported one. */
+  trend?: unknown;
 }
 
 export interface Sample {
@@ -98,6 +101,13 @@ export interface Sample {
   /** Epoch milliseconds of the measurement itself. */
   at: number;
   source: string;
+  /** Recognised source trend for THIS measurement, or null. Never inherited. */
+  trend: string | null;
+}
+
+/** A trend is only ever taken from the reading it was reported with. */
+export function sampleTrend(source: string, trend: unknown): string | null {
+  return source === "dexcom" || source === "dexcom_share" ? normalizeTrendWord(trend) : null;
 }
 
 /**
@@ -119,7 +129,7 @@ export function normalizeSamples(rows: ReadingRow[] | null | undefined, nowMs: n
     if (at > nowMs + toleranceMs) continue;
     if (seen.has(at)) continue;
     seen.add(at);
-    out.push({ id: String(row?.id ?? `${at}`), value, at, source });
+    out.push({ id: String(row?.id ?? `${at}`), value, at, source, trend: sampleTrend(source, row?.trend) });
   }
   return out.sort((a, b) => a.at - b.at);
 }
@@ -335,7 +345,8 @@ export function decideMissingNotification(input: MissingDecisionInput): MissingD
 // ── Privacy and previews ──────────────────────────────────────────────────
 
 export const GENERIC_TITLE = "Stackd update";
-export const GENERIC_BODY = "Open Stackd for details.";
+export const GENERIC_BODY = "Open Stackd to review.";
+export const PRIVATE_URGENT_TITLE = "Urgent Stackd alert";
 
 export function formatGlucoseValue(value: unknown, units: unknown): string {
   const v = Number(value);
@@ -365,7 +376,7 @@ export function formatClock(value: string | number | null | undefined, timeZone:
 
 export interface CopyInput {
   category: Category;
-  /** Only used when details are allowed. */
+  /** The triggering measurement's own value, never a later fetch. */
   value?: number | null;
   units?: string | null;
   readingAt?: number | null;
@@ -375,6 +386,12 @@ export interface CopyInput {
   /** The person being followed, for a follower's detailed preview. */
   personName?: string | null;
   durationMinutes?: number | null;
+  /** The triggering sample's own source trend, when it reported one. */
+  trend?: string | null;
+  /** Now, used only to state a genuinely measured age. */
+  nowMs?: number | null;
+  /** Every category this one send covers, after coalescing. */
+  coveredCategories?: string[] | null;
 }
 
 export interface PushCopy {
@@ -383,54 +400,113 @@ export interface PushCopy {
 }
 
 /**
+ * One headline per category. Deliberately not CATEGORY_LABELS (the settings
+ * labels) and never shared between categories, so a comfort-zone notice cannot
+ * read as an alert-threshold notice or the other way round.
+ */
+const PUSH_LABELS: Record<Category, string> = {
+  urgent_low: "Urgent low",
+  custom_low: "Low glucose",
+  custom_high: "High glucose",
+  below_range: "Below comfort zone",
+  above_range: "Above comfort zone",
+  falling_fast: "Falling fast",
+  rising_fast: "Rising fast",
+  missing_readings: "Readings haven't updated",
+};
+
+/** A second, coalesced condition is named by its OWN threshold. */
+const COALESCED_PHRASES: Partial<Record<Category, string>> = {
+  urgent_low: "urgent-low level",
+  custom_low: "low alert level",
+  custom_high: "high alert level",
+  below_range: "comfort-zone low",
+  above_range: "comfort-zone high",
+  falling_fast: "fast-fall pace",
+  rising_fast: "fast-rise pace",
+};
+
+function possessive(name: string): string {
+  return /s$/i.test(name) ? `${name}'` : `${name}'s`;
+}
+
+function measuredMinutes(fromMs: unknown, toMs: unknown): number | null {
+  if (fromMs == null || toMs == null || fromMs === "" || toMs === "") return null;
+  const from = Number(fromMs);
+  const to = Number(toMs);
+  if (!Number.isFinite(from) || !Number.isFinite(to) || from <= 0 || to < from) return null;
+  return Math.floor((to - from) / 60_000);
+}
+
+/**
  * The whole of what a preview may say.
  *
- * Generic unless the recipient explicitly asked for details, and even then only
- * facts: the category, the measured value with its unit, and when it was
- * measured. Nothing judges, guesses, advises or promises freshness.
+ * Private unless the recipient explicitly asked for details: no value, no
+ * trend, no name and no condition — only that something needs attention, and
+ * for an urgent low that it is urgent, so a lock screen can be acted on
+ * without exposing health detail. With details on, the copy states the
+ * recipient's own display unit, the source's own verified trend (when it had
+ * one) and one factual sentence. It never judges, guesses, predicts, advises
+ * or recommends.
  */
 export function buildNotificationCopy(input: CopyInput): PushCopy {
-  if (!input.showDetails) return { title: GENERIC_TITLE, body: GENERIC_BODY };
+  if (!input.showDetails) {
+    return input.category === "urgent_low"
+      ? { title: PRIVATE_URGENT_TITLE, body: GENERIC_BODY }
+      : { title: GENERIC_TITLE, body: GENERIC_BODY };
+  }
+
+  const who = typeof input.personName === "string" && input.personName.trim() ? input.personName.trim() : null;
+  const lead = who ? `${who} · ` : "";
+
+  // A stale value is never dressed up as a current one: the notice reports age
+  // and receipt time only, with no value and no trend.
+  if (input.category === "missing_readings") {
+    const clock = formatClock(input.readingAt ?? null, input.timeZone);
+    const age = measuredMinutes(input.readingAt, input.nowMs);
+    const last = who ? `${possessive(who)} last reading` : "Your last reading";
+    const parts: string[] = [];
+    if (age != null) parts.push(`No new readings for ${age} minute${age === 1 ? "" : "s"}.`);
+    if (clock) parts.push(`${last} arrived at ${clock}.`);
+    if (!parts.length) parts.push(`${last} is the most recent one we have.`);
+    return { title: `${lead}${PUSH_LABELS.missing_readings}`, body: parts.join(" ") };
+  }
 
   const units = unitLabel(input.units);
-  const clock = formatClock(input.readingAt ?? null, input.timeZone);
-  const who = typeof input.personName === "string" && input.personName.trim() ? input.personName.trim() : null;
-  const prefix = who ? `${who}: ` : "";
   const value = formatGlucoseValue(input.value, input.units);
+  const arrow = trendArrowFor(input.category, input.trend);
+  const title = `${lead}${PUSH_LABELS[input.category]}: ${value} ${units}${arrow ? ` ${arrow}` : ""}`;
 
-  switch (input.category) {
-    case "urgent_low":
-      return {
-        title: who ? `${who}: urgent low` : "Urgent low",
-        body: `${prefix}${value} ${units}${clock ? ` at ${clock}` : ""}.`,
-      };
-    case "below_range":
-      return {
-        title: who ? `${who}: below comfort zone` : "Below comfort zone",
-        body: `${prefix}${value} ${units}${clock ? ` at ${clock}` : ""}.`,
-      };
-    case "above_range": {
-      const held = Number(input.durationMinutes);
-      const sustained = Number.isFinite(held) && held > 0 ? `, sustained for ${Math.round(held)} minutes` : "";
-      return {
-        title: who ? `${who}: above comfort zone` : "Above comfort zone",
-        body: `${prefix}${value} ${units}${clock ? ` at ${clock}` : ""}${sustained}.`,
-      };
-    }
-    case 'custom_low':
-    case 'custom_high':
-    case 'falling_fast':
-    case 'rising_fast':
-      return { title: `${prefix}${CATEGORY_LABELS[input.category]}`, body: `${value} ${units}${clock ? ` at ${clock}` : ''}.${input.durationMinutes ? ` Sustained for ${input.durationMinutes} minutes.` : ''}` };
-    case "missing_readings":
-    default:
-      return {
-        title: who ? `${who}: readings haven't updated` : "Your readings haven’t updated",
-        body: who
-          ? `${prefix}last reading received at ${clock || "the last update"}.`
-          : `Your last reading was received at ${clock || "the last update"}.`,
-      };
+  const subject = who ? possessive(who) : "Your";
+  const their = who ? possessive(who) : "your";
+  const held = Number(input.durationMinutes);
+  const sustained = Number.isFinite(held) && held > 0 ? ` and has stayed there for ${Math.round(held)} minutes` : "";
+
+  const bodies: Record<Exclude<Category, "missing_readings">, string> = {
+    urgent_low: `${subject} glucose is critically low right now. Act immediately.`,
+    custom_low: `${subject} glucose is below ${their} low alert level.`,
+    custom_high: `${subject} glucose is above ${their} high alert level.`,
+    below_range: `${subject} glucose is below ${their} comfort zone.`,
+    above_range: `${subject} glucose is above ${their} comfort zone${sustained}.`,
+    falling_fast: `${subject} glucose is falling faster than the pace ${who ? `${who} set` : "you set"}.`,
+    rising_fast: `${subject} glucose is rising faster than the pace ${who ? `${who} set` : "you set"}.`,
+  };
+
+  return { title, body: `${bodies[input.category]}${coalescedClause(input)}` };
+}
+
+/** "It also meets your …" — only when several conditions coalesced into one send. */
+function coalescedClause(input: CopyInput): string {
+  const seen = new Set<string>();
+  const phrases: string[] = [];
+  for (const category of Array.isArray(input.coveredCategories) ? input.coveredCategories : []) {
+    if (typeof category !== "string" || category === input.category || seen.has(category)) continue;
+    seen.add(category);
+    const phrase = COALESCED_PHRASES[category as Category];
+    if (phrase) phrases.push(phrase);
   }
+  if (!phrases.length) return "";
+  return ` It also meets your ${phrases.join(" and your ")}.`;
 }
 
 // ── Quiet hours ───────────────────────────────────────────────────────────

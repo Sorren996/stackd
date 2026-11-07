@@ -223,9 +223,10 @@ test('new grants default off; follower opt-ins cannot widen granted scope, direc
 test('all new category previews remain generic, with no value/person leaking', () => {
   for (const category of ['custom_low', 'custom_high', 'falling_fast', 'rising_fast']) {
     const generic = buildNotificationCopy({ category, value: 50, showDetails: false, personName: 'Private Name' });
-    assert.deepEqual(generic, { title: 'Stackd update', body: 'Open Stackd for details.' });
+    assert.deepEqual(generic, { title: 'Stackd update', body: 'Open Stackd to review.' });
     const detailed = buildNotificationCopy({ category, value: 50, showDetails: true });
-    assert.match(detailed.body, /50 mg\/dL/);
+    assert.match(detailed.title, /50 mg\/dL/);
+    assert.ok(!detailed.body.includes('Private Name'));
   }
 });
 
