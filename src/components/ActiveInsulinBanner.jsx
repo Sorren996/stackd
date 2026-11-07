@@ -1,15 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  ArrowDown,
-  ArrowDownRight,
-  ArrowRight,
-  ArrowUp,
-  ArrowUpRight,
-  ChevronsDown,
-  ChevronsUp,
   Info,
   X } from
 "lucide-react";
+import TrendMark from "@/components/glucose/TrendMark";
 import { formatMonitoringEndTime } from "@/lib/mealMonitoring";
 import { useMonitoringStatus } from "@/hooks/useMonitoringStatus";
 import {
@@ -716,16 +710,6 @@ function MetricCard({ label, value, sub, status, color, tooltipId, openTooltip, 
 
 }
 
-const TREND_ICONS = {
-  "double_up": ChevronsUp,
-  up: ArrowUp,
-  "up-right": ArrowUpRight,
-  right: ArrowRight,
-  "down-right": ArrowDownRight,
-  down: ArrowDown,
-  "double_down": ChevronsDown
-};
-
 export default function ActiveInsulinBanner({ doses = [], latestGlucose, liveReadingPending = false, liveReadingUnverified = false, glucoseReadings = [], carbEntries = [], graphSlot = null, onEditGlucose = null, onEditDose = null, onDeleteDose = null, connectBanner = null }) {
   const [insulinSettings, setInsulinSettings] = useState(readInsulinSettings);
   const [targetRange, setTargetRange] = useState(readTargetRange);
@@ -1011,8 +995,6 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, liveRea
   glucoseValue > targetHigh ?
   `${GLUCOSE_STATUS_COLORS.high}88` :
   `${GLUCOSE_STATUS_COLORS.inRange}88`;
-  const TrendIcon = TREND_ICONS[trend.icon] || ArrowRight;
-
   const stackingAlertsEnabled =
   typeof window !== "undefined" && window.localStorage.getItem("stacking_alerts_enabled") !== "false";
 
@@ -1103,7 +1085,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, liveRea
           value={glucoseValue != null ? formatGlucose(glucoseValue) : "-"}
           unit={glucoseUnitLabel()}
           caption={rangeCardLabel}
-          trendIcon={glucoseValue != null ? <TrendIcon size={30} strokeWidth={2.5} /> : null}
+          trendIcon={glucoseValue != null && trend ? <TrendMark trend={trend} /> : null}
           trendColor={inRange ? "#3f3830" : glucoseColor}
           subcaption={
           <span className="font-serif-italic">{liveReadingUnverified ? "last known, " : "reading "}{(() => {

@@ -119,17 +119,16 @@ describe("the arrow and the written direction never disagree", () => {
 });
 
 describe("thin data never implies a steady arrow", () => {
-  test("fewer than two readings fall back to the steady default, which is why the card guards on the count", () => {
-    // The mapping itself has no way to say "unknown", so the follower's card
-    // only draws a derived arrow when there are at least two readings, when the
-    // reading is not stale, and when the projection itself describes a
-    // direction. This test documents the trap it avoids.
-    assert.equal(computeGlucoseTrend([]).icon, "right");
-    assert.equal(computeGlucoseTrend([reading(5, 120)]).icon, "right");
+  test("fewer than two readings answer null, never the steady arrow", () => {
+    // "We cannot tell" is its own answer. Every surface therefore has to
+    // tolerate null and draw nothing, rather than reading a direction that was
+    // never measured.
+    assert.equal(computeGlucoseTrend([]), null);
+    assert.equal(computeGlucoseTrend([reading(5, 120)]), null);
   });
 
   test("a single reading series cannot be mistaken for a measured steady", () => {
     const only = [reading(5, 120)];
-    assert.equal(only.length < 2, true, "the card's guard is the reading count");
+    assert.equal(computeGlucoseTrend(only), null);
   });
 });

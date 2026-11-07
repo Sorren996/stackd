@@ -65,7 +65,7 @@ export default function MealReviewContent({ mealInsight, monitoringStatus, gluco
 
   const d = mealInsight.details;
   const trendArrow = glucoseTrend?.icon ? TREND_ARROW[glucoseTrend.icon] : null;
-  const trendLabel = glucoseTrend?.label || "steady";
+  const trendLabel = glucoseTrend?.label || null;
 
   // ── NO ACTIVE MEAL ──────────────────────────────────────────────
   if (!d || d.noActiveMeal) {
@@ -195,7 +195,7 @@ export default function MealReviewContent({ mealInsight, monitoringStatus, gluco
         <div className="mt-4 flex items-center gap-2">
           <span className="h-2 w-2 rounded-full" style={{ background: PALETTE.green }} />
           <span className="text-[14px]" style={{ color: PALETTE.ink }}>
-            {formatGlucose(glucoseNow)} {glucoseUnitLabel()}, {trendLabel}
+            {formatGlucose(glucoseNow)} {glucoseUnitLabel()}{trendLabel ? `, ${trendLabel}` : ""}
           </span>
         </div>
       )}
