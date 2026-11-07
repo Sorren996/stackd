@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import useInsightsReadings from "@/hooks/useInsightsReadings";
 import { format } from "date-fns";
 import RangeSelector from "@/components/analytics/RangeSelector";
 import InsightSection from "@/components/insights/InsightSection";
@@ -10,7 +9,6 @@ import TimeOfDayLine from "@/components/insights/TimeOfDayLine";
 import MoreNumbers from "@/components/insights/MoreNumbers";
 import DashboardCard from "@/components/dashboard/DashboardCard";
 import { filterReadingsForStats } from "@/lib/timeInRange";
-import { fetchAllGlucoseReadings } from "@/lib/fetchAllGlucose";
 import { evaluateSufficiency } from "@/lib/dataSufficiency";
 import {
   buildDaySeries,
@@ -50,27 +48,10 @@ export default function Analytics() {
   const [rangeDays, setRangeDays] = useState(readStoredRange);
   const [targetRange, setTargetRange] = useState(readTargetRange);
 
-  const { data: graphReadings = [], isLoading: graphLoading, isError: graphError, refetch: refetchGraph } = useQuery({
-    queryKey: ["glucose-readings", "graph"],
-    queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", 5000),
-    staleTime: 5 * 60 * 1000,
-  });
-  const { data: extendedReadings = [], isLoading: extendedLoading, isError: extendedError, refetch: refetchExtended } = useQuery({
-    queryKey: ["glucose-readings", "analytics"],
-    queryFn: () => fetchAllGlucoseReadings(270),
-    staleTime: 5 * 60 * 1000,
-  });
-
-  const readings = useMemo(() => {
-    if (!graphReadings.length) return extendedReadings;
-    if (!extendedReadings.length) return graphReadings;
-    const seen = new Set(graphReadings.map((record) => record.id));
-    return [...graphReadings, ...extendedReadings.filter((record) => !seen.has(record.id))];
-  }, [graphReadings, extendedReadings]);
-
-  const isLoading = graphLoading || extendedLoading;
-  // A single failed source is fine while the other still holds readings.
-  const isError = graphError && extendedError;
+  const query = useInsightsReadings(rangeDays);
+  const { data: snapshot, isError, isFetching, refetch, ready, userId } = query;
+  // An unstarted, paused or pending request is never evidence of an empty range.
+  const isLoading = !ready || (!snapshot && !isError);
 
   useEffect(() => {
     const refresh = () => setTargetRange(readTargetRange());
@@ -94,9 +75,9 @@ export default function Analytics() {
   };
 
   const stats = useMemo(() => {
-    const now = new Date();
+    const now = snapshot ? new Date(snapshot.end) : new Date();
     const { start, end } = periodWindow(rangeDays, now);
-    const recent = readingsInWindow(filterReadingsForStats(readings), start, end);
+    const recent = readingsInWindow(filterReadingsForStats(snapshot?.readings), start, end);
     const series = buildDaySeries(recent, targetRange.low, targetRange.high, rangeDays, now);
     const coverage = dayCoverage(series);
     const sufficiency = evaluateSufficiency(recent, rangeDays);
@@ -132,7 +113,7 @@ export default function Analytics() {
       sufficiency,
       rangeText,
     };
-  }, [readings, targetRange, rangeDays]);
+  }, [snapshot, targetRange, rangeDays]);
 
   // Existing GMI formula, unchanged — only shown when the period carries enough
   // readings to support an estimate.
@@ -159,32 +140,26 @@ export default function Analytics() {
     </header>
   );
 
-  if (isError && !readings.length) {
-    return (
-      <div className="mx-auto w-full max-w-md pb-10 pt-2">
-        {header}
+  const errorNotice = isError && ready ? (
         <DashboardCard className="p-[18px]">
           <p className="text-[13px] font-semibold" style={{ color: "#3f3830" }}>
             We couldn&rsquo;t load your readings just now
           </p>
           <p className="mt-1 text-[12px] leading-relaxed" style={{ color: "#6b6153" }}>
-            Nothing has changed on your account. Try again in a moment.
+            {stats.total ? "Showing the last completed results for this period. Try again to update them." : "Nothing has changed on your account. Try again in a moment."}
           </p>
           <button
             type="button"
-            onClick={() => {
-              refetchGraph();
-              refetchExtended();
-            }}
+            onClick={() => refetch()}
+            disabled={isFetching}
+            aria-busy={isFetching}
             className="mt-3 min-h-[40px] rounded-full px-4 text-[12px] font-semibold"
             style={{ background: "#3f3830", color: "#fdf9f2" }}
           >
-            Try again
+            {isFetching ? "Trying again…" : "Try again"}
           </button>
         </DashboardCard>
-      </div>
-    );
-  }
+  ) : null;
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-md pb-10 pt-2">
@@ -194,7 +169,11 @@ export default function Analytics() {
         <RangeSelector value={rangeDays} onChange={handleRangeChange} />
       </div>
 
-      {isLoading && !readings.length ? (
+      {errorNotice}
+      {ready && snapshot && isFetching && stats.total > 0 && (
+        <p role="status" className="px-1 pt-2 text-xs text-field-muted">Refreshing this period…</p>
+      )}
+      {isLoading || (isFetching && !stats.total) ? (
         <div aria-busy="true" aria-live="polite">
           <span className="sr-only">Loading your insights</span>
           {[0, 1, 2].map((key) => (
@@ -206,7 +185,7 @@ export default function Analytics() {
             </DashboardCard>
           ))}
         </div>
-      ) : !stats.total ? (
+      ) : !snapshot || (!stats.total && !query.isSuccess) ? null : !stats.total ? (
         <InsightSection label="No readings in this period">
           <p className="text-[13px] font-semibold" style={{ color: "#3f3830" }}>
             No readings in this period yet
@@ -231,7 +210,7 @@ export default function Analytics() {
           </InsightSection>
 
           <InsightSection title="Day by day" helper="Time in your comfort zone each day">
-            <DayByDayBars series={stats.series} />
+            <DayByDayBars key={`${userId}:${rangeDays}:${stats.series[0]?.date}`} series={stats.series} />
           </InsightSection>
 
           <InsightSection title="Glucose by time of day" helper="Average readings at each time">

@@ -67,6 +67,7 @@ export function useCreateGlucose() {
       );
       queryClient.invalidateQueries({ queryKey: ["latest-glucose"] });
       queryClient.invalidateQueries({ queryKey: ["glucose-readings", "graph"] });
+      queryClient.invalidateQueries({ queryKey: ["glucose-readings", "insights-period"] });
       toast.success("Glucose check-in recorded");
     },
     onError: (_error, _variables, context) => {
