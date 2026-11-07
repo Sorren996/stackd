@@ -461,6 +461,7 @@ export default function History() {
 
           {level === "recap" && selectedDay &&
           <DayRecap
+            dayDate={selectedDay}
             allDays={allDays}
             daySummary={selectedDaySummary}
             glucose={recapData.glucose || []}

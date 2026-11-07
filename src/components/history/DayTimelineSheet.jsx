@@ -3,7 +3,7 @@ import { format } from "date-fns";
 import HistoricalSheet from "./HistoricalSheet";
 import { formatGlucose, glucoseUnitLabel } from "@/lib/glucoseUnits";
 
-const DOT = { meal: "#5b6550", rescue: "#af751b", dose: "#8a9488", reading: "#a89e8d" };
+const DOT = { meal: "#5b6550", rescue: "#a89e8d", dose: "#8a9488", reading: "#a89e8d" };
 
 function detailFor(event) {
   if (event.kind === "dose") return `${event.units} units`;

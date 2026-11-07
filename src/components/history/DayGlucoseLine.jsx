@@ -13,7 +13,6 @@ import {
 import { format } from "date-fns";
 import { buildGlucoseSegments } from "@/lib/glucoseSeries";
 import { formatGlucose, glucoseUnitLabel } from "@/lib/glucoseUnits";
-import { GLUCOSE_STATUS_COLORS } from "@/lib/glucoseStatus";
 
 const HOUR_MS = 60 * 60 * 1000;
 const MIN_MS = 60 * 1000;

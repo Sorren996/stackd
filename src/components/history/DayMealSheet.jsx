@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { format } from "date-fns";
 import { ChevronRight } from "lucide-react";
 import HistoricalSheet from "./HistoricalSheet";
@@ -41,9 +41,14 @@ function Row({ label, value, unit, qualified }) {
  */
 export default function DayMealSheet({ open, onClose, meal, glucose, targetLow, targetHigh }) {
   const [notesOpen, setNotesOpen] = useState(false);
+  // Keep the last meal on screen while the sheet slides out, so closing never
+  // swaps the content mid-animation.
+  const lastMealRef = useRef(null);
+  if (meal) lastMealRef.current = meal;
+  const activeMeal = meal || lastMealRef.current;
 
-  const record = meal?.record || null;
-  const outcome = meal?.outcome || null;
+  const record = activeMeal?.record || null;
+  const outcome = activeMeal?.outcome || null;
   const mealMs = record ? new Date(record.consumed_at).getTime() : null;
   const notes = typeof record?.notes === "string" ? record.notes.trim() : "";
 
@@ -68,7 +73,7 @@ export default function DayMealSheet({ open, onClose, meal, glucose, targetLow, 
   }, [glucose, mealMs]);
 
   if (!record) {
-    return <HistoricalSheet open={open} onClose={onClose} title="This meal" />;
+    return <HistoricalSheet open={open} onClose={onClose} title="Meal" />;
   }
 
   const title = record.food_name || record.name || "Meal";

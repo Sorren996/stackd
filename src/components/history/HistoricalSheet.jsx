@@ -19,17 +19,21 @@ export default function HistoricalSheet({
   footerLabel = "Back to your day",
 }) {
   const returnFocusRef = useRef(null);
+  const wasOpenRef = useRef(false);
+
+  // Capture the trigger during render, before the sheet focuses itself, so
+  // closing always hands focus back to the row that opened it.
+  if (open && !wasOpenRef.current && typeof document !== "undefined") {
+    returnFocusRef.current = document.activeElement;
+  }
 
   useEffect(() => {
-    if (open) {
-      returnFocusRef.current =
-        typeof document !== "undefined" ? document.activeElement : null;
-      return undefined;
+    if (!open && wasOpenRef.current) {
+      const target = returnFocusRef.current;
+      returnFocusRef.current = null;
+      target?.focus?.();
     }
-    const target = returnFocusRef.current;
-    returnFocusRef.current = null;
-    target?.focus?.();
-    return undefined;
+    wasOpenRef.current = open;
   }, [open]);
 
   return (
