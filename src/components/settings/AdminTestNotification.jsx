@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Loader2, Send } from "lucide-react";
 import { toast } from "sonner";
 import { base44 } from "@/api/base44Client";
+import { playNotificationFeedback } from "@/lib/notificationFeedback";
 
 /**
  * Admin-only push delivery test. Manual only: nothing runs on mount or on
@@ -17,7 +18,8 @@ export default function AdminTestNotification() {
     setPending(true);
     try {
       await base44.functions.invoke("sendMyTestPushNotification", {});
-      toast.success("Test notification submitted. Check your iPhone.");
+      playNotificationFeedback();
+      toast.success("Test notification sent. You should hear a chime and feel a buzz here.");
     } catch (error) {
       const message = error?.response?.data?.error || error?.message;
       toast.error(message || "We could not submit the test notification. Please try again.");
@@ -34,6 +36,9 @@ export default function AdminTestNotification() {
       <p className="mt-1.5 text-xs leading-relaxed" style={{ color: "#6b6153" }}>
         Sends a test to this account’s registered mobile devices. To test your lock screen, open
         Stackd on your computer and lock your phone first.
+      </p>
+      <p className="mt-1.5 text-xs leading-relaxed" style={{ color: "#746959" }}>
+        Sending also plays a chime and a buzz on the device you send from, as a quick confirmation.
       </p>
       <button
         type="button"
