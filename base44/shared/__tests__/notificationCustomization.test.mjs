@@ -18,7 +18,7 @@ function runner(prefs, thresholds = { low: 70, high: 180 }) {
       if (value != null) rows.push(row(m, value, options.row));
       const result = advanceNotificationEpisodes({ rows, state, preferences: prefs, thresholds, nowMs: T + (options.now ?? m) * 60000, allowed: options.allowed });
       state = result.state;
-      const fixed = fixedLowDecisions({ rows, preferences: prefs, thresholds, nowMs: T + (options.now ?? m) * 60000 }).filter(item => !claimed.has(item.episodeKey) && (!options.allowed || options.allowed(item.category)));
+      const fixed = fixedLowDecisions({ rows, preferences: prefs, thresholds, nowMs: T + (options.now ?? m) * 60000, allowed: options.allowed }).filter(item => !claimed.has(item.episodeKey) && (!options.allowed || options.allowed(item.category)));
       const chosen = fixed.at(-1) || result.notification;
       fixed.forEach(item => claimed.add(item.episodeKey));
       if (chosen) emitted.push(chosen);
@@ -52,29 +52,31 @@ test('notification limits, separation and finite integer validation, including e
   assert.ok(sanitizeNotificationOptions({ repeat_minutes: { urgent_low: 5 } }).error);
 });
 
-test('100 then exact 70 then below 70 then urgent: each stage independent, urgent stays strictly <55', () => {
+test('every fresh reading below a boundary is its own event, and urgent stays strictly <55', () => {
   const r = runner(preferences({ custom_low: true, below_range: true, urgent_low: true }));
-  assert.equal(r.step(0, 100).category, 'custom_low');
-  assert.equal(r.step(5, 70), null);
-  assert.equal(r.step(10, 69).category, 'low_glucose');
-  assert.equal(r.step(15, 55).category, 'low_glucose');
-  assert.equal(r.step(20, 54).category, 'urgent_low');
-  assert.equal(r.step(25, 60).category, 'low_glucose');
+  assert.equal(r.step(0, 100), null);                    // on the chosen level: not below it
+  assert.equal(r.step(5, 99).category, 'custom_low');
+  assert.equal(r.step(10, 70).category, 'custom_low');   // still below the chosen 100
+  assert.equal(r.step(15, 69).category, 'below_range');  // the tighter 70 boundary names it
+  assert.equal(r.step(20, 55).category, 'below_range');
+  assert.equal(r.step(25, 54).category, 'urgent_low');
+  assert.equal(r.emitted.length, 5);
 });
 
-test('simultaneous stages coalesce into one highest-severity push and cover every event', () => {
+test('simultaneous boundaries coalesce into one push that covers every matched one', () => {
   const r = runner(preferences({ custom_low: true, below_range: true, urgent_low: true }));
   const n = r.step(0, 54);
   assert.equal(n.category, 'urgent_low');
-  assert.deepEqual(n.coveredEvents.map(e => e.category).sort(), ['below_range', 'urgent_low']);
-  assert.equal(r.step(5, 60).category, 'low_glucose');
+  assert.deepEqual(n.coveredEvents.map(e => e.category).sort(), ['below_range', 'custom_low', 'urgent_low']);
+  assert.equal(r.step(5, 60).category, 'below_range');
   assert.equal(r.step(10, 53).category, 'urgent_low');
 });
 
-test('custom warning at 70 cannot consume the next distinct fixed-low reading', () => {
+test('a custom level equal to the comfort floor shares one boundary and never consumes the next reading', () => {
   const r = runner(preferences({ custom_low: true, below_range: true }, { custom_low_mgdl: 70 }));
-  assert.equal(r.step(0, 70).category, 'custom_low');
-  assert.equal(r.step(5, 69).category, 'low_glucose');
+  assert.equal(r.step(0, 70), null);                     // exactly on the shared boundary
+  assert.equal(r.step(5, 69).category, 'below_range');
+  assert.equal(r.step(10, 68).category, 'below_range');
   assert.equal(r.emitted.length, 2);
 });
 
@@ -84,30 +86,35 @@ test('equal high bounds with inclusive custom comparator are covered once', () =
   for (const t of [5, 10, 15, 20]) assert.equal(r.step(t, 181), null);
 });
 
-test('near-boundary oscillation cannot rearm; two fresh samples beyond the 5 mg/dL margin do', () => {
+test('every distinct fresh reading below the boundary alerts; a reading at or above it does not', () => {
   const r = runner(preferences({ custom_low: true }));
-  assert.ok(r.step(0, 100));
-  for (const [m, v] of [[5, 101], [10, 99], [15, 104], [20, 100], [25, 105], [30, 104], [35, 99]]) assert.equal(r.step(m, v), null);
-  r.step(40, 105); r.step(45, 106);
-  assert.ok(r.step(50, 100));
-  assert.equal(r.emitted.length, 2);
+  assert.equal(r.step(0, 100), null);
+  assert.equal(r.step(5, 101), null);
+  assert.equal(r.step(10, 99).category, 'custom_low');
+  assert.equal(r.step(15, 99).category, 'custom_low');   // a second reading, a second event
+  assert.equal(r.step(20, 100), null);
+  assert.equal(r.step(25, 99).category, 'custom_low');
+  assert.equal(r.emitted.length, 3);
 });
 
-test('gap or stale readings cannot supply recovery samples', () => {
+test('a gap never blocks the next reading, and a stale one is not replayed', () => {
   const r = runner(preferences({ custom_low: true }));
-  r.step(0, 99); r.step(5, 105);
+  assert.equal(r.step(0, 99).category, 'custom_low');
+  assert.equal(r.step(5, 105), null);
   r.step(25, 105);
-  assert.equal(r.step(30, 99), null);
+  assert.equal(r.step(30, 99).category, 'custom_low');
   r.step(35, 105, { now: 50 });
-  assert.equal(r.step(55, 99), null);
+  assert.equal(r.step(55, 99, { now: 60 }).category, 'custom_low');
+  assert.equal(r.step(70, 99, { now: 120 }), null);      // 50 minutes old: history
+  assert.equal(r.emitted.length, 3);
 });
 
-test('a first fresh already-low observation starts an episode; historic/backfilled or out-of-order callbacks do not replay', () => {
+test('only a truly fresh arrival counts: stale, backfilled and reprocessed readings never replay', () => {
   const r = runner(preferences({ custom_low: true }));
-  assert.equal(r.step(-30, 99, { now: 0 }), null);
-  assert.ok(r.step(0, 98));
-  assert.equal(r.step(-5, 80, { now: 1 }), null);
-  assert.equal(r.step(5, null), null);
+  assert.equal(r.step(-30, 99, { now: 0 }), null);       // measured 30 minutes ago
+  assert.equal(r.step(0, 95, { now: 5, row: { created_date: new Date(T + 30 * 60000).toISOString() } }), null);
+  assert.equal(r.step(5, 98).category, 'custom_low');
+  assert.equal(r.step(5, 98, { now: 6 }), null);         // same measurement, same event
   assert.equal(r.emitted.length, 1);
 });
 
@@ -116,6 +123,7 @@ test('turning a category on while already beyond its boundary waits for the next
   const r = runner(p);
   assert.equal(r.step(0, 90), null);
   p.categories.custom_low = true;
+  p.category_activation = { custom_low: new Date(T + 1 * 60000).toISOString() };
   assert.equal(r.step(1, null), null);
   assert.equal(r.step(5, 90).category, 'custom_low');
 });
@@ -140,21 +148,23 @@ test('above comfort remains strictly > its own boundary and separate from custom
   assert.equal(r.step(25, 250).category, 'custom_high');
 });
 
-test('no implicit repeats; explicit repeats stay per stage and cannot suppress urgent escalation', () => {
+test('legacy repeat settings cannot suppress a per-reading low, and urgent still escalates', () => {
   const p = preferences({ custom_low: true, urgent_low: true }, { repeat_minutes: { custom_low: 15 } });
   const r = runner(p);
-  r.step(0, 100); assert.equal(r.step(5, 99), null); r.step(10, 99);
-  assert.equal(r.step(15, 99).repeatIndex, 1);
+  assert.equal(r.step(0, 99).category, 'custom_low');
+  assert.equal(r.step(5, 99).category, 'custom_low');
+  assert.equal(r.step(10, 99).category, 'custom_low');
+  assert.equal(r.step(15, 54).category, 'urgent_low');
   assert.equal(r.step(20, 54).category, 'urgent_low');
-  assert.equal(r.step(25, 54).category, 'urgent_low');
+  assert.equal(r.emitted.length, 5);
 });
 
-test('urgent quiet-hours opt-in is independent and lower stages are covered, not sent later', () => {
+test('urgent quiet-hours opt-in is independent, and held-back boundaries are not covered', () => {
   const quiet = { enabled: true, startHour: 0, endHour: 23, timeZone: 'UTC', urgentDuringQuiet: true };
   const r = runner(preferences({ custom_low: true, below_range: true, urgent_low: true }));
   const n = r.step(0, 54, { allowed: k => !isHeldByQuietHours(k, quiet, T) });
   assert.equal(n.category, 'urgent_low');
-  assert.equal(n.coveredEvents.length, 2);
+  assert.deepEqual(n.coveredEvents.map(e => e.category), ['urgent_low']);
   assert.equal(r.step(5, 60, { allowed: k => !isHeldByQuietHours(k, quiet, T + 5 * 60000) }), null);
 });
 

@@ -17,19 +17,19 @@ test('an explicit re-enable creates a server-owned activation, while value/priva
   assert.match(categoryActivation({ ...initial, master_enabled: false }, initial, () => 'master-new').urgent_low, /\|master-new$/);
 });
 
-test('re-enable while already low waits for a fresh sample and then starts exactly one new episode', () => {
-  let state = {}, rows = [row(0, 90)];
-  const evaluate = (now, prefs) => {
-    const result = advanceNotificationEpisodes({ state, rows, nowMs: T + now * 60000, preferences: prefs, thresholds });
-    state = result.state; return result.notification;
-  };
-  assert.equal(evaluate(0, preferences).category, 'custom_low');
-  const enabled = { ...preferences, category_activation: { custom_low: 'new-explicit-activation' } };
-  assert.equal(evaluate(1, enabled), null);
+test('re-enable while already low never replays the earlier reading, and each new reading alerts once', () => {
+  const rows = [row(0, 90)];
+  const enabled = { ...preferences, category_activation: { custom_low: new Date(T + 1 * 60000).toISOString() } };
+  const decide = (now) => fixedLowDecisions({ rows, nowMs: T + now * 60000, thresholds, preferences: enabled }).at(-1) || null;
+  // The reading taken before the opt-in is not replayed by it.
+  assert.equal(decide(1), null);
   rows.push(row(5, 90));
-  assert.equal(evaluate(5, enabled).category, 'custom_low');
+  assert.equal(decide(5).category, 'custom_low');
   rows.push(row(10, 89));
-  assert.equal(evaluate(10, enabled), null);
+  const next = decide(10);
+  assert.equal(next.category, 'custom_low');
+  // The same measurement reprocessed is the same event, never a second alert.
+  assert.equal(decide(10).episodeKey, next.episodeKey);
 });
 
 test('pace episodes need two fresh recovery windows and cannot be rearmed by an unknown gap', () => {

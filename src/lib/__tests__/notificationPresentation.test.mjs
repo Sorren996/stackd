@@ -8,14 +8,14 @@ test('all prior categories remain alongside fixed low, urgent first', () => {
 });
 test('saved summaries use actual operators, units, bounds and delay', () => {
   assert.equal(alertSummary('custom_high', {}, thresholds), 'Choose a level');
-  assert.equal(alertSummary('custom_low', { custom_low_mgdl: 100 }, thresholds), 'At or below 100 mg/dL');
+  assert.equal(alertSummary('custom_low', { custom_low_mgdl: 100 }, thresholds), 'Every new reading below 100 mg/dL');
   assert.equal(alertSummary('custom_high', { custom_high_mgdl: 180 }, thresholds), 'At or above 180 mg/dL');
   assert.equal(alertSummary('above_range', {}, thresholds), 'Above 180 mg/dL');
-  assert.equal(alertSummary('below_range', {}, thresholds), 'Below 70 mg/dL');
+  assert.equal(alertSummary('below_range', {}, thresholds), 'Every new reading below 70 mg/dL');
   assert.equal(alertSummary('urgent_low', {}, thresholds), 'Every new reading below 55 mg/dL');
   assert.equal(alertSummary('missing_readings', { missing_delay_minutes: 20 }, thresholds), 'No new readings for 20 minutes');
   assert.equal(alertSummary('falling_fast', { falling_fast_rate: 3 }, thresholds), 'Falling by 3 mg/dL per minute or faster');
-  assert.equal(alertSummary('custom_low', { custom_low_mgdl: 100 }, { units: 'mmol/L' }), 'At or below 5.6 mmol/L');
+  assert.equal(alertSummary('custom_low', { custom_low_mgdl: 100 }, { units: 'mmol/L' }), 'Every new reading below 5.6 mmol/L');
 });
 test('timing and optional conditions stay visible outside the editor', () => {
   assert.equal(alertTimingSummary('custom_high', { custom_high_minutes: 30, repeat_minutes: { custom_high: 120 } }), 'After 30 minutes · Remind every 120 minutes');

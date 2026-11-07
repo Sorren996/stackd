@@ -50,7 +50,7 @@ test('numeric level inputs show units and pace options remain explicit', () => {
   assert.equal(notificationValue(100, 'mmol/L'), '5.6');
   const html = renderToStaticMarkup(React.createElement(Fields, { rule: { key: 'custom_low', label: 'Custom low' }, draft: { ...preferences, custom_low_mgdl: 100 }, units: 'mmol/L', onChange() {} }));
   assert.match(html, /type="number"/); assert.match(html, /inputMode="decimal"/); assert.match(html, /value="5.6"/);
-  assert.match(html, /Let me know at or below/); assert.match(html, /mmol\/L/);
+  assert.match(html, /Let me know below/); assert.match(html, /mmol\/L/);
   const pace = renderToStaticMarkup(React.createElement(Fields, { rule: { key: 'falling_fast', label: 'Falling fast' }, draft: preferences, units: 'mmol/L', onChange() {} }));
   assert.match(pace, /0.11 mmol\/L or faster \(2 mg\/dL\)/);
   assert.match(pace, /0.17 mmol\/L or faster \(3 mg\/dL\)/);
