@@ -26,11 +26,11 @@ export function advanceNotificationEpisodes({ rows, nowMs, preferences, threshol
   const validOptions = !sanitizeNotificationOptions({}, prefs).error;
   const velocity = conflict ? null : notificationVelocity(samples, nowMs);
   const v = latest.value;
+  // Every low category (fixed 70, urgent, custom low and the comfort-zone low)
+  // is dispatched per source measurement by notificationLowStream.ts, so no
+  // low rule appears here: an episode, a first-alert delay or a repeat interval
+  // must never suppress a new qualifying low reading.
   const defs = [
-    // Fixed low/urgent are dispatched by source measurement, not episodes.
-    // A genuinely different comfort-zone boundary remains independent.
-    { key: 'below_range', low: thresholds?.low === 70 ? null : thresholds?.low, strict: true },
-    { key: 'custom_low', low: validOptions ? options.custom_low_mgdl : null },
     { key: 'above_range', high: thresholds?.high, strict: true, delay: prefs.above_range_minutes },
     { key: 'custom_high', high: validOptions ? options.custom_high_mgdl : null, delay: options.custom_high_minutes },
     { key: 'falling_fast', velocity: true, priority: 500, level: options.falling_fast_level_mgdl, rate: options.falling_fast_rate },
@@ -84,10 +84,10 @@ export function advanceNotificationEpisodes({ rows, nowMs, preferences, threshol
   const permitted = candidates.filter(c => allowed(c.category));
   if (!permitted.length) return { state: next, notification: null };
   permitted.sort((a, b) => b.priority - a.priority);
-  // Equal selected/comfort bounds represent the same excursion even though
-  // custom comparators are inclusive and comfort comparators are strict.
+  // Equal selected/comfort high bounds represent the same excursion even though
+  // the custom comparator is inclusive and the comfort comparator is strict.
   const covered = [...candidates];
-  for (const [custom, comfort, bound] of [['custom_low', 'below_range', 'low'], ['custom_high', 'above_range', 'high']]) {
+  for (const [custom, comfort, bound] of [['custom_high', 'above_range', 'high']]) {
     const a = defs.find(d => d.key === custom), b = defs.find(d => d.key === comfort);
     if (a[bound] == null || a[bound] !== b[bound]) continue;
     if (!candidates.some(c => c.category === custom || c.category === comfort)) continue;

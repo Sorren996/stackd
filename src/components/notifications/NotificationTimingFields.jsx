@@ -2,7 +2,8 @@ import ChoiceRow from '@/components/notifications/ChoiceRow';
 import { ABOVE_DURATION_OPTIONS } from '@/lib/notifications/notificationCopy';
 export default function NotificationTimingFields({ rule, draft, disabled, onChange }) {
   const key = rule.key;
-  if (key === 'urgent_low' || key === 'low_glucose') return null;
+  // Every low rule is decided per new reading: no delay, no reminder interval.
+  if (['urgent_low', 'low_glucose', 'custom_low', 'below_range'].includes(key)) return null;
   const high = key === 'custom_high' || key === 'above_range';
   const delays = ABOVE_DURATION_OPTIONS.map(option => ({ ...option, label: `After ${option.value} minutes` }));
   return <details className="pt-1">

@@ -392,6 +392,12 @@ export interface CopyInput {
   nowMs?: number | null;
   /** Every category this one send covers, after coalescing. */
   coveredCategories?: string[] | null;
+  /**
+   * The low boundary this reading sits strictly below, in mg/dL. Supplied only
+   * by the per-reading low stream, so the body can state the real boundary the
+   * reading met instead of a generic phrase.
+   */
+  thresholdMgdl?: number | null;
 }
 
 export interface PushCopy {
@@ -477,6 +483,20 @@ export function buildNotificationCopy(input: CopyInput): PushCopy {
   const units = unitLabel(input.units);
   const value = formatGlucoseValue(input.value, input.units);
   const arrow = trendArrowFor(input.category, input.trend);
+
+  // A per-reading low states the boundary it actually met — the chosen custom
+  // level, the real comfort-zone bound, or the fixed 70 — so a reading of 99 is
+  // never described as "below 70", and one reading never grows a second clause.
+  const threshold = Number(input.thresholdMgdl);
+  if (
+    Number.isFinite(threshold) &&
+    (input.category === "low_glucose" || input.category === "custom_low" || input.category === "below_range")
+  ) {
+    return {
+      title: `${lead}Low glucose: ${value} ${units}${arrow ? ` ${arrow}` : ""}`,
+      body: `${who ? possessive(who) : "Your"} glucose is below ${formatGlucoseValue(threshold, units)} ${units}.`,
+    };
+  }
   const title = `${lead}${PUSH_LABELS[input.category]}: ${value} ${units}${arrow ? ` ${arrow}` : ""}`;
 
   const subject = who ? possessive(who) : "Your";

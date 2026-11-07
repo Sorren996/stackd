@@ -15,12 +15,14 @@ export function needsAlertSetup(key, prefs) {
 export function alertSummary(key, prefs, thresholds = {}) {
   const units = thresholds.units || 'mg/dL';
   const level = value => `${notificationValue(value, units)} ${units}`;
-  if (key === 'custom_low' || key === 'custom_high') return prefs[`${key}_mgdl`] == null ? 'Choose a level' : `At or ${key === 'custom_low' ? 'below' : 'above'} ${level(prefs[`${key}_mgdl`])}`;
+  if (key === 'custom_low') return prefs.custom_low_mgdl == null ? 'Choose a level' : `Every new reading below ${level(prefs.custom_low_mgdl)}`;
+  if (key === 'custom_high') return prefs.custom_high_mgdl == null ? 'Choose a level' : `At or above ${level(prefs.custom_high_mgdl)}`;
   if (key === 'low_glucose') return 'Every new reading below 70 mg/dL';
   if (key === 'urgent_low') return 'Every new reading below 55 mg/dL';
   if (key === 'below_range' || key === 'above_range') {
     const bound = thresholds[key === 'below_range' ? 'target_low' : 'target_high'];
-    return bound == null ? 'Comfort zone not set' : `${key === 'below_range' ? 'Below' : 'Above'} ${level(bound)}`;
+    if (bound == null) return 'Comfort zone not set';
+    return key === 'below_range' ? `Every new reading below ${level(bound)}` : `Above ${level(bound)}`;
   }
   if (key.endsWith('_fast')) {
     const rate = prefs[`${key}_rate`];
@@ -29,7 +31,9 @@ export function alertSummary(key, prefs, thresholds = {}) {
   return prefs.missing_delay_minutes == null ? 'Choose how long to wait' : `No new readings for ${prefs.missing_delay_minutes} minutes`;
 }
 export function alertTimingSummary(key, prefs, units = 'mg/dL') {
-  if (key === 'low_glucose' || key === 'urgent_low') return '';
+  // Every low rule speaks on each new qualifying reading, so it has no timing,
+  // delay or repeat to describe.
+  if (key === 'low_glucose' || key === 'urgent_low' || key === 'custom_low' || key === 'below_range') return '';
   const parts = [];
   const delay = key === 'custom_high' ? prefs.custom_high_minutes : key === 'above_range' ? prefs.above_range_minutes : null;
   if (delay > 0) parts.push(`After ${delay} minutes`);

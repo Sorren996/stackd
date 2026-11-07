@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { advanceNotificationEpisodes } from '../notificationEpisodes.ts';
-import { fixedLowDecisions } from '../notificationFixedLow.ts';
+import { lowStreamDecisions as fixedLowDecisions } from '../notificationLowStream.ts';
 import { notificationVelocity, episodeSamples, velocityMeets } from '../notificationVelocity.ts';
 import { sanitizePersonalPreferences, sanitizeFollowerPreferences, sharerGrants, buildNotificationCopy, isHeldByQuietHours } from '../notificationCore.ts';
 import { sanitizeNotificationOptions } from '../notificationOptions.ts';

@@ -55,11 +55,14 @@ export async function runTestPushNotification(
   lastSendByUser.set(user.id, nowMs);
 
   try {
-    await base44.asServiceRole.integrations.Core.SendPushNotification({
-      user_id: user.id,
-      title: TEST_PUSH_TITLE,
-      content: TEST_PUSH_MESSAGE,
-    });
+    // Same three documented fields as a real alert (see
+    // PUSH_MESSAGE_FIELDS in notificationDispatch.ts). The integration accepts
+    // no sound, interruption level or APNs key, so the test path cannot request
+    // an audible alert any more than the automatic path can. Field names only
+    // are logged, never the message text.
+    const message = { user_id: user.id, title: TEST_PUSH_TITLE, content: TEST_PUSH_MESSAGE };
+    console.log(JSON.stringify({ diagStage: 'PUSH_PAYLOAD_TEST', fields: Object.keys(message).sort() }));
+    await base44.asServiceRole.integrations.Core.SendPushNotification(message);
   } catch (error: any) {
     lastSendByUser.delete(user.id);
     console.error(

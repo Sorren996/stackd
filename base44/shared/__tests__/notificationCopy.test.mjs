@@ -11,7 +11,7 @@ import {
 } from "../notificationCore.ts";
 import { normalizeTrendWord, trendArrowFor } from "../notificationTrend.ts";
 import { advanceNotificationEpisodes } from "../notificationEpisodes.ts";
-import { fixedLowDecisions } from '../notificationFixedLow.ts';
+import { lowStreamDecisions as fixedLowDecisions } from '../notificationLowStream.ts';
 
 // Pure-function tests only: no database, no push transport, no readings written
 // anywhere and no saved settings touched.
@@ -135,7 +135,9 @@ test("threshold boundaries stay exactly where they are, and the copy follows", (
   assert.equal(classifySample(54.9, 70, 180), "urgent");
   assert.equal(classifySample(55, 70, 180), "below");
   assert.equal(decide({ urgent_low: true }, {}, [80, 80, 54]).category, "urgent_low");
-  assert.equal(decide({ below_range: true }, {}, [80, 80, 55]).category, "low_glucose");
+  // Exactly 55 is not urgent. This account's low choice at 70 is the legacy
+  // "below comfort zone" one, so that is the category the reading matched.
+  assert.equal(decide({ below_range: true }, {}, [80, 80, 55]).category, "below_range");
   assert.equal(decide({ urgent_low: true }, {}, [80, 80, 55]), null, "55 is not an urgent low");
 
   // A custom high is inclusive at the level the person chose.

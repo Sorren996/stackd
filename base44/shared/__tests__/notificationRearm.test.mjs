@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { advanceNotificationEpisodes } from '../notificationEpisodes.ts';
 import { legacyEpisodeState } from '../notificationLegacyEpisodes.ts';
 import { categoryActivation } from '../notificationOptions.ts';
-import { fixedLowDecisions } from '../notificationFixedLow.ts';
+import { lowStreamDecisions as fixedLowDecisions } from '../notificationLowStream.ts';
 const T = Date.parse('2026-11-06T12:00:00Z');
 const row = (m, value) => ({ id: `r${m}`, source: 'dexcom_share', value, recorded_at: new Date(T + m * 60000).toISOString() });
 const thresholds = { low: 70, high: 180 };

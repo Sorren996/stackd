@@ -151,12 +151,14 @@ export async function dispatchNotification(
 
   // 7. One attempt, never retried.
   try {
-    const response = await deps.send({
+    const message = {
       user_id: input.recipientUserId,
       title: input.copy.title,
       content: input.copy.body,
       action_url: deps.absoluteUrl(input.destination),
-    });
+    };
+    logPushPayload(message);
+    const response = await deps.send(message);
     if (response?.success === false || response?.ok === false) throw Object.assign(new Error('Push service refused submission'), { status: 422 });
   } catch (error: any) {
     const kind = classifySendOutcome(error);
@@ -193,6 +195,29 @@ export function keysToPrune(claimedKeys: unknown, keep = 200): string[] {
   const keys = Array.isArray(claimedKeys) ? claimedKeys.filter((k) => typeof k === "string") : [];
   if (keys.length <= keep + 100) return [];
   return keys.slice(0, keys.length - keep);
+}
+
+/**
+ * The documented fields of the platform's native push integration.
+ *
+ * Deliberately closed: the integration schema has no sound, interruption level
+ * or raw APNs key, so this app cannot request `aps.sound` and must not pretend
+ * to by inventing a field the provider ignores. The alert tone and haptics are
+ * chosen by iOS and by the person's own Stackd notification settings.
+ */
+export const PUSH_MESSAGE_FIELDS = ['action_url', 'content', 'title', 'user_id'];
+
+/**
+ * Field NAMES only — never a title, a body, a link or an account. This makes the
+ * serialized payload verifiable in the server logs without exposing health
+ * content, tokens or credentials.
+ */
+function logPushPayload(message: Record<string, unknown>) {
+  try {
+    console.log(JSON.stringify({ diagStage: 'PUSH_PAYLOAD', fields: Object.keys(message).sort() }));
+  } catch {
+    // Diagnostics never block a send.
+  }
 }
 
 /** Human clock for a delivery row, in the recipient's own zone. */

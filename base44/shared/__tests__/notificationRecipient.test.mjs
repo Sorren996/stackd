@@ -47,7 +47,7 @@ test('concurrent server evaluations serialize state and send one push with all c
   assert.equal(f.sends.length, 1);
   assert.equal(f.deliveries.length, 1);
   assert.equal(f.deliveries[0].category, 'urgent_low');
-  assert.equal(f.deliveries[0].covered_events.length, 2);
+  assert.equal(f.deliveries[0].covered_events.length, 3, 'urgent, custom low and the comfort-zone low all matched this one reading');
   assert.equal(f.deliveries[0].status, 'submitted');
   await f.invoke();
   assert.equal(f.sends.length, 1);
@@ -133,7 +133,8 @@ test('69, 68, 54, 53 submit four times, urgent at escalation, duplicate callback
     }
     assert.equal(f.sends.length, 4);
     assert.match(f.sends[0].title, /Low glucose/);
-    assert.match(f.sends[2].title, /Urgent low/);
+    // The urgent presentation is used only when urgent low was opted into.
+    assert.match(f.sends[2].title, urgent ? /Urgent low/ : /Low glucose/);
     assert.deepEqual(f.deliveries.map(d => d.status), Array(4).fill('submitted'));
     await f.invoke({ rows, nowMs: now + 16 * 60000 });
     assert.equal(f.sends.length, 4);

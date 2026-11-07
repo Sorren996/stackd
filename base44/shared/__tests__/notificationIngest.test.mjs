@@ -218,7 +218,9 @@ const followerWorld = ({ relationship = {}, prefs = {}, readings = [] } = {}) =>
 test('the verified incident shape now alerts: below-zone first, then urgent at 54', async () => {
   const w = world({ readings: [reading(70, 8), reading(65, 1)] });
   await w.dispatch();
-  assert.deepEqual(w.categories(), ['low_glucose'], 'a fresh sub-70 reading must notify');
+  // This account's only low choice at 70 is the comfort-zone lower bound, so
+  // that is the category the reading matched.
+  assert.deepEqual(w.categories(), ['below_range'], 'a fresh sub-70 reading must notify');
 
   await w.ingest(54, 0);
   assert.equal(w.categories().at(-1), 'urgent_low', 'the later, more severe crossing is not suppressed');
@@ -230,7 +232,7 @@ test('each fresh distinct low in a newly ingested batch is evaluated, with urgen
   const w = world({ readings: [reading(70, 8), reading(65, 6), reading(60, 4), reading(57, 2), reading(54, 0)] });
   const result = await w.dispatch();
   assert.equal(result.dispatched, true);
-  assert.deepEqual(w.categories(), ['low_glucose', 'low_glucose', 'low_glucose', 'urgent_low']);
+  assert.deepEqual(w.categories(), ['below_range', 'below_range', 'below_range', 'urgent_low']);
   assert.ok(w.deliveries().every(row => row.status === 'submitted'));
   assert.equal(w.deliveries().at(-1).covered_events.length, 2);
   assert.equal(w.sends.length, 4);

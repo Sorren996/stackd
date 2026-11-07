@@ -1,5 +1,5 @@
 import { advanceNotificationEpisodes } from './notificationEpisodes.ts';
-import { fixedLowDecisions } from './notificationFixedLow.ts';
+import { lowStreamDecisions } from './notificationLowStream.ts';
 import { legacyEpisodeState } from './notificationLegacyEpisodes.ts';
 import { buildNotificationCopy, effectiveFollowerCategories, relationshipAllowsPush, notificationEventKey, destinationFor, isHeldByQuietHours, decideMissingNotification } from './notificationCore.ts';
 import { dispatchNotification } from './notificationDispatch.ts';
@@ -31,14 +31,18 @@ export async function evaluateRecipient({ sr, ownerId, prefs, relationship = nul
   const effectivePrefs = { ...prefs, categories };
   const displaySettings = relationship ? recipientSettings : settings;
   const quiet = quietFrom(prefs, displaySettings?.timezone);
+  const permitted = key => !isHeldByQuietHours(key, quiet, nowMs);
   const result = advanceNotificationEpisodes({ rows, nowMs, preferences: effectivePrefs,
     thresholds: { low: settings?.target_range_low, high: settings?.target_range_high },
-    state: legacyEpisodeState(ledger, rows, settings, ownerId, recipientId, nowMs, prefs.category_activation), allowed: key => !isHeldByQuietHours(key, quiet, nowMs) });
+    state: legacyEpisodeState(ledger, rows, settings, ownerId, recipientId, nowMs, prefs.category_activation), allowed: permitted });
   // Persist a cutover watermark once: already-processed legacy episodes must
   // not replay the same fresh reading when this contract is first deployed.
-  const fixedLowSince = ledger.episode_state?.fixedLowSince ?? ledger.episode_state?.lastAt ?? 0;
-  result.state.fixedLowSince = fixedLowSince;
-  const fixed = fixedLowDecisions({ rows, preferences: effectivePrefs, thresholds: { low: settings?.target_range_low }, nowMs }).filter(item => item.sample.at > fixedLowSince);
+  const lowSince = ledger.episode_state?.fixedLowSince ?? ledger.episode_state?.lastAt ?? 0;
+  result.state.fixedLowSince = lowSince;
+  // Every distinct fresh reading below an enabled low boundary is its own event:
+  // one decision per measurement, with every matching low category covered.
+  const low = lowStreamDecisions({ rows, preferences: effectivePrefs, thresholds: { low: settings?.target_range_low }, nowMs, allowed: permitted })
+    .filter(item => item.sample.at > lowSince);
   let decision = result.notification;
   let concurrent = false;
   if (JSON.stringify(result.state) !== JSON.stringify(ledger.episode_state || {})) {
@@ -59,8 +63,8 @@ export async function evaluateRecipient({ sr, ownerId, prefs, relationship = nul
     }
   }
   if (concurrent) decision = null;
-  const decisions = [...fixed];
-  if (decision && !fixed.some(item => item.sample.at === decision.sample.at)) decisions.push(decision);
+  const decisions = [...low];
+  if (decision && !low.some(item => item.sample.at === decision.sample.at)) decisions.push(decision);
   if (!decisions.length) return concurrent ? 'concurrent_evaluation' : 'no_event';
   let status = 'duplicate';
   for (const item of decisions) status = await dispatchDecision(item);
@@ -75,9 +79,10 @@ export async function evaluateRecipient({ sr, ownerId, prefs, relationship = nul
     readingAt: decision.sample.at, units: displaySettings?.glucose_units || 'mg/dL', timeZone: prefs.quiet_timezone || displaySettings?.timezone || 'UTC',
     showDetails: prefs.show_health_details === true, personName: relationship?.sharer_display_name,
     durationMinutes: decision.durationMinutes, trend: decision.sample.trend ?? null, nowMs,
-    coveredCategories: decision.fixedLow ? [] : covered.map(c => c.category) });
+    thresholdMgdl: decision.lowThreshold ?? null,
+    coveredCategories: decision.perReadingLow ? [] : covered.map(c => c.category) });
   const episodeEvent = `${decision.episodeKey}${decision.repeatIndex ? `:repeat:${decision.repeatIndex}` : ''}`;
-  const eventKey = decision.fixedLow
+  const eventKey = decision.perReadingLow
     ? `push:${ownerId}:${recipientId}:${scopeKey}:${decision.episodeKey}`
     : notificationEventKey(decision.category, ownerId, recipientId, episodeEvent);
   // Older code appended nested claim arrays. Honor those spent keys too, but
@@ -100,17 +105,23 @@ export async function evaluateRecipient({ sr, ownerId, prefs, relationship = nul
       const entity = relationship ? sr.entities.FollowNotificationPreference : sr.entities.NotificationPreference;
       const fresh = await entity.get(prefs.id);
       const relation = relationship ? await sr.entities.SharedAccess.get(relationship.id) : null;
-      if (!recipientAuthorized(fresh, relation, ownerId, recipientId, covered.map(c => c.category), Date.now())) return { ok: false, reason: 'permission_changed' };
+      // Each covered category is re-authorized on its own, moments before the
+      // send. A warning revoked while this send was queued drops out of the
+      // coverage instead of vetoing the reading's other, still-authorized low
+      // rule; only losing every low category blocks the transport.
+      const still = covered.filter(event => recipientAuthorized(fresh, relation, ownerId, recipientId, [event.category], Date.now()));
+      if (!still.some(event => event.category === decision.category)) return { ok: false, reason: 'permission_changed' };
+      covered.splice(0, covered.length, ...still);
       const owner = await sr.entities.User.get(ownerId);
       if (owner.health_data_consent_active !== true || owner.required_reconsent === true || owner.account_status === 'disabled') return { ok: false, reason: 'consent_changed' };
-      if (decision.fixedLow && !fixedLowDecisions({ rows, preferences: { ...fresh, categories: relation ? effectiveFollowerCategories(relation, fresh.categories) : fresh.categories }, thresholds: { low: settings?.target_range_low }, nowMs: nowMs + Math.max(0, Date.now() - wallStarted) }).some(item => item.episodeKey === decision.episodeKey)) return { ok: false, reason: 'expired_or_disabled' };
+      if (decision.perReadingLow && !lowStreamDecisions({ rows, preferences: { ...fresh, categories: relation ? effectiveFollowerCategories(relation, fresh.categories) : fresh.categories }, thresholds: { low: settings?.target_range_low }, nowMs: nowMs + Math.max(0, Date.now() - wallStarted) }).some(item => item.episodeKey === decision.episodeKey)) return { ok: false, reason: 'expired_or_disabled' };
       // An edited preview, threshold, quiet window, opt-in or relationship must
       // be evaluated again, never sent using a stale authorization snapshot.
       const deliveryFields = ['show_health_details', 'quiet_hours_enabled', 'quiet_start_hour', 'quiet_end_hour', 'quiet_timezone', 'urgent_during_quiet'];
-      const relevantChange = decision.fixedLow
+      const relevantChange = decision.perReadingLow
         ? deliveryFields.some(key => fresh[key] !== prefs[key]) || covered.some(event => fresh.category_activation?.[event.category] !== prefs.category_activation?.[event.category])
         : fresh.updated_date !== prefs.updated_date;
-      if (relevantChange || (!decision.fixedLow && relation && relation.permission_version !== relationship.permission_version)) return { ok: false, reason: 'configuration_changed' };
+      if (relevantChange || (!decision.perReadingLow && relation && relation.permission_version !== relationship.permission_version)) return { ok: false, reason: 'configuration_changed' };
       return { ok: true };
     },
     send: message => sr.integrations.Core.SendPushNotification(message),
