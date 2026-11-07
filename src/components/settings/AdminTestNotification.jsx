@@ -19,7 +19,7 @@ export default function AdminTestNotification() {
     try {
       await base44.functions.invoke("sendMyTestPushNotification", {});
       playNotificationFeedback();
-      toast.success("Test notification sent. You should hear a chime and feel a buzz here.");
+      toast.success("Test sent. Check the locked phone itself for the alert tone.");
     } catch (error) {
       const message = error?.response?.data?.error || error?.message;
       toast.error(message || "We could not submit the test notification. Please try again.");
@@ -38,7 +38,9 @@ export default function AdminTestNotification() {
         Stackd on your computer and lock your phone first.
       </p>
       <p className="mt-1.5 text-xs leading-relaxed" style={{ color: "#746959" }}>
-        Sending also plays a chime and a buzz on the device you send from, as a quick confirmation.
+        A chime and a buzz here only mean the request left Stackd. The tone and buzz on a locked or
+        closed phone come from Stackd&rsquo;s own settings in the phone&rsquo;s Notifications, so this
+        screen can&rsquo;t confirm what a locked phone will do.
       </p>
       <button
         type="button"

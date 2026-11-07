@@ -208,6 +208,23 @@ export function keysToPrune(claimedKeys: unknown, keep = 200): string[] {
 export const PUSH_MESSAGE_FIELDS = ['action_url', 'content', 'title', 'user_id'];
 
 /**
+ * Whether THIS APP is able to ask for a sound on a remote notification.
+ *
+ * It is not. The documented input schema of the platform's push integration is
+ * { app_id, app_owner, user_id, title, content, action_label, action_url }.
+ * There is no `sound`, no interruption level and no raw APNs body, so
+ * `aps.sound` — and with it the alert tone while the phone is locked or the app
+ * is closed — is decided entirely by Base44's own push service and by the
+ * person's iOS Stackd notification settings. No field this app can set reaches
+ * that decision, so none is invented here.
+ *
+ * The chime in src/lib/notificationFeedback.js is Web Audio played by the open
+ * app on the device that triggers a test. It confirms the request left Stackd.
+ * It is never evidence that the remote alert is audible on a locked phone.
+ */
+export const PUSH_SOUND_SUPPORTED = false;
+
+/**
  * Field NAMES only — never a title, a body, a link or an account. This makes the
  * serialized payload verifiable in the server logs without exposing health
  * content, tokens or credentials.
