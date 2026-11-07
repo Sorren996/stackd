@@ -407,7 +407,9 @@ function App() {
           <AuthenticatedApp />
         </Router>
         <Toaster />
-        <SonnerToaster position="top-center" theme="light" />
+        {/* Position and safe-area offset live in the component itself, so no
+            caller can drop a banner back onto the status bar. */}
+        <SonnerToaster />
       </QueryClientProvider>
     </AuthProvider>
   )

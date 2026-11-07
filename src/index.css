@@ -672,3 +672,25 @@
   border-color: #eadccf !important;
   color: #3f3830;
 }
+
+/* ============================================================
+   IN-APP BANNER MOTION (Sonner)
+   Sonner parks each toast in a slot, then animates it in from
+   `translateY(-100%)` and out the same way. Now that the slot
+   starts below the status area, a full-height travel would carry
+   the text back up through the clock on the way in and out. Both
+   directions are shortened to a few pixels, so a banner still
+   moves but never leaves the safe region. Stacking, expansion and
+   swipe offsets are untouched.
+
+   These rules are unlayered on purpose: Sonner injects its own
+   stylesheet at runtime, after this file, so a layered rule would
+   lose regardless of specificity.
+   ============================================================ */
+[data-sonner-toast][data-y-position="top"][data-mounted="false"] {
+  --y: translateY(-10px) !important;
+}
+
+[data-sonner-toast][data-y-position="top"][data-removed="true"] {
+  --y: translateY(6px) !important;
+}

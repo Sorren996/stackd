@@ -19,10 +19,17 @@ export default function AdminTestNotification() {
     try {
       await base44.functions.invoke("sendMyTestPushNotification", {});
       playNotificationFeedback();
-      toast.success("Test sent. Check the locked phone itself for the alert tone.");
+      // One stable id for both outcomes: repeating the test — or retrying after
+      // a failure — updates this single banner instead of stacking a second one
+      // on top of it.
+      toast.success("Test sent. Check the locked phone itself for the alert tone.", {
+        id: "push-delivery-test",
+      });
     } catch (error) {
       const message = error?.response?.data?.error || error?.message;
-      toast.error(message || "We could not submit the test notification. Please try again.");
+      toast.error(message || "We could not submit the test notification. Please try again.", {
+        id: "push-delivery-test",
+      });
     } finally {
       setPending(false);
     }
