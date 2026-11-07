@@ -243,7 +243,13 @@ export const AuthProvider = ({ children }) => {
     bootstrapRef.current = work;
     return work;
   }, [executeAppCheck]);
-  const checkUserAuth = checkAppState;
+  // Consent writes require a read begun AFTER the write, not a session probe
+  // already in flight before it. Wait for that probe, then share a fresh launch.
+  const checkUserAuth = useCallback(async () => {
+    if (bootstrapRef.current) await bootstrapRef.current;
+    await sessionRequest.current.settle();
+    if (mountedRef.current) return checkAppState();
+  }, [checkAppState]);
 
   /**
    * Centralized session expiration handler.

@@ -26,6 +26,15 @@ test('existing acknowledgment is returned unchanged through an explicit immutabl
   assert.deepEqual(client.calls, [[{ created_by_id: 'account-a' }, '-accepted_at', 1]]);
 });
 
+test('latest consent and full history never share differently sized responses', async () => {
+  let calls = 0;
+  const client = { entities: { UserAcknowledgment: { filter: async (_query, _sort, limit) => {
+    calls++; return limit === 1 ? [record] : [record, { ...record, id: 'older' }];
+  } } } };
+  const [latest, history] = await Promise.all([loadAcknowledgments(client, 'account-a'), loadAcknowledgments(client, 'account-a', 50)]);
+  assert.equal(latest.length, 1); assert.equal(history.length, 2); assert.equal(calls, 2);
+});
+
 test('new account empty result remains a successful empty result', async () => {
   assert.deepEqual(await loadAcknowledgments(mock([[]]), 'account-a'), []);
 });

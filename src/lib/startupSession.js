@@ -17,6 +17,9 @@ export default function createStartupSession(client) {
       flight = work;
       return work;
     },
+    settle() {
+      return flight ? flight.then(() => {}, () => {}) : Promise.resolve();
+    },
     retire() {
       controller?.abort();
       flight = null;
