@@ -12,6 +12,10 @@ export const TEST_PUSH_TITLE = "Stackd test notification";
 export const TEST_PUSH_MESSAGE =
   "This is a delivery test. No glucose alert has been triggered.";
 
+// Fallback origin, used only when the caller cannot supply the app's own public
+// origin (for example in a unit test).
+export const DEFAULT_PUSH_ORIGIN = "https://stackdinsight.base44.app";
+
 // Best-effort per-account cooldown so repeated taps cannot fan out sends.
 // In-memory only — no entity or workflow exists just for this test facility.
 export const TEST_PUSH_COOLDOWN_MS = 20_000;
@@ -32,7 +36,8 @@ function isUnavailable(error: any) {
 export async function runTestPushNotification(
   base44: any,
   user: any,
-  nowMs: number = Date.now()
+  nowMs: number = Date.now(),
+  origin: string = DEFAULT_PUSH_ORIGIN
 ): Promise<{ status: number; body: Record<string, any> }> {
   if (!user?.id) {
     return { status: 401, body: { error: "Please sign in to continue." } };
@@ -55,12 +60,22 @@ export async function runTestPushNotification(
   lastSendByUser.set(user.id, nowMs);
 
   try {
-    // Same three documented fields as a real alert (see
-    // PUSH_MESSAGE_FIELDS in notificationDispatch.ts). The integration accepts
-    // no sound, interruption level or APNs key, so the test path cannot request
-    // an audible alert any more than the automatic path can. Field names only
-    // are logged, never the message text.
-    const message = { user_id: user.id, title: TEST_PUSH_TITLE, content: TEST_PUSH_MESSAGE };
+    // The same four documented fields as a real alert (see PUSH_MESSAGE_FIELDS
+    // in notificationDispatch.ts): recipient, title, body, and the tapping link.
+    // A real self alert opens "/" (destinationFor("self")), so the test carries
+    // that same link rather than a shorter payload. That makes a locked-phone
+    // test a faithful reproduction of an automatic alert — one fewer difference
+    // to explain when the two behave differently.
+    //
+    // This is payload parity only. It is NOT a sound fix: the integration
+    // accepts no sound, interruption level or APNs key, so neither path can ask
+    // for an audible alert. Field names only are logged, never the text.
+    const message = {
+      user_id: user.id,
+      title: TEST_PUSH_TITLE,
+      content: TEST_PUSH_MESSAGE,
+      action_url: `${String(origin || "").replace(/\/+$/, "") || DEFAULT_PUSH_ORIGIN}/`,
+    };
     console.log(JSON.stringify({ diagStage: 'PUSH_PAYLOAD_TEST', fields: Object.keys(message).sort() }));
     await base44.asServiceRole.integrations.Core.SendPushNotification(message);
   } catch (error: any) {

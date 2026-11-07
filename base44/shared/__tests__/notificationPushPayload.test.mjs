@@ -64,9 +64,10 @@ test('the test push uses the same documented field set as a real alert', async (
   assert.equal(result.status, 200);
   assert.deepEqual(
     Object.keys(sends[0]).sort(),
-    PUSH_MESSAGE_FIELDS.filter((field) => field !== 'action_url').sort(),
-    'test and automatic paths differ only by the optional action link'
+    PUSH_MESSAGE_FIELDS.slice().sort(),
+    'the test push is field-for-field identical to a real alert, action link included'
   );
+  assert.equal(sends[0].action_url, 'https://stackdinsight.base44.app/');
   assert.equal(sends[0].title, TEST_PUSH_TITLE);
   assert.equal(sends[0].content, TEST_PUSH_MESSAGE);
   for (const key of ['sound', 'aps', 'apns', 'interruptionLevel', 'critical']) assert.equal(key in sends[0], false);

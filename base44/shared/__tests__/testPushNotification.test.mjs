@@ -63,12 +63,14 @@ describe("sendMyTestPushNotification", () => {
     assert.deepEqual(res.body, { ok: true });
     assert.equal(calls.length, 1);
 
-    // Exactly these three fields: the recipient is the authenticated account,
-    // the copy is fixed, and no link (or anything else) is passed through.
+    // Exactly the same four fields a real self alert sends: the recipient is the
+    // authenticated account, the copy is fixed, and the link is the app's own
+    // home route — never a caller-supplied value.
     assert.deepEqual(calls[0], {
       user_id: "u-admin-recipient",
       title: TEST_PUSH_TITLE,
       content: TEST_PUSH_MESSAGE,
+      action_url: "https://stackdinsight.base44.app/",
     });
   });
 

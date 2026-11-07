@@ -9,6 +9,7 @@
 
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.54";
 import { runTestPushNotification } from "../../shared/testPushNotification.ts";
+import { appOrigin } from "../../shared/sharingAccess.ts";
 
 export default async function (req: Request): Promise<Response> {
   try {
@@ -18,7 +19,9 @@ export default async function (req: Request): Promise<Response> {
       .me()
       .catch((e: any) => (e?.status === 401 ? null : Promise.reject(e)));
 
-    const { status, body } = await runTestPushNotification(base44, user);
+    // The app's own public origin, taken from the platform-set header, so the
+    // test carries the same tapping link a real alert carries.
+    const { status, body } = await runTestPushNotification(base44, user, Date.now(), appOrigin(req));
     return Response.json(body, { status });
   } catch (error: any) {
     console.error("[sendMyTestPushNotification]", error?.message || "unexpected error");
