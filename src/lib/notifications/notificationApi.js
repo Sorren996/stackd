@@ -29,8 +29,14 @@ export const savePersonalNotifications = (preferences) =>
 export const saveFollowNotifications = (accessId, preferences) =>
   call("updateFollowNotificationPreferences", { access_id: accessId, preferences }, true);
 
-export const savePushGrants = (accessId, grants) =>
-  call("updateRelationshipPushGrants", { access_id: accessId, grants });
+/**
+ * Allow or withdraw ONE push category for one follower.
+ *
+ * Only the category being changed is sent: the server merges it onto the
+ * permission it has stored, so nothing else can be switched off by omission.
+ */
+export const savePushGrants = (accessId, category, value) =>
+  call("updateRelationshipPushGrants", { access_id: accessId, category, value });
 
 export const markNotificationRead = (deliveryId) =>
   call("markNotificationRead", { delivery_id: deliveryId });
@@ -43,6 +49,9 @@ const REASON_COPY = {
   invalid_custom_high_mgdl: 'Choose a notification high from 100 to 400 mg/dL.',
   invalid_velocity_rate: 'Choose a pace of 2 or 3 mg/dL per minute.',
   invalid_repeat_minutes: 'Choose one of the repeat options.',
+  invalid_grant_category: 'That permission is not one you can change here.',
+  invalid_grant_value: 'That permission could not be read. Please try again.',
+  not_found: 'That person is no longer in your list.',
   above_range_minutes_required: "Choose how long a high has to last before saving.",
   missing_delay_minutes_required: "Choose how long readings must be quiet before saving.",
   invalid_above_range_minutes: "That timing is not one of the options.",
@@ -51,6 +60,7 @@ const REASON_COPY = {
   invalid_timezone: "We could not use that time zone.",
   not_available: "This person is not sharing glucose with you right now.",
   revoked: "This relationship has ended.",
+  expired: "That invitation expired, so nothing more can be set for this person.",
   forbidden: "That is not your setting to change.",
   unauthorized: "Please sign in again.",
   timeout: "That took too long. Please try again.",

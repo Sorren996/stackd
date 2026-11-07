@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
+import { initialPushState, pushGrantReducer } from "@/lib/sharing/pushGrantToggle";
 import Sheet from "@/components/Sheet";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -36,7 +37,11 @@ export default function RelationshipSheet({ relationship, open, onClose, onChang
   const [busy, setBusy] = useState(false);
   const [pendingAction, setPendingAction] = useState("");
   const [confirmRevoke, setConfirmRevoke] = useState(false);
-  const [pushBusy, setPushBusy] = useState(false);
+  // The sharer's push permission for this one follower. Kept apart from the
+  // follower's own opt-in and device, which this screen never touches.
+  const [pushState, dispatchPush] = useReducer(pushGrantReducer, relationship, (row) =>
+    initialPushState(row?.push, row?.permission_version, row?.id)
+  );
 
   // One submission at a time: a second tap while a change is in flight is
   // ignored rather than queued, so a slow connection can never apply it twice.
@@ -52,6 +57,15 @@ export default function RelationshipSheet({ relationship, open, onClose, onChang
     setLocal(relationship);
     setError("");
     activeIdRef.current = relationship?.id || null;
+    // Fresh data from the server. The reducer decides whether it is newer than
+    // what the sharer just saved, so a refetch that started before a save
+    // cannot switch a permission back off.
+    dispatchPush({
+      type: "sync",
+      id: relationship?.id || null,
+      grants: relationship?.push || {},
+      version: Number(relationship?.permission_version) || 0,
+    });
   }, [relationship]);
 
   if (!local) return null;
@@ -71,6 +85,12 @@ export default function RelationshipSheet({ relationship, open, onClose, onChang
       // Nothing is reported as done until the server has confirmed it.
       if (activeIdRef.current !== idAtSubmit) return;
       setLocal(data.relationship);
+      dispatchPush({
+        type: "sync",
+        id: data.relationship?.id,
+        grants: data.relationship?.push || {},
+        version: Number(data.relationship?.permission_version) || 0,
+      });
       if (action === "revoke") {
         // Withdrawn for good: the sheet closes and the list shows the state.
         onRevoked?.();
@@ -98,20 +118,43 @@ export default function RelationshipSheet({ relationship, open, onClose, onChang
   const toggleScope = (key, value) => apply("set_scopes", { scopes: { ...scopes, [key]: value } });
   const toggleAlert = (key, value) => apply("set_alerts", { alert_scopes: { ...alerts, [key]: value } });
 
-  const pushGrants = local.push || {};
+  /**
+   * Allow or withdraw ONE push category for this follower.
+   *
+   * The switch answers immediately; only this one switch is held while the
+   * permission is saved. A confirmed failure puts the switch back where it was
+   * and says why — the sharer's permission is never reported as saved when the
+   * server did not accept it. The follower's own opt-in and their device are
+   * untouched by all of this: a saved permission stays saved whether or not
+   * they have switched anything on yet.
+   */
+  const pushGrants = pushState.push;
+  // Held only while this one switch is being saved.
+  const pendingPush = pushState.pending;
   const togglePush = async (key, value) => {
-    if (pushBusy) return;
-    setPushBusy(true);
+    if (pushState.pending.includes(key)) return;
+    const idAtSubmit = local.id;
+    const previous = pushGrants[key] === true;
+
+    // The reply quotes this number, so a later tap on the same switch wins.
+    const seq = pushState.nextSeq + 1;
     setError("");
+    dispatchPush({ type: "toggle", key, value, seq });
+
     try {
-      const data = await savePushGrants(local.id, { ...pushGrants, [key]: value });
-      // Nothing is reported as done until the server has confirmed it.
-      setLocal((current) => ({ ...current, push: data.grants }));
+      const data = await savePushGrants(idAtSubmit, key, value);
+      if (activeIdRef.current !== idAtSubmit) return;
+      dispatchPush({
+        type: "saved",
+        key,
+        seq,
+        grants: data.grants,
+        version: Number(data.permission_version) || 0,
+      });
       onChanged?.();
     } catch (err) {
-      setError(describeNotificationError(err));
-    } finally {
-      setPushBusy(false);
+      dispatchPush({ type: "failed", key, seq, previous });
+      if (activeIdRef.current === idAtSubmit) setError(describeNotificationError(err));
     }
   };
 
@@ -198,11 +241,25 @@ export default function RelationshipSheet({ relationship, open, onClose, onChang
                     <p className="text-xs" style={{ color: "#746959" }}>
                       {category.description}
                     </p>
+                    {/* Saved here, not yet received there: the follower chooses
+                        their own notifications, and this says so without
+                        switching the sharer's permission back off. */}
+                    {local.status === "active" &&
+                      pushGrants[category.key] &&
+                      local.follower_push_ready?.[category.key] === false && (
+                        <p className="pt-0.5 text-xs" style={{ color: "#8a6326" }}>
+                          Waiting for them to turn their notifications on.
+                        </p>
+                      )}
+                    {pendingPush.includes(category.key) && (
+                      <p className="pt-0.5 text-xs" style={{ color: "#746959" }}>Saving…</p>
+                    )}
                   </div>
                   <Switch
                     checked={Boolean(pushGrants[category.key])}
-                    disabled={pushBusy || busy || terminal || !scopes.glucose}
+                    disabled={pendingPush.includes(category.key) || busy || terminal || !scopes.glucose}
                     aria-label={category.label}
+                    aria-busy={pendingPush.includes(category.key)}
                     onCheckedChange={(value) => togglePush(category.key, value)}
                   />
                 </div>

@@ -18,6 +18,7 @@ import {
   normalizeEmail,
   isPlausibleEmail,
 } from "./sharingCore.ts";
+import { sharerGrants } from "./notificationCore.ts";
 
 /** Invitations live for 48 hours by default. */
 export const INVITE_TTL_HOURS = 48;
@@ -151,13 +152,10 @@ export function publicRelationship(access: any, now: number = Date.now()): Recor
     alert_scopes: effectiveAlertScopes(access, now),
     // Push permissions the sharer has granted on this relationship. Read-only
     // here and only meaningful while glucose is shared; the follower's own
-    // narrowing lives in FollowNotificationPreference.
-    push: {
-      urgent_low: access?.push?.urgent_low === true,
-      below_range: access?.push?.below_range === true,
-      above_range: access?.push?.above_range === true,
-      missing_readings: access?.push?.missing_readings === true,
-    },
+    // narrowing lives in FollowNotificationPreference. Reported through the
+    // canonical grant shape, so a permission the sharer saved is never dropped
+    // on the way back to their own screen.
+    push: sharerGrants(access),
     contact_shared: Boolean(access.contact_shared),
     permission_version: Number(access.permission_version) || 1,
     invitation_id: access.invitation_id ?? null,

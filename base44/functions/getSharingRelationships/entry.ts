@@ -13,6 +13,7 @@ import {
 } from '../../shared/sharingCrypto.ts';
 import { maskPhone } from '../../shared/sharingCore.ts';
 import { ok, fail, asArray, currentUser, publicRelationship } from '../../shared/sharingAccess.ts';
+import { followerPushReady } from '../../shared/notificationCore.ts';
 
 export default async function (req: Request): Promise<Response> {
   try {
@@ -33,6 +34,18 @@ export default async function (req: Request): Promise<Response> {
       sr.entities.FollowerAlertDelivery.filter({ sharer_user_id: user.id }, { sort: '-created_date', limit: 30 }),
     ]);
 
+    // The follower's own push choice, so the owner's screen can say honestly
+    // "permission saved, waiting for them" instead of showing a permission as
+    // off when it is on. Their choice is read, never written, here.
+    const accessIds = asArray(rows).map((row: any) => row.id).filter(Boolean);
+    const followPrefs = accessIds.length
+      ? asArray(await sr.entities.FollowNotificationPreference.filter({ shared_access_id: { $in: accessIds } }, { limit: 200 }))
+      : [];
+    const followerPrefByAccess: Record<string, any> = {};
+    for (const pref of followPrefs) {
+      if (pref?.shared_access_id) followerPrefByAccess[pref.shared_access_id] = pref;
+    }
+
     const inviteByAccess: Record<string, any> = {};
     for (const invite of asArray(invitations)) {
       const prior = inviteByAccess[invite.shared_access_id];
@@ -46,6 +59,9 @@ export default async function (req: Request): Promise<Response> {
       const base = publicRelationship(row, now);
       return {
         ...base,
+        // Per category: the owner's permission is saved, but is this follower
+        // ready to receive it? Derived from their own stored choice only.
+        follower_push_ready: followerPushReady(followerPrefByAccess[row.id]),
         // What would actually reach this follower right now: the owner's
         // authorization AND the follower's own choice. A channel that is armed
         // but not yet allowed by the follower is reported as armed, never as

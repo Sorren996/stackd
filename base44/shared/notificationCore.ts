@@ -614,7 +614,16 @@ export function relationshipAllowsPush(row: RelationshipLike | null | undefined,
 
 /** The sharer's own per-category permission. Absent means off. */
 export function sharerGrants(row: RelationshipLike | null | undefined): Record<Category, boolean> {
-  const raw = (row?.push || {}) as Record<string, unknown>;
+  return sharerGrantsFromPush((row?.push || {}) as Record<string, unknown>);
+}
+
+/**
+ * The ONE canonical shape of a sharer's per-follower push permission. Every
+ * reader (persistence, the relationship payload, delivery) goes through it, so
+ * a category can never be saved yet reported as absent.
+ */
+export function sharerGrantsFromPush(rawPush: Record<string, unknown> | null | undefined): Record<Category, boolean> {
+  const raw = (rawPush || {}) as Record<string, unknown>;
   return {
     custom_low: raw.custom_low === true, custom_high: raw.custom_high === true,
     falling_fast: raw.falling_fast === true, rising_fast: raw.rising_fast === true,
@@ -926,6 +935,39 @@ export function sanitizeFollowerPreferences(
     },
     error: null,
   };
+}
+
+/**
+ * Change ONE category of a relationship's push permission.
+ *
+ * Merged against the grants the server itself has stored, never against a copy
+ * the browser sent. A client that does not know about a category therefore
+ * cannot switch it off by leaving it out.
+ */
+export function applySharerGrantPatch(
+  storedPush: Record<string, unknown> | null | undefined,
+  category: unknown,
+  value: unknown
+): { grants: Record<Category, boolean>; error?: undefined } | { grants?: undefined; error: string } {
+  if (typeof category !== "string" || !CATEGORY_KEYS.includes(category as Category)) {
+    return { error: "invalid_grant_category" };
+  }
+  if (typeof value !== "boolean") return { error: "invalid_grant_value" };
+  const grants = sharerGrantsFromPush(storedPush);
+  grants[category as Category] = value;
+  return { grants };
+}
+
+/**
+ * What the FOLLOWER has chosen for themselves. Used only to tell the sharer
+ * their permission is saved but waiting — never to infer or change it.
+ */
+export function followerPushReady(prefs: Record<string, any> | null | undefined): Record<Category, boolean> {
+  const on = prefs?.master_enabled === true;
+  const chosen = (prefs?.categories || {}) as Record<string, unknown>;
+  const out = {} as Record<Category, boolean>;
+  for (const key of CATEGORY_KEYS) out[key] = on && chosen[key] === true;
+  return out;
 }
 
 /** Sharer-side grants are plain booleans, all defaulting to off. */
