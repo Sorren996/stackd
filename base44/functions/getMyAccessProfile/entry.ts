@@ -18,7 +18,6 @@ import {
   ok,
   fail,
   asArray,
-  currentUser,
   publicRelationship,
   audit,
   readBody,
@@ -29,7 +28,7 @@ export default async function (req: Request): Promise<Response> {
     if (req.method !== 'POST') return fail('method_not_allowed', 405);
 
     const base44 = createClientFromRequest(req);
-    const user = await currentUser(base44);
+    const user = await base44.auth.me();
     if (!user) return fail('unauthorized', 401);
 
     const body = await readBody(req);
@@ -101,15 +100,15 @@ export default async function (req: Request): Promise<Response> {
     }
 
     const [noticeRowList, settingsRows, glucoseRows, carbRows] = await Promise.all([
-      sr.entities.FollowerNotice.filter({ created_by_id: user.id }, { sort: '-accepted_at', limit: 5 }).catch(() => []),
-      sr.entities.UserSettings.filter({ created_by_id: user.id }, { sort: '-updated_date', limit: 1 }).catch(() => []),
-      sr.entities.GlucoseReading.filter({ created_by_id: user.id }, { limit: 1 }).catch(() => []),
-      sr.entities.CarbEntry.filter({ created_by_id: user.id }, { limit: 1 }).catch(() => []),
+      sr.entities.FollowerNotice.filter({ created_by_id: user.id }, { sort: '-accepted_at', limit: 5 }),
+      sr.entities.UserSettings.filter({ created_by_id: user.id }, { sort: '-updated_date', limit: 1 }),
+      sr.entities.GlucoseReading.filter({ created_by_id: user.id }, { limit: 1 }),
+      sr.entities.CarbEntry.filter({ created_by_id: user.id }, { limit: 1 }),
     ]);
     const [doseRows, journalRows, dexcomRows] = await Promise.all([
-      sr.entities.InsulinDose.filter({ created_by_id: user.id }, { limit: 1 }).catch(() => []),
-      sr.entities.JournalEntry.filter({ created_by_id: user.id }, { limit: 1 }).catch(() => []),
-      sr.entities.DexcomConnection.filter({ created_by_id: user.id }, { limit: 1 }).catch(() => []),
+      sr.entities.InsulinDose.filter({ created_by_id: user.id }, { limit: 1 }),
+      sr.entities.JournalEntry.filter({ created_by_id: user.id }, { limit: 1 }),
+      sr.entities.DexcomConnection.filter({ created_by_id: user.id }, { limit: 1 }),
     ]);
 
     const settings = asArray(settingsRows)[0] || null;
@@ -141,7 +140,14 @@ export default async function (req: Request): Promise<Response> {
         : null,
     });
   } catch (error: any) {
-    console.error('[getMyAccessProfile] failed:', error?.message || error);
-    return fail('server_error', 500);
+    const upstreamStatus = Number(error?.status || error?.response?.status);
+    const status = [401, 403, 429].includes(upstreamStatus) ? upstreamStatus : 503;
+    const headers = error?.response?.headers || error?.originalError?.response?.headers;
+    const retryAfter = headers?.get?.('retry-after') ?? headers?.['retry-after'];
+    console.info(JSON.stringify({ diagStage: 'STARTUP', stage: 'profile-server', outcome: 'error', status }));
+    return Response.json({ ok: false, reason: status === 401 ? 'unauthorized' : status === 403 ? 'forbidden' : 'temporarily_unavailable' }, {
+      status,
+      headers: retryAfter ? { 'Retry-After': String(retryAfter) } : status === 429 ? { 'Retry-After': '30' } : {},
+    });
   }
 }

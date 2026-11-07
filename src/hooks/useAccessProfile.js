@@ -6,22 +6,21 @@ import { getMyAccessProfile, NOTICE_VERSION } from "@/lib/access/profileApi";
  * Resolves what this account IS, server-side, before any patient gate or
  * patient data query mounts.
  *
- * Failure never strands anyone: an unresolved or errored profile falls back to
- * the patient experience, which is the app exactly as it was. It is never used
- * to hide an existing person's own data.
+ * Unknown or failed role checks remain unknown; no patient/follower default.
  */
 export default function useAccessProfile() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoadingAuth } = useAuth();
 
   const query = useQuery({
     // Keyed by the account, so switching accounts can never serve the previous
     // person's capability or relationships.
     queryKey: ["access-profile", user?.id || "anon"],
-    queryFn: getMyAccessProfile,
-    enabled: isAuthenticated && Boolean(user?.id),
-    staleTime: 0,
-    gcTime: 0,
-    retry: 1,
+    queryFn: ({ signal }) => getMyAccessProfile(user.id, signal),
+    enabled: isAuthenticated && !isLoadingAuth && Boolean(user?.id),
+    staleTime: Infinity,
+    gcTime: 5 * 60 * 1000,
+    refetchOnReconnect: false,
+    retry: false,
   });
 
   const data = query.data;
@@ -35,8 +34,8 @@ export default function useAccessProfile() {
   return {
     ...query,
     resolving,
-    resolved: Boolean(data),
-    mode: data?.mode || (query.isError ? "patient" : null),
+    resolved: Boolean(data) && !query.isError,
+    mode: query.isError ? null : data?.mode || null,
     following: data?.following || [],
     pendingInvitations: data?.pending_invitations || [],
     noticeAccepted,
