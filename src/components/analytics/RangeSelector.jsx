@@ -1,35 +1,36 @@
-import { motion } from "framer-motion";
-
-const RANGES = [
-  { value: 7, label: "7d" },
-  { value: 14, label: "14d" },
-  { value: 30, label: "30d" },
-  { value: 60, label: "60d" },
-  { value: 90, label: "90d" },
-];
+// Compact period control for the Insights view. One segment per supported
+// period; the selected segment is a solid espresso pill so the state is
+// unmistakable at a glance and to a screen reader (aria-pressed).
+const RANGES = [7, 14, 30, 60, 90];
 
 export default function RangeSelector({ value, onChange }) {
   return (
-    <div className="flex items-center gap-0.5 rounded-lg border p-0.5" style={{ borderColor: "#eadccf", background: "#fdf9f2" }}>
-      {RANGES.map((range) => (
-        <button
-          key={range.value}
-          onClick={() => onChange(range.value)}
-          className={`relative px-2.5 py-0.5 text-[11px] font-semibold rounded-md transition-colors ${
-            value === range.value ? "text-white" : "text-white/40 hover:text-white/70"
-          }`}
-        >
-          {value === range.value && (
-            <motion.div
-              layoutId="analytics-range-active"
-              className="absolute inset-0 rounded-md"
-              style={{ background: "rgba(91,101,80,0.15)" }}
-              transition={{ type: "spring", stiffness: 380, damping: 30 }}
-            />
-          )}
-          <span className="relative z-10">{range.label}</span>
-        </button>
-      ))}
+    <div
+      role="group"
+      aria-label="Time period"
+      className="flex w-full items-center gap-0.5 rounded-full p-0.5"
+      style={{ background: "#fdf9f2", border: "1px solid #e6dccd", boxShadow: "0 2px 10px rgba(63,56,48,0.06)" }}
+    >
+      {RANGES.map((days) => {
+        const selected = value === days;
+        return (
+          <button
+            key={days}
+            type="button"
+            onClick={() => onChange(days)}
+            aria-pressed={selected}
+            aria-label={`Past ${days} days`}
+            className="min-h-[34px] flex-1 rounded-full px-1 text-[12px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+            style={{
+              background: selected ? "#3f3830" : "transparent",
+              color: selected ? "#fdf9f2" : "#6b6153",
+              boxShadow: "none",
+            }}
+          >
+            {days}d
+          </button>
+        );
+      })}
     </div>
   );
 }
