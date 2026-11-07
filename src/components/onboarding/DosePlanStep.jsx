@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { ChevronLeft, Lock } from "lucide-react";
+import TermInfoButton from "@/components/doseplan/TermInfoButton";
+import { DOSE_TERMS } from "@/lib/dosePlanCopy";
 
 const INK = "#3f3830";
 const COPPER = "#9c5228";
@@ -9,40 +11,48 @@ const HAIRLINE = "#eadccf";
 const FAINT = "#746959";
 const TAUPE = "#6b6153";
 
-function FieldInput({ label, value, onChange, placeholder, unit }) {
+function FieldInput({ label, value, onChange, unit, helper, info }) {
   return (
     <div>
-      <label
-        className="text-[10px] font-bold uppercase tracking-[0.16em] block mb-1.5"
-        style={{ color: FAINT }}
-      >
-        {label}
-      </label>
+      <div className="mb-1 flex items-center gap-1">
+        <label className="text-[12px] font-semibold" style={{ color: INK }}>
+          {label}
+        </label>
+        {info}
+      </div>
       <div className="flex items-center gap-2">
         <input
           type="number"
           inputMode="decimal"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
           className="flex-1 rounded-2xl border px-4 py-3 text-sm focus:outline-none"
           style={{ background: CANVAS, borderColor: HAIRLINE, color: INK }}
         />
         {unit && (
-          <span className="text-[12px] shrink-0" style={{ color: TAUPE }}>
+          <span className="shrink-0 text-[12px]" style={{ color: TAUPE }}>
             {unit}
           </span>
         )}
       </div>
+      {helper && (
+        <p className="mt-1.5 text-[11px] leading-relaxed" style={{ color: FAINT }}>
+          {helper}
+        </p>
+      )}
     </div>
   );
 }
 
 /**
- * Step 2 — Dose Plan (optional, skippable).
- * Presents insulin sensitivity, carb ratio, and correction target fields
- * with a "Confirm my plan" button and a "Skip for now" option. If skipped,
- * dose math stays paused per the existing settings_confirmed gate.
+ * Step 2 — prescribed insulin settings (optional, skippable).
+ *
+ * Everyday labels with the medical term in each explanation. Units match the
+ * stored fields exactly: mg/dL per unit, units per 5 grams of carbs (never
+ * grams per unit), and mg/dL for the correction target. Inputs start empty —
+ * no seeded example value is ever presented as someone's prescribed plan.
+ * Confirming sets settings_confirmed; skipping leaves the existing gate in
+ * place, so dose calculations stay off.
  */
 export default function DosePlanStep({ onConfirm, onSkip, onBack }) {
   const [sensitivity, setSensitivity] = useState("");
@@ -71,7 +81,8 @@ export default function DosePlanStep({ onConfirm, onSkip, onBack }) {
       >
         <button
           onClick={onBack}
-          className="flex h-9 w-9 items-center justify-center rounded-full"
+          aria-label="Back"
+          className="flex h-11 w-11 items-center justify-center rounded-full"
           style={{ background: CREAM, border: `1px solid ${HAIRLINE}` }}
         >
           <ChevronLeft className="h-4 w-4" style={{ color: INK }} />
@@ -83,15 +94,15 @@ export default function DosePlanStep({ onConfirm, onSkip, onBack }) {
 
       {/* Title */}
       <div className="px-5 pt-6 pb-4">
-        <h1 className="text-2xl font-bold" style={{ color: INK }}>
+        <h1 className="text-2xl font-bold leading-tight" style={{ color: INK }}>
           Your{" "}
           <em style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontWeight: 400 }}>
-            dose plan
-          </em>
+            prescribed
+          </em>{" "}
+          insulin settings
         </h1>
         <p className="mt-2 text-sm leading-relaxed" style={{ color: TAUPE }}>
-          Enter your prescribed settings to unlock dose insights. You can skip and set this up later in
-          Settings.
+          Use the settings from your care team. If you&rsquo;re unsure, you can skip this step.
         </p>
       </div>
 
@@ -102,33 +113,36 @@ export default function DosePlanStep({ onConfirm, onSkip, onBack }) {
           style={{ background: CREAM, border: `1px solid ${HAIRLINE}` }}
         >
           <FieldInput
-            label="Insulin sensitivity"
+            label={DOSE_TERMS.sensitivity.label}
             value={sensitivity}
             onChange={setSensitivity}
-            placeholder="50"
-            unit="mg/dL per U"
+            unit={DOSE_TERMS.sensitivity.unit}
+            helper={DOSE_TERMS.sensitivity.helper}
+            info={<TermInfoButton termKey="sensitivity" />}
           />
           <FieldInput
-            label="Carb ratio"
+            label={DOSE_TERMS.mealRatio.label}
             value={carbRatio}
             onChange={setCarbRatio}
-            placeholder="2.5"
-            unit="U per 5g"
+            unit={DOSE_TERMS.mealRatio.unit}
+            helper={DOSE_TERMS.mealRatio.helper}
+            info={<TermInfoButton termKey="mealRatio" />}
           />
           <FieldInput
-            label="Correction target"
+            label={DOSE_TERMS.correctionTarget.label}
             value={correctionTarget}
             onChange={setCorrectionTarget}
-            placeholder="110"
-            unit="mg/dL"
+            unit={DOSE_TERMS.correctionTarget.unit}
+            helper={DOSE_TERMS.correctionTarget.helper}
+            info={<TermInfoButton termKey="correctionTarget" />}
           />
         </div>
 
         <div className="flex items-start gap-2 px-1">
           <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: COPPER }} />
           <p className="text-[11px] leading-relaxed" style={{ color: FAINT }}>
-            Only enter insulin settings prescribed or confirmed by your licensed healthcare
-            professional. Dose math stays paused until you confirm.
+            Only enter settings prescribed or confirmed by your healthcare professional. Dose
+            calculations stay off until you confirm your settings.
           </p>
         </div>
       </div>

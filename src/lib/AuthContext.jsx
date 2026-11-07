@@ -263,7 +263,7 @@ export const AuthProvider = ({ children }) => {
     window.location.href = '/login';
   }, []);
 
-  const logout = async (shouldRedirect = true) => {
+  const logout = async (shouldRedirect = true, redirectTo = '/') => {
     // Prevent duplicate logout requests
     if (isLoggingOutRef.current) return;
     isLoggingOutRef.current = true;
@@ -273,17 +273,19 @@ export const AuthProvider = ({ children }) => {
       // even if the server request fails (offline, poor connectivity)
       performLocalLogout(shouldRedirect);
 
-      // Attempt the official server-side logout
+      // Attempt the official server-side logout. The destination is explicit so
+      // a deliberate action (such as closing an account) can land on the public
+      // sign-in instead of the page it started from.
       if (shouldRedirect) {
-        await base44.auth.logout('/');
+        await base44.auth.logout(redirectTo);
       } else {
         await base44.auth.logout();
       }
     } catch {
       // Server logout failed — local state is already cleared.
-      // Redirect to splash so user sees they're logged out.
+      // Redirect to the same destination the caller asked for.
       if (shouldRedirect) {
-        window.location.href = '/';
+        window.location.href = redirectTo;
       }
     } finally {
       isLoggingOutRef.current = false;

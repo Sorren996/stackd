@@ -132,7 +132,7 @@ export function reconcileMealNarrative(opts) {
   if (!hasInsulinDose) {
     doseVerdict = { show: false, neutralLabel: "No insulin logged for this meal." };
   } else if (!settingsConfirmed) {
-    doseVerdict = { show: false, neutralLabel: "Dose math paused — confirm your plan." };
+    doseVerdict = { show: false, neutralLabel: "Dose calculations paused — confirm your plan." };
   } else {
     doseVerdict = { show: true };
   }

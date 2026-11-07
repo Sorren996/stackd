@@ -14,6 +14,9 @@ import AppleIcon from "@/components/AppleIcon";
 export default function Login() {
   const [searchParams] = useSearchParams();
   const isExisting = searchParams.get("existing") === "1";
+  // Arriving here straight from closing an account: confirm it plainly, and
+  // never bounce back into a signed-in screen.
+  const wasDeleted = searchParams.get("deleted") === "1";
   const prefilledEmail = searchParams.get("email") || "";
 
   const [email, setEmail] = useState("");
@@ -119,6 +122,15 @@ export default function Login() {
           <span className="bg-card px-3 text-muted-foreground">or</span>
         </div>
       </div>
+
+      {wasDeleted &&
+      <div className="mb-4 rounded-2xl border p-4 text-sm leading-relaxed" style={{ borderColor: "#eadccf", background: "#fdf9f2" }} role="status">
+          <p className="font-semibold">Your account has been closed.</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Your records and your sign-in are gone. You're welcome back any time with a new account.
+          </p>
+        </div>
+      }
 
       {isExisting &&
       <div className="mb-4 rounded-2xl border p-4 text-sm leading-relaxed" style={{ borderColor: "#eadccf", background: "#fdf9f2" }}>

@@ -1,68 +1,66 @@
-// Permanently purges every record belonging to the caller, including
-// server-created records (keyed by user_id) and encrypted Dexcom
-// credentials. Writes an audit event (no PHI) before purging.
+// Closes the caller's Stackd account.
+//
+// The user is always the authenticated identity from the request — never a
+// user_id from the body. Sequence and scoping live in
+// base44/shared/accountDeletion.ts: purge the account's own rows (including
+// sharing relationships, invites and follower access), remove the app's auth
+// user record through the documented service-role capability, confirm it is
+// gone, then sweep records the app re-creates on demand.
+//
+// A deletion is only reported as successful once the identity has actually
+// been removed. A partial purge keeps the account open and asks for a retry,
+// because telling someone their account is gone while the sign-in still works
+// would be false.
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
-import { deleteDexcomCredentials } from '../../shared/dexcomCredentials.ts';
+import { closeAccount } from '../../shared/accountDeletion.ts';
 import { writeAuditLog } from '../../shared/auditLog.ts';
 
-// Entities owned via created_by_id only.
-const OWNED = [
-  'InsulinDose', 'CarbEntry', 'JournalEntry', 'UserSettings', 'DexcomConnection',
-  'SplitDosePlan', 'SplitDosePreset', 'UserAcknowledgment', 'SupportTicket', 'CreatorSupport',
-];
-// Entities that may also be server-created with an explicit user_id.
-const OWNED_OR_USER_ID = [
-  'GlucoseReading', 'DailySummary', 'GlucoseEvent', 'MealResponseAnalysis', 'MealMatchFeedback',
-  'UserPatternProfile', 'AnalysisJob', 'GlucoseProjection', 'ProjectionModelState',
-  'MealResponseModelState', 'AbsorptionAdjustment',
-];
+// Fixed, non-secret confirmation token: a deliberate second step in the client,
+// not a credential. Authenticating the caller is what protects the endpoint.
+const CONFIRMATION = 'delete-my-account';
 
-async function purge(sr: any, entity: string, query: any) {
-  // deleteMany is bounded per call; loop until nothing matches.
-  for (let i = 0; i < 200; i++) {
-    const res = await sr.entities[entity].deleteMany(query);
-    const n = Number(res?.deleted ?? res?.count ?? 0);
-    if (!n || res?.has_more === false) break;
-  }
-}
-
-export default async function(req: Request): Promise<Response> {
+export default async function (req: Request): Promise<Response> {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
+    // A signed-out caller rejects rather than resolving null; that is a 401,
+    // not a crash.
+    const user = await base44.auth.me().catch((error: any) => {
+      if (error?.status === 401) return null;
+      throw error;
+    });
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const body = await req.json().catch(() => ({}));
+    if (body?.confirm !== CONFIRMATION) {
+      return Response.json({ error: 'Please confirm the deletion.', code: 'not_confirmed' }, { status: 400 });
+    }
+
+    // Authorization is the verified session, so the scope is this user only.
+    const userId = user.id;
     const sr = base44.asServiceRole;
 
-    await writeAuditLog(sr, { action: 'account_deletion_requested', affected_user_id: user.id });
+    await writeAuditLog(sr, { action: 'account_deletion_requested', affected_user_id: userId });
 
-    const failures: string[] = [];
-    const tasks: Array<() => Promise<void>> = [
-      ...OWNED.map((e) => () => purge(sr, e, { created_by_id: user.id })),
-      ...OWNED_OR_USER_ID.map((e) => async () => {
-        await purge(sr, e, { created_by_id: user.id });
-        await purge(sr, e, { user_id: user.id });
-      }),
-      () => deleteDexcomCredentials(sr, user.id),
-    ];
+    const result = await closeAccount(sr, userId, (action, metadata) =>
+      writeAuditLog(sr, { action, affected_user_id: userId, metadata }),
+    );
 
-    for (let i = 0; i < tasks.length; i += 6) {
-      const results = await Promise.allSettled(tasks.slice(i, i + 6).map((t) => t()));
-      results.forEach((r, j) => { if (r.status === 'rejected') failures.push(String(i + j)); });
+    if (!result.ok) {
+      const message = result.code === 'purge_incomplete'
+        ? 'Some of your records could not be removed, so your account is still open. Please try again.'
+        : 'Your records were removed, but the sign-in could not be closed. Please try again.';
+      return Response.json({ ok: false, code: result.code, error: message }, { status: 500 });
     }
 
-    await writeAuditLog(sr, {
-      action: failures.length ? 'account_deletion_partial' : 'account_deleted',
-      affected_user_id: user.id,
-      metadata: { failed_steps: failures.length },
-    });
-
-    if (failures.length) {
-      return Response.json({ ok: false, error: 'Some data could not be removed. Please try again.' }, { status: 500 });
-    }
-    return Response.json({ ok: true });
-  } catch (error) {
+    // One non-clinical record of the deletion is kept for the audit log. It
+    // carries the account id and nothing else — no health data, no email.
+    return Response.json({ ok: true, identityRemoved: true, residual: result.residual ?? 0 });
+  } catch (error: any) {
     console.error('[deleteMyAccount]', error?.message);
-    return Response.json({ error: 'Unable to delete account right now.' }, { status: 500 });
+    return Response.json(
+      { ok: false, code: 'failed', error: 'Unable to close the account right now.' },
+      { status: 500 },
+    );
   }
 }

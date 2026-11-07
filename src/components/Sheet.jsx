@@ -14,7 +14,7 @@ const DISMISS_VELOCITY = 500;
  * - Backdrop dim + blur, body scroll lock, escape key, focus management
  * - Reduced-motion aware
  */
-export default function Sheet({ open, onClose, children, accentColor }) {
+export default function Sheet({ open, onClose, children, accentColor, labelledBy }) {
   const dragControls = useDragControls();
   const prefersReducedMotion = useReducedMotion();
   const sheetRef = useRef(null);
@@ -89,6 +89,7 @@ export default function Sheet({ open, onClose, children, accentColor }) {
             tabIndex={-1}
             role="dialog"
             aria-modal="true"
+            aria-labelledby={labelledBy}
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}

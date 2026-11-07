@@ -9,6 +9,8 @@ import SettingRow from "@/components/settings/insulin/SettingRow";
 import NumericEditSheet from "@/components/settings/insulin/NumericEditSheet";
 import TargetRangeSheet from "@/components/settings/insulin/TargetRangeSheet";
 import StackingSheet from "@/components/settings/insulin/StackingSheet";
+import TermInfoButton from "@/components/doseplan/TermInfoButton";
+import { DOSE_TERMS } from "@/lib/dosePlanCopy";
 import LibraryPicker from "@/components/settings/insulin/LibraryPicker";
 import SubsetPicker from "@/components/settings/insulin/SubsetPicker";
 import { toast } from "sonner";
@@ -216,7 +218,7 @@ export default function InsulinSettings() {
     const canConfirm =
       Number(insulinSensitivity) > 0 && Number(unitsPer5g) > 0;
     if (!canConfirm) {
-      toast.error("Enter your insulin sensitivity and carb ratio first.");
+      toast.error("Enter your glucose drop per unit and meal insulin ratio first.");
       return;
     }
     setSettingsConfirmed(true);
@@ -224,7 +226,7 @@ export default function InsulinSettings() {
     dirtyRef.current = true;
     saveRef.current({ ...valuesRef.current, settings_confirmed: true });
     window.dispatchEvent(new Event("insulin-settings-updated"));
-    toast.success("Your plan is confirmed. Dose insights are now active.");
+    toast.success("Your plan is confirmed. Dose calculations are now on.");
   };
 
   const handleUnconfirmPlan = () => {
@@ -233,7 +235,7 @@ export default function InsulinSettings() {
     dirtyRef.current = true;
     saveRef.current({ ...valuesRef.current, settings_confirmed: false });
     window.dispatchEvent(new Event("insulin-settings-updated"));
-    toast.success("Plan confirmation removed. Dose insights are paused.");
+    toast.success("Plan confirmation removed. Dose calculations are off.");
   };
 
   valuesRef.current = buildPayload();
@@ -348,10 +350,10 @@ export default function InsulinSettings() {
       {/* Edit sheets */}
       <Sheet open={activeSheet === "sensitivity"} onClose={closeSheet}>
         <NumericEditSheet
-          title="Insulin sensitivity"
+          title={DOSE_TERMS.sensitivity.label}
           value={toDisplayGlucose(insulinSensitivity)}
           unit={`${glucoseUnitLabel()} per unit`}
-          help="How much one unit lowers your glucose."
+          help={DOSE_TERMS.sensitivity.helper}
           decrement={stepDraft(-sensitivityStep(), sensitivityDecimal())}
           increment={stepDraft(sensitivityStep(), sensitivityDecimal())}
           onSave={(v) => {
@@ -364,10 +366,10 @@ export default function InsulinSettings() {
 
       <Sheet open={activeSheet === "carb"} onClose={closeSheet}>
         <NumericEditSheet
-          title="Carb ratio"
+          title={DOSE_TERMS.mealRatio.label}
           value={unitsPer5g}
-          unit="units per 5g"
-          help="How much insulin covers a small portion of carbs."
+          unit={DOSE_TERMS.mealRatio.unit}
+          help={DOSE_TERMS.mealRatio.helper}
           decrement={stepDraft(-0.5, true)}
           increment={stepDraft(0.5, true)}
           onSave={(v) => {
@@ -380,10 +382,10 @@ export default function InsulinSettings() {
 
       <Sheet open={activeSheet === "correction"} onClose={closeSheet}>
         <NumericEditSheet
-          title="Correction target"
+          title={DOSE_TERMS.correctionTarget.label}
           value={toDisplayGlucose(correctionTargetGlucose)}
           unit={glucoseUnitLabel()}
-          help="The baseline used when estimating a correction."
+          help={DOSE_TERMS.correctionTarget.helper}
           decrement={stepDraft(-sensitivityStep(), sensitivityDecimal())}
           increment={stepDraft(sensitivityStep(), sensitivityDecimal())}
           onSave={(v) => {
@@ -488,20 +490,23 @@ export default function InsulinSettings() {
           <GroupLabel>Your plan</GroupLabel>
           <GroupCard>
             <SettingRow
-              label="Insulin sensitivity"
-              value={`${toDisplayGlucose(insulinSensitivity) || "—"} ${glucoseUnitLabel()} per U`}
+              label={DOSE_TERMS.sensitivity.label}
+              value={`${toDisplayGlucose(insulinSensitivity) || "—"} ${glucoseUnitLabel()} per unit`}
+              info={<TermInfoButton termKey="sensitivity" />}
               onPress={() => setActiveSheet("sensitivity")}
             />
             <RowDivider />
             <SettingRow
-              label="Carb ratio"
-              value={`${unitsPer5g || "—"} U per 5g`}
+              label={DOSE_TERMS.mealRatio.label}
+              value={`${unitsPer5g || "—"} units per 5 g carbs`}
+              info={<TermInfoButton termKey="mealRatio" />}
               onPress={() => setActiveSheet("carb")}
             />
             <RowDivider />
             <SettingRow
-              label="Correction target"
+              label={DOSE_TERMS.correctionTarget.label}
               value={`${toDisplayGlucose(correctionTargetGlucose) || "—"} ${glucoseUnitLabel()}`}
+              info={<TermInfoButton termKey="correctionTarget" />}
               onPress={() => setActiveSheet("correction")}
             />
             <RowDivider />
@@ -530,10 +535,10 @@ export default function InsulinSettings() {
                   <Lock className="mt-0.5 h-4 w-4 shrink-0" style={{ color: "#9c5228" }} />
                   <div className="min-w-0 flex-1">
                     <p className="text-[12px] font-semibold leading-snug" style={{ color: "#3f3830" }}>
-                      Confirm your plan to unlock dose insights
+                      Confirm your plan to turn on dose calculations
                     </p>
                     <p className="mt-1 text-[11px] leading-relaxed" style={{ color: "#746959" }}>
-                      Dose math stays paused until you confirm these are your own settings,
+                      Dose calculations stay off until you confirm these are your own settings,
                       prescribed by your healthcare professional.
                     </p>
                   </div>
@@ -552,7 +557,7 @@ export default function InsulinSettings() {
           {!settingsConfirmed && (
             <p className="px-1 text-[11px] leading-relaxed" style={{ color: "#746959" }}>
               Enter only insulin settings prescribed or confirmed by your licensed healthcare
-              professional, then tap "Confirm my plan" to activate dose insights.
+              professional, then tap "Confirm my plan" to turn on dose calculations.
             </p>
           )}
         </div>
