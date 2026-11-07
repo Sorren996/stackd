@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Menu, X } from "lucide-react";
+import {
+  PUBLIC_HEADER_PAD_TOP,
+  PUBLIC_HEADER_EDGE_LEFT,
+  PUBLIC_HEADER_EDGE_RIGHT,
+} from "@/lib/safeArea";
 
 const LOGO_URL =
   "https://media.base44.com/images/public/6a1b93f234a8611ee1595134/9cd3c84cf_stackdappiconver3tran.png";
@@ -14,6 +19,17 @@ const NAV_LINKS = [
   { label: "Contact", to: "/contact" },
 ];
 
+/**
+ * The public site's bar. It owns the top safe area for every public page (see
+ * lib/safeArea.js): the sticky header reserves the OS status strip with padding
+ * and paints it with the solid field colour.
+ *
+ * It is deliberately opaque. A translucent blurred bar was tried and it cannot
+ * do this job: page content scrolled behind it stayed faintly visible in the
+ * strip where the clock and battery sit. The band being solid means the strip is
+ * reserved and covered at every scroll position, while the logo row keeps its
+ * own comfortable height.
+ */
 export default function PublicNav() {
   const [open, setOpen] = useState(false);
   const { pathname } = useLocation();
@@ -34,7 +50,15 @@ export default function PublicNav() {
     "inline-flex min-h-[44px] items-center rounded-full px-3 text-sm font-medium transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#fdf9f2] focus-visible:ring-offset-0";
 
   return (
-    <header className="sticky top-0 z-40" style={{ background: "rgba(76, 103, 112, 0.92)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)" }}>
+    <header
+      className="sticky top-0 z-40"
+      style={{
+        paddingTop: PUBLIC_HEADER_PAD_TOP,
+        paddingLeft: PUBLIC_HEADER_EDGE_LEFT,
+        paddingRight: PUBLIC_HEADER_EDGE_RIGHT,
+        background: "var(--site-field)",
+      }}
+    >
       <nav aria-label="Stackd" className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-2 px-4 sm:h-16 sm:px-8">
         <Link to="/" className="flex items-center gap-2 rounded-full py-1 pr-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#fdf9f2]" aria-label="Stackd home">
           <img src={LOGO_URL} alt="" width="30" height="30" decoding="async" className="h-[30px] w-[30px] rounded-[9px] object-contain" />

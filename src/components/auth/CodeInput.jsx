@@ -52,7 +52,10 @@ export default function CodeInput({
                 style={{
                   background: "#fdf9f2",
                   color: "#3f3830",
-                  borderColor: invalid ? "#9c3f2e" : active ? "#3f5760" : "#d8cec2",
+                  // The resting boundary comes from the account-screen palette
+                  // (index.css) so a code box is identifiable on cream; the
+                  // fallback keeps the box drawn if this is used outside it.
+                  borderColor: invalid ? "#9c3f2e" : active ? "#3f5760" : "var(--auth-control-border, #9c8e7c)",
                   boxShadow: active ? "0 0 0 3px rgba(76, 103, 112, 0.28)" : "none",
                 }}
               >

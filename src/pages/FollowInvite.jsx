@@ -5,6 +5,13 @@ import { HeartHandshake, Users } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import { redeemSharingInvitation, describeSharingError } from "@/lib/sharing/sharingApi";
 import useSiteMeta from "@/hooks/useSiteMeta";
+import SafeAreaBand from "@/components/SafeAreaBand";
+import {
+  AUTH_PAGE_PAD_TOP,
+  AUTH_PAGE_PAD_BOTTOM,
+  AUTH_PAGE_PAD_SIDE_LEFT,
+  AUTH_PAGE_PAD_SIDE_RIGHT,
+} from "@/lib/safeArea";
 
 const LOGO_URL =
   "https://media.base44.com/images/public/6a1b93f234a8611ee1595134/9cd3c84cf_stackdappiconver3tran.png";
@@ -49,15 +56,27 @@ export default function FollowInvite() {
     }
   };
 
+  // Same cream card, same text context and same safe-area contract as the
+  // account screens (see components/AuthLayout.jsx and lib/safeArea.js): this
+  // invite screen is reached from an email, often on a phone.
   const card = (eyebrow, title, body) => (
-    <div className="min-h-screen bg-field px-4 py-12 text-field-ink sm:py-20">
+    <div
+      className="min-h-screen bg-field text-field-ink"
+      style={{
+        paddingTop: AUTH_PAGE_PAD_TOP,
+        paddingBottom: AUTH_PAGE_PAD_BOTTOM,
+        paddingLeft: AUTH_PAGE_PAD_SIDE_LEFT,
+        paddingRight: AUTH_PAGE_PAD_SIDE_RIGHT,
+      }}
+    >
+      <SafeAreaBand />
       <div className="mx-auto w-full max-w-md">
         <Link to="/" className="mx-auto flex w-fit items-center gap-2 rounded-full px-2 py-1" aria-label="Stackd home">
           <img src={LOGO_URL} alt="" width="30" height="30" decoding="async" className="h-[30px] w-[30px] rounded-[9px] object-contain" />
           <span className="text-[17px] font-bold tracking-tight">Stackd</span>
         </Link>
         <div
-          className="mt-6 rounded-3xl bg-paper p-6 sm:p-8"
+          className="auth-surface mt-6 rounded-3xl bg-paper p-6 sm:p-8"
           style={{ boxShadow: "0 2px 4px rgba(24, 35, 39, 0.2), 0 24px 60px rgba(24, 35, 39, 0.28)" }}
         >
           <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-ink-muted">{eyebrow}</p>

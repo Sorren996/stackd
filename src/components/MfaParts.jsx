@@ -10,6 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { loadSignInOptions } from "@/lib/authMfaFlow";
 import { safeReturnTo } from "@/lib/authReturnTo";
+import { MFA_PAGE_PAD_TOP, MFA_PAGE_PAD_BOTTOM } from "@/lib/safeArea";
 
 // Building blocks shared by MfaFlow, MfaMethodSetup and MfaManage.
 
@@ -28,9 +29,17 @@ export function useAppInfo() {
 // A whole page holding one MFA card. MfaFlow and MfaManage are card content, so a page that
 // shows them returns <MfaScreen> in place of its own layout instead of nesting them in its card.
 export function MfaScreen({ children }) {
+  // Safe area is part of the shared public/auth contract (lib/safeArea.js): the
+  // page reserves the status strip and the home-indicator strip as padding.
+  // `my-auto` on the card centres it when there is room and simply scrolls when
+  // the keyboard or enlarged text makes it taller — flex centring alone would
+  // push the top of a tall card out of reach.
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4 py-8">
-      <div className="w-full max-w-md bg-card rounded-2xl shadow-sm border border-border p-8">{children}</div>
+    <div
+      className="min-h-[100dvh] flex justify-center bg-background px-4"
+      style={{ paddingTop: MFA_PAGE_PAD_TOP, paddingBottom: MFA_PAGE_PAD_BOTTOM }}
+    >
+      <div className="my-auto w-full max-w-md bg-card rounded-2xl shadow-sm border border-border p-8">{children}</div>
     </div>
   );
 }

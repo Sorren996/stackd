@@ -98,7 +98,7 @@ export default function Login() {
         variant="outline"
         className="w-full h-12 text-sm font-medium mb-3"
         onClick={handleApple}
-        style={{ background: "#fdf9f2", color: "#3f3830", borderColor: "#eadccf" }}>
+        style={{ background: "var(--auth-card)", color: "var(--auth-ink)", borderColor: "var(--auth-control-border)" }}>
         
         <AppleIcon className="w-5 h-5 mr-2" />
         Continue with Apple
@@ -108,7 +108,7 @@ export default function Login() {
         variant="outline"
         className="w-full h-12 text-sm font-medium mb-6"
         onClick={handleGoogle}
-        style={{ background: "#fdf9f2", color: "#3f3830", borderColor: "#eadccf" }}>
+        style={{ background: "var(--auth-card)", color: "var(--auth-ink)", borderColor: "var(--auth-control-border)" }}>
         
         <GoogleIcon className="w-5 h-5 mr-2" />
         Continue with Google
@@ -124,23 +124,28 @@ export default function Login() {
       </div>
 
       {wasDeleted &&
-      <div className="mb-4 rounded-2xl border p-4 text-sm leading-relaxed" style={{ borderColor: "#eadccf", background: "#fdf9f2" }} role="status">
+      <div
+        className="mb-4 rounded-2xl border p-4 text-sm leading-relaxed"
+        style={{ borderColor: "var(--auth-notice-border)", background: "var(--auth-notice-bg)" }}
+        role="status">
           <p className="font-semibold">Your account has been closed.</p>
-          <p className="mt-1 text-xs text-muted-foreground">
+          <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
             Your records and your sign-in are gone. You're welcome back any time with a new account.
           </p>
         </div>
       }
 
       {isExisting &&
-      <div className="mb-4 rounded-2xl border p-4 text-sm leading-relaxed" style={{ borderColor: "#eadccf", background: "#fdf9f2" }}>
+      <div
+        className="mb-4 rounded-2xl border p-4 text-sm leading-relaxed"
+        style={{ borderColor: "var(--auth-notice-border)", background: "var(--auth-notice-bg)" }}>
           <p className="font-semibold">It looks like you already have an account.</p>
-          <p className="mt-1 text-xs text-muted-foreground">Log in below, or use <Link to="/forgot-password" className="text-primary font-medium hover:underline">forgot password</Link> to reset it.</p>
+          <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">Log in below, or use <Link to="/forgot-password" className="text-primary font-medium hover:underline">forgot password</Link> to reset it.</p>
         </div>
       }
 
       {error &&
-      <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+      <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm" role="alert">
           {error}
         </div>
       }

@@ -180,7 +180,7 @@ export default function Register() {
         variant="outline"
         className="w-full h-12 text-sm font-medium mb-3"
         onClick={handleApple}
-        style={{ background: "#fdf9f2", color: "#3f3830", borderColor: "#eadccf" }}>
+        style={{ background: "var(--auth-card)", color: "var(--auth-ink)", borderColor: "var(--auth-control-border)" }}>
 
         <AppleIcon className="w-5 h-5 mr-2" />
         Continue with Apple
@@ -190,7 +190,7 @@ export default function Register() {
         variant="outline"
         className="w-full h-12 text-sm font-medium mb-6"
         onClick={handleGoogle}
-        style={{ background: "#fdf9f2", color: "#3f3830", borderColor: "#eadccf" }}>
+        style={{ background: "var(--auth-card)", color: "var(--auth-ink)", borderColor: "var(--auth-control-border)" }}>
 
         <GoogleIcon className="w-5 h-5 mr-2" />
         Continue with Google

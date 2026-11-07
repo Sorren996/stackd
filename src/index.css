@@ -674,6 +674,86 @@
 }
 
 /* ============================================================
+   ACCOUNT SCREENS — THE CREAM CARD OWNS ITS TEXT CONTEXT
+
+   The auth shells (sign in, create account, verify, recovery,
+   authorize) sit on the slate field, whose text colour is cream
+   so it reads on the blue. The card is cream too, so it must
+   declare its own foreground. Before this block it inherited
+   #fdf9f2 from the field, which left the deletion notice, the
+   field labels and the "or" separator pale-on-pale, while
+   secondary copy and the separator chip pulled dark-theme tokens
+   that have nothing to do with these screens.
+
+   Every value is measured against the card (#fdf9f2) and is
+   deliberately theme-independent: this surface is the branded
+   cream-on-slate pair in light and dark mode alike. Nothing here
+   changes behaviour, and every rule is scoped to .auth-surface so
+   the signed-in app keeps its own palette.
+   ============================================================ */
+.auth-surface {
+  --auth-card: #fdf9f2;
+  --auth-ink: #3f3830;              /* 11.00:1 — headings, labels, field text */
+  --auth-muted: #6b6153;            /*  5.78:1 — help, secondary copy, placeholders */
+  --auth-link: #8a4a24;             /*  6.48:1 — in-card links */
+  --auth-error: #9c3f2e;            /*  5.70:1 on --auth-error-bg */
+  --auth-error-bg: #f8ebe7;
+  --auth-notice-bg: #f4ece1;        /*  9.85:1 ink, 5.18:1 muted */
+  --auth-notice-border: #d8cec2;
+  --auth-control-border: #9c8e7c;   /*  3.04:1 vs the card — control boundary */
+  --auth-divider: #dccdb9;          /*  decorative rule; never the only cue */
+  color: var(--auth-ink);
+  background-color: var(--auth-card);
+}
+
+/* Text inside the card resolves to the card's palette, whatever the app theme
+   is. No opacity is used to fade small copy: contrast is set by colour. */
+.auth-surface .text-foreground,
+.auth-surface .text-ink { color: var(--auth-ink); }
+.auth-surface .text-muted-foreground { color: var(--auth-muted); }
+.auth-surface .text-primary { color: var(--auth-link); }
+.auth-surface .text-destructive { color: var(--auth-error); }
+
+/* The separator chip and its rule belong to the card, never to a dark-theme
+   card token (which is what produced the unrelated dark patch). */
+.auth-surface .bg-card { background-color: var(--auth-card); }
+.auth-surface .border-border { border-color: var(--auth-divider); }
+.auth-surface .bg-destructive\/10 { background-color: var(--auth-error-bg); }
+
+/* An outline button's edge is what identifies it on a cream card, so it gets
+   the same measured boundary as the fields rather than a hairline. */
+.auth-surface .border-white\/12 { border-color: var(--auth-control-border); }
+
+/* Controls: a boundary that is actually visible on cream, a placeholder that is
+   readable rather than faded, and a focus ring that survives the card. */
+.auth-surface input,
+.auth-surface textarea,
+.auth-surface select {
+  color: var(--auth-ink);
+  background-color: var(--auth-card);
+  border-color: var(--auth-control-border);
+}
+.auth-surface input::placeholder,
+.auth-surface textarea::placeholder { color: var(--auth-muted); opacity: 1; }
+.auth-surface input:focus-visible,
+.auth-surface textarea:focus-visible,
+.auth-surface select:focus-visible {
+  outline: 2px solid var(--auth-link);
+  outline-offset: 1px;
+}
+
+/* ── Skip links, public site and account screens ──────────────
+   The first thing a keyboard or screen-reader user reaches, so it
+   must not land in the strip the OS draws its clock in. */
+.skip-link:focus,
+.skip-link:focus-visible {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + 0.75rem);
+  left: max(1rem, env(safe-area-inset-left));
+  z-index: 60;
+}
+
+/* ============================================================
    IN-APP BANNER MOTION (Sonner)
    Sonner parks each toast in a slot, then animates it in from
    `translateY(-100%)` and out the same way. Now that the slot

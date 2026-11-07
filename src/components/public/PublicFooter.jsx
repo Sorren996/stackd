@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { PUBLIC_FOOTER_PAD_BOTTOM } from "@/lib/safeArea";
 
 const LOGO_URL =
   "https://media.base44.com/images/public/6a1b93f234a8611ee1595134/1b816d1eb_stackdappiconver3.png";
@@ -31,8 +32,14 @@ const COLUMNS = [
 ];
 
 export default function PublicFooter() {
+  // The footer owns the bottom safe area for every public page: the band itself
+  // is the field-deep colour, so the home-indicator strip is both reserved and
+  // painted. See lib/safeArea.js for the whole contract.
   return (
-    <footer className="bg-field-deep px-4 pb-12 pt-14 text-field-ink sm:px-8">
+    <footer
+      className="bg-field-deep px-4 pt-14 text-field-ink sm:px-8"
+      style={{ paddingBottom: PUBLIC_FOOTER_PAD_BOTTOM }}
+    >
       <div className="mx-auto w-full max-w-6xl">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
           <div>
