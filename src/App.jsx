@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Toaster } from "@/components/ui/toaster"
 import { Toaster as SonnerToaster } from "@/components/ui/sonner"
 import { QueryClientProvider, useQuery } from '@tanstack/react-query'
@@ -51,12 +51,12 @@ import Onboarding from "@/pages/Onboarding";
 import SplitPlanReview from "@/pages/SplitPlanReview";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { ACKNOWLEDGMENT_VERSIONS, CHECKBOX_KEYS } from "@/lib/acknowledgmentConfig";
-import { loadUserSettings, migrateLocalSettingsIfNeeded, cacheSettingsLocally } from "@/lib/userSettings";
+import { cacheSettingsLocally } from "@/lib/userSettings";
+import { loadStartupSetup } from '@/lib/startupSetup';
+import useStartupRecovery from '@/hooks/useStartupRecovery';
 import {
-  STARTUP_DATA_DEADLINE_MS,
   logStartup,
   startupErrorCode,
-  withStartupDeadline,
 } from "@/lib/startupDiagnostics";
 import StartupRecovery from "@/components/StartupRecovery";
 import useAccessProfile from "@/hooks/useAccessProfile";
@@ -73,10 +73,9 @@ const AuthenticatedApp = () => {
     handleSessionExpired,
     startupError,
     retryStartup,
+    checkSession,
   } = useAuth();
-  const [dataReadyUser, setDataReadyUser] = useState(null);
-  const dataReady = Boolean(user?.id) && dataReadyUser === user.id;
-  const [retryingSurfaces, setRetryingSurfaces] = useState(false);
+  const [preparedSetup, setPreparedSetup] = useState(null);
 
   // What this account IS — resolved server-side from invitation and
   // relationship data before any patient gate or patient query runs. Someone
@@ -104,7 +103,7 @@ const AuthenticatedApp = () => {
       if (checking || !user?.id) return;
       checking = true;
       try {
-        const current = await withStartupDeadline(base44.auth.me());
+        const current = await checkSession();
         if (active && current?.id !== user.id) await retryStartup();
       } catch (error) {
         if (!active) return;
@@ -115,7 +114,7 @@ const AuthenticatedApp = () => {
       }
     });
     return () => { active = false; setOnAuthFailure(null); };
-  }, [user?.id, handleSessionExpired, retryStartup]);
+  }, [user?.id, handleSessionExpired, retryStartup, checkSession]);
 
   const {
     data: latestAck,
@@ -123,101 +122,26 @@ const AuthenticatedApp = () => {
     isError: ackError,
     isSuccess: ackSuccess,
     error: ackFailure,
+    isFetching: ackFetching,
     refetch: refetchAcknowledgment,
   } = useQuery({
     queryKey: acknowledgmentKey(user?.id),
-    queryFn: () => loadAcknowledgments(base44, user.id),
+    queryFn: ({ signal }) => loadAcknowledgments(base44, user.id, 1, signal),
     enabled: isAuthenticated && Boolean(user?.id) && !isLoadingAuth && profile.resolved && !profile.error && !viewerMode,
-    staleTime: 0,
-    gcTime: 0,
+    staleTime: Infinity,
+    gcTime: 5 * 60 * 1000,
+    refetchOnReconnect: false,
+    networkMode: 'always',
     retry: retryConsent,
   });
 
-  useEffect(() => {
-    if (ackFailure?.consentCode === 'ACCOUNT_CHANGED') retryStartup();
-  }, [ackFailure, retryStartup]);
 
-  useEffect(() => {
-    // Hold every patient read until the capability is known, so a viewer's
-    // device never starts fetching a patient set it will not use.
-    if (!isAuthenticated || !user?.id || isLoadingAuth || authError || !profile.resolved || profile.error || viewerMode) {
-      setDataReadyUser(null);
-      return;
-    }
-
-    let cancelled = false;
-    const startedAt = Date.now();
-
-    // Only the two things the shell itself needs block the launch: the person's
-    // own settings (the confirmed-plan gate reads them) and the newest saved
-    // reading. Everything larger — graph history, meal and dose history,
-    // split plans, analytics and history summaries — is left to the page that
-    // asks for it, at its own exact ranges, so the shell never waits on
-    // thousands of rows and no history is truncated.
-    //
-    // The wait is bounded: a slow or unanswered settings read cannot hold the
-    // splash open, and a failure is reported, never mistaken for "no records".
-    const criticalWarmup = Promise.allSettled([
-      queryClientInstance.prefetchQuery({
-        queryKey: ["user-settings"],
-        queryFn: async () => {
-          try {
-            await migrateLocalSettingsIfNeeded();
-          } catch {
-            // Migration failure is non-fatal
-          }
-          return loadUserSettings();
-        },
-      }),
-      queryClientInstance.prefetchQuery({
-        queryKey: ["latest-glucose"],
-        queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", 1),
-      }),
-    ]);
-
-    withStartupDeadline(criticalWarmup, STARTUP_DATA_DEADLINE_MS)
-      .catch((error) => {
-        logStartup("data", {
-          outcome: "error",
-          code: startupErrorCode(error),
-          durationMs: Date.now() - startedAt,
-        });
-      })
-      .finally(() => {
-        if (cancelled) return;
-
-        // Cache user settings into localStorage so all pages (Dashboard,
-        // ActiveInsulinBanner, etc.) can read them immediately on login.
-        try {
-          const settings = queryClientInstance.getQueryData(["user-settings"]);
-          if (settings && user?.id) {
-            cacheSettingsLocally(user.id, settings);
-            // Save the browser timezone so the AI Coach can reference local times.
-            const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-            if (browserTz && settings.timezone !== browserTz) {
-              base44.entities.UserSettings.update(settings.id, { timezone: browserTz }).catch(() => {});
-            }
-            if (typeof window !== "undefined") {
-              window.dispatchEvent(new Event("target-range-updated"));
-              window.dispatchEvent(new Event("insulin-settings-updated"));
-            }
-          }
-        } catch {
-          // Settings cache failure is non-fatal — don't block the app.
-        }
-
-        logStartup("data", { durationMs: Date.now() - startedAt });
-        setDataReadyUser(user.id);
-      });
-
-    return () => { cancelled = true; };
-  }, [isAuthenticated, user?.id, isLoadingAuth, authError, profile.resolved, profile.error, viewerMode]);
 
   const needsAcknowledgment = useMemo(() => {
     // A viewer is not a patient. The medical acknowledgments are never applied
     // to them, and nothing is ever recorded as accepted on their behalf.
     if (viewerMode) return false;
-    if (!isAuthenticated || !dataReady || ackLoading || ackError || !ackSuccess) return null;
+    if (!isAuthenticated || isLoadingAuth || ackLoading || ackError || !ackSuccess) return null;
 
     if (user?.required_reconsent) return true;
     if (!user?.health_data_consent_active) return true;
@@ -235,53 +159,56 @@ const AuthenticatedApp = () => {
     if (CHECKBOX_KEYS.some((flag) => !record[flag])) return true;
 
     return false;
-  }, [user, latestAck, isAuthenticated, dataReady, ackLoading, ackError, ackSuccess, viewerMode]);
+  }, [user, latestAck, isAuthenticated, isLoadingAuth, ackLoading, ackError, ackSuccess, viewerMode]);
 
-  // Onboarding check — only runs after acknowledgment is complete.
-  // Existing accounts (with any health data) are auto-marked as onboarded.
+  // Read-only setup check, only after authoritative role and consent resolution.
   const {
     data: onboardingData,
     isLoading: onboardingChecking,
     isError: onboardingError,
+    error: onboardingFailure,
+    isFetching: onboardingFetching,
+    refetch: refetchOnboarding,
   } = useQuery({
     queryKey: onboardingKey(user?.id),
-    queryFn: async () => {
-      const [settings] = await base44.entities.UserSettings.filter({ created_by_id: user.id }, '-created_date', 1);
-      if (settings?.onboarding_completed === true) return { needsOnboarding: false };
-
-      // Check for existing health data — existing users skip onboarding.
-      const [readings, carbs, doses] = await Promise.all([
-        base44.entities.GlucoseReading.filter({ $or: [{ created_by_id: user.id }, { user_id: user.id }] }, '-created_date', 1),
-        base44.entities.CarbEntry.filter({ created_by_id: user.id }, '-created_date', 1),
-        base44.entities.InsulinDose.filter({ created_by_id: user.id }, '-created_date', 1),
-      ]);
-
-      const hasData = (readings?.length > 0) || (carbs?.length > 0) || (doses?.length > 0);
-      if (hasData) {
-        if (settings?.id) {
-          await base44.entities.UserSettings.update(settings.id, { onboarding_completed: true }).catch(() => {});
-        }
-        await queryClientInstance.invalidateQueries({ queryKey: ["user-settings"] });
-        return { needsOnboarding: false };
-      }
-
-      return { needsOnboarding: true };
-    },
-    enabled: isAuthenticated && Boolean(user?.id) && !isLoadingAuth && ackSuccess && !ackError && needsAcknowledgment === false && !viewerMode,
-    staleTime: 0,
+    queryFn: ({ signal }) => loadStartupSetup(base44, user.id, signal),
+    enabled: isAuthenticated && Boolean(user?.id) && !isLoadingAuth && profile.resolved && !profile.error && ackSuccess && !ackError && needsAcknowledgment === false && !viewerMode,
+    staleTime: Infinity,
+    refetchOnReconnect: false,
+    networkMode: 'always',
+    retry: false,
   });
 
-  // Explicit, manual retry for the account surfaces. Nothing here reloads the
-  // app on its own — one press, one attempt.
-  const retryAccountSurfaces = useCallback(() => {
-    setRetryingSurfaces(true);
-    Promise.allSettled([
-      queryClientInstance.invalidateQueries({ queryKey: acknowledgmentKey(user?.id), exact: true }),
-      queryClientInstance.invalidateQueries({ queryKey: onboardingKey(user?.id), exact: true }),
-      queryClientInstance.invalidateQueries({ queryKey: ["user-settings"] }),
-      queryClientInstance.invalidateQueries({ queryKey: ["access-profile", user?.id], exact: true }),
-    ]).finally(() => setRetryingSurfaces(false));
-  }, [user?.id]);
+  useEffect(() => {
+    if (!user?.id || !onboardingData || onboardingError || needsAcknowledgment !== false || !profile.resolved || viewerMode) return;
+    if (preparedSetup?.userId === user.id && preparedSetup?.data === onboardingData) return;
+    // Hydrate once per startup snapshot; later profile/consent checks must not
+    // overwrite settings the person has since edited in the working view.
+    queryClientInstance.setQueryData(['user-settings'], onboardingData.settings);
+    try {
+      cacheSettingsLocally(user.id, { ...onboardingData.settings,
+        settings_confirmed: onboardingData.settings?.settings_confirmed === true,
+        onboarding_completed: onboardingData.settings?.onboarding_completed === true });
+      // Preserve the existing non-blocking timezone sync used by background notices.
+      const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const settings = onboardingData.settings;
+      if (settings?.id && browserTz && settings.timezone !== browserTz) {
+        base44.entities.UserSettings.update(settings.id, { timezone: browserTz }).catch(() => {});
+      }
+      window.dispatchEvent(new Event('target-range-updated'));
+      window.dispatchEvent(new Event('insulin-settings-updated'));
+    } catch { /* Device storage is not the server's setup result. */ }
+    setPreparedSetup({ userId: user.id, data: onboardingData });
+  }, [user?.id, onboardingData, onboardingError, needsAcknowledgment, profile.resolved, viewerMode, preparedSetup]);
+
+  const failedStage = startupError && !isAuthenticated ? 'auth' : profile.error ? 'profile' : ackError ? 'consent' : onboardingError ? 'setup' : null;
+  const recoveryError = failedStage === 'auth' ? startupError : failedStage === 'profile' ? profile.error : failedStage === 'consent' ? ackFailure : failedStage === 'setup' ? onboardingFailure : null;
+  const recovery = useStartupRecovery(`${user?.id || 'anon'}:${failedStage}`, recoveryError, () => {
+    if (failedStage === 'auth') return retryStartup();
+    if (failedStage === 'profile') return profile.refetch({ cancelRefetch: false });
+    if (failedStage === 'consent') return refetchAcknowledgment({ cancelRefetch: false });
+    if (failedStage === 'setup') return refetchOnboarding({ cancelRefetch: false });
+  });
 
   // Still checking auth, or still resolving what this account is. A neutral
   // splash — never a patient empty state for someone who only follows along.
@@ -306,8 +233,8 @@ const AuthenticatedApp = () => {
             : "We could not reach Stackd just now"
         }
         message="Your data is safe. Check your connection, then try again."
-        onRetry={retryStartup}
-        retrying={isLoadingAuth || isLoadingPublicSettings}
+        onRetry={recovery.retryNow}
+        retrying={recovery.busy || isLoadingAuth || isLoadingPublicSettings}
         showSignIn
         onSignIn={() => { window.location.href = "/login"; }}
       />
@@ -356,11 +283,8 @@ const AuthenticatedApp = () => {
       <StartupRecovery
         title="We could not confirm your account set-up"
         message="Your data is safe. Check your connection, then try again."
-        onRetry={() => {
-          profile.refetch();
-          retryAccountSurfaces();
-        }}
-        retrying={profile.isFetching || retryingSurfaces}
+        onRetry={recovery.retryNow}
+        retrying={profile.isFetching || recovery.busy}
       />
     );
   }
@@ -400,11 +324,8 @@ const AuthenticatedApp = () => {
       <StartupRecovery
         title="We could not confirm your account status"
         message="Nothing has changed on your account. Try again in a moment."
-        onRetry={() => {
-          setRetryingSurfaces(true);
-          refetchAcknowledgment().finally(() => setRetryingSurfaces(false));
-        }}
-        retrying={retryingSurfaces}
+        onRetry={recovery.retryNow}
+        retrying={ackFetching || recovery.busy}
       />
     );
   }
@@ -421,13 +342,13 @@ const AuthenticatedApp = () => {
       <StartupRecovery
         title="We could not finish checking your set-up"
         message="Nothing has changed on your account. Try again in a moment."
-        onRetry={retryAccountSurfaces}
-        retrying={retryingSurfaces}
+        onRetry={recovery.retryNow}
+        retrying={onboardingFetching || recovery.busy}
       />
     );
   }
 
-  if (onboardingChecking || onboardingData == null) {
+  if (needsAcknowledgment == null || onboardingChecking || onboardingData == null || preparedSetup?.userId !== user?.id || preparedSetup?.data !== onboardingData) {
     return (
       <AnimatePresence>
         <SplashScreen />

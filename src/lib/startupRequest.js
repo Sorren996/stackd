@@ -1,4 +1,6 @@
-import { withStartupDeadline } from '@/lib/startupDiagnostics';
+import startupAwait from '@/lib/startupAwait';
+import startupTransport from '@/lib/startupTransport';
+import { logStartup } from '@/lib/startupDiagnostics';
 
 export const requestStatus = (error) => {
   const status = Number(error?.status ?? error?.response?.status ?? error?.originalError?.response?.status);
@@ -17,7 +19,7 @@ export const retryableStartupError = (error) => {
   return status == null || status === 408 || status === 429 || status >= 500;
 };
 export const startupCode = (error) => error?.name === 'AbortError' ? 'CANCELLED'
-  : error?.startupCode === 'TIMEOUT' ? 'TIMEOUT' : error?.startupInvalid || error?.consentCode ? 'INVALID_RESPONSE'
+  : error?.startupCode === 'TIMEOUT' ? 'TIMEOUT' : error?.startupCode === 'OFFLINE' ? 'OFFLINE' : error?.startupInvalid || error?.consentCode ? 'INVALID_RESPONSE'
   : requestStatus(error) === 401 ? 'UNAUTHORIZED' : requestStatus(error) === 403 ? 'FORBIDDEN'
   : requestStatus(error) === 429 ? 'RATE_LIMITED' : requestStatus(error) >= 500 ? 'SERVER_ERROR' : 'UNAVAILABLE';
 const cooldowns = new Map();
@@ -36,16 +38,17 @@ export async function runStartupCheck(key, stage, read, signal) {
     if (cooldown?.until > Date.now()) throw cooldown.error;
     cooldowns.delete(key);
     try {
-      const result = await withStartupDeadline(Promise.resolve().then(read), 45_000);
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) throw Object.assign(new Error('Offline'), { startupCode: 'OFFLINE' });
+      const result = await startupAwait(startupTransport(key, read, signal), signal);
       signal?.throwIfAborted();
-      console.info(JSON.stringify({ diagStage: 'STARTUP', stage, outcome: 'ok', status: null, durationMs: Date.now() - started, retryCount }));
+      logStartup(stage, { outcome: 'ok', status: null, durationMs: Date.now() - started, retryCount });
       return result;
     } catch (error) {
       signal?.throwIfAborted();
       const delay = Math.max(1000 * 2 ** retryCount, retryAfterMs(error));
       if (requestStatus(error) === 429 || retryAfterMs(error) > 0) cooldowns.set(key, { until: Date.now() + delay, error });
       const retry = retryCount < 2 && retryableStartupError(error) && delay <= 60_000;
-      console.info(JSON.stringify({ diagStage: 'STARTUP', stage, outcome: retry ? 'retry' : 'error', status: requestStatus(error), code: startupCode(error), durationMs: Date.now() - started, retryCount }));
+      logStartup(stage, { outcome: retry ? 'retry' : 'error', status: requestStatus(error), code: startupCode(error), durationMs: Date.now() - started, retryCount });
       if (!retry) throw error;
       await wait(delay, signal);
     }

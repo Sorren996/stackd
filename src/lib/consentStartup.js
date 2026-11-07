@@ -18,7 +18,7 @@ export const retryConsent = false;
 
 export async function loadAcknowledgments(client, userId, limit = 1, signal) {
   if (!userId) throw failure('SESSION_REQUIRED', 401);
-  return runStartupCheck(`consent:${userId}`, 'consent', async () => {
+  return runStartupCheck(`consent:${userId}:${limit}`, 'consent', async () => {
     const rows = await client.entities.UserAcknowledgment.filter({ created_by_id: userId }, '-accepted_at', limit);
     if (!Array.isArray(rows)) throw failure('INVALID_RESPONSE');
     if (rows.some(row => !row || row.created_by_id !== userId)) throw failure('OWNER_MISMATCH');

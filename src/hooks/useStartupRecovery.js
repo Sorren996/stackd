@@ -13,7 +13,8 @@ export default function useStartupRecovery(scope, error, retry) {
     if (flight.current) return flight.current;
     if (!current.current.error) return Promise.resolve();
     setBusy(true);
-    const work = Promise.resolve().then(() => current.current.retry()).finally(() => {
+    const run = current.current.retry;
+    const work = Promise.resolve().then(run).finally(() => {
       if (flight.current === work) flight.current = null;
       if (mounted.current) setBusy(false);
     });

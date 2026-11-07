@@ -17,7 +17,6 @@ import { normalizeEmail } from '../../shared/sharingCore.ts';
 import {
   ok,
   fail,
-  asArray,
   publicRelationship,
   audit,
   readBody,
@@ -29,12 +28,17 @@ export default async function (req: Request): Promise<Response> {
 
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
-    if (!user) return fail('unauthorized', 401);
+    if (!user?.id || typeof user.email !== 'string') return fail('invalid_session_response', 503);
 
     const body = await readBody(req);
     const now = Date.now();
     const myEmail = normalizeEmail(user.email);
     const sr = base44.asServiceRole;
+    const asArray = (result) => {
+      if (Array.isArray(result)) return result;
+      if (Array.isArray(result?.items)) return result.items;
+      throw new Error('invalid_profile_response');
+    };
 
     // Explicit opt-in. Called only from a control the person themselves presses,
     // and it records intent only — no health record, no consent and no plan is

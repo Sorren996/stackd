@@ -39,7 +39,7 @@ export default function ConsentManagement() {
 
   const { data: ackRecords = [], isLoading } = useQuery({
     queryKey: ["acknowledgment-history", user?.id],
-    queryFn: () => loadAcknowledgments(base44, user.id, 50),
+    queryFn: ({ signal }) => loadAcknowledgments(base44, user.id, 50, signal),
     enabled: Boolean(user?.id),
     retry: retryConsent,
   });

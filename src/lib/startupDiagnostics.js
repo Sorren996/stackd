@@ -28,12 +28,12 @@ export const STARTUP_CODES = {
  */
 export function startupErrorCode(error) {
   if (error?.startupCode === "TIMEOUT") return STARTUP_CODES.TIMEOUT;
-  const status = error?.status || error?.response?.status;
+  const status = Number(error?.status ?? error?.response?.status ?? error?.originalError?.response?.status);
   if (status === 401 || status === 403) return STARTUP_CODES.UNAUTHORIZED;
   return STARTUP_CODES.UNAVAILABLE;
 }
 
-export function logStartup(stage, { outcome = "ok", code = null, durationMs = null } = {}) {
+export function logStartup(stage, { outcome = "ok", code = null, durationMs = null, status = null, retryCount = 0 } = {}) {
   try {
     console.log(
       JSON.stringify({
@@ -42,6 +42,8 @@ export function logStartup(stage, { outcome = "ok", code = null, durationMs = nu
         outcome,
         code,
         durationMs: Number.isFinite(durationMs) ? Math.round(durationMs) : null,
+        status: Number.isInteger(status) && status >= 400 && status <= 599 ? status : null,
+        retryCount: Number.isInteger(retryCount) && retryCount >= 0 ? retryCount : 0,
       })
     );
   } catch {

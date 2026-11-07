@@ -98,7 +98,8 @@ export default function Layout() {
       const dexcomPromise = requestRefresh(true).catch(() => {});
 
       const refreshPromise = queryClient.refetchQueries({
-        predicate: (query) => query.queryKey[0] !== "dexcom-connection",
+        // Content refresh must not restart already verified startup gates.
+        predicate: (query) => !["dexcom-connection", "access-profile", "latest-acknowledgment", "onboarding-check"].includes(query.queryKey[0]),
       });
       // Guard against a hung connection — never leave the refresh spinning.
       const timeoutPromise = new Promise((_, reject) => {

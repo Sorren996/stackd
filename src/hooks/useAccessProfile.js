@@ -20,6 +20,7 @@ export default function useAccessProfile() {
     staleTime: Infinity,
     gcTime: 5 * 60 * 1000,
     refetchOnReconnect: false,
+    networkMode: 'always',
     retry: false,
   });
 

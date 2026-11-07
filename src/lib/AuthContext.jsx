@@ -8,8 +8,9 @@ import {
   STARTUP_CODES,
   logStartup,
   startupErrorCode,
-  withStartupDeadline,
 } from '@/lib/startupDiagnostics';
+import { runStartupCheck, requestStatus } from '@/lib/startupRequest';
+import createStartupSession from '@/lib/startupSession';
 
 const AuthContext = createContext();
 
@@ -35,11 +36,20 @@ export const AuthProvider = ({ children }) => {
   // account change makes any late completion from an earlier attempt inert.
   const attemptRef = useRef(0);
   const cacheUserRef = useRef(null);
+  const bootstrapRef = useRef(null);
+  const bootstrapController = useRef(null);
+  const sessionRequest = useRef(null);
+  if (!sessionRequest.current) sessionRequest.current = createStartupSession(base44);
+  const checkSession = useCallback(() => sessionRequest.current.read(), []);
 
   useEffect(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
+      attemptRef.current += 1;
+      bootstrapController.current?.abort();
+      sessionRequest.current.retire();
+      bootstrapRef.current = null;
     };
   }, []);
 
@@ -83,6 +93,9 @@ export const AuthProvider = ({ children }) => {
 
   const performLocalLogout = (broadcast = true) => {
     attemptRef.current += 1; // Retire an in-flight session check on logout.
+    bootstrapController.current?.abort();
+    sessionRequest.current.retire();
+    bootstrapRef.current = null;
     cacheUserRef.current = null;
     queryClientInstance.clear();
     // Clear all user-specific local state
@@ -91,8 +104,8 @@ export const AuthProvider = ({ children }) => {
     setAuthChecked(true);
     setSessionExpired(false);
 
-    // Clear cached clinical settings and glucose cache
-    clearLocalSettingsCache();
+    // Server gates are already closed even if device storage is unavailable.
+    try { clearLocalSettingsCache(); } catch { /* Optional device cache. */ }
 
     // Broadcast to other tabs if requested
     if (broadcast) {
@@ -118,10 +131,10 @@ export const AuthProvider = ({ children }) => {
   // token is left untouched, nothing is claimed as signed in, and the person is
   // offered a calm Retry. Only a definite 401/403 follows the existing safe
   // session-expiry behaviour.
-  const checkAppState = useCallback(async () => {
+  const executeAppCheck = useCallback(async (signal) => {
     const attempt = attemptRef.current + 1;
     attemptRef.current = attempt;
-    const isCurrent = () => mountedRef.current && attemptRef.current === attempt;
+    const isCurrent = () => mountedRef.current && attemptRef.current === attempt && !signal.aborted;
     const startedAt = Date.now();
 
     setStartupError(null);
@@ -140,9 +153,8 @@ export const AuthProvider = ({ children }) => {
           interceptResponses: true
         });
 
-        const publicSettings = await withStartupDeadline(
-          appClient.get(`/prod/public-settings/by-id/${appParams.appId}`)
-        );
+        const publicSettings = await runStartupCheck('public-settings', 'public-settings',
+          () => appClient.get(`/prod/public-settings/by-id/${appParams.appId}`), signal);
         if (isCurrent()) setAppPublicSettings(publicSettings);
       } catch (appError) {
         if (!isCurrent()) return;
@@ -168,20 +180,16 @@ export const AuthProvider = ({ children }) => {
 
     const authTask = (async () => {
       try {
-        const currentUser = await withStartupDeadline(base44.auth.me());
+        const currentUser = await sessionRequest.current.read();
         if (!isCurrent()) return;
-        if (!currentUser?.id) {
-          const noSession = new Error('no-session');
-          noSession.status = 401;
-          throw noSession;
-        }
         // On a shared device, wipe the previous account's cached settings and
         // latest glucose before this session starts so no data crosses accounts.
         if (cacheUserRef.current !== currentUser.id) {
           queryClientInstance.clear();
           cacheUserRef.current = currentUser.id;
         }
-        ensureLocalCacheOwnedBy(currentUser.id);
+        // Device cache availability is not an authentication result.
+        try { ensureLocalCacheOwnedBy(currentUser.id); } catch { /* Optional cache only. */ }
         setUser(currentUser);
         setIsAuthenticated(true);
         setAuthChecked(true);
@@ -197,13 +205,16 @@ export const AuthProvider = ({ children }) => {
           // Only the auth endpoint's rejection establishes session expiry.
           cacheUserRef.current = null;
           queryClientInstance.clear();
-          clearLocalSettingsCache();
+          try { clearLocalSettingsCache(); } catch { /* Optional device cache. */ }
           setAuthError({ type: 'auth_required', message: 'Authentication required' });
         } else {
           // Transient: keep credentials, claim nothing, offer Retry.
           setStartupError({
             type: code === STARTUP_CODES.TIMEOUT ? 'timeout' : 'unreachable',
             code,
+            status: requestStatus(error),
+            startupCode: error?.startupCode,
+            startupInvalid: error?.startupInvalid === true,
           });
         }
 
@@ -220,7 +231,18 @@ export const AuthProvider = ({ children }) => {
     await Promise.allSettled([settingsTask, authTask]);
   }, []);
 
-  // Existing callers re-run the same bounded check; the newest attempt wins.
+  // Synchronous single-flight lock: overlapping callers join, never supersede
+  // a valid slow response. Settled/rejected work is not retained for Retry.
+  const checkAppState = useCallback(() => {
+    if (bootstrapRef.current) return bootstrapRef.current;
+    const controller = new AbortController();
+    bootstrapController.current = controller;
+    const work = executeAppCheck(controller.signal).finally(() => {
+      if (bootstrapRef.current === work) bootstrapRef.current = null;
+    });
+    bootstrapRef.current = work;
+    return work;
+  }, [executeAppCheck]);
   const checkUserAuth = checkAppState;
 
   /**
@@ -281,6 +303,7 @@ export const AuthProvider = ({ children }) => {
       logout,
       navigateToLogin,
       checkUserAuth,
+      checkSession,
       checkAppState,
       handleSessionExpired
     }}>

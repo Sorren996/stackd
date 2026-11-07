@@ -20,7 +20,7 @@ export default function FollowerLayout() {
   const handleRefresh = () =>
     queryClient
       .refetchQueries({
-        predicate: (query) => ["shared-view", "access-profile", "shared-with-me"].includes(query.queryKey[0]),
+        predicate: (query) => ["shared-view", "shared-with-me"].includes(query.queryKey[0]),
       })
       .catch(() => {});
 

@@ -29,10 +29,13 @@ export default function RequiredAcknowledgments() {
 
   const { data: existingAcks = [], isSuccess: acknowledgmentsReady } = useQuery({
     queryKey: acknowledgmentKey(user?.id),
-    queryFn: () => loadAcknowledgments(base44, user.id),
+    queryFn: ({ signal }) => loadAcknowledgments(base44, user.id, 1, signal),
     enabled: Boolean(user?.id),
     retry: retryConsent,
-    gcTime: 0,
+    staleTime: Infinity,
+    refetchOnReconnect: false,
+    networkMode: 'always',
+    gcTime: 5 * 60 * 1000,
   });
 
   const consentSource = existingAcks.length > 0 ? "reconsent" : "initial_onboarding";
