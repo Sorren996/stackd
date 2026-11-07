@@ -7,8 +7,11 @@
 import { base44 } from "@/api/base44Client";
 import { withTimeout } from "@/lib/sharing/pendingAction";
 
-async function call(functionName, payload) {
-  const response = await withTimeout(base44.functions.invoke(functionName, payload));
+async function call(functionName, payload, confirmWrite = false) {
+  const request = base44.functions.invoke(functionName, payload);
+  // A preference write must settle before the next queued intention is sent.
+  // A local timeout cannot cancel a server write and could let it finish late.
+  const response = await (confirmWrite ? request : withTimeout(request));
   const data = response?.data || {};
   if (data.ok !== true) {
     const error = new Error(data.reason || "request_failed");
@@ -21,10 +24,10 @@ async function call(functionName, payload) {
 export const getNotificationCenter = () => call("getNotificationCenter", {});
 
 export const savePersonalNotifications = (preferences) =>
-  call("updateNotificationPreferences", { preferences });
+  call("updateNotificationPreferences", { preferences }, true);
 
 export const saveFollowNotifications = (accessId, preferences) =>
-  call("updateFollowNotificationPreferences", { access_id: accessId, preferences });
+  call("updateFollowNotificationPreferences", { access_id: accessId, preferences }, true);
 
 export const savePushGrants = (accessId, grants) =>
   call("updateRelationshipPushGrants", { access_id: accessId, grants });

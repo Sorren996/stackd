@@ -10,8 +10,8 @@ export const OPTION_DEFAULTS = {
 // (including master re-enable) starts a new activation, on the next fresh sample.
 export function categoryActivation(existing, value, newId = () => crypto.randomUUID()) {
   const activation = { ...(existing?.category_activation || {}) };
-  for (const key of ['custom_low', 'custom_high', 'below_range', 'above_range', 'falling_fast', 'rising_fast', 'urgent_low', 'missing_readings']) {
-    if (value.master_enabled && value.categories?.[key] === true && (existing?.master_enabled !== true || existing?.categories?.[key] !== true)) activation[key] = newId();
+  for (const key of ['custom_low', 'custom_high', 'below_range', 'above_range', 'falling_fast', 'rising_fast', 'urgent_low', 'low_glucose', 'missing_readings']) {
+    if (value.master_enabled && value.categories?.[key] === true && (existing?.master_enabled !== true || existing?.categories?.[key] !== true)) activation[key] = `${new Date().toISOString()}|${newId()}`;
   }
   return activation;
 }
@@ -41,7 +41,7 @@ export function sanitizeNotificationOptions(input = {}, existing = {}, categorie
   }
   if (!value.repeat_minutes || typeof value.repeat_minutes !== 'object' || Array.isArray(value.repeat_minutes)) return { value, error: 'invalid_repeat_minutes' };
   const repeats = {};
-  for (const key of ['custom_low', 'custom_high', 'below_range', 'above_range', 'falling_fast', 'rising_fast', 'urgent_low', 'missing_readings']) {
+  for (const key of ['custom_low', 'custom_high', 'below_range', 'above_range', 'falling_fast', 'rising_fast', 'urgent_low', 'low_glucose', 'missing_readings']) {
     const n = value.repeat_minutes[key] ?? null;
     if (n != null && ![15, 30, 60, 120].includes(n)) return { value, error: 'invalid_repeat_minutes' };
     if (n != null) repeats[key] = n;

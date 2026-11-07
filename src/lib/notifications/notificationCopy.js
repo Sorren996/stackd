@@ -3,6 +3,7 @@
 // care, and nothing promises delivery.
 
 export const CATEGORY_COPY = [
+  { key: 'low_glucose', label: 'Low glucose', description: 'Every new reading below 70 mg/dL' },
   { key: 'custom_low', label: 'Custom low', description: 'At or below your selected notification level.' },
   { key: 'below_range', label: 'Below comfort zone', description: 'Below the existing lower boundary.' },
   { key: 'custom_high', label: 'Custom high', description: 'At or above your selected notification level.' },

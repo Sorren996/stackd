@@ -27,8 +27,9 @@ export function advanceNotificationEpisodes({ rows, nowMs, preferences, threshol
   const velocity = conflict ? null : notificationVelocity(samples, nowMs);
   const v = latest.value;
   const defs = [
-    { key: 'urgent_low', low: 55, strict: true, priority: 10000 },
-    { key: 'below_range', low: thresholds?.low, strict: true },
+    // Fixed low/urgent are dispatched by source measurement, not episodes.
+    // A genuinely different comfort-zone boundary remains independent.
+    { key: 'below_range', low: thresholds?.low === 70 ? null : thresholds?.low, strict: true },
     { key: 'custom_low', low: validOptions ? options.custom_low_mgdl : null },
     { key: 'above_range', high: thresholds?.high, strict: true, delay: prefs.above_range_minutes },
     { key: 'custom_high', high: validOptions ? options.custom_high_mgdl : null, delay: options.custom_high_minutes },

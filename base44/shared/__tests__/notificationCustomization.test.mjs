@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { advanceNotificationEpisodes } from '../notificationEpisodes.ts';
+import { fixedLowDecisions } from '../notificationFixedLow.ts';
 import { notificationVelocity, episodeSamples, velocityMeets } from '../notificationVelocity.ts';
 import { sanitizePersonalPreferences, sanitizeFollowerPreferences, sharerGrants, buildNotificationCopy, isHeldByQuietHours } from '../notificationCore.ts';
 import { sanitizeNotificationOptions } from '../notificationOptions.ts';
@@ -11,14 +12,17 @@ const row = (m, value, extra = {}) => ({ id: `sample:${m}`, value, recorded_at: 
 const preferences = (categories = {}, extra = {}) => ({ master_enabled: true, categories, custom_low_mgdl: 100, custom_high_mgdl: 250, custom_high_minutes: 0, above_range_minutes: 15, ...extra });
 function runner(prefs, thresholds = { low: 70, high: 180 }) {
   let state = {}, rows = [];
-  const emitted = [];
+  const emitted = [], claimed = new Set();
   return { emitted, get state() { return state; },
     step(m, value, options = {}) {
       if (value != null) rows.push(row(m, value, options.row));
       const result = advanceNotificationEpisodes({ rows, state, preferences: prefs, thresholds, nowMs: T + (options.now ?? m) * 60000, allowed: options.allowed });
       state = result.state;
-      if (result.notification) emitted.push(result.notification);
-      return result.notification;
+      const fixed = fixedLowDecisions({ rows, preferences: prefs, thresholds, nowMs: T + (options.now ?? m) * 60000 }).filter(item => !claimed.has(item.episodeKey) && (!options.allowed || options.allowed(item.category)));
+      const chosen = fixed.at(-1) || result.notification;
+      fixed.forEach(item => claimed.add(item.episodeKey));
+      if (chosen) emitted.push(chosen);
+      return chosen;
     },
   };
 }
@@ -52,26 +56,26 @@ test('100 then exact 70 then below 70 then urgent: each stage independent, urgen
   const r = runner(preferences({ custom_low: true, below_range: true, urgent_low: true }));
   assert.equal(r.step(0, 100).category, 'custom_low');
   assert.equal(r.step(5, 70), null);
-  assert.equal(r.step(10, 69).category, 'below_range');
-  assert.equal(r.step(15, 55), null);
+  assert.equal(r.step(10, 69).category, 'low_glucose');
+  assert.equal(r.step(15, 55).category, 'low_glucose');
   assert.equal(r.step(20, 54).category, 'urgent_low');
-  assert.equal(r.step(25, 60), null);
+  assert.equal(r.step(25, 60).category, 'low_glucose');
 });
 
 test('simultaneous stages coalesce into one highest-severity push and cover every event', () => {
   const r = runner(preferences({ custom_low: true, below_range: true, urgent_low: true }));
   const n = r.step(0, 54);
   assert.equal(n.category, 'urgent_low');
-  assert.deepEqual(n.coveredEvents.map(e => e.category).sort(), ['below_range', 'custom_low', 'urgent_low']);
-  assert.equal(r.step(5, 60), null);
-  assert.equal(r.step(10, 53), null);
+  assert.deepEqual(n.coveredEvents.map(e => e.category).sort(), ['below_range', 'urgent_low']);
+  assert.equal(r.step(5, 60).category, 'low_glucose');
+  assert.equal(r.step(10, 53).category, 'urgent_low');
 });
 
-test('equal custom/comfort low bounds: equality then next lower sample does not double-notify', () => {
+test('custom warning at 70 cannot consume the next distinct fixed-low reading', () => {
   const r = runner(preferences({ custom_low: true, below_range: true }, { custom_low_mgdl: 70 }));
   assert.equal(r.step(0, 70).category, 'custom_low');
-  assert.equal(r.step(5, 69), null);
-  assert.equal(r.emitted[0].coveredEvents.length, 2);
+  assert.equal(r.step(5, 69).category, 'low_glucose');
+  assert.equal(r.emitted.length, 2);
 });
 
 test('equal high bounds with inclusive custom comparator are covered once', () => {
@@ -142,7 +146,7 @@ test('no implicit repeats; explicit repeats stay per stage and cannot suppress u
   r.step(0, 100); assert.equal(r.step(5, 99), null); r.step(10, 99);
   assert.equal(r.step(15, 99).repeatIndex, 1);
   assert.equal(r.step(20, 54).category, 'urgent_low');
-  assert.equal(r.step(25, 54), null);
+  assert.equal(r.step(25, 54).category, 'urgent_low');
 });
 
 test('urgent quiet-hours opt-in is independent and lower stages are covered, not sent later', () => {
@@ -150,8 +154,8 @@ test('urgent quiet-hours opt-in is independent and lower stages are covered, not
   const r = runner(preferences({ custom_low: true, below_range: true, urgent_low: true }));
   const n = r.step(0, 54, { allowed: k => !isHeldByQuietHours(k, quiet, T) });
   assert.equal(n.category, 'urgent_low');
-  assert.equal(n.coveredEvents.length, 3);
-  assert.equal(r.step(5, 60), null);
+  assert.equal(n.coveredEvents.length, 2);
+  assert.equal(r.step(5, 60, { allowed: k => !isHeldByQuietHours(k, quiet, T + 5 * 60000) }), null);
 });
 
 const velocityFor = (values, extra = {}) => notificationVelocity(episodeSamples(values.map((v, i) => row(i * 5, v, extra)), T + 15 * 60000).samples, T + 15 * 60000);

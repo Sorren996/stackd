@@ -11,6 +11,7 @@ function fixture({ follower = false, beforeRecheck, failSend = false } = {}) {
   const ledger = { id: 'ledger', user_id: preferences.user_id, scope_key: follower ? 'follow:access' : 'self', claimed_keys: [] };
   const deliveries = [], sends = [];
   const sr = { entities: {
+    User: { get: async () => ({ health_data_consent_active: true }) },
     NotificationLedger: {
       filter: async query => ({ items: query.user_id === ledger.user_id && query.scope_key === ledger.scope_key ? [structuredClone(ledger)] : [] }),
       updateMany: async (query, update) => {
@@ -37,7 +38,7 @@ function fixture({ follower = false, beforeRecheck, failSend = false } = {}) {
     NotificationDelivery: { create: async row => { const r = { ...row, id: `delivery:${deliveries.length}` }; deliveries.push(r); return r; }, update: async (id, patch) => Object.assign(deliveries.find(d => d.id === id), patch) },
   }, integrations: { Core: { SendPushNotification: async message => { sends.push(message); if (failSend) throw Object.assign(new Error('timeout'), { status: 504 }); } } } };
   const invoke = (extra = {}) => evaluateRecipient({ sr, ownerId: 'owner', prefs: structuredClone(preferences), relationship: relationship && structuredClone(relationship), settings, rows: readings, nowMs: now, absoluteUrl: path => `https://stackdinsight.base44.app${path}`, ...extra });
-  return { ledger, deliveries, sends, preferences, relationship, invoke };
+  return { sr, ledger, deliveries, sends, preferences, relationship, invoke };
 }
 
 test('concurrent server evaluations serialize state and send one push with all covered events', async () => {
@@ -46,7 +47,7 @@ test('concurrent server evaluations serialize state and send one push with all c
   assert.equal(f.sends.length, 1);
   assert.equal(f.deliveries.length, 1);
   assert.equal(f.deliveries[0].category, 'urgent_low');
-  assert.equal(f.deliveries[0].covered_events.length, 3);
+  assert.equal(f.deliveries[0].covered_events.length, 2);
   assert.equal(f.deliveries[0].status, 'submitted');
   await f.invoke();
   assert.equal(f.sends.length, 1);
@@ -60,14 +61,14 @@ test('follower consent is rechecked at the last send boundary; revoke blocks tra
   assert.equal(f.deliveries[0].status, 'skipped');
 });
 
-test('removing just a covered grant cancels stale coalesced transport', async () => {
-  const f = fixture({ follower: true, beforeRecheck: (_, relation) => { relation.push.custom_low = false; } });
+test('changing an optional early-warning grant cannot veto the authorized fixed low stream', async () => {
+  const f = fixture({ follower: true, beforeRecheck: (_, relation) => { relation.push.custom_low = false; relation.permission_version += 1; } });
   await f.invoke();
-  assert.equal(f.sends.length, 0);
+  assert.equal(f.sends.length, 1);
 });
 
-test('a privacy/threshold edit while queued cancels the stale configuration', async () => {
-  const f = fixture({ beforeRecheck: pref => { pref.updated_date = 'edited'; pref.show_health_details = false; } });
+test('a privacy edit while queued cancels the stale configuration', async () => {
+  const f = fixture({ beforeRecheck: pref => { pref.updated_date = 'edited'; pref.show_health_details = true; } });
   await f.invoke();
   assert.equal(f.sends.length, 0);
   assert.equal(f.deliveries[0].reason, 'configuration_changed');
@@ -115,4 +116,68 @@ test('missing episode stays once per gap by default; repeats require an explicit
   f.preferences.repeat_minutes = { missing_readings: 15 };
   await f.invoke({ ...options, nowMs: now + 15 * 60000 });
   assert.equal(f.sends.length, 2);
+});
+
+test('69, 68, 54, 53 submit four times, urgent at escalation, duplicate callbacks and timer sweeps submit nothing else', async () => {
+  for (const urgent of [false, true]) {
+    const f = fixture();
+    f.preferences.categories = { low_glucose: true, urgent_low: urgent };
+    f.preferences.show_health_details = true;
+    f.preferences.repeat_minutes = { low_glucose: 120, below_range: 120, urgent_low: 120 };
+    const rows = [];
+    for (const [index, value] of [69, 68, 54, 53].entries()) {
+      const at = now + index * 5 * 60000;
+      rows.push({ id: `reading-${index}`, source: 'dexcom_share', value, recorded_at: new Date(at).toISOString() });
+      await f.invoke({ rows, nowMs: at });
+      await f.invoke({ rows, nowMs: at });
+    }
+    assert.equal(f.sends.length, 4);
+    assert.match(f.sends[0].title, /Low glucose/);
+    assert.match(f.sends[2].title, /Urgent low/);
+    assert.deepEqual(f.deliveries.map(d => d.status), Array(4).fill('submitted'));
+    await f.invoke({ rows, nowMs: now + 16 * 60000 });
+    assert.equal(f.sends.length, 4);
+    assert.equal(new Set(f.deliveries.map(d => d.event_key)).size, 4);
+  }
+});
+test('urgent alone submits for each distinct reading below 55; neither enabled and exact 70 submit nothing', async () => {
+  for (const low of [false, true]) for (const urgent of [false, true]) {
+    const f = fixture(); f.preferences.categories = { low_glucose: low, urgent_low: urgent };
+    for (const [index, value] of [70, 69, 54, 53].entries()) await f.invoke({ rows: [{ ...readings[0], id: `${index}`, value, recorded_at: new Date(now + index * 5 * 60000).toISOString() }], nowMs: now + index * 5 * 60000 });
+    assert.equal(f.sends.length, low ? 3 : urgent ? 2 : 0, `${low}/${urgent}`);
+  }
+});
+test('concurrent workers and duplicate row IDs share one source-measurement claim', async () => {
+  const f = fixture(); f.preferences.categories = { low_glucose: true, urgent_low: true };
+  await Promise.all(Array.from({ length: 8 }, (_, i) => f.invoke({ rows: [{ ...readings[0], id: `different-db-id-${i}` }] })));
+  assert.equal(f.sends.length, 1); assert.equal(f.deliveries.length, 1);
+});
+test('changing optional custom warning settings cannot suppress fixed low', async () => {
+  const f = fixture({ beforeRecheck: pref => { pref.updated_date = 'new-custom-value'; pref.custom_low_mgdl = 110; pref.categories.custom_low = false; } });
+  f.preferences.categories = { low_glucose: true, custom_low: true };
+  await f.invoke(); assert.equal(f.sends.length, 1);
+});
+test('owner consent withdrawal and low/urgent scope removal before submission stop transport', async () => {
+  const f = fixture();
+  f.sr.entities.User.get = async () => ({ health_data_consent_active: false });
+  await f.invoke(); assert.equal(f.sends.length, 0); assert.equal(f.deliveries[0].reason, 'consent_changed');
+  const follower = fixture({ follower: true, beforeRecheck: (_, relation) => { relation.push.below_range = false; relation.push.urgent_low = false; } });
+  await follower.invoke(); assert.equal(follower.sends.length, 0);
+});
+test('stale and backfilled readings cannot produce a fixed-low flood', async () => {
+  const f = fixture(); f.preferences.categories = { low_glucose: true };
+  const old = Array.from({ length: 20 }, (_, i) => ({ ...readings[0], id: String(i), recorded_at: new Date(now - (i + 9) * 60000).toISOString(), created_date: new Date(now).toISOString() }));
+  await f.invoke({ rows: old }); assert.equal(f.sends.length, 0);
+});
+test('legacy processed samples do not replay at cutover; the next distinct measurement submits', async () => {
+  const f = fixture(); f.ledger.episode_state = { lastAt: now };
+  f.preferences.categories = { low_glucose: true };
+  await f.invoke(); await f.invoke(); assert.equal(f.sends.length, 0);
+  await f.invoke({ rows: [{ ...readings[0], recorded_at: new Date(now + 5 * 60000).toISOString() }], nowMs: now + 5 * 60000 });
+  assert.equal(f.sends.length, 1);
+});
+test('an explicit service refusal is failed, never submitted, and is not resent on callback retry', async () => {
+  const f = fixture(); f.sr.integrations.Core.SendPushNotification = async message => { f.sends.push(message); return { success: false }; };
+  await f.invoke(); await f.invoke();
+  assert.equal(f.sends.length, 1); assert.equal(f.deliveries[0].status, 'failed'); assert.equal(f.deliveries[0].submitted_at, undefined);
 });

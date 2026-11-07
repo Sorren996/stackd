@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/lib/AuthContext';
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
 import NotificationHowItWorks from '@/components/notifications/NotificationHowItWorks';
@@ -23,33 +24,22 @@ import { SUPPLEMENT_NOTE } from "@/lib/notifications/notificationCopy";
 export default function NotificationsPage({ variant = "patient" }) {
   const navigate = useNavigate();
   const { data, isLoading, isError, refetch } = useNotificationCenter();
-  const [saving, setSaving] = useState(false);
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const backTo = variant === "follower" ? "/following/settings" : "/settings";
 
   const savePersonal = async (preferences) => {
-    setSaving(true);
-    try {
-      await savePersonalNotifications(preferences);
-      const confirmed = await refetch();
-      if (confirmed.isError || !confirmed.data?.personal) throw Object.assign(new Error('Unconfirmed save'), { reason: 'confirmation_failed' });
-      return confirmed.data.personal;
-    } finally {
-      setSaving(false);
-    }
+    await queryClient.cancelQueries({ queryKey: ['notification-center', user?.id], exact: true });
+    const result = await savePersonalNotifications(preferences);
+    queryClient.setQueryData(['notification-center', user?.id], current => current ? { ...current, personal: result.preferences } : current);
+    return result.preferences;
   };
-
   const savePerson = async (accessId, preferences) => {
-    setSaving(true);
-    try {
-      await saveFollowNotifications(accessId, preferences);
-      const confirmed = await refetch();
-      const person = confirmed.data?.following?.find(item => item.access_id === accessId);
-      if (confirmed.isError || !person?.preferences) throw Object.assign(new Error('Unconfirmed save'), { reason: 'confirmation_failed' });
-      return person.preferences;
-    } finally {
-      setSaving(false);
-    }
+    await queryClient.cancelQueries({ queryKey: ['notification-center', user?.id], exact: true });
+    const result = await saveFollowNotifications(accessId, preferences);
+    queryClient.setQueryData(['notification-center', user?.id], current => current ? { ...current, following: current.following.map(person => person.access_id === accessId ? { ...person, preferences: result.preferences } : person) } : current);
+    return result.preferences;
   };
 
   const following = Array.isArray(data?.following) ? data.following : [];
@@ -101,7 +91,6 @@ export default function NotificationsPage({ variant = "patient" }) {
         <PersonalNotificationSettings
           personal={data.personal}
           thresholds={data.thresholds}
-          saving={saving}
           onSave={savePersonal}
         />
       )}
@@ -120,7 +109,7 @@ export default function NotificationsPage({ variant = "patient" }) {
       {data && activeFollowing.length > 0 && (
         <section className="space-y-6" aria-label="People I follow">
           <h2 className="px-1 text-sm font-medium text-field-ink">People I follow</h2>
-          {activeFollowing.map(person => <FollowedPersonNotifications key={person.access_id} person={person} saving={saving} onSave={preferences => savePerson(person.access_id, preferences)} />)}
+          {activeFollowing.map(person => <FollowedPersonNotifications key={person.access_id} person={person} onSave={preferences => savePerson(person.access_id, preferences)} />)}
           <p className="px-1 text-xs leading-relaxed text-field-muted">Each person decides what they share. Your choices here can only narrow that.</p>
         </section>
       )}

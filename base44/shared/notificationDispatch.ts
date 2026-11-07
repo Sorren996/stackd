@@ -62,7 +62,7 @@ export interface DispatchDeps {
   /** Re-reads permissions and access. Runs immediately before transport. */
   recheck: () => Promise<{ ok: boolean; reason?: string }>;
   /** The platform's own native push integration. */
-  send: (message: { user_id: string; title: string; content: string; action_url: string }) => Promise<void>;
+  send: (message: { user_id: string; title: string; content: string; action_url: string }) => Promise<any>;
   nowMs: number;
   /** Builds the absolute link the OS opens when the notification is tapped. */
   absoluteUrl: (path: string) => string;
@@ -151,12 +151,13 @@ export async function dispatchNotification(
 
   // 7. One attempt, never retried.
   try {
-    await deps.send({
+    const response = await deps.send({
       user_id: input.recipientUserId,
       title: input.copy.title,
       content: input.copy.body,
       action_url: deps.absoluteUrl(input.destination),
     });
+    if (response?.success === false || response?.ok === false) throw Object.assign(new Error('Push service refused submission'), { status: 422 });
   } catch (error: any) {
     const kind = classifySendOutcome(error);
     const status = kind === "ambiguous" ? "unknown" : "failed";

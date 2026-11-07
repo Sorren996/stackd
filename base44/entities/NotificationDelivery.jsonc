@@ -28,7 +28,8 @@
         "custom_low",
         "custom_high",
         "falling_fast",
-        "rising_fast"
+        "rising_fast",
+        "low_glucose"
       ],
       "enumColors": [
         "red",
@@ -38,7 +39,8 @@
         "blue",
         "purple",
         "pink",
-        "green"
+        "green",
+        "red"
       ]
     },
     "channel": {

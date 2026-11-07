@@ -113,7 +113,7 @@ function makeDb(seed = {}) {
 }
 
 const ENTITIES = [
-  'GlucoseReading', 'UserSettings', 'NotificationPreference', 'SharedAccess',
+  'User', 'GlucoseReading', 'UserSettings', 'NotificationPreference', 'SharedAccess',
   'FollowNotificationPreference', 'DexcomConnection', 'NotificationLedger',
   'NotificationDelivery', 'NotificationDispatchJob',
 ];
@@ -125,6 +125,7 @@ const ENTITIES = [
  */
 function world({ prefs = {}, settings = {}, readings = [], follower = null, connection = {}, master = true } = {}) {
   const db = makeDb({
+    User: [{ id: 'owner', health_data_consent_active: true }],
     GlucoseReading: readings,
     UserSettings: [
       { id: 'settings', created_by_id: 'owner', updated_date: iso(NOW), target_range_low: 70, target_range_high: 180, glucose_units: 'mg/dL', timezone: 'UTC', ...settings },
@@ -217,7 +218,7 @@ const followerWorld = ({ relationship = {}, prefs = {}, readings = [] } = {}) =>
 test('the verified incident shape now alerts: below-zone first, then urgent at 54', async () => {
   const w = world({ readings: [reading(70, 8), reading(65, 1)] });
   await w.dispatch();
-  assert.deepEqual(w.categories(), ['below_range'], 'a fresh sub-zone reading must notify');
+  assert.deepEqual(w.categories(), ['low_glucose'], 'a fresh sub-70 reading must notify');
 
   await w.ingest(54, 0);
   assert.equal(w.categories().at(-1), 'urgent_low', 'the later, more severe crossing is not suppressed');
@@ -225,14 +226,15 @@ test('the verified incident shape now alerts: below-zone first, then urgent at 5
   assert.equal(w.sends.length, 2);
 });
 
-test('a single 54 reading is urgent_low immediately, without any client open', async () => {
+test('each fresh distinct low in a newly ingested batch is evaluated, with urgent presentation at 54', async () => {
   const w = world({ readings: [reading(70, 8), reading(65, 6), reading(60, 4), reading(57, 2), reading(54, 0)] });
   const result = await w.dispatch();
   assert.equal(result.dispatched, true);
-  assert.equal(w.categories().join(), 'urgent_low');
-  assert.equal(w.deliveries()[0].status, 'submitted');
-  assert.equal(w.deliveries()[0].covered_events.length, 2, 'below-zone and urgent-low coalesce into one push');
-  assert.equal(w.sends.length, 1);
+  assert.deepEqual(w.categories(), ['low_glucose', 'low_glucose', 'low_glucose', 'urgent_low']);
+  assert.ok(w.deliveries().every(row => row.status === 'submitted'));
+  assert.equal(w.deliveries().at(-1).covered_events.length, 2);
+  assert.equal(w.sends.length, 4);
+  await w.dispatch(); assert.equal(w.sends.length, 4);
 });
 
 // ── Independent thresholds ─────────────────────────────────────────────────
@@ -360,7 +362,7 @@ test('the 54 mg/dL incident is not replayed once newer readings exist', async ()
 
 // ── Repeats and recovery ───────────────────────────────────────────────────
 
-test('repeats fire only when explicitly configured, and recovery re-arms the category', async () => {
+test('urgent low ignores old repeat intervals and needs no episode recovery', async () => {
   const w = world({ prefs: { categories: { urgent_low: true }, repeat_minutes: { urgent_low: 15 } } });
   // Four-minute cadence, each reading evaluated as it becomes the newest one.
   const step = async (value, minutesAgo) => {
@@ -372,18 +374,18 @@ test('repeats fire only when explicitly configured, and recovery re-arms the cat
   assert.equal(w.sends.length, 1, 'the first low alerts');
 
   await step(51, 12);
-  assert.equal(w.sends.length, 1, 'still low, below the repeat interval');
+  assert.equal(w.sends.length, 2, 'each distinct urgent reading qualifies, regardless of old interval');
 
   // Two fresh recovery readings 4 minutes apart clear the episode.
   await step(70, 8);
   await step(75, 4);
-  assert.equal(w.sends.length, 1, 'recovery itself is not a notification');
+  assert.equal(w.sends.length, 2, 'recovery itself is not a notification');
 
   await step(50, 0);
-  assert.equal(w.sends.length, 2, 'a new episode alerts again after recovery');
+  assert.equal(w.sends.length, 3, 'a new urgent measurement alerts after recovery too');
 });
 
-test('repeat intervals are honoured when explicitly set', async () => {
+test('legacy urgent intervals never throttle distinct urgent readings', async () => {
   const w = world({ prefs: { categories: { urgent_low: true }, repeat_minutes: { urgent_low: 15 } } });
   const step = async (value, minutesAgo) => {
     w.db.rows('GlucoseReading').push(reading(value, minutesAgo));
@@ -395,8 +397,7 @@ test('repeat intervals are honoured when explicitly set', async () => {
   await step(49, 4);
   await step(48, 0);
   const repeats = w.deliveries().filter(d => d.category === 'urgent_low');
-  assert.ok(repeats.length >= 2, 'an explicit repeat re-notifies while the episode persists');
-  assert.ok(repeats.length <= 3, 'and only at the configured interval, never on every reading');
+  assert.equal(repeats.length, 5, 'all five source readings qualify independently of the legacy interval');
 });
 
 // ── Concurrency, failure, retry ────────────────────────────────────────────

@@ -1,21 +1,24 @@
-import { useId } from 'react';
+import { memo, useId } from 'react';
+import { ChevronRight } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { alertSummary, alertTimingSummary } from '@/lib/notifications/notificationPresentation';
-export default function NotificationRuleRow({ rule, draft, thresholds, disabled, editing, onToggle, onEdit, children }) {
+function NotificationRuleRow({ rule, draft, thresholds, disabled, pending, onToggle, onEdit }) {
   const id = useId();
+  const fixed = ['low_glucose', 'urgent_low'].includes(rule.key);
   const timing = alertTimingSummary(rule.key, draft, thresholds?.units);
-  return <div className="border-t border-border/50 py-4 first:border-t-0 first:pt-1">
-    <div className="flex items-start gap-3">
-      <div className="min-w-0 flex-1">
-        <h3 id={id} className={`text-sm text-ink ${rule.key === 'urgent_low' ? 'font-semibold' : 'font-medium'}`}>{rule.label}</h3>
-        <p id={`${id}-summary`} className="mt-1 text-xs leading-relaxed text-ink-muted">{alertSummary(rule.key, draft, thresholds)}</p>
-        {timing && <p className="mt-1 text-xs leading-relaxed text-ink-muted">{timing}</p>}
-      </div>
-      <div className="flex h-11 w-11 shrink-0 items-center justify-center">
-        <Switch aria-labelledby={id} aria-describedby={`${id}-summary`} checked={draft.categories?.[rule.key] === true} disabled={disabled || editing || draft.master_enabled !== true} onCheckedChange={onToggle} className="relative after:absolute after:-inset-y-3 after:-inset-x-1" />
-      </div>
+  const summary = alertSummary(rule.key, draft, thresholds);
+  return <div className="flex items-center gap-3 py-3">
+    <div className="min-w-0 flex-1">
+      <h3 id={id} className={`text-sm leading-snug text-ink ${rule.key === 'urgent_low' ? 'font-semibold' : 'font-medium'}`}>{rule.label}</h3>
+      {fixed ? <p id={`${id}-summary`} className="mt-1 text-xs leading-relaxed text-ink-muted">{summary}</p> :
+        <button type="button" onClick={onEdit} aria-label={`Edit ${rule.label.toLowerCase()}`} aria-haspopup="dialog" disabled={disabled || pending} className="flex min-h-11 w-full items-center gap-1.5 text-left text-xs leading-relaxed text-ink-muted active:opacity-60 disabled:opacity-60">
+          <span id={`${id}-summary`} className="min-w-0">{summary}{timing && <span className="block">{timing}</span>}</span><ChevronRight className="h-3.5 w-3.5 shrink-0 text-brand" />
+        </button>}
+      {pending && <span role="status" className="text-xs text-ink-muted">Saving…</span>}
     </div>
-    <button type="button" className="min-h-11 min-w-11 text-left text-xs font-semibold text-brand underline underline-offset-4 disabled:opacity-50" aria-label={`Edit ${rule.label.toLowerCase()}`} aria-expanded={Boolean(children)} aria-controls={`${id}-editor`} disabled={disabled || editing} onClick={onEdit}>Edit</button>
-    {children && <div id={`${id}-editor`}>{children}</div>}
+    <div className="flex h-11 w-11 shrink-0 items-center justify-center">
+      <Switch aria-labelledby={id} aria-describedby={`${id}-summary`} aria-busy={pending} checked={draft.categories?.[rule.key] === true} disabled={disabled || pending || draft.master_enabled !== true} onCheckedChange={onToggle} thumbClassName="bg-paper shadow-none duration-100" className="relative shadow-none duration-100 after:absolute after:-inset-y-3 after:-inset-x-1 data-[state=checked]:bg-field data-[state=unchecked]:bg-ink-muted" />
+    </div>
   </div>;
 }
+export default memo(NotificationRuleRow, (a, b) => a.rule.key === b.rule.key && a.disabled === b.disabled && a.pending === b.pending && a.draft.master_enabled === b.draft.master_enabled && a.draft.categories?.[a.rule.key] === b.draft.categories?.[b.rule.key] && alertSummary(a.rule.key, a.draft, a.thresholds) === alertSummary(b.rule.key, b.draft, b.thresholds) && alertTimingSummary(a.rule.key, a.draft, a.thresholds?.units) === alertTimingSummary(b.rule.key, b.draft, b.thresholds?.units));

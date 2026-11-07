@@ -12,6 +12,10 @@
     "categories": {
       "type": "object",
       "properties": {
+        "low_glucose": {
+          "type": "boolean",
+          "description": "Explicit fixed below-70 choice. Absent preserves an existing below_range choice only when its boundary is exactly 70; never auto-enabled."
+        },
         "urgent_low": {
           "type": "boolean",
           "default": false
@@ -98,7 +102,7 @@
     },
     "repeat_minutes": {
       "type": "object",
-      "description": "Explicit per-category repeats, 15/30/60/120 minutes; absent/null means once per episode."
+      "description": "Explicit per-category repeats, 15/30/60/120 minutes; absent/null means once per episode. Fixed low and urgent low ignore legacy repeats."
     },
     "above_range_minutes": {
       "type": "number"

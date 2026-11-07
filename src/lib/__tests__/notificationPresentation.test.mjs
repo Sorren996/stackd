@@ -2,9 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ALERT_GROUPS, alertSummary, alertTimingSummary, needsAlertSetup, mergeNotificationPatch, savedPatchMatches } from '../notifications/notificationPresentation.js';
 const thresholds = { units: 'mg/dL', target_low: 70, target_high: 180 };
-test('all eight distinct categories remain, urgent low first', () => {
+test('all prior categories remain alongside fixed low, urgent first', () => {
   const keys = ALERT_GROUPS.flatMap(group => group.keys);
-  assert.equal(keys.length, 8); assert.equal(new Set(keys).size, 8); assert.equal(keys[0], 'urgent_low');
+  assert.equal(keys.length, 9); assert.equal(new Set(keys).size, 9); assert.equal(keys[0], 'urgent_low');
 });
 test('saved summaries use actual operators, units, bounds and delay', () => {
   assert.equal(alertSummary('custom_high', {}, thresholds), 'Choose a level');
@@ -12,7 +12,7 @@ test('saved summaries use actual operators, units, bounds and delay', () => {
   assert.equal(alertSummary('custom_high', { custom_high_mgdl: 180 }, thresholds), 'At or above 180 mg/dL');
   assert.equal(alertSummary('above_range', {}, thresholds), 'Above 180 mg/dL');
   assert.equal(alertSummary('below_range', {}, thresholds), 'Below 70 mg/dL');
-  assert.equal(alertSummary('urgent_low', {}, thresholds), 'Below 55 mg/dL');
+  assert.equal(alertSummary('urgent_low', {}, thresholds), 'Every new reading below 55 mg/dL');
   assert.equal(alertSummary('missing_readings', { missing_delay_minutes: 20 }, thresholds), 'No new readings for 20 minutes');
   assert.equal(alertSummary('falling_fast', { falling_fast_rate: 3 }, thresholds), 'Falling by 3 mg/dL per minute or faster');
   assert.equal(alertSummary('custom_low', { custom_low_mgdl: 100 }, { units: 'mmol/L' }), 'At or below 5.6 mmol/L');

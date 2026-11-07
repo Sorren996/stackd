@@ -1,4 +1,4 @@
-import { useEffect, useRef, useId } from "react";
+import { useEffect, useRef, useId, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, useDragControls, useReducedMotion, AnimatePresence } from "framer-motion";
 
@@ -42,6 +42,7 @@ export default function LogSheetShell({
   children,
   detent = "default",
   labelledBy,
+  compact = false,
 }) {
   const dragControls = useDragControls();
   const prefersReducedMotion = useReducedMotion();
@@ -49,6 +50,14 @@ export default function LogSheetShell({
   const previouslyFocused = useRef(null);
   const autoId = useId();
   const headingId = labelledBy || autoId;
+  const [viewport, setViewport] = useState(null);
+  useEffect(() => {
+    if (!compact || !open || !window.visualViewport) return;
+    const view = window.visualViewport;
+    const update = () => setViewport({ height: view.height, top: view.offsetTop });
+    update(); view.addEventListener('resize', update); view.addEventListener('scroll', update);
+    return () => { view.removeEventListener('resize', update); view.removeEventListener('scroll', update); };
+  }, [compact, open]);
 
   // Body scroll lock while open.
   useEffect(() => {
@@ -81,8 +90,8 @@ export default function LogSheetShell({
     }
     previouslyFocused.current = document.activeElement;
     const id = requestAnimationFrame(() => sheetRef.current?.focus());
-    return () => cancelAnimationFrame(id);
-  }, [open]);
+    return () => { cancelAnimationFrame(id); if (compact) previouslyFocused.current?.focus?.(); };
+  }, [open, compact]);
 
   // Focus trap — keep Tab cycling within the sheet.
   useEffect(() => {
@@ -122,7 +131,7 @@ export default function LogSheetShell({
   return createPortal(
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0" style={{ zIndex: 90 }}>
+        <div className="fixed inset-0" style={{ zIndex: 90, ...(compact && viewport ? { top: viewport.top, height: viewport.height, bottom: 'auto' } : {}) }}>
           {/* Scrim */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -160,7 +169,8 @@ export default function LogSheetShell({
               background: PALETTE.surface,
               borderRadius: "28px 28px 0 0",
               boxShadow: "0 -12px 40px rgba(63,56,48,0.12)",
-              height: sheetHeight,
+              height: compact ? 'auto' : sheetHeight,
+              ...(compact ? { maxHeight: 'calc(100% - 12px)', maxWidth: '36rem', marginInline: 'auto' } : {}),
               willChange: "transform",
             }}
           >
@@ -185,12 +195,13 @@ export default function LogSheetShell({
               <button
                 type="button"
                 onClick={onClose}
-                className="flex h-9 items-center rounded-full px-1 text-sm font-medium transition active:opacity-60"
+                onPointerDown={compact ? e => e.stopPropagation() : undefined}
+                className="flex min-h-11 items-center rounded-full px-1 text-sm font-medium transition active:opacity-60"
                 style={{ color: PALETTE.copper }}
               >
                 Cancel
               </button>
-              <h2 id={headingId} className="text-base font-semibold" style={{ color: PALETTE.ink }}>
+              <h2 id={headingId} className={compact ? 'min-w-0 text-center font-serif-italic text-lg' : 'text-base font-semibold'} style={{ color: PALETTE.ink }}>
                 {title}
               </h2>
               <div style={{ width: "52px" }} aria-hidden />

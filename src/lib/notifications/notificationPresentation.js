@@ -1,7 +1,7 @@
 import { notificationValue } from './notificationForm.js';
 
 export const ALERT_GROUPS = [
-  { title: 'Glucose levels', keys: ['urgent_low', 'custom_low', 'below_range', 'custom_high', 'above_range'] },
+  { title: 'Glucose levels', keys: ['urgent_low', 'low_glucose', 'custom_low', 'below_range', 'custom_high', 'above_range'] },
   { title: 'Changing quickly', keys: ['falling_fast', 'rising_fast'] },
   { title: 'Connection', keys: ['missing_readings'] },
 ];
@@ -16,7 +16,8 @@ export function alertSummary(key, prefs, thresholds = {}) {
   const units = thresholds.units || 'mg/dL';
   const level = value => `${notificationValue(value, units)} ${units}`;
   if (key === 'custom_low' || key === 'custom_high') return prefs[`${key}_mgdl`] == null ? 'Choose a level' : `At or ${key === 'custom_low' ? 'below' : 'above'} ${level(prefs[`${key}_mgdl`])}`;
-  if (key === 'urgent_low') return `Below ${level(thresholds.urgent_low ?? 55)}`;
+  if (key === 'low_glucose') return 'Every new reading below 70 mg/dL';
+  if (key === 'urgent_low') return 'Every new reading below 55 mg/dL';
   if (key === 'below_range' || key === 'above_range') {
     const bound = thresholds[key === 'below_range' ? 'target_low' : 'target_high'];
     return bound == null ? 'Comfort zone not set' : `${key === 'below_range' ? 'Below' : 'Above'} ${level(bound)}`;
@@ -28,6 +29,7 @@ export function alertSummary(key, prefs, thresholds = {}) {
   return prefs.missing_delay_minutes == null ? 'Choose how long to wait' : `No new readings for ${prefs.missing_delay_minutes} minutes`;
 }
 export function alertTimingSummary(key, prefs, units = 'mg/dL') {
+  if (key === 'low_glucose' || key === 'urgent_low') return '';
   const parts = [];
   const delay = key === 'custom_high' ? prefs.custom_high_minutes : key === 'above_range' ? prefs.above_range_minutes : null;
   if (delay > 0) parts.push(`After ${delay} minutes`);

@@ -69,9 +69,9 @@ export async function allRows(entity: any, query: any, sort = '-created_date') {
 /**
  * Evaluate every permitted recipient for one owner and return what happened.
  *
- * Only the newest stored measurement is ever decided on, so an old reading
- * that arrives late (a backlog callback, a retry, a late sync) can never be
- * replayed as a current alert.
+ * Fixed low/urgent consider distinct fresh measurements from the bounded
+ * reading window; other categories use the newest measurement. Stale and
+ * backfilled rows never become a queue of historical alerts.
  */
 export async function evaluateOwnerNotifications({
   sr,

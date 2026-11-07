@@ -1,4 +1,5 @@
 import { advanceNotificationEpisodes } from './notificationEpisodes.ts';
+import { fixedLowDecisions } from './notificationFixedLow.ts';
 import { legacyEpisodeState } from './notificationLegacyEpisodes.ts';
 import { buildNotificationCopy, effectiveFollowerCategories, relationshipAllowsPush, notificationEventKey, destinationFor, isHeldByQuietHours, decideMissingNotification } from './notificationCore.ts';
 import { dispatchNotification } from './notificationDispatch.ts';
@@ -17,6 +18,7 @@ export function recipientAuthorized(prefs, relationship, ownerId, recipientId, c
 }
 
 export async function evaluateRecipient({ sr, ownerId, prefs, relationship = null, settings, recipientSettings = null, rows, connection, nowMs, absoluteUrl }) {
+  const wallStarted = Date.now();
   const recipientId = prefs?.user_id;
   if (!recipientId || !recipientAuthorized(prefs, relationship, ownerId, recipientId, [], nowMs)) return 'off';
   const scopeKey = relationship ? `follow:${relationship.id}` : 'self';
@@ -32,14 +34,20 @@ export async function evaluateRecipient({ sr, ownerId, prefs, relationship = nul
   const result = advanceNotificationEpisodes({ rows, nowMs, preferences: effectivePrefs,
     thresholds: { low: settings?.target_range_low, high: settings?.target_range_high },
     state: legacyEpisodeState(ledger, rows, settings, ownerId, recipientId, nowMs, prefs.category_activation), allowed: key => !isHeldByQuietHours(key, quiet, nowMs) });
+  // Persist a cutover watermark once: already-processed legacy episodes must
+  // not replay the same fresh reading when this contract is first deployed.
+  const fixedLowSince = ledger.episode_state?.fixedLowSince ?? ledger.episode_state?.lastAt ?? 0;
+  result.state.fixedLowSince = fixedLowSince;
+  const fixed = fixedLowDecisions({ rows, preferences: effectivePrefs, thresholds: { low: settings?.target_range_low }, nowMs }).filter(item => item.sample.at > fixedLowSince);
   let decision = result.notification;
+  let concurrent = false;
   if (JSON.stringify(result.state) !== JSON.stringify(ledger.episode_state || {})) {
     const version = ledger.episode_revision;
     const updated = await sr.entities.NotificationLedger.updateMany({ id: ledger.id, user_id: recipientId,
       scope_key: scopeKey, // Optional entity fields are materialized as null, not absent.
       episode_revision: version == null ? null : version },
     { $set: { episode_state: result.state, episode_revision: (version || 0) + 1 } });
-    if (Number(updated.updated) !== 1) return 'concurrent_evaluation';
+    concurrent = Number(updated.updated) !== 1;
   }
   if (!decision && categories?.missing_readings) {
     const missing = decideMissingNotification({ rows, nowMs, delayMinutes: prefs.missing_delay_minutes, connection });
@@ -50,7 +58,15 @@ export async function evaluateRecipient({ sr, ownerId, prefs, relationship = nul
         durationMinutes: null, repeatIndex: index, coveredEvents: [{ category: 'missing_readings', episodeKey: missing.episodeKey, repeatIndex: index }] };
     }
   }
-  if (!decision) return 'no_event';
+  if (concurrent) decision = null;
+  const decisions = [...fixed];
+  if (decision && !fixed.some(item => item.sample.at === decision.sample.at)) decisions.push(decision);
+  if (!decisions.length) return concurrent ? 'concurrent_evaluation' : 'no_event';
+  let status = 'duplicate';
+  for (const item of decisions) status = await dispatchDecision(item);
+  return status;
+
+  async function dispatchDecision(decision) {
   const audience = relationship ? 'follower' : 'self';
   const covered = decision.coveredEvents;
   // Built from the triggering measurement itself: its value, its timestamp and
@@ -59,9 +75,11 @@ export async function evaluateRecipient({ sr, ownerId, prefs, relationship = nul
     readingAt: decision.sample.at, units: displaySettings?.glucose_units || 'mg/dL', timeZone: prefs.quiet_timezone || displaySettings?.timezone || 'UTC',
     showDetails: prefs.show_health_details === true, personName: relationship?.sharer_display_name,
     durationMinutes: decision.durationMinutes, trend: decision.sample.trend ?? null, nowMs,
-    coveredCategories: covered.map(c => c.category) });
+    coveredCategories: decision.fixedLow ? [] : covered.map(c => c.category) });
   const episodeEvent = `${decision.episodeKey}${decision.repeatIndex ? `:repeat:${decision.repeatIndex}` : ''}`;
-  const eventKey = notificationEventKey(decision.category, ownerId, recipientId, episodeEvent);
+  const eventKey = decision.fixedLow
+    ? `push:${ownerId}:${recipientId}:${scopeKey}:${decision.episodeKey}`
+    : notificationEventKey(decision.category, ownerId, recipientId, episodeEvent);
   // Older code appended nested claim arrays. Honor those spent keys too, but
   // all new atomic appends use a scalar so $nin actually prevents duplication.
   if ((ledger.claimed_keys || []).flat().includes(eventKey)) return 'duplicate';
@@ -83,9 +101,16 @@ export async function evaluateRecipient({ sr, ownerId, prefs, relationship = nul
       const fresh = await entity.get(prefs.id);
       const relation = relationship ? await sr.entities.SharedAccess.get(relationship.id) : null;
       if (!recipientAuthorized(fresh, relation, ownerId, recipientId, covered.map(c => c.category), Date.now())) return { ok: false, reason: 'permission_changed' };
+      const owner = await sr.entities.User.get(ownerId);
+      if (owner.health_data_consent_active !== true || owner.required_reconsent === true || owner.account_status === 'disabled') return { ok: false, reason: 'consent_changed' };
+      if (decision.fixedLow && !fixedLowDecisions({ rows, preferences: { ...fresh, categories: relation ? effectiveFollowerCategories(relation, fresh.categories) : fresh.categories }, thresholds: { low: settings?.target_range_low }, nowMs: nowMs + Math.max(0, Date.now() - wallStarted) }).some(item => item.episodeKey === decision.episodeKey)) return { ok: false, reason: 'expired_or_disabled' };
       // An edited preview, threshold, quiet window, opt-in or relationship must
       // be evaluated again, never sent using a stale authorization snapshot.
-      if (fresh.updated_date !== prefs.updated_date || (relation && relation.permission_version !== relationship.permission_version)) return { ok: false, reason: 'configuration_changed' };
+      const deliveryFields = ['show_health_details', 'quiet_hours_enabled', 'quiet_start_hour', 'quiet_end_hour', 'quiet_timezone', 'urgent_during_quiet'];
+      const relevantChange = decision.fixedLow
+        ? deliveryFields.some(key => fresh[key] !== prefs[key]) || covered.some(event => fresh.category_activation?.[event.category] !== prefs.category_activation?.[event.category])
+        : fresh.updated_date !== prefs.updated_date;
+      if (relevantChange || (!decision.fixedLow && relation && relation.permission_version !== relationship.permission_version)) return { ok: false, reason: 'configuration_changed' };
       return { ok: true };
     },
     send: message => sr.integrations.Core.SendPushNotification(message),
@@ -93,4 +118,5 @@ export async function evaluateRecipient({ sr, ownerId, prefs, relationship = nul
   // Episode watermarks are never pruned; only old transport-claim keys are.
   if ((ledger.claimed_keys || []).length > 300) await sr.entities.NotificationLedger.updateMany({ id: ledger.id }, { $pull: { claimed_keys: { $in: ledger.claimed_keys.slice(0, -200) } } });
   return outcome.status;
+  }
 }

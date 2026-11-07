@@ -396,7 +396,7 @@ test("everything starts off", () => {
   assert.equal(value.master_enabled, false);
   assert.deepEqual(value.categories, {
     custom_low: false, custom_high: false, falling_fast: false, rising_fast: false,
-    urgent_low: false,
+    urgent_low: false, low_glucose: false,
     below_range: false,
     above_range: false,
     missing_readings: false,
@@ -426,7 +426,7 @@ test("a follower can never widen what the sharer permitted", () => {
   const { value } = sanitizeFollowerPreferences({ master_enabled: true, categories: submitted }, null, relationship);
   assert.deepEqual(value.categories, {
     custom_low: false, custom_high: false, falling_fast: false, rising_fast: false,
-    urgent_low: true,
+    urgent_low: true, low_glucose: false,
     below_range: false,
     above_range: false,
     missing_readings: false,

@@ -15,6 +15,10 @@
     "categories": {
       "type": "object",
       "properties": {
+        "low_glucose": {
+          "type": "boolean",
+          "description": "Explicit fixed below-70 choice, subject to the matching sharer grant."
+        },
         "urgent_low": {
           "type": "boolean",
           "default": false
@@ -101,7 +105,7 @@
     },
     "repeat_minutes": {
       "type": "object",
-      "description": "Explicit per-direction/category repeat intervals only; missing means once."
+      "description": "Explicit per-direction/category repeat intervals only; missing means once. Fixed low and urgent low ignore legacy repeats."
     },
     "above_range_minutes": {
       "type": "number"

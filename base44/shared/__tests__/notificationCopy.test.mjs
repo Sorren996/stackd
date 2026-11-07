@@ -11,6 +11,7 @@ import {
 } from "../notificationCore.ts";
 import { normalizeTrendWord, trendArrowFor } from "../notificationTrend.ts";
 import { advanceNotificationEpisodes } from "../notificationEpisodes.ts";
+import { fixedLowDecisions } from '../notificationFixedLow.ts';
 
 // Pure-function tests only: no database, no push transport, no readings written
 // anywhere and no saved settings touched.
@@ -126,7 +127,7 @@ function decide(allowedCategories, prefs, values) {
     thresholds: { low: 70, high: 180 },
     state: {},
   });
-  return result.notification;
+  return fixedLowDecisions({ rows: rows(values), nowMs: NOW, preferences: { master_enabled: true, categories: allowedCategories, ...prefs }, thresholds: { low: 70 } }).at(-1) || result.notification;
 }
 
 test("threshold boundaries stay exactly where they are, and the copy follows", () => {
@@ -134,7 +135,7 @@ test("threshold boundaries stay exactly where they are, and the copy follows", (
   assert.equal(classifySample(54.9, 70, 180), "urgent");
   assert.equal(classifySample(55, 70, 180), "below");
   assert.equal(decide({ urgent_low: true }, {}, [80, 80, 54]).category, "urgent_low");
-  assert.equal(decide({ below_range: true }, {}, [80, 80, 55]).category, "below_range");
+  assert.equal(decide({ below_range: true }, {}, [80, 80, 55]).category, "low_glucose");
   assert.equal(decide({ urgent_low: true }, {}, [80, 80, 55]), null, "55 is not an urgent low");
 
   // A custom high is inclusive at the level the person chose.

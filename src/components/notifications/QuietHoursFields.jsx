@@ -46,12 +46,14 @@ export default function QuietHoursFields({
   urgentDuringQuiet,
   onChange,
   disabled = false,
+  pending = false,
 }) {
   const zone = timeZone || "UTC";
   return (
     <div>
       <ToggleRow
         label="Quiet hours"
+        pending={pending}
         description="Hold non-urgent notifications during a window you choose."
         checked={Boolean(enabled)}
         disabled={disabled}

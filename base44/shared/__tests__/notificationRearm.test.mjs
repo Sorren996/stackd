@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { advanceNotificationEpisodes } from '../notificationEpisodes.ts';
 import { legacyEpisodeState } from '../notificationLegacyEpisodes.ts';
 import { categoryActivation } from '../notificationOptions.ts';
+import { fixedLowDecisions } from '../notificationFixedLow.ts';
 const T = Date.parse('2026-11-06T12:00:00Z');
 const row = (m, value) => ({ id: `r${m}`, source: 'dexcom_share', value, recorded_at: new Date(T + m * 60000).toISOString() });
 const thresholds = { low: 70, high: 180 };
@@ -12,8 +13,8 @@ test('an explicit re-enable creates a server-owned activation, while value/priva
   const initial = { ...preferences, category_activation: { custom_low: 'old' } };
   assert.deepEqual(categoryActivation(initial, { ...initial, show_health_details: true }, () => 'new'), { custom_low: 'old' });
   const off = { ...initial, categories: { ...initial.categories, custom_low: false } };
-  assert.equal(categoryActivation(off, initial, () => 'new').custom_low, 'new');
-  assert.equal(categoryActivation({ ...initial, master_enabled: false }, initial, () => 'master-new').urgent_low, 'master-new');
+  assert.match(categoryActivation(off, initial, () => 'new').custom_low, /\|new$/);
+  assert.match(categoryActivation({ ...initial, master_enabled: false }, initial, () => 'master-new').urgent_low, /\|master-new$/);
 });
 
 test('re-enable while already low waits for a fresh sample and then starts exactly one new episode', () => {
@@ -53,7 +54,7 @@ test('legacy spent low stages survive upgrade without migrating opt-in to custom
   const result = advanceNotificationEpisodes({ state, rows, nowMs: T + 5 * 60000, thresholds, preferences: { master_enabled: true, categories: { below_range: true, urgent_low: true } } });
   assert.equal(result.notification, null);
   rows.push(row(10, 54));
-  assert.equal(advanceNotificationEpisodes({ state: result.state, rows, nowMs: T + 10 * 60000, thresholds, preferences: { master_enabled: true, categories: { below_range: true, urgent_low: true } } }).notification.category, 'urgent_low');
+  assert.equal(fixedLowDecisions({ rows, nowMs: T + 10 * 60000, thresholds, preferences: { master_enabled: true, categories: { below_range: true, urgent_low: true } } }).at(-1).category, 'urgent_low');
 });
 
 test('legacy urgent consumption cannot suppress a new urgent escalation that was not reached in this episode', () => {

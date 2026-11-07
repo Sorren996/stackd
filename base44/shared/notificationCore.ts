@@ -21,7 +21,7 @@ import { normalizeTrendWord, trendArrowFor } from './notificationTrend.ts';
 
 export const CATEGORY_KEYS = [
   "custom_low", "custom_high", "falling_fast", "rising_fast",
-  "urgent_low",
+  "urgent_low", "low_glucose",
   "below_range",
   "above_range",
   "missing_readings",
@@ -31,7 +31,7 @@ export type Category = (typeof CATEGORY_KEYS)[number];
 
 export const CATEGORY_LABELS: Record<Category, string> = {
   custom_low: 'Custom low', custom_high: 'Custom high', falling_fast: 'Falling fast', rising_fast: 'Rising fast',
-  urgent_low: "Urgent low",
+  urgent_low: "Urgent low", low_glucose: "Low glucose",
   below_range: "Below comfort zone",
   above_range: "Above comfort zone",
   missing_readings: "Readings haven't updated",
@@ -408,6 +408,7 @@ const PUSH_LABELS: Record<Category, string> = {
   urgent_low: "Urgent low",
   custom_low: "Low glucose",
   custom_high: "High glucose",
+  low_glucose: "Low glucose",
   below_range: "Below comfort zone",
   above_range: "Above comfort zone",
   falling_fast: "Falling fast",
@@ -418,6 +419,7 @@ const PUSH_LABELS: Record<Category, string> = {
 /** A second, coalesced condition is named by its OWN threshold. */
 const COALESCED_PHRASES: Partial<Record<Category, string>> = {
   urgent_low: "urgent-low level",
+  low_glucose: "below-70 alert level",
   custom_low: "low alert level",
   custom_high: "high alert level",
   below_range: "comfort-zone low",
@@ -483,7 +485,8 @@ export function buildNotificationCopy(input: CopyInput): PushCopy {
   const sustained = Number.isFinite(held) && held > 0 ? ` and has stayed there for ${Math.round(held)} minutes` : "";
 
   const bodies: Record<Exclude<Category, "missing_readings">, string> = {
-    urgent_low: `${subject} glucose is critically low right now. Act immediately.`,
+    urgent_low: `${subject} glucose is critically low, below ${formatGlucoseValue(55, units)} ${units}.`,
+    low_glucose: `${subject} glucose is below ${formatGlucoseValue(70, units)} ${units}.`,
     custom_low: `${subject} glucose is below ${their} low alert level.`,
     custom_high: `${subject} glucose is above ${their} high alert level.`,
     below_range: `${subject} glucose is below ${their} comfort zone.`,
@@ -615,6 +618,7 @@ export function sharerGrants(row: RelationshipLike | null | undefined): Record<C
   return {
     custom_low: raw.custom_low === true, custom_high: raw.custom_high === true,
     falling_fast: raw.falling_fast === true, rising_fast: raw.rising_fast === true,
+    low_glucose: raw.low_glucose === true,
     urgent_low: raw.urgent_low === true,
     below_range: raw.below_range === true,
     above_range: raw.above_range === true,
@@ -637,6 +641,7 @@ export function effectiveFollowerCategories(
     custom_high: granted.custom_high && chosen.custom_high === true,
     falling_fast: granted.falling_fast && chosen.falling_fast === true,
     rising_fast: granted.rising_fast && chosen.rising_fast === true,
+    ...(chosen.low_glucose == null ? {} : { low_glucose: granted.low_glucose && chosen.low_glucose === true }),
     urgent_low: granted.urgent_low && chosen.urgent_low === true,
     below_range: granted.below_range && chosen.below_range === true,
     above_range: granted.above_range && chosen.above_range === true,
@@ -684,7 +689,7 @@ export const EMPTY_PERSONAL_PREFERENCES: PersonalPreferences = {
   master_enabled: false,
   categories: {
     custom_low: false, custom_high: false, falling_fast: false, rising_fast: false,
-    urgent_low: false,
+    urgent_low: false, low_glucose: false,
     below_range: false,
     above_range: false,
     missing_readings: false,
@@ -735,6 +740,7 @@ export function sanitizePersonalPreferences(
     ...(existing || {}),
     categories: { ...EMPTY_PERSONAL_PREFERENCES.categories, ...(existing?.categories || {}) },
   };
+  if (existing && existing.categories?.low_glucose == null) delete base.categories.low_glucose;
   const input = submitted || {};
 
   const categories: Record<Category, boolean> = { ...base.categories };
@@ -831,7 +837,7 @@ export const EMPTY_FOLLOWER_PREFERENCES: FollowerPreferences = {
   master_enabled: false,
   categories: {
     custom_low: false, custom_high: false, falling_fast: false, rising_fast: false,
-    urgent_low: false,
+    urgent_low: false, low_glucose: false,
     below_range: false,
     above_range: false,
     missing_readings: false,
@@ -856,6 +862,7 @@ export function sanitizeFollowerPreferences(
     ...(existing || {}),
     categories: { ...EMPTY_FOLLOWER_PREFERENCES.categories, ...(existing?.categories || {}) },
   };
+  if (existing && existing.categories?.low_glucose == null) delete base.categories.low_glucose;
   const input = submitted || {};
 
   const chosen: Record<string, unknown> = { ...base.categories };

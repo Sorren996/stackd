@@ -23,14 +23,15 @@ const { Personal, Follower, Fields } = compiled.exports;
 const preferences = { master_enabled: true, categories: {}, repeat_minutes: {} };
 const thresholds = { target_low: 70, target_high: 180, units: 'mg/dL' };
 
-test('personal UI renders eight switch rows in three groups, plus privacy and quiet controls', () => {
+test('personal UI uses fixed low and urgent switches without inline editors or frequency controls', () => {
   const html = renderToStaticMarkup(React.createElement(Personal, { personal: preferences, thresholds, saving: false, onSave() {} }));
-  for (const label of ['Custom low', 'Below comfort zone', 'Custom high', 'Above comfort zone', 'Falling fast', 'Rising fast', 'Urgent low', 'Missing readings']) assert.match(html, new RegExp(label));
+  for (const label of ['Custom low', 'Low glucose', 'Custom high', 'Above comfort zone', 'Falling fast', 'Rising fast', 'Urgent low', 'Missing readings']) assert.match(html, new RegExp(label));
   assert.equal((html.match(/<details/g) || []).length, 0);
   assert.match(html, /These settings change your alerts, not your comfort zone/);
-  for (const label of ['Glucose levels', 'Changing quickly', 'Connection', 'Below 70 mg\/dL', 'Above 180 mg\/dL', 'Below 55 mg\/dL']) assert.ok(html.includes(label));
+  for (const label of ['Glucose levels', 'Changing quickly', 'Connection', 'Every new reading below 70 mg\/dL', 'Above 180 mg\/dL', 'Every new reading below 55 mg\/dL']) assert.ok(html.includes(label));
   assert.equal((html.match(/role="switch"/g) || []).length, 11);
-  assert.equal((html.match(/>Edit<\/button>/g) || []).length, 8);
+  assert.equal((html.match(/aria-haspopup="dialog"/g) || []).length, 6);
+  assert.doesNotMatch(html, /Edit low glucose|Edit urgent low|Below comfort zone|>Edit</);
   assert.doesNotMatch(html, /≥|≤|not set mg\/dL|read-only|First-alert delay|Repeat within this episode/);
   assert.match(html, /Show health details in previews/);
   assert.match(html, /Quiet hours/);
@@ -39,7 +40,8 @@ test('personal UI renders eight switch rows in three groups, plus privacy and qu
 
 test('follower UI shows only authorized choices, hides denied custom/velocity controls and has no Recent list', () => {
   const html = renderToStaticMarkup(React.createElement(Follower, { person: { name: 'A friend', access_id: 'access', status: 'active', glucose_shared: true, thresholds, preferences, grants: { custom_low: true, urgent_low: true } }, saving: false, onSave() {} }));
-  assert.equal((html.match(/>Edit<\/button>/g) || []).length, 2);
+  assert.equal((html.match(/aria-haspopup="dialog"/g) || []).length, 1);
+  assert.doesNotMatch(html, /Low glucose|Edit urgent low/);
   assert.match(html, /Custom low/); assert.match(html, /Urgent low/);
   assert.doesNotMatch(html, /Custom high|Falling fast|Rising fast|Recent notifications/);
 });
