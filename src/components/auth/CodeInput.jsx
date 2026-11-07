@@ -20,8 +20,10 @@ import { CODE_LENGTH } from "@/lib/verification/otpState";
  * text stays invisible beneath the boxes drawn on top.
  */
 export default function CodeInput({
+  id,
   value,
   onChange,
+  onEnter,
   invalid = false,
   disabled = false,
   autoFocus = false,
@@ -62,6 +64,7 @@ export default function CodeInput({
 
         <input
           ref={inputRef}
+          id={id}
           type="text"
           inputMode="numeric"
           pattern="[0-9]*"
@@ -70,6 +73,14 @@ export default function CodeInput({
           maxLength={CODE_LENGTH}
           value={value ?? ""}
           onChange={(e) => onChange(e.target.value)}
+          onKeyDown={(e) => {
+            // Done / Enter submits only a complete code, so an unfinished field
+            // is never sent for verification.
+            if (e.key === "Enter" && onEnter && chars.length === CODE_LENGTH) {
+              e.preventDefault();
+              onEnter(String(value));
+            }
+          }}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           disabled={disabled}

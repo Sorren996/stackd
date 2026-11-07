@@ -3,7 +3,8 @@ import { Check, ChevronsUpDown, Copy, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import CodeInput from "@/components/auth/CodeInput";
+import { isCompleteCode, sanitizeCode } from "@/lib/verification/otpState";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
@@ -48,21 +49,19 @@ export function MfaHeader({ title, description }) {
   );
 }
 
-// Six digits. Like the built-in code box, any change that leaves six digits, a paste over a full code
-// included, and the Enter key both call onComplete with the code as it stands.
+// Six digits, on the same app-owned field the signup code uses: one real text input covering the boxes,
+// so a tap anywhere opens the keyboard and paste, autofill and backspace all behave natively. Digits are
+// the only thing stored; a complete code — typed or pasted — and the Enter key both call onComplete.
 export function CodeField({ id, label = "Enter the 6-digit code", value, onChange, onComplete, hasError = false }) {
+  const apply = (raw) => {
+    const next = sanitizeCode(raw);
+    onChange(next);
+    if (isCompleteCode(next)) onComplete?.(next);
+  };
   return (
     <div className="space-y-2">
       <Label htmlFor={id} className="block text-center font-normal text-muted-foreground">{label}</Label>
-      <InputOTP id={id} maxLength={6} value={value} autoFocus autoComplete="one-time-code" containerClassName="justify-center"
-        onChange={(next) => { onChange(next); if (next.length === 6) onComplete?.(next); }}
-        onKeyDown={(e) => { if (e.key === "Enter" && onComplete) { e.preventDefault(); onComplete(value); } }}>
-        <InputOTPGroup>
-          {[0, 1, 2, 3, 4, 5].map((index) => (
-            <InputOTPSlot key={index} index={index} className={hasError ? "border-destructive" : undefined} />
-          ))}
-        </InputOTPGroup>
-      </InputOTP>
+      <CodeInput id={id} value={value} onChange={apply} onEnter={onComplete} invalid={hasError} autoFocus label={label} />
     </div>
   );
 }
