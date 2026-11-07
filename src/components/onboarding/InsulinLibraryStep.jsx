@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
-import { Check, ChevronLeft } from "lucide-react";
+import { Check } from "lucide-react";
+import OnboardingShell from "@/components/onboarding/OnboardingShell";
 import { INSULIN_PROFILES } from "@/lib/insulinPharmacology";
 
 const INK = "#3f3830";
@@ -89,51 +90,43 @@ export default function InsulinLibraryStep({ onContinue, onBack }) {
   };
 
   return (
-    <div className="flex flex-col min-h-screen" style={{ background: CANVAS }}>
-      {/* Header */}
-      <div
-        className="flex items-center gap-3 px-4 pt-[max(env(safe-area-inset-top),1rem)] pb-3"
-        style={{ borderBottom: `1px solid ${HAIRLINE}` }}
-      >
-        <button
-          onClick={handleBack}
-          className="flex h-9 w-9 items-center justify-center rounded-full"
-          style={{ background: CREAM, border: `1px solid ${HAIRLINE}` }}
-        >
-          <ChevronLeft className="h-4 w-4" style={{ color: INK }} />
-        </button>
-        <p className="text-[11px] font-bold uppercase tracking-[0.18em]" style={{ color: FAINT }}>
-          Step 1 of 3
-        </p>
-      </div>
-
-      {/* Title */}
-      <div className="px-5 pt-6 pb-4">
-        <h1 className="text-2xl font-bold" style={{ color: INK }}>
+    <OnboardingShell
+      stepLabel="Step 1 of 3"
+      onBack={handleBack}
+      title={
+        <>
           Your{" "}
           <em style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontWeight: 400 }}>
             insulin
           </em>
-        </h1>
-        <p className="mt-2 text-sm leading-relaxed" style={{ color: TAUPE }}>
-          Select the insulin(s) you use. This shapes your logging and activity insights.
-        </p>
-      </div>
-
-      {/* Back note */}
-      {showBackNote && (
-        <div
-          className="mx-5 mb-3 rounded-2xl px-4 py-3"
-          style={{ background: "rgba(156,82,40,0.08)", border: "1px solid rgba(156,82,40,0.20)" }}
+        </>
+      }
+      intro="Select the insulin(s) you use. This shapes your logging and activity insights."
+      notice={
+        showBackNote ? (
+          <div
+            className="mb-4 rounded-2xl px-4 py-3"
+            style={{ background: "rgba(156,82,40,0.08)", border: "1px solid rgba(156,82,40,0.20)" }}
+          >
+            <p className="text-[12px] leading-relaxed" style={{ color: COPPER }}>
+              Your insulin selection is needed to continue. You can always change it later in Settings.
+            </p>
+          </div>
+        ) : null
+      }
+      footer={
+        <button
+          type="button"
+          onClick={handleContinue}
+          disabled={selected.size === 0}
+          className="w-full rounded-full py-3.5 text-sm font-semibold transition active:scale-[0.98] disabled:opacity-40"
+          style={{ background: COPPER, color: CREAM, boxShadow: "0 4px 16px rgba(156,82,40,0.28)" }}
         >
-          <p className="text-[12px] leading-relaxed" style={{ color: COPPER }}>
-            Your insulin selection is needed to continue. You can always change it later in Settings.
-          </p>
-        </div>
-      )}
-
-      {/* Insulin list */}
-      <div className="flex-1 overflow-y-auto px-5 pb-4">
+          {selected.size === 0 ? "Select at least one" : `Continue (${selected.size} selected)`}
+        </button>
+      }
+    >
+      <div className="min-w-0">
         {grouped.map(({ key, items }) => (
           <div key={key} className="mb-4">
             <div
@@ -165,7 +158,7 @@ export default function InsulinLibraryStep({ onContinue, onBack }) {
                         {name}
                       </span>
                       <span
-                        className="flex h-6 w-6 items-center justify-center rounded-full"
+                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full"
                         style={{
                           background: isSelected ? COPPER : "transparent",
                           border: isSelected ? "none" : `1px solid ${HAIRLINE}`,
@@ -175,7 +168,7 @@ export default function InsulinLibraryStep({ onContinue, onBack }) {
                       </span>
                     </button>
                     {isSelected && (
-                      <div className="flex items-center gap-2 px-4 pb-3">
+                      <div className="flex flex-wrap items-center gap-2 px-4 pb-3">
                         <button
                           type="button"
                           onClick={() => toggleMealType(name)}
@@ -209,22 +202,6 @@ export default function InsulinLibraryStep({ onContinue, onBack }) {
           </div>
         ))}
       </div>
-
-      {/* Footer */}
-      <div
-        className="shrink-0 px-5 py-3 pb-[max(env(safe-area-inset-bottom),0.75rem)]"
-        style={{ borderTop: `1px solid ${HAIRLINE}` }}
-      >
-        <button
-          type="button"
-          onClick={handleContinue}
-          disabled={selected.size === 0}
-          className="w-full rounded-full py-3.5 text-sm font-semibold transition active:scale-[0.98] disabled:opacity-40"
-          style={{ background: COPPER, color: CREAM, boxShadow: "0 4px 16px rgba(156,82,40,0.28)" }}
-        >
-          {selected.size === 0 ? "Select at least one" : `Continue (${selected.size} selected)`}
-        </button>
-      </div>
-    </div>
+    </OnboardingShell>
   );
 }

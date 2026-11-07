@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { ChevronLeft, Lock } from "lucide-react";
+import { Lock } from "lucide-react";
+import OnboardingShell from "@/components/onboarding/OnboardingShell";
 import TermInfoButton from "@/components/doseplan/TermInfoButton";
 import { DOSE_TERMS } from "@/lib/dosePlanCopy";
 
@@ -13,30 +14,37 @@ const TAUPE = "#6b6153";
 
 function FieldInput({ label, value, onChange, unit, helper, info }) {
   return (
-    <div>
+    <div className="min-w-0">
       <div className="mb-1 flex items-center gap-1">
         <label className="text-[12px] font-semibold" style={{ color: INK }}>
           {label}
         </label>
         {info}
       </div>
-      <div className="flex items-center gap-2">
-        <input
-          type="number"
-          inputMode="decimal"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="flex-1 rounded-2xl border px-4 py-3 text-sm focus:outline-none"
-          style={{ background: CANVAS, borderColor: HAIRLINE, color: INK }}
-        />
-        {unit && (
-          <span className="shrink-0 text-[12px]" style={{ color: TAUPE }}>
-            {unit}
-          </span>
-        )}
-      </div>
+      {/* The input owns the row at its real width, and the unit sits BELOW it
+          and wraps. A numeric input keeps an intrinsic width unless it is
+          allowed to shrink, so a sibling `shrink-0` unit used to push the whole
+          row past the right edge; `min-w-0` plus a full-width field is what
+          actually fixes that. The unit is never truncated — every character is
+          still on screen, just on its own line. */}
+      <input
+        type="number"
+        inputMode="decimal"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full min-w-0 rounded-2xl border px-4 py-3 text-sm focus:outline-none"
+        style={{ background: CANVAS, borderColor: HAIRLINE, color: INK }}
+      />
+      {unit && (
+        <p
+          className="mt-1.5 text-[12px] leading-snug"
+          style={{ color: TAUPE, overflowWrap: "break-word" }}
+        >
+          {unit}
+        </p>
+      )}
       {helper && (
-        <p className="mt-1.5 text-[11px] leading-relaxed" style={{ color: FAINT }}>
+        <p className="mt-1 text-[11px] leading-relaxed" style={{ color: FAINT }}>
           {helper}
         </p>
       )}
@@ -73,41 +81,42 @@ export default function DosePlanStep({ onConfirm, onSkip, onBack }) {
   };
 
   return (
-    <div className="flex flex-col min-h-screen" style={{ background: CANVAS }}>
-      {/* Header */}
-      <div
-        className="flex items-center gap-3 px-4 pt-[max(env(safe-area-inset-top),1rem)] pb-3"
-        style={{ borderBottom: `1px solid ${HAIRLINE}` }}
-      >
-        <button
-          onClick={onBack}
-          aria-label="Back"
-          className="flex h-11 w-11 items-center justify-center rounded-full"
-          style={{ background: CREAM, border: `1px solid ${HAIRLINE}` }}
-        >
-          <ChevronLeft className="h-4 w-4" style={{ color: INK }} />
-        </button>
-        <p className="text-[11px] font-bold uppercase tracking-[0.18em]" style={{ color: FAINT }}>
-          Step 2 of 3
-        </p>
-      </div>
-
-      {/* Title */}
-      <div className="px-5 pt-6 pb-4">
-        <h1 className="text-2xl font-bold leading-tight" style={{ color: INK }}>
+    <OnboardingShell
+      stepLabel="Step 2 of 3"
+      onBack={onBack}
+      title={
+        <>
           Your{" "}
           <em style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontWeight: 400 }}>
             prescribed
           </em>{" "}
           insulin settings
-        </h1>
-        <p className="mt-2 text-sm leading-relaxed" style={{ color: TAUPE }}>
-          Use the settings from your care team. If you&rsquo;re unsure, you can skip this step.
-        </p>
-      </div>
-
-      {/* Fields */}
-      <div className="flex-1 overflow-y-auto px-5 space-y-5 pb-4">
+        </>
+      }
+      intro="Use the settings from your care team. If you&rsquo;re unsure, you can skip this step."
+      footer={
+        <>
+          <button
+            type="button"
+            onClick={handleConfirm}
+            disabled={!canConfirm}
+            className="w-full rounded-full py-3.5 text-sm font-semibold transition active:scale-[0.98] disabled:opacity-40"
+            style={{ background: INK, color: CREAM }}
+          >
+            Confirm my plan
+          </button>
+          <button
+            type="button"
+            onClick={onSkip}
+            className="w-full rounded-full py-3 text-sm font-medium transition"
+            style={{ color: TAUPE }}
+          >
+            Skip for now
+          </button>
+        </>
+      }
+    >
+      <div className="space-y-5">
         <div
           className="rounded-2xl p-4 space-y-4"
           style={{ background: CREAM, border: `1px solid ${HAIRLINE}` }}
@@ -146,30 +155,6 @@ export default function DosePlanStep({ onConfirm, onSkip, onBack }) {
           </p>
         </div>
       </div>
-
-      {/* Footer */}
-      <div
-        className="shrink-0 px-5 py-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] space-y-2.5"
-        style={{ borderTop: `1px solid ${HAIRLINE}` }}
-      >
-        <button
-          type="button"
-          onClick={handleConfirm}
-          disabled={!canConfirm}
-          className="w-full rounded-full py-3.5 text-sm font-semibold transition active:scale-[0.98] disabled:opacity-40"
-          style={{ background: INK, color: CREAM }}
-        >
-          Confirm my plan
-        </button>
-        <button
-          type="button"
-          onClick={onSkip}
-          className="w-full rounded-full py-3 text-sm font-medium transition"
-          style={{ color: TAUPE }}
-        >
-          Skip for now
-        </button>
-      </div>
-    </div>
+    </OnboardingShell>
   );
 }

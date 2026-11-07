@@ -34,7 +34,17 @@ export default function PrivacyConsent() {
       const response = await base44.functions.invoke("deleteMyAccount", { confirm: "delete-my-account" });
       const data = response?.data || {};
       if (!data.ok) {
-        setDeleteError(data.error || "Your account is still open. Please try again.");
+        // The server says exactly how far it got. A partial purge is reported
+        // as a partial purge — never as "nothing changed", and never as a
+        // completed deletion.
+        setDeleteError(
+          [
+            data.error || "Your account is still open. Please try again.",
+            data.support_ref ? `Reference ${data.support_ref} — quote it if you contact support.` : "",
+          ]
+            .filter(Boolean)
+            .join(" "),
+        );
         setIsDeletingAccount(false);
         return;
       }
@@ -49,8 +59,12 @@ export default function PrivacyConsent() {
       await logout(true, "/login?deleted=1");
       window.location.href = "/login?deleted=1";
     } catch (error) {
-      const message = error?.response?.data?.error;
-      setDeleteError(message || "We couldn't close your account just now. Nothing changed — please try again.");
+      const body = error?.response?.data;
+      const message = body?.error
+        || "We couldn't finish closing your account. Your account is still open — some records may already have been removed. Please try again.";
+      setDeleteError(
+        [message, body?.support_ref ? `Reference ${body.support_ref}.` : ""].filter(Boolean).join(" "),
+      );
       setIsDeletingAccount(false);
     }
   };
@@ -86,17 +100,17 @@ export default function PrivacyConsent() {
             />
           </div>
         ) : (
-          <div className="rounded-2xl border p-5 space-y-4 mt-3 mb-2" style={{ background: "rgba(201,112,96,0.04)", borderColor: "rgba(201,112,96,0.20)" }}>
+          <div className="rounded-2xl border p-5 space-y-4 mt-3 mb-2" style={{ background: "#f8ebe7", borderColor: "rgba(156,63,46,0.22)" }}>
             <div className="flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" style={{ color: "#c97060" }} />
+              <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" style={{ color: "#9c3f2e" }} />
               <div>
-                <p className="text-sm font-bold" style={{ color: "#c97060" }}>This closes your account for good</p>
-                <p className="text-xs mt-1 leading-relaxed" style={{ color: "#c97060", opacity: 0.75 }}>
+                <p className="text-sm font-bold" style={{ color: "#9c3f2e" }}>This closes your account for good</p>
+                <p className="text-xs mt-1 leading-relaxed" style={{ color: "#3f3830" }}>
                   Your readings, doses, carb logs, notes, Dexcom link and the invites you&rsquo;ve sent will be
                   removed, and your sign-in will be closed. Anyone you share with loses access. This can&rsquo;t
                   be undone, and the data can&rsquo;t be recovered.
                 </p>
-                <p className="text-[11px] mt-2 leading-relaxed" style={{ color: "#c97060", opacity: 0.7 }}>
+                <p className="text-[12px] mt-2 leading-relaxed" style={{ color: "#6b6153" }}>
                   We keep one record that an account was deleted, for our audit log — it holds no health data.
                   A password saved in your phone or browser isn&rsquo;t removed by Stackd, so you may want to
                   clear it there too.
@@ -125,7 +139,7 @@ export default function PrivacyConsent() {
                 onClick={handleDeleteAccount}
                 disabled={isDeletingAccount}
                 className="flex-1 text-sm py-3 rounded-2xl transition-all font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
-                style={{ background: "#c97060", color: "#f7f1e8" }}
+                style={{ background: "#9c3f2e", color: "#fdf9f2" }}
               >
                 {isDeletingAccount ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                 {isDeletingAccount ? "Closing account…" : "Yes, delete my account"}

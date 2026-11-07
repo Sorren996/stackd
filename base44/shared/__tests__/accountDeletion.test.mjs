@@ -14,16 +14,38 @@ import assert from "node:assert/strict";
 import {
   closeAccount,
   deletionQueries,
+  deletionTuning,
   deleteAuthIdentity,
   purgeUserData,
   sweepRecreatedRecords,
 } from "../accountDeletion.ts";
 
+// Real pacing waits whole seconds of a rate-limit window; the fixture does not
+// need the wall-clock time to prove the behaviour.
+deletionTuning.retryDelaysMs = [0, 0, 0];
+deletionTuning.batchGapMs = 0;
+
 const A = "user-a";
 const B = "user-b";
 
 function matches(data, query) {
-  return Object.entries(query).every(([key, value]) => data[key] === value);
+  return Object.entries(query).every(([key, value]) => {
+    // A merged query matches a row if ANY of its field conditions do.
+    if (key === "$or") return value.some((sub) => matches(data, sub));
+    return data[key] === value;
+  });
+}
+
+/** Simulates the platform's delete burst limit: N rejections, then success. */
+function rateLimited(options = {}) {
+  let remaining = options.times ?? 2;
+  return () => {
+    if (remaining <= 0) return null;
+    remaining -= 1;
+    const error = new Error("Too many requests");
+    error.status = 429;
+    return error;
+  };
 }
 
 function makeSr(options = {}) {

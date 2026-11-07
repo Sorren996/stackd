@@ -31,14 +31,20 @@ export const DOSE_TERMS = {
     more:
       'Stackd keeps your number on exactly this 5-gram basis. It does not convert it to grams per unit.',
   },
+  // The calculation it belongs to, checked in ActiveInsulinBanner:
+  //   correction units = (current glucose − target) / glucose drop per unit,
+  //   and that estimate is only made at all when the reading is above the
+  //   comfort zone's upper bound. So this number is the level the estimate aims
+  //   TOWARD — it is not a threshold that triggers anything, and changing it
+  //   never changes an alert, a comfort-zone band or a notification.
   correctionTarget: {
     label: 'Glucose target for corrections',
     medical: 'Correction target',
     unit: 'mg/dL',
-    helper: 'The glucose level a correction starts from.',
+    helper: 'The target glucose level used in correction calculations.',
     short:
-      'This is the glucose level Stackd starts from when it estimates a correction from your plan.',
+      'This is the target your plan uses when Stackd estimates a correction. It is the level the estimate aims toward, not a level that starts an alert.',
     more:
-      'It is separate from your alert thresholds and from your comfort-zone range.',
+      'It does not change your alert thresholds or your comfort-zone range — those are set separately.',
   },
 };

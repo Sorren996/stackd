@@ -28,6 +28,9 @@
  *                  bottom  AuthLayout reserves it as page padding.
  *                  sides   AuthLayout's page padding.
  *   mfa page       all     MfaScreen (same reserve-and-paint pattern).
+ *   onboarding     top     OnboardingShell's header (opaque from y = 0).
+ *                  bottom  OnboardingShell's footer.
+ *                  sides   OnboardingShell's own side padding.
  *
  * No inset is added twice: an element never carries a safe-area offset that
  * another element in the same shell already applies, and the signed-in app
@@ -91,6 +94,19 @@ export const AUTH_PAGE_PAD_SIDE_RIGHT = "max(1rem, env(safe-area-inset-right))";
 
 export const MFA_PAGE_PAD_TOP = "calc(env(safe-area-inset-top) + 2rem)";
 export const MFA_PAGE_PAD_BOTTOM = "calc(env(safe-area-inset-bottom) + 2rem)";
+
+/* ── Onboarding ────────────────────────────────────────────
+   Every onboarding step lives in ONE shell
+   (components/onboarding/OnboardingShell.jsx), pinned to the viewport, so the
+   header cannot scroll and only the inner region does. Each edge has exactly
+   one owner: top by the header, bottom by the footer, sides by the shell. No
+   step applies its own env() offset, so nothing is counted twice in Safari, in
+   the native host, or on a nested route. */
+
+export const ONBOARDING_HEADER_PAD_TOP = `max(${SAFE_TOP}, 1rem)`;
+export const ONBOARDING_FOOTER_PAD_BOTTOM = `max(${SAFE_BOTTOM}, 0.75rem)`;
+export const ONBOARDING_PAD_SIDE_LEFT = SAFE_LEFT;
+export const ONBOARDING_PAD_SIDE_RIGHT = SAFE_RIGHT;
 
 /* ── Skip links ──────────────────────────────────────────── */
 

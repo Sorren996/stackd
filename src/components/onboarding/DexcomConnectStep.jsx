@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { ChevronLeft, HeartPulse, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
+import { HeartPulse, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
+import OnboardingShell from "@/components/onboarding/OnboardingShell";
 import { base44 } from "@/api/base44Client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -47,39 +48,48 @@ export default function DexcomConnectStep({ onComplete, onBack, completing }) {
   };
 
   return (
-    <div className="flex flex-col min-h-screen" style={{ background: CANVAS }}>
-      {/* Header */}
-      <div
-        className="flex items-center gap-3 px-4 pt-[max(env(safe-area-inset-top),1rem)] pb-3"
-        style={{ borderBottom: `1px solid ${HAIRLINE}` }}
-      >
-        <button
-          onClick={onBack}
-          className="flex h-9 w-9 items-center justify-center rounded-full"
-          style={{ background: CREAM, border: `1px solid ${HAIRLINE}` }}
-        >
-          <ChevronLeft className="h-4 w-4" style={{ color: INK }} />
-        </button>
-        <p className="text-[11px] font-bold uppercase tracking-[0.18em]" style={{ color: FAINT }}>
-          Step 3 of 3
-        </p>
-      </div>
-
-      {/* Title */}
-      <div className="px-5 pt-6 pb-4">
-        <h1 className="text-2xl font-bold" style={{ color: INK }}>
+    <OnboardingShell
+      stepLabel="Step 3 of 3"
+      onBack={onBack}
+      title={
+        <>
           Your{" "}
           <em style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontWeight: 400 }}>
             glucose source
           </em>
-        </h1>
-        <p className="mt-2 text-sm leading-relaxed" style={{ color: TAUPE }}>
-          Connect your Dexcom account so readings flow in automatically, or do this later.
-        </p>
-      </div>
-
-      {/* Form */}
-      <div className="flex-1 overflow-y-auto px-5 space-y-4 pb-4">
+        </>
+      }
+      intro="Connect your Dexcom account so readings flow in automatically, or do this later."
+      footer={
+        <>
+          <button
+            type="button"
+            onClick={handleConnect}
+            disabled={connecting || !username.trim() || !password}
+            className="w-full flex items-center justify-center gap-2 rounded-full py-3.5 text-sm font-semibold transition active:scale-[0.98] disabled:opacity-40"
+            style={{ background: INK, color: CREAM }}
+          >
+            {connecting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <HeartPulse className="h-4 w-4" />
+            )}
+            {connecting ? "Connecting..." : "Connect your glucose source"}
+          </button>
+          <button
+            type="button"
+            onClick={onComplete}
+            disabled={completing}
+            className="w-full flex items-center justify-center gap-2 rounded-full py-3 text-sm font-medium transition disabled:opacity-40"
+            style={{ color: TAUPE }}
+          >
+            {completing ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            {completing ? "Finishing up..." : "I'll do this later"}
+          </button>
+        </>
+      }
+    >
+      <div className="space-y-4">
         <div
           className="rounded-2xl p-4 space-y-3"
           style={{ background: CREAM, border: `1px solid ${HAIRLINE}` }}
@@ -95,7 +105,7 @@ export default function DexcomConnectStep({ onComplete, onBack, completing }) {
               placeholder="Your Dexcom account email"
               autoCapitalize="none"
               autoCorrect="off"
-              className="w-full rounded-2xl border px-4 py-3 text-sm focus:outline-none"
+              className="w-full min-w-0 rounded-2xl border px-4 py-3 text-sm focus:outline-none"
               style={{ background: CANVAS, borderColor: HAIRLINE, color: INK }}
             />
           </div>
@@ -111,7 +121,7 @@ export default function DexcomConnectStep({ onComplete, onBack, completing }) {
                 placeholder="Your Dexcom account password"
                 autoCapitalize="none"
                 autoCorrect="off"
-                className="w-full rounded-2xl border px-4 py-3 pr-11 text-sm focus:outline-none"
+                className="w-full min-w-0 rounded-2xl border px-4 py-3 pr-11 text-sm focus:outline-none"
                 style={{ background: CANVAS, borderColor: HAIRLINE, color: INK }}
               />
               <button
@@ -134,37 +144,6 @@ export default function DexcomConnectStep({ onComplete, onBack, completing }) {
           </p>
         </div>
       </div>
-
-      {/* Footer */}
-      <div
-        className="shrink-0 px-5 py-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] space-y-2.5"
-        style={{ borderTop: `1px solid ${HAIRLINE}` }}
-      >
-        <button
-          type="button"
-          onClick={handleConnect}
-          disabled={connecting || !username.trim() || !password}
-          className="w-full flex items-center justify-center gap-2 rounded-full py-3.5 text-sm font-semibold transition active:scale-[0.98] disabled:opacity-40"
-          style={{ background: INK, color: CREAM }}
-        >
-          {connecting ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <HeartPulse className="h-4 w-4" />
-          )}
-          {connecting ? "Connecting..." : "Connect your glucose source"}
-        </button>
-        <button
-          type="button"
-          onClick={onComplete}
-          disabled={completing}
-          className="w-full flex items-center justify-center gap-2 rounded-full py-3 text-sm font-medium transition disabled:opacity-40"
-          style={{ color: TAUPE }}
-        >
-          {completing ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-          {completing ? "Finishing up..." : "I'll do this later"}
-        </button>
-      </div>
-    </div>
+    </OnboardingShell>
   );
 }

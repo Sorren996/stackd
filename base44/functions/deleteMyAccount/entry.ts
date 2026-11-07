@@ -48,18 +48,43 @@ export default async function (req: Request): Promise<Response> {
 
     if (!result.ok) {
       const message = result.code === 'purge_incomplete'
-        ? 'Some of your records could not be removed, so your account is still open. Please try again.'
-        : 'Your records were removed, but the sign-in could not be closed. Please try again.';
-      return Response.json({ ok: false, code: result.code, error: message }, { status: 500 });
+        ? 'Some records could not be removed, so your account is still open. Nothing was signed out, and trying again picks up where it stopped.'
+        : 'Your records were removed, but the sign-in could not be closed. Nothing was signed out. Please try again.';
+      // Stage + class only — the entity that failed and why (rate_limited,
+      // permission_denied, unavailable…), never a message, a credential or a
+      // health value. The same codes sit in the audit metadata.
+      console.error('[deleteMyAccount] stage_failure', {
+        support_ref: result.supportRef,
+        code: result.code,
+        stages: (result.failed || []).map((f) => `${f.label}:${f.code}${f.status ? `:${f.status}` : ''}`),
+      });
+      return Response.json(
+        {
+          ok: false,
+          code: result.code,
+          error: message,
+          support_ref: result.supportRef,
+          failed_steps: result.failed?.length ?? 0,
+          retryable: true,
+        },
+        { status: 503 },
+      );
     }
 
     // One non-clinical record of the deletion is kept for the audit log. It
     // carries the account id and nothing else — no health data, no email.
     return Response.json({ ok: true, identityRemoved: true, residual: result.residual ?? 0 });
   } catch (error: any) {
-    console.error('[deleteMyAccount]', error?.message);
+    // The error class only: the request carries no health data, and the
+    // provider's own message is not ours to log.
+    console.error('[deleteMyAccount] unexpected', { name: error?.name ?? 'Error' });
     return Response.json(
-      { ok: false, code: 'failed', error: 'Unable to close the account right now.' },
+      {
+        ok: false,
+        code: 'failed',
+        error: 'We could not finish closing your account just now. Your account is still open. Please try again.',
+        retryable: true,
+      },
       { status: 500 },
     );
   }
