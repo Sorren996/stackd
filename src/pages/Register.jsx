@@ -1,15 +1,19 @@
-import React, { useState } from "react";
+import React, { useReducer, useState } from "react";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UserPlus, Mail, Lock, Loader2 } from "lucide-react";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import CodeInput from "@/components/auth/CodeInput";
+import { canSubmit, initialOtpState, otpReducer } from "@/lib/verification/otpState";
 import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
 import AppleIcon from "@/components/AppleIcon";
 import { toast } from "@/components/ui/use-toast";
+
+// How long a freshly emailed code stays usable, per the platform's own policy.
+const CODE_VALIDITY_MINUTES = 10;
 
 export default function Register() {
   const [email, setEmail] = useState("");
@@ -18,7 +22,9 @@ export default function Register() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showOtp, setShowOtp] = useState(false);
-  const [otpCode, setOtpCode] = useState("");
+  const [otp, dispatchOtp] = useReducer(otpReducer, initialOtpState);
+
+  const cleanEmail = email.trim().toLowerCase();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -27,7 +33,6 @@ export default function Register() {
       setError("Passwords do not match");
       return;
     }
-    const cleanEmail = email.trim().toLowerCase();
     setEmail(cleanEmail);
     setLoading(true);
     try {
@@ -37,14 +42,15 @@ export default function Register() {
       const msg = String(err?.message || "").toLowerCase();
       if (msg.includes("exist") || msg.includes("already") || msg.includes("registered") || msg.includes("taken")) {
         // An account already exists for this email. If it's still unverified,
-        // resend the OTP so the user can finish verifying it; otherwise send
+        // resend the OTP so the person can finish verifying it; otherwise send
         // them to log in.
         try {
           await base44.auth.resendOtp(cleanEmail);
+          dispatchOtp({ type: "resent" });
           setShowOtp(true);
           toast({
             title: "Let's pick up where you left off",
-            description: "We sent a fresh verification code to finish setting up your account."
+            description: `We sent a fresh code to finish setting up your account. It works for ${CODE_VALIDITY_MINUTES} minutes.`,
           });
         } catch {
           const params = new URLSearchParams({ existing: "1" });
@@ -60,31 +66,37 @@ export default function Register() {
   };
 
   const handleVerify = async () => {
-    setError("");
-    setLoading(true);
-    const cleanEmail = email.trim().toLowerCase();
+    if (!canSubmit(otp)) return;
+    dispatchOtp({ type: "submit" });
     try {
-      await base44.auth.verifyOtp({ email: cleanEmail, otpCode: otpCode.trim() });
+      // verifyOtp returns an access token for the account it just verified; the
+      // session is started from that token rather than by signing in again.
+      const response = await base44.auth.verifyOtp({ email: cleanEmail, otpCode: otp.code });
+      const token = response?.data?.access_token || response?.access_token;
+      if (!token) throw new Error("We could not finish signing you in. Please log in.");
       localStorage.setItem("stackd_auth_provider", "email");
-      await base44.auth.loginViaEmailPassword(cleanEmail, password);
+      base44.auth.setToken(token);
+      dispatchOtp({ type: "verified" });
       window.location.href = "/";
     } catch (err) {
-      setError(err.message || "Invalid verification code");
-    } finally {
-      setLoading(false);
+      dispatchOtp({ type: "failed", message: err?.message });
     }
   };
 
   const handleResend = async () => {
-    setError("");
+    if (otp.sendingResend) return;
+    dispatchOtp({ type: "resend-start" });
     try {
-      await base44.auth.resendOtp(email.trim().toLowerCase());
+      await base44.auth.resendOtp(cleanEmail);
+      // Clears the spent code and any old complaint, and never leaves the field
+      // locked: the person types the newest code straight away.
+      dispatchOtp({ type: "resent" });
       toast({
-        title: "Code sent",
-        description: "Check your email for the new code."
+        title: "New code sent",
+        description: `The newest code is the one to use. It works for ${CODE_VALIDITY_MINUTES} minutes.`,
       });
     } catch (err) {
-      setError(err.message || "Failed to resend code");
+      dispatchOtp({ type: "resend-failed", message: err?.message });
     }
   };
 
@@ -104,49 +116,47 @@ export default function Register() {
         icon={Mail}
         title="Verify your email"
         subtitle={`We sent a code to ${email}`}>
-        
-        {error &&
-        <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
-            {error}
+
+        {otp.error &&
+          <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm" role="alert">
+            {otp.error}
           </div>
         }
-        <div className="flex justify-center mb-6">
-          <InputOTP
-            maxLength={6}
-            value={otpCode}
-            onChange={setOtpCode}
+        <div className="flex justify-center mb-2">
+          <CodeInput
+            value={otp.code}
+            onChange={(value) => dispatchOtp({ type: "edit", value })}
+            invalid={Boolean(otp.error)}
             autoFocus
-            autoComplete="one-time-code">
-            
-            <InputOTPGroup>
-              <InputOTPSlot index={0} />
-              <InputOTPSlot index={1} />
-              <InputOTPSlot index={2} />
-              <InputOTPSlot index={3} />
-              <InputOTPSlot index={4} />
-              <InputOTPSlot index={5} />
-            </InputOTPGroup>
-          </InputOTP>
+            label="Six digit verification code"
+          />
         </div>
+        <p className="mb-4 text-center text-xs leading-relaxed" style={{ color: "#6b6153" }}>
+          Tap the boxes and enter all six digits. The code works for {CODE_VALIDITY_MINUTES} minutes.
+        </p>
         <Button
           className="w-full h-12 font-medium"
           onClick={handleVerify}
           style={{ background: "#3f3830", color: "#f7f1e8" }}
-          disabled={loading || otpCode.length < 6}>
-          
-          {loading ?
-          <>
+          disabled={!canSubmit(otp)}>
+
+          {otp.sending ?
+            <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               Verifying...
             </> :
 
-          "Verify"
+            "Verify"
           }
         </Button>
         <p className="text-center text-sm text-muted-foreground mt-4">
           Didn't receive the code?{" "}
-          <button onClick={handleResend} className="text-primary font-medium hover:underline">
-            Resend
+          <button
+            type="button"
+            onClick={handleResend}
+            disabled={otp.sendingResend}
+            className="text-primary font-medium hover:underline disabled:opacity-60">
+            {otp.sendingResend ? "Sending..." : "Resend"}
           </button>
         </p>
       </AuthLayout>);
@@ -159,20 +169,19 @@ export default function Register() {
       title="Create your account"
       subtitle="Sign up to get started"
       footer={
-      <>
+        <>
           Already have an account?{" "}
           <Link to="/login" className="text-primary font-medium hover:underline">
             Log in
           </Link>
-        </>
-      }>
-      
+        </>}>
+
       <Button
         variant="outline"
         className="w-full h-12 text-sm font-medium mb-3"
         onClick={handleApple}
         style={{ background: "#fdf9f2", color: "#3f3830", borderColor: "#eadccf" }}>
-        
+
         <AppleIcon className="w-5 h-5 mr-2" />
         Continue with Apple
       </Button>
@@ -182,7 +191,7 @@ export default function Register() {
         className="w-full h-12 text-sm font-medium mb-6"
         onClick={handleGoogle}
         style={{ background: "#fdf9f2", color: "#3f3830", borderColor: "#eadccf" }}>
-        
+
         <GoogleIcon className="w-5 h-5 mr-2" />
         Continue with Google
       </Button>
@@ -197,7 +206,7 @@ export default function Register() {
       </div>
 
       {error &&
-      <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+        <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
           {error}
         </div>
       }
@@ -217,7 +226,7 @@ export default function Register() {
               onChange={(e) => setEmail(e.target.value)}
               className="pl-10 h-12"
               required />
-            
+
           </div>
         </div>
         <div className="space-y-2 text-foreground">
@@ -233,7 +242,7 @@ export default function Register() {
               onChange={(e) => setPassword(e.target.value)}
               className="pl-10 h-12"
               required />
-            
+
           </div>
         </div>
         <div className="space-y-2 text-foreground">
@@ -249,17 +258,17 @@ export default function Register() {
               onChange={(e) => setConfirmPassword(e.target.value)}
               className="pl-10 h-12"
               required />
-            
+
           </div>
         </div>
         <Button type="submit" className="w-full h-12 font-medium" disabled={loading} style={{ background: "#3f3830", color: "#f7f1e8" }}>
           {loading ?
-          <>
+            <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               Creating account...
             </> :
 
-          "Create account"
+            "Create account"
           }
         </Button>
       </form>

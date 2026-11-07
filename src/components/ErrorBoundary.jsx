@@ -1,15 +1,23 @@
 import React from "react";
+import { ERROR_THEME } from "@/lib/startup/errorTheme";
+import { redactError, redactStack } from "@/lib/startup/redactError";
+import { logStartup } from "@/lib/startupDiagnostics";
 
 /**
- * Catches render errors anywhere in the child tree and shows a gentle
- * fallback instead of a blank screen. Without this, a single component
- * crash unmounts the entire React tree and the user sees only the
- * background gradient.
+ * Catches render errors anywhere in the child tree and shows a readable,
+ * bounded fallback instead of a blank screen or a wall of stack text.
+ *
+ * Every colour here is an inline literal from ERROR_THEME, never a theme token
+ * or a `text-white` utility: this screen must stay legible when the stylesheet,
+ * the theme classes or the providers are exactly what failed. (The previous
+ * version used `text-white`, which this app's global palette remaps to dark
+ * espresso — dark text on the slate field, which is the unreadable screen the
+ * owner photographed.)
  */
 export default class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false, error: null, info: null };
+    this.state = { hasError: false, error: null, info: null, retryFocused: false };
   }
 
   static getDerivedStateFromError(error) {
@@ -19,48 +27,139 @@ export default class ErrorBoundary extends React.Component {
   componentDidCatch(error, info) {
     console.error("Render crash caught:", error, info);
     this.setState({ info });
+    // Codes only: the stage and the error's class name. No message, no payload.
+    logStartup("render-crash", {
+      outcome: "error",
+      code: (error && typeof error.name === "string" && error.name) || "Error",
+    });
   }
 
-  handleReload = () => {
+  /**
+   * A fresh launch, not a partial re-render: a full document load discards the
+   * errored boundary and every query that resolved against the broken state.
+   * `replace` so the back button cannot land on the crashed screen again.
+   */
+  handleRetry = () => {
     this.setState({ hasError: false, error: null, info: null });
-    window.location.href = "/";
+    window.location.replace("/");
   };
 
   render() {
-    if (this.state.hasError) {
-      const errorMsg = this.state.error?.message || "Unknown error";
-      const stack = this.state.error?.stack || "";
-      return (
-        <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center px-6 text-center">
-          <h2 className="mb-2 text-lg font-semibold text-white/90">
-            A brief pause in the flow
-          </h2>
-          <p className="mb-4 max-w-xs text-sm text-white/50">
-            Something stumbled while opening your dashboard. Let's try again.
-          </p>
-          <details className="mb-6 max-w-md text-left">
-            <summary className="cursor-pointer text-xs text-white/40 hover:text-white/60">
-              Technical details
-            </summary>
-            <pre className="mt-2 max-h-40 overflow-auto rounded-lg bg-black/40 p-3 text-[10px] text-white/50">
-              {errorMsg}
-              {"\n\n"}
-              {stack}
-            </pre>
-          </details>
-          <button
-            onClick={this.handleReload}
-            className="rounded-2xl border border-white/20 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+    if (!this.state.hasError) return this.props.children;
+
+    const summary = redactError(this.state.error);
+    const stack = redactStack(this.state.error && this.state.error.stack);
+
+    return (
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 9999,
+          background: ERROR_THEME.field,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          overflowY: "auto",
+          paddingTop: "calc(env(safe-area-inset-top, 0px) + 20px)",
+          paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 20px)",
+          paddingLeft: 16,
+          paddingRight: 16,
+        }}
+      >
+        <div
+          style={{
+            width: "100%",
+            maxWidth: 360,
+            background: ERROR_THEME.surface,
+            borderRadius: 24,
+            padding: "26px 22px",
+            boxShadow: "0 2px 4px rgba(24, 35, 39, 0.2), 0 24px 60px rgba(24, 35, 39, 0.28)",
+          }}
+        >
+          <h1
             style={{
-              background: "linear-gradient(145deg, rgba(91,168,138,0.3), rgba(91,163,184,0.2))",
+              margin: 0,
+              fontSize: 21,
+              lineHeight: 1.3,
+              fontWeight: 700,
+              color: ERROR_THEME.ink,
             }}
           >
-            Open again
-          </button>
-        </div>
-      );
-    }
+            We couldn’t open your day
+          </h1>
+          <p
+            style={{
+              margin: "10px 0 0",
+              fontSize: 14,
+              lineHeight: 1.6,
+              color: ERROR_THEME.muted,
+            }}
+          >
+            Something went wrong while loading. Your information is safe. Please try again.
+          </p>
 
-    return this.props.children;
+          <button
+            type="button"
+            onClick={this.handleRetry}
+            onFocus={() => this.setState({ retryFocused: true })}
+            onBlur={() => this.setState({ retryFocused: false })}
+            style={{
+              marginTop: 22,
+              width: "100%",
+              minHeight: 48,
+              borderRadius: 16,
+              border: "none",
+              background: ERROR_THEME.primary,
+              color: ERROR_THEME.onPrimary,
+              fontSize: 15,
+              fontWeight: 600,
+              cursor: "pointer",
+              outline: this.state.retryFocused
+                ? `3px solid ${ERROR_THEME.field}`
+                : "3px solid transparent",
+              outlineOffset: 2,
+            }}
+          >
+            Try again
+          </button>
+
+          <details style={{ marginTop: 14 }}>
+            <summary
+              style={{
+                cursor: "pointer",
+                fontSize: 12,
+                lineHeight: 1.4,
+                color: ERROR_THEME.muted,
+                minHeight: 44,
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              Technical details
+            </summary>
+            <pre
+              style={{
+                margin: "6px 0 0",
+                maxHeight: 160,
+                overflowY: "auto",
+                overflowX: "hidden",
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
+                overflowWrap: "anywhere",
+                background: ERROR_THEME.sunken,
+                borderRadius: 12,
+                padding: 12,
+                fontSize: 11,
+                lineHeight: 1.5,
+                color: ERROR_THEME.ink,
+              }}
+            >
+              {stack ? `${summary}\n\n${stack}` : summary}
+            </pre>
+          </details>
+        </div>
+      </div>
+    );
   }
 }
