@@ -8,17 +8,18 @@ function hourLabel(hour) {
   return `${display} ${suffix}`;
 }
 
-function HourSelect({ label, value, onChange, timeZone }) {
+function HourSelect({ label, value, onChange, timeZone, disabled }) {
   return (
-    <label className="flex flex-1 flex-col gap-1">
+    <label className="flex min-w-0 flex-1 flex-col gap-1">
       <span className="text-xs" style={{ color: "#746959" }}>
         {label}
       </span>
       <select
+        disabled={disabled}
         value={value == null ? "" : String(value)}
         onChange={(event) => onChange(Number(event.target.value))}
         aria-label={`${label} (${timeZone})`}
-        className="min-h-[40px] rounded-lg px-2 text-sm"
+        className="min-h-11 w-full min-w-0 rounded-lg px-2 text-base"
         style={{ background: "#fdf9f2", border: "1px solid #eadccf", color: "#3f3830" }}
       >
         {HOUR_OPTIONS.map((hour) => (
@@ -70,12 +71,14 @@ export default function QuietHoursFields({
               label="From"
               value={startHour}
               timeZone={zone}
+              disabled={disabled}
               onChange={(hour) => onChange({ quiet_start_hour: hour })}
             />
             <HourSelect
               label="Until"
               value={endHour}
               timeZone={zone}
+              disabled={disabled}
               onChange={(hour) => onChange({ quiet_end_hour: hour })}
             />
           </div>

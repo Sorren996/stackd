@@ -1,13 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
-import { toast } from "sonner";
+import NotificationHowItWorks from '@/components/notifications/NotificationHowItWorks';
 import SectionCard from "@/components/editorial/SectionCard";
 import useNotificationCenter from "@/hooks/useNotificationCenter";
 import PersonalNotificationSettings from "@/components/notifications/PersonalNotificationSettings";
 import FollowedPersonNotifications from "@/components/notifications/FollowedPersonNotifications";
 import {
-  describeNotificationError,
   saveFollowNotifications,
   savePersonalNotifications,
 } from "@/lib/notifications/notificationApi";
@@ -15,7 +14,7 @@ import { SUPPLEMENT_NOTE } from "@/lib/notifications/notificationCopy";
 
 /**
  * Notifications for every kind of account: a patient's own alerts, the people a
- * viewer follows, preview privacy, quiet hours and recent history.
+ * viewer follows, preview privacy and quiet hours.
  *
  * `variant` is set by the route: a viewer reaches the follower version from
  * their own settings, and the "For me" section only exists for someone who
@@ -32,10 +31,9 @@ export default function NotificationsPage({ variant = "patient" }) {
     setSaving(true);
     try {
       await savePersonalNotifications(preferences);
-      await refetch();
-    } catch (error) {
-      toast.error(describeNotificationError(error));
-      await refetch();
+      const confirmed = await refetch();
+      if (confirmed.isError || !confirmed.data?.personal) throw Object.assign(new Error('Unconfirmed save'), { reason: 'confirmation_failed' });
+      return confirmed.data.personal;
     } finally {
       setSaving(false);
     }
@@ -45,10 +43,10 @@ export default function NotificationsPage({ variant = "patient" }) {
     setSaving(true);
     try {
       await saveFollowNotifications(accessId, preferences);
-      await refetch();
-    } catch (error) {
-      toast.error(describeNotificationError(error));
-      await refetch();
+      const confirmed = await refetch();
+      const person = confirmed.data?.following?.find(item => item.access_id === accessId);
+      if (confirmed.isError || !person?.preferences) throw Object.assign(new Error('Unconfirmed save'), { reason: 'confirmation_failed' });
+      return person.preferences;
     } finally {
       setSaving(false);
     }
@@ -59,12 +57,12 @@ export default function NotificationsPage({ variant = "patient" }) {
   const pausedFollowing = following.filter((person) => person.status !== "active");
 
   return (
-    <div className="mx-auto max-w-md space-y-5 pb-4 pt-2">
+    <div className="mx-auto w-full min-w-0 max-w-md space-y-5 break-words pb-[calc(3rem+env(safe-area-inset-bottom))] pt-2">
       <div className="flex items-center gap-2 px-1 pb-1">
         <button
           type="button"
           onClick={() => navigate(backTo)}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg transition"
           style={{ color: "#f7f1e8" }}
           aria-label="Back"
         >
@@ -120,22 +118,11 @@ export default function NotificationsPage({ variant = "patient" }) {
       )}
 
       {data && activeFollowing.length > 0 && (
-        <SectionCard label="People I follow">
-          <div className="space-y-4">
-            {activeFollowing.map((person) => (
-              <div key={person.access_id} className="border-t pt-3 first:border-t-0 first:pt-0" style={{ borderColor: "#eadccf" }}>
-                <FollowedPersonNotifications
-                  person={person}
-                  saving={saving}
-                  onSave={(preferences) => savePerson(person.access_id, preferences)}
-                />
-              </div>
-            ))}
-          </div>
-          <p className="pt-3 text-xs leading-relaxed" style={{ color: "#746959" }}>
-            Each person decides what they share. Your choices here can only narrow that.
-          </p>
-        </SectionCard>
+        <section className="space-y-6" aria-label="People I follow">
+          <h2 className="px-1 text-sm font-medium text-field-ink">People I follow</h2>
+          {activeFollowing.map(person => <FollowedPersonNotifications key={person.access_id} person={person} saving={saving} onSave={preferences => savePerson(person.access_id, preferences)} />)}
+          <p className="px-1 text-xs leading-relaxed text-field-muted">Each person decides what they share. Your choices here can only narrow that.</p>
+        </section>
       )}
 
       {data && pausedFollowing.length > 0 && (
@@ -148,6 +135,7 @@ export default function NotificationsPage({ variant = "patient" }) {
         </SectionCard>
       )}
 
+      {data && <NotificationHowItWorks />}
       <SectionCard>
         <p className="text-xs leading-relaxed" style={{ color: "#746959" }}>
           {SUPPLEMENT_NOTE}

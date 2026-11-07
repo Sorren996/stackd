@@ -3,33 +3,13 @@
  * a timing is chosen with its real value in view, never inferred.
  */
 export default function ChoiceRow({ label, options, value, onChange, disabled = false }) {
-  return (
-    <div className="pb-3 pt-1">
-      <p className="pb-1.5 text-xs" style={{ color: "#746959" }}>
-        {label}
-      </p>
-      <div className="flex gap-2">
-        {options.map((option) => {
-          const selected = Number(value) === option.value;
-          return (
-            <button
-              key={option.value}
-              type="button"
-              disabled={disabled}
-              onClick={() => onChange(option.value)}
-              aria-pressed={selected}
-              className="min-h-[36px] flex-1 rounded-full text-xs font-medium transition disabled:opacity-50"
-              style={{
-                background: selected ? "#3f3830" : "#f4ece1",
-                color: selected ? "#fdf9f2" : "#4a423a",
-                border: `1px solid ${selected ? "#3f3830" : "#eadccf"}`,
-              }}
-            >
-              {option.label}
-            </button>
-          );
-        })}
-      </div>
+  return <fieldset disabled={disabled} className="min-w-0 pb-3 pt-1">
+    <legend className="pb-2 text-sm text-ink">{label}</legend>
+    <div className="flex flex-wrap gap-2">
+      {options.map(option => {
+        const selected = value != null && value !== '' && Number(value) === option.value;
+        return <button key={option.value} type="button" disabled={disabled} onClick={() => onChange(option.value)} aria-pressed={selected} className={`min-h-11 max-w-full rounded-xl border px-3 py-2 text-left text-sm disabled:opacity-50 ${selected ? 'border-ink bg-ink text-paper' : 'border-border bg-paper text-ink'}`}>{option.label}</button>;
+      })}
     </div>
-  );
+  </fieldset>;
 }

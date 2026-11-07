@@ -8,7 +8,7 @@ export default function ToggleRow({ label, description, checked, onChange, disab
   return (
     <div className="flex items-start gap-3 py-2.5">
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium" style={{ color: disabled ? "#a89e8d" : "#3f3830" }}>
+        <p className="text-sm font-medium text-ink">
           {label}
         </p>
         {description && (
@@ -27,7 +27,7 @@ export default function ToggleRow({ label, description, checked, onChange, disab
         onCheckedChange={onChange}
         disabled={disabled}
         aria-label={label}
-        className="mt-0.5 shrink-0"
+        className="relative my-3 shrink-0 after:absolute after:-inset-y-3 after:-inset-x-1"
       />
     </div>
   );
