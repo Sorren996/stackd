@@ -1,8 +1,16 @@
 import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO } from "date-fns";
+import { axisTickIndices } from "@/lib/dayAxisTicks";
 
 const PLOT_HEIGHT = 132;
+// Two printed lines (month over day): 11px + 13px, with a 24px block so
+// neither line is clipped by the row it sits in.
+const LABEL_BLOCK_HEIGHT = 24;
+// Half a two-line label. The outer ticks are clamped by this much so the first
+// and last dates cannot run off the edge, while every tick in between stays
+// centred on its own bar.
+const LABEL_GUTTER = 10;
 const SAGE = "#5b6550";
 const TICKS = [100, 50, 0];
 
@@ -19,11 +27,7 @@ export default function DayByDayBars({ series }) {
 
   const gap = series.length <= 14 ? 2 : 1;
 
-  const labelIndices = useMemo(() => {
-    const last = series.length - 1;
-    if (series.length <= 7) return series.map((_, i) => i);
-    return [0, Math.round(last / 3), Math.round((last * 2) / 3), last];
-  }, [series]);
+  const labelIndices = useMemo(() => axisTickIndices(series.length), [series.length]);
 
   const dayText = (day) => {
     if (!day.count) return "no readings";
@@ -124,25 +128,37 @@ export default function DayByDayBars({ series }) {
             ))}
           </div>
 
-          <div className="relative mt-1.5 h-3">
-            {labelIndices.map((i) => (
-              <span
-                key={series[i].date}
-                className="absolute top-0 whitespace-nowrap text-[9px]"
-                style={{
-                  left: `${((i + 0.5) / series.length) * 100}%`,
-                  transform: `translateX(${i === 0 ? 0 : i === series.length - 1 ? -100 : -50}%)`,
-                  color: "#746959",
-                }}
-              >
-                {series[i].label}
-              </span>
-            ))}
+          <div
+            className="relative mt-3"
+            style={{ height: LABEL_BLOCK_HEIGHT }}
+            aria-hidden="true"
+          >
+            {labelIndices.map((i) => {
+              const day = series[i];
+              const center = ((i + 0.5) / series.length) * 100;
+              return (
+                <span
+                  key={day.date}
+                  className="absolute top-0 flex flex-col items-center whitespace-nowrap"
+                  style={{
+                    left: `clamp(${LABEL_GUTTER}px, ${center}%, calc(100% - ${LABEL_GUTTER}px))`,
+                    transform: "translateX(-50%)",
+                  }}
+                >
+                  <span className="text-[9px] leading-[11px]" style={{ color: "#746959" }}>
+                    {format(parseISO(day.date), "MMM")}
+                  </span>
+                  <span className="text-[10px] font-semibold leading-[13px] tabular-nums" style={{ color: "#4a423a" }}>
+                    {format(parseISO(day.date), "d")}
+                  </span>
+                </span>
+              );
+            })}
           </div>
         </div>
       </div>
 
-      <p className="mt-1 flex items-center gap-1.5 text-[10px]" style={{ color: "#746959" }}>
+      <p className="mt-[18px] flex items-center gap-1.5 text-[10px]" style={{ color: "#746959" }}>
         <span
           className="inline-block h-2 w-2 shrink-0 rounded-[2px] border border-dashed"
           style={{ borderColor: "#d8cec2" }}
