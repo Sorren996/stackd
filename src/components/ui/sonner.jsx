@@ -37,17 +37,19 @@ const Toaster = ({ ...props }) => {
       gap={10}
       visibleToasts={3}
       closeButton
+      icons={{ close: <span>Dismiss</span> }}
       containerAriaLabel="Stackd messages"
       toastOptions={{
+        closeButtonAriaLabel: "Dismiss message",
         classNames: {
           toast:
-            "group toast group-[.toaster]:items-start group-[.toaster]:rounded-2xl group-[.toaster]:border group-[.toaster]:border-border group-[.toaster]:bg-card group-[.toaster]:px-4 group-[.toaster]:py-3.5 group-[.toaster]:pr-9 group-[.toaster]:text-foreground group-[.toaster]:shadow-lg",
+            "group toast group-[.toaster]:items-start group-[.toaster]:rounded-2xl group-[.toaster]:border group-[.toaster]:border-border group-[.toaster]:bg-card group-[.toaster]:px-4 group-[.toaster]:py-3.5 group-[.toaster]:text-foreground group-[.toaster]:shadow-lg",
           title:
             "group-[.toast]:!whitespace-normal group-[.toast]:!break-words group-[.toast]:!font-semibold group-[.toast]:!leading-snug",
           description:
             "group-[.toast]:!whitespace-normal group-[.toast]:!break-words group-[.toast]:!leading-relaxed group-[.toast]:!text-muted-foreground",
           closeButton:
-            "group-[.toast]:!border-border group-[.toast]:!bg-card group-[.toast]:!text-foreground",
+            "stackd-banner-dismiss group-[.toast]:!border-border group-[.toast]:!bg-card group-[.toast]:!text-foreground",
         },
       }}
       {...props}

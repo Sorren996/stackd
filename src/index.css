@@ -774,3 +774,34 @@
 [data-sonner-toast][data-y-position="top"][data-removed="true"] {
   --y: translateY(6px) !important;
 }
+
+/* Keep Sonner's existing dismiss handler accessible without a visible X or
+   reserved content space. Keyboard focus reveals a text-only dismiss control. */
+[data-sonner-toast] .stackd-banner-dismiss {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  clip-path: inset(50%) !important;
+  white-space: nowrap !important;
+}
+
+[data-sonner-toast] .stackd-banner-dismiss:focus-visible {
+  width: auto !important;
+  height: auto !important;
+  top: auto !important;
+  bottom: 4px !important;
+  left: auto !important;
+  right: 4px !important;
+  transform: none !important;
+  padding: 0.375rem 0.625rem !important;
+  overflow: visible !important;
+  clip: auto !important;
+  clip-path: none !important;
+  outline: 2px solid hsl(var(--ring)) !important;
+  outline-offset: 2px;
+  z-index: 2;
+}
