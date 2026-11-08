@@ -36,16 +36,11 @@ function matches(data, query) {
   });
 }
 
-/** Simulates the platform's delete burst limit: N rejections, then success. */
-function rateLimited(options = {}) {
-  let remaining = options.times ?? 2;
-  return () => {
-    if (remaining <= 0) return null;
-    remaining -= 1;
-    const error = new Error("Too many requests");
-    error.status = 429;
-    return error;
-  };
+/** Every id a (possibly merged) query compares against. */
+function scopedValues(node) {
+  return Object.entries(node).flatMap(([key, value]) =>
+    key === "$or" ? value.flatMap(scopedValues) : [value],
+  );
 }
 
 function makeSr(options = {}) {
@@ -53,6 +48,7 @@ function makeSr(options = {}) {
     rows: [],
     users: new Map(),
     failEntities: new Set(options.failEntities || []),
+    transient429: { ...(options.transient429 || {}) },
     noopUserDelete: options.noopUserDelete === true,
     recreateOnUserDelete: options.recreateOnUserDelete || null,
     calls: [],
@@ -61,6 +57,13 @@ function makeSr(options = {}) {
   const handler = (entity) => ({
     async deleteMany(query) {
       state.calls.push({ entity, op: "deleteMany", query });
+      if (state.transient429[entity] > 0) {
+        // The platform's delete burst limit: a rejection, then it clears.
+        state.transient429[entity] -= 1;
+        const error = new Error("Too many requests");
+        error.status = 429;
+        throw error;
+      }
       if (state.failEntities.has(entity)) throw new Error("unavailable");
       const keep = [];
       let deleted = 0;
@@ -111,11 +114,35 @@ test("the delete plan is always scoped to the one account", () => {
   const queries = deletionQueries(A);
   assert.ok(queries.length > 20);
   for (const q of queries) {
-    const keys = Object.keys(q.query);
-    assert.ok(keys.length >= 1, `${q.label} has no scope`);
-    for (const key of keys) assert.equal(q.query[key], A);
+    assert.ok(Object.keys(q.query).length >= 1, `${q.label} has no scope`);
+    for (const id of scopedValues(q.query)) assert.equal(id, A, `${q.label} leaks a scope`);
   }
   assert.equal(new Set(queries.map((q) => q.label)).size, queries.length);
+});
+
+test("the whole plan fits inside one delete burst", async () => {
+  const sr = makeSr();
+  sr.state.users.set(A, { id: A });
+
+  await closeAccount(sr, A, noEvents);
+
+  // The platform meters deletes per caller (60 per 30s) and one service-role
+  // function is one caller for every account. Crossing it is what reported a
+  // populated account's records as unremovable, so the plan is budgeted.
+  const deletes = sr.state.calls.filter((c) => c.op === "deleteMany").length;
+  assert.ok(deletes <= 45, `${deletes} deletes issued in one burst`);
+});
+
+test("a rate-limited delete is retried, not reported as unremovable data", async () => {
+  const sr = makeSr({ transient429: { GlucoseReading: 1 } });
+  sr.state.users.set(A, { id: A });
+  seed(sr, "GlucoseReading", { created_by_id: A });
+
+  const result = await closeAccount(sr, A, noEvents);
+
+  assert.equal(result.ok, true);
+  assert.equal(rowsFor(sr, "GlucoseReading", "created_by_id", A).length, 0);
+  assert.equal(sr.state.users.has(A), false);
 });
 
 test("purges only the requesting account's rows", async () => {
@@ -250,10 +277,11 @@ test("purge and sweep report the failing step instead of throwing", async () => 
   sr.state.users.set(A, { id: A });
 
   const purge = await purgeUserData(sr, A);
-  assert.ok(purge.failed.includes("LatestLocation.user_id"));
+  assert.ok(purge.failed.some((f) => f.label.startsWith("LatestLocation")));
+  assert.equal(purge.failed[0].code, "unknown");
 
   const residualFailures = await sweepRecreatedRecords(sr, A);
-  assert.ok(residualFailures.includes("LatestLocation.user_id"));
+  assert.ok(residualFailures.some((f) => f.label.startsWith("LatestLocation")));
 });
 
 test("every close reports its outcome to the audit callback", async () => {
