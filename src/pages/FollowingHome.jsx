@@ -10,6 +10,7 @@ import SharedDataNotice from "@/pages/SharedDataNotice";
 import useAccessProfile from "@/hooks/useAccessProfile";
 import { sharerName } from "@/lib/sharing/sharerName";
 import { describeProjectionReason } from "@/lib/sharing/sharingCopy";
+import { useAuth } from '@/lib/AuthContext';
 
 /** Pull the token out of a pasted invitation link, or accept a bare code. */
 function extractToken(value) {
@@ -36,6 +37,7 @@ function extractToken(value) {
  * waiting state — never the patient "log your first reading" screen.
  */
 export default function FollowingHome() {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const { following, pendingInvitations, isLoading, noticeAccepted } = useAccessProfile();
   const [selectedId, setSelectedId] = useState(null);
@@ -157,7 +159,7 @@ export default function FollowingHome() {
         </div>
       )}
 
-      {selected && <SharerDashboard relationship={selected} onOpenPrefs={setPrefsFor} />}
+      {selected && <SharerDashboard key={`${user?.id}:${selected.id}:${selected.permission_version}`} relationship={selected} onOpenPrefs={setPrefsFor} />}
 
       {ended.length > 0 && (
         <SectionCard label="Ended">

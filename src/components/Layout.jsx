@@ -12,6 +12,7 @@ import PullToRefresh from "@/components/PullToRefresh";
 import HeaderBackdrop from "@/components/header/HeaderBackdrop";
 import LocationForegroundUpdater from "@/components/LocationForegroundUpdater";
 import { CONTENT_TOP_PADDING } from "@/lib/layoutMetrics";
+import { useAuth } from "@/lib/AuthContext";
 
 // iOS repaint bug after backgrounding: WebKit sometimes fails to repaint
 // scrolled content when the WebView returns from the background, leaving
@@ -58,6 +59,7 @@ const CachedSettingsPage = memo(SettingsPage);
 const CachedAnalyticsPage = memo(AnalyticsPage);
 
 export default function Layout() {
+  const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const isSettingsRoute = location.pathname === "/settings";
@@ -191,7 +193,7 @@ export default function Layout() {
             }}
           >
             <div hidden={!isDashboardRoute}>
-              <CachedDashboard />
+              <CachedDashboard key={user?.id} />
             </div>
             {visitedTabs.history && (
               <div hidden={!isHistoryRoute}>

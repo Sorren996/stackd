@@ -2,21 +2,23 @@ import { useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useDexcomConnection } from "./useDexcomConnection";
+import { useAuth } from '@/lib/AuthContext';
+import { readStoredCacheOwner } from '@/lib/latestGlucoseCache';
+import { boundedRead } from '@/lib/resumeFreshness';
 
 // ── Module-level singleton promise ──────────────────────────
 // Only one Dexcom fetch is allowed at a time. If multiple components
 // request a refresh simultaneously (Dashboard periodic poll, foreground
 // lifecycle, manual refresh button), they all join the same in-flight
 // promise rather than starting competing API calls.
-let inflightPromise = null;
+const inflightByOwner = new Map();
 
 // Invalidates the glucose-related React Query caches so the graph,
 // latest-glucose card, and IOB banner pick up any new readings
 // immediately after a successful sync.
 function invalidateGlucoseQueries(queryClient) {
-  queryClient.invalidateQueries({ queryKey: ["latest-glucose"] });
-  queryClient.invalidateQueries({ queryKey: ["glucose-readings", "graph"] });
-  queryClient.invalidateQueries({ queryKey: ["glucose-readings"] });
+  queryClient.invalidateQueries({ queryKey: ["latest-glucose"] }, { cancelRefetch: false });
+  queryClient.invalidateQueries({ queryKey: ["glucose-readings"] }, { cancelRefetch: false });
   // Re-read the connection row so the stale-sync banner's "since last sync"
   // timer resets the moment last_fetched_at bumps forward.
   queryClient.invalidateQueries({ queryKey: ["dexcom-connection"] });
@@ -37,32 +39,31 @@ function invalidateGlucoseQueries(queryClient) {
  */
 export function useDexcomRefresh() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const { connected } = useDexcomConnection();
   const connectedRef = useRef(connected);
   connectedRef.current = connected;
 
   const requestRefresh = useCallback(
     async (force = false) => {
-      if (!connectedRef.current) {
+      if (!user?.id || !connectedRef.current) {
         return { status: "not_connected" };
       }
 
       // Concurrency: join an existing in-flight request.
-      if (inflightPromise) {
-        return inflightPromise;
-      }
+      if (inflightByOwner.has(user.id)) return inflightByOwner.get(user.id);
 
-      inflightPromise = (async () => {
+      const inflightPromise = (async () => {
         const invokeStart = Date.now();
         try {
-          const res = await base44.functions.invoke("pollDexcomNow", { force });
+          const res = await boundedRead(() => base44.functions.invoke("pollDexcomNow", { force }));
           const data = res?.data;
 
           // Invalidate glucose queries whenever the poll returns a valid
           // latest reading timestamp — even when the frontend's own poll
           // didn't insert it (the scheduled workflow may have ingested it
           // first, so records_inserted is 0 but a newer reading now exists).
-          if (data?.latest_glucose_timestamp) {
+          if (data?.latest_glucose_timestamp && readStoredCacheOwner() === user.id) {
             invalidateGlucoseQueries(queryClient);
           }
 
@@ -90,13 +91,13 @@ export function useDexcomRefresh() {
           }));
           throw invokeErr;
         } finally {
-          inflightPromise = null;
+          inflightByOwner.delete(user.id);
         }
       })();
-
+      inflightByOwner.set(user.id, inflightPromise);
       return inflightPromise;
     },
-    [queryClient]
+    [queryClient, user?.id]
   );
 
   return { requestRefresh };

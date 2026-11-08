@@ -710,13 +710,12 @@ function MetricCard({ label, value, sub, status, color, tooltipId, openTooltip, 
 
 }
 
-export default function ActiveInsulinBanner({ doses = [], latestGlucose, liveReadingPending = false, liveReadingUnverified = false, glucoseReadings = [], carbEntries = [], graphSlot = null, onEditGlucose = null, onEditDose = null, onDeleteDose = null, connectBanner = null }) {
+export default function ActiveInsulinBanner({ doses = [], latestGlucose, liveReadingPending = false, liveReadingUnverified = false, snapshotNow, resumeRevision = 0, secondaryUnverified = false, glucoseReadings = [], carbEntries = [], graphSlot = null, onEditGlucose = null, onEditDose = null, onDeleteDose = null, connectBanner = null }) {
   const [insulinSettings, setInsulinSettings] = useState(readInsulinSettings);
   const [targetRange, setTargetRange] = useState(readTargetRange);
   const [centerGlucoseStatus, setCenterGlucoseStatus] = useState(null);
-  const [nowMinute, setNowMinute] = useState(() =>
-  Math.floor(Date.now() / MINUTE_MS)
-  );
+  const [clockMinute, setNowMinute] = useState(() => Math.floor(Date.now() / MINUTE_MS));
+  const nowMinute = snapshotNow ? Math.floor(snapshotNow / MINUTE_MS) : clockMinute;
   const { connected: dexcomConnected } = useDexcomConnection();
   const safeDoses = Array.isArray(doses) ? doses : [];
   const safeGlucoseReadings = Array.isArray(glucoseReadings) ? glucoseReadings : [];
@@ -976,9 +975,11 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, liveRea
   // Zone, direction, and note copy are all withheld whenever the data is old —
   // by the CGM stale flag or the 15-minute age gate — so nothing reads as
   // current when it isn't.
-  const statusCopyStale = isGlucoseStale || comfortLabelStale;
+  const sourceTime = Date.parse(latestGlucose?.recorded_at);
+  const statusCopyStale = liveReadingPending || liveReadingUnverified || isGlucoseStale || comfortLabelStale ||
+    !Number.isFinite(sourceTime) || sourceTime > Date.now() || latestGlucose?.source === 'system';
 
-  const glucoseZone = getCurrentGlucoseZone(glucoseValue, targetLow, targetHigh, comfortLabelStale);
+  const glucoseZone = getCurrentGlucoseZone(glucoseValue, targetLow, targetHigh, statusCopyStale);
   // Direction is read from the last 3–4 readings (~15–20 min), never a single
   // reading, and is omitted entirely when the data is thin or old.
   const rawDirection = computeGlucoseDirection(safeGlucoseReadings, { stale: statusCopyStale });
@@ -1078,32 +1079,30 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, liveRea
         </div>
 
         <div className="section-label mt-5">Current Glucose</div>
-        {liveReadingPending ? (
-          <LiveReadingPlaceholder />
-        ) : (
+        <div className="resume-sensitive relative min-h-[132px]" aria-busy={liveReadingPending}>
+          <div className="resume-placeholder absolute inset-x-0 top-3 pointer-events-none"><LiveReadingPlaceholder /></div>
+          <div className="resume-values" aria-hidden={liveReadingPending || undefined}>
         <AnchorNumber
           value={glucoseValue != null ? formatGlucose(glucoseValue) : "-"}
           unit={glucoseUnitLabel()}
-          caption={rangeCardLabel}
-          trendIcon={glucoseValue != null && trend ? <TrendMark trend={trend} /> : null}
+          caption={statusCopyStale ? (latestGlucose ? 'Last known reading' : 'Reading unavailable') : rangeCardLabel}
+          trendIcon={!statusCopyStale && glucoseValue != null && trend ? <TrendMark trend={trend} /> : null}
           trendColor={inRange ? "#3f3830" : glucoseColor}
           subcaption={
-          <span className="font-serif-italic">{liveReadingUnverified ? "last known, " : "reading "}{(() => {
-              if (!latestGlucose?.recorded_at) return "just now";
+          <span className="font-serif-italic">{latestGlucose ? 'reading ' : ''}{(() => {
+              if (!Number.isFinite(sourceTime) || sourceTime > Date.now()) return 'Time unavailable';
               const mins = Math.max(0, Math.round((nowMinute * MINUTE_MS - new Date(latestGlucose.recorded_at).getTime()) / 60000));
               if (mins < 1) return "just now";
               if (mins < 60) return `${mins}m ago`;
               return `${Math.floor(mins / 60)}h ${mins % 60}m ago`;
             })()}</span>
           } />
-        )}
-        
-
         {!liveReadingPending && (isGlucoseStale ?
         <StaleReadingBanner visible={isGlucoseStale} /> :
-
-        <CurrentGlucoseNote note={glucoseNote} tone={glucoseZone.zone} />
+        !statusCopyStale && <CurrentGlucoseNote note={glucoseNote} tone={glucoseZone.zone} />
         )}
+          </div>
+        </div>
 
         <DailyBalanceSection
           percentage={comfortZonePercentage}
@@ -1132,6 +1131,9 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, liveRea
 
       {/* Right Now — at-a-glance combined IOB + Meal Review */}
       <RightNowView
+        freshnessPending={liveReadingPending}
+        resumeRevision={resumeRevision}
+        currentStatusUnavailable={statusCopyStale || secondaryUnverified}
         totalUnits={activeUnits}
         breakdown={activeInsulinBreakdown}
         basalRegimenStatus={basalRegimenStatus}

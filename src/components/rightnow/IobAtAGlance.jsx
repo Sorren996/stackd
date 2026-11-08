@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef, useLayoutEffect } from "react";
 import { motion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 import DashboardCard from "@/components/dashboard/DashboardCard";
@@ -106,7 +106,10 @@ function bolusStatusLine(dose, now) {
   return { label: entry.label, color: entry.color, remaining };
 }
 
-export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus, onEditDose, onDeleteDose }) {
+export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus, onEditDose, onDeleteDose, resumeRevision = 0 }) {
+  const previousResume = useRef(resumeRevision);
+  const resumed = previousResume.current !== resumeRevision;
+  useLayoutEffect(() => { previousResume.current = resumeRevision; }, [resumeRevision]);
   const now = Date.now();
   const [openDoseId, setOpenDoseId] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
@@ -246,7 +249,7 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
                         {status.remaining && (
                           <>
                             {" · clears in "}
-                            <motion.span key={status.remaining} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
+                            <motion.span key={status.remaining} initial={resumed ? false : { opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: resumed ? 0 : 0.2 }}>
                               {status.remaining}
                             </motion.span>
                           </>
@@ -344,7 +347,7 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
                       {status.remaining && (
                         <span className="block text-[10px] tabular-nums" style={{ color: PALETTE.faint }}>
                           clears in{" "}
-                          <motion.span key={status.remaining} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
+                          <motion.span key={status.remaining} initial={resumed ? false : { opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: resumed ? 0 : 0.2 }}>
                             {status.remaining}
                           </motion.span>
                         </span>

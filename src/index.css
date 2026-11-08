@@ -742,6 +742,22 @@
   outline-offset: 1px;
 }
 
+/* Resume guards keep the existing boxes mounted, including scroll and tabs. */
+.resume-placeholder { display: none; }
+[data-freshness="updating"] .resume-chart-reading { visibility: hidden; }
+[data-freshness="updating"] .resume-chart-row::before {
+  content: 'Updating saved readings';
+  position: absolute;
+  left: 18px;
+  color: var(--site-muted);
+  font-size: 12px;
+  pointer-events: none;
+}
+[data-freshness="updating"] .resume-sensitive > .resume-values { visibility: hidden; }
+[data-freshness="updating"] .resume-sensitive > .resume-placeholder { display: block; }
+[data-freshness="updating"] .resume-sensitive { overflow-anchor: none; }
+[data-freshness="updating"] .resume-values { animation: none !important; transition: none !important; }
+
 /* ── Skip links, public site and account screens ──────────────
    The first thing a keyboard or screen-reader user reaches, so it
    must not land in the strip the OS draws its clock in. */

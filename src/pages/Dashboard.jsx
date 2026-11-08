@@ -10,7 +10,9 @@ import { Activity } from "lucide-react";
 import { toast } from "sonner";
 import EditLogSheet from "@/components/edit/EditLogSheet";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
-import { useVisibilityRefresh } from "@/hooks/useVisibilityRefresh";
+import usePatientResumeSnapshot from "@/hooks/usePatientResumeSnapshot";
+import { boundedRead } from "@/lib/resumeFreshness";
+import { useAuth } from "@/lib/AuthContext";
 import { useDexcomRefresh } from "@/hooks/useDexcomRefresh";
 import { useLatestProjection } from "@/hooks/useLatestProjection";
 import DexcomSyncStatus from "@/components/DexcomSyncStatus";
@@ -22,7 +24,7 @@ import {
   readCachedLatestGlucoseSavedAt,
   writeCachedLatestGlucose,
 } from "@/lib/latestGlucoseCache";
-import { LIVE_READING, LIVE_READING_DEADLINE_MS, liveReadingState } from "@/lib/liveReadingGate";
+const EMPTY = [];
 
 const FRESH_DATA_MS = 60 * 1000;
 const GRAPH_DATA_MS = 5 * 60 * 1000;
@@ -38,49 +40,33 @@ function replaceCachedItem(queryClient, queryKey, updatedItem) {
 
 export default function Dashboard() {
   const queryClient = useQueryClient();
-  const [now, setNow] = useState(() => Date.now());
+  const { user } = useAuth();
   const [showAllDoses, setShowAllDoses] = useState(false);
   const [editingLog, setEditingLog] = useState(null);
   const { connected: dexcomConnected, isLoading: dexcomLoading, connection: dexcomConnection } = useDexcomConnection();
   const { requestRefresh } = useDexcomRefresh();
   const stackingAlertsEnabled = localStorage.getItem("stacking_alerts_enabled") !== "false";
 
-  // ── Live reading confirmation ───────────────────────────────────────────
-  // A launch, or a return from behind the lock screen, begins without any
-  // proof this device has seen the newest saved reading. Until one lands the
-  // hero shows a neutral placeholder rather than the previous value dressed as
-  // current. `revalidatedAt` opens that window; the deadline only stops it
-  // waiting — after it, the last known reading returns, labelled as such.
-  const [revalidatedAt, setRevalidatedAt] = useState(() => Date.now());
-  const [readingDeadlinePassed, setReadingDeadlinePassed] = useState(false);
-
-  const markReadingUnconfirmed = useCallback(() => {
-    setReadingDeadlinePassed(false);
-    setRevalidatedAt(Date.now());
-  }, []);
-
-  // One coordinator for foreground returns (visibility, pageshow, online).
-  useVisibilityRefresh({ onRevalidate: markReadingUnconfirmed });
-
-  useEffect(() => {
-    const interval = setInterval(() => setNow(Date.now()), 60000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const { data: doses = [], isLoading: loadingDoses } = useQuery({
-    queryKey: ["insulin-doses"],
-    queryFn: () => base44.entities.InsulinDose.list("-administered_at", 100),
+  const { data: rawDoses = EMPTY, isLoading: loadingDoses } = useQuery({
+    queryKey: ["insulin-doses", user.id],
+    queryFn: ({ signal }) => boundedRead(() => base44.entities.InsulinDose.filter({ created_by_id: user.id }, "-administered_at", 100), signal),
+    retry: false,
+    networkMode: 'always',
     staleTime: FRESH_DATA_MS,
     gcTime: GRAPH_DATA_MS,
   });
 
   const {
-    data: latestGlucoseRows = [],
+    data: rawLatestGlucoseRows = EMPTY,
     isLoading: loadingLatestGlucose,
     dataUpdatedAt: latestGlucoseUpdatedAt,
+    isFetchedAfterMount,
+    isSuccess: latestQuerySuccess,
   } = useQuery({
-    queryKey: ["latest-glucose"],
-    queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", 1),
+    queryKey: ["latest-glucose", user.id],
+    queryFn: ({ signal }) => boundedRead(() => base44.entities.GlucoseReading.filter({ source: { $ne: 'system' }, $or: [{ user_id: user.id }, { created_by_id: user.id }] }, "-recorded_at", 1), signal),
+    retry: false,
+    networkMode: 'always',
     staleTime: 30 * 1000,
     refetchInterval: dexcomConnected ? 60_000 : false,
     gcTime: GRAPH_DATA_MS,
@@ -91,97 +77,74 @@ export default function Dashboard() {
     // The cached reading carries the moment it was saved, so an old
     // observation is immediately stale and revalidates instead of passing as
     // fresh. Only the account that saved it can read it back.
-    initialData: () => readCachedLatestGlucose(),
-    initialDataUpdatedAt: () => readCachedLatestGlucoseSavedAt(),
-    placeholderData: () => queryClient.getQueryData(["glucose-readings", "graph"])?.slice(0, 1) ?? [],
+    initialData: () => readCachedLatestGlucose(user.id),
+    initialDataUpdatedAt: () => readCachedLatestGlucoseSavedAt(user.id),
   });
 
   useEffect(() => {
-    // Only a real measurement is cached for the next cold start.
-    if (latestGlucoseRows[0]?.source !== "system") writeCachedLatestGlucose(latestGlucoseRows[0]);
-  }, [latestGlucoseRows]);
-
-  const readingState = liveReadingState({
-    dataUpdatedAt: latestGlucoseUpdatedAt,
-    revalidatedAt,
-    deadlineElapsed: readingDeadlinePassed,
-  });
-
-  useEffect(() => {
-    if (readingDeadlinePassed) return undefined;
-    if (readingState !== LIVE_READING.PENDING) return undefined;
-    const id = setTimeout(() => setReadingDeadlinePassed(true), LIVE_READING_DEADLINE_MS);
-    return () => clearTimeout(id);
-  }, [readingState, readingDeadlinePassed]);
-
-  useEffect(() => {
-    if (readingState === LIVE_READING.CURRENT && readingDeadlinePassed) {
-      setReadingDeadlinePassed(false);
+    if (isFetchedAfterMount && latestQuerySuccess && rawLatestGlucoseRows[0]?.source !== 'system') {
+      writeCachedLatestGlucose(rawLatestGlucoseRows[0], user.id);
     }
-  }, [readingState, readingDeadlinePassed]);
+  }, [rawLatestGlucoseRows, isFetchedAfterMount, latestQuerySuccess, user.id]);
 
-  const { data: glucoseReadings = [] } = useQuery({
-    queryKey: ["glucose-readings", "graph"],
-    queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", 5000),
+  const { data: rawGlucoseReadings = EMPTY } = useQuery({
+    queryKey: ["glucose-readings", "graph", user.id],
+    queryFn: ({ signal }) => boundedRead(() => base44.entities.GlucoseReading.filter({ $or: [{ user_id: user.id }, { created_by_id: user.id }], recorded_at: { $gte: new Date(Date.now() - FOURTEEN_DAYS_MS).toISOString() } }, "-recorded_at", 5000), signal),
+    retry: false,
+    networkMode: 'always',
     staleTime: GRAPH_DATA_MS,
     refetchInterval: dexcomConnected ? 120_000 : false,
     gcTime: 30 * 60 * 1000,
-    placeholderData: () => queryClient.getQueryData(["glucose-readings", "graph"]) ?? latestGlucoseRows,
+    placeholderData: () => queryClient.getQueryData(["glucose-readings", "graph", user.id]) ?? rawLatestGlucoseRows,
   });
 
-  // ── Single source of truth for glucose display ──────────────────────────
-  // The latest-glucose query refetches every 60s; the graph query every 120s.
-  // Merge the latest reading into the graph data on every render so the Daily
-  // Flow graph and the Current Glucose card always derive from the same
-  // freshest source. This replaces the old cache-injection effect, which was
-  // fragile: a graph refetch could overwrite the injected reading with stale
-  // server data, and the effect wouldn't re-run to re-inject it.
-  const mergedGraphReadings = useMemo(() => {
-    if (!latestGlucoseRows.length) return glucoseReadings;
-    const latest = latestGlucoseRows[0];
-    if (!latest?.recorded_at) return glucoseReadings;
-    const latestTime = new Date(latest.recorded_at).getTime();
-    const graphLatest = glucoseReadings[0];
-    const graphLatestTime = graphLatest ? new Date(graphLatest.recorded_at).getTime() : -Infinity;
-    if (latestTime > graphLatestTime && !glucoseReadings.some((r) => r.id === latest.id)) {
-      return [latest, ...glucoseReadings];
-    }
-    return glucoseReadings;
-  }, [glucoseReadings, latestGlucoseRows]);
 
-  const { data: carbEntries = [], isLoading: loadingCarbs } = useQuery({
-    queryKey: ["carb-entries"],
-    queryFn: () => base44.entities.CarbEntry.list("-consumed_at", 100),
+
+  const { data: rawCarbEntries = EMPTY, isLoading: loadingCarbs } = useQuery({
+    queryKey: ["carb-entries", user.id],
+    queryFn: ({ signal }) => boundedRead(() => base44.entities.CarbEntry.filter({ created_by_id: user.id }, "-consumed_at", 100), signal),
+    retry: false,
+    networkMode: 'always',
     staleTime: FRESH_DATA_MS,
     gcTime: GRAPH_DATA_MS,
   });
 
-  // ── Continuous-learning projection ─────────────────────────────────────
-  // The projection re-anchors on every new glucose reading and refreshes its
-  // active inputs on every new meal/insulin log. The latest timestamps act
-  // as signals: when any changes, the hook triggers a background generation
-  // through the existing insight-engine pipeline and refetches promptly so
-  // the rendered cone reflects the latest reading and latest logged support.
+  const { data: rawGraphCarbs = EMPTY } = useQuery({
+    queryKey: ["carb-entries", "graph", user.id],
+    queryFn: ({ signal }) => boundedRead(() => base44.entities.CarbEntry.filter({ created_by_id: user.id }, "-consumed_at", 1000), signal),
+    retry: false,
+    networkMode: 'always',
+    staleTime: GRAPH_DATA_MS,
+    gcTime: 30 * 60 * 1000,
+    placeholderData: () => queryClient.getQueryData(["carb-entries", "graph", user.id]) ?? rawCarbEntries,
+  });
+
+  const { data: rawGraphDoses = EMPTY } = useQuery({
+    queryKey: ["insulin-doses", "graph", user.id],
+    queryFn: ({ signal }) => boundedRead(() => base44.entities.InsulinDose.filter({ created_by_id: user.id }, "-administered_at", 1000), signal),
+    retry: false,
+    networkMode: 'always',
+    staleTime: GRAPH_DATA_MS,
+    gcTime: 30 * 60 * 1000,
+    placeholderData: () => queryClient.getQueryData(["insulin-doses", "graph", user.id]) ?? rawDoses,
+  });
+
+  const freshness = usePatientResumeSnapshot(user.id, {
+    doses: rawDoses, latestGlucoseRows: rawLatestGlucoseRows, glucoseReadings: rawGlucoseReadings,
+    carbEntries: rawCarbEntries, graphDosesSource: rawGraphDoses, graphCarbsSource: rawGraphCarbs,
+    confirmedAt: latestGlucoseUpdatedAt, verified: latestQuerySuccess,
+  }, requestRefresh);
+  const { doses, latestGlucoseRows, glucoseReadings, carbEntries, graphDosesSource, graphCarbsSource } = freshness.snapshot;
+  const now = freshness.now;
+  const mergedGraphReadings = useMemo(() => {
+    const byId = new Map(glucoseReadings.map(r => [r.id, r]));
+    latestGlucoseRows.forEach(r => byId.set(r.id, r));
+    return [...byId.values()].sort((a, b) => Date.parse(b.recorded_at) - Date.parse(a.recorded_at));
+  }, [glucoseReadings, latestGlucoseRows]);
   const projection = useLatestProjection({
     latestReadingTime: latestGlucoseRows[0]?.recorded_at || null,
     latestMealTime: carbEntries[0]?.consumed_at || null,
     latestDoseTime: doses[0]?.administered_at || null,
-  });
-
-  const { data: graphCarbsSource = [] } = useQuery({
-    queryKey: ["carb-entries", "graph"],
-    queryFn: () => base44.entities.CarbEntry.list("-consumed_at", 1000),
-    staleTime: GRAPH_DATA_MS,
-    gcTime: 30 * 60 * 1000,
-    placeholderData: () => queryClient.getQueryData(["carb-entries", "graph"]) ?? carbEntries,
-  });
-
-  const { data: graphDosesSource = [] } = useQuery({
-    queryKey: ["insulin-doses", "graph"],
-    queryFn: () => base44.entities.InsulinDose.list("-administered_at", 1000),
-    staleTime: GRAPH_DATA_MS,
-    gcTime: 30 * 60 * 1000,
-    placeholderData: () => queryClient.getQueryData(["insulin-doses", "graph"]) ?? doses,
   });
 
   // ── Cadence-aware Dexcom refresh ──────────────────────────
@@ -200,7 +163,7 @@ export default function Dashboard() {
     let cancelled = false;
 
     const poll = async () => {
-      if (cancelled) return;
+      if (cancelled || document.visibilityState !== 'visible') return;
       try {
         const result = await requestRefresh(false);
         // Surface real errors (not skips or rate-limit noise).
@@ -286,22 +249,22 @@ export default function Dashboard() {
       const updatedItem = { ...editingLog?.item, ...variables.patch, ...updated, id: variables.id };
 
       if (variables.type === "insulin") {
-        replaceCachedItem(queryClient, ["insulin-doses"], updatedItem);
-        replaceCachedItem(queryClient, ["insulin-doses", "graph"], updatedItem);
+        replaceCachedItem(queryClient, ["insulin-doses", user.id], updatedItem);
+        replaceCachedItem(queryClient, ["insulin-doses", "graph", user.id], updatedItem);
         queryClient.invalidateQueries({ queryKey: ["insulin-doses"] });
         queryClient.invalidateQueries({ queryKey: ["insulin-doses", "graph"] });
       } else if (variables.type === "glucose") {
-        replaceCachedItem(queryClient, ["latest-glucose"], updatedItem);
+        replaceCachedItem(queryClient, ["latest-glucose", user.id], updatedItem);
         replaceCachedItem(queryClient, ["glucose-readings"], updatedItem);
-        replaceCachedItem(queryClient, ["glucose-readings", "graph"], updatedItem);
+        replaceCachedItem(queryClient, ["glucose-readings", "graph", user.id], updatedItem);
         queryClient.invalidateQueries({ queryKey: ["latest-glucose"] });
         queryClient.invalidateQueries({ queryKey: ["glucose-readings"] });
         queryClient.invalidateQueries({ queryKey: ["glucose-readings", "graph"] });
-        const latest = queryClient.getQueryData(["latest-glucose"])?.[0];
-        if (latest?.id === updatedItem.id) writeCachedLatestGlucose(updatedItem);
+        const latest = queryClient.getQueryData(["latest-glucose", user.id])?.[0];
+        if (latest?.id === updatedItem.id) writeCachedLatestGlucose(updatedItem, user.id);
       } else {
-        replaceCachedItem(queryClient, ["carb-entries"], updatedItem);
-        replaceCachedItem(queryClient, ["carb-entries", "graph"], updatedItem);
+        replaceCachedItem(queryClient, ["carb-entries", user.id], updatedItem);
+        replaceCachedItem(queryClient, ["carb-entries", "graph", user.id], updatedItem);
         queryClient.invalidateQueries({ queryKey: ["carb-entries"] });
         queryClient.invalidateQueries({ queryKey: ["carb-entries", "graph"] });
       }
@@ -359,11 +322,7 @@ export default function Dashboard() {
   // The current reading is the newest REAL measurement. A carry-forward
   // `system` row (which only bridges a gap) is never presented as a current
   // reading, and a cached row is refreshed by the live query on mount.
-  const latestGlucose = useMemo(() => {
-    const newest = latestGlucoseRows[0];
-    if (newest && newest.source !== "system") return newest;
-    return glucoseReadings.find((r) => r && r.source !== "system") || newest || null;
-  }, [latestGlucoseRows, glucoseReadings]);
+  const latestGlucose = useMemo(() => mergedGraphReadings.find(r => r && r.source !== 'system') || null, [mergedGraphReadings]);
 
   const activeRapidCount = useMemo(() => {
     const activeDoses = recentDoses
@@ -398,6 +357,7 @@ export default function Dashboard() {
   }, [recentDoses, recentGlucose, recentCarbs]);
 
   const shouldShowEmptyState =
+    !freshness.pending && freshness.verified && freshness.secondaryVerified &&
     !loadingDoses &&
     !loadingLatestGlucose &&
     !loadingCarbs &&
@@ -406,7 +366,7 @@ export default function Dashboard() {
     recentCarbs.length === 0;
 
   return (
-    <div className="dashboard-page relative w-full max-w-full min-w-0 space-y-0 overflow-x-hidden">
+    <div ref={freshness.rootRef} data-freshness={freshness.pending ? 'updating' : 'ready'} className="dashboard-page relative w-full max-w-full min-w-0 space-y-0 overflow-x-hidden">
       <EditLogSheet
         log={editingLog}
         onClose={() => setEditingLog(null)}
@@ -434,8 +394,11 @@ export default function Dashboard() {
             <ActiveInsulinBanner
               doses={recentDoses}
               latestGlucose={latestGlucose}
-              liveReadingPending={readingState === LIVE_READING.PENDING}
-              liveReadingUnverified={readingState === LIVE_READING.UNVERIFIED}
+              liveReadingPending={freshness.pending}
+              liveReadingUnverified={!freshness.verified}
+              snapshotNow={now}
+              resumeRevision={freshness.revision}
+              secondaryUnverified={!freshness.secondaryVerified}
               glucoseReadings={heroGlucoseReadings}
               carbEntries={recentCarbs}
               connectBanner={!dexcomConnected && !dexcomLoading ? (
@@ -449,7 +412,9 @@ export default function Dashboard() {
                   onSelectLog={setEditingLog}
                   onDeleteLog={handleDeleteLog}
                   glucoseReadOnly={dexcomConnected}
-                  projection={projection}
+                  projection={freshness.pending || !freshness.verified || !(now - Date.parse(latestGlucose?.recorded_at) < 8 * 60000) ? null : projection}
+                  snapshotNow={now}
+                  resumeRevision={freshness.revision}
                 />
               }
               onEditGlucose={dexcomConnected ? null : (reading) => setEditingLog({ type: "glucose", item: reading })}

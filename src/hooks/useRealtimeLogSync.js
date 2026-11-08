@@ -8,9 +8,9 @@ import { base44 } from "@/api/base44Client";
 // are marked stale and revalidate, so the Dashboard is already fresh by the
 // time the user returns to it.
 const ENTITY_QUERY_KEYS = {
-  GlucoseReading: [["latest-glucose"], ["glucose-readings"], ["glucose-readings", "graph"]],
-  InsulinDose: [["insulin-doses"], ["insulin-doses", "graph"]],
-  CarbEntry: [["carb-entries"], ["carb-entries", "graph"]],
+  GlucoseReading: [["latest-glucose"], ["glucose-readings"]],
+  InsulinDose: [["insulin-doses"]],
+  CarbEntry: [["carb-entries"]],
 };
 
 export function useRealtimeLogSync() {
@@ -25,7 +25,7 @@ export function useRealtimeLogSync() {
         if (!entity || typeof entity.subscribe !== "function") return;
 
         const unsub = entity.subscribe(() => {
-          keys.forEach((key) => queryClient.invalidateQueries({ queryKey: key }));
+          keys.forEach((key) => queryClient.invalidateQueries({ queryKey: key }, { cancelRefetch: false }));
         });
         if (unsub) unsubs.push(unsub);
       } catch {

@@ -22,6 +22,7 @@ const LOW = "#d98a78"; // salmon
  */
 export default function SharedGlucoseChart({ readings, targetLow, targetHigh }) {
   const scrollerRef = useRef(null);
+  const previousEdge = useRef(null);
   const points = (Array.isArray(readings) ? readings : []).filter((r) =>
     Number.isFinite(Number(r?.value))
   );
@@ -29,7 +30,9 @@ export default function SharedGlucoseChart({ readings, targetLow, targetHigh }) 
   // The newest reading lives at the right edge, exactly like the patient chart.
   useEffect(() => {
     const el = scrollerRef.current;
-    if (el) el.scrollLeft = el.scrollWidth;
+    if (!el) return;
+    if (previousEdge.current == null || el.scrollLeft >= previousEdge.current - 2) el.scrollLeft = el.scrollWidth;
+    previousEdge.current = el.scrollWidth - el.clientWidth;
   }, [points.length]);
 
   if (points.length < 2) {

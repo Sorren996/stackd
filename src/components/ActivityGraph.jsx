@@ -319,7 +319,9 @@ function FilterDropdown({ filters, onChange, anchorRect }) {
 
 }
 
-export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries = [], onSelectLog = null, onDeleteLog = null, glucoseReadOnly = false, projection = null }) {
+export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries = [], onSelectLog = null, onDeleteLog = null, glucoseReadOnly = false, projection = null, snapshotNow, resumeRevision = 0 }) {
+  const previousResume = useRef(resumeRevision);
+  const previousNowPosition = useRef(null);
   const [showFilter, setShowFilter] = useState(false);
   const [filterAnchorRect, setFilterAnchorRect] = useState(null);
   const [filters, setFilters] = useState({ glucose: true, insulin: true, carbs: true });
@@ -344,7 +346,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   // future zone, and IOB thresholds from shifting on every re-render — the
   // primary jitter source: recharts received new x1/x props for
   // ReferenceLine/ReferenceArea on every render, triggering chart re-layout.
-  const [stableNow, setStableNow] = useState(() => Date.now());
+  const [clockNow, setStableNow] = useState(() => Date.now());
+  const stableNow = snapshotNow ?? clockNow;
   useEffect(() => {
     const id = setInterval(() => setStableNow(Date.now()), 60000);
     return () => clearInterval(id);
@@ -1023,7 +1026,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     return Math.abs(a.time - time) <= Math.abs(b.time - time) ? a : b;
   };
 
-  const drawCenterGlucose = (scrollLeft, animate = false) => {
+  const drawCenterGlucose = (scrollLeft, animate = false, suppressMotion = false) => {
     const marker = centerMarkerRef.current;
     const timeEl = tooltipTimeRef.current;
     const dateEl = tooltipDateRef.current;
@@ -1065,7 +1068,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     // perfectly static between readings and fires the existing rolling
     // animation precisely when the active reading changes (scrub or live).
     const selectedKey = selected.id ?? selected.time;
-    const shouldAnimate = lastSelectedKeyRef.current !== null && lastSelectedKeyRef.current !== selectedKey;
+    const shouldAnimate = !suppressMotion && lastSelectedKeyRef.current !== null && lastSelectedKeyRef.current !== selectedKey;
     lastSelectedKeyRef.current = selectedKey;
 
     // Marker Y still samples the ACTUAL rendered glucose <path> so the dot
@@ -1221,17 +1224,22 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
   useEffect(() => {
     if (!scrollRef.current) return;
-    scrollRef.current.scrollLeft = nowScrollLeft;
+    const resumed = previousResume.current !== resumeRevision;
+    previousResume.current = resumeRevision;
+    const wasAtLatest = previousNowPosition.current == null || scrollRef.current.scrollLeft >= previousNowPosition.current - 2;
+    if (wasAtLatest) scrollRef.current.scrollLeft = nowScrollLeft;
+    previousNowPosition.current = nowScrollLeft;
+    const position = scrollRef.current.scrollLeft;
     const latestValue = glucoseLinePoints.length > 0 ? glucoseLinePoints[glucoseLinePoints.length - 1].value : null;
-    const shouldAnimate = prevLatestValueRef.current !== null && latestValue !== null && latestValue !== prevLatestValueRef.current;
+    const shouldAnimate = !resumed && prevLatestValueRef.current !== null && latestValue !== null && latestValue !== prevLatestValueRef.current;
     prevLatestValueRef.current = latestValue;
-    drawCenterGlucose(nowScrollLeft, shouldAnimate);
-    updateMonitoringOverlay(nowScrollLeft);
+    drawCenterGlucose(position, shouldAnimate, resumed);
+    updateMonitoringOverlay(position);
 
     return () => {
       if (scrollFrameRef.current) cancelAnimationFrame(scrollFrameRef.current);
     };
-  }, [nowScrollLeft, latestGlucoseBucket, filters.glucose, glucoseLinePoints.length, positionedMonitoringIntervals, isGlucoseStale, glucoseUnits]);
+  }, [nowScrollLeft, latestGlucoseBucket, filters.glucose, glucoseLinePoints.length, positionedMonitoringIntervals, isGlucoseStale, glucoseUnits, resumeRevision]);
 
   if (!doses.length && !glucoseReadings.length && !carbEntries.length) return null;
 
@@ -1291,8 +1299,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           left, its time and date and the way back to now on the right. It sits
           in normal flow above the trace, replacing the tall stacked block that
           used to float over the top of the chart and leave dead space. */}
-      <div className="flex items-center gap-2 px-[18px] pb-1.5">
-        <div className="flex min-w-0 items-end gap-2">
+      <div className="resume-chart-row relative flex items-center gap-2 px-[18px] pb-1.5">
+        <div className="resume-chart-reading flex min-w-0 items-end gap-2">
           {filters.glucose && glucoseLinePoints.length > 0 &&
             <>
               {(onSelectLog || onDeleteLog) && !dexcomConnected &&

@@ -70,10 +70,9 @@ export function readCachedLatestGlucoseSavedAt(ownerId = readStoredCacheOwner())
  * Saves a real measurement for the next launch. Nothing is written without a
  * known owner, so a reading can never be stamped as another account's.
  */
-export function writeCachedLatestGlucose(reading) {
+export function writeCachedLatestGlucose(reading, ownerId = readStoredCacheOwner()) {
   const store = storage();
-  const ownerId = readStoredCacheOwner();
-  if (!store || !ownerId || !reading?.recorded_at) return;
+  if (!store || !ownerId || readStoredCacheOwner() !== ownerId || !reading?.recorded_at) return;
 
   const meta = readMeta();
   if (meta && meta.ownerId !== ownerId) return;

@@ -1,4 +1,5 @@
 import TrendArrow from "@/components/glucose/TrendArrow";
+import { STALE_READING_MINUTES } from '@/lib/glucoseStaleness';
 import { resolveGlucoseTrend } from "@/lib/glucoseTrend";
 import { computeSharedDailyBalance } from "@/lib/sharing/sharedDailyBalance";
 import { describeProjectionReason, describeReadingAge, describeZone } from "@/lib/sharing/sharingCopy";
@@ -11,7 +12,7 @@ import { describeProjectionReason, describeReadingAge, describeZone } from "@/li
  * computed with the same helper the patient's own dashboard uses, so the two
  * always read the same figure.
  */
-export default function SharedGlucosePanel({ glucose, reason }) {
+export default function SharedGlucosePanel({ glucose, reason, now = Date.now(), staleMinutes = 15 }) {
   if (!glucose) {
     return (
       <p className="text-sm" style={{ color: "#746959" }}>
@@ -21,6 +22,10 @@ export default function SharedGlucosePanel({ glucose, reason }) {
   }
 
   const latest = glucose.latest;
+  const measuredAt = Date.parse(latest?.recorded_at);
+  const age = Number.isFinite(measuredAt) && measuredAt <= now ? (now - measuredAt) / 60000 : null;
+  const displayLimit = ['dexcom', 'dexcom_share'].includes(latest?.source) ? Math.min(STALE_READING_MINUTES, staleMinutes) : staleMinutes;
+  const stale = glucose.stale || age == null || age >= displayLimit || latest?.source === 'system';
   const balance = computeSharedDailyBalance(
     glucose.readings,
     glucose.target_low,
@@ -40,7 +45,7 @@ export default function SharedGlucosePanel({ glucose, reason }) {
   // the readings with the same mapping. Below two readings nothing is derived,
   // so no steady arrow is ever implied from thin data.
   const trend =
-    !glucose.stale && glucose.direction != null
+    !stale && glucose.direction != null
       ? resolveGlucoseTrend(latest, realReadings)
       : null;
   const zone = describeZone(glucose.zone);
@@ -65,7 +70,7 @@ export default function SharedGlucosePanel({ glucose, reason }) {
             decorative when one exists; with no direction it announces that
             instead of staying silent. */}
         <TrendArrow icon={trend?.icon} className="self-center" size={20} style={{ color: "#3f3830" }} />
-        {!glucose.stale && zone && (
+        {!stale && zone && (
           <span
             className="ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em]"
             style={{ background: `${zoneColor}1f`, color: zoneColor }}
@@ -76,12 +81,12 @@ export default function SharedGlucosePanel({ glucose, reason }) {
       </div>
 
       <p className="text-xs" style={{ color: "#746959" }}>
-        {describeReadingAge(glucose.latest_age_minutes)}
-        {glucose.stale && " · the newest reading is older than usual"}
+        {age == null ? 'Reading time unavailable' : describeReadingAge(age)}
+        {stale && " · the newest reading is older than usual"}
         {trend?.label && ` · ${trend.label}`}
       </p>
 
-      {glucose.stale && (
+      {stale && (
         <p className="text-xs" style={{ color: "#9a6f2f" }}>
           Showing the last reading they shared. A current direction is not described while the data is this old.
         </p>

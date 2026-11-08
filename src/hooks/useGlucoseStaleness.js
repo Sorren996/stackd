@@ -8,19 +8,17 @@ import { computeGlucoseStale, STALE_READING_MINUTES } from "@/lib/glucoseStalene
  * refresh required. Recovery is automatic when a fresh reading lands.
  */
 export function useGlucoseStaleness(latestDexcomReading, dexcomConnected) {
-  const [isStale, setIsStale] = useState(() =>
-    computeGlucoseStale(latestDexcomReading, dexcomConnected)
-  );
+  const [, setTick] = useState(0);
 
   useEffect(() => {
-    const update = () =>
-      setIsStale(computeGlucoseStale(latestDexcomReading, dexcomConnected));
+    const update = () => setTick(t => t + 1);
     update();
     const id = setInterval(update, 30 * 1000);
     return () => clearInterval(id);
   }, [latestDexcomReading, dexcomConnected]);
 
-  return isStale;
+  // Source age is checked during render, never one effect behind on resume.
+  return computeGlucoseStale(latestDexcomReading, dexcomConnected);
 }
 
 export { STALE_READING_MINUTES };

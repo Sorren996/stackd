@@ -1,5 +1,7 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import useResumeSnapshot from "@/hooks/useResumeSnapshot";
+import { boundedRead, refreshSnapshotQueries } from "@/lib/resumeFreshness";
 import { ChevronRight, MapPin, Phone, Settings2 } from "lucide-react";
 import SectionCard from "@/components/editorial/SectionCard";
 import { Button } from "@/components/ui/button";
@@ -30,26 +32,39 @@ export default function SharerDashboard({ relationship, onOpenPrefs }) {
 
   const isActive = relationship.status === "active";
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: ["shared-view", user?.id || "anon", relationship.id, relationship.permission_version],
-    queryFn: () => getSharedView(relationship.id),
-    enabled: isActive,
+  const client = useQueryClient();
+  const queryKey = useMemo(() => ['shared-view', user?.id || 'anon', relationship.id, relationship.permission_version], [user?.id, relationship.id, relationship.permission_version]);
+  const { data: rawData, isLoading, error, dataUpdatedAt } = useQuery({
+    queryKey,
+    queryFn: ({ signal }) => boundedRead(() => getSharedView(relationship.id), signal),
+    enabled: isActive && Boolean(user?.id),
     gcTime: 0,
-    // A pause or withdrawal made elsewhere is re-checked the moment the viewer
-    // returns to the app, instead of leaving old figures on screen.
-    refetchOnWindowFocus: true,
+    retry: false,
+    networkMode: 'always',
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
+    refetchInterval: 60000,
   });
+  const incoming = useMemo(() => ({ data: rawData, confirmedAt: dataUpdatedAt }), [rawData, dataUpdatedAt]);
+  const freshness = useResumeSnapshot({
+    scope: queryKey.join(':'), incoming, sourceTime: rawData?.glucose?.latest?.recorded_at || rawData?.computed_at,
+    cancel: () => client.cancelQueries({ queryKey, exact: true }),
+    refresh: (options) => refreshSnapshotQueries(client, [queryKey], () => ({
+      data: client.getQueryData(queryKey), confirmedAt: client.getQueryState(queryKey)?.dataUpdatedAt || 0,
+    }), options),
+  });
+  const data = freshness.snapshot.data;
 
   const label = sharerName(relationship.sharer_display_name);
   const status = describeStatus(relationship.status);
-  const scopes = relationship.scopes || {};
+  const scopes = data?.relationship?.scopes || relationship.scopes || {};
 
   // A refused read (revoked, paused, expired) always wins over any cached copy.
-  const blocked = Boolean(error) || !isActive;
-  const blockedReason = error ? describeSharingError(error) : describeProjectionReason(relationship.status);
+  const blocked = Boolean(error) || !isActive || (!freshness.pending && !freshness.verified);
+  const blockedReason = error ? describeSharingError(error) : !isActive ? describeProjectionReason(relationship.status) : 'The shared view could not be confirmed. Reconnect and return to try again.';
 
   return (
-    <div className="space-y-4">
+    <div ref={freshness.rootRef} data-freshness={freshness.pending ? 'updating' : 'ready'} className="space-y-4">
       <div className="flex items-baseline gap-2 px-1">
         <h1 className="min-w-0 flex-1 truncate text-lg font-semibold" style={{ color: "#fdf9f2" }}>
           {label}
@@ -85,7 +100,9 @@ export default function SharerDashboard({ relationship, onOpenPrefs }) {
       )}
 
       {!blocked && data && (
-        <>
+        <div className="resume-sensitive relative" aria-busy={freshness.pending}>
+          <p className="resume-placeholder absolute inset-x-0 top-0 rounded-2xl bg-paper p-4 text-sm text-ink" role="status">Updating the shared view</p>
+          <div className="resume-values space-y-4" aria-hidden={freshness.pending || undefined}>
           {!scopes.glucose && !scopes.insulin && !scopes.location && (
             <SectionCard label="Nothing shared yet">
               <p className="text-sm" style={{ color: "#746959" }}>
@@ -97,7 +114,7 @@ export default function SharerDashboard({ relationship, onOpenPrefs }) {
 
           {scopes.glucose && (
             <SectionCard label="Glucose">
-              <SharedGlucosePanel glucose={data.glucose} reason={data.glucose_reason} />
+              <SharedGlucosePanel glucose={data.glucose} reason={data.glucose_reason} now={freshness.now} staleMinutes={data.stale_minutes} />
               {data.glucose && (
                 <div className="pt-3">
                   <SharedGlucoseChart
@@ -162,20 +179,21 @@ export default function SharerDashboard({ relationship, onOpenPrefs }) {
               </p>
             </SectionCard>
           )}
-        </>
+          </div>
+        </div>
       )}
 
       <SharedInsulinSheet
-        open={insulinOpen}
+        open={insulinOpen && !blocked && !freshness.pending}
         onClose={() => setInsulinOpen(false)}
-        insulin={data?.insulin}
+        insulin={blocked ? null : data?.insulin}
         reason={data?.insulin_reason}
         sharerLabel={label}
       />
       <SharedLocationSheet
-        open={locationOpen}
+        open={locationOpen && !blocked && !freshness.pending}
         onClose={() => setLocationOpen(false)}
-        location={data?.location}
+        location={blocked ? null : data?.location}
         reason={data?.location_reason}
         sharerLabel={label}
       />

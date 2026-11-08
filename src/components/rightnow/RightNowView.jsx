@@ -21,6 +21,9 @@ const TAB_ORDER = TABS.map((t) => t.id);
  * renders the single-meal review exactly as before.
  */
 export default function RightNowView({
+  freshnessPending = false,
+  currentStatusUnavailable = false,
+  resumeRevision = 0,
   totalUnits,
   breakdown,
   basalRegimenStatus,
@@ -47,7 +50,7 @@ export default function RightNowView({
           At a Glance
         </span>
         <h1 className="hdr mt-2" style={{ color: "#f7f1e8" }}>
-          Right <em>Now</em>
+          {currentStatusUnavailable ? <>Saved <em>view</em></> : <>Right <em>Now</em></>}
         </h1>
       </div>
 
@@ -85,9 +88,13 @@ export default function RightNowView({
       </div>
 
       {/* Tab content: slides in from the direction of the incoming tab. */}
-      <div className="mt-4">
+      <div className="mt-4 resume-sensitive relative" aria-busy={freshnessPending}>
+          <p className="resume-placeholder absolute inset-x-0 top-4 rounded-xl bg-paper p-4 text-sm text-ink pointer-events-none" role="status">Updating your saved view</p>
+          {currentStatusUnavailable && !freshnessPending && <p className="mb-2 text-xs text-field-ink">Based on last saved logs, not a confirmed current glucose picture.</p>}
           <motion.div
             key={tab}
+            className="resume-values"
+            aria-hidden={freshnessPending || undefined}
             initial={{ opacity: 0, x: activeIndex === 0 ? -24 : 24 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.28, ease: [0.32, 0.72, 0.25, 1] }}
@@ -96,6 +103,7 @@ export default function RightNowView({
               <CardErrorBoundary>
                 <IobAtAGlance
                   totalUnits={totalUnits}
+                  resumeRevision={resumeRevision}
                   breakdown={breakdown}
                   basalRegimenStatus={basalRegimenStatus}
                   onEditDose={onEditDose}
