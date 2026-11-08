@@ -11,6 +11,7 @@ import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
 import AppleIcon from "@/components/AppleIcon";
 import { toast } from "@/components/ui/use-toast";
+import { safeReturnTo } from "@/lib/authReturnTo";
 
 // How long a freshly emailed code stays usable, per the platform's own policy.
 const CODE_VALIDITY_MINUTES = 10;
@@ -77,7 +78,8 @@ export default function Register() {
       localStorage.setItem("stackd_auth_provider", "email");
       base44.auth.setToken(token);
       dispatchOtp({ type: "verified" });
-      window.location.href = "/";
+      // Carries an MCP OAuth request (?returnTo=) through sign-up to consent.
+      window.location.href = safeReturnTo();
     } catch (err) {
       dispatchOtp({ type: "failed", message: err?.message });
     }
@@ -102,12 +104,12 @@ export default function Register() {
 
   const handleGoogle = () => {
     localStorage.setItem("stackd_auth_provider", "google");
-    base44.auth.loginWithProvider("google", "/");
+    base44.auth.loginWithProvider("google", safeReturnTo());
   };
 
   const handleApple = () => {
     localStorage.setItem("stackd_auth_provider", "apple");
-    base44.auth.loginWithProvider("apple", "/");
+    base44.auth.loginWithProvider("apple", safeReturnTo());
   };
 
   if (showOtp) {

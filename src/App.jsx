@@ -13,6 +13,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import OAuthConsent from './pages/OAuthConsent';
 import Landing from './pages/Landing';
 import Install from './pages/Install';
 import PrivacyPage from './pages/PrivacyPage';
@@ -254,6 +255,9 @@ const AuthenticatedApp = () => {
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        {/* MCP OAuth consent — unguarded on purpose: the page handles the
+            signed-out case itself and preserves the request in returnTo. */}
+        <Route path="/oauth/consent" element={<OAuthConsent />} />
         <Route path="/" element={<Landing />} />
         <Route path="/install" element={<Install />} />
         <Route path="/privacy" element={<PrivacyPage />} />
@@ -301,6 +305,7 @@ const AuthenticatedApp = () => {
             <Route path="/shared" element={<FollowingHome />} />
             <Route path="/follow" element={<FollowInvite />} />
           </Route>
+          <Route path="/oauth/consent" element={<OAuthConsent />} />
           <Route path="/install" element={<Install />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
@@ -387,6 +392,7 @@ const AuthenticatedApp = () => {
             <Route path="/settings/support-inbox" element={<SupportInbox />} />
             <Route path="/split-plan/:planId" element={<SplitPlanReview />} />
           </Route>
+          <Route path="/oauth/consent" element={<OAuthConsent />} />
           <Route path="/install" element={<Install />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

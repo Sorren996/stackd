@@ -72,12 +72,12 @@ export default function Login() {
 
   const handleGoogle = () => {
     localStorage.setItem("stackd_auth_provider", "google");
-    base44.auth.loginWithProvider("google", "/");
+    base44.auth.loginWithProvider("google", safeReturnTo());
   };
 
   const handleApple = () => {
     localStorage.setItem("stackd_auth_provider", "apple");
-    base44.auth.loginWithProvider("apple", "/");
+    base44.auth.loginWithProvider("apple", safeReturnTo());
   };
 
   return (
