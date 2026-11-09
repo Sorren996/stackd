@@ -16,6 +16,9 @@ export default function DailyBalanceSection({
   readings,
   targetLow,
   targetHigh,
+  loading = false,
+  unavailable = false,
+  coverage = '',
 }) {
   const [open, setOpen] = useState(false);
   const state = getDailyBalanceState(percentage);
@@ -52,11 +55,12 @@ export default function DailyBalanceSection({
           )}
           {isGathering && (
             <span className="text-sm font-medium" style={{ color: "#7a6b5d" }}>
-              Still gathering today
+              {hasData ? 'Saved picture so far' : loading ? 'Loading today’s saved history…' : unavailable ? 'Saved history unavailable' : 'Waiting for more readings today'}
             </span>
           )}
         </div>
 
+        {hasData && coverage && <p className="mt-2 px-1 text-xs text-muted-foreground">{coverage}</p>}
         {hasData && (
           <div className="mt-3 px-1">
             <BalanceSpectrum percentage={percentage} />
@@ -82,8 +86,9 @@ export default function DailyBalanceSection({
       </button>
 
       <DailyBalanceDetailSheet
-        open={open}
+        open={open && hasData}
         onClose={() => setOpen(false)}
+        coverage={coverage}
         percentage={percentage}
         breakdown={breakdown}
         readings={readings}

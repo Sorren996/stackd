@@ -87,7 +87,7 @@ export default function Dashboard() {
     }
   }, [rawLatestGlucoseRows, isFetchedAfterMount, latestQuerySuccess, user.id]);
 
-  const { data: rawGlucoseReadings = EMPTY } = useQuery({
+  const { data: rawGlucoseReadings = EMPTY, dataUpdatedAt: historyLoadedAt, isFetching: historyFetching, error: historyError } = useQuery({
     queryKey: ["glucose-readings", "graph", user.id],
     queryFn: ({ signal }) => boundedRead(() => base44.entities.GlucoseReading.filter({ $or: [{ user_id: user.id }, { created_by_id: user.id }], recorded_at: { $gte: new Date(Date.now() - FOURTEEN_DAYS_MS).toISOString() } }, "-recorded_at", 5000), signal),
     retry: false,
@@ -95,7 +95,7 @@ export default function Dashboard() {
     staleTime: GRAPH_DATA_MS,
     refetchInterval: dexcomConnected ? 120_000 : false,
     gcTime: 30 * 60 * 1000,
-    placeholderData: () => queryClient.getQueryData(["glucose-readings", "graph", user.id]) ?? rawLatestGlucoseRows,
+    refetchOnMount: 'always',
   });
 
 
@@ -132,15 +132,18 @@ export default function Dashboard() {
   const freshness = usePatientResumeSnapshot(user.id, {
     doses: rawDoses, latestGlucoseRows: rawLatestGlucoseRows, glucoseReadings: rawGlucoseReadings,
     carbEntries: rawCarbEntries, graphDosesSource: rawGraphDoses, graphCarbsSource: rawGraphCarbs,
-    confirmedAt: latestGlucoseUpdatedAt, verified: latestQuerySuccess,
+    confirmedAt: latestGlucoseUpdatedAt, verified: latestQuerySuccess && isFetchedAfterMount,
   }, requestRefresh);
+  const historyReady = historyLoadedAt > 0 && !freshness.blocked;
   const { doses, latestGlucoseRows, glucoseReadings, carbEntries, graphDosesSource, graphCarbsSource } = freshness.snapshot;
   const now = freshness.now;
   const mergedGraphReadings = useMemo(() => {
     const byId = new Map(glucoseReadings.map(r => [r.id, r]));
     latestGlucoseRows.forEach(r => byId.set(r.id, r));
-    return [...byId.values()].sort((a, b) => Date.parse(b.recorded_at) - Date.parse(a.recorded_at));
-  }, [glucoseReadings, latestGlucoseRows]);
+    return [...byId.values()].filter(r => Number.isFinite(Number(r.value)) && Number(r.value) > 0 &&
+      Number.isFinite(Date.parse(r.recorded_at)) && Date.parse(r.recorded_at) <= now)
+      .sort((a, b) => Date.parse(b.recorded_at) - Date.parse(a.recorded_at));
+  }, [glucoseReadings, latestGlucoseRows, now]);
   const projection = useLatestProjection({
     latestReadingTime: latestGlucoseRows[0]?.recorded_at || null,
     latestMealTime: carbEntries[0]?.consumed_at || null,
@@ -292,7 +295,7 @@ export default function Dashboard() {
     return age < TWO_DAYS_MS;
   }), [doses, now]);
 
-  const heroGlucoseReadings = mergedGraphReadings.length ? mergedGraphReadings : latestGlucoseRows;
+  const heroGlucoseReadings = mergedGraphReadings;
 
   const recentGlucose = useMemo(() => heroGlucoseReadings.filter((reading) => {
     const age = now - new Date(reading.recorded_at).getTime();
@@ -357,7 +360,7 @@ export default function Dashboard() {
   }, [recentDoses, recentGlucose, recentCarbs]);
 
   const shouldShowEmptyState =
-    !freshness.pending && freshness.verified && freshness.secondaryVerified &&
+    historyReady && !historyError && !freshness.pending && freshness.verified && freshness.secondaryVerified &&
     !loadingDoses &&
     !loadingLatestGlucose &&
     !loadingCarbs &&
@@ -366,7 +369,7 @@ export default function Dashboard() {
     recentCarbs.length === 0;
 
   return (
-    <div ref={freshness.rootRef} data-freshness={freshness.pending ? 'updating' : 'ready'} className="dashboard-page relative w-full max-w-full min-w-0 space-y-0 overflow-x-hidden">
+    <div data-freshness="ready" className="dashboard-page relative w-full max-w-full min-w-0 space-y-0 overflow-x-hidden">
       <EditLogSheet
         log={editingLog}
         onClose={() => setEditingLog(null)}
@@ -395,7 +398,12 @@ export default function Dashboard() {
               doses={recentDoses}
               latestGlucose={latestGlucose}
               liveReadingPending={freshness.pending}
+              liveReadingRefreshing={freshness.refreshing}
               liveReadingUnverified={!freshness.verified}
+              balanceReadings={glucoseReadings}
+              historyReady={historyReady && rawGlucoseReadings.length < 5000}
+              historyLoading={historyFetching}
+              historyError={Boolean(historyError) || freshness.blocked}
               snapshotNow={now}
               resumeRevision={freshness.revision}
               secondaryUnverified={!freshness.secondaryVerified}
@@ -407,7 +415,10 @@ export default function Dashboard() {
               graphSlot={
                 <ActivityGraph
                   doses={graphDoses}
-                  glucoseReadings={graphGlucose}
+                  glucoseReadings={historyReady ? graphGlucose : EMPTY}
+                  historyReady={historyReady}
+                  historyLoading={historyFetching}
+                  historyError={Boolean(historyError) || freshness.blocked}
                   carbEntries={graphCarbs}
                   onSelectLog={setEditingLog}
                   onDeleteLog={handleDeleteLog}

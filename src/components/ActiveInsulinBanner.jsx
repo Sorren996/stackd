@@ -36,11 +36,12 @@ import DailyBalanceSection from "./dailybalance/DailyBalanceSection";
 import CurrentGlucoseNote from "./glucose/CurrentGlucoseNote";
 import CurrentGlucoseCard from "./graph/CurrentGlucoseCard";
 import LiveReadingPlaceholder from "./graph/LiveReadingPlaceholder";
-import { filterReadingsForStats, computeTimeInRangeFromReadings } from "@/lib/timeInRange";
+import { filterReadingsForStats } from "@/lib/timeInRange";
+import { homeDaySummary } from '@/lib/homeDaySummary';
 import { resolveGlucoseTrend } from "@/lib/glucoseTrend";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 import { useGlucoseStaleness } from "@/hooks/useGlucoseStaleness";
-import { getLatestDexcomReading } from "@/lib/glucoseStaleness";
+import { getLatestDexcomReading, STALE_READING_MINUTES } from "@/lib/glucoseStaleness";
 import StaleReadingBanner from "@/components/StaleReadingBanner";
 import { isRescueCarbEntry } from "@/lib/rescueCarbDetection";
 import { GLUCOSE_STATUS_COLORS, classifyGlucose, readHighReference, FIXED_LOW_REFERENCE, getCurrentGlucoseZone, computeGlucoseDirection, describeDirection, getCurrentGlucoseNote } from "@/lib/glucoseStatus";
@@ -710,7 +711,7 @@ function MetricCard({ label, value, sub, status, color, tooltipId, openTooltip, 
 
 }
 
-export default function ActiveInsulinBanner({ doses = [], latestGlucose, liveReadingPending = false, liveReadingUnverified = false, snapshotNow, resumeRevision = 0, secondaryUnverified = false, glucoseReadings = [], carbEntries = [], graphSlot = null, onEditGlucose = null, onEditDose = null, onDeleteDose = null, connectBanner = null }) {
+export default function ActiveInsulinBanner({ doses = [], latestGlucose, liveReadingPending = false, liveReadingRefreshing = false, liveReadingUnverified = false, snapshotNow, resumeRevision = 0, secondaryUnverified = false, glucoseReadings = [], balanceReadings = glucoseReadings, historyReady = true, historyLoading = false, historyError = false, carbEntries = [], graphSlot = null, onEditGlucose = null, onEditDose = null, onDeleteDose = null, connectBanner = null }) {
   const [insulinSettings, setInsulinSettings] = useState(readInsulinSettings);
   const [targetRange, setTargetRange] = useState(readTargetRange);
   const [centerGlucoseStatus, setCenterGlucoseStatus] = useState(null);
@@ -934,17 +935,12 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, liveRea
     return Math.round(readingsToday.reduce((sum, reading) => sum + reading.value, 0) / readingsToday.length);
   }, [safeGlucoseReadings, dexcomConnected]);
 
-  const comfortZonePercentage = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const readingsToday = filterReadingsForStats(
-      safeGlucoseReadings.filter((reading) => new Date(reading.recorded_at) >= today),
-      dexcomConnected
-    );
-    // Always use point-count TIR so the headline matches the subtext
-    // breakdown and the Rhythm/Journal pages, which all use the same method.
-    return computeTimeInRangeFromReadings(readingsToday, insulinSettings.targetLow, insulinSettings.targetHigh);
-  }, [safeGlucoseReadings, insulinSettings.targetLow, insulinSettings.targetHigh, dexcomConnected]);
+  const daySummary = useMemo(() => homeDaySummary(balanceReadings, {
+    ready: historyReady, now: snapshotNow || nowMinute * MINUTE_MS,
+    targetLow: insulinSettings.targetLow, targetHigh: insulinSettings.targetHigh,
+    breakdownLow: targetRange.low, breakdownHigh: targetRange.high,
+  }), [balanceReadings, historyReady, snapshotNow, nowMinute, insulinSettings.targetLow, insulinSettings.targetHigh, targetRange.low, targetRange.high]);
+  const { percentage: comfortZonePercentage, breakdown: dailyTimeBreakdown, isGathering } = daySummary;
 
   // The sensor's own arrow wins when the source supplies one — that is what
   // makes a genuine Dexcom double-down draw as a double-down. Both Dexcom
@@ -970,8 +966,9 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, liveRea
   // When the latest reading is older than 15 minutes the in-range status is no
   // longer reassurance, so it falls back to a neutral label.
   const STALE_COMFORT_MINUTES = 15;
-  const comfortLabelStale =
-  glucoseReadingAgeMinutes != null && glucoseReadingAgeMinutes > STALE_COMFORT_MINUTES;
+  const isCgmReading = ['dexcom', 'dexcom_share'].includes(latestGlucose?.source);
+  const comfortLabelStale = glucoseReadingAgeMinutes != null &&
+    (isCgmReading ? glucoseReadingAgeMinutes >= STALE_READING_MINUTES : glucoseReadingAgeMinutes > STALE_COMFORT_MINUTES);
   // Zone, direction, and note copy are all withheld whenever the data is old —
   // by the CGM stale flag or the 15-minute age gate — so nothing reads as
   // current when it isn't.
@@ -1017,34 +1014,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, liveRea
     return "In comfort zone";
   };
 
-  const dailyTimeBreakdown = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const readingsToday = filterReadingsForStats(
-      safeGlucoseReadings.filter((reading) => new Date(reading.recorded_at) >= today),
-      dexcomConnected
-    );
-    if (!readingsToday.length) return null;
-    const intervalMin = 5;
-    const totalMin = readingsToday.length * intervalMin;
-    const inR = readingsToday.filter((r) => r.value >= targetRange.low && r.value <= targetRange.high).length;
-    const above = readingsToday.filter((r) => r.value > targetRange.high).length;
-    const below = readingsToday.filter((r) => r.value < targetRange.low).length;
-    const fmt = (m) => {
-      if (m < 60) return `${m}m`;
-      const h = Math.floor(m / 60);
-      const r = m % 60;
-      return r ? `${h}h ${r}m` : `${h}h`;
-    };
-    return {
-      inRange: fmt(inR * intervalMin),
-      above: fmt(above * intervalMin),
-      below: fmt(below * intervalMin),
-      inRangeMin: inR * intervalMin,
-      aboveMin: above * intervalMin,
-      belowMin: below * intervalMin
-    };
-  }, [safeGlucoseReadings, targetRange.low, targetRange.high, dexcomConnected]);
+
 
   const dexcomModel = useMemo(() => {
     try {
@@ -1054,19 +1024,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, liveRea
     }
   }, []);
 
-  // Check if today's data is still gathering (less than 3 hours of readings)
-  const todayReadingsSpanMs = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const readingsToday = filterReadingsForStats(
-      safeGlucoseReadings.filter((reading) => new Date(reading.recorded_at) >= today),
-      dexcomConnected
-    );
-    if (readingsToday.length < 2) return 0;
-    const times = readingsToday.map((r) => new Date(r.recorded_at).getTime());
-    return Math.max(...times) - Math.min(...times);
-  }, [safeGlucoseReadings, dexcomConnected]);
-  const isGathering = todayReadingsSpanMs < 3 * 60 * 60 * 1000;
+
 
   return (
     <div className="space-y-5">
@@ -1078,10 +1036,12 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, liveRea
           
         </div>
 
-        <div className="section-label mt-5">Current Glucose</div>
-        <div className="resume-sensitive relative min-h-[132px]" aria-busy={liveReadingPending}>
-          <div className="resume-placeholder absolute inset-x-0 top-3 pointer-events-none"><LiveReadingPlaceholder /></div>
-          <div className="resume-values" aria-hidden={liveReadingPending || undefined}>
+        <div className="section-label mt-5 flex items-center justify-between">
+          <span>{statusCopyStale ? 'Saved Glucose' : 'Current Glucose'}</span>
+          {liveReadingRefreshing && latestGlucose && <span className="normal-case tracking-normal font-normal">Refreshing…</span>}
+        </div>
+        <div className="relative min-h-[132px]" aria-busy={liveReadingRefreshing}>
+          {liveReadingPending && !latestGlucose ? <LiveReadingPlaceholder /> : <div>
         <AnchorNumber
           value={glucoseValue != null ? formatGlucose(glucoseValue) : "-"}
           unit={glucoseUnitLabel()}
@@ -1089,7 +1049,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, liveRea
           trendIcon={!statusCopyStale && glucoseValue != null && trend ? <TrendMark trend={trend} /> : null}
           trendColor={inRange ? "#3f3830" : glucoseColor}
           subcaption={
-          <span className="font-serif-italic">{latestGlucose ? 'reading ' : ''}{(() => {
+          <span className="font-serif-italic" title={Number.isFinite(sourceTime) ? new Date(sourceTime).toLocaleString() : undefined}>{latestGlucose ? 'reading ' : ''}{(() => {
               if (!Number.isFinite(sourceTime) || sourceTime > Date.now()) return 'Time unavailable';
               const mins = Math.max(0, Math.round((nowMinute * MINUTE_MS - new Date(latestGlucose.recorded_at).getTime()) / 60000));
               if (mins < 1) return "just now";
@@ -1101,14 +1061,17 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, liveRea
         <StaleReadingBanner visible={isGlucoseStale} /> :
         !statusCopyStale && <CurrentGlucoseNote note={glucoseNote} tone={glucoseZone.zone} />
         )}
-          </div>
+          </div>}
         </div>
 
         <DailyBalanceSection
           percentage={comfortZonePercentage}
           breakdown={dailyTimeBreakdown}
           isGathering={isGathering}
-          readings={safeGlucoseReadings}
+          loading={!historyReady && historyLoading}
+          unavailable={historyError || !historyReady && !historyLoading}
+          coverage={daySummary.coverage}
+          readings={daySummary.readings}
           targetLow={targetRange.low}
           targetHigh={targetRange.high} />
       </DashboardCard>
@@ -1131,7 +1094,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, liveRea
 
       {/* Right Now — at-a-glance combined IOB + Meal Review */}
       <RightNowView
-        freshnessPending={liveReadingPending}
+        freshnessPending={false}
         resumeRevision={resumeRevision}
         currentStatusUnavailable={statusCopyStale || secondaryUnverified}
         totalUnits={activeUnits}

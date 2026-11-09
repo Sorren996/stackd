@@ -319,7 +319,7 @@ function FilterDropdown({ filters, onChange, anchorRect }) {
 
 }
 
-export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries = [], onSelectLog = null, onDeleteLog = null, glucoseReadOnly = false, projection = null, snapshotNow, resumeRevision = 0 }) {
+export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries = [], onSelectLog = null, onDeleteLog = null, glucoseReadOnly = false, projection = null, snapshotNow, resumeRevision = 0, historyReady = true, historyLoading = false, historyError = false }) {
   const previousResume = useRef(resumeRevision);
   const previousNowPosition = useRef(null);
   const [showFilter, setShowFilter] = useState(false);
@@ -1241,7 +1241,12 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     };
   }, [nowScrollLeft, latestGlucoseBucket, filters.glucose, glucoseLinePoints.length, positionedMonitoringIntervals, isGlucoseStale, glucoseUnits, resumeRevision]);
 
-  if (!doses.length && !glucoseReadings.length && !carbEntries.length) return null;
+  if (!historyReady || (!doses.length && !glucoseReadings.length && !carbEntries.length)) {
+    return <div ref={containerRef} className="flex min-h-[240px] items-center justify-center px-5 text-sm text-muted-foreground" role="status">
+      {!historyReady ? (historyLoading ? 'Loading saved history…' : 'Saved history is unavailable right now.') :
+        historyError ? 'Saved history is unavailable right now.' : 'No readings or logs in this window yet.'}
+    </div>;
+  }
 
   // Range-driven tick count: 3h/6h → 1h interval, 12h → 2h, 24h → 4h.
   // Prevents hundreds of duplicate hour labels from flooding the DOM.

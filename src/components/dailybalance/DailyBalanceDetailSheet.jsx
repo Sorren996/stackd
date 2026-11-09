@@ -47,6 +47,7 @@ export default function DailyBalanceDetailSheet({
   readings,
   targetLow,
   targetHigh,
+  coverage = '',
 }) {
   const state = getDailyBalanceState(percentage);
   const hasData = percentage != null && Number.isFinite(percentage);
@@ -63,6 +64,7 @@ export default function DailyBalanceDetailSheet({
           <p className="mt-1 text-xs" style={{ color: PALETTE.faint }}>
             {formatDate()}
           </p>
+          {coverage && <p className="mt-1 text-xs text-muted-foreground">{coverage}</p>}
         </div>
 
         {/* Hero: percentage + state */}
