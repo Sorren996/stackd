@@ -1,5 +1,15 @@
-// The live resting offset is the native scroll limit, with visible projection
-// space but no scrollable future area or delayed snap-back.
+// The chart's resting position.
+//
+// Two symptoms this guards, in opposite directions:
+//   • a bounce that resolved to the far right of the content, leaving the newest
+//     reading parked at the right edge with the projection tail cut off; and
+//   • a correction that ran mid-gesture, shaking the now-guide while the finger
+//     was still down.
+//
+// So: the resting offset is the centre of the viewport, the content keeps its
+// full width so the tail is visible, and only a finished gesture may be pulled
+// back to rest.
+
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
@@ -24,35 +34,16 @@ test("at rest the newest reading sits in the horizontal centre", () => {
 
   assert.equal(restingScrollLeft, latestX - viewport / 2);
   assert.equal(Math.round(latestX - restingScrollLeft), Math.round(viewport / 2));
-  assert.equal(maxScrollLeft, restingScrollLeft, "no scrollable future zone");
-  assert.ok(chartWidth - (restingScrollLeft + viewport) > 0, "projection retains its drawing domain");
+  // There is still chart to the right of it: the projection tail is on screen.
+  assert.ok(maxScrollLeft > restingScrollLeft, "the future zone stays reachable");
+  assert.ok(chartWidth - (restingScrollLeft + viewport) > 0, "tail beyond the right edge exists");
 });
 
-test("native content ends half a viewport beyond the latest drawn point", () => {
+test("the content keeps the chart's full width, so nothing is clipped at the reading", () => {
   const chartWidth = 40 * viewport;
-  const latestX = 0.9 * chartWidth;
-  const { contentWidth, maxScrollLeft } = resolveScrollBounds({ chartWidth, containerWidth: viewport, latestX });
-  assert.equal(contentWidth, latestX + viewport / 2);
-  assert.equal(contentWidth - viewport, maxScrollLeft);
+  const { contentWidth } = resolveScrollBounds({ chartWidth, containerWidth: viewport, latestX: 0.9 * chartWidth });
+  assert.equal(contentWidth, chartWidth);
 });
-
-for (const hours of [3, 6, 12]) {
-  test(`${hours}h first load, new reading and shrinking extent share one live boundary`, () => {
-    const scale = viewport / (hours * 60 * 60 * 1000);
-    const geometry = (time) => resolveScrollBounds({
-      chartWidth: (time + hours * 60 * 60 * 1000) * scale,
-      containerWidth: viewport,
-      latestX: time * scale,
-    });
-    const latest = 7 * 24 * 60 * 60 * 1000;
-    for (const time of [latest, latest + 300000, latest - 300000]) {
-      const edge = geometry(time);
-      assert.equal(edge.restingScrollLeft, edge.maxScrollLeft);
-      assert.ok(Math.abs(edge.contentWidth - viewport - edge.maxScrollLeft) < 1e-8);
-      assert.ok(Math.abs(time * scale - edge.maxScrollLeft - viewport / 2) < 1e-8);
-    }
-  });
-}
 
 test("near the start of the chart the resting offset cannot go negative", () => {
   const { restingScrollLeft } = resolveScrollBounds({ chartWidth: 5 * viewport, containerWidth: viewport, latestX: 100 });
