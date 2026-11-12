@@ -1,7 +1,7 @@
 import { useState } from "react";
 import BalanceSpectrum from "./BalanceSpectrum";
 import DailyBalanceDetailSheet from "./DailyBalanceDetailSheet";
-import { getDailyBalanceState } from "@/lib/dailyBalanceState";
+import { RANGE_NEUTRAL_LABEL, getRangeSummaryQualifier } from "@/lib/dailyBalanceState";
 
 // Redesigned Daily Balance section for the home "Today" card.
 //
@@ -21,7 +21,7 @@ export default function DailyBalanceSection({
   coverage = ''
 }) {
   const [open, setOpen] = useState(false);
-  const state = getDailyBalanceState(percentage);
+  const qualifier = getRangeSummaryQualifier(percentage);
   const hasData = percentage != null && Number.isFinite(percentage);
   const displayValue = hasData ? `${Math.floor(percentage)}%` : "--";
 
@@ -31,11 +31,11 @@ export default function DailyBalanceSection({
         type="button"
         onClick={() => hasData && setOpen(true)}
         className="mt-6 block w-full text-left"
-        aria-label="Open Daily Balance detail">
+        aria-label="Open time in your comfort zone detail">
         
-        <div className="section-label">Daily Balance</div>
+        <div className="section-label">{RANGE_NEUTRAL_LABEL}</div>
 
-        <div className="mt-2 flex items-baseline gap-2 px-1">
+        <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1 px-1">
           <span
             className="tabular-nums"
             style={{
@@ -48,9 +48,9 @@ export default function DailyBalanceSection({
             
             {displayValue}
           </span>
-          {hasData && !isGathering &&
-          <span className="text-sm font-medium" style={{ color: "#7a6b5d" }}>
-              {state.label}
+          {hasData && !isGathering && qualifier &&
+          <span className="text-sm font-medium leading-snug" style={{ color: "#7a6b5d" }}>
+              {qualifier}
             </span>
           }
           {isGathering &&
@@ -59,6 +59,12 @@ export default function DailyBalanceSection({
             </span>
           }
         </div>
+
+        {hasData && !isGathering &&
+        <p className="mt-1 px-1 text-[11px]" style={{ color: "#746959" }}>
+            So far today
+          </p>
+        }
 
         {hasData && coverage && <p className="mt-2 px-1 text-xs text-muted-foreground hidden">{coverage}</p>}
         {hasData &&

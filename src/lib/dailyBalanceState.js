@@ -1,26 +1,36 @@
-// Daily Balance PRESENTATION helpers.
+// Range-summary PRESENTATION helpers.
 //
-// These are display-only. The underlying Daily Balance percentage and the
-// time-in-range / above / below minutes remain authoritative — they are
-// computed in ActiveInsulinBanner via computeTimeInRangeFromReadings and the
+// These are display-only. The underlying percentage and the time-in-zone /
+// above / below minutes remain authoritative — they are computed in
+// ActiveInsulinBanner via computeTimeInRangeFromReadings and the
 // dailyTimeBreakdown useMemo. Nothing here re-scores the day or creates a
 // second calculation system.
+//
+// The percentage says one thing only: how much of the observed time sat inside
+// the person's own configured comfort zone. It is not a day score, a grade, or
+// a statement about stability — rises and dips are a separate question this
+// app does not classify. So the copy names the range and stops there.
 
-// Four presentation thresholds for the state label. These do NOT modify the
-// Daily Balance calculation — they only describe the current number.
+export const RANGE_NEUTRAL_LABEL = "Time in your comfort zone";
+export const RANGE_MOSTLY_LABEL = "Mostly in your comfort zone";
+
+// The existing 70% tier (previously "Mostly steady") is kept exactly — only
+// the words changed. At or above it the phrase may carry the qualifier; below
+// it the neutral heading stands alone and the percentage plus the above/below
+// breakdown do the explaining. An empty or unknown result is never described
+// as "mostly" anything.
 export function getDailyBalanceState(percentage) {
   if (percentage == null || !Number.isFinite(percentage)) {
     return { label: "Waiting for today" };
   }
-  // Describes the day from the same in-range percentage shown above the
-  // breakdown, so the label can never disagree with it.
-  // >= 85% → Balanced day, 70–84% → Mostly steady, 50–69% → Mixed day,
-  // < 50% → Off-balance day. Descriptive, never judgmental.
-  const p = Math.round(percentage);
-  if (p >= 85) return { label: "Balanced day" };
-  if (p >= 70) return { label: "Mostly steady" };
-  if (p >= 50) return { label: "Mixed day" };
-  return { label: "Off-balance day" };
+  return { label: Math.round(percentage) >= 70 ? RANGE_MOSTLY_LABEL : RANGE_NEUTRAL_LABEL };
+}
+
+// The qualifier on its own, for surfaces that already print the neutral
+// heading and must not repeat it. null whenever there is nothing extra to say.
+export function getRangeSummaryQualifier(percentage) {
+  if (percentage == null || !Number.isFinite(percentage)) return null;
+  return Math.round(percentage) >= 70 ? RANGE_MOSTLY_LABEL : null;
 }
 
 // Named periods of the day, used for the "What shaped today" observation.
@@ -41,7 +51,7 @@ function describePeriod(inRange, above, below) {
   const inRatio = inRange / total;
   const aboveRatio = above / total;
   const belowRatio = below / total;
-  if (inRatio >= 0.7) return "Mostly steady";
+  if (inRatio >= 0.7) return "Mostly in your comfort zone";
   if (aboveRatio >= 0.4 && aboveRatio > belowRatio) return "Mostly above range";
   if (belowRatio >= 0.4 && belowRatio > aboveRatio) return "Mostly below range";
   return "A mix of highs and lows";

@@ -1,6 +1,6 @@
 import Sheet from "@/components/Sheet";
 import BalanceSpectrum from "./BalanceSpectrum";
-import { getDailyBalanceState, describeDayShape } from "@/lib/dailyBalanceState";
+import { RANGE_NEUTRAL_LABEL, getRangeSummaryQualifier, describeDayShape } from "@/lib/dailyBalanceState";
 
 const PALETTE = {
   ink: "#3f3830",
@@ -49,7 +49,7 @@ export default function DailyBalanceDetailSheet({
   targetHigh,
   coverage = ''
 }) {
-  const state = getDailyBalanceState(percentage);
+  const qualifier = getRangeSummaryQualifier(percentage);
   const hasData = percentage != null && Number.isFinite(percentage);
   const displayValue = hasData ? `${Math.floor(percentage)}%` : "--";
   const percents = derivePercents(breakdown, percentage);
@@ -60,9 +60,9 @@ export default function DailyBalanceDetailSheet({
       <div className="flex flex-col overflow-y-auto px-1">
         {/* Header */}
         <div className="px-6 pb-2">
-          <div className="section-label">Daily Balance</div>
+          <div className="section-label">{RANGE_NEUTRAL_LABEL}</div>
           <p className="mt-1 text-xs" style={{ color: PALETTE.faint }}>
-            {formatDate()}
+            {formatDate()}{hasData ? " \u00b7 so far today" : ""}
           </p>
           
         </div>
@@ -73,9 +73,9 @@ export default function DailyBalanceDetailSheet({
             <span className="anchor-number" style={{ color: PALETTE.ink }}>
               {displayValue}
             </span>
-            {hasData &&
-            <span className="text-sm font-medium" style={{ color: PALETTE.sec }}>
-                {state.label}
+            {hasData && qualifier &&
+            <span className="text-sm font-medium leading-snug" style={{ color: PALETTE.sec }}>
+                {qualifier}
               </span>
             }
           </div>

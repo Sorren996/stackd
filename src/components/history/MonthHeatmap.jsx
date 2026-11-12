@@ -100,9 +100,9 @@ export default function MonthHeatmap({ days, onSelectDay }) {
         ))}
       </div>
       <div className="mt-3 flex items-center justify-center gap-4 text-[9px] font-medium" style={{ color: "#746959" }}>
-        <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: "#4d5742" }} />Steady</span>
+        <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: "#4d5742" }} />Mostly in zone</span>
         <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: "#d58814ff" }} />Mixed</span>
-        <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: "#d33418ff" }} />Hard</span>
+        <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: "#d33418ff" }} />Often out of zone</span>
       </div>
     </div>
   );

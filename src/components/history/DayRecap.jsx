@@ -4,7 +4,7 @@ import { ChevronRight } from "lucide-react";
 import { computeDayGlucoseMetrics } from "@/lib/dayRecapMetrics";
 import { computeMealOutcomes } from "@/lib/dayRecapAnalytics";
 import { buildDayHistoryEvents, findLowestReading, isRescueCarb } from "@/lib/dayHistoryTimeline";
-import { getDailyBalanceState } from "@/lib/dailyBalanceState";
+import { getRangeSummaryQualifier } from "@/lib/dailyBalanceState";
 import { formatGlucose, glucoseUnitLabel } from "@/lib/glucoseUnits";
 import DayGlucoseLine from "./DayGlucoseLine";
 import DayMealSheet from "./DayMealSheet";
@@ -24,7 +24,7 @@ const HOUR_MS = 60 * 60 * 1000;
  * Every number comes from the app's existing calculations:
  *   - computeDayGlucoseMetrics → the same duration-weighted time-in-zone the
  *     Rhythms view and the month list use
- *   - getDailyBalanceState → the approved day-status wording
+ *   - getRangeSummaryQualifier → the approved range wording
  *   - computeMealOutcomes → the same meal analysis the meal review uses
  */
 export default function DayRecap({
@@ -100,12 +100,17 @@ export default function DayRecap({
 
   const hasReadings = metrics.hasData;
   const hasZoneShare = hasReadings && metrics.count >= 2 && metrics.tir != null;
-  const statusLabel = hasZoneShare ? getDailyBalanceState(metrics.tir).label : null;
-  const headline = statusLabel
-    ? `${statusLabel}.`
-    : hasReadings
-      ? "Only one reading."
-      : "No readings recorded.";
+  // Only the "mostly" range wording earns a headline of its own. Below that
+  // tier the neutral heading plus the percentage and its caption carry the
+  // reading, so the day is never graded and nothing is said twice.
+  const rangeQualifier = hasZoneShare ? getRangeSummaryQualifier(metrics.tir) : null;
+  const headline = rangeQualifier
+    ? `${rangeQualifier}.`
+    : hasZoneShare
+      ? null
+      : hasReadings
+        ? "Only one reading."
+        : "No readings recorded.";
 
   const belowZone = Boolean(
     lowestReading && Number.isFinite(targetLow) && lowestReading.value < targetLow
@@ -120,15 +125,17 @@ export default function DayRecap({
     <>
       <div className="editorial-surface rounded-2xl px-5 pb-3 pt-5">
         <p className="text-[10px] font-bold uppercase tracking-[0.16em]" style={{ color: "#746959" }}>
-          {isToday ? "Today so far" : "Your day"}
+          {isToday ? "Today so far" : dayLabel}
         </p>
 
-        <h1
-          className="mt-2 font-serif-italic text-[23px] leading-tight"
-          style={{ color: "#3f3830" }}
-        >
-          {headline}
-        </h1>
+        {headline && (
+          <h1
+            className="mt-2 font-serif-italic text-[23px] leading-tight"
+            style={{ color: "#3f3830" }}
+          >
+            {headline}
+          </h1>
+        )}
 
         {hasZoneShare && (
           <div className="mt-3">

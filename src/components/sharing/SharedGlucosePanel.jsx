@@ -94,10 +94,10 @@ export default function SharedGlucosePanel({ glucose, reason, now = Date.now(), 
 
       <div className="flex items-baseline justify-between border-t pt-2" style={{ borderColor: "#eadccf" }}>
         <span className="text-sm" style={{ color: "#3f3830" }}>
-          Today&apos;s balance
+          Time in their comfort zone
         </span>
-        <span className="text-sm font-medium" style={{ color: "#3f3830" }}>
-          {balance ? `${balance.label} · ${balance.percent}%` : "Not enough data yet"}
+        <span className="text-sm font-medium tabular-nums" style={{ color: "#3f3830" }}>
+          {balance ? `${balance.percent}%` : "Not enough data yet"}
         </span>
       </div>
 

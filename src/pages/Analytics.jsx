@@ -197,7 +197,7 @@ export default function Analytics() {
         </InsightSection>
       ) : (
         <>
-          <InsightSection label="In your comfort zone">
+          <InsightSection label="Time in your comfort zone">
             <ComfortZoneSummary
               percent={stats.inRangePercent}
               belowPercent={stats.belowPercent}
