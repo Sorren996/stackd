@@ -154,7 +154,7 @@ export default function Dashboard() {
   }, [glucoseReadings, latestGlucoseRows, now]);
   // Generation follows the newest reading only; freshness is decided inside
   // the hook by a single clock, so nothing here adds a second age rule.
-  const projection = useLatestProjection({
+  const { projection, abstainNote } = useLatestProjection({
     latestReadingTime: latestGlucoseRows[0]?.recorded_at || null,
   });
 
@@ -440,6 +440,7 @@ export default function Dashboard() {
                   onDeleteLog={handleDeleteLog}
                   glucoseReadOnly={dexcomConnected}
                   projection={freshness.verified ? projection : null}
+                  projectionNote={freshness.verified ? abstainNote : null}
                   snapshotNow={now}
                   resumeRevision={freshness.revision}
                 />

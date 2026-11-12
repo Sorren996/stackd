@@ -298,7 +298,7 @@ function FilterDropdown({ filters, onChange, anchorRect }) {
 
 }
 
-export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries = [], onSelectLog = null, onDeleteLog = null, glucoseReadOnly = false, projection = null, snapshotNow, resumeRevision = 0, historyReady = true, historyLoading = false, historyError = false }) {
+export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries = [], onSelectLog = null, onDeleteLog = null, glucoseReadOnly = false, projection = null, projectionNote = null, snapshotNow, resumeRevision = 0, historyReady = true, historyLoading = false, historyError = false }) {
   const previousResume = useRef(resumeRevision);
   const previousNowPosition = useRef(null);
   // Identity of the scroll container the last anchoring ran against. A newly
@@ -1489,6 +1489,21 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         {/* The chart's full width: at rest the reading is centred and the
             projection tail continues past it to the right. */}
         <div className="relative" style={{ width: contentWidth, height: isCandlestick ? CANDLESTICK_TOTAL_HEIGHT : twoRowHeight }}>
+          {/* No forecast, but a reason. When the engine withholds a trajectory it
+              is because the evidence is genuinely absent, so the future area says
+              so quietly, in the graph's own type — never a bare gap. */}
+          {!projection && projectionNote && (() => {
+            const nowX = (stableNow - domainStart) / totalMs * chartWidth;
+            const noteWidth = 176;
+            const left = Math.min(Math.max(nowX + 14, 8), Math.max(8, chartWidth - noteWidth - 8));
+            return (
+              <div
+                className="pointer-events-none absolute z-[6]"
+                style={{ left, top: GLUCOSE_MARGIN_TOP + 10, width: noteWidth }}>
+                <p className="text-[11px] leading-snug" style={{ color: "#746959" }}>{projectionNote}</p>
+              </div>
+            );
+          })()}
           {isCandlestick ?
               <>
                 <CandlestickView

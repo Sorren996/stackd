@@ -25,9 +25,9 @@ import { getGlucoseBeforeMeal } from "@/lib/glucoseBeforeMeal";
 import {
   generateCarbCurve,
   getActiveCarbsNow,
-  getCarbAbsorptionAt,
-  getMealWindowMinutes } from
+  getCarbAbsorptionAt } from
 "@/lib/carbAbsorption";
+import { mealInPlayWindowMinutes } from "@/lib/mealInPlayWindow";
 import { AnimatePresence, motion } from "framer-motion";
 import DashboardCard from "@/components/dashboard/DashboardCard";
 import RightNowView from "@/components/rightnow/RightNowView";
@@ -210,13 +210,13 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
   let mealGroup = targetGroup;
   if (!mealGroup) {
     const groups = buildMealEventGroups(carbEntries, doses, insulinSettings, glucoseReadings, insulinSettings.targetLow).sort((a, b) => b.mealTime - a.mealTime);
-    // The same window the review and the projection read — no 6-hour floor, so
-    // a shorter absorption window is actually shorter.
-    const maxOutcomeWindowMs = insulinSettings.outcomeWindowMinutes * MINUTE_MS;
-    // Only meals still inside the user's configured review window are tracked.
-    // Once the window ends the review resets to "no meal to review yet".
+    // The one in-play window: scaled by the size of the meal, never shorter than
+    // the review window chosen in Settings. The projection reads the same rule,
+    // so the review never ends while the forecast still has carbs on board.
     // Rescue carbs never open a meal review on their own, regardless of volume.
-    mealGroup = groups.find((group) => now - group.mealTime <= maxOutcomeWindowMs);
+    mealGroup = groups.find(
+      (group) => now - group.mealTime <= mealInPlayWindowMinutes(group.carbs, insulinSettings.outcomeWindowMinutes) * MINUTE_MS
+    );
   }
 
   if (!mealGroup) {
@@ -238,7 +238,9 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
   const mealTime = mealGroup.mealTime;
   const mealFatGrams = (mealGroup.carbEntries || []).reduce((s, e) => s + Number(e.fat_grams || 0), 0);
   const mealProteinGrams = (mealGroup.carbEntries || []).reduce((s, e) => s + Number(e.protein_grams || 0), 0);
-  const outcomeWindowMs = getMealWindowMinutes(mealFatGrams, mealProteinGrams) * MINUTE_MS;
+  // The review's window ends exactly when the meal leaves play, so the chart's
+  // shading, the "still in play" copy and the forecast all agree.
+  const outcomeWindowMs = mealInPlayWindowMinutes(mealGroup.carbs, insulinSettings.outcomeWindowMinutes) * MINUTE_MS;
   const mealStillUnderReview = true;
   const windowStart = mealGroup.start;
   const windowEnd = mealGroup.end;

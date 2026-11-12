@@ -15,6 +15,7 @@ import {
   INSULIN_PROFILES,
 } from "./insulinPharmacology";
 import { isRescueCarbEntry } from "./rescueCarbDetection";
+import { mealInPlayWindowMinutes } from "./mealInPlayWindow";
 
 const MINUTE_MS = 60 * 1000;
 export const DEFAULT_PRE_MEAL_WINDOW_MINUTES = 45;
@@ -172,8 +173,10 @@ export function resolveOutcomeWindowMinutes(insulinSettings = {}) {
 // Returns every meal group still inside its glucose-response window, most
 // recent first — the same window the single-meal review and the projection use.
 export function getActiveMealGroups(groups, insulinSettings, now = Date.now()) {
-  const maxOutcomeWindowMs = resolveOutcomeWindowMinutes(insulinSettings) * MINUTE_MS;
+  const configured = resolveOutcomeWindowMinutes(insulinSettings);
   return groups
-    .filter((g) => now - g.mealTime <= maxOutcomeWindowMs)
+    // Each meal keeps its own size-scaled window, so a large meal stays in play
+    // for its full absorption tail — the same rule the projection reads.
+    .filter((g) => now - g.mealTime <= mealInPlayWindowMinutes(g.carbs, configured) * MINUTE_MS)
     .sort((a, b) => b.mealTime - a.mealTime); // most recent first
 }

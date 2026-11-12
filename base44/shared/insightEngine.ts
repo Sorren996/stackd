@@ -34,6 +34,7 @@ import type { ModelResolution } from "./modelResolution.ts";
 import { extractEffectiveMealParams } from "./modelResolution.ts";
 import type { UncertaintyCalibration } from "./uncertaintyCalibration.ts";
 import { getEmpiricalSigma } from "./uncertaintyCalibration.ts";
+import { mealInPlayWindowMinutes } from "./mealInPlayWindow.ts";
 import {
   projectSuperposition,
   GLUCOSE_FLOOR,
@@ -133,7 +134,13 @@ const DEFAULT_HORIZON_MIN = 60;       // 1-hour forecast (extendable)
 const STEP_MIN = 5;                   // 5-min steps (matches CGM interval)
 const BASE_SIGMA_MGDL = 8;            // base uncertainty at the anchor
 const SIGMA_PER_SQRT_MIN = 1.5;      // uncertainty growth per sqrt(min)
-const MAX_SIGMA_MGDL = 60;            // cap so the band never gets absurd
+// How wide the band can ever get, as a half-width in mg/dL. Uncertainty still
+// grows with the horizon, but it SETTLES towards this ceiling instead of
+// climbing without limit — a linear term reached several hundred mg/dL by two
+// hours, which made every meal-time forecast look unprintable. The ceiling sits
+// inside the range the person's own evaluated residuals actually reach
+// (roughly 60-80 mg/dL at the far horizon).
+const UNCERTAINTY_CEILING_MGDL = 70;
 const MIN_CONFIDENCE = 0.15;
 const ABSTAIN_CONFIDENCE_THRESHOLD = 0.12;
 
@@ -144,10 +151,9 @@ const UNCALIBRATED_MG_PER_GRAM = 3.0;
 // engine's carb appearance rate reconciles with the rendered absorption curve.
 const ABSORPTION_SHAPE_EXP = 3.0;
 
-// Honest abstention. Above this reading-to-reading volatility the shape model
-// cannot keep its own expected error under the internal bar, so it draws
-// nothing rather than a confident-looking line.
-const VOLATILITY_ABSTAIN_SD = 20;
+// Volatility no longer abstains. Uneven readings widen the band instead, so a
+// busy afternoon still gets a forecast that shows how unsure it is rather than
+// no forecast at all.
 
 // A per-class absorption adjustment is only trusted once this many qualifying
 // meals have contributed to it.
@@ -183,6 +189,8 @@ export interface DataQuality {
   activeDoseCount: number;
   calibrated: boolean;
   confounders: string[];
+  /** Reading-to-reading spread over the recent window (mg/dL). */
+  volatilitySd?: number;
 }
 
 export interface ProjectionPoint {
@@ -533,7 +541,11 @@ export function normalizeInputs(
       if (!Number.isFinite(Number(m.carbs)) || Number(m.carbs) <= 0) return false;
       const mealTime = new Date(m.consumed_at).getTime();
       if (!Number.isFinite(mealTime)) return false;
-      return mealTime <= now && mealTime + mealOutcomeWindowMin * MINUTE_MS > now;
+      // Size-scaled in-play window: a big meal keeps arriving for longer than a
+      // flat window allowed, and never less than the review window chosen in
+      // Settings. The same rule shades the graph and writes the meal copy.
+      const inPlayMin = mealInPlayWindowMinutes(m.carbs, mealOutcomeWindowMin);
+      return mealTime <= now && mealTime + inPlayMin * MINUTE_MS > now;
     });
 
   // Active rescue carbs: is_rescue_carb=true, inside their own short window.
@@ -632,6 +644,32 @@ export function resolveHorizonMin(snapshot: NormalizedSnapshot): number {
 
 // ── Uncertainty ─────────────────────────────────────────────────────────────
 
+// A band that climbs without limit is not more honest, it is just unprintable.
+// The raw width is passed through a smooth approach to the ceiling: small
+// widths are almost unchanged, and large ones settle near the ceiling instead of
+// reaching several hundred mg/dL by the far horizon.
+function saturateSigma(rawMgdl: number): number {
+  if (!(rawMgdl > 0)) return 0;
+  return UNCERTAINTY_CEILING_MGDL * (1 - Math.exp(-rawMgdl / UNCERTAINTY_CEILING_MGDL));
+}
+
+// Everything that makes this particular forecast less certain, as extra mg/dL
+// added to the raw half-width before it is saturated. Shared by BOTH sigma
+// paths, so a busy afternoon widens the band whichever calibration produced the
+// base width — several doses on board is a reason to widen, never to abstain.
+function confounderWidening(dq: DataQuality): number {
+  let widen = 0;
+  if (dq.staleReadings) widen += 10;
+  if (dq.gapPresent) widen += 8;
+  if (!dq.calibrated) widen += 6;
+  if (dq.confounders.includes("overlapping_meals")) widen += 5;
+  if (dq.confounders.includes("multiple_active_doses")) widen += 8;
+  if (dq.confounders.includes("active_rescue_carb")) widen += 3;
+  const volatility = Number(dq.volatilitySd);
+  if (Number.isFinite(volatility) && volatility > 0) widen += Math.min(15, volatility * 1.5);
+  return widen;
+}
+
 function computeSigmaAtOffset(
   minOffset: number,
   dq: DataQuality,
@@ -650,6 +688,7 @@ function computeSigmaAtOffset(
   // reading or sensor gap doesn't make us uncertain about the value we just
   // read, it makes us uncertain about the future.
   const dqRamp = Math.min(1, minOffset / 5);
+  const widening = (confounderWidening(dq) + Math.max(0, extraSigmaMgdl)) * dqRamp;
 
   // ── Empirically calibrated sigma (Milestone 4) ──
   // When enough evaluation data exists, use the empirical MAE-by-horizon as
@@ -670,12 +709,7 @@ function computeSigmaAtOffset(
         .sort((a, b) => a - b);
       const firstHorizon = horizonKeys.length > 0 ? horizonKeys[0] : 15;
       const anchorRamp = Math.min(1, Math.sqrt(minOffset / firstHorizon));
-      let sigma = empirical * anchorRamp;
-      // Binary data-quality penalties are still added on top (ramped from 0).
-      if (dq.staleReadings) sigma += 10 * dqRamp;
-      if (dq.gapPresent) sigma += 8 * dqRamp;
-      sigma += extraSigmaMgdl * dqRamp;
-      return Math.min(MAX_SIGMA_MGDL, sigma);
+      return saturateSigma(empirical * anchorRamp + widening);
     }
   }
 
@@ -687,28 +721,16 @@ function computeSigmaAtOffset(
   // we know the current value exactly.
   let sigma = SIGMA_PER_SQRT_MIN * Math.sqrt(minOffset);
 
-  // Widen for data quality issues (ramped from 0).
-  if (dq.staleReadings) sigma += 10 * dqRamp;
-  if (dq.gapPresent) sigma += 8 * dqRamp;
-  if (!dq.calibrated) sigma += 6 * dqRamp;
-  if (dq.confounders.includes("overlapping_meals")) sigma += 5 * dqRamp;
-  if (dq.confounders.includes("multiple_active_doses")) sigma += 4 * dqRamp;
-  // Active rescue carbs add modest timing uncertainty during the rapid-
-  // absorption window — the upward pressure is expected, but the exact
-  // rate of rise is less certain than a calibrated meal response.
-  if (dq.confounders.includes("active_rescue_carb")) sigma += 3 * dqRamp;
+  // Widen for data quality, overlapping meals, several doses, rescue carbs,
+  // volatility and a damped momentum term — all inside the shared term above.
+  sigma += widening;
 
   // Asymmetric widening: a strongly rising net rate has more upside
   // uncertainty; a strongly falling rate has more downside. Ramped from 0.
   const rateInfluence = Math.min(15, Math.abs(netRate) * 3);
   sigma += rateInfluence * dqRamp;
 
-  // A damped momentum term is a centre line the engine deliberately did not
-  // follow. The honest answer to "we are less sure where this is going" is a
-  // wider band, not a harder shift of the centre.
-  sigma += extraSigmaMgdl * dqRamp;
-
-  return Math.min(MAX_SIGMA_MGDL, sigma);
+  return saturateSigma(sigma);
 }
 
 function computeConfidence(
@@ -852,33 +874,13 @@ export function projectGlucose(
     };
   }
 
-  // ── Honest abstention ───────────────────────────────────────────────────
-  // With nothing on board the forecast is simply persistence, and it is drawn
-  // as exactly that: a flat line from the anchor with a widening band, never a
-  // shape invented from the recent slope. Abstention is reserved for readings
-  // too uneven for any shape model to keep its own expected error under the
-  // internal bar.
-  const structuralAbstain = (Number(snapshot.dataQuality.volatilitySd) || 0) > VOLATILITY_ABSTAIN_SD
-    ? "Glucose is moving too unevenly right now to estimate a shape."
-    : null;
-
-  if (structuralAbstain) {
-    return {
-      trajectory: [],
-      anchor: snapshot.anchor,
-      modelVersion,
-      mealModelVersion,
-      generatedAt,
-      horizonMinutes: horizonMin,
-      confidence,
-      abstained: true,
-      abstainReason: structuralAbstain,
-      dataQuality: snapshot.dataQuality,
-      uncertaintySummary: null,
-      inputProvenance: null,
-      activeInputs: null,
-    };
-  }
+  // ── Drawn, not withheld ────────────────────────────────────────────────
+  // Uneven readings, several doses on board or a wide band are all reasons to
+  // be less sure — and being less sure is drawn as a wider band, never as an
+  // empty forecast. With nothing on board the forecast is simply persistence:
+  // a flat line from the anchor with a widening band, never a shape invented
+  // from the recent slope. Abstention is reserved for genuinely absent
+  // evidence — no fresh reading, or readings too sparse to trust at all.
 
   // Conversion factors.
   const isf = snapshot.settings.isf && snapshot.settings.isf > 0 ? snapshot.settings.isf : null;
@@ -970,33 +972,13 @@ export function projectGlucose(
     };
   });
 
-  // ONLY genuinely wide uncertainty abstains. A band narrowed against the floor
-  // or the ceiling is a DISPLAY bound, not a doubt: a meal legitimately projects
-  // towards the top of the scale, and deleting the whole forecast because the
-  // band met the top of the chart is how an active meal made the projection
-  // vanish. The band narrows to whatever the bounds allow and the line is still
-  // drawn — a forecast that says "stays very high" is more use than no forecast.
-  const sigmaCapped = trajectory.some((p) =>
-    p.min_offset > 0 && (p.upper - p.lower) / 2 >= MAX_SIGMA_MGDL * 0.95
-  );
-  if (sigmaCapped) {
-    return {
-      trajectory: [],
-      anchor: snapshot.anchor,
-      modelVersion,
-      mealModelVersion,
-      generatedAt,
-      horizonMinutes: horizonMin,
-      confidence,
-      abstained: true,
-      abstainReason: "The range of likely outcomes is too wide right now to draw a single estimate.",
-      dataQuality: snapshot.dataQuality,
-      uncertaintySummary: null,
-      inputProvenance: null,
-      activeInputs: null,
-      modelResolution,
-    };
-  }
+  // The band's width is never a reason to withhold the forecast. A wide band is
+  // exactly how "we are less sure" is shown: the trajectory is drawn with its
+  // own lower and upper bounds and the chart renders the uncertainty. A band
+  // narrowed against the floor or ceiling is a DISPLAY bound, not a doubt — a
+  // meal legitimately projects towards the top of the scale, and deleting the
+  // forecast because the band met the top of the chart is how an active meal
+  // made the projection vanish.
 
   // Active speed classes (for meal-response evaluation grouping).
   const activeSpeedClasses = [...new Set(snapshot.activeMeals.map((m) => getCarbSpeedClass(m)))];
@@ -1071,7 +1053,7 @@ export function projectGlucose(
     abstained: false,
     abstainReason: null,
     dataQuality: snapshot.dataQuality,
-    uncertaintySummary: { baseSigma: 0, sigmaPerSqrtMin: SIGMA_PER_SQRT_MIN, maxSigma: MAX_SIGMA_MGDL },
+    uncertaintySummary: { baseSigma: 0, sigmaPerSqrtMin: SIGMA_PER_SQRT_MIN, maxSigma: UNCERTAINTY_CEILING_MGDL },
     inputProvenance: {
       readingCount: snapshot.dataQuality.readingCount,
       mealCount: snapshot.dataQuality.activeMealCount,

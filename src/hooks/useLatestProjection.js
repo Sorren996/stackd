@@ -18,14 +18,16 @@
 // After a request the read is retried on a short ladder until a row carrying
 // the new anchor appears, then it stops. Failures are logged, never swallowed.
 //
-// SAFETY: Only returns non-abstained projections with a trajectory. Abstained
-// projections (insufficient evidence) draw nothing rather than a misleading
-// empty forecast.
+// SAFETY: `projection` is only ever a non-abstained forecast with a trajectory,
+// so nothing draws a misleading empty line. When the engine genuinely withheld
+// one, `abstainNote` carries a short plain-language reason instead, so the chart
+// can say why rather than leave an unexplained gap.
 
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useEffect, useRef, useState } from "react";
 import { subscribeProjectionInputsChanged } from "@/lib/projection/projectionStaleness";
+import { abstainNoteFor } from "@/lib/projection/projectionNote";
 
 // The single freshness window for drawing a projection.
 export const PROJECTION_FRESH_MS = 12 * 60 * 1000;
@@ -131,10 +133,16 @@ export function useLatestProjection({ latestReadingTime } = {}) {
     };
   }, [needsGeneration, inputsStale, readingMs, attempt]);
 
-  if (!projection || projection.abstained) return null;
-  if (!Array.isArray(projection.trajectory) || projection.trajectory.length === 0) return null;
-  // Too old to be current — draw nothing rather than a stale trajectory.
-  if (!Number.isFinite(anchorMs) || Date.now() - anchorMs > PROJECTION_FRESH_MS) return null;
+  // Too old to be current — draw nothing rather than a stale trajectory, and say
+  // nothing either: a reason about an old anchor would not be true of now.
+  if (!projection || !Number.isFinite(anchorMs) || Date.now() - anchorMs > PROJECTION_FRESH_MS) {
+    return { projection: null, abstainNote: null };
+  }
 
-  return projection;
+  const hasTrajectory = Array.isArray(projection.trajectory) && projection.trajectory.length > 0;
+  if (projection.abstained || !hasTrajectory) {
+    return { projection: null, abstainNote: abstainNoteFor(projection.abstain_reason) };
+  }
+
+  return { projection, abstainNote: null };
 }
