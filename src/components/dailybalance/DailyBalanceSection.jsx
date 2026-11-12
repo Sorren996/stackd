@@ -60,7 +60,7 @@ export default function DailyBalanceSection({
           }
         </div>
 
-        
+        {hasData && coverage && <p className="mt-2 px-1 text-xs text-muted-foreground hidden">{coverage}</p>}
         {hasData &&
         <div className="mt-3 px-1">
             <BalanceSpectrum percentage={percentage} />
@@ -68,17 +68,17 @@ export default function DailyBalanceSection({
         }
 
         {breakdown &&
-        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 px-1 text-xs" style={{ color: "#7a6b5d" }}>
-            <span className="flex items-center gap-1.5">
-              <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: "#5f8460" }} />
+        <div className="mt-3 grid grid-cols-3 items-baseline gap-x-2 px-1 text-xs" style={{ color: "#7a6b5d" }}>
+            <span className="flex items-baseline gap-1.5 whitespace-nowrap">
+              <span className="inline-block h-1.5 w-1.5 shrink-0 translate-y-[-1px] rounded-full" style={{ background: "#5f8460" }} />
               {breakdown.inRange} in range
             </span>
-            <span className="flex items-center gap-1.5">
-              <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: "#d9a441" }} />
+            <span className="flex items-baseline gap-1.5 whitespace-nowrap">
+              <span className="inline-block h-1.5 w-1.5 shrink-0 translate-y-[-1px] rounded-full" style={{ background: "#d9a441" }} />
               {breakdown.above} above
             </span>
-            <span className="flex items-center gap-1.5">
-              <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: "#d98a78" }} />
+            <span className="flex items-baseline gap-1.5 whitespace-nowrap">
+              <span className="inline-block h-1.5 w-1.5 shrink-0 translate-y-[-1px] rounded-full" style={{ background: "#d98a78" }} />
               {breakdown.below} below
             </span>
           </div>
