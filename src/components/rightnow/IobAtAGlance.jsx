@@ -266,9 +266,9 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
             <p className="mt-3 text-[10px] leading-relaxed" style={{ color: PALETTE.faint }}>
               Each bar is scaled to its own logged amount — the fill shows what fraction of that dose is still estimated to be active, not activity strength.
             </p>
-            <p className="mt-1.5 text-[10px] leading-relaxed hidden" style={{ color: PALETTE.faint }}>
-              {REMAINING_ESTIMATE_NOTE}
-            </p>
+            
+
+          
 
             {/* Optional activity view — existing canonical curve visualization */}
             <div className="mt-3" style={{ borderTop: `1px solid ${PALETTE.hairline}`, paddingTop: 12 }}>
