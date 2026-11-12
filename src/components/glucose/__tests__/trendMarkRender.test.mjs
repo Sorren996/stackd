@@ -98,8 +98,12 @@ test('a valid sensor arrow keeps its own direction', () => {
 });
 
 test('a valid derived arrow keeps its own direction', () => {
-  const rising = [reading(100, 0), reading(150, 30)];
-  const trend = resolveGlucoseTrend(rising[1], rising);
+  // The arrow and the projection share one measured velocity (Theil–Sen over
+  // the last 15 minutes, three samples minimum), so a "Rising quickly" arrow has
+  // to be earned by a measured climb of 3 mg/dL/min or more: +15 mg/dL every
+  // five minutes.
+  const rising = [reading(90, -10), reading(105, -5), reading(120, 0)];
+  const trend = resolveGlucoseTrend(rising[2], rising);
   assert.equal(trend.icon, 'double_up');
   assert.equal(trend.origin, 'derived');
   assert.ok(render(trend).includes('lucide-chevrons-up'));

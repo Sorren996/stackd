@@ -517,7 +517,7 @@ export function resolveHorizonMin(snapshot) {
 
 // ── Uncertainty ─────────────────────────────────────────────────────────────
 
-function computeSigmaAtOffset(minOffset, dq, netRate, uncertaintyCalibration) {
+function computeSigmaAtOffset(minOffset, dq, netRate, uncertaintyCalibration, extraSigmaMgdl = 0) {
   // The band starts at ZERO WIDTH at the anchor (the current reading) and
   // widens with the horizon. We know the current value exactly; uncertainty
   // grows as we project forward. The high/low lines connect to the glucose
@@ -542,6 +542,7 @@ function computeSigmaAtOffset(minOffset, dq, netRate, uncertaintyCalibration) {
       let sigma = empirical * anchorRamp;
       if (dq.staleReadings) sigma += 10 * dqRamp;
       if (dq.gapPresent) sigma += 8 * dqRamp;
+      sigma += extraSigmaMgdl * dqRamp;
       return Math.min(MAX_SIGMA_MGDL, sigma);
     }
   }
@@ -557,6 +558,10 @@ function computeSigmaAtOffset(minOffset, dq, netRate, uncertaintyCalibration) {
   if (dq.confounders.includes("multiple_active_doses")) sigma += 4 * dqRamp;
   if (dq.confounders.includes("active_rescue_carb")) sigma += 3 * dqRamp;
   sigma += Math.min(15, Math.abs(netRate) * 3) * dqRamp;
+  // A damped momentum term is a centre line the engine deliberately did not
+  // follow. The honest answer to "we are less sure where this is going" is a
+  // wider band, not a harder shift of the centre.
+  sigma += extraSigmaMgdl * dqRamp;
   return Math.min(MAX_SIGMA_MGDL, sigma);
 }
 
@@ -630,6 +635,7 @@ export function projectGlucose(snapshot, opts = {}) {
     abstained: true, abstainReason: reason,
     dataQuality: snapshot.dataQuality, uncertaintySummary: null,
     inputProvenance: null, activeInputs: null,
+    measuredVelocity: null, momentum: null,
     modelResolution,
     effectiveParameters: {
       rateAdjustmentFactor,
@@ -722,6 +728,11 @@ export function projectGlucose(snapshot, opts = {}) {
     stepMin,
   });
 
+  // What the shape did with the measured trend, kept for audit and for the band.
+  const shapeDiagnostics = superposition.diagnostics || {};
+  const momentum = shapeDiagnostics.momentum || null;
+  const momentumBandMgdl = momentum?.damped ? 10 : 0;
+
   // ── The band ───────────────────────────────────────────────────────────
   // Two rules: offset 0 IS the reading (lower = upper = the value on screen),
   // and the centre is always the exact midpoint of the band. A band that has
@@ -741,7 +752,9 @@ export function projectGlucose(snapshot, opts = {}) {
         upper: anchorValue,
       };
     }
-    const sigma = computeSigmaAtOffset(point.min_offset, snapshot.dataQuality, point.rate, uncertaintyCalibration);
+    const sigma = computeSigmaAtOffset(
+      point.min_offset, snapshot.dataQuality, point.rate, uncertaintyCalibration, momentumBandMgdl
+    );
     const halfWidth = Math.max(0, Math.min(sigma, point.value - GLUCOSE_FLOOR, GLUCOSE_CEILING - point.value));
     if (sigma > 0 && halfWidth < 1) bandCollapsed.push(point.min_offset);
     return {
@@ -853,12 +866,17 @@ export function projectGlucose(snapshot, opts = {}) {
       doseCount: snapshot.activeDoses.length,
       activeSpeedClasses,
     },
+    // The measurement behind the opening rate, and the residual it produced.
+    // Persisted with the projection so a forecast can be audited against the
+    // trend it started from.
+    measuredVelocity: momentum ? momentum.measuredVelocity : null,
+    momentum,
     modelResolution,
     effectiveParameters: {
       // Diagnostics only — neither is applied to the projected shape.
       rateAdjustmentFactor,
       mealParams: mealModelParams,
-      shapeEngine: superposition.diagnostics,
+      shapeEngine: shapeDiagnostics,
     },
     uncertainty: uncertaintyCalibration
       ? {

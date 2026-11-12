@@ -15,12 +15,25 @@
 // a shape that comes from published pharmacology rather than from the last two
 // readings:
 //
-//   glucose(t) = anchor + ∫ [ carbs(t) − insulin(t) + nudge(t) ] dt
+//   glucose(t) = anchor + ∫ [ carbs(t) − insulin(t) + momentum(t) ] dt
 //
 //   carbs(t)    = Σ grams × carbSensitivity × absorption_fraction(t − mealTime)
 //   rescues(t)  = Σ grams × carbSensitivity × rescue_fraction(t − rescueTime)
 //   insulin(t)  = Σ units × ISF × action_fraction(t − doseTime)
-//   nudge(t)    = capped, short-lived residual of the observed trend
+//   momentum(t) = opening residual × exp(−t / 25 min), capped at ±3 mg/dL/min
+//
+// MOMENTUM, AND WHY IT IS NOT THE OLD EXTRAPOLATOR.
+// The curve must leave the anchor at the speed glucose is actually moving, or a
+// falling morning is drawn as a rise and the arrow beside the reading points
+// the other way. So the opening residual is the measured velocity MINUS the
+// mechanistic rate at the anchor: whatever the shapes do not yet explain is
+// carried as a residual that decays with a 25-minute time constant and is gone
+// by 45–60 minutes. It is a correction that hands off, never an extrapolation:
+// it holds no opinion beyond ~an hour, and its whole integrated contribution is
+// bounded (18 mg/dL per mg/dL/min of residual). The old model multiplied the
+// whole net rate by a learned factor and let the recent slope lead for the full
+// horizon — 0.91 correlation with the last two readings, and a meal could never
+// turn the curve.
 //
 // Rescue carbohydrates are a separate term with their own short curve (peak
 // 20–30 min, spent by 45–60) and their own logged mass, so a rescue can end
@@ -53,7 +66,9 @@
 // anywhere in the app. When the engine expects its own error to exceed the
 // internal bar it returns nothing at all rather than a confident-looking line.
 
-export const SUPERPOSITION_MODEL_VERSION = "2.0.0-superposition";
+import { measureVelocity, VELOCITY_MAX_MGDL_PER_MIN } from "./measuredVelocity";
+
+export const SUPERPOSITION_MODEL_VERSION = "2.1.0-momentum";
 
 export const GRID_MIN = 5;
 const MINUTE_MS = 60 * 1000;
@@ -277,33 +292,29 @@ export function rescueAbsorptionRate(minSinceRescue, shape) {
   return carbAbsorptionRate(minSinceRescue, shape);
 }
 
-// ── Trend nudge ────────────────────────────────────────────────────────────
-// The trend is allowed exactly one job: a short, bounded nudge near the
-// anchor, and never more than ±0.5 mg/dL/min of it. It decays with a 6-minute
-// time constant and is gone inside 15 minutes, so its whole integrated
-// contribution is under ~6 mg/dL — the shape cannot be dominated by it.
-export const MAX_TREND_NUDGE_MGDL_PER_MIN = 0.5;
-export const NUDGE_TAU_MIN = 6;
-export const NUDGE_CUTOFF_MIN = 15;
-export const INTERSTITIAL_LAG_MIN = 8;
+// ── Momentum ───────────────────────────────────────────────────────────────
+// The residual that makes the curve leave the anchor at the speed glucose is
+// actually moving. It decays on a 25-minute time constant, so it is most of the
+// opening rate, a third of it by 25 minutes, and under a tenth by 60 — by which
+// point the insulin and carb terms are the whole story.
+export const MOMENTUM_TAU_MIN = 25;
+// A single reading-to-reading swing cannot be allowed to bend the curve harder
+// than this, whatever the fit says.
+export const MAX_MOMENTUM_MGDL_PER_MIN = VELOCITY_MAX_MGDL_PER_MIN;
 
-export function trendNudge(minOffset, slopeMgDlPerMin) {
-  if (!(minOffset >= 0) || minOffset >= NUDGE_CUTOFF_MIN) return 0;
-  const slope = Math.max(-MAX_TREND_NUDGE_MGDL_PER_MIN, Math.min(MAX_TREND_NUDGE_MGDL_PER_MIN, Number(slopeMgDlPerMin) || 0));
-  return slope * Math.exp(-minOffset / NUDGE_TAU_MIN);
+// A fast fall with nothing on board to explain it is more often sensor
+// compression than physiology. Its residual is scaled back and the band is
+// widened instead, so the centre line is not yanked by an artefact.
+export const UNEXPLAINED_FALL_RATE = -1.5;
+export const UNEXPLAINED_FALL_SCALE = 0.35;
+
+export function momentumRate(minOffset, startRateMgDlPerMin) {
+  if (!(minOffset >= 0) || !startRateMgDlPerMin) return 0;
+  return startRateMgDlPerMin * Math.exp(-minOffset / MOMENTUM_TAU_MIN);
 }
 
-// How fast glucose was moving into the anchor, in mg/dL/min, from the last
-// ~30 minutes of real readings. Used ONLY for the bounded nudge above.
-export function observedSlope(readings, atTime) {
-  if (!Array.isArray(readings) || readings.length < 2) return 0;
-  const recent = readings.filter((r) => r.time <= atTime && r.time >= atTime - 30 * MINUTE_MS);
-  if (recent.length < 2) return 0;
-  const first = recent[0];
-  const last = recent[recent.length - 1];
-  const dtMin = (last.time - first.time) / MINUTE_MS;
-  if (!(dtMin > 0)) return 0;
-  return (last.value - first.value) / dtMin;
+function clampMomentum(rate) {
+  return Math.max(-MAX_MOMENTUM_MGDL_PER_MIN, Math.min(MAX_MOMENTUM_MGDL_PER_MIN, rate));
 }
 
 // The curve begins at the reading itself. An earlier version nudged the start
@@ -379,8 +390,6 @@ export function projectSuperposition(inputs) {
       shape: rescueShapeFor(r.speedFactor),
     }));
 
-  const slope = observedSlope(readings, anchorTime);
-
   const carbRateAt = (tMin) => {
     if (carbSensitivity == null) return 0;
     let rate = 0;
@@ -411,30 +420,58 @@ export function projectSuperposition(inputs) {
     return rate;
   };
 
-  const modelRateAtAnchor = carbRateAt(0) + rescueRateAt(0) - insulinRateAt(0);
+  const mechanisticRateAtAnchor = carbRateAt(0) + rescueRateAt(0) - insulinRateAt(0);
+
+  // ── Opening rate ───────────────────────────────────────────────────────
+  // The measured velocity is the rate the curve must leave the anchor at. The
+  // mechanistic shapes already claim `mechanisticRateAtAnchor`, so the residual
+  // carried by momentum is the difference: at offset 0 the total rate IS the
+  // measured velocity, and as that residual decays the shapes take over without
+  // a seam. With nothing measurable nothing is added — the shapes stand alone
+  // rather than a zero being invented.
+  const measured = measureVelocity(readings, anchorTime);
+  const measuredVelocity = measured.velocity;
+
+  let momentumStart = 0;
+  let momentumDamped = false;
+  if (measuredVelocity != null) {
+    momentumStart = measuredVelocity - mechanisticRateAtAnchor;
+    const nothingOnBoard = mealTerms.length === 0 && rescueTerms.length === 0 && doseTerms.length === 0;
+    if (measuredVelocity <= UNEXPLAINED_FALL_RATE && nothingOnBoard) {
+      momentumStart *= UNEXPLAINED_FALL_SCALE;
+      momentumDamped = true;
+    }
+    momentumStart = clampMomentum(momentumStart);
+  }
+  const openingRate = mechanisticRateAtAnchor + momentumStart;
+
   // Offset 0 is the reading itself — the same number the solid line ends on.
   let value = anchor;
 
   const points = [];
+  let previousRate = 0;
   for (let offset = 0; offset <= horizon; offset += step) {
     const carbRate = carbRateAt(offset);
     const rescueRate = rescueRateAt(offset);
     const insulinRate = insulinRateAt(offset);
-    const nudgeRate = trendNudge(offset, slope);
-    const rate = carbRate + rescueRate - insulinRate + nudgeRate;
+    const momentum = momentumRate(offset, momentumStart);
+    const rate = carbRate + rescueRate - insulinRate + momentum;
 
-    if (offset > 0) value += rate * step;
+    // Trapezoid across the step, so a segment's slope is the average of the two
+    // endpoints and the first point is the anchor exactly, never a step past it.
+    if (offset > 0) value += ((previousRate + rate) / 2) * step;
+    previousRate = rate;
     value = Math.max(GLUCOSE_FLOOR, Math.min(GLUCOSE_CEILING, value));
 
     points.push({
       min_offset: offset,
       time: anchorTime + offset * MINUTE_MS,
-      value: Math.round(value),
+      value: offset === 0 ? anchor : Math.round(value),
       rate: Math.round(rate * 1000) / 1000,
       carbRate,
       rescueRate,
       insulinRate,
-      nudgeRate,
+      momentumRate: momentum,
     });
   }
 
@@ -443,11 +480,22 @@ export function projectSuperposition(inputs) {
     diagnostics: {
       version: SUPERPOSITION_MODEL_VERSION,
       lagCorrection: 0,
-      trendSlope: Math.round(slope * 1000) / 1000,
-      trendNudgeCapped: Math.round(Math.max(-MAX_TREND_NUDGE_MGDL_PER_MIN, Math.min(MAX_TREND_NUDGE_MGDL_PER_MIN, slope)) * 1000) / 1000,
       carbSensitivity: carbSensitivity,
       insulinSensitivity,
-      rateAtAnchor: Math.round(modelRateAtAnchor * 1000) / 1000,
+      rateAtAnchor: Math.round(mechanisticRateAtAnchor * 1000) / 1000,
+      momentum: {
+        measuredVelocity,
+        appliedStart: Math.round(momentumStart * 1000) / 1000,
+        openingRate: Math.round(openingRate * 1000) / 1000,
+        mechanisticRateAtAnchor: Math.round(mechanisticRateAtAnchor * 1000) / 1000,
+        tauMin: MOMENTUM_TAU_MIN,
+        cap: MAX_MOMENTUM_MGDL_PER_MIN,
+        damped: momentumDamped,
+        method: measured.method,
+        sampleCount: measured.sampleCount,
+        spanMin: measured.spanMin,
+        unusableReason: measured.reason,
+      },
       doseTerms: doseTerms.map((d) => ({ units: d.units, peakMin: d.shape.peakMin, durationMin: d.shape.durationMin, family: d.shape.family })),
       mealTerms: mealTerms.map((m) => ({ carbs: m.carbs, peakMin: Math.round(m.shape.firstPeakMin), durationMin: Math.round(m.shape.durationMin) })),
       rescueTerms: rescueTerms.map((r) => ({ grams: r.grams, peakMin: Math.round(r.shape.firstPeakMin), durationMin: Math.round(r.shape.durationMin) })),

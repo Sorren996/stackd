@@ -26,7 +26,15 @@
     },
     "anchor_value": {
       "type": "number",
-      "description": "Glucose value at the anchor reading (mg/dL)."
+      "description": "Glucose value at the anchor reading (mg/dL). The trajectory's first point is this value exactly."
+    },
+    "measured_velocity_mgdl_per_min": {
+      "type": "number",
+      "description": "Audit trail: the robust measured velocity at the anchor, in mg/dL per minute (Theil\u2013Sen slope over the last 15 minutes of real readings, three samples minimum). Null when the series was too short, stale, duplicated or interpolated, in which case no momentum was applied and the mechanistic shapes stood alone. This is the same measurement the trend arrow beside the reading uses."
+    },
+    "applied_momentum": {
+      "type": "object",
+      "description": "Audit trail: what the forecast did with the measured velocity. Contains measuredVelocity, appliedStart (the residual actually carried, capped at \u00b13 mg/dL/min), openingRate (the trajectory's rate at the anchor), mechanisticRateAtAnchor (what the carb, rescue and insulin terms alone claimed there), tauMin (25-minute decay constant), cap, damped (true when a fast fall with no insulin or carbs on board was scaled back as likely sensor compression, with the band widened instead), method, sampleCount, spanMin, unusableReason. Null when no velocity could be measured."
     },
     "horizon_minutes": {
       "type": "number",
@@ -38,7 +46,7 @@
         "type": "object"
       },
       "default": [],
-      "description": "Time-indexed projected glucose values, each { time, min_offset, value, lower, upper }. Empty when the engine abstained."
+      "description": "Time-indexed projected glucose values, each { time, min_offset, value, lower, upper }. The first point (min_offset 0) is the anchor reading exactly. Empty when the engine abstained."
     },
     "uncertainty_summary": {
       "type": "object",

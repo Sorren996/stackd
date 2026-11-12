@@ -275,6 +275,11 @@ export default async function (req) {
       meal_response_model_version: result.mealModelVersion,
       anchor_time: anchorIso,
       anchor_value: result.anchor ? result.anchor.value : null,
+      // What the curve opened at, and why — the measured velocity and the
+      // residual it produced, so a forecast can be audited against the trend it
+      // started from rather than guessed at.
+      measured_velocity_mgdl_per_min: result.measuredVelocity ?? null,
+      applied_momentum: result.momentum ?? null,
       horizon_minutes: result.horizonMinutes,
       trajectory: result.trajectory.map((p) => ({
         time: new Date(p.time).toISOString(),
