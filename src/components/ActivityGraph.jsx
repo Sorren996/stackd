@@ -25,6 +25,7 @@ import TimeViewToggle from "@/components/graph/TimeViewToggle";
 import CandlestickView from "@/components/graph/CandlestickView";
 import ReferenceLabels from "@/components/graph/ReferenceLabels";
 import MealEditOverlay from "@/components/insulin/MealEditOverlay";
+import ProjectionOverlay from "@/components/graph/ProjectionOverlay";
 
 const STEP_MS = 3 * 60 * 1000;
 const HALF_HOUR_MS = 30 * 60 * 1000;
@@ -296,7 +297,7 @@ function FilterDropdown({ filters, onChange, anchorRect }) {
 
 }
 
-export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries = [], onSelectLog = null, onDeleteLog = null, glucoseReadOnly = false, snapshotNow, resumeRevision = 0, historyReady = true, historyLoading = false, historyError = false }) {
+export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries = [], onSelectLog = null, onDeleteLog = null, glucoseReadOnly = false, projection = null, snapshotNow, resumeRevision = 0, historyReady = true, historyLoading = false, historyError = false }) {
   const previousResume = useRef(resumeRevision);
   // Identity of the scroll container the last anchoring ran against. A newly
   // mounted container starts at scrollLeft 0 — the oldest edge of the chart —
@@ -943,7 +944,12 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     return GLUCOSE_MARGIN_TOP + (effectiveMax - clamped) / (effectiveMax - effectiveMin) * plotHeight;
   }, [effectiveMin, effectiveMax, plotHeight]);
 
-
+  // The alternate chart branch uses its own vertical plot geometry.
+  const candlePlotHeight = CHART_HEIGHT - CHART_MARGIN_TOP - X_AXIS_HEIGHT;
+  const getCandleGlucoseY = useCallback((value) => {
+    const clamped = Math.min(Math.max(value, effectiveMin), effectiveMax);
+    return CHART_MARGIN_TOP + (effectiveMax - clamped) / (effectiveMax - effectiveMin) * candlePlotHeight;
+  }, [effectiveMin, effectiveMax, candlePlotHeight]);
 
   const getHighRangeOpacity = (value) => {
     const pctFromTop = (effectiveMax - Math.min(value, effectiveMax)) / (effectiveMax - effectiveMin);
@@ -1326,6 +1332,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
   // How many filters are off (to show indicator dot)
   const activeFilterCount = Object.values(filters).filter(Boolean).length;
+  const latestGlucosePoint = glucoseLinePoints.length ? glucoseLinePoints[glucoseLinePoints.length - 1] : null;
 
 
   return (
@@ -1480,7 +1487,22 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                   glucoseMax={effectiveMax}
                   highReference={highReference} />
 
-
+                {projection && (
+                  <ProjectionOverlay
+                    projection={projection}
+                    domainStart={domainStart}
+                    totalMs={totalMs}
+                    chartWidth={chartWidth}
+                    glucoseChartHeight={CHART_HEIGHT}
+                    glucoseMarginTop={CHART_MARGIN_TOP}
+                    plotHeight={candlePlotHeight}
+                    effectiveMin={effectiveMin}
+                    effectiveMax={effectiveMax}
+                    getGlucoseY={getCandleGlucoseY}
+                    latestReading={latestGlucosePoint}
+                    readings={filteredGlucoseReadings}
+                  />
+                )}
               </> :
 
 
@@ -1600,7 +1622,22 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             </ComposedChart>
           </div>
 
-
+          {projection && (
+            <ProjectionOverlay
+              projection={projection}
+              domainStart={domainStart}
+              totalMs={totalMs}
+              chartWidth={chartWidth}
+              glucoseChartHeight={GLUCOSE_CHART_HEIGHT}
+              glucoseMarginTop={GLUCOSE_MARGIN_TOP}
+              plotHeight={plotHeight}
+              effectiveMin={effectiveMin}
+              effectiveMax={effectiveMax}
+              getGlucoseY={getGlucoseY}
+              latestReading={latestGlucosePoint}
+              readings={filteredGlucoseReadings}
+            />
+          )}
 
           {/* ── The selection marker ──
               One dot, drawn inside the chart's own content coordinates, sitting
@@ -1823,13 +1860,20 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       </div>
       </div>
       <div className="px-3 mt-1.5 space-y-1">
-        {/* Row 1: glucose and meals */}
+        {/* Row 1: glucose, projection, meals */}
         <div className="flex items-center gap-x-3 gap-y-1 flex-wrap">
           <div className="flex items-center gap-1.5">
             <div className="h-[2.75px] w-3 rounded-full" style={{ background: "#8c4a28" }} />
             <span className="text-[10px] font-medium" style={{ color: "#7a6b5d" }}>Glucose</span>
           </div>
-
+          {projection && (
+            <>
+              <div className="flex items-center gap-1.5">
+                <div className="h-[2.5px] w-3 border-t-2 border-dashed" style={{ borderColor: "#c4965a", opacity: 0.9 }} />
+                <span className="text-[10px] font-medium" style={{ color: "#7a6b5d" }}>Projection</span>
+              </div>
+            </>
+          )}
           <div className="flex items-center gap-1.5">
             <div className="h-2 w-2 rounded-full" style={{ border: "1.5px solid #3f3830", background: "#f7f1e8" }} />
             <span className="text-[10px] font-medium" style={{ color: "#6b6153" }}>Meals</span>
