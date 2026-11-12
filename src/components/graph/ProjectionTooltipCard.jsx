@@ -11,7 +11,17 @@
 //   • the range line reads "likely between X and Y" — never "High ~" / "Low ~",
 //     and never a tilde.
 
-export const CARD_MAX_WIDTH_PX = 220;
+// The card's box is fixed, never content-sized. A reading card ("now", value,
+// one trend word) and a forecast card ("estimated in 5 min", value, a two-line
+// range) are different shapes, and a card that resized between them would move
+// its own clamp and flip under the reader's finger. Width and the three reserved
+// lines below are therefore constants the overlay positions against.
+export const CARD_WIDTH_PX = 190;
+// 2px border + 22px padding + 12px eyebrow + 4px gap + 40px value + 5px gap
+// + 34px reserved for the range line (two lines at 12.5px / 1.35).
+export const CARD_HEIGHT_PX = 119;
+const VALUE_BLOCK_PX = 40;
+const RANGE_BLOCK_PX = 34;
 
 function eyebrowFor(point) {
   if (point.kind === "forecast") return `estimated in ${Math.max(1, Math.round(point.minOffset))} min`;
@@ -48,9 +58,9 @@ export default function ProjectionTooltipCard({ point }) {
   return (
     <div
       style={{
-        display: "inline-block",
-        width: "fit-content",
-        maxWidth: CARD_MAX_WIDTH_PX,
+        boxSizing: "border-box",
+        display: "block",
+        width: CARD_WIDTH_PX,
         background: "#FDF9F2",
         border: "1px solid rgba(46,36,32,.14)",
         borderRadius: 14,
@@ -59,19 +69,22 @@ export default function ProjectionTooltipCard({ point }) {
     >
       <div
         style={{
+          height: 12,
           fontSize: 10,
           letterSpacing: ".16em",
           textTransform: "uppercase",
           fontWeight: 600,
           color: "#8F7E6B",
           whiteSpace: "nowrap",
-          lineHeight: 1.2,
+          overflow: "hidden",
+          lineHeight: "12px",
         }}
       >
         {copy.eyebrow}
       </div>
       <div
         style={{
+          minHeight: VALUE_BLOCK_PX,
           fontFamily: "var(--font-sans)",
           fontSize: 42,
           lineHeight: 0.94,
@@ -84,18 +97,21 @@ export default function ProjectionTooltipCard({ point }) {
       >
         {copy.value}
       </div>
-      {copy.range && (
-        <div
-          style={{
-            fontSize: 12.5,
-            lineHeight: 1.35,
-            color: "#5B5046",
-            marginTop: 5,
-          }}
-        >
-          {copy.range}
-        </div>
-      )}
+      {/* Always rendered, so a one-word reading card and a two-line forecast
+          card are exactly the same height. */}
+      <div
+        style={{
+          minHeight: RANGE_BLOCK_PX,
+          maxHeight: RANGE_BLOCK_PX,
+          overflow: "hidden",
+          fontSize: 12.5,
+          lineHeight: 1.35,
+          color: "#5B5046",
+          marginTop: 5,
+        }}
+      >
+        {copy.range}
+      </div>
     </div>
   );
 }

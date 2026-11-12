@@ -38,9 +38,14 @@
 import { useMemo, useState, useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import ProjectionTooltipCard, { projectionCardCopy } from "@/components/graph/ProjectionTooltipCard";
+import ProjectionTooltipCard, {
+  projectionCardCopy,
+  CARD_WIDTH_PX,
+  CARD_HEIGHT_PX,
+} from "@/components/graph/ProjectionTooltipCard";
 import { glucoseTrendWord } from "@/lib/glucoseTrend";
 import { useServerNow } from "@/lib/serverClock";
+import { resolveScrubPoint, resolveCardFlip } from "@/lib/projection/projectionScrub";
 import { BAR_HEIGHT } from "@/components/nav/navGeometry";
 
 const MARGIN = 8;
@@ -50,6 +55,24 @@ const HIT_BAND = 54; // px — total height of the hit path stroke (27px each si
 const CARD_GAP = 12; // px between the marker and the card
 // The floating pill nav never gets a card on top of it.
 const NAV_CLEARANCE = BAR_HEIGHT + 34;
+// Scroll and resize dismissal stay quiet for a moment after a gesture, so the
+// tail of a scrub cannot blink the card away.
+const DISMISS_GRACE_MS = 350;
+
+// The visible plot box: the horizontally scrollable window the chart is seen
+// through. The card is clamped to this rather than to the whole viewport, so it
+// can never drift outside the plot.
+function plotBoxFor(el) {
+  let node = el?.parentElement;
+  while (node) {
+    const style = window.getComputedStyle(node);
+    if (/(auto|scroll)/.test(style.overflowX) && node.clientWidth > 0) {
+      return node.getBoundingClientRect();
+    }
+    node = node.parentElement;
+  }
+  return null;
+}
 
 function pointAgeSeconds(point, nowMs) {
   if (!Number.isFinite(point?.time) || !Number.isFinite(nowMs)) return null;
@@ -74,7 +97,6 @@ export default function ProjectionOverlay({
   const [scrubbing, setScrubbing] = useState(false);
   const svgRef = useRef(null);
   const hitPathRef = useRef(null);
-  const cardRef = useRef(null);
   // Gesture state machine: "idle" | "pending" | "scrubbing" | "cancelled"
   const gestureStateRef = useRef("idle");
   const scrubbingRef = useRef(false);
@@ -84,6 +106,27 @@ export default function ProjectionOverlay({
   const holdTimerRef = useRef(null);
   const [pos, setPos] = useState({ left: 0, top: 0, ready: false, flipped: false });
   const nowMs = useServerNow();
+
+  // The one resolved selection, readable synchronously by the per-frame scrub
+  // resolver, so a frame can tell whether the point actually changed.
+  const activePointRef = useRef(null);
+  const select = useCallback((next) => {
+    if (activePointRef.current === next) return;
+    activePointRef.current = next;
+    setActivePoint(next);
+  }, []);
+
+  // Latest pointer x and the pending frame: pointermove records only the x, and
+  // the snap is resolved once per animation frame.
+  const pointerXRef = useRef(null);
+  const frameRef = useRef(null);
+  // The points this gesture started against. A reading that arrives mid-gesture
+  // must not re-clamp the selection under the finger.
+  const gesturePointsRef = useRef(null);
+  // Scroll and resize dismissal are held off during a gesture and just after it.
+  const dismissSuppressUntilRef = useRef(0);
+  // The current flip, kept so the deadband has something to compare against.
+  const flippedRef = useRef(false);
 
   // The newest real reading: the tip of the solid line, and the only place the
   // dashed line may start. Without one there is nothing to anchor to.
@@ -151,23 +194,34 @@ export default function ProjectionOverlay({
 
   const forecastPoints = useMemo(() => points.filter((p) => p.kind === "forecast"), [points]);
 
-  // Find the plotted point nearest to a chart-local x coordinate.
-  const findNearestPointByX = useCallback((localX) => {
-    if (!points.length) return null;
-    if (localX <= points[0].x) return points[0];
-    const last = points[points.length - 1];
-    if (localX >= last.x) return last;
-    let lo = 0;
-    let hi = points.length - 1;
-    while (lo < hi) {
-      const mid = (lo + hi) >> 1;
-      if (points[mid].x < localX) lo = mid + 1;
-      else hi = mid;
+  // The plotted points, readable from a frame callback without re-creating it.
+  const pointsRef = useRef(points);
+  pointsRef.current = points;
+
+  // ── One snap per animation frame ──────────────────────────────────────
+  // pointermove stores the latest x and asks for a single resolution on the next
+  // frame. resolveScrubPoint holds the current selection until the pointer is
+  // 8px past the midpoint and latches at both ends, and when the resolved point
+  // is the one already selected, `select` skips the state update entirely.
+  const resolveAtPointer = useCallback(() => {
+    if (frameRef.current != null) return;
+    frameRef.current = requestAnimationFrame(() => {
+      frameRef.current = null;
+      const rect = svgRectRef.current;
+      const clientX = pointerXRef.current;
+      if (!rect || clientX == null) return;
+      const source = gesturePointsRef.current || pointsRef.current;
+      const next = resolveScrubPoint(source, clientX - rect.left, activePointRef.current);
+      if (next) select(next);
+    });
+  }, [select]);
+
+  const cancelFrame = useCallback(() => {
+    if (frameRef.current != null) {
+      cancelAnimationFrame(frameRef.current);
+      frameRef.current = null;
     }
-    const a = points[lo - 1];
-    const b = points[lo];
-    return Math.abs(localX - a.x) <= Math.abs(localX - b.x) ? a : b;
-  }, [points]);
+  }, []);
 
   // ── Gesture disambiguation: tap / hold / scrub / scroll ─────────────
   // The hit path is a 54px-tall transparent stroke along the plotted line, so
@@ -193,15 +247,23 @@ export default function ProjectionOverlay({
     }
     if (svgRectRef.current) {
       const localX = downPosRef.current.x - svgRectRef.current.left;
-      const nearest = findNearestPointByX(localX);
-      if (nearest) setActivePoint(nearest);
+      const nearest = resolveScrubPoint(
+        gesturePointsRef.current || pointsRef.current,
+        localX,
+        activePointRef.current
+      );
+      if (nearest) select(nearest);
     }
-  }, [findNearestPointByX]);
+  }, [select]);
 
   const handlePointerDown = useCallback((e) => {
     if (!points.length || !e.isPrimary) return;
     gestureStateRef.current = "pending";
+    // Freeze the plotted points for this gesture: a reading that lands mid-drag
+    // must not move the selection under the finger.
+    gesturePointsRef.current = points;
     downPosRef.current = { x: e.clientX, y: e.clientY };
+    pointerXRef.current = e.clientX;
     pointerIdRef.current = e.pointerId;
     if (svgRef.current) svgRectRef.current = svgRef.current.getBoundingClientRect();
     scrubbingRef.current = false;
@@ -228,16 +290,15 @@ export default function ProjectionOverlay({
       if (Math.abs(dx) >= Math.abs(dy) && Math.abs(dx) > TOUCH_SLOP) {
         clearHoldTimer();
         enterScrubMode();
+        pointerXRef.current = e.clientX;
+        resolveAtPointer();
       }
       return;
     }
 
-    if (svgRectRef.current) {
-      const localX = e.clientX - svgRectRef.current.left;
-      const nearest = findNearestPointByX(localX);
-      if (nearest) setActivePoint(nearest);
-    }
-  }, [findNearestPointByX, clearHoldTimer, enterScrubMode]);
+    pointerXRef.current = e.clientX;
+    resolveAtPointer();
+  }, [resolveAtPointer, clearHoldTimer, enterScrubMode]);
 
   const handlePointerUp = useCallback(() => {
     clearHoldTimer();
@@ -249,9 +310,13 @@ export default function ProjectionOverlay({
       /* already released or not captured */
     }
 
+    cancelFrame();
     const state = gestureStateRef.current;
     gestureStateRef.current = "idle";
     pointerIdRef.current = null;
+    gesturePointsRef.current = null;
+    // A scroll or resize nudge just after the finger lifts must not dismiss.
+    dismissSuppressUntilRef.current = Date.now() + DISMISS_GRACE_MS;
 
     if (state === "scrubbing") {
       scrubbingRef.current = false;
@@ -259,25 +324,30 @@ export default function ProjectionOverlay({
     } else if (state === "pending") {
       if (svgRectRef.current) {
         const localX = downPosRef.current.x - svgRectRef.current.left;
-        const nearest = findNearestPointByX(localX);
+        // A tap picks the nearest point outright, not the hysteresis result.
+        const nearest = resolveScrubPoint(pointsRef.current, localX, null);
         if (nearest) {
-          setActivePoint((prev) =>
-            prev && prev.x === nearest.x && prev.minOffset === nearest.minOffset ? null : nearest
-          );
+          const same = activePointRef.current
+            && activePointRef.current.x === nearest.x
+            && activePointRef.current.kind === nearest.kind;
+          select(same ? null : nearest);
         }
       }
     }
-  }, [findNearestPointByX, clearHoldTimer]);
+  }, [clearHoldTimer, cancelFrame, select]);
 
   const handlePointerCancel = useCallback(() => {
     clearHoldTimer();
+    cancelFrame();
     gestureStateRef.current = "idle";
     pointerIdRef.current = null;
+    gesturePointsRef.current = null;
+    dismissSuppressUntilRef.current = Date.now() + DISMISS_GRACE_MS;
     if (scrubbingRef.current) {
       scrubbingRef.current = false;
       setScrubbing(false);
     }
-  }, [clearHoldTimer]);
+  }, [clearHoldTimer, cancelFrame]);
 
   // ── Keyboard accessibility ───────────────────────────────────────────
   // Arrow keys step through every plotted point, starting at the newest
@@ -293,31 +363,31 @@ export default function ProjectionOverlay({
       case "ArrowUp": {
         e.preventDefault();
         const next = currentIndex < 0 ? 0 : Math.min(currentIndex + 1, points.length - 1);
-        setActivePoint(points[next]);
+        select(points[next]);
         break;
       }
       case "ArrowLeft":
       case "ArrowDown": {
         e.preventDefault();
         const prev = currentIndex < 0 ? points.length - 1 : Math.max(currentIndex - 1, 0);
-        setActivePoint(points[prev]);
+        select(points[prev]);
         break;
       }
       case "Escape": {
         e.preventDefault();
-        setActivePoint(null);
+        select(null);
         break;
       }
       case "Enter":
       case " ": {
         e.preventDefault();
-        setActivePoint((prev) => (prev ? null : points[0]));
+        select(activePointRef.current ? null : points[0]);
         break;
       }
       default:
         break;
     }
-  }, [points, activePoint]);
+  }, [points, activePoint, select]);
 
   // Non-passive touch listener — only locks down scrolling AFTER scrub mode is
   // confirmed, so a vertical swipe still scrolls the dashboard.
@@ -332,49 +402,72 @@ export default function ProjectionOverlay({
   }, [points]);
 
   // Resolve the card's position: above the selected point, flipped below when
-  // it would cross the top of the plot, clamped inside the viewport on both
-  // axes and never over the floating nav. The card sizes itself to its content,
-  // so its real box is measured after paint.
+  // it would cross the top of the plot, clamped inside the visible plot box on
+  // both axes and never over the floating nav. The card's box is a fixed size,
+  // so switching between a reading and a forecast point cannot move it, and the
+  // flip only changes once the point has cleared the deadband.
   useLayoutEffect(() => {
     if (!activePoint || !svgRef.current) {
-      setPos({ left: 0, top: 0, ready: false, flipped: false });
+      flippedRef.current = false;
+      setPos((prev) => (prev.ready || prev.left || prev.top
+        ? { left: 0, top: 0, ready: false, flipped: false }
+        : prev));
       return;
     }
     const rect = svgRef.current.getBoundingClientRect();
-    const box = cardRef.current?.getBoundingClientRect();
-    const width = box?.width || 180;
-    const height = box?.height || 84;
+    const plot = plotBoxFor(svgRef.current) || rect;
+    const width = CARD_WIDTH_PX;
+    const height = CARD_HEIGHT_PX;
     const vw = window.innerWidth;
     const vh = window.innerHeight;
 
     const pointLeft = rect.left + activePoint.x;
     const pointTop = rect.top + activePoint.y;
 
-    // Flip below the marker when the card would leave the plot's own top edge.
-    const plotTop = rect.top;
-    const wantsAbove = pointTop - CARD_GAP - height >= plotTop - MARGIN;
-    const flipped = !wantsAbove;
+    // Space left above the marker inside the plot once gap and card are placed;
+    // negative means the card does not fit above it.
+    const slack = pointTop - CARD_GAP - height - (rect.top - MARGIN);
+    const flipped = resolveCardFlip(slack, flippedRef.current);
+    flippedRef.current = flipped;
     let top = flipped ? pointTop + CARD_GAP : pointTop - CARD_GAP - height;
 
+    // Horizontal clamp against the plot's own box, never beyond the viewport.
+    const boundsLeft = Math.max(MARGIN, plot.left + MARGIN);
+    const boundsRight = Math.min(vw, plot.right) - MARGIN;
     let left = pointLeft - width / 2;
-    left = Math.max(MARGIN, Math.min(left, vw - width - MARGIN));
+    left = Math.min(Math.max(left, boundsLeft), Math.max(boundsLeft, boundsRight - width));
     top = Math.max(MARGIN, Math.min(top, vh - NAV_CLEARANCE - height));
 
-    setPos({ left, top, ready: true, flipped });
+    setPos((prev) => (
+      prev.ready && prev.left === left && prev.top === top && prev.flipped === flipped
+        ? prev
+        : { left, top, ready: true, flipped }
+    ));
   }, [activePoint, nowMs]);
 
-  // Dismiss on tap outside, scroll, Escape or resize.
+  // Dismiss on tap outside, scroll, Escape or resize — but never while a scrub
+  // is in flight or in the moment just after it. A one-pixel scroll nudge used
+  // to clear the card mid-drag and the next pointermove put it back: the blink.
   useEffect(() => {
     if (!activePoint) return;
+    const holdsCard = () => (
+      gestureStateRef.current === "pending"
+      || gestureStateRef.current === "scrubbing"
+      || Date.now() < dismissSuppressUntilRef.current
+    );
     const onDown = (e) => {
       if (e.target?.closest?.("[data-projection-scrub]")) return;
-      setActivePoint(null);
+      select(null);
     };
     const onEsc = (e) => {
-      if (e.key === "Escape") setActivePoint(null);
+      if (e.key === "Escape") select(null);
     };
-    const onScroll = () => setActivePoint(null);
-    const onResize = () => setActivePoint(null);
+    const onScroll = () => {
+      if (!holdsCard()) select(null);
+    };
+    const onResize = () => {
+      if (!holdsCard()) select(null);
+    };
     document.addEventListener("mousedown", onDown);
     document.addEventListener("touchstart", onDown, { passive: true });
     document.addEventListener("keydown", onEsc);
@@ -387,7 +480,7 @@ export default function ProjectionOverlay({
       window.removeEventListener("scroll", onScroll, true);
       window.removeEventListener("resize", onResize);
     };
-  }, [activePoint]);
+  }, [activePoint, select]);
 
   if (forecastPoints.length === 0) return null;
 
@@ -501,17 +594,17 @@ export default function ProjectionOverlay({
 
       {selected && createPortal(
         <AnimatePresence>
+          {/* Opacity only: a vertical entrance would animate every time the
+              card flipped between a reading and a forecast point. */}
           <motion.div
-            initial={{ opacity: 0, y: pos.flipped ? -4 : 4 }}
-            animate={{ opacity: pos.ready ? 1 : 0, y: 0 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: pos.ready ? 1 : 0 }}
             exit={{ opacity: 0 }}
             transition={{ duration: scrubbing ? 0 : 0.14 }}
             className="fixed z-[300] pointer-events-none"
             style={{ left: pos.left, top: pos.top }}
           >
-            <div ref={cardRef}>
-              <ProjectionTooltipCard point={selected} />
-            </div>
+            <ProjectionTooltipCard point={selected} />
           </motion.div>
         </AnimatePresence>,
         document.body
