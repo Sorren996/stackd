@@ -3,6 +3,7 @@ import { normalizeInputs, projectGlucose, PROJECTION_MODEL_VERSION, MEAL_RESPONS
 import { resolveModelComponents } from "../../shared/modelResolution.ts";
 import { calibrateUncertainty } from "../../shared/uncertaintyCalibration.ts";
 import { buildInputSnapshot } from "../../shared/projectionSnapshot.ts";
+import { learnRescueCarbModel, observeRescueEpisodes, MIN_EPISODES } from "../../shared/rescueCarbLearning.ts";
 
 // Stackd Insight Engine — Glucose Projection Generator (Milestone 4)
 //
@@ -54,6 +55,12 @@ export default async function (req) {
       if (!authenticatedUser) return Response.json({ error: "Unauthorized" }, { status: 401 });
       userId = authenticatedUser.id;
     }
+
+    // A forced rebuild is asked for when the model's INPUTS changed but the
+    // anchor reading did not — editing a meal's carbs, flipping it to a rescue
+    // carb, or deleting a meal or dose. Without it the row for that anchor is
+    // treated as complete and the forecast stays stale.
+    const forceRefresh = body.force === true;
 
     const now = Date.now();
 
@@ -118,6 +125,59 @@ export default async function (req) {
     // heuristic is used and the interval is marked as uncalibrated.
     const uncertaintyCalibration = calibrateUncertainty(evaluatedProjections || []);
 
+    // ── Rescue-carb learning ────────────────────────────────────────────────
+    // Rescue carbs are projected on their own fast absorption term. How much
+    // and how quickly this person's glucose actually rises after one is learned
+    // from their own logged rescues, so the next rescue is drawn from their
+    // history rather than a generic curve. With fewer than MIN_EPISODES clean
+    // episodes nothing is changed and the generic profile stands.
+    const isf = Number(settings.insulin_sensitivity_mgdl_per_unit);
+    const unitsPer5g = Number(settings.meal_insulin_units_per_5g);
+    const mgPerGram = isf > 0 && unitsPer5g > 0 ? isf * (unitsPer5g / 5) : 3.0;
+
+    const rescueStateRows = await base44.asServiceRole.entities.RescueCarbModelState.filter(
+      { user_id: userId }, "-created_date", 1
+    );
+    const rescueState = (rescueStateRows && rescueStateRows.length > 0) ? rescueStateRows[0] : null;
+    const rescueEpisodes = observeRescueEpisodes({ meals, doses, readings, nowMs: now });
+    const rescueLearning = learnRescueCarbModel({
+      episodes: rescueEpisodes,
+      previous: rescueState,
+      mgPerGram,
+    });
+    const rescueParams = {
+      magnitudeFactor: rescueLearning.magnitudeFactor,
+      speedFactor: rescueLearning.speedFactor,
+    };
+
+    if (rescueLearning.changed && rescueLearning.sampleCount >= MIN_EPISODES) {
+      const patch = {
+        magnitude_factor: rescueLearning.magnitudeFactor,
+        speed_factor: rescueLearning.speedFactor,
+        sample_count: rescueLearning.sampleCount,
+        observed_ratio: rescueLearning.observedRatio,
+        last_learned_at: new Date(now).toISOString(),
+      };
+      try {
+        if (rescueState) {
+          await base44.asServiceRole.entities.RescueCarbModelState.update(rescueState.id, patch);
+        } else {
+          await base44.asServiceRole.entities.RescueCarbModelState.create({ user_id: userId, ...patch });
+        }
+      } catch { /* learning is auxiliary: a failed write never blocks the forecast */ }
+    } else if (!rescueState && rescueLearning.sampleCount > 0) {
+      // Record the count so the evidence is visible before it is actionable.
+      try {
+        await base44.asServiceRole.entities.RescueCarbModelState.create({
+          user_id: userId,
+          magnitude_factor: 1,
+          speed_factor: 1,
+          sample_count: rescueLearning.sampleCount,
+          last_learned_at: new Date(now).toISOString(),
+        });
+      } catch { /* auxiliary */ }
+    }
+
     // Run the projection engine with the resolved model and calibrated uncertainty.
     const snapshot = normalizeInputs(readings, meals, doses, settings, now);
     // Let the engine resolve the horizon via the close-window rule (meals →
@@ -126,6 +186,7 @@ export default async function (req) {
     const result = projectGlucose(snapshot, {
       modelResolution,
       uncertaintyCalibration,
+      rescueParams,
     });
 
     // ── Build immutable input snapshot (Milestone 5.1) ──────────────────────
@@ -146,8 +207,18 @@ export default async function (req) {
       const existingForAnchor = await base44.asServiceRole.entities.GlucoseProjection.filter(
         { user_id: userId, anchor_time: anchorIso }, "-generated_at", 1
       );
-      if (existingForAnchor.length > 0) {
+      if (existingForAnchor.length > 0 && !forceRefresh) {
         return Response.json({ ok: true, skipped: true, reason: "duplicate_anchor", anchor_time: anchorIso });
+      }
+      // A forced rebuild supersedes the earlier drawing for this same anchor so
+      // exactly one row stays current, instead of two rows disagreeing.
+      if (existingForAnchor.length > 0 && forceRefresh) {
+        try {
+          await base44.asServiceRole.entities.GlucoseProjection.updateMany(
+            { user_id: userId, anchor_time: anchorIso, status: "active" },
+            { $set: { status: "superseded" } }
+          );
+        } catch { /* the newest row still wins by generated_at */ }
       }
     }
 

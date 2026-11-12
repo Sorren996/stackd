@@ -25,6 +25,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useEffect, useRef, useState } from "react";
+import { subscribeProjectionInputsChanged } from "@/lib/projection/projectionStaleness";
 
 // The single freshness window for drawing a projection.
 export const PROJECTION_FRESH_MS = 12 * 60 * 1000;
@@ -50,12 +51,26 @@ export function useLatestProjection({ latestReadingTime } = {}) {
   // the debounce window is never recorded as handled and then forgotten.
   const [attempt, setAttempt] = useState(0);
 
+  // Edits to meals or doses change the forecast's inputs without touching any
+  // timestamp, so the reading anchor alone cannot tell that a stored row is
+  // out of date. Every carb or dose write (create, edit, delete) marks the
+  // inputs as changed, and a mark newer than the stored row forces a rebuild.
+  const [inputsChangedAt, setInputsChangedAt] = useState(0);
+  useEffect(() => subscribeProjectionInputsChanged((at) => setInputsChangedAt(at)), []);
+
   const readingMs = latestReadingTime ? Date.parse(latestReadingTime) : NaN;
   const anchorMs = projection?.anchor_time ? Date.parse(projection.anchor_time) : NaN;
+  const generatedMs = projection?.generated_at ? Date.parse(projection.generated_at) : NaN;
 
   const rowCoversReading =
     Boolean(projection) &&
     (!Number.isFinite(readingMs) || (Number.isFinite(anchorMs) && anchorMs >= readingMs));
+
+  // Inputs edited since this row was drawn: rebuild even though the anchor is
+  // unchanged. The request is forced, because a row for the same anchor would
+  // otherwise be treated as complete and left alone.
+  const inputsStale = inputsChangedAt > 0 && (!Number.isFinite(generatedMs) || inputsChangedAt > generatedMs);
+  const needsGeneration = !rowCoversReading || inputsStale;
 
   const clearLadder = () => {
     ladderRef.current.forEach((t) => clearTimeout(t));
@@ -76,7 +91,7 @@ export function useLatestProjection({ latestReadingTime } = {}) {
   };
 
   useEffect(() => {
-    if (rowCoversReading || inFlightRef.current) return;
+    if (!needsGeneration || inFlightRef.current) return;
 
     // Debounce: coalesce a burst of changes into one request, and re-check
     // afterwards instead of dropping the change on the floor.
@@ -94,7 +109,7 @@ export function useLatestProjection({ latestReadingTime } = {}) {
 
     (async () => {
       try {
-        await base44.functions.invoke("generateProjection", {});
+        await base44.functions.invoke("generateProjection", inputsStale ? { force: true } : {});
       } catch (error) {
         console.error("[projection] generateProjection failed", error);
       } finally {
@@ -114,7 +129,7 @@ export function useLatestProjection({ latestReadingTime } = {}) {
     return () => {
       cancelled = true;
     };
-  }, [rowCoversReading, readingMs, attempt]);
+  }, [needsGeneration, inputsStale, readingMs, attempt]);
 
   if (!projection || projection.abstained) return null;
   if (!Array.isArray(projection.trajectory) || projection.trajectory.length === 0) return null;

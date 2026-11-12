@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import { writeCachedLatestGlucose } from "@/lib/latestGlucoseCache";
+import { markProjectionInputsChanged } from "@/lib/projection/projectionStaleness";
 
 function asList(value) {
   if (Array.isArray(value)) return value;
@@ -35,6 +36,8 @@ export function useCreateDoses() {
       queryClient.setQueryData(["insulin-doses", "graph"], (current = []) => prependUnique(savedDoses, asList(current).filter((dose) => !optimisticIds.has(dose.id))));
       queryClient.invalidateQueries({ queryKey: ["insulin-doses"] });
       queryClient.invalidateQueries({ queryKey: ["insulin-doses", "graph"] });
+      // New insulin changes the forecast's inputs: rebuild it.
+      markProjectionInputsChanged();
       toast.success("Support logged, tracking its gentle activity");
     },
     onError: (error, _variables, context) => {
@@ -110,6 +113,8 @@ export function useCreateCarbs() {
       queryClient.setQueryData(["carb-entries", "graph"], (current = []) => prependUnique(savedEntries, current.filter((entry) => !optimisticIds.has(entry.id))));
       queryClient.invalidateQueries({ queryKey: ["carb-entries"] });
       queryClient.invalidateQueries({ queryKey: ["carb-entries", "graph"] });
+      // New carbohydrate changes the forecast's inputs: rebuild it.
+      markProjectionInputsChanged();
       toast.success("Nourishment logged");
 
       // Split dose plan creation — only when a split plan was confirmed.

@@ -9,10 +9,12 @@ import {
   TextField,
   TapStepper,
   NowTimeField,
+  RescueChip,
   COPPER,
   CREAM,
   FAINT,
 } from "@/components/forms/FieldKit";
+import { markProjectionInputsChanged } from "@/lib/projection/projectionStaleness";
 
 const PALETTE = {
   ink: "#3f3830",
@@ -87,6 +89,11 @@ export default function MealEditOverlay({ entries, onClose }) {
   );
   const [mealDate, setMealDate] = useState(() => toDateInputValue(entries?.[0]?.consumed_at));
   const [mealTime, setMealTime] = useState(() => toTimeInputValue(entries?.[0]?.consumed_at));
+  // Prefilled from the record, so the same "Rescue carbs" control offered when
+  // this meal was logged can be changed afterwards.
+  const [rescue, setRescue] = useState(
+    () => (entries || []).some((e) => e.is_rescue_carb === true || e.classification === "rescue_carbs")
+  );
   const [isSaving, setIsSaving] = useState(false);
   const [pendingDelete, setPendingDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -133,6 +140,7 @@ export default function MealEditOverlay({ entries, onClose }) {
       queryClient.invalidateQueries({ queryKey: ["carb-entries"] });
       queryClient.invalidateQueries({ queryKey: ["carb-entries", "graph"] });
       queryClient.invalidateQueries({ queryKey: ["history-summary"] });
+      markProjectionInputsChanged();
       toast.success("Item removed");
       // Last food item deleted → the entire meal log is gone. Close the
       // sheet so the graph and all views refresh without an empty editor.
@@ -170,6 +178,7 @@ export default function MealEditOverlay({ entries, onClose }) {
         const update = {
           food_name: item.food_name.trim(),
           carbs: Number(item.carbs),
+          is_rescue_carb: rescue,
         };
         if (newConsumedAt) update.consumed_at = newConsumedAt;
         await base44.entities.CarbEntry.update(item.id, update);
@@ -180,12 +189,16 @@ export default function MealEditOverlay({ entries, onClose }) {
           food_name: item.food_name.trim(),
           carbs: Number(item.carbs),
           consumed_at: newConsumedAt || item.consumed_at,
+          is_rescue_carb: rescue,
         });
       }
 
       queryClient.invalidateQueries({ queryKey: ["carb-entries"] });
       queryClient.invalidateQueries({ queryKey: ["carb-entries", "graph"] });
       queryClient.invalidateQueries({ queryKey: ["history-summary"] });
+      // Same downstream refresh the create path runs: carb edits change the
+      // forecast's inputs, so the projection is rebuilt from them.
+      markProjectionInputsChanged();
       toast.success("Meal updated");
       onClose();
     } catch {
@@ -243,6 +256,28 @@ export default function MealEditOverlay({ entries, onClose }) {
                 maxTime={mealDate === todayDateValue ? nowTimeString : undefined}
               />
             </div>
+          </div>
+
+          {/* Rescue carbs — the same control offered when this meal was logged,
+              prefilled from the record, so it can be turned on or off later. */}
+          <div>
+            <span
+              style={{
+                textTransform: "uppercase",
+                letterSpacing: "0.16em",
+                fontWeight: 700,
+                fontSize: "10px",
+                color: FAINT,
+              }}
+            >
+              Kind of carbs
+            </span>
+            <div className="mt-1.5">
+              <RescueChip checked={rescue} onChange={setRescue} />
+            </div>
+            <p className="mt-1.5 text-xs" style={{ color: PALETTE.faint }}>
+              Small, quick carbs taken to lift glucose. They are projected on their own fast curve and stay out of meal coverage maths.
+            </p>
           </div>
 
           <div className="space-y-4">

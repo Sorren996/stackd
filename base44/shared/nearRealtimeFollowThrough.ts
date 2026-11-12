@@ -12,9 +12,12 @@
 // found here is alerted within one poll of existing.
 //
 // Bounded on purpose:
-//   • it stops the moment a new reading is stored (one reading per CGM cycle
-//     is all there is to find);
-//   • it stops on a rate-limit answer, leaving the next scheduled pass to it;
+//   • it keeps polling for the whole budget rather than stopping at the first
+//     reading it finds — the readings published later in the same five-minute
+//     window would otherwise wait for the next scheduled pass, which is exactly
+//     the multi-minute tail this exists to remove;
+//   • it stops early only on a rate-limit answer, leaving the next scheduled
+//     pass to it;
 //   • it can never run past the request budget, well under the platform's
 //     five-minute cap.
 //
@@ -25,8 +28,8 @@ import { requestDexcomRefreshIfNeeded } from "./dexcomShareSync.ts";
 import { loadDexcomCredentials } from "./dexcomCredentials.ts";
 
 const POLL_INTERVAL_MS = 20 * 1000;
-/** Leaves a minute of head-room under the five-minute request cap. */
-const FOLLOW_BUDGET_MS = 4 * 60 * 1000;
+/** Leaves head-room under the five-minute request cap for the pass itself. */
+const FOLLOW_BUDGET_MS = 4.25 * 60 * 1000;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -57,6 +60,8 @@ export async function followShareReadings({
   if (!shareConnections.length) return { attempts: 0, inserted: 0, stopped: "no_connections" };
 
   let attempts = 0;
+  let inserted = 0;
+  let lastDelaySeconds: number | undefined;
   while (Date.now() - fnStart < FOLLOW_BUDGET_MS) {
     await sleep(POLL_INTERVAL_MS);
     attempts += 1;
@@ -111,24 +116,37 @@ export async function followShareReadings({
         const delaySeconds = Number.isFinite(newest)
           ? Math.max(0, Math.round((Date.now() - newest) / 1000))
           : undefined;
+        // Ingestion dispatches the notification for this reading itself, in the
+        // same request, so the notice leaves within one poll of the reading
+        // existing. The loop then KEEPS POLLING: the scheduler cannot fire more
+        // often than every five minutes, so returning here would leave the rest
+        // of the window unwatched and push the next alert out to the next
+        // scheduled pass — the measured 4-5 minute tail this exists to remove.
+        inserted += Number(result.records_inserted);
+        lastDelaySeconds = delaySeconds ?? lastDelaySeconds;
         console.log(JSON.stringify({
           diagStage: "NRT_FOLLOW_THROUGH",
-          stopped: "new_reading",
+          event: "new_reading",
           attempts,
-          inserted: result.records_inserted,
+          inserted: Number(result.records_inserted),
           discovery_delay_s: delaySeconds ?? null,
           notification_dispatch: result?.notification_dispatch ?? null,
         }));
-        return {
-          attempts,
-          inserted: Number(result.records_inserted),
-          stopped: "new_reading",
-          delaySeconds,
-        };
       }
     }
   }
 
-  console.log(JSON.stringify({ diagStage: "NRT_FOLLOW_THROUGH", stopped: "budget", attempts }));
-  return { attempts, inserted: 0, stopped: "budget" };
+  console.log(JSON.stringify({
+    diagStage: "NRT_FOLLOW_THROUGH",
+    stopped: inserted > 0 ? "new_reading" : "budget",
+    attempts,
+    inserted,
+    discovery_delay_s: lastDelaySeconds ?? null,
+  }));
+  return {
+    attempts,
+    inserted,
+    stopped: inserted > 0 ? "new_reading" : "budget",
+    delaySeconds: lastDelaySeconds,
+  };
 }

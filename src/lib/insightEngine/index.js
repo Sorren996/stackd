@@ -676,12 +676,14 @@ export function projectGlucose(snapshot, opts = {}) {
         speedClass: deriveSpeedClass(meal),
         speedFactor: speedFactorForMeal(meal, snapshot.settings, mealModelParams),
       })),
-      // Rescue carbs absorb on the fast profile, with no personalization.
+      // Rescue carbs keep their own fast absorption term, learned from this
+      // person's observed rescues (opts.rescueParams). Defaults to the generic
+      // fast profile when no evidence exists.
       ...snapshot.activeRescueCarbs.map((meal) => ({
-        carbs: Number(meal.carbs) || 0,
+        carbs: (Number(meal.carbs) || 0) * Math.max(0.7, Math.min(1.3, Number(opts.rescueParams?.magnitudeFactor) || 1)),
         consumedAt: new Date(meal.consumed_at).getTime(),
         speedClass: "fast",
-        speedFactor: 1,
+        speedFactor: Math.max(0.75, Math.min(1.35, Number(opts.rescueParams?.speedFactor) || 1)),
       })),
     ],
     doses: snapshot.activeDoses.map((dose) => ({

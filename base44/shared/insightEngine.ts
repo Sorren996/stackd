@@ -694,6 +694,8 @@ export function projectGlucose(
     mealModelParams?: { [key: string]: { speedFactor: number; magnitudeFactor: number } } | null;
     modelResolution?: ModelResolution | null;
     uncertaintyCalibration?: UncertaintyCalibration | null;
+    /** Learned rescue-carb multipliers; absent = the generic fast profile. */
+    rescueParams?: { magnitudeFactor?: number; speedFactor?: number } | null;
   } = {}
 ): ProjectionResult {
   // Horizon: use the explicit override when provided (tests, replay), otherwise
@@ -829,6 +831,14 @@ export function projectGlucose(
     ? isf * (unitsPer5g / 5)
     : UNCALIBRATED_MG_PER_GRAM;
 
+  // Learned rescue-carb corrections, from the person's own observed rises after
+  // their logged rescues (rescueCarbLearning.ts). Absent evidence they are both
+  // exactly 1, which is the generic fast profile — nothing is claimed that the
+  // person's history does not support. These scale the PROJECTED shape only:
+  // the logged grams, insulin coverage and meal-review statistics are untouched.
+  const rescueMagnitude = Math.max(0.7, Math.min(1.3, Number(opts.rescueParams?.magnitudeFactor) || 1));
+  const rescueSpeed = Math.max(0.75, Math.min(1.35, Number(opts.rescueParams?.speedFactor) || 1));
+
   const anchorTime = snapshot.anchor.time;
   const anchorValue = snapshot.anchor.value;
 
@@ -849,12 +859,13 @@ export function projectGlucose(
         speedClass: getCarbSpeedClass(meal),
         speedFactor: speedFactorForMeal(meal, snapshot.settings, mealModelParams),
       })),
-      // Rescue carbs absorb on the fast profile, with no personalization.
+      // Rescue carbs keep their own fast absorption term, learned from this
+      // person's observed rescues when there is enough evidence for it.
       ...snapshot.activeRescueCarbs.map((meal: any) => ({
-        carbs: Number(meal.carbs) || 0,
+        carbs: (Number(meal.carbs) || 0) * rescueMagnitude,
         consumedAt: new Date(meal.consumed_at).getTime(),
         speedClass: "fast",
-        speedFactor: 1,
+        speedFactor: rescueSpeed,
       })),
     ],
     doses: snapshot.activeDoses.map((dose: any) => ({

@@ -25,6 +25,7 @@ import {
   readCachedLatestGlucoseSavedAt,
   writeCachedLatestGlucose,
 } from "@/lib/latestGlucoseCache";
+import { markProjectionInputsChanged } from "@/lib/projection/projectionStaleness";
 const EMPTY = [];
 
 const FRESH_DATA_MS = 60 * 1000;
@@ -226,6 +227,8 @@ export default function Dashboard() {
     onSuccess: (_data, deletedId) => {
       queryClient.invalidateQueries({ queryKey: ["carb-entries"] });
       queryClient.invalidateQueries({ queryKey: ["carb-entries", "graph"] });
+      // Removing carbohydrate changes the forecast's inputs: rebuild it.
+      markProjectionInputsChanged();
       toast.success("Nourishment removed");
       (async () => {
         if (await cancelSplitPlansForMeal(base44, deletedId)) {
@@ -240,6 +243,8 @@ export default function Dashboard() {
     onSuccess: (_data, deletedId) => {
       queryClient.invalidateQueries({ queryKey: ["insulin-doses"] });
       queryClient.invalidateQueries({ queryKey: ["insulin-doses", "graph"] });
+      // Removing insulin changes the forecast's inputs: rebuild it.
+      markProjectionInputsChanged();
       toast.success("Support removed");
       (async () => {
         if (await cleanupSplitPlansForDose(base44, deletedId)) {
@@ -278,6 +283,10 @@ export default function Dashboard() {
         queryClient.invalidateQueries({ queryKey: ["carb-entries"] });
         queryClient.invalidateQueries({ queryKey: ["carb-entries", "graph"] });
       }
+
+      // An edited meal (carbs, name, rescue flag) or dose changes the forecast's
+      // inputs without changing any timestamp, so the projection is rebuilt.
+      if (variables.type !== "glucose") markProjectionInputsChanged();
 
       toast.success("Moment updated");
       setEditingLog(null);

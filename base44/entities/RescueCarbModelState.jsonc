@@ -1,0 +1,80 @@
+{
+  "name": "RescueCarbModelState",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "Explicit user ID for service-role created state, so the owning user can read it."
+    },
+    "magnitude_factor": {
+      "type": "number",
+      "default": 1,
+      "description": "How much this person's glucose actually rises per gram of rescue carbohydrate, relative to the generic fast-absorbing profile. Learned from observed rises after their own rescue carbs. 1 = generic profile, <1 = smaller rise than generic, >1 = larger. Clamped to [0.7, 1.3]. An empirical correction describing what the generic profile tended to get wrong; it never prescribes or recommends any action."
+    },
+    "speed_factor": {
+      "type": "number",
+      "default": 1,
+      "description": "How quickly this person's glucose rises after a rescue carb, relative to the generic fast profile. Multiplies the absorption peak time and window. 1 = generic timing, <1 = faster than generic, >1 = slower. Clamped to [0.75, 1.35]."
+    },
+    "sample_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of clean rescue episodes that contributed to these factors. Zero means the generic profile is still in use."
+    },
+    "observed_ratio": {
+      "type": "object",
+      "description": "Median observed-to-expected ratios behind the current factors, for auditability: { magnitude, speed }. Never contains glucose values or timestamps."
+    },
+    "last_learned_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the factors were last recomputed from the person's own rescue episodes."
+    },
+    "update_history": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "default": [],
+      "description": "Chronological log of accepted factor updates: timestamp, previous factors, new factors, sample count, reason."
+    }
+  },
+  "required": [
+    "user_id"
+  ],
+  "rls": {
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.user_id": "{{user.id}}"
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.user_id": "{{user.id}}"
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.user_id": "{{user.id}}"
+        }
+      ]
+    }
+  }
+}
