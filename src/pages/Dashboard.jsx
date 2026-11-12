@@ -12,6 +12,7 @@ import EditLogSheet from "@/components/edit/EditLogSheet";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 import usePatientResumeSnapshot from "@/hooks/usePatientResumeSnapshot";
 import { boundedRead } from "@/lib/resumeFreshness";
+import { mergeReadingSeries } from "@/lib/glucoseSeries";
 import { useAuth } from "@/lib/AuthContext";
 import { useDexcomRefresh } from "@/hooks/useDexcomRefresh";
 import { useLatestProjection } from "@/hooks/useLatestProjection";
@@ -89,7 +90,13 @@ export default function Dashboard() {
 
   const { data: rawGlucoseReadings = EMPTY, dataUpdatedAt: historyLoadedAt, isFetching: historyFetching, error: historyError } = useQuery({
     queryKey: ["glucose-readings", "graph", user.id],
-    queryFn: ({ signal }) => boundedRead(() => base44.entities.GlucoseReading.filter({ $or: [{ user_id: user.id }, { created_by_id: user.id }], recorded_at: { $gte: new Date(Date.now() - FOURTEEN_DAYS_MS).toISOString() } }, "-recorded_at", 5000), signal),
+    queryFn: async ({ signal }) => {
+      const fresh = await boundedRead(() => base44.entities.GlucoseReading.filter({ $or: [{ user_id: user.id }, { created_by_id: user.id }], recorded_at: { $gte: new Date(Date.now() - FOURTEEN_DAYS_MS).toISOString() } }, "-recorded_at", 5000), signal);
+      // Never step the chart back: a slower refetch that returns an older
+      // newest reading is dropped, and duplicate timestamps collapse to the
+      // most recently written row.
+      return mergeReadingSeries(queryClient.getQueryData(["glucose-readings", "graph", user.id]), fresh);
+    },
     retry: false,
     networkMode: 'always',
     staleTime: GRAPH_DATA_MS,

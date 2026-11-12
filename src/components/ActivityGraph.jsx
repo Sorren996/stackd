@@ -1458,6 +1458,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                     effectiveMin={effectiveMin}
                     effectiveMax={effectiveMax}
                     getGlucoseY={getCandleGlucoseY}
+                    latestReading={latestGlucosePoint}
+                    readings={filteredGlucoseReadings}
                   />
                 )}
               </> :
@@ -1606,6 +1608,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               effectiveMin={effectiveMin}
               effectiveMax={effectiveMax}
               getGlucoseY={getGlucoseY}
+              latestReading={latestGlucosePoint}
+              readings={filteredGlucoseReadings}
             />
           )}
 

@@ -1,49 +1,59 @@
 // Stackd Insight — Projection Overlay (Milestone 5)
 //
-// Renders the projected glucose trajectory as a restrained dashed line
-// with a subtle uncertainty band, overlaid on the ActivityGraph's glucose
-// row. The overlay is positioned inside the scrollable chart container so
-// it scrolls and scales with the existing graph.
+// Renders the projected glucose trajectory as a restrained dashed line with a
+// subtle uncertainty band, overlaid on the ActivityGraph's glucose row. The
+// overlay is positioned inside the scrollable chart container so it scrolls and
+// scales with the existing graph.
 //
 // DESIGN PRINCIPLES:
 //   - Observed CGM readings remain the solid, prominent line.
 //   - Projected values are a muted, dashed line — clearly not a reading.
-//   - The uncertainty band is very subtle (7% opacity) — never looks like
-//     a calibrated probability range unless the projection is empirically
+//   - The uncertainty band is very subtle (7% opacity) — never looks like a
+//     calibrated probability range unless the projection is empirically
 //     calibrated.
-//   - No confidence percentages, model versions, or parameter values
-//     are shown to the user — just the visual trajectory.
-//   - The "now" reference line already separates observed from projected.
-//   - Tapping a projected point shows its value and time in a small bubble
-//     (Issue 3: tap-to-show-values for readability).
-//   - Tap-hold-drag scrubs through every forecast point; the popup updates
-//     continuously with projected values only and freezes on release.
-//   - Keyboard: arrow keys step through each forecast point; Escape dismisses.
+//   - No confidence percentages, model versions, or parameter values are shown
+//     to the user — just the visual trajectory.
+//   - Tapping a point opens an editorial card: WHEN, WHAT, HOW SURE.
+//   - Tap-hold-drag scrubs through every forecast point; keyboard arrows step
+//     point by point; Escape dismisses.
+//
+// TWO RULES THIS FILE EXISTS TO ENFORCE:
+//
+//   1. A LABEL NEVER COMES FROM THE CLOCK. A forecast point is labelled from the
+//      trajectory's own min_offset ("estimated in 20 min"), so it is always
+//      +5, +10, +15 … A real reading is labelled from its own age against
+//      server time ("now" under 90 seconds, otherwise "N min ago"). Wall-clock
+//      rounding never produces "+1m", and a reading that has not posted cannot
+//      appear as the anchor.
+//
+//   2. THE DASHED LINE IS ONLY THE FUTURE. It starts at the tip of the solid
+//      line — the newest real reading — and every point before that reading is
+//      dropped. The solid line is the record of what happened; a forecast never
+//      draws over it and the card can never select a forecast point that has
+//      since become a real reading.
 //
 // SAFETY: This is an informational wellness estimate, never a clinical
-// prediction. The dashed treatment and muted color ensure it never
-// looks like a confirmed reading.
+// prediction.
 
 import { useMemo, useState, useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
+import ProjectionTooltipCard, { projectionCardCopy } from "@/components/graph/ProjectionTooltipCard";
+import { glucoseTrendWord } from "@/lib/glucoseTrend";
+import { useServerNow } from "@/lib/serverClock";
+import { BAR_HEIGHT } from "@/components/nav/navGeometry";
 
-const MINUTE_MS = 60 * 1000;
 const MARGIN = 8;
 const TOUCH_SLOP = 8; // px — horizontal movement that confirms a scrub
 const HOLD_DELAY = 200; // ms — stationary hold before entering scrub mode
-const HIT_BAND = 54; // px — total height of the hit path stroke (27px each side of the line)
+const HIT_BAND = 54; // px — total height of the hit path stroke (27px each side)
+const CARD_GAP = 12; // px between the marker and the card
+// The floating pill nav never gets a card on top of it.
+const NAV_CLEARANCE = BAR_HEIGHT + 34;
 
-function formatProjectionTime(time) {
-  if (!Number.isFinite(time)) return "";
-  const d = new Date(time);
-  const now = new Date();
-  const diffMin = Math.round((time - now.getTime()) / MINUTE_MS);
-  if (diffMin <= 0) return "now";
-  if (diffMin < 60) return `+${diffMin}m`;
-  const h = Math.floor(diffMin / 60);
-  const m = diffMin % 60;
-  return m ? `+${h}h ${m}m` : `+${h}h`;
+function pointAgeSeconds(point, nowMs) {
+  if (!Number.isFinite(point?.time) || !Number.isFinite(nowMs)) return null;
+  return Math.max(0, Math.round((nowMs - point.time) / 1000));
 }
 
 export default function ProjectionOverlay({
@@ -57,11 +67,14 @@ export default function ProjectionOverlay({
   effectiveMin,
   effectiveMax,
   getGlucoseY,
+  latestReading = null,
+  readings = [],
 }) {
   const [activePoint, setActivePoint] = useState(null);
   const [scrubbing, setScrubbing] = useState(false);
   const svgRef = useRef(null);
   const hitPathRef = useRef(null);
+  const cardRef = useRef(null);
   // Gesture state machine: "idle" | "pending" | "scrubbing" | "cancelled"
   const gestureStateRef = useRef("idle");
   const scrubbingRef = useRef(false);
@@ -69,38 +82,76 @@ export default function ProjectionOverlay({
   const pointerIdRef = useRef(null);
   const svgRectRef = useRef(null);
   const holdTimerRef = useRef(null);
-  const [pos, setPos] = useState({ left: 0, top: 0, ready: false });
+  const [pos, setPos] = useState({ left: 0, top: 0, ready: false, flipped: false });
+  const nowMs = useServerNow();
+
+  // The newest real reading: the tip of the solid line, and the only place the
+  // dashed line may start. Without one there is nothing to anchor to.
+  const anchorReading = useMemo(() => {
+    const time = new Date(latestReading?.time ?? latestReading?.recorded_at).getTime();
+    const value = Number(latestReading?.value);
+    if (!Number.isFinite(time) || !Number.isFinite(value)) return null;
+    return { time, value };
+  }, [latestReading]);
+
+  const trendWord = useMemo(() => glucoseTrendWord(readings), [readings]);
 
   const points = useMemo(() => {
     if (!projection || !projection.trajectory || projection.abstained) return [];
-    return projection.trajectory
+    const forecast = projection.trajectory
       .map((p) => {
         const t = new Date(p.time).getTime();
         if (!Number.isFinite(t)) return null;
-        const x = ((t - domainStart) / totalMs) * chartWidth;
-        if (x < 0 || x > chartWidth) return null;
         const value = Number(p.value);
-        const lower = Number(p.lower);
-        const upper = Number(p.upper);
         if (!Number.isFinite(value)) return null;
+        const minOffset = Number(p.min_offset);
         return {
-          x,
-          y: getGlucoseY(value),
-          yLower: Number.isFinite(lower) ? getGlucoseY(lower) : null,
-          yUpper: Number.isFinite(upper) ? getGlucoseY(upper) : null,
-          value: Math.round(value),
-          upper: Number.isFinite(upper) ? Math.round(upper) : null,
-          lower: Number.isFinite(lower) ? Math.round(lower) : null,
           time: t,
-          minOffset: Number(p.min_offset) || 0,
+          value,
+          minOffset: Number.isFinite(minOffset) ? minOffset : null,
+          lower: Number.isFinite(Number(p.lower)) ? Math.round(Number(p.lower)) : null,
+          upper: Number.isFinite(Number(p.upper)) ? Math.round(Number(p.upper)) : null,
         };
       })
-      .filter(Boolean);
-  }, [projection, domainStart, totalMs, chartWidth, getGlucoseY]);
+      .filter(Boolean)
+      // Only the future: a point at or before the newest real reading is
+      // already history and must never be drawn or selectable as a forecast.
+      .filter((p) => (anchorReading ? p.time > anchorReading.time : true))
+      .sort((a, b) => a.time - b.time);
 
-  // Find the trajectory point nearest to a chart-local x coordinate.
-  // Points are sorted by x (time increases → x increases), so a binary
-  // search converges quickly. Clamps to the first/last point outside the range.
+    let lastOffset = 0;
+    const plotted = [];
+    if (anchorReading) {
+      // Re-anchor: the dashed line begins at the reading's own value, so it
+      // meets the tip of the solid line instead of floating beside it.
+      plotted.push({
+        time: anchorReading.time,
+        value: anchorReading.value,
+        minOffset: 0,
+        lower: null,
+        upper: null,
+        kind: "reading",
+      });
+    }
+    for (const point of forecast) {
+      // Labels come from the trajectory's own spacing, never from the clock.
+      const offset = point.minOffset != null
+        ? point.minOffset
+        : Math.round((point.time - anchorReading.time) / 60000);
+      const stepped = Math.max(lastOffset + 1, Math.round(offset));
+      lastOffset = stepped;
+      plotted.push({ ...point, minOffset: stepped, kind: "forecast" });
+    }
+
+    return plotted.map((p) => {
+      const x = ((p.time - domainStart) / totalMs) * chartWidth;
+      return { ...p, x, y: getGlucoseY(p.value) };
+    }).filter((p) => Number.isFinite(p.x) && p.x >= 0 && p.x <= chartWidth);
+  }, [projection, domainStart, totalMs, chartWidth, getGlucoseY, anchorReading]);
+
+  const forecastPoints = useMemo(() => points.filter((p) => p.kind === "forecast"), [points]);
+
+  // Find the plotted point nearest to a chart-local x coordinate.
   const findNearestPointByX = useCallback((localX) => {
     if (!points.length) return null;
     if (localX <= points[0].x) return points[0];
@@ -119,23 +170,8 @@ export default function ProjectionOverlay({
   }, [points]);
 
   // ── Gesture disambiguation: tap / hold / scrub / scroll ─────────────
-  // The hit path is a 54px-tall transparent stroke along the projected line,
-  // so only touches within ~27px of the line engage scrub logic; everything
-  // else passes through to normal chart scrolling.
-  //
-  // State machine:
-  //   idle      — no touch active.
-  //   pending   — touch-down on the line; waiting for hold timer or movement
-  //               to disambiguate. No pointer capture, no preventDefault —
-  //               the browser may still scroll the dashboard vertically.
-  //   scrubbing — hold timer fired OR horizontal movement confirmed; pointer
-  //               captured, touchmove preventDefaulted, popup tracks finger.
-  //   cancelled — vertical movement detected first; release the gesture so
-  //               the browser scrolls the dashboard normally.
-  //
-  // Quick tap (pointer-up from pending with minimal movement) toggles the
-  // popup at the nearest forecast point — unchanged from before.
-
+  // The hit path is a 54px-tall transparent stroke along the plotted line, so
+  // only touches near it engage; everything else scrolls the dashboard.
   const clearHoldTimer = useCallback(() => {
     if (holdTimerRef.current) {
       clearTimeout(holdTimerRef.current);
@@ -148,7 +184,6 @@ export default function ProjectionOverlay({
     gestureStateRef.current = "scrubbing";
     scrubbingRef.current = true;
     setScrubbing(true);
-    // Capture the pointer so horizontal movement anywhere continues scrubbing.
     try {
       if (hitPathRef.current && pointerIdRef.current != null) {
         hitPathRef.current.setPointerCapture(pointerIdRef.current);
@@ -156,7 +191,6 @@ export default function ProjectionOverlay({
     } catch {
       /* pointer capture not supported — events still fire on the hit path */
     }
-    // Snap the popup to the nearest point at the down position.
     if (svgRectRef.current) {
       const localX = downPosRef.current.x - svgRectRef.current.left;
       const nearest = findNearestPointByX(localX);
@@ -166,9 +200,6 @@ export default function ProjectionOverlay({
 
   const handlePointerDown = useCallback((e) => {
     if (!points.length || !e.isPrimary) return;
-    // The hit path already filters touches to within ~27px of the line.
-    // Start in pending state — do NOT capture or preventDefault yet, so
-    // the browser can still scroll the dashboard if the finger moves vertically.
     gestureStateRef.current = "pending";
     downPosRef.current = { x: e.clientX, y: e.clientY };
     pointerIdRef.current = e.pointerId;
@@ -177,7 +208,6 @@ export default function ProjectionOverlay({
     setScrubbing(false);
     clearHoldTimer();
     holdTimerRef.current = setTimeout(() => {
-      // Finger stayed put for the hold delay → enter scrub mode.
       if (gestureStateRef.current === "pending") enterScrubMode();
     }, HOLD_DELAY);
   }, [points, clearHoldTimer, enterScrubMode]);
@@ -190,23 +220,18 @@ export default function ProjectionOverlay({
     const dy = e.clientY - downPosRef.current.y;
 
     if (state === "pending") {
-      // Disambiguate direction before claiming the gesture.
       if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > TOUCH_SLOP) {
-        // Vertical movement first → let the browser scroll the dashboard.
         clearHoldTimer();
         gestureStateRef.current = "cancelled";
         return;
       }
       if (Math.abs(dx) >= Math.abs(dy) && Math.abs(dx) > TOUCH_SLOP) {
-        // Horizontal movement → enter scrub mode.
         clearHoldTimer();
         enterScrubMode();
       }
-      // Movement below slop — stay pending (hold timer may still fire).
       return;
     }
 
-    // Scrubbing — track the nearest forecast point.
     if (svgRectRef.current) {
       const localX = e.clientX - svgRectRef.current.left;
       const nearest = findNearestPointByX(localX);
@@ -214,7 +239,7 @@ export default function ProjectionOverlay({
     }
   }, [findNearestPointByX, clearHoldTimer, enterScrubMode]);
 
-  const handlePointerUp = useCallback((e) => {
+  const handlePointerUp = useCallback(() => {
     clearHoldTimer();
     try {
       if (hitPathRef.current && pointerIdRef.current != null) {
@@ -229,11 +254,9 @@ export default function ProjectionOverlay({
     pointerIdRef.current = null;
 
     if (state === "scrubbing") {
-      // Scrub ended — freeze the popup at the last position (do not close).
       scrubbingRef.current = false;
       setScrubbing(false);
     } else if (state === "pending") {
-      // Quick tap — toggle the popup at the nearest point.
       if (svgRectRef.current) {
         const localX = downPosRef.current.x - svgRectRef.current.left;
         const nearest = findNearestPointByX(localX);
@@ -244,7 +267,6 @@ export default function ProjectionOverlay({
         }
       }
     }
-    // "cancelled" → browser handled the scroll; nothing to do.
   }, [findNearestPointByX, clearHoldTimer]);
 
   const handlePointerCancel = useCallback(() => {
@@ -258,13 +280,12 @@ export default function ProjectionOverlay({
   }, [clearHoldTimer]);
 
   // ── Keyboard accessibility ───────────────────────────────────────────
-  // Arrow keys step through each forecast point individually so keyboard
-  // and screen-reader users can inspect every estimated value. Escape
-  // dismisses. Enter/Space toggles the popup at the first point.
+  // Arrow keys step through every plotted point, starting at the newest
+  // reading and moving forward through the forecast.
   const handleKeyDown = useCallback((e) => {
     if (!points.length) return;
     const currentIndex = activePoint
-      ? points.findIndex((p) => p.minOffset === activePoint.minOffset)
+      ? points.findIndex((p) => p.x === activePoint.x && p.kind === activePoint.kind)
       : -1;
 
     switch (e.key) {
@@ -298,10 +319,8 @@ export default function ProjectionOverlay({
     }
   }, [points, activePoint]);
 
-  // Native touch listener (non-passive) — only locks down scrolling AFTER
-  // scrub mode is confirmed. In the pending state the browser is free to
-  // scroll the dashboard vertically, so swipes over the projection region
-  // that start as vertical movement pass through naturally.
+  // Non-passive touch listener — only locks down scrolling AFTER scrub mode is
+  // confirmed, so a vertical swipe still scrolls the dashboard.
   useEffect(() => {
     const el = hitPathRef.current;
     if (!el) return;
@@ -312,37 +331,39 @@ export default function ProjectionOverlay({
     return () => el.removeEventListener("touchmove", onTouchMove);
   }, [points]);
 
-  // Tooltip dimensions and local (chart-relative) position.
-  const tooltipW = 78;
-  const tooltipH = 64;
-  const tooltipX = activePoint
-    ? Math.max(4, Math.min(chartWidth - tooltipW - 4, activePoint.x - tooltipW / 2))
-    : 0;
-  const tooltipY = activePoint
-    ? Math.max(4, activePoint.y - tooltipH - 10)
-    : 0;
-
-  // Convert chart-local coordinates to viewport coordinates via the SVG's
-  // bounding rect, then clamp within the viewport. Runs in useLayoutEffect
-  // so the tooltip never flashes at a stale position.
+  // Resolve the card's position: above the selected point, flipped below when
+  // it would cross the top of the plot, clamped inside the viewport on both
+  // axes and never over the floating nav. The card sizes itself to its content,
+  // so its real box is measured after paint.
   useLayoutEffect(() => {
     if (!activePoint || !svgRef.current) {
-      setPos({ left: 0, top: 0, ready: false });
+      setPos({ left: 0, top: 0, ready: false, flipped: false });
       return;
     }
     const rect = svgRef.current.getBoundingClientRect();
+    const box = cardRef.current?.getBoundingClientRect();
+    const width = box?.width || 180;
+    const height = box?.height || 84;
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    let left = rect.left + tooltipX;
-    let top = rect.top + tooltipY;
-    left = Math.max(MARGIN, Math.min(left, vw - tooltipW - MARGIN));
-    top = Math.max(MARGIN, Math.min(top, vh - tooltipH - MARGIN));
-    setPos({ left, top, ready: true });
-  }, [activePoint, tooltipX, tooltipY, tooltipW, tooltipH]);
 
-  // Dismiss the tooltip on outside tap, any scroll, Escape, or resize.
-  // The scrub surface is marked with data-projection-scrub so taps on the
-  // projection don't close the popup (they start a new tap/scrub instead).
+    const pointLeft = rect.left + activePoint.x;
+    const pointTop = rect.top + activePoint.y;
+
+    // Flip below the marker when the card would leave the plot's own top edge.
+    const plotTop = rect.top;
+    const wantsAbove = pointTop - CARD_GAP - height >= plotTop - MARGIN;
+    const flipped = !wantsAbove;
+    let top = flipped ? pointTop + CARD_GAP : pointTop - CARD_GAP - height;
+
+    let left = pointLeft - width / 2;
+    left = Math.max(MARGIN, Math.min(left, vw - width - MARGIN));
+    top = Math.max(MARGIN, Math.min(top, vh - NAV_CLEARANCE - height));
+
+    setPos({ left, top, ready: true, flipped });
+  }, [activePoint, nowMs]);
+
+  // Dismiss on tap outside, scroll, Escape or resize.
   useEffect(() => {
     if (!activePoint) return;
     const onDown = (e) => {
@@ -368,44 +389,53 @@ export default function ProjectionOverlay({
     };
   }, [activePoint]);
 
-  if (points.length < 2) return null;
+  if (forecastPoints.length === 0) return null;
 
-  // Accessible label for the SVG — describes the projection and current point.
-  const ariaLabel = activePoint
-    ? `Projected glucose ${activePoint.value} at ${formatProjectionTime(activePoint.time)}` +
-      (activePoint.upper != null ? `, high estimate ${activePoint.upper}` : "") +
-      (activePoint.lower != null ? `, low estimate ${activePoint.lower}` : "") +
-      `. Use arrow keys to step through forecast points.`
-    : "Projected glucose trajectory. Press Enter to open, then use arrow keys to step through forecast points.";
+  // The selected point, carrying the facts its card needs.
+  const selected = activePoint
+    ? {
+        ...activePoint,
+        ageSeconds: activePoint.kind === "reading" ? pointAgeSeconds(activePoint, nowMs) : null,
+        trendWord: activePoint.kind === "reading" ? trendWord : null,
+      }
+    : null;
 
-  // Build the dashed mean line path.
+  const selectedCopy = projectionCardCopy(selected);
+
+  const ariaLabel = selectedCopy
+    ? `Projected glucose ${selectedCopy.value}, ${selectedCopy.eyebrow}` +
+      (selectedCopy.range ? `, ${selectedCopy.range}` : "") +
+      `. Use arrow keys to step through the points.`
+    : "Projected glucose trajectory. Press Enter to open, then use arrow keys to step through the points.";
+
   const linePath = points
     .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
     .join(" ");
 
-  // The uncertainty range is carried by the soft band alone (see the render
-  // below). Only one dashed centre guide is drawn, so nothing competes with
-  // the observed glucose line.
-
-  // Build the uncertainty band path (lower edge L→R, upper edge R→L).
-  const hasBand = points.every((p) => p.yLower != null && p.yUpper != null);
+  // The uncertainty band covers the forecast only — it starts from the reading,
+  // which has no uncertainty of its own.
+  const bandPoints = points.filter((p) => p.kind === "forecast");
+  const hasBand = bandPoints.length > 1 && bandPoints.every((p) => p.lower != null && p.upper != null);
   let bandPath = "";
   if (hasBand) {
-    const lower = points.map((p) => `L ${p.x.toFixed(1)} ${p.yLower.toFixed(1)}`).join(" ");
-    const upper = points
+    const first = { x: points[0].x, y: points[0].y };
+    const upperOf = (p) => getGlucoseY(p.upper);
+    const lowerOf = (p) => getGlucoseY(p.lower);
+    const forward = bandPoints.map((p) => `L ${p.x.toFixed(1)} ${lowerOf(p).toFixed(1)}`).join(" ");
+    const back = bandPoints
       .slice()
       .reverse()
-      .map((p) => `L ${p.x.toFixed(1)} ${p.yUpper.toFixed(1)}`)
+      .map((p) => `L ${p.x.toFixed(1)} ${upperOf(p).toFixed(1)}`)
       .join(" ");
-    bandPath = `M ${points[0].x.toFixed(1)} ${points[0].yLower.toFixed(1)} ${lower.slice(1)} L ${points[points.length - 1].x.toFixed(1)} ${points[points.length - 1].yUpper.toFixed(1)} ${upper.slice(1)} Z`;
+    bandPath = `M ${first.x.toFixed(1)} ${first.y.toFixed(1)} ${forward} ${back} Z`;
   }
 
   return (
     <>
-      {/* Screen-reader live region — announces the current forecast point */}
       <div className="sr-only" aria-live="polite">
-        {activePoint
-          ? `Projected glucose ${activePoint.value} at ${formatProjectionTime(activePoint.time)}`
+        {selectedCopy
+          ? `Projected glucose ${selectedCopy.value}, ${selectedCopy.eyebrow}` +
+            (selectedCopy.range ? `, ${selectedCopy.range}` : "")
           : ""}
       </div>
       <svg
@@ -417,12 +447,7 @@ export default function ProjectionOverlay({
         aria-label={ariaLabel}
         onKeyDown={handleKeyDown}
       >
-        {hasBand && (
-          <path d={bandPath} fill="#c4965a" fillOpacity={0.16} stroke="none" />
-        )}
-        {/* Mean projected trajectory — the ONE dashed guide through the cone.
-            The uncertainty is carried by the soft band alone, with no extra
-            boundary strokes competing with the observed line. */}
+        {hasBand && <path d={bandPath} fill="#c4965a" fillOpacity={0.16} stroke="none" />}
         <path
           d={linePath}
           stroke="#c4965a"
@@ -433,38 +458,29 @@ export default function ProjectionOverlay({
           strokeLinecap="round"
           style={{ pointerEvents: "none" }}
         />
-        {/* Anchor dot — connects the projection to the last actual reading */}
-        <circle
-          cx={points[0].x}
-          cy={points[0].y}
-          r={3}
-          fill="#c4965a"
-          fillOpacity={0.3}
-          stroke="#c4965a"
-          strokeWidth={1}
-          strokeOpacity={0.4}
-          style={{ pointerEvents: "none" }}
-        />
-        {/* Active point marker — tracks the current scrub/keyboard position.
-            Slightly larger and more opaque during scrub for emphasis. */}
-        {activePoint && (
-          <circle
-            cx={activePoint.x}
-            cy={activePoint.y}
-            r={scrubbing ? 5 : 4}
-            fill="#af751b"
-            fillOpacity={scrubbing ? 0.85 : 0.7}
-            stroke="#fdf9f2"
-            strokeWidth={1.5}
-            style={{ pointerEvents: "none" }}
-          />
+        {/* Active point marker — a soft halo under a small solid dot. */}
+        {selected && (
+          <>
+            <circle
+              cx={selected.x}
+              cy={selected.y}
+              r={9}
+              fill="#af751b"
+              fillOpacity={scrubbing ? 0.2 : 0.16}
+              style={{ pointerEvents: "none" }}
+            />
+            <circle
+              cx={selected.x}
+              cy={selected.y}
+              r={3.6}
+              fill="#8C4A28"
+              stroke="#fdf8f1"
+              strokeWidth={1.4}
+              style={{ pointerEvents: "none" }}
+            />
+          </>
         )}
-        {/* Scrub hit path — a 54px-tall transparent stroke along the projected
-            line. Only touches within ~27px of the line engage scrub logic;
-            touches outside this band pass through to normal chart scrolling.
-            touch-action: pan-y lets vertical dashboard scrolling pass through
-            while the gesture is still pending; the native touchmove listener
-            locks it down (preventDefault) only after scrub mode is confirmed. */}
+        {/* Scrub hit path — a 54px-tall transparent stroke along the line. */}
         <path
           ref={hitPathRef}
           data-projection-scrub
@@ -483,61 +499,18 @@ export default function ProjectionOverlay({
         />
       </svg>
 
-      {/* Tooltip bubble — portaled to document.body so it floats above all
-          graph layers (insulin row, legend, glucose ticker). Closes on
-          outside tap, scroll, Escape, or resize. */}
-      {activePoint && createPortal(
+      {selected && createPortal(
         <AnimatePresence>
           <motion.div
-            initial={{ opacity: 0, y: 6, scale: 0.96 }}
-            animate={{ opacity: pos.ready ? 1 : 0, y: pos.ready ? 0 : 6, scale: pos.ready ? 1 : 0.96 }}
+            initial={{ opacity: 0, y: pos.flipped ? -4 : 4 }}
+            animate={{ opacity: pos.ready ? 1 : 0, y: 0 }}
+            exit={{ opacity: 0 }}
             transition={{ duration: scrubbing ? 0 : 0.14 }}
             className="fixed z-[300] pointer-events-none"
-            style={{
-              left: pos.left,
-              top: pos.top,
-              width: tooltipW,
-            }}
+            style={{ left: pos.left, top: pos.top }}
           >
-            <div
-              className="rounded-[8px] px-2 py-1.5 text-center"
-              style={{
-                background: "#fdf9f2",
-                border: "1px solid #eadccf",
-                boxShadow: "0 8px 28px rgba(63,56,48,0.16), 0 2px 8px rgba(63,56,48,0.08)",
-              }}
-            >
-              <div
-                className="text-[9px] font-medium leading-tight"
-                style={{ color: "#746959" }}
-              >
-                {formatProjectionTime(activePoint.time)}
-              </div>
-              {/* Mean estimate */}
-              <div className="flex items-center justify-between gap-2 mt-0.5">
-                <span className="text-[9px] font-medium" style={{ color: "#746959" }}>Est.</span>
-                <span className="text-[14px] font-semibold tabular-nums leading-tight" style={{ color: "#8a5a12" }}>
-                  {activePoint.value}
-                </span>
-              </div>
-              {/* Highest estimated value (upper bound) — same trajectory point */}
-              {activePoint.upper != null && (
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-[9px] font-medium" style={{ color: "#746959" }}>High</span>
-                  <span className="text-[11px] font-semibold tabular-nums leading-tight" style={{ color: "#8a5a12" }}>
-                    ~{activePoint.upper}
-                  </span>
-                </div>
-              )}
-              {/* Lowest estimated value (lower bound) — same trajectory point */}
-              {activePoint.lower != null && (
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-[9px] font-medium" style={{ color: "#746959" }}>Low</span>
-                  <span className="text-[11px] font-semibold tabular-nums leading-tight" style={{ color: "#4d5742" }}>
-                    ~{activePoint.lower}
-                  </span>
-                </div>
-              )}
+            <div ref={cardRef}>
+              <ProjectionTooltipCard point={selected} />
             </div>
           </motion.div>
         </AnimatePresence>,

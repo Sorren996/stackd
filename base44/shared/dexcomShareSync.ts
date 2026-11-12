@@ -3,6 +3,7 @@
 // Identical behavior to the original fetchDexcomShareReadings per-connection loop.
 
 import { notifyAfterPersist } from "./notificationIngest.ts";
+import { upsertReadings, reconcileReadings } from "./readingPersistence.ts";
 import {
   DEXCOM_SHARE_BASE_URL_US,
   DEXCOM_SHARE_APPLICATION_ID_US,
@@ -422,10 +423,13 @@ export async function syncShareForConnection(
 
     if (toCreate.length) {
       try {
-        const created = await sr.entities.GlucoseReading.bulkCreate(toCreate);
-        diag.records_inserted = toCreate.length;
-        diag.inserted_timestamps = toCreate.map((r) => r.recorded_at);
-        insertedIds = Array.isArray(created) ? created.map((r: any) => r?.id).filter(Boolean) : [];
+        // One reading per measured moment: a re-ingested timestamp updates the
+        // stored row instead of adding a second one.
+        const write = await upsertReadings({ sr, ownerId: owner, rows: toCreate });
+        diag.records_inserted = write.inserted;
+        diag.records_corrected = write.updated;
+        diag.inserted_timestamps = write.insertedTimestamps;
+        insertedIds = write.insertedIds;
         dbWriteOk = true;
       } catch (dbErr: any) {
         dbError = dbErr?.message || String(dbErr);
@@ -466,11 +470,33 @@ export async function syncShareForConnection(
       durationMs: Date.now() - dbStart,
     }));
 
+    // One row per measured moment. Two writers that both saw "not stored yet"
+    // cannot both survive: the window just written is reconciled here, keeping
+    // the most recently written row for each timestamp.
+    if (dbWriteOk) {
+      try {
+        diag.records_deduplicated = await reconcileReadings({
+          sr,
+          ownerId: owner,
+          sinceIso: new Date(now.getTime() - (POLL_MINUTES + 10) * 60 * 1000).toISOString(),
+        });
+      } catch (dedupeErr: any) {
+        diag.records_deduplicated = null;
+        console.log(JSON.stringify({
+          diagStage: "DATABASE",
+          warning: "reading_reconcile_failed",
+          error: String(dedupeErr?.message || dedupeErr).slice(0, 160),
+        }));
+      }
+    }
+
     // ── Notifications run server-side, right after persistence ──────────
     // These readings arrive through bulkCreate, which emits no per-record
-    // entity trigger, so the hand-off is made here. It is awaited (never a
-    // fire-and-forget call ingestion's lifetime could cut short) yet fully
-    // isolated: a notification failure can never roll back a stored reading.
+    // entity trigger, so the hand-off is made here — inside ingestion, in the
+    // same breath as the write. It is awaited (never a fire-and-forget call
+    // ingestion's lifetime could cut short) yet fully isolated: a notification
+    // failure can never roll back a stored reading. The 5-minute sweep exists
+    // only for work that was missed, never as the normal path.
     if (dbWriteOk && diag.records_inserted > 0) {
       const notify = await notifyAfterPersist({ sr, ownerId: owner, readingIds: insertedIds });
       diag.notification_dispatch = notify.dispatched ? "evaluated" : notify.reason;

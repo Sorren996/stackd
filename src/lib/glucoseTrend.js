@@ -172,3 +172,30 @@ export function resolveGlucoseTrend(latestReading, readings) {
   const derived = computeGlucoseTrend(readings);
   return derived ? { ...derived, origin: "derived" } : null;
 }
+
+/**
+ * The plain-language movement of the last few readings, for a tooltip's range
+ * line. Always measured across the last three or four readings (never one), so
+ * a single wiggle is not described as a climb or a fall.
+ *
+ * Returns null when there is not enough evidence to describe movement — the
+ * caller then shows no movement line at all rather than "holding steady", which
+ * would claim something nobody measured.
+ */
+const TREND_WORD_BY_ICON = {
+  double_up: "climbing",
+  up: "climbing",
+  "up-right": "still rising",
+  right: "holding steady",
+  "down-right": "easing down",
+  down: "falling",
+  double_down: "falling",
+};
+
+export function glucoseTrendWord(readings) {
+  if (!Array.isArray(readings) || readings.length < 2) return null;
+  const recent = readings.slice(-4);
+  const trend = computeGlucoseTrend(recent);
+  if (!trend) return null;
+  return TREND_WORD_BY_ICON[trend.icon] || null;
+}

@@ -2,6 +2,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.54';
 import { secrets } from 'base44:runtime';
 import { DEXCOM_TOKEN_URL, DEXCOM_API_BASE } from "../../shared/dexcomConfig.ts";
 import { notifyAfterPersist } from "../../shared/notificationIngest.ts";
+import { upsertReadings, reconcileReadings } from "../../shared/readingPersistence.ts";
 import { appOrigin } from "../../shared/sharingAccess.ts";
 
 // ── Dexcom V3 Sync ──────────────────────────────────────────
@@ -352,9 +353,17 @@ export default async function(req) {
 
         // ── 5. Store new readings ──────────────────────────
         if (toCreate.length) {
-          await sr.entities.GlucoseReading.bulkCreate(toCreate);
-          diag.records_inserted = toCreate.length;
+          const write = await upsertReadings({ sr, ownerId: owner, rows: toCreate });
+          diag.records_inserted = write.inserted;
+          diag.records_corrected = write.updated;
         }
+
+        // One row per measured moment, even when two writers raced.
+        diag.records_deduplicated = await reconcileReadings({
+          sr,
+          ownerId: owner,
+          sinceIso: startDate.toISOString(),
+        });
 
         // Promote reconciled Share readings to canonical "dexcom" source
         if (shareIdsToReconcile.size) {

@@ -4,6 +4,7 @@
 
 import { DEXCOM_TOKEN_URL, DEXCOM_API_BASE } from "./dexcomConfig.ts";
 import { notifyAfterPersist } from "./notificationIngest.ts";
+import { upsertReadings, reconcileReadings } from "./readingPersistence.ts";
 
 const MAX_QUERY_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 const INITIAL_SYNC_WINDOW_MS = 24 * 60 * 60 * 1000;
@@ -273,9 +274,28 @@ export async function syncApiForConnection(
     diag.newest_egv_systemTime = newestSystemTime ? newestSystemTime.toISOString() : null;
 
     if (toCreate.length) {
-      await sr.entities.GlucoseReading.bulkCreate(toCreate);
-      diag.records_inserted = toCreate.length;
-      diag.inserted_timestamps = toCreate.map((r) => r.recorded_at);
+      // One reading per measured moment: a re-ingested timestamp corrects the
+      // stored row rather than adding a second one.
+      const write = await upsertReadings({ sr, ownerId: owner, rows: toCreate });
+      diag.records_inserted = write.inserted;
+      diag.records_corrected = write.updated;
+      diag.inserted_timestamps = write.insertedTimestamps;
+    }
+
+    // Collapse any duplicate the two writers produced for the same moment.
+    try {
+      diag.records_deduplicated = await reconcileReadings({
+        sr,
+        ownerId: owner,
+        sinceIso: startDate.toISOString(),
+      });
+    } catch (dedupeErr: any) {
+      diag.records_deduplicated = null;
+      console.log(JSON.stringify({
+        diagStage: "DATABASE",
+        warning: "reading_reconcile_failed",
+        error: String(dedupeErr?.message || dedupeErr).slice(0, 160),
+      }));
     }
 
     if (shareIdsToReconcile.size) {

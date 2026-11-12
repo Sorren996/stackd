@@ -184,6 +184,15 @@ export async function dispatchNotification(
       reason: null,
     });
   }
+  // Measured, not assumed: how long the pipeline itself took between the
+  // moment that fired this notice and the moment it was handed to the push
+  // service. Category and duration only — never a value, never a person.
+  console.log(JSON.stringify({
+    diagStage: "NOTIFICATION_SUBMITTED",
+    category: input.category,
+    audience: input.audience,
+    latency_ms: Math.max(0, deps.nowMs - input.occurredAtMs),
+  }));
   return { status: "submitted", reason: null, deliveryId };
 }
 

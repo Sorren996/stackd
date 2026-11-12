@@ -55,6 +55,49 @@ export function canonicalGlucoseSeries(readings, { cgmOnly = false } = {}) {
   return Array.from(byBucket.values()).sort((a, b) => a.time - b.time);
 }
 
+const rowWrittenAt = (r) => new Date(r?.updated_date || r?.created_date || 0).getTime() || 0;
+
+/**
+ * Fold a fresh query response into what is already on screen.
+ *
+ * Two rules, both about never going backwards:
+ *  1. A response whose newest reading is older than the one already displayed is
+ *     ignored completely — two refetches landing out of order cannot make the
+ *     screen step back to an earlier moment.
+ *  2. Otherwise the two lists merge by exact `recorded_at`, and a timestamp that
+ *     appears in both keeps the row most recently written, so a corrected value
+ *     replaces the stale one instead of sitting beside it.
+ *
+ * @returns {Array} newest-first, as the queries request it
+ */
+export function mergeReadingSeries(current, incoming) {
+  const next = Array.isArray(incoming) ? incoming : [];
+  const prev = Array.isArray(current) ? current : [];
+  if (!next.length) return prev;
+  if (!prev.length) return next;
+
+  const newest = (rows) =>
+    rows.reduce((max, r) => Math.max(max, new Date(r?.recorded_at).getTime() || 0), 0);
+
+  if (newest(next) < newest(prev)) return prev;
+
+  const byMoment = new Map();
+  for (const row of prev) {
+    const key = new Date(row?.recorded_at).getTime();
+    if (Number.isFinite(key)) byMoment.set(key, row);
+  }
+  for (const row of next) {
+    const key = new Date(row?.recorded_at).getTime();
+    if (!Number.isFinite(key)) continue;
+    const existing = byMoment.get(key);
+    if (!existing || rowWrittenAt(row) >= rowWrittenAt(existing)) byMoment.set(key, row);
+  }
+
+  return Array.from(byMoment.values()).sort(
+    (a, b) => (new Date(b.recorded_at).getTime() || 0) - (new Date(a.recorded_at).getTime() || 0)
+  );
+}
+
 /** The newest real reading, or null when there is none. */
 export function newestRealReading(readings) {
   const series = canonicalGlucoseSeries(readings);

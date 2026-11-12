@@ -14,6 +14,7 @@
 // now calls that engine in-process, so every caller must share one SDK version.
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.54";
 import { requestDexcomRefreshIfNeeded } from "../../shared/dexcomShareSync.ts";
+import { followShareReadings } from "../../shared/nearRealtimeFollowThrough.ts";
 import { dayKeyFromTimezone, recomputeDailySummary } from "../../shared/dailySummary.ts";
 import { loadDexcomCredentials } from "../../shared/dexcomCredentials.ts";
 import { writeAuditLog } from "../../shared/auditLog.ts";
@@ -163,7 +164,17 @@ export default async function (req: Request): Promise<Response> {
       metadata: { connections: connections.length, ...counts },
     });
 
-    return Response.json({ processed: connections.length, results: results.map((r) => ({ status: r?.status, records_inserted: r?.records_inserted || 0 })) });
+    // The scheduler's floor is five minutes; a reading can be published at any
+    // second inside that window. This keeps asking Share for anything new for
+    // the rest of the request's budget, so a reading is discovered — and
+    // notified by ingestion itself — within one poll of existing.
+    const followThrough = await followShareReadings({ sr, base44, connections, fnStart });
+
+    return Response.json({
+      processed: connections.length,
+      results: results.map((r) => ({ status: r?.status, records_inserted: r?.records_inserted || 0 })),
+      follow_through: followThrough,
+    });
   } catch (error: any) {
     return Response.json({ error: error.message }, { status: 500 });
   }

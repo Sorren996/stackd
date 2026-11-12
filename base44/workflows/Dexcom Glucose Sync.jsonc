@@ -1,18 +1,18 @@
 {
   "name": "Dexcom Glucose Sync",
-  "description": "Consolidated Dexcom synchronization \u2014 runs Share (near-real-time) then API V3 (official) in a single pass for each connected user, with incremental spike detection. Replaces the separate Share sync, API V3 sync, and Spike Detection Scan automations.",
+  "description": "Consolidated Dexcom synchronization \u2014 runs Share (near-real-time) then API V3 (official) in a single pass for each connected user, with incremental spike detection. Replaces the separate Share sync, API V3 sync, and Spike Detection Scan automations. Each pass keeps polling Share for the rest of its own request budget, so a reading published between scheduled runs is discovered within about twenty seconds and its notification is submitted in-path; the five-minute notification sweep remains only as a backup for work that was missed.",
   "trigger": {
     "condition": null,
     "config": {
       "trigger_type": "scheduled",
       "events": [],
-      "schedule_mode": "interval",
-      "cron_expression": null,
+      "schedule_mode": "recurring",
+      "cron_expression": "*/5 * * * *",
       "one_time_date": null,
       "timezone": "UTC",
-      "interval_value": 5,
-      "interval_unit": "minutes",
-      "interval_anchor": "2026-08-18T03:50:46.790000",
+      "interval_value": null,
+      "interval_unit": null,
+      "interval_anchor": null,
       "ends_type": "never",
       "ends_on_date": null,
       "ends_after_count": null
@@ -22,7 +22,7 @@
     "document": {
       "dsl": "1.0.0",
       "name": "dexcom_glucose_sync",
-      "version": "1.0",
+      "version": "1.2",
       "namespace": "base44"
     },
     "do": [
@@ -33,7 +33,11 @@
             "function_name": "syncDexcomGlucose",
             "args": {}
           },
-          "then": "end"
+          "then": "end",
+          "x-base44": {
+            "title": "Sync Dexcom readings",
+            "description": "Share + API, then follow through in-request"
+          }
         }
       }
     ]
