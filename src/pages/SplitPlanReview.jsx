@@ -11,6 +11,7 @@ import {
   isBolusInsulinType,
 } from "@/lib/insulinPharmacology";
 import { getHighProteinFatMonitoringStatus } from "@/lib/mealMonitoring";
+import BackButton from "@/components/navigation/BackButton";
 import {
   getPlanStatus,
   formatElapsedTime,
@@ -34,7 +35,6 @@ import {
   SkipForward,
   Bell,
   Plus,
-  ChevronLeft,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -281,14 +281,11 @@ export default function SplitPlanReview() {
     <div className="mx-auto w-full max-w-2xl space-y-4 px-4 pb-28 pt-4">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => navigate("/")}
+        <BackButton
+          fallback="/"
           className="flex h-9 w-9 items-center justify-center rounded-full border text-white/60 transition hover:text-white"
           style={{ background: "#fdf9f2", borderColor: "#eadccf" }}
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </button>
+        />
         <div>
           <h1 className="text-lg font-bold" style={{ color: "#f7f1e8" }}>Meal Plan Review</h1>
           <p className="text-xs font-medium" style={{ color: "#f7f1e8" }}>{STATUS_LABELS[planStatus]}</p>

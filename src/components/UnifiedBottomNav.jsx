@@ -22,12 +22,13 @@ import {
   LOG_RING,
   LOG_SIZE,
 } from "@/components/nav/navGeometry";
+import { resolveTabPress } from "@/components/nav/tabPress";
+import { scrollToTop } from "@/lib/feedScroll";
 
 const EASE_OUT = [0.16, 1, 0.3, 1];
 
-// Four destinations with the primary Log action between them.
-// `key` values are unchanged from the previous bar, so each tab's saved
-// sub-path (Journal month/day, Settings sub-page) still restores exactly.
+// Four destinations with the primary Log action between them. Each path is
+// that tab's MAIN page: a tap always lands there, never on a deeper view.
 const navItems = [
   { key: "dashboard", path: "/", label: "Home", Icon: Home },
   { key: "analytics", path: "/analytics", label: "Insights", Icon: BarChart3 },
@@ -35,26 +36,7 @@ const navItems = [
   { key: "settings", path: "/settings", label: "Profile", Icon: CircleUser },
 ];
 
-const SUBPATH_KEY = (key) => `stackd-tab-subpath:${key}`;
 
-function readSavedSubpath(key) {
-  if (typeof window === "undefined" || typeof sessionStorage === "undefined") return null;
-  try {
-    const v = sessionStorage.getItem(SUBPATH_KEY(key));
-    return v && v !== "/" ? v : null;
-  } catch {
-    return null;
-  }
-}
-
-function saveSubpath(key, pathname) {
-  if (typeof window === "undefined" || typeof sessionStorage === "undefined") return;
-  try {
-    sessionStorage.setItem(SUBPATH_KEY(key), pathname || "/");
-  } catch {
-    // Session storage may be unavailable (private mode) — navigate still works.
-  }
-}
 
 function readManualGlucoseEnabled() {
   if (typeof window === "undefined") return true;
@@ -72,12 +54,6 @@ export default function UnifiedBottomNav() {
     const idx = navItems.findIndex((it) => it.path === location.pathname);
     return idx === -1 ? 0 : idx;
   })();
-  const isNavMatch = (() => {
-    if (location.pathname.startsWith("/settings")) return true;
-    return navItems.some((it) => it.path === location.pathname);
-  })();
-  const activeTabKey = navItems[activeIndex]?.key || "dashboard";
-
   // The bar's own width drives the contour path, so the notch stays centred.
   const [barRef, barWidth] = useMeasuredWidth();
 
@@ -107,23 +83,29 @@ export default function UnifiedBottomNav() {
     setExpanded(false);
   }, [location.pathname]);
 
-  // Persist the active sub-path of each tab so switching back restores the
-  // exact screen the user was on (Journal month/day/recap, etc.).
-  useEffect(() => {
-    if (!isNavMatch) return;
-    saveSubpath(activeTabKey, `${location.pathname}${location.search}`);
-  }, [activeTabKey, location.pathname, location.search, isNavMatch]);
-
   const handleTabPress = (e, item) => {
-    const alreadyActive = item.key === activeTabKey;
-    if (alreadyActive) {
-      e.preventDefault();
-      if (location.pathname !== item.path) navigate(item.path);
+    e.preventDefault();
+    const next = resolveTabPress({
+      pathname: location.pathname,
+      search: location.search,
+      tabPath: item.path,
+    });
+
+    // Already exactly on this tab's main page: the tap means "take me to the
+    // top of it". No navigation, and no duplicate history entry.
+    if (!next.to) {
+      requestAnimationFrame(() => scrollToTop());
       return;
     }
-    const saved = readSavedSubpath(item.key);
-    e.preventDefault();
-    navigate(saved || item.path);
+
+    // Otherwise always land on the tab's own main page. Resetting a deeper view
+    // of the tab you are already on replaces that view, so the nav never
+    // reopens a journalled day/week or a settings sub-page — and Back (which
+    // follows the real visit path) still returns to where you came from.
+    navigate(next.to, next.replace ? { replace: true } : undefined);
+    // After the new view has painted, show it from the top. This also covers a
+    // tab main page that is already mounted and merely re-revealed.
+    requestAnimationFrame(() => scrollToTop());
   };
 
   useEffect(() => {

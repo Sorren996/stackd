@@ -2,8 +2,8 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
-import { Link } from "react-router-dom";
 import { ChevronLeft, ChevronDown, ChevronUp, LifeBuoy, Bug, MessageSquare, Loader2, Send } from "lucide-react";
+import BackButton from "@/components/navigation/BackButton";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import PageHeader from "@/components/editorial/PageHeader";
@@ -72,9 +72,14 @@ export default function SupportInbox() {
         <SectionCard>
           <div className="text-center space-y-3 py-4">
             <p className="text-sm" style={{ color: "#6b6153" }}>This area is reserved for administrators.</p>
-            <Link to="/settings" className="inline-flex items-center gap-1 text-sm" style={{ color: "#5b6550" }}>
+            <BackButton
+              fallback="/settings"
+              label="Back to Settings"
+              className="inline-flex items-center gap-1 text-sm"
+              style={{ color: "#5b6550" }}
+            >
               <ChevronLeft className="h-4 w-4" /> Back to Settings
-            </Link>
+            </BackButton>
           </div>
         </SectionCard>
       </div>
