@@ -68,18 +68,18 @@ export default function DailyBalanceSection({
         }
 
         {breakdown &&
-        <div className="mt-3 grid grid-cols-3 items-baseline gap-x-2 px-1 text-xs" style={{ color: "#7a6b5d" }}>
-            <span className="flex items-baseline gap-1.5 whitespace-nowrap">
+        <div className="mt-3 grid grid-cols-3 items-baseline gap-x-1.5 px-1 text-[11px] leading-tight" style={{ color: "#7a6b5d" }}>
+            <span className="flex min-w-0 items-baseline gap-1">
               <span className="inline-block h-1.5 w-1.5 shrink-0 translate-y-[-1px] rounded-full" style={{ background: "#5f8460" }} />
-              {breakdown.inRange} in range
+              <span className="min-w-0 break-words">{breakdown.inRange} in range</span>
             </span>
-            <span className="flex items-baseline gap-1.5 whitespace-nowrap">
+            <span className="flex min-w-0 items-baseline gap-1">
               <span className="inline-block h-1.5 w-1.5 shrink-0 translate-y-[-1px] rounded-full" style={{ background: "#d9a441" }} />
-              {breakdown.above} above
+              <span className="min-w-0 break-words">{breakdown.above} above</span>
             </span>
-            <span className="flex items-baseline gap-1.5 whitespace-nowrap">
+            <span className="flex min-w-0 items-baseline gap-1">
               <span className="inline-block h-1.5 w-1.5 shrink-0 translate-y-[-1px] rounded-full" style={{ background: "#d98a78" }} />
-              {breakdown.below} below
+              <span className="min-w-0 break-words">{breakdown.below} below</span>
             </span>
           </div>
         }
