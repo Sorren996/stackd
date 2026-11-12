@@ -64,7 +64,7 @@ export default function DailyBalanceDetailSheet({
           <p className="mt-1 text-xs" style={{ color: PALETTE.faint }}>
             {formatDate()}
           </p>
-          {coverage && <p className="mt-1 text-xs text-muted-foreground hidden">{coverage}</p>}
+          
         </div>
 
         {/* Hero: percentage + state */}
@@ -153,9 +153,9 @@ export default function DailyBalanceDetailSheet({
               </p>
             }
           </div>
-          <p className="mt-4 text-[10px] leading-relaxed hidden" style={{ color: PALETTE.faint }}>
-            An observation of where the day spent time, not a judgment of it.
-          </p>
+          
+
+          
         </div>
 
         <div className="h-4" />
