@@ -376,6 +376,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   };
   const scrollRef = useRef(null);
   const tickerRef = useRef(null);
+  const selectionMarkerRef = useRef(null);
   const tooltipTimeRef = useRef(null);
   const tooltipDateRef = useRef(null);
   const scrollFrameRef = useRef(null);
@@ -1038,10 +1039,31 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     return Math.abs(a.time - time) <= Math.abs(b.time - time) ? a : b;
   };
 
-  // The centred reading's number, time and glow. The MARKER DOT is no longer
-  // drawn from here: it lives inside the scrollable content at the newest
-  // reading's own x, so it translates with the curve instead of being
-  // repositioned a frame late from a scroll event.
+  // The marker sits on the reading the big number shows — the one nearest the
+  // centre of the view. At rest that is the newest reading, so the dot rests on
+  // the end of the line; as the view scrolls, it travels along the curve to
+  // whichever reading is now displayed, instead of being stranded on an earlier
+  // sample. It is moved imperatively from the same frame as the number, so it
+  // can never lag behind the scroll.
+  const positionSelectionMarker = (reading) => {
+    const el = selectionMarkerRef.current;
+    if (!el || !reading || !Number.isFinite(reading.time)) return;
+    const value = Number(getReadingValue(reading) ?? reading.value);
+    if (!Number.isFinite(value)) return;
+    const HALO_R = 9;
+    const cx = Math.min(
+      Math.max((reading.time - domainStart) / totalMs * chartWidth, HALO_R),
+      Math.max(HALO_R, chartWidth - HALO_R)
+    );
+    const cy = Math.min(
+      Math.max(getGlucoseY(Math.min(value, effectiveMax)), GLUCOSE_MARGIN_TOP + HALO_R),
+      GLUCOSE_MARGIN_TOP + plotHeight - HALO_R
+    );
+    el.setAttribute("transform", `translate(${cx} ${cy})`);
+  };
+
+  // The centred reading's number, time and glow, plus the marker that rides on
+  // that same reading.
   const drawCenterGlucose = (scrollLeft, animate = false, suppressMotion = false) => {
     const timeEl = tooltipTimeRef.current;
     const dateEl = tooltipDateRef.current;
@@ -1055,6 +1077,9 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     // the marker can keep tracking the smooth line for visual continuity.
     const selected = getSelectedReading(centerTime);
     if (!selected || !Number.isFinite(selected.time)) return;
+
+    // Keep the marker on the reading the number is showing.
+    positionSelectionMarker(selected);
 
     // Stale-reading contingency: when the CGM stream has gone quiet and the
     // viewport is centered in the gap past the last real reading, hide the
@@ -1617,23 +1642,25 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             />
           )}
 
-          {/* ── The end-of-line marker ──
-              Drawn from the SAME sample array that feeds the glucose line
-              (glucoseSegments → dataKey glucose_seg_N). No bucketed copy, no
-              separate list: the dot's time is the last drawn sample's own time,
-              so its x is by construction a point of the curve it marks. Both
-              coordinates are clamped inside the plot, so an edge sample can
-              never push the dot outside the drawable area and vanish. */}
+          {/* ── The selection marker ──
+              One dot, drawn inside the chart's own content coordinates, sitting
+              on the reading the big number shows. It starts on the newest
+              reading and is then moved by positionSelectionMarker() from the
+              same animation frame that updates the number, so scrolling carries
+              it along the line to the displayed sample instead of leaving it on
+              an earlier one. Coordinates are clamped inside the plot so it can
+              never render outside the drawable area. */}
           {!isCandlestick && filters.glucose && (() => {
-            const lastSegment = glucoseSegments[glucoseSegments.length - 1];
-            const lastPoint = lastSegment?.[lastSegment.length - 1];
-            if (!lastPoint || !Number.isFinite(lastPoint.time) || !Number.isFinite(lastPoint.value)) return null;
             const HALO_R = 9;
-            const cx = Math.min(Math.max((lastPoint.time - domainStart) / totalMs * chartWidth, HALO_R), Math.max(HALO_R, chartWidth - HALO_R));
-            const cy = Math.min(
-              Math.max(getGlucoseY(Math.min(lastPoint.value, effectiveMax)), GLUCOSE_MARGIN_TOP + HALO_R),
+            const newest = filteredGlucoseReadings[filteredGlucoseReadings.length - 1];
+            const newestValue = newest ? Number(getReadingValue(newest) ?? newest.value) : NaN;
+            const clampX = (t) => Math.min(Math.max((t - domainStart) / totalMs * chartWidth, HALO_R), Math.max(HALO_R, chartWidth - HALO_R));
+            const clampY = (v) => Math.min(
+              Math.max(getGlucoseY(Math.min(v, effectiveMax)), GLUCOSE_MARGIN_TOP + HALO_R),
               GLUCOSE_MARGIN_TOP + plotHeight - HALO_R
             );
+            const startX = newest && Number.isFinite(newest.time) ? clampX(newest.time) : chartWidth - HALO_R;
+            const startY = Number.isFinite(newestValue) ? clampY(newestValue) : GLUCOSE_MARGIN_TOP + plotHeight / 2;
             return (
               <svg
                 className="pointer-events-none absolute left-0 top-0 z-[12]"
@@ -1641,8 +1668,10 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                 height={GLUCOSE_CHART_HEIGHT}
                 viewBox={`0 0 ${chartWidth} ${GLUCOSE_CHART_HEIGHT}`}
                 aria-hidden="true">
-                <circle cx={cx} cy={cy} r={9} fill="#8c4a28" fillOpacity={0.12} />
-                <circle cx={cx} cy={cy} r={3.6} fill="#8c4a28" stroke="#fdf8f1" strokeWidth={1.6} />
+                <g ref={selectionMarkerRef} transform={`translate(${startX} ${startY})`}>
+                  <circle r={9} fill="#8c4a28" fillOpacity={0.12} />
+                  <circle r={3.6} fill="#8c4a28" stroke="#fdf8f1" strokeWidth={1.6} />
+                </g>
               </svg>
             );
           })()}
