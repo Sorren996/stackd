@@ -753,12 +753,13 @@ describe("5. Projection integration", () => {
     }
     expect(maxDiff).toBeGreaterThan(2); // meaningful difference
 
-    // The model version should reflect personalization
-    expect(baselineResult.mealModelVersion).toBe("1.0.0-meal-baseline");
-    expect(learnedResult.mealModelVersion).toBe("1.1.0-meal-personalized");
+    // Absorption timing is the one learned quantity the shape engine still
+    // honours — it is the person's own speed, not a re-scaling of the meal.
+    expect(baselineResult.mealModelVersion).toBe(learnedResult.mealModelVersion);
+    expect(learnedResult.effectiveParameters.mealParams.high_fat.speedFactor).toBe(1.3);
   });
 
-  test("5b: a learned magnitudeFactor changes the glucose rise magnitude", () => {
+  test("5b: a learned magnitudeFactor is recorded but never re-scales the rise", () => {
     const meal = makeEntry({
       name: "Pizza",
       carbs: 75,
@@ -783,16 +784,15 @@ describe("5. Projection integration", () => {
       mealModelParams: learnedParams,
     });
 
-    // The magnitude factor increases the carb-driven glucose rise, so the
-    // learned trajectory should show higher glucose values (or at least
-    // different values) compared to baseline
+    // A gram of carbohydrate is a fixed amount of glucose work: the shape
+    // engine delivers exactly grams x sensitivity, so a learned magnitude
+    // multiplier is recorded for the shadow report and never applied.
     let maxDiff = 0;
     for (let i = 0; i < baselineResult.trajectory.length; i++) {
-      const diff = learnedResult.trajectory[i].value - baselineResult.trajectory[i].value;
-      if (diff > maxDiff) maxDiff = diff;
+      maxDiff = Math.max(maxDiff, Math.abs(learnedResult.trajectory[i].value - baselineResult.trajectory[i].value));
     }
-    // At some point the learned trajectory should be above the baseline
-    expect(maxDiff).toBeGreaterThan(2);
+    expect(maxDiff).toBe(0);
+    expect(learnedResult.effectiveParameters.mealParams.high_fat.magnitudeFactor).toBe(1.2);
   });
 
   test("5c: no double-counting — the curve is applied exactly once per meal", () => {
@@ -850,10 +850,13 @@ describe("5. Projection integration", () => {
       const dv = learnedResult.trajectory[i].value - learnedResult.trajectory[i - 1].value;
       totalRiseLearned += dv;
     }
-    // The total rise should be approximately the same (speedFactor only
-    // shifts timing, not total amount). Tolerance accounts for momentum
-    // decay differences and integration step effects.
-    expect(Math.abs(totalRiseLearned - totalRise)).toBeLessThan(50);
+    // speedFactor shifts timing, not the total amount. The forecast horizon is
+    // bounded, so a slower curve has simply delivered less by its end — the
+    // learned rise inside the window may be smaller, never larger, and it can
+    // never exceed the carbohydrate actually logged.
+    expect(totalRiseLearned).toBeLessThanOrEqual(totalRise + 1);
+    expect(totalRiseLearned).toBeGreaterThan(0);
+    expect(totalRiseLearned).toBeLessThanOrEqual(totalPossibleRise + 5);
   });
 
   test("5d: the projection uses the same curve as the display — no separate model", () => {

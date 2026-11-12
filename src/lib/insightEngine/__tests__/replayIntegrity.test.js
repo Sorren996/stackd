@@ -241,7 +241,7 @@ describe("Milestone 5.1 — replayFromSnapshot", () => {
     expect(result1.modelVersion).toBe(result2.modelVersion);
   });
 
-  test("different model resolutions produce different trajectories on the same snapshot", () => {
+  test("identical snapshots draw the same shape under any model resolution", () => {
     const genTime = Date.now();
     const readings = makeReadingsBefore(genTime, 10, 120);
     // Use a small meal so the trajectory doesn't hit the 500 clamp, making
@@ -259,10 +259,12 @@ describe("Milestone 5.1 — replayFromSnapshot", () => {
     expect(baselineResult.abstained).toBe(false);
     expect(generalResult.abstained).toBe(false);
 
-    // The trajectories should differ (different rate adjustment factors).
+    // The stored general correction is provenance only: the same snapshot draws
+    // the same shape, whatever multipliers are recorded beside it. That is what
+    // makes a shadow comparison of the two configurations fair.
     const lastBaseline = baselineResult.trajectory[baselineResult.trajectory.length - 1].value;
     const lastGeneral = generalResult.trajectory[generalResult.trajectory.length - 1].value;
-    expect(lastBaseline).not.toBe(lastGeneral);
+    expect(lastBaseline).toBe(lastGeneral);
   });
 });
 

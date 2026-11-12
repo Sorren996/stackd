@@ -238,9 +238,18 @@ describe("M5: No future-data leakage in shadow replay", () => {
       createBaselineResolution()
     );
 
-    // The replay should not include the future meal in active meals
-    // (the future meal is after the generation time, so it's not active)
-    expect(replayed.trajectory[0].value).toBe(result.trajectory[0].value);
+    // A meal logged after generation contributes nothing to the replay: the
+    // same snapshot with it and without it must draw the identical curve.
+    const original = {
+      anchor_time: result.anchor.time,
+      anchor_value: result.anchor.value,
+      generated_at: genTime,
+      horizon_minutes: 60,
+    };
+    const replayedWithoutFuture = replayProjection(
+      original, readings, oldMeals, [], settings, createBaselineResolution()
+    );
+    expect(replayed.trajectory).toEqual(replayedWithoutFuture.trajectory);
   });
 });
 
@@ -273,15 +282,16 @@ describe("M5: Baseline and personalized on identical observations", () => {
     expect(generalResult.trajectory.length).toBeGreaterThan(0);
     expect(mealResult.trajectory.length).toBeGreaterThan(0);
 
-    // The trajectories should differ (different model parameters)
     const baselineEnd = baselineResult.trajectory[baselineResult.trajectory.length - 1].value;
     const generalEnd = generalResult.trajectory[generalResult.trajectory.length - 1].value;
     const mealEnd = mealResult.trajectory[mealResult.trajectory.length - 1].value;
 
-    // General with rateAdjustmentFactor 1.2 should differ from baseline
-    expect(generalEnd).not.toBe(baselineEnd);
-    // Meal with magnitudeFactor 0.85 should differ from baseline
+    // The general correction and the magnitude correction are recorded
+    // provenance only, so neither may bend the curve. A learned absorption
+    // speed is the one multiplier that still moves timing.
+    expect(generalEnd).toBe(baselineEnd);
     expect(mealEnd).not.toBe(baselineEnd);
+    expect(mealResult.effectiveParameters.mealParams.mixed.speedFactor).toBe(1.2);
   });
 });
 
@@ -586,13 +596,15 @@ describe("M5: Cross-user isolation", () => {
     const resultA = runProjection(readings, meals, [], settings, userAState, null, { now });
     const resultB = runProjection(readings, meals, [], settings, userBState, null, { now });
 
-    // Different rate factors should produce different trajectories
+    // One user's stored factor is never read for the other, and since a rate
+    // multiplier no longer shapes anything, identical inputs draw one shape
+    // while each keeps its own recorded provenance.
     const endA = resultA.result.trajectory[resultA.result.trajectory.length - 1].value;
     const endB = resultB.result.trajectory[resultB.result.trajectory.length - 1].value;
 
-    expect(endA).not.toBe(endB);
-    expect(resultA.result.modelVersion).toBe(PERSONALIZED_MODEL_VERSION);
-    expect(resultB.result.modelVersion).toBe(PERSONALIZED_MODEL_VERSION);
+    expect(endA).toBe(endB);
+    expect(resultA.result.effectiveParameters.rateAdjustmentFactor).toBe(1.25);
+    expect(resultB.result.effectiveParameters.rateAdjustmentFactor).toBe(0.75);
   });
 
   test("user A's meal state does not affect user B's meal resolution", () => {

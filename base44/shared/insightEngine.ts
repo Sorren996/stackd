@@ -795,14 +795,14 @@ export function projectGlucose(
   }
 
   // ── Honest abstention ───────────────────────────────────────────────────
-  // Nothing to superpose, or the readings are moving too unevenly for a shape
-  // model to keep its own expected error under the internal bar. Drawing
-  // nothing is the correct answer — never a line pretending to be a forecast.
-  const structuralAbstain = !hasActiveInputs
-    ? "No meal or insulin on board to model."
-    : (Number(snapshot.dataQuality.volatilitySd) || 0) > VOLATILITY_ABSTAIN_SD
-      ? "Glucose is moving too unevenly right now to estimate a shape."
-      : null;
+  // With nothing on board the forecast is simply persistence, and it is drawn
+  // as exactly that: a flat line from the anchor with a widening band, never a
+  // shape invented from the recent slope. Abstention is reserved for readings
+  // too uneven for any shape model to keep its own expected error under the
+  // internal bar.
+  const structuralAbstain = (Number(snapshot.dataQuality.volatilitySd) || 0) > VOLATILITY_ABSTAIN_SD
+    ? "Glucose is moving too unevenly right now to estimate a shape."
+    : null;
 
   if (structuralAbstain) {
     return {

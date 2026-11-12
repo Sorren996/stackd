@@ -19,7 +19,7 @@ import {
   MIN_SAMPLES_FOR_VALIDATION,
   EVAL_BUFFER_MIN,
 } from "../evaluation";
-import { projectGlucose, normalizeInputs, BASELINE_MODEL_VERSION, PERSONALIZED_MODEL_VERSION } from "../index";
+import { projectGlucose, normalizeInputs, BASELINE_MODEL_VERSION, PERSONALIZED_MODEL_VERSION, PROJECTION_MODEL_VERSION } from "../index";
 
 const MINUTE_MS = 60 * 1000;
 
@@ -854,15 +854,17 @@ describe("12. Learned parameter changes and affects a subsequent forecast", () =
       modelParams: { rateAdjustmentFactor: updatedState.parameters.rateAdjustmentFactor },
     });
 
-    // Step 6: Verify the personalized forecast is different from the baseline.
-    // The personalized model has a lower rateAdjustmentFactor, so it predicts
-    // a smaller rise → lower values at the end of the horizon.
+    // Step 6: The learning path still runs end to end and records its decision,
+    // but the multiplier it produced is now provenance only — the forecast is
+    // unchanged, and both carry the shape engine's own label.
     const baselineEnd = baselineResult.trajectory[baselineResult.trajectory.length - 1].value;
     const personalizedEnd = personalizedResult.trajectory[personalizedResult.trajectory.length - 1].value;
 
-    expect(personalizedEnd).toBeLessThan(baselineEnd);
-    expect(personalizedResult.modelVersion).toBe(PERSONALIZED_MODEL_VERSION);
-    expect(baselineResult.modelVersion).toBe(BASELINE_MODEL_VERSION);
+    expect(personalizedEnd).toBe(baselineEnd);
+    expect(personalizedResult.effectiveParameters.rateAdjustmentFactor)
+      .toBe(updatedState.parameters.rateAdjustmentFactor);
+    expect(personalizedResult.modelVersion).toBe(PROJECTION_MODEL_VERSION);
+    expect(baselineResult.modelVersion).toBe(PROJECTION_MODEL_VERSION);
   });
 
   it("the learned parameter is clamped and does not cause extreme shifts", () => {

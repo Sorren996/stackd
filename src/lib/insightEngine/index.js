@@ -599,14 +599,34 @@ export function projectGlucose(snapshot, opts = {}) {
   modelVersion = PROJECTION_MODEL_VERSION;
   mealModelVersion = PROJECTION_MODEL_VERSION;
 
+  // An abstained projection is still a complete answer. It carries the same
+  // provenance fields as a drawn one, so a reader never has to guess whether a
+  // missing field meant "nothing to report" or "field not produced".
+  const abstainedResult = (reason, confidence, anchor = null) => ({
+    trajectory: [], anchor, modelVersion, mealModelVersion,
+    generatedAt, horizonMinutes: horizonMin, confidence,
+    abstained: true, abstainReason: reason,
+    dataQuality: snapshot.dataQuality, uncertaintySummary: null,
+    inputProvenance: null, activeInputs: null,
+    modelResolution,
+    effectiveParameters: {
+      rateAdjustmentFactor,
+      mealParams: mealModelParams,
+      shapeEngine: null,
+    },
+    uncertainty: uncertaintyCalibration
+      ? {
+          method: uncertaintyCalibration.method,
+          version: uncertaintyCalibration.version,
+          calibrated: uncertaintyCalibration.calibrated,
+          sampleCount: uncertaintyCalibration.sampleCount,
+          coverageObserved: uncertaintyCalibration.coverageObserved,
+        }
+      : null,
+  });
+
   if (!snapshot.anchor) {
-    return {
-      trajectory: [], anchor: null, modelVersion, mealModelVersion,
-      generatedAt, horizonMinutes: horizonMin, confidence: 0,
-      abstained: true, abstainReason: "No valid CGM reading within the freshness window.",
-      dataQuality: snapshot.dataQuality, uncertaintySummary: null,
-      inputProvenance: null, activeInputs: null,
-    };
+    return abstainedResult("No valid CGM reading within the freshness window.", 0);
   }
 
   const hasActiveInputs = snapshot.activeMeals.length > 0 || snapshot.activeRescueCarbs.length > 0 || snapshot.activeDoses.length > 0;
@@ -616,34 +636,20 @@ export function projectGlucose(snapshot, opts = {}) {
   );
 
   if (confidence < ABSTAIN_CONFIDENCE_THRESHOLD) {
-    return {
-      trajectory: [], anchor: snapshot.anchor, modelVersion, mealModelVersion,
-      generatedAt, horizonMinutes: horizonMin, confidence,
-      abstained: true, abstainReason: "Insufficient evidence to project.",
-      dataQuality: snapshot.dataQuality, uncertaintySummary: null,
-      inputProvenance: null, activeInputs: null,
-    };
+    return abstainedResult("Insufficient evidence to project.", confidence, snapshot.anchor);
   }
 
   // ── Honest abstention ───────────────────────────────────────────────────
-  // Nothing to superpose, or the readings are moving too unevenly for a shape
-  // model to expect its own error to stay under the internal bar. Drawing
-  // nothing is the correct answer here — never a line pretending to be a
-  // forecast.
-  const structuralAbstain = !hasActiveInputs
-    ? "No meal or insulin on board to model."
-    : (Number(snapshot.dataQuality.volatilitySd) || 0) > VOLATILITY_ABSTAIN_SD
-      ? "Glucose is moving too unevenly right now to estimate a shape."
-      : null;
+  // With nothing on board the forecast is simply persistence, and it is drawn
+  // as exactly that: a flat line from the anchor with a widening band, never a
+  // shape invented from the recent slope. Abstention is reserved for readings
+  // too uneven for any shape model to hold its own error bar.
+  const structuralAbstain = (Number(snapshot.dataQuality.volatilitySd) || 0) > VOLATILITY_ABSTAIN_SD
+    ? "Glucose is moving too unevenly right now to estimate a shape."
+    : null;
 
   if (structuralAbstain) {
-    return {
-      trajectory: [], anchor: snapshot.anchor, modelVersion, mealModelVersion,
-      generatedAt, horizonMinutes: horizonMin, confidence,
-      abstained: true, abstainReason: structuralAbstain,
-      dataQuality: snapshot.dataQuality, uncertaintySummary: null,
-      inputProvenance: null, activeInputs: null,
-    };
+    return abstainedResult(structuralAbstain, confidence, snapshot.anchor);
   }
 
   const isf = snapshot.settings.isf && snapshot.settings.isf > 0 ? snapshot.settings.isf : null;

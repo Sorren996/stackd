@@ -116,8 +116,11 @@ describe("A. Model propagation", () => {
     // absorption parameter. The absorption curve must not change when only
     // magnitudeFactor changes.
     const entry = makeEntry({ carbs: 45, consumedAtMs: Date.now() - 30 * MINUTE });
-    const result1 = getCarbAbsorptionAt(entry, Date.now(), { speedFactor: 1.0 });
-    const result2 = getCarbAbsorptionAt(entry, Date.now(), { speedFactor: 1.0 }); // same — magnitudeFactor is not an opts field
+    // One fixed instant for both reads: the curve is a function of elapsed time,
+    // so comparing two different wall-clock moments would measure the clock.
+    const at = Date.now();
+    const result1 = getCarbAbsorptionAt(entry, at, { speedFactor: 1.0 });
+    const result2 = getCarbAbsorptionAt(entry, at, { speedFactor: 1.0 }); // same — magnitudeFactor is not an opts field
     expect(result1.absorbedGrams).toBe(result2.absorbedGrams);
     expect(result1.remainingGrams).toBe(result2.remainingGrams);
     expect(result1.peakMin).toBe(result2.peakMin);

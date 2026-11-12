@@ -18,6 +18,7 @@ import {
   replayProjection,
   BASELINE_MODEL_VERSION,
   PERSONALIZED_MODEL_VERSION,
+  PROJECTION_MODEL_VERSION,
   MEAL_RESPONSE_MODEL_VERSION_BASELINE,
   MEAL_RESPONSE_MODEL_VERSION_PERSONALIZED,
 } from "../index";
@@ -154,8 +155,8 @@ describe("M4: Baseline projection (no personalization)", () => {
     const { result, resolution } = runProjection(readings, meals, doses, settings, null, null);
 
     expect(result.abstained).toBe(false);
-    expect(result.modelVersion).toBe(BASELINE_MODEL_VERSION);
-    expect(result.mealModelVersion).toBe(MEAL_RESPONSE_MODEL_VERSION_BASELINE);
+    expect(result.modelVersion).toBe(PROJECTION_MODEL_VERSION);
+    expect(result.mealModelVersion).toBe(PROJECTION_MODEL_VERSION);
     expect(resolution.isIntegrated).toBe(false);
     expect(resolution.resolutionReason).toBe("full_baseline");
     expect(result.trajectory.length).toBeGreaterThan(0);
@@ -190,8 +191,8 @@ describe("M4: Partial personalization", () => {
     expect(resolution.meal.eligible).toBe(false);
     expect(resolution.isIntegrated).toBe(false);
     expect(resolution.resolutionReason).toBe("general_personalized_meal_baseline");
-    expect(result.modelVersion).toBe(PERSONALIZED_MODEL_VERSION);
-    expect(result.mealModelVersion).toBe(MEAL_RESPONSE_MODEL_VERSION_BASELINE);
+    expect(result.modelVersion).toBe(PROJECTION_MODEL_VERSION);
+    expect(result.mealModelVersion).toBe(PROJECTION_MODEL_VERSION);
     expect(result.effectiveParameters.rateAdjustmentFactor).toBe(1.15);
     expect(result.effectiveParameters.mealParams).toBeNull();
   });
@@ -212,8 +213,8 @@ describe("M4: Partial personalization", () => {
     expect(resolution.meal.eligibleClasses).toContain("mixed");
     expect(resolution.isIntegrated).toBe(false);
     expect(resolution.resolutionReason).toBe("meal_personalized_general_baseline");
-    expect(result.modelVersion).toBe(BASELINE_MODEL_VERSION);
-    expect(result.mealModelVersion).toBe(MEAL_RESPONSE_MODEL_VERSION_PERSONALIZED);
+    expect(result.modelVersion).toBe(PROJECTION_MODEL_VERSION);
+    expect(result.mealModelVersion).toBe(PROJECTION_MODEL_VERSION);
     expect(result.effectiveParameters.rateAdjustmentFactor).toBe(1.0);
     expect(result.effectiveParameters.mealParams).not.toBeNull();
     expect(result.effectiveParameters.mealParams.mixed.speedFactor).toBe(1.2);
@@ -236,8 +237,8 @@ describe("M4: Integrated personalization", () => {
 
     expect(resolution.isIntegrated).toBe(true);
     expect(resolution.resolutionReason).toBe("integrated_personalized");
-    expect(result.modelVersion).toBe(PERSONALIZED_MODEL_VERSION);
-    expect(result.mealModelVersion).toBe(MEAL_RESPONSE_MODEL_VERSION_PERSONALIZED);
+    expect(result.modelVersion).toBe(PROJECTION_MODEL_VERSION);
+    expect(result.mealModelVersion).toBe(PROJECTION_MODEL_VERSION);
     expect(result.effectiveParameters.rateAdjustmentFactor).toBe(1.1);
     expect(result.effectiveParameters.mealParams.mixed.speedFactor).toBe(1.15);
     expect(result.effectiveParameters.mealParams.mixed.magnitudeFactor).toBe(0.85);
@@ -258,8 +259,8 @@ describe("M4: Neither component eligible", () => {
     expect(resolution.general.eligible).toBe(false);
     expect(resolution.meal.eligible).toBe(false);
     expect(resolution.resolutionReason).toBe("full_baseline");
-    expect(result.modelVersion).toBe(BASELINE_MODEL_VERSION);
-    expect(result.mealModelVersion).toBe(MEAL_RESPONSE_MODEL_VERSION_BASELINE);
+    expect(result.modelVersion).toBe(PROJECTION_MODEL_VERSION);
+    expect(result.mealModelVersion).toBe(PROJECTION_MODEL_VERSION);
   });
 });
 
@@ -396,7 +397,7 @@ describe("M4: Parameter application and separation", () => {
     expect(Math.abs(lastFaster - lastBaseline)).toBeLessThan(25);
   });
 
-  test("magnitudeFactor changes excursion magnitude", () => {
+  test("magnitudeFactor is recorded but no longer reshapes the excursion", () => {
     const now = Date.now();
     const readings = makeReadings(now - 10 * MINUTE, 3, 5 * MINUTE, 120);
     const meals = [makeMeal(now - 5 * MINUTE, 15)];
@@ -405,34 +406,33 @@ describe("M4: Parameter application and separation", () => {
     const smaller = runProjection(readings, meals, [], makeSettings(), null,
       makeMealState({ mixed: { speedFactor: 1.0, magnitudeFactor: 0.8 } }), { now });
 
-    // With smaller magnitude, the peak should be lower
+    // The magnitude correction is kept as a diagnostic only. A carbohydrate
+    // gram is a fixed quantity of glucose work: the shape engine delivers
+    // exactly grams x sensitivity, so a learned magnitude multiplier can no
+    // longer quietly re-scale it. The peak is unchanged; the value is recorded.
     const peakBaseline = Math.max(...baseline.result.trajectory.map(p => p.value));
     const peakSmaller = Math.max(...smaller.result.trajectory.map(p => p.value));
-    expect(peakSmaller).toBeLessThan(peakBaseline);
+    expect(peakSmaller).toBe(peakBaseline);
+    expect(smaller.result.effectiveParameters.mealParams.mixed.magnitudeFactor).toBe(0.8);
   });
 
-  test("rateAdjustmentFactor does not affect insulin activity directly", () => {
+  test("rateAdjustmentFactor never scales insulin action", () => {
     const now = Date.now();
     const readings = makeReadings(now - 10 * MINUTE, 3, 5 * MINUTE, 120);
     const doses = [makeDose(now - 5 * MINUTE, 5)];
 
-    // The rateAdjustmentFactor multiplies the net rate, which includes insulin.
-    // But it should NOT change the insulin activity RATE itself — only the
-    // net effect. Verify that the insulin activity is computed the same way
-    // regardless of rateAdjustmentFactor by checking that the trajectory
-    // with rateAdjustmentFactor=1.0 and rateAdjustmentFactor=1.3 differ
-    // proportionally (not just in the insulin component).
+    // A single global multiplier on the net rate was exactly what let the old
+    // model drag the recent trend forward. Insulin action now comes from the
+    // dose's own shape, so the learned factor is recorded and nothing more.
     const baseline = runProjection(readings, [], doses, makeSettings(), null, null, { now });
     const adjusted = runProjection(readings, [], doses, makeSettings(),
       makeProjectionState(1.3), null, { now });
 
-    // With rateAdjustmentFactor=1.3, the net rate is amplified by 1.3.
-    // The insulin drop is part of the net rate, so it's also amplified.
-    // This is the documented interaction — rateAdjustmentFactor applies to
-    // the ENTIRE net rate, including insulin.
     expect(adjusted.result.effectiveParameters.rateAdjustmentFactor).toBe(1.3);
-    // The trajectories should differ
-    expect(adjusted.result.trajectory).not.toEqual(baseline.result.trajectory);
+    expect(adjusted.result.trajectory).toEqual(baseline.result.trajectory);
+    // The insulin drop is the dose's own doing: it ends below where it started.
+    expect(adjusted.result.trajectory[adjusted.result.trajectory.length - 1].value)
+      .toBeLessThan(adjusted.result.trajectory[0].value);
   });
 });
 
@@ -531,15 +531,18 @@ describe("M4: Historical integrity", () => {
     // Original projection with baseline
     const original = runProjection(readings, meals, [], settings, null, null, { now });
 
-    // Later, the user gets personalized params
+    // Later, the user's general correction is learned. Only a learned
+    // absorption speed can change timing; the general rate multiplier cannot.
     const personalized = runProjection(readings, meals, [], settings,
-      makeProjectionState(1.2), makeMealState({ mixed: { speedFactor: 1.2, magnitudeFactor: 0.8 } }), { now });
+      makeProjectionState(1.2), null, { now });
 
-    // The original trajectory is NOT changed by the new model state
-    // (In the backend, the original projection record is never rewritten)
-    expect(original.result.trajectory).not.toEqual(personalized.result.trajectory);
-    expect(original.result.modelVersion).toBe(BASELINE_MODEL_VERSION);
-    expect(personalized.result.modelVersion).toBe(PERSONALIZED_MODEL_VERSION);
+    // A stored trajectory is never rewritten when the model state changes
+    // later, and a learned rate multiplier no longer takes part in the shape,
+    // so re-running identical inputs reproduces the same curve.
+    expect(original.result.trajectory).toEqual(personalized.result.trajectory);
+    expect(original.result.modelVersion).toBe(PROJECTION_MODEL_VERSION);
+    expect(personalized.result.modelVersion).toBe(PROJECTION_MODEL_VERSION);
+    expect(personalized.result.effectiveParameters.rateAdjustmentFactor).toBe(1.2);
   });
 });
 
@@ -639,10 +642,12 @@ describe("M4: Shadow evaluation (replay)", () => {
 
     expect(baselineReplay.abstained).toBe(false);
     expect(personalizedReplay.abstained).toBe(false);
-    expect(baselineReplay.modelVersion).toBe(BASELINE_MODEL_VERSION);
-    expect(personalizedReplay.modelVersion).toBe(PERSONALIZED_MODEL_VERSION);
-    // Trajectories should differ (different rateAdjustmentFactor)
-    expect(baselineReplay.trajectory).not.toEqual(personalizedReplay.trajectory);
+    expect(baselineReplay.modelVersion).toBe(PROJECTION_MODEL_VERSION);
+    expect(personalizedReplay.modelVersion).toBe(PROJECTION_MODEL_VERSION);
+    // Same inputs, same shape. The learned multiplier is provenance: it is
+    // recorded so its performance can be watched in shadow, and it never
+    // bends the curve it is recorded next to.
+    expect(baselineReplay.trajectory).toEqual(personalizedReplay.trajectory);
   });
 
   test("replay is deterministic for identical inputs", () => {
@@ -803,13 +808,19 @@ describe("M4: Cross-user isolation", () => {
     // User A: baseline
     const userA = runProjection(readings, meals, [], settings, null, null, { now });
 
-    // User B: personalized
+    // User B: a learned general correction that no longer shapes the curve
     const userB = runProjection(readings, meals, [], settings,
-      makeProjectionState(1.2), makeMealState({ mixed: { speedFactor: 1.15, magnitudeFactor: 0.85 } }), { now });
+      makeProjectionState(1.2), null, { now });
 
-    expect(userA.result.modelVersion).toBe(BASELINE_MODEL_VERSION);
-    expect(userB.result.modelVersion).toBe(PERSONALIZED_MODEL_VERSION);
-    expect(userA.result.trajectory).not.toEqual(userB.result.trajectory);
+    expect(userA.result.modelVersion).toBe(PROJECTION_MODEL_VERSION);
+    expect(userB.result.modelVersion).toBe(PROJECTION_MODEL_VERSION);
+    // Isolation is absolute: one user's stored multipliers are never read for
+    // another, and since they no longer reshape anything, identical inputs
+    // produce an identical curve for both — while each keeps its own
+    // provenance.
+    expect(userA.result.trajectory).toEqual(userB.result.trajectory);
+    expect(userA.result.effectiveParameters.rateAdjustmentFactor).toBe(1.0);
+    expect(userB.result.effectiveParameters.rateAdjustmentFactor).toBe(1.2);
   });
 
   test("user A's model state does not affect user B's resolution", () => {
@@ -891,8 +902,8 @@ describe("M4: Backward compatibility", () => {
       mealModelParams: { mixed: { speedFactor: 1.15, magnitudeFactor: 0.9 } },
     });
 
-    expect(result.modelVersion).toBe(PERSONALIZED_MODEL_VERSION);
-    expect(result.mealModelVersion).toBe(MEAL_RESPONSE_MODEL_VERSION_PERSONALIZED);
+    expect(result.modelVersion).toBe(PROJECTION_MODEL_VERSION);
+    expect(result.mealModelVersion).toBe(PROJECTION_MODEL_VERSION);
     expect(result.trajectory.length).toBeGreaterThan(0);
   });
 
@@ -901,8 +912,8 @@ describe("M4: Backward compatibility", () => {
     const readings = makeReadings(now - 10 * MINUTE, 3, 5 * MINUTE, 120);
     const snapshot = normalizeInputs(readings, [], [], makeSettings(), now);
     const result = projectGlucose(snapshot, { horizonMin: 60 });
-    expect(result.modelVersion).toBe(BASELINE_MODEL_VERSION);
-    expect(result.mealModelVersion).toBe(MEAL_RESPONSE_MODEL_VERSION_BASELINE);
+    expect(result.modelVersion).toBe(PROJECTION_MODEL_VERSION);
+    expect(result.mealModelVersion).toBe(PROJECTION_MODEL_VERSION);
   });
 });
 
@@ -923,16 +934,17 @@ describe("M4: End-to-end scenarios", () => {
       { now });
 
     expect(baseline.result.modelVersion).toBe(BASELINE_MODEL_VERSION);
-    expect(integrated.result.modelVersion).toBe(PERSONALIZED_MODEL_VERSION);
-    expect(integrated.result.mealModelVersion).toBe(MEAL_RESPONSE_MODEL_VERSION_PERSONALIZED);
+    expect(integrated.result.modelVersion).toBe(PROJECTION_MODEL_VERSION);
+    expect(integrated.result.mealModelVersion).toBe(PROJECTION_MODEL_VERSION);
     expect(integrated.resolution.isIntegrated).toBe(true);
 
-    // The trajectories should differ in the expected direction:
-    // - speedFactor 1.2 → slower peak (less early rise)
-    // - magnitudeFactor 0.85 → smaller excursion
-    // - rateAdjustmentFactor 1.15 → amplified net rate
-    // The combined effect should produce a different trajectory
-    expect(integrated.result.trajectory).not.toEqual(baseline.result.trajectory);
+    // Eligibility is still resolved and reported in full — that is what the
+    // shadow report is built on — while the curve itself comes from insulin
+    // and carbohydrate. A learned absorption speed may move its timing; it can
+    // never re-scale how much glucose a gram of carbohydrate produces.
+    const baselinePeak = Math.max(...baseline.result.trajectory.map((p) => p.value));
+    const integratedPeak = Math.max(...integrated.result.trajectory.map((p) => p.value));
+    expect(Math.abs(integratedPeak - baselinePeak)).toBeLessThan(baselinePeak * 0.1);
 
     // Verify the integrated trajectory is bounded
     for (const p of integrated.result.trajectory) {
@@ -960,8 +972,8 @@ describe("M4: End-to-end scenarios", () => {
     expect(resolution.meal.eligible).toBe(true);
     expect(resolution.isIntegrated).toBe(false);
     expect(resolution.resolutionReason).toBe("meal_personalized_general_baseline");
-    expect(result.modelVersion).toBe(BASELINE_MODEL_VERSION);
-    expect(result.mealModelVersion).toBe(MEAL_RESPONSE_MODEL_VERSION_PERSONALIZED);
+    expect(result.modelVersion).toBe(PROJECTION_MODEL_VERSION);
+    expect(result.mealModelVersion).toBe(PROJECTION_MODEL_VERSION);
     expect(result.effectiveParameters.rateAdjustmentFactor).toBe(1.0);
     expect(result.effectiveParameters.mealParams.mixed.speedFactor).toBe(1.2);
   });
