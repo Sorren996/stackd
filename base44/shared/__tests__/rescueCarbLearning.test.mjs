@@ -128,9 +128,12 @@ test("a smaller-than-generic rise lowers the magnitude factor", () => {
 });
 
 test("the learned magnitude reaches the projection", () => {
+  // 1 unit per 10 g at ISF 50 → 5 mg/dL per gram of carbohydrate, so a 15 g
+  // rescue moves glucose by about 75 mg/dL and the curve stays inside the
+  // drawable range.
   const settings = {
     insulin_sensitivity_mgdl_per_unit: 50,
-    meal_insulin_units_per_5g: 2.5,
+    meal_insulin_units_per_5g: 0.5,
     target_range_low: 70,
     target_range_high: 180,
   };

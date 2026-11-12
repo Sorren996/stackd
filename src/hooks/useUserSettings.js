@@ -11,6 +11,7 @@ import {
 import { useAuth } from "@/lib/AuthContext";
 import { toast } from "sonner";
 import { getSupportiveErrorMessage, SUPPORTIVE_SUCCESS } from "@/lib/supportiveErrors";
+import { markProjectionInputsChanged } from "@/lib/projection/projectionStaleness";
 
 const SETTINGS_QUERY_KEY = ["user-settings"];
 
@@ -69,6 +70,10 @@ export function useUserSettings() {
       if (user?.id) cacheSettingsLocally(user.id, saved);
       window.dispatchEvent(new Event("insulin-settings-updated"));
       window.dispatchEvent(new Event("target-range-updated"));
+      // Settings shape the forecast (sensitivity, ratios, absorption window),
+      // so a saved setting rebuilds the projection now instead of waiting for
+      // the next reading to arrive.
+      markProjectionInputsChanged();
       setSaveSuccess(true);
       toast.success(SUPPORTIVE_SUCCESS.save);
       setTimeout(() => setSaveSuccess(false), 2500);
