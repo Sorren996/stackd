@@ -1795,30 +1795,16 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
                 })}
 
-          {/* The live marker, drawn INSIDE the scrollable content at the newest
-              reading's own x, through the same x and y functions the curve uses.
-              It therefore translates with the line it marks at any scroll speed,
-              and no frame repositions it from a scroll event — which is what
-              used to leave it up to 15px off the curve during a swipe. */}
-          {filters.glucose && newestDrawnGlucosePoint &&
-                (() => {
-                  const markerValue = Math.min(newestDrawnGlucosePoint.value, effectiveMax);
-                  return (
-                    <div
-                      className="pointer-events-none absolute z-10"
-                      style={{
-                        left: (newestDrawnGlucosePoint.time - domainStart) / totalMs * chartWidth,
-                        top: getGlucoseY(markerValue),
-                        transform: "translate(-50%, -50%)",
-                        width: 9,
-                        height: 9,
-                        opacity: getHighRangeOpacity(markerValue)
-                      }}>
-                      <div className="absolute inset-0 rounded-full" style={{ background: "#9c5228", boxShadow: "0 0 6px #9c522866, 0 0 14px #9c522826" }} />
-                      <div className="absolute -inset-[3px] rounded-full border" style={{ borderColor: "#eadccf" }} />
-                    </div>
-                  );
-                })()}
+          {/* There is exactly ONE end-of-line marker, and it is the pair of
+              ReferenceDots drawn inside the glucose chart's own SVG (above).
+              A second, DOM-positioned copy used to live here: an absolutely
+              positioned div whose `left` was computed from the chart width. An
+              overlay element like that is a sibling of the plot rather than a
+              child of its coordinate space, so it can sit still on screen while
+              the curve travels under it — which is exactly the "planted dot"
+              that was measured. Nothing may be positioned here again: the marker
+              must stay inside the SVG, mapped by the chart's own x and y scales,
+              so it can only ever move with the line it marks. */}
 
           </>
               }
