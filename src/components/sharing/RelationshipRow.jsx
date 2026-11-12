@@ -1,4 +1,5 @@
 import { describeStatus } from "@/lib/sharing/sharingCopy";
+import { REACHABILITY_COPY } from "@/lib/notifications/notificationCopy";
 
 const TONE = {
   on: { bg: "rgba(91,101,80,0.14)", fg: "#4f5a45" },
@@ -7,9 +8,12 @@ const TONE = {
 };
 
 /** One person in a sharing list: who, the state, and what is shared. */
-export default function RelationshipRow({ title, subtitle, status, onOpen }) {
+export default function RelationshipRow({ title, subtitle, status, reachability, onOpen }) {
   const copy = describeStatus(status);
   const tone = TONE[copy.tone] || TONE.off;
+  // Said plainly, on the row itself: a sharer must never assume alerts are
+  // arriving when no device has received one.
+  const reachabilityNote = REACHABILITY_COPY[reachability] || null;
 
   return (
     <button
@@ -34,6 +38,11 @@ export default function RelationshipRow({ title, subtitle, status, onOpen }) {
       {subtitle && (
         <p className="mt-0.5 truncate text-xs" style={{ color: "#746959" }}>
           {subtitle}
+        </p>
+      )}
+      {reachabilityNote && (
+        <p className="mt-1 text-xs leading-relaxed" style={{ color: "#8a6326" }}>
+          {reachabilityNote}
         </p>
       )}
     </button>

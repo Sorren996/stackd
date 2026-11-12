@@ -130,6 +130,32 @@
     "urgent_during_quiet": {
       "type": "boolean",
       "default": false
+    },
+    "all_readings_enabled": {
+      "type": "boolean",
+      "default": false,
+      "description": "Owner only: one quiet note for each new reading. Followers can never enable this, and it is hidden for follower accounts. A reading that already produced an alert never produces a second, stream notice."
+    },
+    "all_readings_pause_enabled": {
+      "type": "boolean",
+      "default": false,
+      "description": "Pause window for the all-readings stream only. Every alert above keeps its own settings."
+    },
+    "all_readings_pause_start_hour": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 23,
+      "description": "Local hour the all-readings pause begins. A window may cross midnight."
+    },
+    "all_readings_pause_end_hour": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 23,
+      "description": "Local hour the all-readings pause ends. Exclusive."
+    },
+    "all_readings_pause_timezone": {
+      "type": "string",
+      "description": "IANA zone the pause window is evaluated in, stored so daylight saving resolves itself."
     }
   },
   "required": [

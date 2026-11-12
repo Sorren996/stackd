@@ -13,7 +13,8 @@ import {
 } from '../../shared/sharingCrypto.ts';
 import { maskPhone } from '../../shared/sharingCore.ts';
 import { ok, fail, asArray, currentUser, publicRelationship } from '../../shared/sharingAccess.ts';
-import { followerPushReady } from '../../shared/notificationCore.ts';
+import { followerPushReady, sharerGrants } from '../../shared/notificationCore.ts';
+import { reachabilityFromRows } from '../../shared/notificationReachability.ts';
 
 export default async function (req: Request): Promise<Response> {
   try {
@@ -26,13 +27,37 @@ export default async function (req: Request): Promise<Response> {
     const sr = base44.asServiceRole;
     const now = Date.now();
 
-    const [rows, invitations, contacts, locations, deliveries] = await Promise.all([
+    const [rows, invitations, contacts, locations, deliveries, pushDeliveries] = await Promise.all([
       sr.entities.SharedAccess.filter({ sharer_user_id: user.id }, { sort: '-created_date', limit: 100 }),
       sr.entities.SharedInvitation.filter({ sharer_user_id: user.id }, { sort: '-created_date', limit: 100 }),
       sr.entities.SharerContact.filter({ user_id: user.id }),
       sr.entities.LatestLocation.filter({ user_id: user.id }),
       sr.entities.FollowerAlertDelivery.filter({ sharer_user_id: user.id }, { sort: '-created_date', limit: 30 }),
+      // What the push transport actually recorded for the people following this
+      // account. A sharer must never be told alerts are arriving when they are not.
+      sr.entities.NotificationDelivery.filter({ audience: 'follower', owner_user_id: user.id }, { sort: '-created_date', limit: 200 }),
     ]);
+
+    // Whether each follower is still an app member at all. A removed account can
+    // never receive a push, and saying so is kinder than silence.
+    const memberIds = new Set<string>();
+    let membershipKnown = false;
+    try {
+      for (let skip = 0; skip < 2000; skip += 200) {
+        const page = asArray(await sr.entities.User.list('-created_date', 200, skip));
+        for (const account of page) if (account?.id) memberIds.add(account.id);
+        if (page.length < 200) break;
+      }
+      membershipKnown = true;
+    } catch (error: any) {
+      console.error('[getSharingRelationships] membership check unavailable:', error?.message || error);
+    }
+
+    const deliveriesByAccess: Record<string, any[]> = {};
+    for (const delivery of asArray(pushDeliveries)) {
+      if (!delivery?.shared_access_id) continue;
+      (deliveriesByAccess[delivery.shared_access_id] ||= []).push(delivery);
+    }
 
     // The follower's own push choice, so the owner's screen can say honestly
     // "permission saved, waiting for them" instead of showing a permission as
@@ -62,6 +87,19 @@ export default async function (req: Request): Promise<Response> {
         // Per category: the owner's permission is saved, but is this follower
         // ready to receive it? Derived from their own stored choice only.
         follower_push_ready: followerPushReady(followerPrefByAccess[row.id]),
+        // Can a push actually reach them? Reachable only once a notice has been
+        // submitted; no_device when the transport said there is no device yet
+        // (or you granted push and not one notice has ever been submitted);
+        // not_member when that account is no longer an app member.
+        push_reachability: (() => {
+          const followerId = row.follower_user_id;
+          if (!followerId) return 'unknown';
+          if (membershipKnown && !memberIds.has(followerId)) return 'not_member';
+          const recorded = reachabilityFromRows(deliveriesByAccess[row.id] || []);
+          const granted = Object.values(sharerGrants(row)).some(Boolean);
+          if (recorded === 'unknown' && granted && row.status === 'active') return 'no_device';
+          return recorded;
+        })(),
         // What would actually reach this follower right now: the owner's
         // authorization AND the follower's own choice. A channel that is armed
         // but not yet allowed by the follower is reported as armed, never as

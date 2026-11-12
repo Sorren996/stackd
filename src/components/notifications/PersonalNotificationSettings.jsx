@@ -3,6 +3,7 @@ import ToggleRow from '@/components/notifications/ToggleRow';
 import NotificationRuleList from '@/components/notifications/NotificationRuleList';
 import NotificationThresholdNote from '@/components/notifications/NotificationThresholdNote';
 import NotificationPrivacyControls from '@/components/notifications/NotificationPrivacyControls';
+import AllReadingsSettings from '@/components/notifications/AllReadingsSettings';
 import useNotificationDraft from '@/hooks/useNotificationDraft';
 export default function PersonalNotificationSettings({ personal, thresholds, onSave }) {
   const { draft, error, pendingKeys, apply } = useNotificationDraft(personal, onSave);
@@ -15,6 +16,9 @@ export default function PersonalNotificationSettings({ personal, thresholds, onS
     </SectionCard>
     {error && <p role="alert" className="rounded-xl bg-paper p-3 text-sm text-red-text">{error}</p>}
     <NotificationRuleList draft={draft} thresholds={thresholds} pendingKeys={pendingKeys} disabled={disabled} onChange={apply} />
+    {/* Owner only: a follower account never reaches this screen, and the
+        server refuses to store the stream for a relationship either. */}
+    <AllReadingsSettings draft={draft} pendingKeys={pendingKeys} disabled={disabled} onChange={apply} />
     <SectionCard><h2 className="mb-3 font-serif-italic text-xl text-ink">Privacy &amp; quiet hours</h2><NotificationPrivacyControls draft={draft} pendingKeys={pendingKeys} disabled={disabled} onChange={apply} /></SectionCard>
   </div>;
 }

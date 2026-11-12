@@ -23,19 +23,22 @@
 
 import {
   PUSH_CHANNEL,
-  type Category,
+  type DeliveryCategory,
   type PushCopy,
   formatClock,
   isHeldByQuietHours,
   type QuietHours,
 } from "./notificationCore.ts";
+import { classifyRecipientRefusal, NO_DEVICE_REASON, NOT_MEMBER_REASON } from "./notificationReachability.ts";
+
+const RETRYABLE_RECIPIENT_REASONS = [NO_DEVICE_REASON, NOT_MEMBER_REASON];
 
 export type DispatchStatus = "skipped" | "submitted" | "failed" | "unknown" | "duplicate";
 
 export interface DispatchInput {
   /** Master switch AND the category permission, already resolved server-side. */
   enabled: boolean;
-  category: Category;
+  category: DeliveryCategory;
   ownerUserId: string;
   recipientUserId: string;
   sharedAccessId: string | null;
@@ -63,6 +66,10 @@ export interface DispatchDeps {
   recheck: () => Promise<{ ok: boolean; reason?: string }>;
   /** The platform's own native push integration. */
   send: (message: { user_id: string; title: string; content: string; action_url: string }) => Promise<any>;
+  /** Gives an unspent claim back: nothing left the server. */
+  releaseClaim?: (eventKey: string) => Promise<void>;
+  /** Schedules a bounded backoff retry for a recipient with no device yet. */
+  scheduleRetry?: (reason: string) => Promise<void>;
   nowMs: number;
   /** Builds the absolute link the OS opens when the notification is tapped. */
   absoluteUrl: (path: string) => string;
@@ -143,10 +150,19 @@ export async function dispatchNotification(
   // 6. Permissions are checked AGAIN, moments before the send.
   const check = await deps.recheck();
   if (!check.ok) {
-    if (deliveryId) {
-      await deps.updateRecord(deliveryId, { status: "skipped", reason: check.reason || "not_eligible" });
+    const reason = check.reason || "not_eligible";
+    if (deliveryId) await deps.updateRecord(deliveryId, { status: "skipped", reason });
+    // A recipient who cannot be addressed yet has not received anything, so the
+    // claim goes back and a bounded retry is scheduled — never a silent drop.
+    if (RETRYABLE_RECIPIENT_REASONS.includes(reason)) {
+      if (deps.releaseClaim) {
+        try { await deps.releaseClaim(input.eventKey); } catch { /* the claim stays spent */ }
+      }
+      if (deps.scheduleRetry) {
+        try { await deps.scheduleRetry(reason); } catch { /* the sweep still re-evaluates */ }
+      }
     }
-    return { status: "skipped", reason: check.reason || "not_eligible", deliveryId };
+    return { status: "skipped", reason, deliveryId };
   }
 
   // 7. One attempt, never retried.
@@ -161,6 +177,22 @@ export async function dispatchNotification(
     const response = await deps.send(message);
     if (response?.success === false || response?.ok === false) throw Object.assign(new Error('Push service refused submission'), { status: 422 });
   } catch (error: any) {
+    // A recipient the push service cannot address at all is not a transport
+    // failure: nothing was sent and no device could receive it. The claim is
+    // released and a bounded backoff retry is scheduled, so the notice is not
+    // dropped — and the reason is recorded honestly instead of as a guess.
+    const refusal = classifyRecipientRefusal(error);
+    if (refusal) {
+      console.warn("[dispatchNotification] recipient not addressable:", refusal, Number(error?.status || 0));
+      if (deliveryId) await deps.updateRecord(deliveryId, { status: "skipped", reason: refusal });
+      if (deps.releaseClaim) {
+        try { await deps.releaseClaim(input.eventKey); } catch { /* the claim stays spent */ }
+      }
+      if (deps.scheduleRetry) {
+        try { await deps.scheduleRetry(refusal); } catch { /* the sweep still re-evaluates */ }
+      }
+      return { status: "skipped", reason: refusal, deliveryId };
+    }
     const kind = classifySendOutcome(error);
     const status = kind === "ambiguous" ? "unknown" : "failed";
     console.error(

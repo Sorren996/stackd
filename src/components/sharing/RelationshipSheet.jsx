@@ -21,7 +21,7 @@ import {
 } from "@/lib/sharing/sharingCopy";
 import { updateSharingScopes, describeSharingError } from "@/lib/sharing/sharingApi";
 import { savePushGrants, describeNotificationError } from "@/lib/notifications/notificationApi";
-import { CATEGORY_COPY } from "@/lib/notifications/notificationCopy";
+import { CATEGORY_COPY, REACHABILITY_COPY } from "@/lib/notifications/notificationCopy";
 import { createSubmissionGate } from "@/lib/sharing/pendingAction";
 
 /**
@@ -231,6 +231,11 @@ export default function RelationshipSheet({ relationship, open, onClose, onChang
               What they may be notified about by push. They still choose whether to receive any of it, and the email
               notices above are separate.
             </p>
+            {REACHABILITY_COPY[local.push_reachability] && (
+              <p className="pb-1 text-xs leading-relaxed" style={{ color: "#8a6326" }}>
+                {REACHABILITY_COPY[local.push_reachability]}
+              </p>
+            )}
             <div className="divide-y" style={{ borderColor: "#eadccf" }}>
               {CATEGORY_COPY.map((category) => (
                 <div key={category.key} className="flex items-start gap-3 py-3" style={{ borderColor: "#eadccf" }}>

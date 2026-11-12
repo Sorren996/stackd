@@ -42,6 +42,17 @@ export const STATUS_COPY = {
   claimed: "Pending",
 };
 
+/**
+ * How a follower's reachability reads to the person sharing with them. A sharer
+ * must never believe alerts are arriving when no device has received one.
+ */
+export const REACHABILITY_COPY = {
+  reachable: null,
+  no_device: "Not reachable yet, they have not opened Stackd on a device.",
+  not_member: "Not reachable — this account is no longer active.",
+  unknown: null,
+};
+
 export const PREVIEW_PRIVACY_HINT =
   "Previews stay generic unless you turn this on, so a locked phone never shows a reading on its own.";
 

@@ -29,6 +29,15 @@ export const CATEGORY_KEYS = [
 
 export type Category = (typeof CATEGORY_KEYS)[number];
 
+/**
+ * Categories that are delivered but are never a settings choice of their own:
+ * the optional all-readings stream and the follower recovery note. They share
+ * the copy and quiet-hour machinery without appearing in any settings list.
+ */
+export const DELIVERY_ONLY_CATEGORIES = ["all_readings", "low_recovery"] as const;
+
+export type DeliveryCategory = Category | (typeof DELIVERY_ONLY_CATEGORIES)[number];
+
 export const CATEGORY_LABELS: Record<Category, string> = {
   custom_low: 'Custom low', custom_high: 'Custom high', falling_fast: 'Falling fast', rising_fast: 'Rising fast',
   urgent_low: "Urgent low", low_glucose: "Low glucose",
@@ -375,7 +384,7 @@ export function formatClock(value: string | number | null | undefined, timeZone:
 }
 
 export interface CopyInput {
-  category: Category;
+  category: DeliveryCategory;
   /** The triggering measurement's own value, never a later fetch. */
   value?: number | null;
   units?: string | null;
@@ -410,7 +419,7 @@ export interface PushCopy {
  * labels) and never shared between categories, so a comfort-zone notice cannot
  * read as an alert-threshold notice or the other way round.
  */
-const PUSH_LABELS: Record<Category, string> = {
+const PUSH_LABELS: Record<DeliveryCategory, string> = {
   urgent_low: "Urgent low",
   custom_low: "Low glucose",
   custom_high: "High glucose",
@@ -420,6 +429,8 @@ const PUSH_LABELS: Record<Category, string> = {
   falling_fast: "Falling fast",
   rising_fast: "Rising fast",
   missing_readings: "Readings haven't updated",
+  all_readings: "Glucose",
+  low_recovery: "Back in range",
 };
 
 /** A second, coalesced condition is named by its OWN threshold. */
@@ -504,7 +515,7 @@ export function buildNotificationCopy(input: CopyInput): PushCopy {
   const held = Number(input.durationMinutes);
   const sustained = Number.isFinite(held) && held > 0 ? ` and has stayed there for ${Math.round(held)} minutes` : "";
 
-  const bodies: Record<Exclude<Category, "missing_readings">, string> = {
+  const bodies: Record<Exclude<DeliveryCategory, "missing_readings">, string> = {
     urgent_low: `${subject} glucose is critically low, below ${formatGlucoseValue(55, units)} ${units}.`,
     low_glucose: `${subject} glucose is below ${formatGlucoseValue(70, units)} ${units}.`,
     custom_low: `${subject} glucose is below ${their} low alert level.`,
@@ -513,6 +524,8 @@ export function buildNotificationCopy(input: CopyInput): PushCopy {
     above_range: `${subject} glucose is above ${their} comfort zone${sustained}.`,
     falling_fast: `${subject} glucose is falling faster than the pace ${who ? `${who} set` : "you set"}.`,
     rising_fast: `${subject} glucose is rising faster than the pace ${who ? `${who} set` : "you set"}.`,
+    all_readings: `${subject} glucose is ${value} ${units}.`,
+    low_recovery: `${subject} glucose is back in range.`,
   };
 
   return { title, body: `${bodies[input.category]}${coalescedClause(input)}` };
@@ -583,7 +596,7 @@ export function isWithinQuietWindow(hour: number | null, startHour: unknown, end
  * inside the window when the recipient turned that on separately.
  */
 export function isHeldByQuietHours(
-  category: Category,
+  category: DeliveryCategory,
   quiet: QuietHours | null | undefined,
   nowMs: number
 ): boolean {
@@ -593,6 +606,21 @@ export function isHeldByQuietHours(
   if (!isWithinQuietWindow(hour, quiet.startHour, quiet.endHour)) return false;
   if (category === "urgent_low" && quiet.urgentDuringQuiet === true) return false;
   return true;
+}
+
+/**
+ * The pause window for the all-readings stream.
+ *
+ * This holds ONLY that stream back. Every alert above keeps its own settings,
+ * so nothing here can quiet an urgent low, a boundary notice, a pace notice or
+ * a missing-readings notice. The window may cross midnight, and it is stored
+ * with its own zone so daylight saving resolves itself.
+ */
+export function allReadingsHeldByPause(preferences: any, nowMs: number): boolean {
+  if (preferences?.all_readings_pause_enabled !== true) return false;
+  const zone = preferences?.all_readings_pause_timezone || preferences?.quiet_timezone || "UTC";
+  const hour = zonedHour(nowMs, zone);
+  return isWithinQuietWindow(hour, preferences?.all_readings_pause_start_hour, preferences?.all_readings_pause_end_hour);
 }
 
 // ── Keys, destinations and authorization predicates ───────────────────────
@@ -712,6 +740,12 @@ export interface PersonalPreferences {
   quiet_end_hour: number | null;
   quiet_timezone: string | null;
   urgent_during_quiet: boolean;
+  /** Owner only: one quiet note for each new reading. Never a follower choice. */
+  all_readings_enabled: boolean;
+  all_readings_pause_enabled: boolean;
+  all_readings_pause_start_hour: number | null;
+  all_readings_pause_end_hour: number | null;
+  all_readings_pause_timezone: string | null;
 }
 
 export const EMPTY_PERSONAL_PREFERENCES: PersonalPreferences = {
@@ -731,6 +765,11 @@ export const EMPTY_PERSONAL_PREFERENCES: PersonalPreferences = {
   quiet_end_hour: null,
   quiet_timezone: null,
   urgent_during_quiet: false,
+  all_readings_enabled: false,
+  all_readings_pause_enabled: false,
+  all_readings_pause_start_hour: null,
+  all_readings_pause_end_hour: null,
+  all_readings_pause_timezone: null,
 };
 
 function readBoolean(value: unknown, fallback: boolean): boolean {
@@ -831,6 +870,33 @@ export function sanitizePersonalPreferences(
     return { value: base, error: "quiet_timezone_required" };
   }
 
+  // The all-readings stream and its pause window. The window may cross
+  // midnight; when it is switched on it needs both hours and its own zone.
+  const streamEnabled = readBoolean(input.all_readings_enabled, base.all_readings_enabled === true);
+  const pauseEnabled = streamEnabled && readBoolean(input.all_readings_pause_enabled, base.all_readings_pause_enabled === true);
+  const pauseStart = "all_readings_pause_start_hour" in input
+    ? readHour(input.all_readings_pause_start_hour)
+    : base.all_readings_pause_start_hour ?? null;
+  const pauseEnd = "all_readings_pause_end_hour" in input
+    ? readHour(input.all_readings_pause_end_hour)
+    : base.all_readings_pause_end_hour ?? null;
+  let pauseTimezone = base.all_readings_pause_timezone ?? null;
+  if ("all_readings_pause_timezone" in input) {
+    if (input.all_readings_pause_timezone == null || input.all_readings_pause_timezone === "") {
+      pauseTimezone = null;
+    } else if (isValidTimeZone(input.all_readings_pause_timezone)) {
+      pauseTimezone = String(input.all_readings_pause_timezone);
+    } else {
+      return { value: base, error: "invalid_timezone" };
+    }
+  }
+  if (pauseEnabled && (pauseStart == null || pauseEnd == null)) {
+    return { value: base, error: "all_readings_pause_required" };
+  }
+  if (pauseEnabled && !pauseTimezone) {
+    return { value: base, error: "all_readings_pause_required" };
+  }
+
   return {
     value: {
       ...options.value,
@@ -844,6 +910,11 @@ export function sanitizePersonalPreferences(
       quiet_end_hour: quietEnd,
       quiet_timezone: quietTimezone,
       urgent_during_quiet: readBoolean(input.urgent_during_quiet, base.urgent_during_quiet),
+      all_readings_enabled: streamEnabled,
+      all_readings_pause_enabled: pauseEnabled,
+      all_readings_pause_start_hour: pauseStart,
+      all_readings_pause_end_hour: pauseEnd,
+      all_readings_pause_timezone: pauseTimezone,
     },
     error: null,
   };

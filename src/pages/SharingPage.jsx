@@ -86,6 +86,7 @@ export default function SharingPage() {
                 title={relationship.invited_email}
                 subtitle={subtitleFor(relationship)}
                 status={relationship.status}
+                reachability={relationship.push_reachability}
                 onOpen={() => setSelectedId(relationship.id)}
               />
             ))}

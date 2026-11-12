@@ -20,6 +20,7 @@
     },
     "category": {
       "type": "string",
+      "description": "The winning category for the reading this notice is about. One reading produces at most one row: urgent_low, then custom_low/below_range/low_glucose, then custom_high/above_range, then falling_fast/rising_fast, then all_readings. low_recovery is the single follower note that closes a low episode.",
       "enum": [
         "urgent_low",
         "below_range",
@@ -29,7 +30,9 @@
         "custom_high",
         "falling_fast",
         "rising_fast",
-        "low_glucose"
+        "low_glucose",
+        "all_readings",
+        "low_recovery"
       ],
       "enumColors": [
         "red",
@@ -40,7 +43,9 @@
         "purple",
         "pink",
         "green",
-        "red"
+        "red",
+        "gray",
+        "green"
       ]
     },
     "channel": {
@@ -51,7 +56,8 @@
       "default": "push"
     },
     "event_key": {
-      "type": "string"
+      "type": "string",
+      "description": "Recipient plus reading identity (user id plus recorded_at), so a corrected value for the same measured moment can never notify twice."
     },
     "episode_key": {
       "type": "string"
@@ -78,7 +84,8 @@
       ]
     },
     "reason": {
-      "type": "string"
+      "type": "string",
+      "description": "no_device_token means the recipient has no device registered yet (nothing was sent, a bounded retry follows). recipient_not_member means the account is no longer an app member. transport_failed is reserved for a send the provider clearly refused."
     },
     "detail_shown": {
       "type": "boolean",

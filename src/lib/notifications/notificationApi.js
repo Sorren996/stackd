@@ -57,6 +57,7 @@ const REASON_COPY = {
   invalid_above_range_minutes: "That timing is not one of the options.",
   invalid_missing_delay_minutes: "That delay is not one of the options.",
   quiet_hours_required: "Choose a start and end for quiet hours.",
+  all_readings_pause_required: "Choose a start and an end for the pause window.",
   invalid_timezone: "We could not use that time zone.",
   not_available: "This person is not sharing glucose with you right now.",
   revoked: "This relationship has ended.",
