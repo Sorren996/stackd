@@ -66,6 +66,8 @@ export interface MealComponentResolution {
   classes: Record<string, MealClassResolution>;
   reason: string;
   eligibleClasses: SpeedClass[];
+  /** Per-class absorption means used for classes with no learned params. */
+  classFallbacks?: Record<string, { sf: number; mf: number }>;
 }
 
 export interface ModelResolution {
@@ -170,11 +172,29 @@ function resolveMealComponent(state: any | null): MealComponentResolution {
     eligibleClasses.push(cls);
   }
 
+  // Per-class absorption fallback: a class this person has not measured yet
+  // inherits the mean of the classes they HAVE, rather than dropping to the
+  // generic 1.0, so a high-fat meal is never the meal that silently loses the
+  // personalized model.
+  if (eligibleClasses.length > 0) {
+    const meanSpeed = eligibleClasses.reduce((s, c) => s + classes[c].speedFactor, 0) / eligibleClasses.length;
+    const meanMagnitude = eligibleClasses.reduce((s, c) => s + classes[c].magnitudeFactor, 0) / eligibleClasses.length;
+    for (const cls of SPEED_CLASSES) {
+      if (classes[cls].eligible) continue;
+      classes[cls] = {
+        ...classes[cls],
+        reason: `${classes[cls].reason}_class_fallback`,
+      };
+      classFallbacks[cls] = { sf: meanSpeed, mf: meanMagnitude };
+    }
+  }
+
   return {
     eligible: eligibleClasses.length > 0,
     classes,
     reason: eligibleClasses.length > 0 ? "personalized_active" : "no_eligible_classes",
     eligibleClasses,
+    classFallbacks,
   };
 }
 
@@ -298,6 +318,10 @@ export function extractEffectiveMealParams(resolution: ModelResolution): Record<
     const cr = resolution.meal.classes[cls];
     if (cr && cr.eligible) {
       result[cls] = { speedFactor: cr.speedFactor, magnitudeFactor: cr.magnitudeFactor };
+    } else if (resolution.meal.classFallbacks?.[cls]) {
+      // Never 1.0 for an unmeasured class: use the person's own learned average.
+      const fb = resolution.meal.classFallbacks[cls];
+      result[cls] = { speedFactor: fb.sf, magnitudeFactor: fb.mf };
     }
   }
   return Object.keys(result).length > 0 ? result : null;

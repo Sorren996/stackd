@@ -1897,27 +1897,32 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       </div>
       </div>
       <div className="px-3 mt-1.5 space-y-1">
-        {/* Row 1: glucose, projection (mean / high / low), meals */}
+        {/* Row 1: received / projected / selected — the three states of the
+            trace, in the graph's own words. */}
         <div className="flex items-center gap-x-3 gap-y-1 flex-wrap">
           <div className="flex items-center gap-1.5">
             <div className="h-[2.75px] w-3 rounded-full" style={{ background: "#8c4a28" }} />
-            <span className="text-[10px] font-medium" style={{ color: "#7a6b5d" }}>Glucose</span>
+            <span className="text-[10px] font-medium" style={{ color: "#7a6b5d" }}>received</span>
           </div>
           {projection && (
             <>
               <div className="flex items-center gap-1.5">
-                <div className="h-[2.5px] w-3 border-t-2 border-dashed" style={{ borderColor: "#c4965a", opacity: 0.9 }} />
-                <span className="text-[10px] font-medium" style={{ color: "#7a6b5d" }}>Projection</span>
+                <div className="h-[2.5px] w-3 border-t-2 border-dashed" style={{ borderColor: "#AF751B", opacity: 0.9 }} />
+                <span className="text-[10px] font-medium" style={{ color: "#7a6b5d" }}>projected</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="h-2 w-2 rounded-full" style={{ border: "1.5px solid #8C4A28", background: "rgba(140,74,40,0.12)" }} />
+                <span className="text-[10px] font-medium" style={{ color: "#7a6b5d" }}>selected</span>
               </div>
             </>
           )}
+        </div>
+        {/* Row 2: insulin entries, plus the meal markers */}
+        <div className="flex items-center gap-x-3 gap-y-1 flex-wrap">
           <div className="flex items-center gap-1.5">
             <div className="h-2 w-2 rounded-full" style={{ border: "1.5px solid #3f3830", background: "#f7f1e8" }} />
             <span className="text-[10px] font-medium" style={{ color: "#6b6153" }}>Meals</span>
           </div>
-        </div>
-        {/* Row 2: insulin entries (separate row) */}
-        <div className="flex items-center gap-x-3 gap-y-1 flex-wrap">
           {activeDoseKeys.length > 0 ? (
             activeDoseKeys.map((k) =>
               <div key={k.label} className="flex items-center gap-1.5">

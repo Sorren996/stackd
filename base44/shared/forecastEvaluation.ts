@@ -181,6 +181,8 @@ export interface ModelState {
   };
   sample_count: number;
   baseline_locked: boolean;
+  /** True when a learned parameter is retained but not active (shadow only). */
+  personalization_shadow?: boolean;
   evaluation_summary: any;
   last_updated_at?: string;
   update_history?: any[];
@@ -649,6 +651,13 @@ export function applyGuardedUpdate(
 // the comparison may be confounded. This is inherent to the sequential
 // design and should be considered when interpreting the result.
 export function validatePersonalization(metrics: AggregateMetrics): ValidationDecision {
+  // No revert is even considered until the account has thirty evaluated
+  // projections behind it — early noise must never be allowed to switch
+  // personalization off.
+  if (metrics.sampleCount < MIN_SAMPLES_FOR_REVERT) {
+    return { shouldRevert: false, reason: "insufficient_total_samples" };
+  }
+
   const baselineMetrics = metrics.byModelVersion[BASELINE_MODEL_VERSION];
   const personalizedMetrics = metrics.byModelVersion[PERSONALIZED_MODEL_VERSION];
 
@@ -677,10 +686,11 @@ export function revertToBaseline(
   }
 
   const previousParams = { ...state.parameters };
-  const newParams = {
-    ...state.parameters,
-    rateAdjustmentFactor: 1.0,
-  };
+  // Keep what was learned. Zeroing the factor to 1.0 erased everything the
+  // account had learned; instead the personalized value stays on the record and
+  // simply stops being the ACTIVE model — it keeps being evaluated in shadow, so
+  // it can come back when it starts winning again.
+  const newParams = { ...state.parameters };
 
   const now = Date.now();
   const evaluationSummary = {
@@ -697,6 +707,9 @@ export function revertToBaseline(
     parameters: newParams,
     sample_count: metrics.sampleCount,
     baseline_locked: true,
+    // Kept, not switched off: the learned factor continues to be evaluated
+    // against the live stream so it can be restored on evidence.
+    personalization_shadow: true,
     evaluation_summary: evaluationSummary,
     last_updated_at: new Date(now).toISOString(),
     update_history: [

@@ -7,19 +7,23 @@
 //
 // Copy rules, enforced here so no caller can drift from them:
 //   • a forecast point reads "estimated in N min" — never "Est.", never "+1m";
-//   • a real reading reads "now" or "N min ago" — never a forecast label;
+//   • a real reading reads its own age in words ("21 min ago", "now"), with the
+//     value and nothing else — no range, no estimate language;
 //   • the range line reads "likely between X and Y" — never "High ~" / "Low ~",
 //     and never a tilde.
 
-// The card's box is fixed, never content-sized. A reading card ("now", value,
-// one trend word) and a forecast card ("estimated in 5 min", value, a two-line
-// range) are different shapes, and a card that resized between them would move
-// its own clamp and flip under the reader's finger. Width and the three reserved
-// lines below are therefore constants the overlay positions against.
+// The card's box is fixed, never content-sized. A reading card ("21 min ago",
+// value) and a forecast card ("estimated in 20 min", value, a two-line range)
+// are different shapes, and a card that resized between them would move its own
+// clamp and flip under the reader's finger. Width and the three reserved lines
+// below are therefore constants the overlay positions against. The card is at
+// least 158px wide by design; it is drawn at the clamp width so its box cannot
+// change under the finger.
+export const CARD_MIN_WIDTH_PX = 158;
 export const CARD_WIDTH_PX = 190;
-// 2px border + 22px padding + 12px eyebrow + 4px gap + 40px value + 5px gap
+// 2px border + 23px padding + 12px eyebrow + 4px gap + 40px value + 5px gap
 // + 34px reserved for the range line (two lines at 12.5px / 1.35).
-export const CARD_HEIGHT_PX = 119;
+export const CARD_HEIGHT_PX = 120;
 const VALUE_BLOCK_PX = 40;
 const RANGE_BLOCK_PX = 34;
 
@@ -31,14 +35,14 @@ function eyebrowFor(point) {
   return `${minutes} min ago`;
 }
 
+// A forecast point carries the range it was drawn with. A real reading carries
+// nothing but its own value and age — it is a measurement, not an estimate.
 function rangeFor(point) {
-  if (point.kind === "forecast") {
-    if (point.lower != null && point.upper != null) {
-      return `likely between ${point.lower} and ${point.upper}`;
-    }
-    return null;
+  if (point.kind !== "forecast") return null;
+  if (point.lower != null && point.upper != null) {
+    return `likely between ${point.lower} and ${point.upper}`;
   }
-  return point.trendWord || null;
+  return null;
 }
 
 /** Every string this card will show, used by the aria-live announcements. */
@@ -61,10 +65,13 @@ export default function ProjectionTooltipCard({ point }) {
         boxSizing: "border-box",
         display: "block",
         width: CARD_WIDTH_PX,
+        minWidth: CARD_MIN_WIDTH_PX,
         background: "#FDF9F2",
         border: "1px solid rgba(46,36,32,.14)",
         borderRadius: 14,
-        padding: "11px 14px",
+        padding: "11px 14px 12px",
+        boxShadow: "none",
+        textAlign: "left",
       }}
     >
       <div
@@ -85,7 +92,7 @@ export default function ProjectionTooltipCard({ point }) {
       <div
         style={{
           minHeight: VALUE_BLOCK_PX,
-          fontFamily: "var(--font-sans)",
+          fontFamily: "var(--font-display, 'Fraunces', Georgia, serif)",
           fontSize: 42,
           lineHeight: 0.94,
           fontWeight: 400,
@@ -97,8 +104,8 @@ export default function ProjectionTooltipCard({ point }) {
       >
         {copy.value}
       </div>
-      {/* Always rendered, so a one-word reading card and a two-line forecast
-          card are exactly the same height. */}
+      {/* Always rendered, so a reading card and a two-line forecast card are
+          exactly the same height. */}
       <div
         style={{
           minHeight: RANGE_BLOCK_PX,

@@ -7,10 +7,10 @@
 //
 // DESIGN PRINCIPLES:
 //   - Observed CGM readings remain the solid, prominent line.
-//   - Projected values are a muted, dashed line — clearly not a reading.
-//   - The uncertainty band is very subtle (7% opacity) — never looks like a
-//     calibrated probability range unless the projection is empirically
-//     calibrated.
+//   - Projected values are a muted, dashed amber line (#AF751B, 5 5, 2px, round
+//     caps) drawn with the same shape-preserving smoothing as the measured
+//     line — never a chain of straight segments.
+//   - The uncertainty band is #AF751B at 10% opacity, no stroke, also smoothed.
 //   - No confidence percentages, model versions, or parameter values are shown
 //     to the user — just the visual trajectory.
 //   - Tapping a point opens an editorial card: WHEN, WHAT, HOW SURE.
@@ -43,8 +43,8 @@ import ProjectionTooltipCard, {
   CARD_WIDTH_PX,
   CARD_HEIGHT_PX,
 } from "@/components/graph/ProjectionTooltipCard";
-import { glucoseTrendWord } from "@/lib/glucoseTrend";
 import { useServerNow } from "@/lib/serverClock";
+import { monotoneXPath } from "@/lib/monotonePath";
 import { resolveScrubPoint, resolveCardFlip } from "@/lib/projection/projectionScrub";
 import { BAR_HEIGHT } from "@/components/nav/navGeometry";
 
@@ -136,8 +136,6 @@ export default function ProjectionOverlay({
     if (!Number.isFinite(time) || !Number.isFinite(value)) return null;
     return { time, value };
   }, [latestReading]);
-
-  const trendWord = useMemo(() => glucoseTrendWord(readings), [readings]);
 
   const points = useMemo(() => {
     if (!projection || !projection.trajectory || projection.abstained) return [];
@@ -485,11 +483,12 @@ export default function ProjectionOverlay({
   if (forecastPoints.length === 0) return null;
 
   // The selected point, carrying the facts its card needs.
+  // A past reading is labelled by its own age against server time — never as a
+  // forecast, so a clock skew cannot produce a phantom "now" plus "+1m".
   const selected = activePoint
     ? {
         ...activePoint,
         ageSeconds: activePoint.kind === "reading" ? pointAgeSeconds(activePoint, nowMs) : null,
-        trendWord: activePoint.kind === "reading" ? trendWord : null,
       }
     : null;
 
@@ -501,27 +500,35 @@ export default function ProjectionOverlay({
       `. Use arrow keys to step through the points.`
     : "Projected glucose trajectory. Press Enter to open, then use arrow keys to step through the points.";
 
-  const linePath = points
-    .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
-    .join(" ");
+  // ── Drawing ───────────────────────────────────────────────────────────
+  // Both the median and the band are drawn with the SAME shape-preserving
+  // smoothing as the measured line (Fritsch–Carlson), so the forecast reads as
+  // one continuous curve rather than a chain of straight segments, and the
+  // curve cannot overshoot a value the model never produced.
+  const linePath = monotoneXPath(points.map((p) => ({ x: p.x, y: p.y })));
 
-  // The uncertainty band covers the forecast only — it starts from the reading,
-  // which has no uncertainty of its own.
+  // The band covers the forecast and closes at the reading, which has no
+  // uncertainty of its own: upper edge forward, lower edge back.
   const bandPoints = points.filter((p) => p.kind === "forecast");
   const hasBand = bandPoints.length > 1 && bandPoints.every((p) => p.lower != null && p.upper != null);
   let bandPath = "";
   if (hasBand) {
-    const first = { x: points[0].x, y: points[0].y };
-    const upperOf = (p) => getGlucoseY(p.upper);
-    const lowerOf = (p) => getGlucoseY(p.lower);
-    const forward = bandPoints.map((p) => `L ${p.x.toFixed(1)} ${lowerOf(p).toFixed(1)}`).join(" ");
-    const back = bandPoints
-      .slice()
-      .reverse()
-      .map((p) => `L ${p.x.toFixed(1)} ${upperOf(p).toFixed(1)}`)
-      .join(" ");
-    bandPath = `M ${first.x.toFixed(1)} ${first.y.toFixed(1)} ${forward} ${back} Z`;
+    const upper = points.map((p) => ({ x: p.x, y: getGlucoseY(p.upper != null ? p.upper : p.value) }));
+    const lower = points.map((p) => ({ x: p.x, y: getGlucoseY(p.lower != null ? p.lower : p.value) }));
+    const back = monotoneXPath([...lower].reverse()).replace(/^M/, "L");
+    bandPath = `${monotoneXPath(upper)} ${back} Z`;
   }
+
+  // The last drawn forecast point carries a small dot, so the eye finds where
+  // the estimate stops. No number is attached to it.
+  const endPoint = points[points.length - 1];
+
+  // A short stub from the marker toward the card, so the card is visibly tied to
+  // the point it describes.
+  const STUB_PX = 10;
+  const stubEnd = selected
+    ? selected.y + (pos.flipped ? STUB_PX : -STUB_PX)
+    : 0;
 
   return (
     <>
@@ -540,26 +547,48 @@ export default function ProjectionOverlay({
         aria-label={ariaLabel}
         onKeyDown={handleKeyDown}
       >
-        {hasBand && <path d={bandPath} fill="#c4965a" fillOpacity={0.16} stroke="none" />}
+        {hasBand && <path d={bandPath} fill="#AF751B" fillOpacity={0.1} stroke="none" />}
         <path
           d={linePath}
-          stroke="#c4965a"
-          strokeWidth={1.5}
-          strokeDasharray="5 4"
-          strokeOpacity={0.85}
+          stroke="#AF751B"
+          strokeWidth={2}
+          strokeDasharray="5 5"
           fill="none"
           strokeLinecap="round"
+          strokeLinejoin="round"
           style={{ pointerEvents: "none" }}
         />
-        {/* Active point marker — a soft halo under a small solid dot. */}
+        {endPoint && (
+          <circle
+            cx={endPoint.x}
+            cy={endPoint.y}
+            r={2.4}
+            fill="#AF751B"
+            fillOpacity={0.85}
+            style={{ pointerEvents: "none" }}
+          />
+        )}
+        {/* Active point marker — a rust dot inside a 12% halo, with a short stub
+            tying it to the card. */}
         {selected && (
           <>
+            <line
+              x1={selected.x}
+              y1={selected.y}
+              x2={selected.x}
+              y2={stubEnd}
+              stroke="#8C4A28"
+              strokeWidth={1}
+              strokeOpacity={0.45}
+              strokeLinecap="round"
+              style={{ pointerEvents: "none" }}
+            />
             <circle
               cx={selected.x}
               cy={selected.y}
               r={9}
-              fill="#af751b"
-              fillOpacity={scrubbing ? 0.2 : 0.16}
+              fill="#8C4A28"
+              fillOpacity={scrubbing ? 0.2 : 0.12}
               style={{ pointerEvents: "none" }}
             />
             <circle
@@ -567,8 +596,8 @@ export default function ProjectionOverlay({
               cy={selected.y}
               r={3.6}
               fill="#8C4A28"
-              stroke="#fdf8f1"
-              strokeWidth={1.4}
+              stroke="#FDF9F2"
+              strokeWidth={1.6}
               style={{ pointerEvents: "none" }}
             />
           </>

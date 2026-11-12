@@ -402,6 +402,11 @@ export function applyGuardedUpdate(state, metrics, decision) {
 // If conditions differ systematically between eras, the comparison may be
 // confounded. This is inherent to the sequential design.
 export function validatePersonalization(metrics) {
+  // No revert is even considered under thirty evaluated projections.
+  if (metrics.sampleCount < MIN_SAMPLES_FOR_REVERT) {
+    return { shouldRevert: false, reason: "insufficient_total_samples" };
+  }
+
   const baselineMetrics = metrics.byModelVersion[BASELINE_MODEL_VERSION];
   const personalizedMetrics = metrics.byModelVersion[PERSONALIZED_MODEL_VERSION];
 
@@ -426,17 +431,21 @@ export function revertToBaseline(state, metrics, validation) {
   }
 
   const previousParams = { ...state.parameters };
-  const newParams = { ...state.parameters, rateAdjustmentFactor: 1.0 };
+  // Keep what was learned: it stops being the ACTIVE model but keeps being
+  // evaluated in shadow, rather than being erased to 1.0.
+  const newParams = { ...state.parameters };
 
   const now = Date.now();
   const evaluationSummary = {
     mae: metrics.mae, bias: metrics.bias, coverage: metrics.coverage,
     byHorizon: metrics.byHorizon, byModelVersion: metrics.byModelVersion,
+    rollingAccuracy: metrics.rollingAccuracy,
   };
 
   const updatedState = {
     model_version: BASELINE_MODEL_VERSION,
     parameters: newParams,
+    personalization_shadow: true,
     sample_count: metrics.sampleCount,
     baseline_locked: true,
     evaluation_summary: evaluationSummary,
