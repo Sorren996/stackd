@@ -52,7 +52,14 @@ export default async function (req: Request): Promise<Response> {
         connectionFound: !!conn,
         connectionStatus: conn?.status ?? null,
       }));
-      return Response.json({ status: "not_connected" });
+      return Response.json({
+        status: "not_connected",
+        source_check_success: false,
+        source_checked_at: null,
+        no_new_reading: false,
+        latest_source_measurement_at: null,
+        verification: "source_error",
+      });
     }
 
     const sr = base44.asServiceRole;
@@ -67,7 +74,14 @@ export default async function (req: Request): Promise<Response> {
         error_code: "DEXCOM_AUTH_ERROR",
         message: "Connection has no stored Share credentials",
       }));
-      return Response.json({ status: "no_credentials" });
+      return Response.json({
+        status: "no_credentials",
+        source_check_success: false,
+        source_checked_at: null,
+        no_new_reading: false,
+        latest_source_measurement_at: null,
+        verification: "source_error",
+      });
     }
 
     const { username, password } = creds;
@@ -137,6 +151,9 @@ export default async function (req: Request): Promise<Response> {
       latest_glucose_timestamp: result.latest_glucose_timestamp ?? null,
       latest_glucose_trend: result.latest_glucose_trend ?? null,
       reading_age_ms: result.reading_age_ms ?? null,
+      source_check_success: result.source_check_success === true,
+      no_new_reading: result.no_new_reading === true,
+      verification: result.verification ?? null,
       error: result.error ?? null,
       totalDurationMs: Date.now() - fnStart,
     }));
@@ -150,6 +167,12 @@ export default async function (req: Request): Promise<Response> {
       latest_glucose_timestamp: result.latest_glucose_timestamp ?? null,
       latest_glucose_trend: result.latest_glucose_trend ?? null,
       reading_age_ms: result.reading_age_ms ?? null,
+      // Proof-of-check metadata: what the client may and may not claim.
+      source_check_success: result.source_check_success === true,
+      source_checked_at: result.source_checked_at ?? null,
+      no_new_reading: result.no_new_reading === true,
+      latest_source_measurement_at: result.latest_source_measurement_at ?? null,
+      verification: result.verification ?? null,
     });
   } catch (error: any) {
     console.log(JSON.stringify({

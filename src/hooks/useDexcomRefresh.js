@@ -5,13 +5,7 @@ import { useDexcomConnection } from "./useDexcomConnection";
 import { useAuth } from '@/lib/AuthContext';
 import { readStoredCacheOwner } from '@/lib/latestGlucoseCache';
 import { boundedRead } from '@/lib/resumeFreshness';
-
-// ── Module-level singleton promise ──────────────────────────
-// Only one Dexcom fetch is allowed at a time. If multiple components
-// request a refresh simultaneously (Dashboard periodic poll, foreground
-// lifecycle, manual refresh button), they all join the same in-flight
-// promise rather than starting competing API calls.
-const inflightByOwner = new Map();
+import { requestGlucoseRefresh } from '@/lib/glucoseRefresh/coordinator';
 
 // Invalidates the glucose-related React Query caches so the graph,
 // latest-glucose card, and IOB banner pick up any new readings
@@ -25,11 +19,16 @@ function invalidateGlucoseQueries(queryClient) {
 }
 
 /**
- * Centralized Dexcom refresh hook.
+ * Centralized source refresh hook.
  *
- * Returns `requestRefresh(force)` — the single function every part of
- * Stackd should call when a legitimate refresh opportunity arises
- * (app launch, foreground, manual refresh, periodic timer).
+ * Returns `requestRefresh(force)` — the single function every part of Stackd
+ * should call when a legitimate refresh opportunity arises (app launch,
+ * foreground, manual refresh, periodic timer).
+ *
+ * The single-flight, generation and timeout rules live in the refresh
+ * coordinator, so a launch/foreground/manual collision joins one request and a
+ * late answer can never overwrite a newer one. This hook only owns what is
+ * Dexcom-specific: the call itself and the cache invalidation that follows.
  *
  * The backend (pollDexcomNow) applies the reading-age gate: if the
  * newest cached Dexcom reading is still within the expected G7 cadence
@@ -50,20 +49,32 @@ export function useDexcomRefresh() {
         return { status: "not_connected" };
       }
 
-      // Concurrency: join an existing in-flight request.
-      if (inflightByOwner.has(user.id)) return inflightByOwner.get(user.id);
+      const ownerId = user.id;
 
-      const inflightPromise = (async () => {
-        const invokeStart = Date.now();
-        try {
-          const res = await boundedRead(() => base44.functions.invoke("pollDexcomNow", { force }));
+      return requestGlucoseRefresh({
+        userId: ownerId,
+        trigger: force ? "manual" : "opportunity",
+        run: async () => {
+          const invokeStart = Date.now();
+          let res;
+          try {
+            res = await boundedRead(() => base44.functions.invoke("pollDexcomNow", { force }));
+          } catch (invokeErr) {
+            console.log(JSON.stringify({
+              diagStage: "FRONTEND",
+              error_code: "FRONTEND_REQUEST_ERROR",
+              message: invokeErr?.message || String(invokeErr),
+              durationMs: Date.now() - invokeStart,
+            }));
+            throw invokeErr;
+          }
           const data = res?.data;
 
           // Invalidate glucose queries whenever the poll returns a valid
           // latest reading timestamp — even when the frontend's own poll
           // didn't insert it (the scheduled workflow may have ingested it
           // first, so records_inserted is 0 but a newer reading now exists).
-          if (data?.latest_glucose_timestamp && readStoredCacheOwner() === user.id) {
+          if (data?.latest_glucose_timestamp && readStoredCacheOwner() === ownerId) {
             invalidateGlucoseQueries(queryClient);
           }
 
@@ -75,6 +86,8 @@ export function useDexcomRefresh() {
             skipped: data?.skipped === true,
             reason: data?.reason ?? null,
             records_inserted: data?.records_inserted ?? null,
+            source_check_success: data?.source_check_success ?? null,
+            verification: data?.verification ?? null,
             latest_glucose: data?.latest_glucose ?? null,
             latest_glucose_timestamp: data?.latest_glucose_timestamp ?? null,
             reading_age_ms: data?.reading_age_ms ?? null,
@@ -82,20 +95,8 @@ export function useDexcomRefresh() {
           }));
 
           return data;
-        } catch (invokeErr) {
-          console.log(JSON.stringify({
-            diagStage: "FRONTEND",
-            error_code: "FRONTEND_REQUEST_ERROR",
-            message: invokeErr?.message || String(invokeErr),
-            durationMs: Date.now() - invokeStart,
-          }));
-          throw invokeErr;
-        } finally {
-          inflightByOwner.delete(user.id);
-        }
-      })();
-      inflightByOwner.set(user.id, inflightPromise);
-      return inflightPromise;
+        },
+      });
     },
     [queryClient, user?.id]
   );

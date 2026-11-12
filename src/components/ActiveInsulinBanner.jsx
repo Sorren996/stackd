@@ -43,6 +43,11 @@ import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 import { useGlucoseStaleness } from "@/hooks/useGlucoseStaleness";
 import { getLatestDexcomReading, STALE_READING_MINUTES } from "@/lib/glucoseStaleness";
 import StaleReadingBanner from "@/components/StaleReadingBanner";
+import RefreshStatusLine from "@/components/glucose/RefreshStatusLine";
+import useGlucoseRefreshState from "@/hooks/useGlucoseRefreshState";
+import { useDexcomRefresh } from "@/hooks/useDexcomRefresh";
+import { useAuth } from "@/lib/AuthContext";
+import { deriveGlucoseFreshness } from "@/lib/glucoseRefresh/verification";
 import { isRescueCarbEntry } from "@/lib/rescueCarbDetection";
 import { GLUCOSE_STATUS_COLORS, classifyGlucose, readHighReference, FIXED_LOW_REFERENCE, getCurrentGlucoseZone, computeGlucoseDirection, describeDirection, getCurrentGlucoseNote } from "@/lib/glucoseStatus";
 import AnchorNumber from "@/components/editorial/AnchorNumber";
@@ -728,6 +733,25 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, liveRea
   );
   const isGlucoseStale = useGlucoseStaleness(latestDexcomReading, dexcomConnected);
 
+  // One refresh lifecycle, shared with launch/foreground/manual refresh. The
+  // stale warning is only allowed to speak once THIS lifecycle has a completed
+  // source check — a cached old reading on reopen shows the checking line, and
+  // a failed attempt says so instead of blaming the sensor.
+  const { user } = useAuth();
+  const { requestRefresh } = useDexcomRefresh();
+  const refreshState = useGlucoseRefreshState(user?.id);
+  const refreshFreshness = useMemo(
+    () =>
+      deriveGlucoseFreshness({
+        reading: latestDexcomReading,
+        now: nowMinute * MINUTE_MS,
+        connected: dexcomConnected,
+        verification: refreshState.verification,
+        checking: refreshState.status === "checking",
+      }),
+    [latestDexcomReading, nowMinute, dexcomConnected, refreshState.verification, refreshState.status]
+  );
+
   useEffect(() => {
     const refreshSettings = () => {
       setInsulinSettings(readInsulinSettings());
@@ -1057,8 +1081,16 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, liveRea
               return `${Math.floor(mins / 60)}h ${mins % 60}m ago`;
             })()}</span>
           } />
-        {!liveReadingPending && (isGlucoseStale ?
-        <StaleReadingBanner visible={isGlucoseStale} /> :
+        {!liveReadingPending && refreshFreshness.showChecking &&
+        <RefreshStatusLine mode="checking" />}
+        {!liveReadingPending && !refreshFreshness.showChecking && refreshFreshness.showRefreshError &&
+        <RefreshStatusLine
+          mode="error"
+          retrying={refreshState.status === "checking"}
+          onRetry={() => { requestRefresh(true).catch(() => {}); }} />}
+        {!liveReadingPending && !refreshFreshness.showChecking && !refreshFreshness.showRefreshError &&
+        (refreshFreshness.showStaleWarning ?
+        <StaleReadingBanner visible /> :
         !statusCopyStale && <CurrentGlucoseNote note={glucoseNote} tone={glucoseZone.zone} />
         )}
           </div>}

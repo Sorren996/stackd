@@ -578,7 +578,16 @@ export async function requestDexcomRefreshIfNeeded(
   }));
 
   if (!owner) {
-    return { status: "skipped_no_owner", trigger, force };
+    return {
+      status: "skipped_no_owner",
+      trigger,
+      force,
+      source_check_success: false,
+      source_checked_at: null,
+      no_new_reading: false,
+      latest_source_measurement_at: null,
+      verification: "pending",
+    };
   }
 
   // 1. Load the newest cached reading for this user.
@@ -619,6 +628,13 @@ export async function requestDexcomRefreshIfNeeded(
       status: "skipped_in_flight",
       skipped: true,
       reason: "in_flight_lock",
+      // A skipped request never asked the source, so it proves nothing about
+      // freshness either way — pending, never "no new readings".
+      source_check_success: false,
+      source_checked_at: null,
+      no_new_reading: false,
+      latest_source_measurement_at: null,
+      verification: "pending",
       trigger,
       force,
       last_fetched_at: conn.last_fetched_at,
@@ -649,6 +665,13 @@ export async function requestDexcomRefreshIfNeeded(
       status: "skipped_fresh_cache",
       skipped: true,
       reason: "reading_age_below_threshold",
+      // Returning a fresh cached row is not a source check: the UI must not
+      // treat it as one.
+      source_check_success: false,
+      source_checked_at: null,
+      no_new_reading: false,
+      latest_source_measurement_at: null,
+      verification: "pending",
       trigger,
       force,
       reading_age_ms: readingAgeMs,
@@ -693,6 +716,29 @@ export async function requestDexcomRefreshIfNeeded(
     had_cached_reading: newestReadingTs != null,
     skipped: false,
   };
+
+  // ── Source-check metadata ────────────────────────────
+  // The gate has just asked Dexcom. Only the two statuses the sync loop can
+  // reach after a completed upstream read prove anything; everything else is
+  // reported as unverified so no caller can present a cached row as a current
+  // check. Captured BEFORE the cached-row backfill below, so a backfilled
+  // timestamp is never attributed to the source.
+  {
+    const sourceStatus = diag.status;
+    const sourceAnswered = sourceStatus === "synced" || sourceStatus === "no_new_records";
+    const insertedCount = diag.records_inserted || 0;
+    diag.source_check_success = sourceAnswered;
+    diag.source_checked_at = sourceAnswered ? new Date().toISOString() : null;
+    diag.no_new_reading = sourceAnswered && insertedCount === 0;
+    diag.latest_source_measurement_at = sourceAnswered
+      ? diag.latest_glucose_timestamp ?? null
+      : null;
+    diag.verification = !sourceAnswered
+      ? "source_error"
+      : diag.no_new_reading
+        ? "confirmed_no_new"
+        : "new_reading";
+  }
 
   // 6. Preserve cached reading info when the sync returned no new records.
   //    syncShareForConnection only sets latest_glucose_* when it inserts

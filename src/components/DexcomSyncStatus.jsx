@@ -10,6 +10,9 @@ import {
   CloudOff,
 } from "lucide-react";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
+import useGlucoseRefreshState from "@/hooks/useGlucoseRefreshState";
+import { useAuth } from "@/lib/AuthContext";
+import { VERIFICATION } from "@/lib/glucoseRefresh/verification";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 
@@ -49,6 +52,8 @@ const TROUBLESHOOTING_TIPS = [
 
 export default function DexcomSyncStatus() {
   const { connected, connection } = useDexcomConnection();
+  const { user } = useAuth();
+  const refreshState = useGlucoseRefreshState(user?.id);
   const [showHelp, setShowHelp] = useState(false);
 
   const { data: latestDexcom = [], isLoading } = useQuery({
@@ -66,6 +71,10 @@ export default function DexcomSyncStatus() {
   // (e.g. right after reopening the app) — wait until we've actually confirmed
   // there's no Dexcom data before showing the "over 3 hours" guidance.
   if (isLoading) return null;
+  // A source check is in flight: claim nothing about the stream until it
+  // answers. This is what stops a reopen from flashing the "over 3 hours"
+  // guidance before the current request has even been made.
+  if (refreshState.status === "checking") return null;
 
   // Both the timer text and the "over 3 hours" trigger read the same source:
   // the last successful fetch (falling back to when the connection was made).
@@ -76,7 +85,13 @@ export default function DexcomSyncStatus() {
   const elapsedMs = Date.now() - lastActivityTime;
   const elapsedHours = Math.floor(elapsedMs / (60 * 60 * 1000));
   const elapsedMinutes = Math.floor((elapsedMs % (60 * 60 * 1000)) / (60 * 1000));
-  const isOverdue = elapsedMs > ESTIMATED_SYNC_MS;
+  // "Over 3 hours" is a claim about the source, so it needs a completed check
+  // from this session. A skipped or failed check leaves the neutral progress
+  // copy instead of an unverified accusation.
+  const checkConfirmed =
+    refreshState.verification === VERIFICATION.CONFIRMED_NO_NEW ||
+    refreshState.verification === VERIFICATION.NEW_READING;
+  const isOverdue = checkConfirmed && elapsedMs > ESTIMATED_SYNC_MS;
 
   return (
     <motion.div
