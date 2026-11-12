@@ -151,9 +151,16 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
     [breakdown]
   );
 
-  // The headline is the sum of the RAW modelled remainders, formatted once at
-  // the end. Per-dose display rounding (0.6u shown as "1u") never feeds it.
-  const bolusUnits = bolusDoses.reduce((sum, d) => sum + (Number(d.iob) || 0), 0);
+  // The headline must equal what the per-dose rows add up to on screen. Each
+  // dose's modelled remainder goes through the SAME display rule its row uses
+  // (a positive remainder under 1u reads as 1), those displayed values are
+  // summed, and the total is formatted once — so the numbers always match.
+  // The engine keeps its exact fractional amounts; only this headline total is
+  // derived from the displayed values. Bars, curves, phases, "estimate ends
+  // in" and the stacking warning still use the raw `dose.iob`.
+  const bolusUnits = Number(
+    bolusDoses.reduce((sum, d) => sum + Number(formatRemainingValue(d.iob)), 0).toFixed(2)
+  );
   // A dose counts as active while the model still has any remainder for it.
   const activeBolusCount = bolusDoses.length;
   const basalUnits = basalDoses.reduce((sum, d) => sum + (Number(d.units) || 0), 0);
