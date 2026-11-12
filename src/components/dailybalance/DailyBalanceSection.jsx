@@ -60,7 +60,7 @@ export default function DailyBalanceSection({
           }
         </div>
 
-        {hasData && coverage && <p className="mt-2 px-1 text-xs text-muted-foreground hidden">{coverage}</p>}
+        
         {hasData &&
         <div className="mt-3 px-1">
             <BalanceSpectrum percentage={percentage} />
