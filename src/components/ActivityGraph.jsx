@@ -729,6 +729,30 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   // construction a point of the line it marks.
   const newestDrawnGlucosePoint = useMemo(() => newestDrawnPoint(chartData), [chartData]);
 
+  // Which drawn run holds that point, so only that line renders the marker.
+  const newestSegmentKey = useMemo(() => (
+    newestDrawnGlucosePoint ? glucoseBucketSegments.get(newestDrawnGlucosePoint.time) ?? null : null
+  ), [newestDrawnGlucosePoint, glucoseBucketSegments]);
+
+  // The end-of-line marker, drawn BY THE LINE at the line's own final point.
+  //
+  // It is a dot renderer rather than a chart annotation: recharts calls it with
+  // the exact cx/cy it computed for that point of that path, inside the same
+  // <svg> as the curve, so the marker cannot detach from the line or hold a
+  // screen position — it is painted from the curve's own geometry and travels
+  // with it. Every other point of the run returns an empty group.
+  const renderNewestMarker = (props) => {
+    const { cx, cy, payload, key } = props;
+    if (!newestDrawnGlucosePoint || payload?.time !== newestDrawnGlucosePoint.time) return null;
+    if (!Number.isFinite(cx) || !Number.isFinite(cy)) return null;
+    return (
+      <g key={key}>
+        <circle cx={cx} cy={cy} r={9} fill="#8c4a28" fillOpacity={0.12} />
+        <circle cx={cx} cy={cy} r={3.6} fill="#8c4a28" stroke="#fdf8f1" strokeWidth={1.6} />
+      </g>
+    );
+  };
+
   const doseKeys = useMemo(() => {
     const typeCount = new Map();
     return filteredDoses.map((dose, index) => {
@@ -1556,7 +1580,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                       strokeWidth={2.75}
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      dot={false}
+                      dot={newestSegmentKey === `glucose_seg_${index}` ? renderNewestMarker : false}
                       activeDot={false}
                       connectNulls
                       isAnimationActive={false} />
@@ -1567,7 +1591,9 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               {/* A lone reading between two gaps has no line to draw, and the
                   newest reading always carries a marker, so nothing real ever
                   disappears from the trace. */}
-              {filters.glucose && glucoseIsolatedPoints.map((point) =>
+              {filters.glucose && glucoseIsolatedPoints
+                    .filter((point) => point.time !== newestDrawnGlucosePoint?.time)
+                    .map((point) =>
               <ReferenceDot
                       key={`glucose_lone_${point.time}`}
                       yAxisId="glucose"
@@ -1581,29 +1607,12 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
               )
               }
-              {/* Current reading — rust dot, cream ring, soft halo. */}
-              {filters.glucose && newestDrawnGlucosePoint &&
-                    <>
-                  <ReferenceDot
-                        yAxisId="glucose"
-                        x={newestDrawnGlucosePoint.time}
-                        y={Math.min(newestDrawnGlucosePoint.value, effectiveMax)}
-                        r={9}
-                        fill="#8c4a28"
-                        fillOpacity={0.12}
-                        stroke="none"
-                        isFront />
-                  <ReferenceDot
-                        yAxisId="glucose"
-                        x={newestDrawnGlucosePoint.time}
-                        y={Math.min(newestDrawnGlucosePoint.value, effectiveMax)}
-                        r={3.6}
-                        fill="#8c4a28"
-                        stroke="#fdf8f1"
-                        strokeWidth={1.6}
-                        isFront />
-                </>
-                    }
+              {/* The current-reading marker is NOT a chart annotation. It is
+                  painted by the glucose line itself, through that line's own dot
+                  renderer (see renderNewestMarker above), because an annotation
+                  placed beside the plot is what left a dot hovering over older
+                  data while the curve moved. Anything added here as a separate
+                  overlay element would bring that bug back. */}
             </ComposedChart>
           </div>
 
