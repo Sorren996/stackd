@@ -257,7 +257,7 @@ export const AuthProvider = ({ children }) => {
   /**
    * Centralized session expiration handler.
    * Called when a protected request fails due to an expired session.
-   * Clears all authenticated state, hides protected data, and redirects.
+   * Only a reachable session denial hides protected views and changes the SPA route.
    */
   const reportStartupFailure = useCallback((error) => {
     setStartupError({ type: error?.startupCode === 'TIMEOUT' ? 'timeout' : 'unreachable',
@@ -284,7 +284,7 @@ export const AuthProvider = ({ children }) => {
       // the SDK to visit its official cookie-clearing logout endpoint.
       await withStartupSignal(async signal => {
         if (navigator.onLine === false) throw Object.assign(new Error('Offline'), { startupCode: 'OFFLINE' });
-        const response = await fetch(`/api/apps/public/prod/public-settings/by-id/${appParams.appId}`, {
+        const response = await base44.fetchWithAuth(`/api/apps/public/prod/public-settings/by-id/${appParams.appId}`, {
           signal, cache: 'no-store', redirect: 'error',
         });
         if (!response.ok) throw new Error('Logout unavailable');

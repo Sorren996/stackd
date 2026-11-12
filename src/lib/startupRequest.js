@@ -24,9 +24,10 @@ export const startupCode = (error) => error?.name === 'AbortError' ? 'CANCELLED'
   : requestStatus(error) === 429 ? 'RATE_LIMITED' : requestStatus(error) >= 500 ? 'SERVER_ERROR' : 'UNAVAILABLE';
 const cooldowns = new Map();
 const wait = (ms, signal) => new Promise((resolve, reject) => {
-  const abort = () => { clearTimeout(timer); reject(new DOMException('Cancelled', 'AbortError')); };
+  const abort = () => { clearTimeout(timer); reject(signal.reason || new DOMException('Cancelled', 'AbortError')); };
   const timer = setTimeout(() => { signal?.removeEventListener('abort', abort); resolve(); }, ms);
   signal?.addEventListener('abort', abort, { once: true });
+  if (signal?.aborted) abort();
 });
 
 // QueryClient deduplicates by account/stage. Only retries reads; no writes or auth defaults.

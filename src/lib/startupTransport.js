@@ -1,9 +1,8 @@
 const pending = new Map();
 
-// SDK read methods do not expose AbortSignal. Keep a timed-out but still-live
-// transport shared across retry windows, instead of sending duplicate requests.
-// Never retain a settled promise. Cancellation retires its slot, so an account
-// change cannot attach to the prior identity's auth read.
+// Share in-flight startup reads only. Deadlines abort their fetch and retire
+// this slot immediately, so Try again cannot reattach to a hung transport.
+// Never retain a settled promise or share one across account changes.
 export default function startupTransport(key, read, signal) {
   if (pending.has(key)) return pending.get(key);
   const work = Promise.resolve().then(() => { signal?.throwIfAborted(); return read(); });
