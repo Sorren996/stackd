@@ -1618,23 +1618,34 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           )}
 
           {/* ── The end-of-line marker ──
-              The newest reading, marked where the glucose curve ends. It is a
-              plain element inside this same scrolled content box, placed at the
-              newest reading's x in the chart's own coordinate space and its y on
-              the glucose scale, so it is part of the curve's world: it scrolls
-              with the trace, sits exactly on the line's last point, and cannot
-              be left hovering in screen space. */}
-          {!isCandlestick && filters.glucose && latestGlucosePoint && Number.isFinite(latestGlucoseX) &&
-            <div
-              className="pointer-events-none absolute z-[12]"
-              style={{ left: latestGlucoseX, top: getGlucoseY(Math.min(Number(latestGlucosePoint.value), effectiveMax)), transform: "translate(-50%, -50%)" }}
-              aria-hidden="true">
-              <div className="rounded-full" style={{ width: 20, height: 20, background: "rgba(140, 74, 40, 0.14)" }} />
-              <div
-                className="absolute rounded-full"
-                style={{ width: 9, height: 9, left: 5.5, top: 5.5, background: "#8c4a28", border: "1.8px solid #fdf8f1" }} />
-            </div>
-          }
+              Drawn from the SAME sample array that feeds the glucose line
+              (glucoseSegments → dataKey glucose_seg_N). No bucketed copy, no
+              separate list: the dot's time is the last drawn sample's own time,
+              so its x is by construction a point of the curve it marks. Both
+              coordinates are clamped inside the plot, so an edge sample can
+              never push the dot outside the drawable area and vanish. */}
+          {!isCandlestick && filters.glucose && (() => {
+            const lastSegment = glucoseSegments[glucoseSegments.length - 1];
+            const lastPoint = lastSegment?.[lastSegment.length - 1];
+            if (!lastPoint || !Number.isFinite(lastPoint.time) || !Number.isFinite(lastPoint.value)) return null;
+            const HALO_R = 9;
+            const cx = Math.min(Math.max((lastPoint.time - domainStart) / totalMs * chartWidth, HALO_R), Math.max(HALO_R, chartWidth - HALO_R));
+            const cy = Math.min(
+              Math.max(getGlucoseY(Math.min(lastPoint.value, effectiveMax)), GLUCOSE_MARGIN_TOP + HALO_R),
+              GLUCOSE_MARGIN_TOP + plotHeight - HALO_R
+            );
+            return (
+              <svg
+                className="pointer-events-none absolute left-0 top-0 z-[12]"
+                width={chartWidth}
+                height={GLUCOSE_CHART_HEIGHT}
+                viewBox={`0 0 ${chartWidth} ${GLUCOSE_CHART_HEIGHT}`}
+                aria-hidden="true">
+                <circle cx={cx} cy={cy} r={9} fill="#8c4a28" fillOpacity={0.12} />
+                <circle cx={cx} cy={cy} r={3.6} fill="#8c4a28" stroke="#fdf8f1" strokeWidth={1.6} />
+              </svg>
+            );
+          })()}
 
           {/* ── Insulin row (lower) — one shared timeline ── */}
           <div style={{ position: "absolute", top: INSULIN_ROW_TOP, left: 0 }}>
