@@ -29,8 +29,8 @@ export default function JournalHeader({
 }) {
   return (
     <div
-      className="sticky z-30 -mx-4 flex items-center gap-3 px-5 pb-3"
-      style={{ top: HEADER_BLUR_HEIGHT, background: "#4c6770" }}
+      className="sticky z-30 -mx-4 flex items-center gap-3 px-5 pb-3 pt-2"
+      style={{ top: HEADER_BLUR_HEIGHT, background: "var(--site-field)" }}
     >
       <BackButton
         fallback={fallback}
