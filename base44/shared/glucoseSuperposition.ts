@@ -231,10 +231,37 @@ export function carbAbsorptionFraction(minSinceMeal: number, shape: CarbShape): 
   return Math.max(0, Math.min(1, delivered / area));
 }
 
+// ── Rescue carbohydrate shape ──────────────────────────────────────────────
+// A rescue carbohydrate (glucose tabs, juice, a fizzy drink) is not a meal. It
+// starts acting within 10–15 minutes, peaks at 20–30, and is essentially spent
+// by 45–60. It therefore gets its own term with its own shape, so it can never
+// inherit a meal's high-fat tail, and the mass it contributes is exactly the
+// grams logged for the rescue — never a share of some larger meal.
+export const RESCUE_PEAK_MIN = 25;
+export const RESCUE_DURATION_MIN = 60;
+
+export function rescueShapeFor(speedFactor?: number | null): CarbShape {
+  const s = Number.isFinite(Number(speedFactor)) && Number(speedFactor) > 0
+    ? Math.max(0.75, Math.min(1.35, Number(speedFactor)))
+    : 1;
+  return {
+    firstPeakMin: Math.max(15, Math.min(35, RESCUE_PEAK_MIN * s)),
+    durationMin: Math.max(45, Math.min(75, RESCUE_DURATION_MIN * s)),
+    secondPeakMin: null,
+    blend: 0,
+    secondShapeExp: 1,
+    shapeExp: 2.0,
+  };
+}
+
+// Absorption rate (fraction of the rescue's grams per minute), area = 1.
+export function rescueAbsorptionRate(minSinceRescue: number, shape: CarbShape): number {
+  return carbAbsorptionRate(minSinceRescue, shape);
+}
+
 export const MAX_TREND_NUDGE_MGDL_PER_MIN = 0.5;
 export const NUDGE_TAU_MIN = 6;
 export const NUDGE_CUTOFF_MIN = 15;
-const MAX_LAG_CORRECTION_MGDL = 5;
 export const INTERSTITIAL_LAG_MIN = 8;
 
 export function trendNudge(minOffset: number, slopeMgDlPerMin: number): number {
@@ -260,11 +287,10 @@ export function observedSlope(
   return (last.value - first.value) / dtMin;
 }
 
-function lagCorrectedAnchor(anchorValue: number, modelRateAtAnchor: number): number {
-  const rate = Math.max(-1.5, Math.min(1.5, Number(modelRateAtAnchor) || 0));
-  const correction = rate * INTERSTITIAL_LAG_MIN;
-  return anchorValue + Math.max(-MAX_LAG_CORRECTION_MGDL, Math.min(MAX_LAG_CORRECTION_MGDL, correction));
-}
+// The curve begins at the reading itself. An earlier version nudged the start
+// by a few points (a lag correction), so the drawn line never touched the solid
+// one and the forecast appeared to disagree with the value on screen. The
+// anchor is the one value actually measured, so offset 0 IS that value.
 
 export const GLUCOSE_FLOOR = 40;
 export const GLUCOSE_CEILING = 400;
@@ -274,6 +300,8 @@ export interface SuperpositionInputs {
   anchorTime: number;
   readings?: Array<{ time: number; value: number }>;
   meals?: Array<{ carbs: number; consumedAt: number; speedClass?: string; speedFactor?: number | null }>;
+  /** Rescue carbs only. Their own mass and their own short curve. */
+  rescues?: Array<{ grams: number; atTime: number; magnitude?: number; speedFactor?: number | null }>;
   doses?: Array<{ units: number; atTime: number; insulinType?: string }>;
   isf?: number | null;
   mgPerGram?: number | null;
@@ -287,6 +315,7 @@ export interface SuperpositionPoint {
   value: number;
   rate: number;
   carbRate: number;
+  rescueRate: number;
   insulinRate: number;
   nudgeRate: number;
 }
@@ -300,14 +329,15 @@ export function projectSuperposition(inputs: SuperpositionInputs): {
     anchorTime,
     readings = [],
     meals = [],
+    rescues = [],
     doses = [],
     isf,
     mgPerGram,
-    horizonMin = 60,
+    horizonMin = 120,
     stepMin = GRID_MIN,
   } = inputs || ({} as SuperpositionInputs);
 
-  const horizon = Math.max(5, Math.min(180, Number(horizonMin) || 60));
+  const horizon = Math.max(5, Math.min(180, Number(horizonMin) || 120));
   const step = Math.max(1, Number(stepMin) || GRID_MIN);
   const anchor = Number(anchorValue);
   if (!Number.isFinite(anchor) || !Number.isFinite(Number(anchorTime))) {
@@ -333,6 +363,17 @@ export function projectSuperposition(inputs: SuperpositionInputs): {
       shape: carbShapeFor(m.speedClass || "mixed", m.speedFactor),
     }));
 
+  // Rescue carbs are their own term: their own mass (exactly the grams logged)
+  // and their own short curve, so a rescue can end and insulin can take over.
+  const rescueTerms = (rescues || [])
+    .filter((r) => r && Number(r.grams) > 0 && Number.isFinite(Number(r.atTime)))
+    .map((r) => ({
+      grams: Number(r.grams),
+      atTime: Number(r.atTime),
+      magnitude: Number.isFinite(Number(r.magnitude)) ? Math.max(0.7, Math.min(1.3, Number(r.magnitude))) : 1,
+      shape: rescueShapeFor(r.speedFactor),
+    }));
+
   const slope = observedSlope(readings, anchorTime);
 
   const carbRateAt = (tMin: number): number => {
@@ -341,6 +382,16 @@ export function projectSuperposition(inputs: SuperpositionInputs): {
     for (const m of mealTerms) {
       const elapsed = tMin - (m.consumedAt - anchorTime) / MINUTE_MS;
       rate += m.carbs * carbSensitivity * carbAbsorptionRate(elapsed, m.shape);
+    }
+    return rate;
+  };
+
+  const rescueRateAt = (tMin: number): number => {
+    if (carbSensitivity == null) return 0;
+    let rate = 0;
+    for (const r of rescueTerms) {
+      const elapsed = tMin - (r.atTime - anchorTime) / MINUTE_MS;
+      rate += r.grams * carbSensitivity * r.magnitude * rescueAbsorptionRate(elapsed, r.shape);
     }
     return rate;
   };
@@ -355,16 +406,17 @@ export function projectSuperposition(inputs: SuperpositionInputs): {
     return rate;
   };
 
-  const modelRateAtAnchor = carbRateAt(0) - insulinRateAt(0);
-  const startValue = lagCorrectedAnchor(anchor, modelRateAtAnchor);
-  let value = startValue;
+  const modelRateAtAnchor = carbRateAt(0) + rescueRateAt(0) - insulinRateAt(0);
+  // Offset 0 is the reading itself — the same number the solid line ends on.
+  let value = anchor;
 
   const points: SuperpositionPoint[] = [];
   for (let offset = 0; offset <= horizon; offset += step) {
     const carbRate = carbRateAt(offset);
+    const rescueRate = rescueRateAt(offset);
     const insulinRate = insulinRateAt(offset);
     const nudgeRate = trendNudge(offset, slope);
-    const rate = carbRate - insulinRate + nudgeRate;
+    const rate = carbRate + rescueRate - insulinRate + nudgeRate;
 
     if (offset > 0) value += rate * step;
     value = Math.max(GLUCOSE_FLOOR, Math.min(GLUCOSE_CEILING, value));
@@ -375,6 +427,7 @@ export function projectSuperposition(inputs: SuperpositionInputs): {
       value: Math.round(value),
       rate: Math.round(rate * 1000) / 1000,
       carbRate,
+      rescueRate,
       insulinRate,
       nudgeRate,
     });
@@ -384,13 +437,14 @@ export function projectSuperposition(inputs: SuperpositionInputs): {
     points,
     diagnostics: {
       version: SUPERPOSITION_MODEL_VERSION,
-      lagCorrection: Math.round((startValue - anchor) * 100) / 100,
+      lagCorrection: 0,
       trendSlope: Math.round(slope * 1000) / 1000,
       trendNudgeCapped: Math.round(
         Math.max(-MAX_TREND_NUDGE_MGDL_PER_MIN, Math.min(MAX_TREND_NUDGE_MGDL_PER_MIN, slope)) * 1000
       ) / 1000,
       carbSensitivity,
       insulinSensitivity,
+      rateAtAnchor: Math.round(modelRateAtAnchor * 1000) / 1000,
       doseTerms: doseTerms.map((d) => ({
         units: d.units,
         peakMin: d.shape.peakMin,
@@ -401,6 +455,11 @@ export function projectSuperposition(inputs: SuperpositionInputs): {
         carbs: m.carbs,
         peakMin: Math.round(m.shape.firstPeakMin),
         durationMin: Math.round(m.shape.durationMin),
+      })),
+      rescueTerms: rescueTerms.map((r) => ({
+        grams: r.grams,
+        peakMin: Math.round(r.shape.firstPeakMin),
+        durationMin: Math.round(r.shape.durationMin),
       })),
     },
   };

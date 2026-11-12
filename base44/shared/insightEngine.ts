@@ -34,7 +34,13 @@ import type { ModelResolution } from "./modelResolution.ts";
 import { extractEffectiveMealParams } from "./modelResolution.ts";
 import type { UncertaintyCalibration } from "./uncertaintyCalibration.ts";
 import { getEmpiricalSigma } from "./uncertaintyCalibration.ts";
-import { projectSuperposition } from "./glucoseSuperposition.ts";
+import {
+  projectSuperposition,
+  GLUCOSE_FLOOR,
+  GLUCOSE_CEILING,
+  rescueShapeFor,
+  rescueAbsorptionRate,
+} from "./glucoseSuperposition.ts";
 
 // ── Shadow evaluation (Milestone 4) ─────────────────────────────────────────
 //
@@ -159,6 +165,9 @@ export interface NormalizedSnapshot {
     unitsPer5g: number | null;
     targetLow: number | null;
     targetHigh: number | null;
+    absorptionSpeedFactors: Record<string, number>;
+    /** The one absorption window, in minutes (meal_outcome_window_minutes). */
+    mealOutcomeWindowMin: number;
   };
   anchor: { time: number; value: number } | null;
   momentumMgDlPerMin: number;
@@ -359,7 +368,16 @@ export function insulinActivityRateUnitsPerMin(dose: any, atTime: number): numbe
 // the "fast" speed-class profile (peakMin=30, windowMin=120) — distinct from
 // normal meal absorption — and are NEVER counted as meals for confounding or
 // meal-response learning. They are informational inputs to a forecast only.
-const RESCUE_WINDOW_MIN = 120; // fast-class absorption window
+// Rescue carbs are their own term in the engine (rescueShapeFor: peak 20–30 min,
+// spent by 45–60), so their active window is about an hour — a rescue 90 minutes
+// old must not still be lifting the curve.
+const RESCUE_WINDOW_MIN = 60;
+
+// How long a logged meal is treated as still delivering carbohydrate. This is
+// the SAME setting the meal review reads (meal_outcome_window_minutes), so the
+// forecast, the review and the analysis cannot disagree about whether a meal is
+// still in play — and lowering it actually lowers the window everywhere.
+const DEFAULT_MEAL_OUTCOME_WINDOW_MIN = 240;
 
 function isRescueCarb(entry: any): boolean {
   return entry?.is_rescue_carb === true || entry?.classification === "rescue_carbs";
@@ -478,6 +496,13 @@ export function normalizeInputs(
     : null;
   const calibrated = isf != null && isf > 0 && unitsPer5g != null && unitsPer5g > 0;
 
+  // The one absorption window. No floor: a shorter window than the default is
+  // honoured everywhere it is read.
+  const requestedWindow = Number(settings?.meal_outcome_window_minutes);
+  const mealOutcomeWindowMin = Number.isFinite(requestedWindow) && requestedWindow > 0
+    ? Math.max(30, requestedWindow)
+    : DEFAULT_MEAL_OUTCOME_WINDOW_MIN;
+
   // Anchor: latest valid reading within the stale threshold.
   const latestReading = readings.length ? readings[readings.length - 1] : null;
   const anchorAgeMin = latestReading ? (now - latestReading.time) / MINUTE_MS : Infinity;
@@ -492,13 +517,12 @@ export function normalizeInputs(
       if (!Number.isFinite(Number(m.carbs)) || Number(m.carbs) <= 0) return false;
       const mealTime = new Date(m.consumed_at).getTime();
       if (!Number.isFinite(mealTime)) return false;
-      const windowMin = deriveCurveParams(m).durationMinutes;
-      return mealTime <= now && mealTime + windowMin * MINUTE_MS > now;
+      return mealTime <= now && mealTime + mealOutcomeWindowMin * MINUTE_MS > now;
     });
 
-  // Active rescue carbs: is_rescue_carb=true, within the rapid absorption
-  // window (fast-class: 120 min). Modeled with the "fast" speed-class profile
-  // — pure glucose treatment, not a meal to learn from.
+  // Active rescue carbs: is_rescue_carb=true, inside their own short window.
+  // They are modelled by their own term — pure glucose treatment, not a meal to
+  // learn from, and never part of insulin coverage.
   const activeRescueCarbs = (Array.isArray(rawMeals) ? rawMeals : [])
     .filter((m) => {
       if (!m || !isRescueCarb(m)) return false;
@@ -545,6 +569,7 @@ export function normalizeInputs(
       targetLow,
       targetHigh,
       absorptionSpeedFactors: readAbsorptionSpeedFactors(settings),
+      mealOutcomeWindowMin,
     },
     anchor,
     momentumMgDlPerMin: momentum,
@@ -575,9 +600,17 @@ export function normalizeInputs(
 // When nothing is actively driving glucose, we don't pretend to forecast
 // far. The band still widens honestly; we just don't extend a flat line
 // with growing uncertainty.
+// Two hours, because an hour is not long enough to tell the truth. Inside 60
+// minutes a carbohydrate term has not finished and the insulin underneath it has
+// not yet overtaken it, so the only outcomes the curve could show were a rise or
+// a flat line — a renewed low was arithmetically impossible to draw. At 120
+// minutes the carb term has decayed, insulin is still working, and the curve is
+// free to turn down. With nothing on board the line stays short (20 min) rather
+// than extending a flat guess for two hours.
+export const FORECAST_HORIZON_MIN = 120;
 export function resolveHorizonMin(snapshot: NormalizedSnapshot): number {
-  if (snapshot.activeMeals.length > 0 || snapshot.activeRescueCarbs.length > 0) return 60;
-  if (snapshot.activeDoses.length > 0) return 30;
+  if (snapshot.activeMeals.length > 0 || snapshot.activeRescueCarbs.length > 0) return FORECAST_HORIZON_MIN;
+  if (snapshot.activeDoses.length > 0) return FORECAST_HORIZON_MIN;
   return 20;
 }
 
@@ -852,22 +885,21 @@ export function projectGlucose(
     anchorValue,
     anchorTime,
     readings: snapshot.readings,
-    meals: [
-      ...snapshot.activeMeals.map((meal: any) => ({
-        carbs: Number(meal.carbs) || 0,
-        consumedAt: new Date(meal.consumed_at).getTime(),
-        speedClass: getCarbSpeedClass(meal),
-        speedFactor: speedFactorForMeal(meal, snapshot.settings, mealModelParams),
-      })),
-      // Rescue carbs keep their own fast absorption term, learned from this
-      // person's observed rescues when there is enough evidence for it.
-      ...snapshot.activeRescueCarbs.map((meal: any) => ({
-        carbs: (Number(meal.carbs) || 0) * rescueMagnitude,
-        consumedAt: new Date(meal.consumed_at).getTime(),
-        speedClass: "fast",
-        speedFactor: rescueSpeed,
-      })),
-    ],
+    meals: snapshot.activeMeals.map((meal: any) => ({
+      carbs: Number(meal.carbs) || 0,
+      consumedAt: new Date(meal.consumed_at).getTime(),
+      speedClass: getCarbSpeedClass(meal),
+      speedFactor: speedFactorForMeal(meal, snapshot.settings, mealModelParams),
+    })),
+    // Rescue carbs are THEIR OWN term with their own short curve and their own
+    // logged grams — never a share of a meal's carbohydrate, and never the
+    // meal's long tail. Magnitude is capped at the grams logged.
+    rescues: snapshot.activeRescueCarbs.map((meal: any) => ({
+      grams: Math.max(0, Number(meal.carbs) || 0),
+      atTime: new Date(meal.consumed_at).getTime(),
+      magnitude: rescueMagnitude,
+      speedFactor: rescueSpeed,
+    })),
     doses: snapshot.activeDoses.map((dose: any) => ({
       units: Number(dose.units) || 0,
       atTime: new Date(dose.administered_at || dose.created_at).getTime(),
@@ -879,16 +911,60 @@ export function projectGlucose(
     stepMin,
   });
 
+  // ── The band ───────────────────────────────────────────────────────────
+  // Two rules: offset 0 IS the reading (lower = upper = the value on screen),
+  // and the centre is always the exact midpoint of the band. A band clipped at
+  // 40 or 400 without moving its centre no longer brackets the number shown, and
+  // a centre outside its own band is how a forecast can look right whichever way
+  // glucose goes. So the half-width is narrowed to whatever the floor and
+  // ceiling allow, and if it collapses the engine abstains rather than claim a
+  // centre.
+  const bandCollapsed: number[] = [];
   const trajectory: ProjectionPoint[] = superposition.points.map((point) => {
+    if (point.min_offset <= 0) {
+      return {
+        time: point.time,
+        min_offset: point.min_offset,
+        value: anchorValue,
+        lower: anchorValue,
+        upper: anchorValue,
+      };
+    }
     const sigma = computeSigmaAtOffset(point.min_offset, snapshot.dataQuality, point.rate, uncertaintyCalibration);
+    const halfWidth = Math.max(0, Math.min(sigma, point.value - GLUCOSE_FLOOR, GLUCOSE_CEILING - point.value));
+    if (sigma > 0 && halfWidth < 1) bandCollapsed.push(point.min_offset);
     return {
       time: point.time,
       min_offset: point.min_offset,
       value: point.value,
-      lower: Math.round(Math.max(40, point.value - sigma)),
-      upper: Math.round(Math.min(400, point.value + sigma)),
+      lower: Math.round(point.value - halfWidth),
+      upper: Math.round(point.value + halfWidth),
     };
   });
+
+  // The error bar has grown to the point where a single centre line would be
+  // false precision. No number is claimed: the engine abstains.
+  const sigmaCapped = trajectory.some((p) =>
+    p.min_offset > 0 && (p.upper - p.lower) / 2 >= MAX_SIGMA_MGDL * 0.95
+  );
+  if (sigmaCapped || bandCollapsed.length > 3) {
+    return {
+      trajectory: [],
+      anchor: snapshot.anchor,
+      modelVersion,
+      mealModelVersion,
+      generatedAt,
+      horizonMinutes: horizonMin,
+      confidence,
+      abstained: true,
+      abstainReason: "The range of likely outcomes is too wide right now to draw a single estimate.",
+      dataQuality: snapshot.dataQuality,
+      uncertaintySummary: null,
+      inputProvenance: null,
+      activeInputs: null,
+      modelResolution,
+    };
+  }
 
   // Active speed classes (for meal-response evaluation grouping).
   const activeSpeedClasses = [...new Set(snapshot.activeMeals.map((m) => getCarbSpeedClass(m)))];
@@ -919,21 +995,20 @@ export function projectGlucose(
     return s + Number(m.carbs) * (1 - fraction);
   }, 0);
 
-  // Rescue carb grams still on board (remaining, using the fixed fast profile).
+  // Rescue carb grams still on board, using the rescue's own curve.
   const totalActiveRescueCarbGrams = snapshot.activeRescueCarbs.reduce((s, m) => {
     const mealTime = new Date(m.consumed_at).getTime();
     const elapsed = (snapshot.now - mealTime) / MINUTE_MS;
-    const peakMin = BASELINE_CLASS_PARAMS.fast.peakMin;
-    const windowMin = BASELINE_CLASS_PARAMS.fast.windowMin;
-    const rateFn = (t: number) => gammaRate(t, peakMin, ABSORPTION_SHAPE_EXP);
-    const step = 2;
+    const shape = rescueShapeFor(rescueSpeed);
+    const rateFn = (t: number) => rescueAbsorptionRate(t, shape);
+    const step = 1;
     let totalArea = 0;
-    for (let t = 0; t < windowMin; t += step) {
+    for (let t = 0; t < shape.durationMin; t += step) {
       totalArea += ((rateFn(t) + rateFn(t + step)) / 2) * step;
     }
     if (totalArea <= 0) return s;
     let elapsedArea = 0;
-    const cap = Math.min(elapsed, windowMin);
+    const cap = Math.min(elapsed, shape.durationMin);
     for (let t = 0; t < cap; t += step) {
       elapsedArea += ((rateFn(t) + rateFn(t + step)) / 2) * step;
     }

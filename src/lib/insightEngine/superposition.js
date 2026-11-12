@@ -18,8 +18,14 @@
 //   glucose(t) = anchor + ∫ [ carbs(t) − insulin(t) + nudge(t) ] dt
 //
 //   carbs(t)    = Σ grams × carbSensitivity × absorption_fraction(t − mealTime)
+//   rescues(t)  = Σ grams × carbSensitivity × rescue_fraction(t − rescueTime)
 //   insulin(t)  = Σ units × ISF × action_fraction(t − doseTime)
 //   nudge(t)    = capped, short-lived residual of the observed trend
+//
+// Rescue carbohydrates are a separate term with their own short curve (peak
+// 20–30 min, spent by 45–60) and their own logged mass, so a rescue can end
+// inside the drawn horizon and the insulin underneath it can take the curve
+// back down. Meals keep the longer absorption shape they always had.
 //
 // absorption_fraction and action_fraction are ACTIVITY RATES normalised so
 // their area over the whole action equals 1. So a 10 u dose always delivers
@@ -243,7 +249,35 @@ export function carbAbsorptionFraction(minSinceMeal, shape) {
   return Math.max(0, Math.min(1, delivered / area));
 }
 
-// ── Trend nudge and interstitial-lag correction ────────────────────────────
+// ── Rescue carbohydrate shape ──────────────────────────────────────────────
+// A rescue carbohydrate (glucose tabs, juice, a fizzy drink) is not a meal. It
+// starts acting within 10–15 minutes, peaks at 20–30, and is essentially spent
+// by 45–60. It therefore gets its own term with its own shape, so it can never
+// inherit a meal's high-fat tail, and the mass it contributes is exactly the
+// grams logged for the rescue — never a share of some larger meal.
+export const RESCUE_PEAK_MIN = 25;
+export const RESCUE_DURATION_MIN = 60;
+
+export function rescueShapeFor(speedFactor) {
+  const s = Number.isFinite(speedFactor) && speedFactor > 0
+    ? Math.max(0.75, Math.min(1.35, speedFactor))
+    : 1;
+  return {
+    firstPeakMin: Math.max(15, Math.min(35, RESCUE_PEAK_MIN * s)),
+    durationMin: Math.max(45, Math.min(75, RESCUE_DURATION_MIN * s)),
+    secondPeakMin: null,
+    blend: 0,
+    secondShapeExp: 1,
+    shapeExp: 2.0,
+  };
+}
+
+// Absorption rate (fraction of the rescue's grams per minute), area = 1.
+export function rescueAbsorptionRate(minSinceRescue, shape) {
+  return carbAbsorptionRate(minSinceRescue, shape);
+}
+
+// ── Trend nudge ────────────────────────────────────────────────────────────
 // The trend is allowed exactly one job: a short, bounded nudge near the
 // anchor, and never more than ±0.5 mg/dL/min of it. It decays with a 6-minute
 // time constant and is gone inside 15 minutes, so its whole integrated
@@ -251,7 +285,6 @@ export function carbAbsorptionFraction(minSinceMeal, shape) {
 export const MAX_TREND_NUDGE_MGDL_PER_MIN = 0.5;
 export const NUDGE_TAU_MIN = 6;
 export const NUDGE_CUTOFF_MIN = 15;
-const MAX_LAG_CORRECTION_MGDL = 5;
 export const INTERSTITIAL_LAG_MIN = 8;
 
 export function trendNudge(minOffset, slopeMgDlPerMin) {
@@ -273,14 +306,10 @@ export function observedSlope(readings, atTime) {
   return (last.value - first.value) / dtMin;
 }
 
-// Sensor-to-blood interstitial lag: the reading describes glucose a few
-// minutes ago. The correction uses the model's own rate at the anchor (not
-// the trend), and is hard-capped so it can never reshape the curve.
-function lagCorrectedAnchor(anchorValue, modelRateAtAnchor) {
-  const rate = Math.max(-1.5, Math.min(1.5, Number(modelRateAtAnchor) || 0));
-  const correction = rate * INTERSTITIAL_LAG_MIN;
-  return anchorValue + Math.max(-MAX_LAG_CORRECTION_MGDL, Math.min(MAX_LAG_CORRECTION_MGDL, correction));
-}
+// The curve begins at the reading itself. An earlier version nudged the start
+// by a few points (a lag correction) so the drawn line never touched the solid
+// one: the forecast appeared to disagree with the value on screen. The anchor is
+// the one value actually measured, so offset 0 is that value, exactly.
 
 export const GLUCOSE_FLOOR = 40;
 export const GLUCOSE_CEILING = 400;
@@ -292,10 +321,12 @@ export const GLUCOSE_CEILING = 400;
 //   anchorTime   that reading's time, epoch ms
 //   readings     [{ time, value }] real readings, ascending (nudge only)
 //   meals        [{ carbs, consumedAt, speedClass, speedFactor }]
+//   rescues      [{ grams, atTime, magnitude, speedFactor }] rescue carbs only
 //   doses        [{ units, atTime, insulinType }]
 //   isf          mg/dL per unit of insulin (the user's own plan)
 //   mgPerGram    carb sensitivity: mg/dL per gram of carbohydrate
-//   horizonMin   15–60
+//   horizonMin   5–180 (120 by default, so the carb term can decay and insulin
+//                can overtake it inside the drawn curve)
 //   stepMin      grid step (5)
 //
 // Returns { points: [{ min_offset, value, rate, carbRate, insulinRate, nudgeRate }],
@@ -306,14 +337,15 @@ export function projectSuperposition(inputs) {
     anchorTime,
     readings = [],
     meals = [],
+    rescues = [],
     doses = [],
     isf,
     mgPerGram,
-    horizonMin = 60,
+    horizonMin = 120,
     stepMin = GRID_MIN,
   } = inputs || {};
 
-  const horizon = Math.max(5, Math.min(180, Number(horizonMin) || 60));
+  const horizon = Math.max(5, Math.min(180, Number(horizonMin) || 120));
   const step = Math.max(1, Number(stepMin) || GRID_MIN);
   const anchor = Number(anchorValue);
   if (!Number.isFinite(anchor) || !Number.isFinite(Number(anchorTime))) {
@@ -336,15 +368,35 @@ export function projectSuperposition(inputs) {
       shape: carbShapeFor(m.speedClass || "mixed", m.speedFactor),
     }));
 
+  // Rescue carbs are their own term: their own mass (exactly the grams logged)
+  // and their own short curve, so a rescue can end and insulin can take over.
+  const rescueTerms = (rescues || [])
+    .filter((r) => r && Number(r.grams) > 0 && Number.isFinite(Number(r.atTime)))
+    .map((r) => ({
+      grams: Number(r.grams),
+      atTime: Number(r.atTime),
+      magnitude: Number.isFinite(Number(r.magnitude)) ? Math.max(0.7, Math.min(1.3, Number(r.magnitude))) : 1,
+      shape: rescueShapeFor(r.speedFactor),
+    }));
+
   const slope = observedSlope(readings, anchorTime);
 
-  // Pure physiology at the anchor (no trend term) drives the lag correction.
   const carbRateAt = (tMin) => {
     if (carbSensitivity == null) return 0;
     let rate = 0;
     for (const m of mealTerms) {
       const elapsed = tMin - (m.consumedAt - anchorTime) / MINUTE_MS;
       rate += m.carbs * carbSensitivity * carbAbsorptionRate(elapsed, m.shape);
+    }
+    return rate;
+  };
+
+  const rescueRateAt = (tMin) => {
+    if (carbSensitivity == null) return 0;
+    let rate = 0;
+    for (const r of rescueTerms) {
+      const elapsed = tMin - (r.atTime - anchorTime) / MINUTE_MS;
+      rate += r.grams * carbSensitivity * r.magnitude * rescueAbsorptionRate(elapsed, r.shape);
     }
     return rate;
   };
@@ -359,15 +411,17 @@ export function projectSuperposition(inputs) {
     return rate;
   };
 
-  const modelRateAtAnchor = carbRateAt(0) - insulinRateAt(0);
-  let value = lagCorrectedAnchor(anchor, modelRateAtAnchor);
+  const modelRateAtAnchor = carbRateAt(0) + rescueRateAt(0) - insulinRateAt(0);
+  // Offset 0 is the reading itself — the same number the solid line ends on.
+  let value = anchor;
 
   const points = [];
   for (let offset = 0; offset <= horizon; offset += step) {
     const carbRate = carbRateAt(offset);
+    const rescueRate = rescueRateAt(offset);
     const insulinRate = insulinRateAt(offset);
     const nudgeRate = trendNudge(offset, slope);
-    const rate = carbRate - insulinRate + nudgeRate;
+    const rate = carbRate + rescueRate - insulinRate + nudgeRate;
 
     if (offset > 0) value += rate * step;
     value = Math.max(GLUCOSE_FLOOR, Math.min(GLUCOSE_CEILING, value));
@@ -378,6 +432,7 @@ export function projectSuperposition(inputs) {
       value: Math.round(value),
       rate: Math.round(rate * 1000) / 1000,
       carbRate,
+      rescueRate,
       insulinRate,
       nudgeRate,
     });
@@ -387,13 +442,15 @@ export function projectSuperposition(inputs) {
     points,
     diagnostics: {
       version: SUPERPOSITION_MODEL_VERSION,
-      lagCorrection: Math.round((lagCorrectedAnchor(anchor, modelRateAtAnchor) - anchor) * 100) / 100,
+      lagCorrection: 0,
       trendSlope: Math.round(slope * 1000) / 1000,
       trendNudgeCapped: Math.round(Math.max(-MAX_TREND_NUDGE_MGDL_PER_MIN, Math.min(MAX_TREND_NUDGE_MGDL_PER_MIN, slope)) * 1000) / 1000,
       carbSensitivity: carbSensitivity,
       insulinSensitivity,
+      rateAtAnchor: Math.round(modelRateAtAnchor * 1000) / 1000,
       doseTerms: doseTerms.map((d) => ({ units: d.units, peakMin: d.shape.peakMin, durationMin: d.shape.durationMin, family: d.shape.family })),
       mealTerms: mealTerms.map((m) => ({ carbs: m.carbs, peakMin: Math.round(m.shape.firstPeakMin), durationMin: Math.round(m.shape.durationMin) })),
+      rescueTerms: rescueTerms.map((r) => ({ grams: r.grams, peakMin: Math.round(r.shape.firstPeakMin), durationMin: Math.round(r.shape.durationMin) })),
     },
   };
 }

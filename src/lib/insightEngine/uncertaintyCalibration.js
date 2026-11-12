@@ -7,9 +7,28 @@ export const UNCERTAINTY_VERSION = "1.0.0";
 export const MIN_SAMPLES_FOR_CALIBRATION = 10;
 
 const MIN_HORIZON_SAMPLES = 3;
-const MAE_TO_SIGMA_MULTIPLIER = 1.25;
 const MAX_SIGMA_MGDL = 80;
 const MIN_SIGMA_FLOOR_MGDL = 5;
+
+// The interval the band claims to be: four times in five, the reading lands
+// inside it. The half-width is fitted from the user's OWN residual quantiles
+// rather than from a multiple of their mean error — a quantile assumes nothing
+// about the shape of the error distribution.
+export const NOMINAL_BAND_COVERAGE = 0.8;
+
+function quantile(values, q) {
+  if (!values.length) return NaN;
+  const sorted = [...values].sort((a, b) => a - b);
+  const pos = (sorted.length - 1) * q;
+  const lo = Math.floor(pos);
+  const hi = Math.ceil(pos);
+  if (lo === hi) return sorted[lo];
+  return sorted[lo] + (sorted[hi] - sorted[lo]) * (pos - lo);
+}
+
+function median(values) {
+  return quantile(values, 0.5);
+}
 
 export function calibrateUncertainty(evaluatedProjections) {
   const valid = evaluatedProjections.filter(
@@ -33,19 +52,21 @@ export function calibrateUncertainty(evaluatedProjections) {
   const horizonSampleCounts = {};
 
   for (const h of EVAL_HORIZONS) {
-    const errors = [];
+    const residuals = [];
     for (const p of valid) {
       const horizonScores = (p.evaluation.horizons || []).filter(
         (s) => s.horizon_min === h && s.scored && s.abs_error != null
       );
       for (const s of horizonScores) {
-        errors.push(s.abs_error);
+        const signed = Number(s.error);
+        residuals.push(Number.isFinite(signed) ? signed : s.abs_error);
       }
     }
-    horizonSampleCounts[h] = errors.length;
-    if (errors.length >= MIN_HORIZON_SAMPLES) {
-      const mae = errors.reduce((sum, e) => sum + e, 0) / errors.length;
-      const sigma = Math.min(MAX_SIGMA_MGDL, Math.max(MIN_SIGMA_FLOOR_MGDL, mae * MAE_TO_SIGMA_MULTIPLIER));
+    horizonSampleCounts[h] = residuals.length;
+    if (residuals.length >= MIN_HORIZON_SAMPLES) {
+      const centre = median(residuals);
+      const halfWidth = quantile(residuals.map((r) => Math.abs(r - centre)), NOMINAL_BAND_COVERAGE);
+      const sigma = Math.min(MAX_SIGMA_MGDL, Math.max(MIN_SIGMA_FLOOR_MGDL, halfWidth));
       sigmaByHorizon[h] = Math.round(sigma * 10) / 10;
     }
   }

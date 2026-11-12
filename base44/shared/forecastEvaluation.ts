@@ -31,11 +31,12 @@ const MINUTE_MS = 60 * 1000;
 // ── Evaluation identity ─────────────────────────────────────────────────────
 export const EVALUATION_VERSION = "2.0.0";
 
-// Horizons at which forecasts are scored (minutes). Must be <= the forecast
-// horizon (60 min in Milestone 1) to be scored. 120 is included for future
-// longer-horizon forecasts; it is excluded as "beyond_forecast_horizon" when
-// the projection's horizon doesn't reach it.
-export const EVAL_HORIZONS = [15, 30, 60, 120] as const;
+// Horizons at which forecasts are scored (minutes). The forecast reaches 120
+// minutes, so 90 and 120 are inside the drawn curve and are scored like the
+// shorter horizons — the part of the curve where carbohydrate has stopped and
+// insulin is still working is exactly the part worth measuring. A horizon is
+// still skipped as "beyond_forecast_horizon" for a shorter projection.
+export const EVAL_HORIZONS = [15, 30, 60, 90, 120] as const;
 
 // Matching tolerance: an actual reading within ±N minutes of the target time
 // is considered a valid match for that horizon.

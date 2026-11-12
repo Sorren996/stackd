@@ -210,7 +210,9 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
   let mealGroup = targetGroup;
   if (!mealGroup) {
     const groups = buildMealEventGroups(carbEntries, doses, insulinSettings, glucoseReadings, insulinSettings.targetLow).sort((a, b) => b.mealTime - a.mealTime);
-    const maxOutcomeWindowMs = Math.max(insulinSettings.outcomeWindowMinutes * MINUTE_MS, 6 * 3600 * 1000);
+    // The same window the review and the projection read — no 6-hour floor, so
+    // a shorter absorption window is actually shorter.
+    const maxOutcomeWindowMs = insulinSettings.outcomeWindowMinutes * MINUTE_MS;
     // Only meals still inside the user's configured review window are tracked.
     // Once the window ends the review resets to "no meal to review yet".
     // Rescue carbs never open a meal review on their own, regardless of volume.

@@ -23,7 +23,11 @@ const MINUTE_MS = 60 * 1000;
 
 // ── Evaluation identity ─────────────────────────────────────────────────────
 export const EVALUATION_VERSION = "2.0.0";
-export const EVAL_HORIZONS = [15, 30, 60, 120];
+// 90 and 120 are scored exactly like the shorter horizons: with a 120-minute
+// forecast they are inside the drawn curve, so excluding them as
+// "beyond_forecast_horizon" would leave the part of the curve where the fall
+// shows up permanently unmeasured.
+export const EVAL_HORIZONS = [15, 30, 60, 90, 120];
 export const MATCH_TOLERANCE_MIN = 5;
 
 // Buffer (minutes) that must elapse after a horizon's target time before it

@@ -34,12 +34,26 @@ export const MIN_SAMPLES_FOR_CALIBRATION = 10;
 // sigma for that horizon. Below this, the heuristic is used for that horizon.
 const MIN_HORIZON_SAMPLES = 3;
 
-// Multiplier to convert MAE to a prediction-interval half-width.
-// MAE ≈ 0.8 * sigma for a normal distribution, so sigma ≈ MAE / 0.8 ≈ 1.25 * MAE.
-// We use 1.25 so the interval captures ~68% of errors when the distribution
-// is roughly normal. This is a conservative choice — it does NOT assume
-// normality, it just scales the observed mean absolute deviation.
-const MAE_TO_SIGMA_MULTIPLIER = 1.25;
+// The interval the band claims to be: four times in five, the reading lands
+// inside it. The half-width is therefore fitted from the user's OWN residual
+// quantiles rather than from a multiple of their mean error — a quantile makes
+// no assumption about the shape of the error distribution, and it does not
+// widen every band to cover one bad afternoon.
+export const NOMINAL_BAND_COVERAGE = 0.8;
+
+function quantile(values: number[], q: number): number {
+  if (!values.length) return NaN;
+  const sorted = [...values].sort((a, b) => a - b);
+  const pos = (sorted.length - 1) * q;
+  const lo = Math.floor(pos);
+  const hi = Math.ceil(pos);
+  if (lo === hi) return sorted[lo];
+  return sorted[lo] + (sorted[hi] - sorted[lo]) * (pos - lo);
+}
+
+function median(values: number[]): number {
+  return quantile(values, 0.5);
+}
 
 // Maximum sigma to prevent absurd intervals even with large empirical errors.
 const MAX_SIGMA_MGDL = 80;
@@ -98,23 +112,28 @@ export function calibrateUncertainty(
   const horizonSampleCounts: Record<number, number> = {};
 
   for (const h of EVAL_HORIZONS) {
-    const errors: number[] = [];
+    const residuals: number[] = [];
     for (const p of valid) {
       const horizonScores = p.evaluation!.horizons?.filter(
         (s) => s.horizon_min === h && s.scored && s.abs_error != null
       ) || [];
       for (const s of horizonScores) {
-        errors.push(s.abs_error as number);
+        // Signed residual where the evaluator stored one, so the band is centred
+        // on where the model actually lands rather than on where it aimed.
+        const signed = Number((s as { error?: number | null }).error);
+        residuals.push(Number.isFinite(signed) ? signed : (s.abs_error as number));
       }
     }
 
-    horizonSampleCounts[h] = errors.length;
+    horizonSampleCounts[h] = residuals.length;
 
-    if (errors.length >= MIN_HORIZON_SAMPLES) {
-      const mae = errors.reduce((sum, e) => sum + e, 0) / errors.length;
+    if (residuals.length >= MIN_HORIZON_SAMPLES) {
+      const centre = median(residuals);
+      const deviations = residuals.map((r) => Math.abs(r - centre));
+      const halfWidth = quantile(deviations, NOMINAL_BAND_COVERAGE);
       const sigma = Math.min(
         MAX_SIGMA_MGDL,
-        Math.max(MIN_SIGMA_FLOOR_MGDL, mae * MAE_TO_SIGMA_MULTIPLIER)
+        Math.max(MIN_SIGMA_FLOOR_MGDL, halfWidth)
       );
       sigmaByHorizon[h] = Math.round(sigma * 10) / 10;
     }

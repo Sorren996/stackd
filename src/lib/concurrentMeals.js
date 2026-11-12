@@ -58,10 +58,19 @@ export function buildMealEventGroups(
   glucoseReadings = [],
   targetLow = 70
 ) {
-  const preMealWindowMs =
-    (insulinSettings.preMealWindowMinutes ?? DEFAULT_PRE_MEAL_WINDOW_MINUTES) * MINUTE_MS;
-  const postMealWindowMs =
-    (insulinSettings.postMealWindowMinutes ?? DEFAULT_POST_MEAL_WINDOW_MINUTES) * MINUTE_MS;
+// The pairing window is part of the same absorption window: a bolus can belong
+// to this meal only while that meal's carbohydrate is landing, so both sides of
+// pairing are bounded by meal_outcome_window_minutes. Lowering that setting now
+// shortens pairing, instead of leaving it on two fixed values that ignored it.
+  const outcomeWindowMs = resolveOutcomeWindowMinutes(insulinSettings) * MINUTE_MS;
+  const preMealWindowMs = Math.min(
+    (insulinSettings.preMealWindowMinutes ?? DEFAULT_PRE_MEAL_WINDOW_MINUTES) * MINUTE_MS,
+    outcomeWindowMs
+  );
+  const postMealWindowMs = Math.min(
+    (insulinSettings.postMealWindowMinutes ?? DEFAULT_POST_MEAL_WINDOW_MINUTES) * MINUTE_MS,
+    outcomeWindowMs
+  );
 
   const carbEvents = (Array.isArray(carbEntries) ? carbEntries : [])
     .filter((entry) => {
@@ -149,16 +158,21 @@ export function buildMealEventGroups(
   }));
 }
 
+// ── One absorption window ─────────────────────────────────────────────────
+// meal_outcome_window_minutes is the single value that decides when a meal is
+// over: the review, the analysis and the projection all read it, and a value
+// below the old 6-hour floor is honoured rather than silently raised.
+export function resolveOutcomeWindowMinutes(insulinSettings = {}) {
+  const requested = Number(insulinSettings.outcomeWindowMinutes);
+  if (Number.isFinite(requested) && requested > 0) return Math.max(30, requested);
+  return DEFAULT_OUTCOME_WINDOW_MINUTES;
+}
+
 // ── Active-meal detection ──────────────────────────────────────────────────
 // Returns every meal group still inside its glucose-response window, most
-// recent first. Uses the same window the single-meal review uses
-// (meal_outcome_window_minutes with a 6-hour floor) so a meal appears in the
-// stacked cards exactly when it would appear in the single-meal review.
-
+// recent first — the same window the single-meal review and the projection use.
 export function getActiveMealGroups(groups, insulinSettings, now = Date.now()) {
-  const maxOutcomeWindowMs =
-    Math.max(insulinSettings.outcomeWindowMinutes || DEFAULT_OUTCOME_WINDOW_MINUTES, 360) *
-    MINUTE_MS;
+  const maxOutcomeWindowMs = resolveOutcomeWindowMinutes(insulinSettings) * MINUTE_MS;
   return groups
     .filter((g) => now - g.mealTime <= maxOutcomeWindowMs)
     .sort((a, b) => b.mealTime - a.mealTime); // most recent first
