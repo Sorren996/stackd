@@ -62,7 +62,7 @@ export default function DailyBalanceDetailSheet({
         <div className="px-6 pb-2">
           <div className="section-label">{RANGE_NEUTRAL_LABEL}</div>
           <p className="mt-1 text-xs" style={{ color: PALETTE.faint }}>
-            {formatDate()}{hasData ? " \u00b7 so far today" : ""}
+            {formatDate()}
           </p>
           
         </div>
