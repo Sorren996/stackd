@@ -308,7 +308,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const [showFilter, setShowFilter] = useState(false);
   const [filterAnchorRect, setFilterAnchorRect] = useState(null);
   const [filters, setFilters] = useState({ glucose: true, insulin: true, carbs: true });
-  const [viewWindow, setViewWindow] = useState(6);
+  const [viewWindow, setViewWindow] = useState(3);
   const [controlsPortalEl, setControlsPortalEl] = useState(null);
 
   useEffect(() => {
@@ -390,6 +390,10 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const prevGlowStatusRef = useRef(null);
   const prevOverReferenceRef = useRef(false);
   const lastSelectedKeyRef = useRef(null);
+  // The reading the marker sits on, and the window it was picked in, so a
+  // window change can carry that same reading across the new scale.
+  const anchorTimeRef = useRef(null);
+  const lastViewWindowRef = useRef(viewWindow);
   const pendingScrollLeftRef = useRef(0);
   const containerRef = useRef(null);
   const graphViewportRef = useRef(null);
@@ -1078,7 +1082,9 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     const selected = getSelectedReading(centerTime);
     if (!selected || !Number.isFinite(selected.time)) return;
 
-    // Keep the marker on the reading the number is showing.
+    // Keep the marker on the reading the number is showing, and remember which
+    // reading that is so a window change can keep it in place.
+    anchorTimeRef.current = selected.time;
     positionSelectionMarker(selected);
 
     // Stale-reading contingency: when the CGM stream has gone quiet and the
@@ -1290,7 +1296,20 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       busy: scrollBusyRef.current,
       atResting: atRestingRef.current
     });
-    if (anchorToLatest && followAllowed) scrollRef.current.scrollLeft = restingScrollLeft;
+    // A change of window (3h ↔ 6h ↔ 12h) only zooms the graph: the reading the
+    // marker sits on is carried across the new scale and re-centred, so the
+    // visible span changes while the marker stays on the same reading in the
+    // same place on screen.
+    const viewChanged = lastViewWindowRef.current !== viewWindow;
+    lastViewWindowRef.current = viewWindow;
+    if (viewChanged && anchorTimeRef.current != null) {
+      const anchorX = (anchorTimeRef.current - domainStart) / totalMs * chartWidth;
+      const keepLeft = Math.min(Math.max(anchorX - containerWidth / 2, 0), Math.max(maxScrollLeft, 0));
+      scrollRef.current.scrollLeft = keepLeft;
+      atRestingRef.current = isAtResting(keepLeft, restingScrollLeft);
+    } else if (anchorToLatest && followAllowed) {
+      scrollRef.current.scrollLeft = restingScrollLeft;
+    }
     previousNowPosition.current = restingScrollLeft;
     const position = scrollRef.current.scrollLeft;
     const latestValue = glucoseLinePoints.length > 0 ? glucoseLinePoints[glucoseLinePoints.length - 1].value : null;
@@ -1303,7 +1322,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       if (scrollFrameRef.current) cancelAnimationFrame(scrollFrameRef.current);
       if (settleTimerRef.current) clearTimeout(settleTimerRef.current);
     };
-  }, [restingScrollLeft, latestGlucoseBucket, filters.glucose, glucoseLinePoints.length, positionedMonitoringIntervals, isGlucoseStale, glucoseUnits, resumeRevision]);
+  }, [restingScrollLeft, latestGlucoseBucket, filters.glucose, glucoseLinePoints.length, positionedMonitoringIntervals, isGlucoseStale, glucoseUnits, resumeRevision, viewWindow, chartWidth]);
 
   // The waiting state keeps the SAME root element as the chart, so the measured
   // container and its ResizeObserver survive the swap. Returning a different
