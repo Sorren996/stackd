@@ -18,7 +18,7 @@ export default function DailyBalanceSection({
   targetHigh,
   loading = false,
   unavailable = false,
-  coverage = '',
+  coverage = ''
 }) {
   const [open, setOpen] = useState(false);
   const state = getDailyBalanceState(percentage);
@@ -31,8 +31,8 @@ export default function DailyBalanceSection({
         type="button"
         onClick={() => hasData && setOpen(true)}
         className="mt-6 block w-full text-left"
-        aria-label="Open Daily Balance detail"
-      >
+        aria-label="Open Daily Balance detail">
+        
         <div className="section-label">Daily Balance</div>
 
         <div className="mt-2 flex items-baseline gap-2 px-1">
@@ -43,32 +43,32 @@ export default function DailyBalanceSection({
               fontSize: isGathering ? 22 : 26,
               fontWeight: 300,
               letterSpacing: "-0.01em",
-              lineHeight: 1.1,
-            }}
-          >
+              lineHeight: 1.1
+            }}>
+            
             {displayValue}
           </span>
-          {hasData && !isGathering && (
-            <span className="text-sm font-medium" style={{ color: "#7a6b5d" }}>
+          {hasData && !isGathering &&
+          <span className="text-sm font-medium" style={{ color: "#7a6b5d" }}>
               {state.label}
             </span>
-          )}
-          {isGathering && (
-            <span className="text-sm font-medium" style={{ color: "#7a6b5d" }}>
+          }
+          {isGathering &&
+          <span className="text-sm font-medium" style={{ color: "#7a6b5d" }}>
               {hasData ? 'Saved picture so far' : loading ? 'Loading today’s saved history…' : unavailable ? 'Saved history unavailable' : 'Waiting for more readings today'}
             </span>
-          )}
+          }
         </div>
 
-        {hasData && coverage && <p className="mt-2 px-1 text-xs text-muted-foreground">{coverage}</p>}
-        {hasData && (
-          <div className="mt-3 px-1">
+        {hasData && coverage && <p className="mt-2 px-1 text-xs text-muted-foreground hidden">{coverage}</p>}
+        {hasData &&
+        <div className="mt-3 px-1">
             <BalanceSpectrum percentage={percentage} />
           </div>
-        )}
+        }
 
-        {breakdown && (
-          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 px-1 text-xs" style={{ color: "#7a6b5d" }}>
+        {breakdown &&
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 px-1 text-xs" style={{ color: "#7a6b5d" }}>
             <span className="flex items-center gap-1.5">
               <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: "#5f8460" }} />
               {breakdown.inRange} in range
@@ -82,7 +82,7 @@ export default function DailyBalanceSection({
               {breakdown.below} below
             </span>
           </div>
-        )}
+        }
       </button>
 
       <DailyBalanceDetailSheet
@@ -93,8 +93,8 @@ export default function DailyBalanceSection({
         breakdown={breakdown}
         readings={readings}
         targetLow={targetLow}
-        targetHigh={targetHigh}
-      />
-    </>
-  );
+        targetHigh={targetHigh} />
+      
+    </>);
+
 }
