@@ -807,11 +807,12 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   //
   // The latest drawn point ends selectable history. Half a viewport remains
   // visible on its right for projections, without extra scrollable future space.
-  const { restingScrollLeft, maxScrollLeft, contentWidth } = resolveScrollBounds({
+  const scrollGeometry = useMemo(() => resolveScrollBounds({
     chartWidth,
     containerWidth,
     latestX: latestGlucoseX
-  });
+  }), [chartWidth, containerWidth, latestGlucoseX]);
+  const { restingScrollLeft, maxScrollLeft, contentWidth } = scrollGeometry;
   const plotHeight = GLUCOSE_PLOT_HEIGHT;
 
   const mergedMonitoringIntervals = useMemo(() => {
