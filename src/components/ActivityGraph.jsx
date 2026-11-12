@@ -1863,7 +1863,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         }
 
           {(onSelectLog || onDeleteLog) && !(activeMarker.type === "glucose" && (activeMarker.item.source === "dexcom" || glucoseReadOnly)) &&
-        <div className="mt-2 flex gap-2">
+        <div className="mt-4 flex gap-2">
               {onSelectLog && !confirmDelete &&
           <button type="button" onClick={handleEdit} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border py-2 text-xs font-semibold transition hover:opacity-70" style={{ borderColor: "#eadccf", background: "#fdf9f2", color: "#3f3830" }}>
                   <Pencil className="h-3 w-3" /> Edit

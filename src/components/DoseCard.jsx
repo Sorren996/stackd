@@ -62,7 +62,7 @@ export default function DoseCard({ dose, onDelete, onEdit, locked = false }) {
 
 </div>
 
-      <div className="min-w-0 flex-1 pt-0.5">
+      <div className={locked ? "min-w-0 flex-1 pt-0.5" : "min-w-0 flex-1 pt-0.5 pr-4"}>
         <p className="text-sm font-semibold" style={{ color: "#f7f1e8" }}>
           {dose.units}u {shortName} logged
         </p>

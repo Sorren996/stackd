@@ -36,7 +36,7 @@ export default function CarbCard({ entry, onDelete, locked = false }) {
         <div className="w-px flex-1 mt-2" style={{ background: `${color}25`, minHeight: 12 }} />
       </div>
 
-      <div className="flex-1 min-w-0 pt-0.5">
+      <div className={locked ? "flex-1 min-w-0 pt-0.5" : "flex-1 min-w-0 pt-0.5 pr-10"}>
         <p className="text-sm font-semibold" style={{ color: "#f7f1e8" }}>{entry.food_name} enjoyed</p>
         <p className="text-xs mt-0.5" style={{ color: "#eef2e9" }}>{timeAgo}, {format(new Date(entry.consumed_at), "h:mm a")}</p>
         <p className="text-xs mt-1.5 font-medium" style={{ color }}>

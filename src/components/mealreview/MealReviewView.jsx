@@ -99,18 +99,13 @@ export default function MealReviewView({ meals = null, mealInsight = null, gluco
   }, [meals, mealInsight]);
 
   const idsKey = entries.map((entry) => entry.id).join("|");
-  const [openIds, setOpenIds] = useState(() => (entries.length ? [entries[0].id] : []));
+  const [openIds, setOpenIds] = useState([]);
 
-  // Keep the open rows meaningful: a row that is still present stays open (so
-  // polling never collapses the reader's choice), and if nothing open survives,
-  // the newest meal opens.
+  // Meals start closed. Refreshes preserve only the user's explicit choices;
+  // newly arriving meals never open automatically.
   useEffect(() => {
     const ids = idsKey ? idsKey.split("|") : [];
-    setOpenIds((prev) => {
-      const kept = prev.filter((id) => ids.includes(id));
-      if (kept.length) return kept;
-      return ids.length ? [ids[0]] : [];
-    });
+    setOpenIds((prev) => prev.filter((id) => ids.includes(id)));
   }, [idsKey]);
 
   const toggleMeal = (id) =>
