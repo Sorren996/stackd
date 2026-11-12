@@ -135,28 +135,84 @@ export default async function (req) {
     const unitsPer5g = Number(settings.meal_insulin_units_per_5g);
     const mgPerGram = isf > 0 && unitsPer5g > 0 ? isf * (unitsPer5g / 5) : 3.0;
 
+    const clamp = (value: unknown, lo: number, hi: number) => {
+      const n = Number(value);
+      return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : 1;
+    };
+
     const rescueStateRows = await base44.asServiceRole.entities.RescueCarbModelState.filter(
       { user_id: userId }, "-created_date", 1
     );
     const rescueState = (rescueStateRows && rescueStateRows.length > 0) ? rescueStateRows[0] : null;
-    const rescueEpisodes = observeRescueEpisodes({ meals, doses, readings, nowMs: now });
-    const rescueLearning = learnRescueCarbModel({
-      episodes: rescueEpisodes,
-      previous: rescueState,
-      mgPerGram,
-    });
-    const rescueParams = {
-      magnitudeFactor: rescueLearning.magnitudeFactor,
-      speedFactor: rescueLearning.speedFactor,
+
+    // The stored factors are what every forecast uses; they are re-learned at
+    // most every six hours rather than on each generation, so the longer history
+    // this needs is read rarely instead of on every request.
+    let rescueParams = {
+      magnitudeFactor: clamp(rescueState?.magnitude_factor, 0.7, 1.3),
+      speedFactor: clamp(rescueState?.speed_factor, 0.75, 1.35),
     };
 
-    if (rescueLearning.changed && rescueLearning.sampleCount >= MIN_EPISODES) {
+    const lastLearnedMs = rescueState?.last_learned_at ? Date.parse(rescueState.last_learned_at) : NaN;
+    const LEARNING_INTERVAL_MS = 6 * 60 * 60 * 1000;
+    const learningDue = !Number.isFinite(lastLearnedMs) || now - lastLearnedMs > LEARNING_INTERVAL_MS;
+
+    if (learningDue) {
+      // A rescue's full rise takes about an hour, so learning needs days of
+      // history — far more than the forecast itself reads. Fetched only here.
+      const sinceIso = new Date(now - 14 * 24 * 60 * 60 * 1000).toISOString();
+      const [learningReadings, learningMeals, learningDoses] = await Promise.all([
+        base44.asServiceRole.entities.GlucoseReading.filter(
+          { $or: [{ user_id: userId }, { created_by_id: userId }], recorded_at: { $gte: sinceIso } },
+          "-recorded_at", 2000
+        ),
+        base44.asServiceRole.entities.CarbEntry.filter(
+          { created_by_id: userId, consumed_at: { $gte: sinceIso } }, "-consumed_at", 300
+        ),
+        base44.asServiceRole.entities.InsulinDose.filter(
+          { created_by_id: userId, administered_at: { $gte: sinceIso } }, "-administered_at", 300
+        ),
+      ]);
+
+      const rescueEpisodes = observeRescueEpisodes({
+        meals: learningMeals || [],
+        doses: learningDoses || [],
+        readings: learningReadings || [],
+        nowMs: now,
+      });
+      const rescueLearning = learnRescueCarbModel({
+        episodes: rescueEpisodes,
+        previous: rescueState,
+        mgPerGram,
+      });
+      rescueParams = {
+        magnitudeFactor: rescueLearning.magnitudeFactor,
+        speedFactor: rescueLearning.speedFactor,
+      };
+
       const patch = {
         magnitude_factor: rescueLearning.magnitudeFactor,
         speed_factor: rescueLearning.speedFactor,
         sample_count: rescueLearning.sampleCount,
         observed_ratio: rescueLearning.observedRatio,
         last_learned_at: new Date(now).toISOString(),
+        ...(rescueLearning.changed && rescueLearning.sampleCount >= MIN_EPISODES
+          ? { update_history: [
+              ...(Array.isArray(rescueState?.update_history) ? rescueState.update_history : []).slice(-19),
+              {
+                at: new Date(now).toISOString(),
+                previous: {
+                  magnitude_factor: clamp(rescueState?.magnitude_factor, 0.7, 1.3),
+                  speed_factor: clamp(rescueState?.speed_factor, 0.75, 1.35),
+                },
+                next: {
+                  magnitude_factor: rescueLearning.magnitudeFactor,
+                  speed_factor: rescueLearning.speedFactor,
+                },
+                sample_count: rescueLearning.sampleCount,
+              },
+            ] }
+          : {}),
       };
       try {
         if (rescueState) {
@@ -165,17 +221,6 @@ export default async function (req) {
           await base44.asServiceRole.entities.RescueCarbModelState.create({ user_id: userId, ...patch });
         }
       } catch { /* learning is auxiliary: a failed write never blocks the forecast */ }
-    } else if (!rescueState && rescueLearning.sampleCount > 0) {
-      // Record the count so the evidence is visible before it is actionable.
-      try {
-        await base44.asServiceRole.entities.RescueCarbModelState.create({
-          user_id: userId,
-          magnitude_factor: 1,
-          speed_factor: 1,
-          sample_count: rescueLearning.sampleCount,
-          last_learned_at: new Date(now).toISOString(),
-        });
-      } catch { /* auxiliary */ }
     }
 
     // Run the projection engine with the resolved model and calibrated uncertainty.

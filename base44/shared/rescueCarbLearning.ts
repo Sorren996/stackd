@@ -37,8 +37,14 @@ const MIN_AGE_MIN = 45;
 const START_LOOKBACK_MIN = 15;
 /** Another meal this close means the rise is not the rescue's alone. */
 const MEAL_CONFOUNDER_MIN = 45;
-/** Insulin this close could be doing the work instead. */
-const DOSE_CONFOUNDER_MIN = 60;
+/**
+ * Insulin BEFORE the rescue this close could be doing the work instead.
+ * Insulin AFTER it only disqualifies the episode when it lands before the peak,
+ * because a dose given after glucose has already peaked cannot have caused the
+ * rise being measured — treating it as a confounder would throw away most real
+ * rescue episodes (a person often corrects once they see the climb).
+ */
+const DOSE_BEFORE_MIN = 20;
 /** A believable peak for a fast carbohydrate. */
 const PEAK_WINDOW_MIN = { min: 10, max: OBSERVE_WINDOW_MIN };
 /** Only episodes this far back are used, so old habits do not dominate. */
@@ -131,11 +137,11 @@ export function observeRescueEpisodes({
     );
     if (otherCarbNearby) continue;
 
-    // Insulin within the action window: it could be responsible for the change.
-    const doseNearby = doseTimes.some(
-      (t) => t >= at - DOSE_CONFOUNDER_MIN * MINUTE_MS && t <= at + DOSE_CONFOUNDER_MIN * MINUTE_MS
+    // Insulin just before the rescue: it could be responsible for the change.
+    const doseBefore = doseTimes.some(
+      (t) => t >= at - DOSE_BEFORE_MIN * MINUTE_MS && t < at
     );
-    if (doseNearby) continue;
+    if (doseBefore) continue;
 
     // Baseline: the last reading in the lookback window before the rescue.
     const baseline = [...series]
@@ -155,6 +161,11 @@ export function observeRescueEpisodes({
 
     const minutesToPeak = (peak.t - at) / MINUTE_MS;
     if (minutesToPeak < PEAK_WINDOW_MIN.min || minutesToPeak > PEAK_WINDOW_MIN.max) continue;
+
+    // A dose landing between the rescue and its peak could be driving the
+    // change, so this episode is not evidence of what the carbs did.
+    const doseDuringRise = doseTimes.some((t) => t >= at && t <= peak.t);
+    if (doseDuringRise) continue;
 
     episodes.push({ carbs, riseMgdl: rise, minutesToPeak });
   }

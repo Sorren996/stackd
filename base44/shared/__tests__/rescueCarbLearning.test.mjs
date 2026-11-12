@@ -72,6 +72,17 @@ test("a rescue with a nearby insulin dose is not evidence", () => {
   assert.equal(episodes.length, 0);
 });
 
+test("a dose given after the peak does not disqualify the episode", () => {
+  const episodes = observeRescueEpisodes({
+    meals: [rescue(15, 90)],
+    // Rescue 90 min ago, peak 60 min ago, dose 45 min ago — after the peak.
+    doses: [{ units: 2, administered_at: at(45) }],
+    readings: cleanReadings,
+    nowMs: now,
+  });
+  assert.equal(episodes.length, 1);
+});
+
 test("a rescue still within its observation window is not judged yet", () => {
   const episodes = observeRescueEpisodes({
     meals: [rescue(15, 10)],
