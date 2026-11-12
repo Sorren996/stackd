@@ -3,6 +3,7 @@ import { Loader2, Send } from "lucide-react";
 import { toast } from "sonner";
 import { base44 } from "@/api/base44Client";
 import { playNotificationFeedback } from "@/lib/notificationFeedback";
+import AlertTonePreview from "@/components/settings/AlertTonePreview";
 
 /**
  * Admin-only push delivery test. Manual only: nothing runs on mount or on
@@ -49,6 +50,7 @@ export default function AdminTestNotification() {
         closed phone come from Stackd&rsquo;s own settings in the phone&rsquo;s Notifications, so this
         screen can&rsquo;t confirm what a locked phone will do.
       </p>
+      <AlertTonePreview />
       <button
         type="button"
         onClick={sendTest}

@@ -249,6 +249,30 @@ export function keysToPrune(claimedKeys: unknown, keep = 200): string[] {
 export const PUSH_MESSAGE_FIELDS = ['action_url', 'content', 'title', 'user_id'];
 
 /**
+ * The custom tone each category asks for, named as the file a native iOS target
+ * must carry at its bundle root — APNs only plays a sound that ships inside the
+ * app. `null` (every category not listed) means the platform's own alert tone
+ * stays in charge.
+ *
+ * This table is the server-side rule for an alert's tone; the in-app chime in
+ * src/lib/notificationFeedback.js mirrors it exactly, so the two can never
+ * disagree about which way a pace alert should sound.
+ *
+ * It is deliberately NOT added to the payload: the integration's documented
+ * input schema has no sound field (see PUSH_SOUND_SUPPORTED below), so sending
+ * one would be a field the provider ignores and a promise this app cannot keep.
+ */
+export const PUSH_SOUND_BY_CATEGORY: Record<string, string | null> = {
+  rising_fast: 'stackd_chime_rising.wav',
+  falling_fast: 'stackd_chime_falling.wav',
+};
+
+/** The native-bundle sound file a category asks for, or null for the default. */
+export function pushSoundFor(category: string): string | null {
+  return PUSH_SOUND_BY_CATEGORY[category] || null;
+}
+
+/**
  * Whether THIS APP is able to ask for a sound on a remote notification.
  *
  * It is not. The documented input schema of the platform's push integration is
