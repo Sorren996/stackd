@@ -53,7 +53,14 @@ export const MIN_FACTOR_CHANGE = 0.02;
 // Chosen to require a clear, non-noise improvement before personalization
 // is kept; adjust based on observed real-world performance.
 export const BASELINE_TOLERANCE_MGDL = 2;
-export const MIN_SAMPLES_FOR_VALIDATION = 5;
+export const MIN_SAMPLES_FOR_VALIDATION = 30;
+export const MIN_SAMPLES_FOR_REVERT = 30;
+
+// Rolling per-user accuracy contract: the horizons a person acts in, held to
+// about 70% of predictions inside 30 mg/dL at 30-60 minutes.
+export const ACCURACY_HORIZONS = [15, 30, 60];
+export const ACCURACY_WITHIN_MGDL = 30;
+export const ACCURACY_TARGET_WITHIN_SHARE = 0.7;
 
 // ── Evaluation ──────────────────────────────────────────────────────────────
 
@@ -87,23 +94,20 @@ export function evaluateProjection(projection, actualReadings, evalTime, rescueC
   const horizons = [];
 
   for (const targetHorizon of EVAL_HORIZONS) {
-    if (targetHorizon > projection.horizon_minutes) {
-      horizons.push({
-        horizon_min: targetHorizon, scored: false,
-        predicted: null, actual: null, actual_time: null,
-        error: null, abs_error: null, in_interval: null,
-        match_offset_min: null, exclusion_reason: "beyond_forecast_horizon",
-      });
-      continue;
-    }
-
+    // A horizon is scored whenever the projection actually DREW a point at it.
+    // The declared horizon is metadata, and trusting it excluded real 60-minute
+    // rows as "beyond_forecast_horizon", so the horizon the model got most wrong
+    // learned nothing.
     const trajPoint = projection.trajectory.find(p => p.min_offset === targetHorizon);
     if (!trajPoint) {
       horizons.push({
         horizon_min: targetHorizon, scored: false,
         predicted: null, actual: null, actual_time: null,
         error: null, abs_error: null, in_interval: null,
-        match_offset_min: null, exclusion_reason: "no_prediction_at_horizon",
+        match_offset_min: null,
+        exclusion_reason: targetHorizon > projection.horizon_minutes
+          ? "beyond_forecast_horizon"
+          : "no_prediction_at_horizon",
       });
       continue;
     }
@@ -272,12 +276,29 @@ export function aggregateMetrics(evaluated) {
     byModelVersion[mv].bias = Math.round((byModelVersion[mv].bias / c) * 100) / 100;
   }
 
+  // Rolling per-user accuracy: MAE and the share within 30 mg/dL at 15/30/60,
+  // measured against the ~70% target at 30-60 minutes.
+  const rollingAccuracy = {};
+  for (const h of ACCURACY_HORIZONS) {
+    const scores = valid.flatMap((p) => p.evaluation.horizons.filter((s) => s.horizon_min === h && s.scored && s.error != null));
+    if (scores.length === 0) continue;
+    const within = scores.filter((s) => Math.abs(Number(s.error)) <= ACCURACY_WITHIN_MGDL).length;
+    const share = within / scores.length;
+    rollingAccuracy[h] = {
+      mae: Math.round((scores.reduce((s, sc) => s + Math.abs(Number(sc.error)), 0) / scores.length) * 100) / 100,
+      within30Pct: Math.round(share * 1000) / 1000,
+      count: scores.length,
+      target: ACCURACY_TARGET_WITHIN_SHARE,
+      meetsTarget: share >= ACCURACY_TARGET_WITHIN_SHARE,
+    };
+  }
+
   return {
     sampleCount: valid.length,
     mae: Math.round(mae * 100) / 100,
     bias: Math.round(bias * 100) / 100,
     coverage: coverage != null ? Math.round(coverage * 1000) / 1000 : null,
-    byHorizon, byModelVersion,
+    byHorizon, byModelVersion, rollingAccuracy,
   };
 }
 

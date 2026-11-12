@@ -39,7 +39,7 @@ export const MEAL_RESPONSE_MODEL_VERSION_BASELINE = "1.0.0-meal-baseline";
 export const MEAL_RESPONSE_MODEL_VERSION_PERSONALIZED = "1.1.0-meal-personalized";
 
 import { extractEffectiveMealParams } from "./modelResolution";
-import { getEmpiricalSigma } from "./uncertaintyCalibration";
+import { getEmpiricalSigma, saturateHalfWidth, UNCERTAINTY_CEILING_MGDL } from "./uncertaintyCalibration";
 import { mealInPlayWindowMinutes } from "../mealInPlayWindow";
 import { projectSuperposition, GLUCOSE_FLOOR, GLUCOSE_CEILING, rescueShapeFor, rescueAbsorptionRate } from "./superposition";
 
@@ -201,9 +201,12 @@ const BASE_SIGMA_MGDL = 8;
 const SIGMA_PER_SQRT_MIN = 1.5;
 // How wide the band can ever get, as a half-width. Uncertainty grows with the
 // horizon but settles towards this ceiling instead of climbing without limit.
-const UNCERTAINTY_CEILING_MGDL = 70;
+// A forecast needs at least this many recent readings to establish a level.
+const MIN_READINGS_TO_PROJECT = 3;
+// A band wider than this is no longer readable; the trajectory is then truncated
+// at the last horizon that passed so the near-term line still draws.
+const MAX_DRAWN_HALF_WIDTH_MGDL = 95;
 const MIN_CONFIDENCE = 0.15;
-const ABSTAIN_CONFIDENCE_THRESHOLD = 0.12;
 const UNCALIBRATED_MG_PER_GRAM = 3.0;
 const ABSORPTION_SHAPE_EXP = 3.0;
 
@@ -526,8 +529,7 @@ export function resolveHorizonMin(snapshot) {
 // raw width passes through a smooth approach to the ceiling: small widths are
 // almost unchanged, large ones settle near the ceiling.
 function saturateSigma(rawMgdl) {
-  if (!(rawMgdl > 0)) return 0;
-  return UNCERTAINTY_CEILING_MGDL * (1 - Math.exp(-rawMgdl / UNCERTAINTY_CEILING_MGDL));
+  return saturateHalfWidth(rawMgdl);
 }
 
 // Everything that makes this forecast less certain, as extra half-width mg/dL.
@@ -683,8 +685,11 @@ export function projectGlucose(snapshot, opts = {}) {
     modelResolution, uncertaintyCalibration
   );
 
-  if (confidence < ABSTAIN_CONFIDENCE_THRESHOLD) {
-    return abstainedResult("Insufficient evidence to project.", confidence, snapshot.anchor);
+  // Abstain only for absent evidence. A wide band, several doses on board or an
+  // uncalibrated plan are reasons to be LESS SURE — drawn as a wider band, never
+  // as an empty forecast.
+  if (snapshot.readings.length < MIN_READINGS_TO_PROJECT) {
+    return abstainedResult("Not enough recent readings yet — a few more samples will bring the estimate back.", confidence, snapshot.anchor);
   }
 
   // ── Drawn, not withheld ────────────────────────────────────────────────
@@ -753,28 +758,35 @@ export function projectGlucose(snapshot, opts = {}) {
   // right whichever way glucose goes. So the half-width is narrowed to whatever
   // the floor and ceiling allow, and if that half-width collapses the engine
   // draws nothing rather than a confident centre.
-  const trajectory = superposition.points.map((point) => {
+  const trajectory = [];
+  let halfWidthSoFar = 0;
+  for (const point of superposition.points) {
     if (point.min_offset <= 0) {
-      return {
+      trajectory.push({
         time: point.time,
         min_offset: point.min_offset,
         value: anchorValue,
         lower: anchorValue,
         upper: anchorValue,
-      };
+      });
+      continue;
     }
     const sigma = computeSigmaAtOffset(
       point.min_offset, snapshot.dataQuality, point.rate, uncertaintyCalibration, momentumBandMgdl
     );
-    const halfWidth = Math.max(0, Math.min(sigma, point.value - GLUCOSE_FLOOR, GLUCOSE_CEILING - point.value));
-    return {
+    // Unacceptable past this horizon: truncate and keep the earlier points, so
+    // the near-term line still draws.
+    if (sigma > MAX_DRAWN_HALF_WIDTH_MGDL) break;
+    // Running maximum: the band grows with the horizon but never narrows.
+    halfWidthSoFar = Math.max(halfWidthSoFar, sigma);
+    trajectory.push({
       time: point.time,
       min_offset: point.min_offset,
       value: point.value,
-      lower: Math.round(point.value - halfWidth),
-      upper: Math.round(point.value + halfWidth),
-    };
-  });
+      lower: Math.round(point.value - halfWidthSoFar),
+      upper: Math.round(point.value + halfWidthSoFar),
+    });
+  }
 
   // The band's width never withholds the forecast. A wide band is how "we are
   // less sure" is shown: the trajectory is drawn with its own lower and upper

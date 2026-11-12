@@ -45,7 +45,12 @@ export const MEAL_EVALUATION_VERSION = "1.0.0";
 
 // ── Learning thresholds ──────────────────────────────────────────────────────
 export const MIN_MEAL_SAMPLES_FOR_LEARNING = 5;
-export const MIN_MEAL_SAMPLES_FOR_VALIDATION = 3;
+export const MIN_MEAL_SAMPLES_FOR_VALIDATION = 30;
+// Personalization only becomes ACTIVE once every speed class — fast, mixed and
+// high-fat — has its own learned parameters. Until then the learned factors are
+// recorded and evaluated but stay in shadow, so a high-fat meal is never the
+// meal that quietly skips a personalized model.
+export const REQUIRED_SPEED_CLASSES_FOR_ACTIVATION = ["fast", "mixed", "high_fat"];
 export const MIN_TIMING_DEVIATION_MIN = 10;
 export const MIN_MAGNITUDE_DEVIATION_MGDL = 10;
 export const MEAL_SHRINKAGE_LAMBDA = 0.3;
@@ -282,6 +287,18 @@ export function shouldUpdateMealClass(state, speedClass, aggregate) {
   };
 }
 
+// Every speed class must carry its own learned parameters — with real samples —
+// before the personalized meal model may become the active one.
+function allSpeedClassesLearned(state, speedClass, sampleCount) {
+  for (const cls of REQUIRED_SPEED_CLASSES_FOR_ACTIVATION) {
+    const isCurrent = cls === speedClass;
+    const params = isCurrent ? true : Boolean(state?.speed_class_parameters?.[cls]);
+    const samples = isCurrent ? Number(sampleCount) || 0 : Number(state?.sample_counts_by_class?.[cls]) || 0;
+    if (!params || samples <= 0) return false;
+  }
+  return true;
+}
+
 export function applyMealClassUpdate(state, speedClass, aggregate, decision) {
   if (!decision.shouldUpdate) {
     return { updatedState: state, provenance: null };
@@ -317,7 +334,9 @@ export function applyMealClassUpdate(state, speedClass, aggregate, decision) {
       ...state.sample_counts_by_class,
       [speedClass]: aggregate.sampleCount,
     },
-    baseline_locked: false,
+    // Active only once every speed class has its own parameters; until then the
+    // factors are recorded but stay in shadow.
+    baseline_locked: !allSpeedClassesLearned(state, speedClass, aggregate.sampleCount),
     evaluation_summary: evaluationSummary,
     last_updated_at: new Date(now).toISOString(),
     update_history: [

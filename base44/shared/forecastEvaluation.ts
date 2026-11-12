@@ -83,8 +83,23 @@ export const MIN_FACTOR_CHANGE = 0.02;
 // is kept; adjust based on observed real-world performance.
 export const BASELINE_TOLERANCE_MGDL = 2;
 
-// Minimum personalized projections to validate against baseline.
-export const MIN_SAMPLES_FOR_VALIDATION = 5;
+// Minimum personalized projections before the personalized model may be judged
+// against baseline at all. Thirty: below this the comparison is noise, and a
+// run of bad luck early on used to switch personalization off before it had a
+// chance to prove itself.
+export const MIN_SAMPLES_FOR_VALIDATION = 30;
+
+// No revert is considered until the account has this many evaluated projections
+// in total, whatever the per-era split says.
+export const MIN_SAMPLES_FOR_REVERT = 30;
+
+// ── Rolling per-user accuracy contract ──────────────────────────────────────
+// The horizons a person actually acts in, held to one bar: about 70% of
+// predictions inside 30 mg/dL at 30-60 minutes. Stored per user on the model
+// state so accuracy can be watched over time rather than recomputed each run.
+export const ACCURACY_HORIZONS = [15, 30, 60] as const;
+export const ACCURACY_WITHIN_MGDL = 30;
+export const ACCURACY_TARGET_WITHIN_SHARE = 0.7;
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -149,6 +164,14 @@ export interface AggregateMetrics {
   coverage: number | null;
   byHorizon: Record<number, { mae: number; bias: number; coverage: number | null; count: number }>;
   byModelVersion: Record<string, { mae: number; bias: number; count: number }>;
+  /** MAE and the share inside 30 mg/dL at 15 / 30 / 60 minutes. */
+  rollingAccuracy?: Record<number, {
+    mae: number;
+    within30Pct: number;
+    count: number;
+    target: number;
+    meetsTarget: boolean;
+  }>;
 }
 
 export interface ModelState {
@@ -254,17 +277,11 @@ export function evaluateProjection(
   const horizons: HorizonScore[] = [];
 
   for (const targetHorizon of EVAL_HORIZONS) {
-    if (targetHorizon > projection.horizon_minutes) {
-      horizons.push({
-        horizon_min: targetHorizon, scored: false,
-        predicted: null, actual: null, actual_time: null,
-        error: null, abs_error: null, in_interval: null,
-        match_offset_min: null,
-        exclusion_reason: "beyond_forecast_horizon",
-      });
-      continue;
-    }
-
+    // A horizon is scored whenever the projection actually DREW a point at it.
+    // The declared horizon is metadata, and trusting it excluded real 60-minute
+    // rows as "beyond_forecast_horizon" (a row stored while the engine capped at
+    // 30 minutes), so the horizon the model got most wrong learned nothing. Only
+    // a horizon the trajectory never reaches is excluded.
     const trajPoint = projection.trajectory.find(p => p.min_offset === targetHorizon);
     if (!trajPoint) {
       horizons.push({
@@ -272,7 +289,9 @@ export function evaluateProjection(
         predicted: null, actual: null, actual_time: null,
         error: null, abs_error: null, in_interval: null,
         match_offset_min: null,
-        exclusion_reason: "no_prediction_at_horizon",
+        exclusion_reason: targetHorizon > projection.horizon_minutes
+          ? "beyond_forecast_horizon"
+          : "no_prediction_at_horizon",
       });
       continue;
     }
@@ -453,6 +472,32 @@ export function aggregateMetrics(evaluated: EvaluatedProjection[]): AggregateMet
     byModelVersion[mv].bias = Math.round((byModelVersion[mv].bias / c) * 100) / 100;
   }
 
+  // Rolling per-user accuracy: MAE at 15 / 30 / 60 minutes and the share of
+  // predictions that landed within 30 mg/dL, measured against the ~70% target at
+  // 30-60 minutes. This is the contract the model is held to over time.
+  const rollingAccuracy: Record<number, {
+    mae: number;
+    within30Pct: number;
+    count: number;
+    target: number;
+    meetsTarget: boolean;
+  }> = {};
+  for (const h of ACCURACY_HORIZONS) {
+    const scores = valid.flatMap(p =>
+      p.evaluation.horizons.filter(s => s.horizon_min === h && s.scored && s.error != null)
+    );
+    if (scores.length === 0) continue;
+    const within = scores.filter(s => Math.abs(Number(s.error)) <= ACCURACY_WITHIN_MGDL).length;
+    const share = within / scores.length;
+    rollingAccuracy[h] = {
+      mae: Math.round((scores.reduce((s, sc) => s + Math.abs(Number(sc.error)), 0) / scores.length) * 100) / 100,
+      within30Pct: Math.round(share * 1000) / 1000,
+      count: scores.length,
+      target: ACCURACY_TARGET_WITHIN_SHARE,
+      meetsTarget: share >= ACCURACY_TARGET_WITHIN_SHARE,
+    };
+  }
+
   return {
     sampleCount: valid.length,
     mae: Math.round(mae * 100) / 100,
@@ -460,6 +505,7 @@ export function aggregateMetrics(evaluated: EvaluatedProjection[]): AggregateMet
     coverage: coverage != null ? Math.round(coverage * 1000) / 1000 : null,
     byHorizon,
     byModelVersion,
+    rollingAccuracy,
   };
 }
 
@@ -548,6 +594,7 @@ export function applyGuardedUpdate(
     coverage: metrics.coverage,
     byHorizon: metrics.byHorizon,
     byModelVersion: metrics.byModelVersion,
+    rollingAccuracy: metrics.rollingAccuracy,
   };
 
   const updatedState: ModelState = {
@@ -642,6 +689,7 @@ export function revertToBaseline(
     coverage: metrics.coverage,
     byHorizon: metrics.byHorizon,
     byModelVersion: metrics.byModelVersion,
+    rollingAccuracy: metrics.rollingAccuracy,
   };
 
   const updatedState: ModelState = {

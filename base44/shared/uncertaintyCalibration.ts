@@ -56,11 +56,48 @@ function median(values: number[]): number {
 }
 
 // Maximum sigma to prevent absurd intervals even with large empirical errors.
-const MAX_SIGMA_MGDL = 80;
+const MAX_SIGMA_MGDL = 95;
 
 // Minimum sigma floor — even with very small empirical errors, the interval
 // should not be narrower than this, to avoid false precision.
 const MIN_SIGMA_FLOOR_MGDL = 5;
+
+// ── The shape the fitted band must have ────────────────────────────────────
+//
+// 1. MONOTONE. The band can never be narrower at a later horizon than at an
+//    earlier one. Production showed 84 mg/dL at 40 minutes and 18 at 120 —
+//    claiming more confidence two hours out than at forty minutes, which the
+//    engine cannot know. Raw per-horizon quantiles are therefore carried
+//    forward as a running maximum, so a thin or unlucky horizon can never pull
+//    the band back in.
+// 2. SATURATING. The band grows towards a realistic ceiling of about 75 mg/dL
+//    half-width instead of widening without limit.
+export const UNCERTAINTY_CEILING_MGDL = 75;
+const SATURATION_KNEE_MGDL = 45;
+
+export function saturateHalfWidth(rawMgdl: number): number {
+  if (!(rawMgdl > 0)) return 0;
+  if (rawMgdl <= SATURATION_KNEE_MGDL) return rawMgdl;
+  const room = UNCERTAINTY_CEILING_MGDL - SATURATION_KNEE_MGDL;
+  return SATURATION_KNEE_MGDL + room * (1 - Math.exp(-(rawMgdl - SATURATION_KNEE_MGDL) / room));
+}
+
+// Carry each horizon's fitted width forward as a running maximum, then saturate.
+// A horizon with no samples of its own inherits the width measured before it, so
+// interpolation between horizons can never step back down.
+export function monotoneSaturatingFit(rawByHorizon: Record<number, number>): Record<number, number> {
+  const out: Record<number, number> = {};
+  let carried = 0;
+  const horizons = [...EVAL_HORIZONS].sort((a, b) => a - b);
+  for (const h of horizons) {
+    const raw = rawByHorizon[h];
+    if (Number.isFinite(raw)) carried = Math.max(carried, raw as number);
+    if (!(carried > 0)) continue;
+    const width = Math.max(MIN_SIGMA_FLOOR_MGDL, saturateHalfWidth(carried));
+    out[h] = Math.round(width * 10) / 10;
+  }
+  return out;
+}
 
 export interface UncertaintyCalibration {
   method: "heuristic" | "empirical_calibrated";
@@ -107,8 +144,9 @@ export function calibrateUncertainty(
     };
   }
 
-  // Compute empirical sigma at each horizon from abs_error.
-  const sigmaByHorizon: Record<number, number> = {};
+  // Compute the RAW fitted width at each horizon from signed residuals, then fit
+  // it once — monotonically and saturating — across the horizon ladder.
+  const rawByHorizon: Record<number, number> = {};
   const horizonSampleCounts: Record<number, number> = {};
 
   for (const h of EVAL_HORIZONS) {
@@ -131,13 +169,16 @@ export function calibrateUncertainty(
       const centre = median(residuals);
       const deviations = residuals.map((r) => Math.abs(r - centre));
       const halfWidth = quantile(deviations, NOMINAL_BAND_COVERAGE);
-      const sigma = Math.min(
+      rawByHorizon[h] = Math.min(
         MAX_SIGMA_MGDL,
         Math.max(MIN_SIGMA_FLOOR_MGDL, halfWidth)
       );
-      sigmaByHorizon[h] = Math.round(sigma * 10) / 10;
     }
   }
+
+  // One fit for the whole ladder: carrying a running maximum makes the band
+  // monotone (never narrower later), and saturation keeps it readable.
+  const sigmaByHorizon = monotoneSaturatingFit(rawByHorizon);
 
   // Compute observed coverage from projections that had intervals.
   const withIntervals = valid.filter(

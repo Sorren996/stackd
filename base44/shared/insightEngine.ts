@@ -33,7 +33,7 @@ import {
 import type { ModelResolution } from "./modelResolution.ts";
 import { extractEffectiveMealParams } from "./modelResolution.ts";
 import type { UncertaintyCalibration } from "./uncertaintyCalibration.ts";
-import { getEmpiricalSigma } from "./uncertaintyCalibration.ts";
+import { getEmpiricalSigma, saturateHalfWidth, UNCERTAINTY_CEILING_MGDL } from "./uncertaintyCalibration.ts";
 import { mealInPlayWindowMinutes } from "./mealInPlayWindow.ts";
 import {
   projectSuperposition,
@@ -140,9 +140,16 @@ const SIGMA_PER_SQRT_MIN = 1.5;      // uncertainty growth per sqrt(min)
 // hours, which made every meal-time forecast look unprintable. The ceiling sits
 // inside the range the person's own evaluated residuals actually reach
 // (roughly 60-80 mg/dL at the far horizon).
-const UNCERTAINTY_CEILING_MGDL = 70;
+// A forecast needs at least this many recent readings to establish a level.
+// Below it there is genuinely no evidence — the one abstain reason left besides
+// a stale anchor.
+const MIN_READINGS_TO_PROJECT = 3;
+// A band wider than this is no longer a band anyone can read. If the fit ever
+// produced one, the trajectory is truncated at the last horizon that passed and
+// the near-term line still draws. With the saturating fit this is a guard, not
+// a routine outcome.
+const MAX_DRAWN_HALF_WIDTH_MGDL = 95;
 const MIN_CONFIDENCE = 0.15;
-const ABSTAIN_CONFIDENCE_THRESHOLD = 0.12;
 
 // Conservative fallback when user hasn't set ISF / I:C. Flagged as uncalibrated.
 const UNCALIBRATED_MG_PER_GRAM = 3.0;
@@ -649,8 +656,7 @@ export function resolveHorizonMin(snapshot: NormalizedSnapshot): number {
 // widths are almost unchanged, and large ones settle near the ceiling instead of
 // reaching several hundred mg/dL by the far horizon.
 function saturateSigma(rawMgdl: number): number {
-  if (!(rawMgdl > 0)) return 0;
-  return UNCERTAINTY_CEILING_MGDL * (1 - Math.exp(-rawMgdl / UNCERTAINTY_CEILING_MGDL));
+  return saturateHalfWidth(rawMgdl);
 }
 
 // Everything that makes this particular forecast less certain, as extra mg/dL
@@ -855,8 +861,13 @@ export function projectGlucose(
     modelResolution, uncertaintyCalibration
   );
 
-  // Abstain if confidence is too low.
-  if (confidence < ABSTAIN_CONFIDENCE_THRESHOLD) {
+  // ── Abstain only for absent evidence ───────────────────────────────────
+  // Never because the band is wide, never because several doses are on board,
+  // never because the plan is uncalibrated: each of those is a reason to be
+  // LESS SURE, and less sure is drawn as a wider band. The only reasons left are
+  // the ones above (no fresh reading) and this one — too few readings to
+  // establish a level at all.
+  if (snapshot.readings.length < MIN_READINGS_TO_PROJECT) {
     return {
       trajectory: [],
       anchor: snapshot.anchor,
@@ -866,7 +877,7 @@ export function projectGlucose(
       horizonMinutes: horizonMin,
       confidence,
       abstained: true,
-      abstainReason: "Insufficient evidence to project — data is too sparse or stale.",
+      abstainReason: "Not enough recent readings yet — a few more samples will bring the estimate back.",
       dataQuality: snapshot.dataQuality,
       uncertaintySummary: null,
       inputProvenance: null,
@@ -949,28 +960,38 @@ export function projectGlucose(
   // glucose goes. So the half-width is narrowed to whatever the floor and
   // ceiling allow, and if it collapses the engine abstains rather than claim a
   // centre.
-  const trajectory: ProjectionPoint[] = superposition.points.map((point) => {
+  const trajectory: ProjectionPoint[] = [];
+  let halfWidthSoFar = 0;
+  for (const point of superposition.points) {
     if (point.min_offset <= 0) {
-      return {
+      trajectory.push({
         time: point.time,
         min_offset: point.min_offset,
         value: anchorValue,
         lower: anchorValue,
         upper: anchorValue,
-      };
+      });
+      continue;
     }
     const sigma = computeSigmaAtOffset(
       point.min_offset, snapshot.dataQuality, point.rate, uncertaintyCalibration, momentumBandMgdl
     );
-    const halfWidth = Math.max(0, Math.min(sigma, point.value - GLUCOSE_FLOOR, GLUCOSE_CEILING - point.value));
-    return {
+    // Unacceptable past this horizon: truncate and keep every earlier point, so
+    // the near-term line still draws instead of nothing drawing at all.
+    if (sigma > MAX_DRAWN_HALF_WIDTH_MGDL) break;
+    // Carried forward as a running maximum, so the band is MONOTONE: it can grow
+    // with the horizon but never narrow. The old clamp narrowed the width as the
+    // projected value approached the top of the scale, which is how a band read
+    // 84 mg/dL at 40 minutes and 18 at 120.
+    halfWidthSoFar = Math.max(halfWidthSoFar, sigma);
+    trajectory.push({
       time: point.time,
       min_offset: point.min_offset,
       value: point.value,
-      lower: Math.round(point.value - halfWidth),
-      upper: Math.round(point.value + halfWidth),
-    };
-  });
+      lower: Math.round(point.value - halfWidthSoFar),
+      upper: Math.round(point.value + halfWidthSoFar),
+    });
+  }
 
   // The band's width is never a reason to withhold the forecast. A wide band is
   // exactly how "we are less sure" is shown: the trajectory is drawn with its

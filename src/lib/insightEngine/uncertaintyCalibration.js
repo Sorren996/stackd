@@ -1,20 +1,75 @@
 // Stackd Insight Engine — Empirical Uncertainty Calibration (Milestone 4)
 // Frontend/testable JavaScript mirror of base44/shared/uncertaintyCalibration.ts.
+// Both must stay identical.
+//
+// Calibrates prediction-interval width (sigma) from the user's historical
+// out-of-sample forecast errors. When enough evaluated projections exist, the
+// half-width at each horizon is fitted from the user's OWN residual quantiles —
+// a quantile assumes nothing about the shape of the error distribution.
+//
+// TWO PROPERTIES THE FIT MUST HAVE, and this file exists to guarantee:
+//
+//   1. MONOTONE. The band can never be narrower at a later horizon than at an
+//      earlier one. Production showed 84 mg/dL at 40 minutes and 18 at 120 —
+//      claiming more confidence two hours out than at forty minutes, which the
+//      engine cannot know. Raw per-horizon quantiles are therefore carried
+//      forward as a running maximum, so a thin or unlucky horizon can never
+//      pull the band back in.
+//   2. SATURATING. The band grows towards a realistic ceiling (~75 mg/dL
+//      half-width) instead of widening without limit or collapsing.
+//
+// HONESTY PRINCIPLES:
+//   - An interval is NOT claimed to be "calibrated" until its coverage has
+//     been measured on suitable observations.
+//   - Intervals are NOT narrowed merely because a personalized model is
+//     active. Personalization without validation does not justify tighter
+//     intervals.
+//   - When the empirical data is insufficient, the interval is marked
+//     "uncalibrated" so consumers know it is a heuristic, not a measured
+//     error distribution.
 
 import { EVAL_HORIZONS } from "./evaluation";
 
-export const UNCERTAINTY_VERSION = "1.0.0";
+export const UNCERTAINTY_VERSION = "1.1.0";
 export const MIN_SAMPLES_FOR_CALIBRATION = 10;
 
 const MIN_HORIZON_SAMPLES = 3;
-const MAX_SIGMA_MGDL = 80;
+const MAX_SIGMA_MGDL = 95;
 const MIN_SIGMA_FLOOR_MGDL = 5;
 
+// The realistic ceiling for a half-width: past this, more band is not more
+// honest, it is unreadable. Inside the knee the fitted width is used as-is;
+// beyond it the width approaches the ceiling smoothly.
+export const UNCERTAINTY_CEILING_MGDL = 75;
+const SATURATION_KNEE_MGDL = 45;
+
 // The interval the band claims to be: four times in five, the reading lands
-// inside it. The half-width is fitted from the user's OWN residual quantiles
-// rather than from a multiple of their mean error — a quantile assumes nothing
-// about the shape of the error distribution.
+// inside it.
 export const NOMINAL_BAND_COVERAGE = 0.8;
+
+export function saturateHalfWidth(rawMgdl) {
+  if (!(rawMgdl > 0)) return 0;
+  if (rawMgdl <= SATURATION_KNEE_MGDL) return rawMgdl;
+  const room = UNCERTAINTY_CEILING_MGDL - SATURATION_KNEE_MGDL;
+  return SATURATION_KNEE_MGDL + room * (1 - Math.exp(-(rawMgdl - SATURATION_KNEE_MGDL) / room));
+}
+
+// Carry each horizon's fitted width forward as a running maximum, then saturate.
+// A horizon with no samples of its own inherits the width measured before it, so
+// the interpolation between horizons can never step back down.
+export function monotoneSaturatingFit(rawByHorizon) {
+  const out = {};
+  let carried = 0;
+  const horizons = [...EVAL_HORIZONS].sort((a, b) => a - b);
+  for (const h of horizons) {
+    const raw = rawByHorizon[h];
+    if (Number.isFinite(raw)) carried = Math.max(carried, raw);
+    if (!(carried > 0)) continue;
+    const width = Math.max(MIN_SIGMA_FLOOR_MGDL, saturateHalfWidth(carried));
+    out[h] = Math.round(width * 10) / 10;
+  }
+  return out;
+}
 
 function quantile(values, q) {
   if (!values.length) return NaN;
@@ -48,7 +103,7 @@ export function calibrateUncertainty(evaluatedProjections) {
     };
   }
 
-  const sigmaByHorizon = {};
+  const rawByHorizon = {};
   const horizonSampleCounts = {};
 
   for (const h of EVAL_HORIZONS) {
@@ -66,10 +121,12 @@ export function calibrateUncertainty(evaluatedProjections) {
     if (residuals.length >= MIN_HORIZON_SAMPLES) {
       const centre = median(residuals);
       const halfWidth = quantile(residuals.map((r) => Math.abs(r - centre)), NOMINAL_BAND_COVERAGE);
-      const sigma = Math.min(MAX_SIGMA_MGDL, Math.max(MIN_SIGMA_FLOOR_MGDL, halfWidth));
-      sigmaByHorizon[h] = Math.round(sigma * 10) / 10;
+      rawByHorizon[h] = Math.min(MAX_SIGMA_MGDL, Math.max(MIN_SIGMA_FLOOR_MGDL, halfWidth));
     }
   }
+
+  // Fitted once, monotonically, saturating — never per-horizon in isolation.
+  const sigmaByHorizon = monotoneSaturatingFit(rawByHorizon);
 
   const withIntervals = valid.filter(
     (p) => p.evaluation.coverage != null && (p.evaluation.horizons || []).some((s) => s.scored && s.in_interval !== null)
@@ -114,7 +171,7 @@ export function getEmpiricalSigma(minOffset, calibration) {
   }
   const horizons = Object.keys(calibration.sigmaByHorizon).map(Number).sort((a, b) => a - b);
   if (minOffset <= horizons[0]) return calibration.sigmaByHorizon[horizons[0]];
-  if (minOffset >= horizons[horizons.length - 1]) return calibration.sigmaByHorizon[horizons.length - 1];
+  if (minOffset >= horizons[horizons.length - 1]) return calibration.sigmaByHorizon[horizons[horizons.length - 1]];
   for (let i = 0; i < horizons.length - 1; i++) {
     const h0 = horizons[i];
     const h1 = horizons[i + 1];
@@ -122,6 +179,8 @@ export function getEmpiricalSigma(minOffset, calibration) {
       const s0 = calibration.sigmaByHorizon[h0];
       const s1 = calibration.sigmaByHorizon[h1];
       const frac = (minOffset - h0) / (h1 - h0);
+      // Interpolating between monotone values is monotone, so a later offset can
+      // never return a narrower band than an earlier one.
       return Math.round((s0 + (s1 - s0) * frac) * 10) / 10;
     }
   }

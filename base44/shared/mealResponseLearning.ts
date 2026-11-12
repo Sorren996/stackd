@@ -62,7 +62,7 @@ export const MIN_MEAL_SAMPLES_FOR_LEARNING = 5;
 // Minimum personalized projections with active meals to validate against
 // baseline. Lower than the general model because meal-containing projections
 // are a subset of all projections.
-export const MIN_MEAL_SAMPLES_FOR_VALIDATION = 3;
+export const MIN_MEAL_SAMPLES_FOR_VALIDATION = 30;
 
 // Minimum timing deviation (minutes) between the observed mean peak time and
 // the baseline predicted peak time to justify a speedFactor update. Below
@@ -487,6 +487,20 @@ export function shouldUpdateMealClass(
   };
 }
 
+// Personalization only becomes ACTIVE once every speed class — fast, mixed and
+// high-fat — has its own learned parameters with real samples behind them.
+export const REQUIRED_SPEED_CLASSES_FOR_ACTIVATION = ["fast", "mixed", "high_fat"];
+
+function allSpeedClassesLearned(state: MealModelState, speedClass: SpeedClass, sampleCount: number): boolean {
+  for (const cls of REQUIRED_SPEED_CLASSES_FOR_ACTIVATION as SpeedClass[]) {
+    const isCurrent = cls === speedClass;
+    const params = isCurrent ? true : Boolean(state?.speed_class_parameters?.[cls]);
+    const samples = isCurrent ? Number(sampleCount) || 0 : Number(state?.sample_counts_by_class?.[cls]) || 0;
+    if (!params || samples <= 0) return false;
+  }
+  return true;
+}
+
 export function applyMealClassUpdate(
   state: MealModelState,
   speedClass: SpeedClass,
@@ -527,7 +541,10 @@ export function applyMealClassUpdate(
       ...state.sample_counts_by_class,
       [speedClass]: aggregate.sampleCount,
     },
-    baseline_locked: false,
+    // Active only once EVERY speed class has its own parameters. Until then the
+    // factors are recorded and evaluated but stay in shadow, so a high-fat meal
+    // is never the one that quietly misses a personalized model.
+    baseline_locked: !allSpeedClassesLearned(state, speedClass, aggregate.sampleCount),
     evaluation_summary: evaluationSummary,
     last_updated_at: new Date(now).toISOString(),
     update_history: [

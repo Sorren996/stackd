@@ -79,6 +79,24 @@ function resolveMealComponent(state) {
     eligibleClasses.push(cls);
   }
 
+  // Per-class absorption fallback: a class this person has not measured yet
+  // inherits the mean of the classes they HAVE, rather than dropping to the
+  // generic 1.0. That way a high-fat meal is never the meal that silently loses
+  // the personalized model.
+  if (eligibleClasses.length > 0) {
+    const meanSpeed = eligibleClasses.reduce((s, c) => s + classes[c].speedFactor, 0) / eligibleClasses.length;
+    const meanMagnitude = eligibleClasses.reduce((s, c) => s + classes[c].magnitudeFactor, 0) / eligibleClasses.length;
+    for (const cls of SPEED_CLASSES) {
+      if (classes[cls].eligible) continue;
+      classes[cls] = {
+        ...classes[cls],
+        fallbackSpeedFactor: meanSpeed,
+        fallbackMagnitudeFactor: meanMagnitude,
+        reason: `${classes[cls].reason}_class_fallback`,
+      };
+    }
+  }
+
   return {
     eligible: eligibleClasses.length > 0,
     classes,
@@ -165,6 +183,9 @@ export function extractEffectiveMealParams(resolution) {
     const cr = resolution.meal.classes[cls];
     if (cr && cr.eligible) {
       result[cls] = { speedFactor: cr.speedFactor, magnitudeFactor: cr.magnitudeFactor };
+    } else if (cr && cr.fallbackSpeedFactor != null) {
+      // Never 1.0 for an unmeasured class: use the person's own learned average.
+      result[cls] = { speedFactor: cr.fallbackSpeedFactor, magnitudeFactor: cr.fallbackMagnitudeFactor };
     }
   }
   return Object.keys(result).length > 0 ? result : null;
