@@ -729,29 +729,12 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   // construction a point of the line it marks.
   const newestDrawnGlucosePoint = useMemo(() => newestDrawnPoint(chartData), [chartData]);
 
-  // Which drawn run holds that point, so only that line renders the marker.
-  const newestSegmentKey = useMemo(() => (
-    newestDrawnGlucosePoint ? glucoseBucketSegments.get(newestDrawnGlucosePoint.time) ?? null : null
-  ), [newestDrawnGlucosePoint, glucoseBucketSegments]);
-
-  // The end-of-line marker, drawn BY THE LINE at the line's own final point.
-  //
-  // It is a dot renderer rather than a chart annotation: recharts calls it with
-  // the exact cx/cy it computed for that point of that path, inside the same
-  // <svg> as the curve, so the marker cannot detach from the line or hold a
-  // screen position — it is painted from the curve's own geometry and travels
-  // with it. Every other point of the run returns an empty group.
-  const renderNewestMarker = (props) => {
-    const { cx, cy, payload, key } = props;
-    if (!newestDrawnGlucosePoint || payload?.time !== newestDrawnGlucosePoint.time) return null;
-    if (!Number.isFinite(cx) || !Number.isFinite(cy)) return null;
-    return (
-      <g key={key}>
-        <circle cx={cx} cy={cy} r={9} fill="#8c4a28" fillOpacity={0.12} />
-        <circle cx={cx} cy={cy} r={3.6} fill="#8c4a28" stroke="#fdf8f1" strokeWidth={1.6} />
-      </g>
-    );
-  };
+  // The end-of-line marker is a plain element placed INSIDE the scrollable
+  // content, at the newest reading's own x in the chart's coordinate space
+  // (latestGlucoseX) and its own y on the glucose scale. Because it lives in
+  // the same scrolled box as the curve, it moves with the curve by definition;
+  // it cannot be left behind on screen. See the marker itself in the chart
+  // content below.
 
   const doseKeys = useMemo(() => {
     const typeCount = new Map();
@@ -1580,7 +1563,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                       strokeWidth={2.75}
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      dot={newestSegmentKey === `glucose_seg_${index}` ? renderNewestMarker : false}
+                      dot={false}
                       activeDot={false}
                       connectNulls
                       isAnimationActive={false} />
@@ -1633,6 +1616,25 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               readings={filteredGlucoseReadings}
             />
           )}
+
+          {/* ── The end-of-line marker ──
+              The newest reading, marked where the glucose curve ends. It is a
+              plain element inside this same scrolled content box, placed at the
+              newest reading's x in the chart's own coordinate space and its y on
+              the glucose scale, so it is part of the curve's world: it scrolls
+              with the trace, sits exactly on the line's last point, and cannot
+              be left hovering in screen space. */}
+          {!isCandlestick && filters.glucose && latestGlucosePoint && Number.isFinite(latestGlucoseX) &&
+            <div
+              className="pointer-events-none absolute z-[12]"
+              style={{ left: latestGlucoseX, top: getGlucoseY(Math.min(Number(latestGlucosePoint.value), effectiveMax)), transform: "translate(-50%, -50%)" }}
+              aria-hidden="true">
+              <div className="rounded-full" style={{ width: 20, height: 20, background: "rgba(140, 74, 40, 0.14)" }} />
+              <div
+                className="absolute rounded-full"
+                style={{ width: 9, height: 9, left: 5.5, top: 5.5, background: "#8c4a28", border: "1.8px solid #fdf8f1" }} />
+            </div>
+          }
 
           {/* ── Insulin row (lower) — one shared timeline ── */}
           <div style={{ position: "absolute", top: INSULIN_ROW_TOP, left: 0 }}>
