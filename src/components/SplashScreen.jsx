@@ -5,12 +5,11 @@ const LOGO_URL = "https://media.base44.com/images/public/6a1b93f234a8611ee159513
 export default function SplashScreen({ showAuth = false }) {
   return (
     <motion.div
-      className="fixed inset-0 z-[9999] flex flex-col items-center justify-center"
+      className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-field"
       initial={{ opacity: 1 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.5, ease: "easeInOut" }}
-      style={{ background: "#f7f1e8" }}
     >
       <motion.img
         src={LOGO_URL}

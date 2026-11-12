@@ -206,7 +206,7 @@
 
   body {
     @apply text-foreground;
-    background: #f7f1e8;
+    background: var(--site-field, #4C6770);
     min-height: 100vh;
     color-scheme: light;
   }

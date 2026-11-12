@@ -135,7 +135,7 @@ export default function Layout() {
   };
 
   return (
-    <div className="isolate relative min-h-screen overflow-x-hidden text-foreground">
+    <div className="isolate relative min-h-screen overflow-x-hidden bg-field text-foreground">
       <header
         className="fixed inset-x-0 top-0 z-50"
         style={{ paddingTop: "env(safe-area-inset-top)", background: "transparent" }}

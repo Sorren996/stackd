@@ -19,12 +19,11 @@ export default function StartupRecovery({
 }) {
   return (
     <div
-      className="fixed inset-0 z-[9999] flex flex-col items-center justify-center px-6"
-      style={{ background: "#f7f1e8" }}
+      className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-field px-6"
     >
       <SplashMark />
 
-      <div className="mt-10 w-full max-w-xs text-center">
+      <div className="mt-10 w-full max-w-xs bg-paper text-center shadow-[0_0_0_24px_var(--site-surface)]">
         <h1 className="text-base font-semibold" style={{ color: "#3f3830" }}>
           {title}
         </h1>
@@ -38,7 +37,7 @@ export default function StartupRecovery({
             onClick={onRetry}
             disabled={retrying}
             className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-semibold transition disabled:opacity-70"
-            style={{ background: "#3f3830", color: "#f7f1e8" }}
+            style={{ background: "#3f3830", color: "#fdf9f2" }}
           >
             {retrying && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
             {retrying ? "Trying again" : "Try again"}
