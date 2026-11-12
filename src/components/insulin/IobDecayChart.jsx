@@ -8,8 +8,9 @@ const STEP_MS = 5 * 60 * 1000;
  * pre-built canonical activity curve. The value read is `activityUnitsPerMinute`
  * — each dose's activity amplitude already scaled by its logged units, so the
  * curve height is proportional to units (a 20u dose reaches ~3.3x a 6u dose),
- * while the rise → peak → tail shape is unchanged. The canonical engine already
- * applies the ≤0.49u clearance floor to these curves, terminating them at 0.
+ * while the rise → peak → tail shape is unchanged. The canonical engine's curves
+ * now run to the model's own endpoint: they are not truncated early, and only
+ * the endpoint sample is zero.
  */
 function activityAtTime(curve, t) {
   if (!curve || !curve.length) return 0;
@@ -41,7 +42,7 @@ function activityAtTime(curve, t) {
  * dose renders with at least `floorFraction` (~25%) of that height. The live
  * IOB unit total is labelled separately above (in IobAtAGlance), not on the
  * chart — this is a purely visual amplitude fix; the underlying dose/IOB math,
- * the ≤0.49u clearance floor, translucent fills, per-dose colors, and the
+ * the model's full-length curves, translucent fills, per-dose colors, and the
  * solid-underway vs dashed-mustard-projected-tail rendering are unchanged.
  *
  * Historical portion (up to NOW) is solid; projected tail (after NOW) is
@@ -71,11 +72,11 @@ export default function IobDecayChart({ bolusDoses, basalDoses, now = Date.now()
     const doseStarts = bolusDoses.map((d) => d.time).filter(Number.isFinite);
     const domainStart = doseStarts.length ? Math.min(...doseStarts) : now - 4 * 3600 * 1000;
 
-    // X-axis end: when the LAST dose clears, per the 0.49u IOB floor rule.
-    // Each canonical curve already terminates at its floor-clearance time (the
-    // point where activity drops to 0). The end extends just past the last such
-    // point so the axis hugs the active curves — no dead ~2h gap after them.
-    // Falls back to now + 3h only when there are no dose curves to bound it.
+    // X-axis end: when the LAST dose's model reaches its own endpoint. Each
+    // canonical curve already runs to that endpoint (the point where activity
+    // drops to 0). The end extends just past the last such point so the axis
+    // hugs the curves — no dead gap after them. Falls back to now + 3h only
+    // when there are no dose curves to bound it.
     let latestClear = null;
     for (const curve of curves) {
       if (!Array.isArray(curve) || !curve.length) continue;

@@ -2,7 +2,7 @@ import { useMemo, useRef, useEffect, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Area, XAxis, YAxis, Line, ComposedChart, ReferenceLine, ReferenceArea, ReferenceDot } from "recharts";
 import { generateActivityCurve, getDoseIOB, getInsulinProfile, isBasalInsulinType } from "@/lib/insulinPharmacology";
-import { IOB_FLOOR } from "@/lib/iobModel";
+import { formatRemaining } from "@/lib/remainingInsulin";
 import { PROFILE_COLORS } from "@/lib/carbAbsorption";
 import { format } from "date-fns";
 import { CornerUpRight, SlidersHorizontal, Check, Pencil, Trash2, Info } from "lucide-react";
@@ -752,8 +752,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
         units: getDoseUnits(dose),
         color: getInsulinProfile(dose.insulin_type)?.color || "#888",
         isBasal: isBasalInsulinType(dose.insulin_type),
-        isActive: getDoseIOB(dose, stableNow) > IOB_FLOOR,
-        isSpent: getDoseIOB(dose, stableNow) <= IOB_FLOOR,
+        isActive: getDoseIOB(dose, stableNow) > 0,
+        isSpent: getDoseIOB(dose, stableNow) <= 0,
         opacity
       };
     });
@@ -761,16 +761,16 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
   // Only insulin types whose curves have activity overlapping the visible
   // graph window — drives the legend so it reflects what's actually shown.
-  // Per-insulin-type totals, counting only doses that are still active (IOB
-  // >= 0.5u) — the same threshold the IOB card uses — so the legend stays
-  // accurate to what's genuinely on board, including lingering long-lasting
-  // insulins. Displayed as "Xu Type" next to each color dot.
+  // Per-insulin-type totals, counting only doses whose model still has a
+  // remainder — the same test the IOB card uses — so the legend stays accurate
+  // to what is still modelled, including lingering long-lasting insulins.
+  // Displayed as "Xu Type" next to each color dot.
   const activeDoseKeys = useMemo(() => {
     const byType = new Map();
     allCurvesMeta.forEach(({ dose, curve }) => {
       if (!curve.length) return;
       const iob = getDoseIOB(dose, stableNow);
-      if (iob <= IOB_FLOOR) return;
+      if (iob <= 0) return;
       const label = String(dose.insulin_type || "Insulin").split(" ")[0];
       const color = getInsulinProfile(dose.insulin_type)?.color || "#888";
       const units = getDoseUnits(dose);
@@ -918,8 +918,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       pillTop = Math.max(pillTop, 0);
 
       placed.push({ x, pillTop });
-      const isActive = getDoseIOB(dose, stableNow) > IOB_FLOOR;
-      const isSpent = getDoseIOB(dose, stableNow) <= IOB_FLOOR;
+      const isActive = getDoseIOB(dose, stableNow) > 0;
+      const isSpent = getDoseIOB(dose, stableNow) <= 0;
       return { dose, x, units, key, color, pillTop, peakY, isActive, isSpent };
     }).
     filter(Boolean);
@@ -1839,9 +1839,12 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               </div>
               {(() => {
             const iob = getDoseIOB(activeMarker.item, Date.now());
-            return iob > 0.01 ?
-            <p className="text-[11px]" style={{ color: "#5b6550" }}>{Math.round(iob)}u estimated active</p> :
-            <p className="text-[11px]" style={{ color: "#746959" }}>Support complete</p>;
+            // Any positive remainder reads as at least "1u" — the estimate is
+            // never rounded down to a confident-looking zero before the model's
+            // own endpoint.
+            return iob > 0 ?
+            <p className="text-[11px]" style={{ color: "#5b6550" }}>{formatRemaining(iob)} estimated active</p> :
+            <p className="text-[11px]" style={{ color: "#746959" }}>Estimate complete</p>;
           })()}
               <p className="text-[11px]" style={{ color: "#746959" }}>{format(new Date(activeMarker.item.administered_at), "h:mm a, MMM d")}</p>
 

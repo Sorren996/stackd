@@ -11,7 +11,7 @@ import { getCarbAbsorptionAt, getMealWindowMinutes, deriveDualWaveBlend, getAbso
 import { reconcileMealNarrative } from "@/lib/mealNarrativeReconciler";
 import { useMealModelResolution, entrySpeedFactorFromResolution, hasLearnedTimingFromResolution, learnedTimingCaptionFromResolution, deriveSpeedClass } from "@/hooks/useMealModelResolution";
 import { getDoseTimingInfo, isBasalInsulinType } from "@/lib/insulinPharmacology";
-import { formatIOBValue, IOB_FLOOR } from "@/lib/iobModel";
+import { formatRemaining as formatRemainingUnits } from "@/lib/remainingInsulin";
 import { formatGlucose, glucoseUnitLabel } from "@/lib/glucoseUnits";
 
 
@@ -303,7 +303,7 @@ export default function MealReviewAtAGlance({ mealInsight, glucoseReadings }) {
   }
 
   const activeDoses = (d.bolusIOBBreakdown || []).filter(
-    (dose) => !isBasalInsulinType(dose.type) && dose.iob > IOB_FLOOR
+    (dose) => !isBasalInsulinType(dose.type) && dose.iob > 0
   );
 
   const rescueGrams = Number.isFinite(d.rescueCarbs) && d.rescueCarbs > 0 ? Math.round(d.rescueCarbs) : 0;
@@ -403,12 +403,12 @@ export default function MealReviewAtAGlance({ mealInsight, glucoseReadings }) {
                           {shortName}, {fmtUnits(dose.units)}u dose
                         </span>
                         <span className="block tabular-nums" style={{ fontSize: 11, color: MR.sec }}>
-                          {formatIOBValue(dose.iob)}u left
+                          {formatRemainingUnits(dose.iob)} left
                         </span>
                       </div>
                       {remaining && (
                         <span className="shrink-0 tabular-nums" style={{ fontSize: 10, color: MR.sec }}>
-                          clears in {remaining}
+                          estimate ends in {remaining}
                         </span>
                       )}
                     </div>
@@ -417,9 +417,9 @@ export default function MealReviewAtAGlance({ mealInsight, glucoseReadings }) {
               ) : (
                 <p style={{ fontSize: 12, color: MR.sec }}>No bolus insulin active right now.</p>
               )}
-              {Number.isFinite(d.priorActiveIOB) && d.priorActiveIOB > IOB_FLOOR && d.topPriorDose && (
+              {Number.isFinite(d.priorActiveIOB) && d.priorActiveIOB > 0 && d.topPriorDose && (
                 <p style={{ fontSize: 11, lineHeight: 1.5, color: MR.sec }}>
-                  {d.priorActiveIOB.toFixed(1)}u still active from your {formatDoseClockTime(d.topPriorDose.time)} dose.
+                  {formatRemainingUnits(d.priorActiveIOB)} still active from your {formatDoseClockTime(d.topPriorDose.time)} dose.
                 </p>
               )}
             </div>

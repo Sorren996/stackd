@@ -76,13 +76,21 @@ describe("which doses are still acting", () => {
     assert.deepEqual(active.map((d) => d.insulin_type), ["Humalog", "NovoLog"]);
   });
 
-  test("a small dose clears earlier than a large one — the engine's own tiered rule, not a fixed day", () => {
-    // The patient model tiers DIA by dose size, so a 3 u dose can be fully
-    // cleared while a 12 u one logged at the same moment is still acting. The
-    // follower's view inherits that instead of assuming every dose lasts the
-    // same time.
-    const active = activeInsulinDoses([dose("NovoLog", 3, 2), dose("NovoLog", 12, 2)], NOW);
+  test("a small dose reaches its endpoint earlier than a large one — the engine's tiered rule", () => {
+    // The patient model tiers the modelled duration by dose size: 3u ends at
+    // 210 minutes, 12u at 240. At 3.85 hours (231 minutes) the 3u dose is past
+    // its own endpoint while the 12u dose still has a real remainder. There is
+    // no early "cleared" threshold in between any more — only the endpoint.
+    const active = activeInsulinDoses([dose("NovoLog", 3, 3.85), dose("NovoLog", 12, 3.85)], NOW);
     assert.deepEqual(active.map((d) => d.units), [12]);
+  });
+
+  test("a sub-unit remainder keeps the dose listed until its own endpoint", () => {
+    // 3u at 3 hours: past the old 0.49u cutoff point, still short of 210 minutes.
+    const active = activeInsulinDoses([dose("NovoLog", 3, 3)], NOW);
+    assert.equal(active.length, 1);
+    assert.equal(active[0].units, 3);
+    assert.ok(active[0].remaining_minutes > 0);
   });
 
   test("an empty or malformed list yields nothing rather than throwing", () => {

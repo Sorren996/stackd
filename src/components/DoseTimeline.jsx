@@ -1,5 +1,5 @@
 import { formatMinutes } from "@/lib/insulinPharmacology";
-import { formatIOBValue } from "@/lib/iobModel";
+import { formatRemainingValue } from "@/lib/remainingInsulin";
 
 function DoseTimelineBar({ dose }) {
   const { shortName, units, iob, color, statusLabel, timingInfo } = dose;
@@ -15,7 +15,7 @@ function DoseTimelineBar({ dose }) {
           <p className="truncate text-xs font-semibold" style={{ color: "#f7f1e8" }}>{shortName}</p>
           <span className="text-[10px]" style={{ color: "#eef2e9" }}>{units}u</span>
         </div>
-        <span className="shrink-0 text-sm font-bold tabular-nums" style={{ color: "#f7f1e8" }}>{formatIOBValue(iob)}u</span>
+        <span className="shrink-0 text-sm font-bold tabular-nums" style={{ color: "#f7f1e8" }}>{formatRemainingValue(iob)}u</span>
       </div>
 
       <div className="relative h-2.5 overflow-hidden rounded-full" style={{ background: "rgba(255,255,255,0.05)" }}>

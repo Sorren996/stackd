@@ -1,6 +1,6 @@
 import { useId, useMemo } from "react";
 import { generateActivityCurve, formatMinutes, isBasalInsulinType } from "@/lib/insulinPharmacology";
-import { formatIOBValue } from "@/lib/iobModel";
+import { formatRemainingValue } from "@/lib/remainingInsulin";
 
 const MINUTE_MS = 60 * 1000;
 const HOUR_MS = 60 * MINUTE_MS;
@@ -73,9 +73,9 @@ export default function InsulinDoseRow({ dose, regimenStatus = null }) {
     return 100 - activity / maxActivity * 100 * 0.82 - 8;
   }, [curve, progress]);
   const formattedUnits = String(Math.round(units));
-  // IOB shows the real number: 1 decimal at ≥0.5u, 2 decimals below 0.5u
-  // (finite-DIA beta curve decays to exactly 0.00 at DIA — no ghost tail).
-  const formattedIob = formatIOBValue(iob);
+  // Remaining-units estimate: any positive amount under 1u reads "1", and only
+  // the model's own endpoint reads "0".
+  const formattedIob = formatRemainingValue(iob);
 
   return (
     <div className="px-0.5 py-2.5">

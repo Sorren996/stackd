@@ -2,6 +2,7 @@ import { Sparkles, X } from "lucide-react";
 import Sheet from "@/components/Sheet";
 import { activeInsulinDoses, computeSharedActiveInsulin, sharedBasalSummary } from "@/lib/sharing/followerInsulin";
 import { describeProjectionReason } from "@/lib/sharing/sharingCopy";
+import { formatRemaining, REMAINING_ESTIMATE_NOTE } from "@/lib/remainingInsulin";
 
 const INK = "#3a2f28";
 const MUTED = "#7a6b5d";
@@ -56,7 +57,7 @@ function ActiveDoseRow({ dose }) {
         </div>
         <p className="pt-1.5 text-xs" style={{ color: INK }}>
           {dose.stage}
-          {dose.remaining_label ? <span style={{ color: MUTED }}> · about {dose.remaining_label} left</span> : null}
+          {dose.remaining_label ? <span style={{ color: MUTED }}> · estimate ends in about {dose.remaining_label}</span> : null}
         </p>
       </div>
     </div>
@@ -116,12 +117,13 @@ export default function SharedInsulinSheet({ open, onClose, insulin, reason, sha
                 className="pt-1 text-2xl font-semibold tabular-nums"
                 style={{ color: estimate.available ? ACCENT : MUTED }}
               >
-                {estimate.available
-                  ? estimate.isZero
-                    ? "None active"
-                    : `${estimate.value.toFixed(1)} u`
-                  : "Unavailable"}
+                {estimate.available ? formatRemaining(estimate.value) : "Unavailable"}
               </p>
+              {estimate.available && (
+                <p className="pt-1 text-[10px] leading-relaxed" style={{ color: MUTED }}>
+                  {REMAINING_ESTIMATE_NOTE}
+                </p>
+              )}
               {!estimate.available && (
                 <p className="pt-1 text-xs" style={{ color: MUTED }}>
                   {describeProjectionReason(estimate.reason)}
@@ -137,7 +139,7 @@ export default function SharedInsulinSheet({ open, onClose, insulin, reason, sha
 
             {!available ? null : active.length === 0 ? (
               <p className="pt-4 text-sm" style={{ color: MUTED }}>
-                Everything they have logged has finished acting for now.
+                Every dose they have logged is past its estimated end for now.
               </p>
             ) : (
               <>

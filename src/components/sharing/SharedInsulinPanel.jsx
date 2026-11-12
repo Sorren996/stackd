@@ -1,6 +1,7 @@
 import { ChevronRight } from "lucide-react";
 import { computeSharedActiveInsulin, sharedBasalSummary } from "@/lib/sharing/followerInsulin";
 import { describeProjectionReason } from "@/lib/sharing/sharingCopy";
+import { formatRemainingValue } from "@/lib/remainingInsulin";
 
 const INK = "#3a2f28";
 const MUTED = "#7a6b5d";
@@ -50,16 +51,11 @@ export default function SharedInsulinPanel({ insulin, reason, onOpenDetail }) {
           className="text-[30px] tabular-nums"
           style={{ color: estimate.available ? INK : MUTED, fontWeight: 300, lineHeight: 1.05, letterSpacing: "-0.02em" }}
         >
-          {estimate.available ? (estimate.isZero ? "None" : estimate.value.toFixed(1)) : "Unavailable"}
+          {estimate.available ? formatRemainingValue(estimate.value) : "Unavailable"}
         </span>
-        {estimate.available && !estimate.isZero && (
+        {estimate.available && (
           <span className="text-xs" style={{ color: MUTED }}>
             u
-          </span>
-        )}
-        {estimate.available && estimate.isZero && (
-          <span className="text-sm" style={{ color: MUTED }}>
-            active
           </span>
         )}
       </span>

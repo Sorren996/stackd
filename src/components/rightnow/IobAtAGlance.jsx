@@ -6,7 +6,11 @@ import SwipeableRow from "@/components/SwipeableRow";
 import IobDecayChart from "@/components/insulin/IobDecayChart";
 import RemainingBar, { RemainingLegend } from "@/components/insulin/RemainingBars";
 import { isBasalInsulinType, getDoseStatus, getDoseTimingInfo } from "@/lib/insulinPharmacology";
-import { formatIOBValue, IOB_FLOOR } from "@/lib/iobModel";
+import {
+  formatRemaining as formatRemainingUnits,
+  formatRemainingValue,
+  REMAINING_ESTIMATE_NOTE,
+} from "@/lib/remainingInsulin";
 
 const PALETTE = {
   ink: "#3f3830",
@@ -27,11 +31,11 @@ function fmtUnits(u) {
   return n % 1 === 0 ? n : n.toFixed(1);
 }
 
-// IOB display: real number with 1 decimal at ≥0.5u, 2 decimals below 0.5u
-// (tail reads 0.42 → 0.08 → 0.01 → 0.00). Never "<1u" — the finite-DIA beta
-// curve reaches exactly 0.00, so the ghost tail is retired.
+// Remaining-units display: a positive remainder under 1u reads "1u" (the model
+// is an estimate, not a measurement); exactly 0 only at the model's endpoint.
+// The underlying amount is never rounded or mutated for this.
 function fmtIob(u) {
-  return `${formatIOBValue(u)}u`;
+  return formatRemainingUnits(u);
 }
 
 // Dynamic basal status derived from real elapsed time vs that basal's
@@ -45,8 +49,8 @@ function basalStatusLine(dose, now) {
   };
   const status = getDoseStatus(doseObj, now);
   const timing = getDoseTimingInfo(doseObj, now);
-  if (status.phase === "expired" || status.iob <= IOB_FLOOR) {
-    return { label: "No longer contributing", remaining: null };
+  if (status.phase === "expired" || status.iob <= 0) {
+    return { label: "Estimate complete", remaining: null };
   }
   const remaining = formatRemaining(timing.remainingMin);
   const map = {
@@ -86,8 +90,8 @@ function bolusStatusLine(dose, now) {
   };
   const status = getDoseStatus(doseObj, now);
   const timing = getDoseTimingInfo(doseObj, now);
-  if (status.phase === "expired" || status.iob <= IOB_FLOOR) {
-    return { label: "Fully cleared", color: PALETTE.grey, remaining: null };
+  if (status.phase === "expired" || status.iob <= 0) {
+    return { label: "Estimate complete", color: PALETTE.grey, remaining: null };
   }
   const remaining = formatRemaining(timing.remainingMin);
   // Every possible phase gets a bolus-appropriate label so a basal-language
@@ -138,21 +142,20 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
   const bolusDoses = useMemo(
     () =>
       (breakdown || [])
-        .filter((d) => !isBasalInsulinType(d.type) && d.iob > IOB_FLOOR)
+        .filter((d) => !isBasalInsulinType(d.type) && d.iob > 0)
         .sort((a, b) => a.time - b.time),
     [breakdown]
   );
   const basalDoses = useMemo(
-    () => (breakdown || []).filter((d) => isBasalInsulinType(d.type) && d.iob > IOB_FLOOR),
+    () => (breakdown || []).filter((d) => isBasalInsulinType(d.type) && d.iob > 0),
     [breakdown]
   );
 
-  // Sum rounded dose IOB values so the headline always matches the sum of
-  // the displayed (one-decimal) per-dose values — no rounding discrepancy.
-  const bolusUnits = bolusDoses.reduce((sum, d) => sum + (Math.round(d.iob * 10) / 10), 0);
-  // Only doses with meaningful IOB count as "active" — fully-cleared doses
-  // (0.00u) stay listed for context but don't inflate the active count.
-  const activeBolusCount = bolusDoses.filter((d) => d.iob > IOB_FLOOR).length;
+  // The headline is the sum of the RAW modelled remainders, formatted once at
+  // the end. Per-dose display rounding (0.6u shown as "1u") never feeds it.
+  const bolusUnits = bolusDoses.reduce((sum, d) => sum + (Number(d.iob) || 0), 0);
+  // A dose counts as active while the model still has any remainder for it.
+  const activeBolusCount = bolusDoses.length;
   const basalUnits = basalDoses.reduce((sum, d) => sum + (Number(d.units) || 0), 0);
   const hasBolus = bolusDoses.length > 0;
   const hasBasal = basalDoses.length > 0;
@@ -190,7 +193,7 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
 
         {/* Totals row */}
         <div className="mt-3 flex items-baseline gap-2">
-          <span className="anchor" style={{ fontSize: 34 }}>{bolusUnits.toFixed(1)}</span>
+          <span className="anchor" style={{ fontSize: 34 }}>{formatRemainingValue(bolusUnits)}</span>
           <span className="text-[15px] font-light" style={{ color: PALETTE.muted }}>u on board</span>
         </div>
         <p className="mt-0.5 text-[12px]" style={{ color: PALETTE.faint }}>
@@ -248,7 +251,7 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
                         {status.label}
                         {status.remaining && (
                           <>
-                            {" · clears in "}
+                            {" · estimate ends in "}
                             <motion.span key={status.remaining} initial={resumed ? false : { opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: resumed ? 0 : 0.2 }}>
                               {status.remaining}
                             </motion.span>
@@ -262,6 +265,9 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
             </div>
             <p className="mt-3 text-[10px] leading-relaxed" style={{ color: PALETTE.faint }}>
               Each bar is scaled to its own logged amount — the fill shows what fraction of that dose is still estimated to be active, not activity strength.
+            </p>
+            <p className="mt-1.5 text-[10px] leading-relaxed" style={{ color: PALETTE.faint }}>
+              {REMAINING_ESTIMATE_NOTE}
             </p>
 
             {/* Optional activity view — existing canonical curve visualization */}
@@ -346,7 +352,7 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
                       </span>
                       {status.remaining && (
                         <span className="block text-[10px] tabular-nums" style={{ color: PALETTE.faint }}>
-                          clears in{" "}
+                          estimate ends in{" "}
                           <motion.span key={status.remaining} initial={resumed ? false : { opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: resumed ? 0 : 0.2 }}>
                             {status.remaining}
                           </motion.span>

@@ -17,7 +17,7 @@ describe("active insulin estimate gating (never a misleading zero)", () => {
     assert.equal(r.available, true);
     assert.equal(r.value, 2.4);
     assert.equal(r.isZero, false);
-    assert.equal(describeActiveInsulinLabel(r), "2.4 u");
+    assert.equal(describeActiveInsulinLabel(r), "2.4u remaining");
   });
 
   test("an unconfirmed plan reports Unavailable, never 0.0u", () => {
@@ -42,16 +42,25 @@ describe("active insulin estimate gating (never a misleading zero)", () => {
     assert.equal(describeActiveInsulinLabel(describeActiveInsulinEstimate(NaN, true, 2)), "Unavailable");
   });
 
-  test("a genuinely decayed estimate from real doses reads 'None active', not 0.0u", () => {
+  test("a small positive remainder stays positive — it is not a decayed zero", () => {
     const r = describeActiveInsulinEstimate(0.01, true, 1);
     assert.equal(r.available, true);
-    assert.equal(r.isZero, true);
-    assert.equal(describeActiveInsulinLabel(r), "None active");
+    assert.equal(r.isZero, false);
+    assert.equal(r.value, 0.01);
+    // Under 1u the figure is shown as 1u; the model keeps its own amount.
+    assert.equal(describeActiveInsulinLabel(r), "1u remaining");
   });
 
-  test("the estimate is rounded to a tenth of a unit", () => {
-    assert.equal(describeActiveInsulinEstimate(2.4499, true, 1).value, 2.4);
-    assert.equal(describeActiveInsulinEstimate(2.4501, true, 1).value, 2.5);
+  test("zero is reported only at the model's own endpoint", () => {
+    const r = describeActiveInsulinEstimate(0, true, 1);
+    assert.equal(r.available, true);
+    assert.equal(r.isZero, true);
+    assert.equal(describeActiveInsulinLabel(r), "0u remaining");
+  });
+
+  test("the estimate is passed through unrounded so display rules can't mutate it", () => {
+    assert.equal(describeActiveInsulinEstimate(2.4499, true, 1).value, 2.4499);
+    assert.equal(describeActiveInsulinEstimate(2.4501, true, 1).value, 2.4501);
   });
 });
 

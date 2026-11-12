@@ -23,8 +23,6 @@ import {
   betaIOBFraction,
   betaActivityRate,
   betaActivityNormalized,
-  IOB_FLOOR,
-  getFloorTimeMinutes,
 } from "./iobModel.js";
 
 // Detects rapid-acting SC analogs (aspart / lispro / glulisine and their
@@ -535,31 +533,35 @@ function buildSingleComponentCurve(profile, units, start, step) {
   const spanMin = Math.max(step, timing.duration);
 
   // Rapid-acting analogs: finite-DIA beta curve (IOB → 0.0 exactly at DIA).
+  //
+  // Sampled across the WHOLE modelled duration, and the model's own endpoint is
+  // always included as a real sample — even when the duration is not a multiple
+  // of the sampling interval. Nothing is truncated early: a positive remainder
+  // below 1u keeps its own value all the way down, and only the endpoint
+  // sample is exactly zero.
   if (timing.useBeta) {
     const dia = timing.duration;
-    const floorTime = getFloorTimeMinutes(units, dia);
     const points = [];
-    for (let minute = 0; minute <= floorTime; minute += step) {
-      const t = Math.min(minute, dia);
-      const iobFrac = betaIOBFraction(t, dia);
-      const activeUnits = Math.max(0, units * iobFrac);
+    for (let minute = 0; minute < dia; minute += step) {
+      const iobFrac = betaIOBFraction(minute, dia);
       points.push({
         minute,
         time: start + minute * MINUTE_MS,
-        activity: betaActivityNormalized(t, dia),
+        activity: betaActivityNormalized(minute, dia),
         iobFraction: iobFrac,
-        activeUnits: activeUnits <= IOB_FLOOR ? 0 : activeUnits,
-        activityUnitsPerMinute: betaActivityRate(t, dia, units),
+        activeUnits: Math.max(0, units * iobFrac),
+        activityUnitsPerMinute: betaActivityRate(minute, dia, units),
       });
     }
-    // Guarantee exact zero termination at the floor time (no sub-0.49 tail).
-    const last = points[points.length - 1];
-    if (last) {
-      last.iobFraction = 0;
-      last.activeUnits = 0;
-      last.activityUnitsPerMinute = 0;
-      last.activity = 0;
-    }
+    // The exact model endpoint, at the dose's full duration.
+    points.push({
+      minute: dia,
+      time: start + dia * MINUTE_MS,
+      activity: 0,
+      iobFraction: 0,
+      activeUnits: 0,
+      activityUnitsPerMinute: 0,
+    });
     return points;
   }
 
@@ -692,11 +694,19 @@ export function getSteadyBasalIOB(dose, atTime = Date.now()) {
   return getDoseIOB(dose, atTime);
 }
 
+/**
+ * Estimated insulin remaining from one dose, in units.
+ *
+ * No early-zero threshold: the modelled remainder is reported for as long as
+ * the model says there is any, including a fraction below 1u. Exactly zero
+ * only at/after the model's endpoint, and for a dose dated in the future.
+ */
 export function getDoseIOB(dose, atTime = Date.now()) {
   const start = getDoseTime(dose);
   if (!Number.isFinite(start) || !Number.isFinite(atTime) || atTime < start) return 0;
   const iob = interpolateCurveValue(generateActivityCurve(dose), atTime, "activeUnits");
-  return iob <= IOB_FLOOR ? 0 : iob;
+  if (!Number.isFinite(iob) || iob <= 0) return 0;
+  return iob;
 }
 
 export function getDoseRelativeActivity(dose, atTime = Date.now()) {
@@ -789,11 +799,13 @@ export function getDoseStatus(dose, atTime = Date.now()) {
   const activity = getRelativeActivityAtMinute(elapsed, timing);
   const iob = getDoseIOB(dose, atTime);
 
-  // Floor rule: once IOB declines to 0.49u or below, the dose is fully
-  // cleared. This applies to all models (beta and exponential).
-  const isExpired = iob <= IOB_FLOOR || elapsed >= timing.duration;
+  // A dose is no longer modelled once the model's own duration has elapsed, or
+  // once its modelled remainder has genuinely reached zero. There is no
+  // in-between threshold: the remainder is not collapsed early.
+  const isExpired = elapsed >= timing.duration || iob <= 0;
   if (isExpired) {
-    return { phase: "expired", label: "No longer active", activity: 0, iob: 0 };
+    // "Estimate complete" states the model's endpoint, not a biological claim.
+    return { phase: "expired", label: "Estimate complete", activity: 0, iob: 0 };
   }
 
   if (timing.model === "flat") {
@@ -821,25 +833,21 @@ export function getDoseTimingInfo(dose, atTime = Date.now()) {
   }
 
   const timing = getProfileTiming(profile, units);
+
+  // The countdown runs to the model's own endpoint — the same moment the
+  // remainder reaches zero. No shortened "cleared early" duration.
+  const totalDurationMin = timing.duration;
   const elapsedMin = atTime >= start ? (atTime - start) / MINUTE_MS : 0;
-  const iob = getDoseIOB(dose, atTime);
-  const floored = iob <= IOB_FLOOR;
+  const clampedElapsed = Math.max(0, elapsedMin);
 
-  // Effective duration: for beta doses, the floor time (when IOB hits 0.49).
-  // For others, the full profile duration. Clearance countdown reaches 0
-  // at the floor point, not the full DIA.
-  const totalDurationMin = timing.useBeta
-    ? getFloorTimeMinutes(units, timing.duration)
-    : timing.duration;
-
-  const remainingMin = floored ? 0 : Math.max(0, totalDurationMin - elapsedMin);
-  const progress = floored ? 1 : (totalDurationMin > 0 ? Math.min(1, elapsedMin / totalDurationMin) : 0);
+  const remainingMin = Math.max(0, totalDurationMin - clampedElapsed);
+  const progress = totalDurationMin > 0 ? Math.min(1, clampedElapsed / totalDurationMin) : 0;
 
   return {
     totalDurationMin,
-    elapsedMin,
+    elapsedMin: clampedElapsed,
     remainingMin,
     progress,
-    isExpired: floored || elapsedMin >= timing.duration,
+    isExpired: clampedElapsed >= totalDurationMin,
   };
 }

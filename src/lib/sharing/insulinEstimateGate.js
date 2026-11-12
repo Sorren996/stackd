@@ -10,18 +10,26 @@
 // Two cases that look alike are kept apart:
 //   - nothing rapid-acting logged in the period we can see is NOT a measured
 //     zero, so it reads Unavailable;
-//   - doses logged and every one of them cleared IS a real zero, so it reads
-//     "None active".
+//   - doses logged and every one of them at the model's own endpoint IS a real
+//     zero, so it reads 0u;
+//   - a small POSITIVE remainder (say 0.3u) is never turned into zero here. The
+//     model's endpoint is the only thing that produces zero; how that positive
+//     amount is worded is the presentation layer's job (remainingInsulin.js).
 //
 // It lives under src/lib so the browser bundle can use it (frontend code
 // cannot import from base44/, which is server-side) and so the Node test
-// runner can exercise it directly. Pure — no imports, no side effects.
+// runner can exercise it directly. Pure apart from the one presentation
+// helper used for the short label.
+
+import { formatRemainingLong } from "../remainingInsulin.js";
 
 /**
  * @param {unknown} value — the computed active insulin, or null when none could be computed
  * @param {boolean} doseMathAvailable — the sharer's plan is confirmed
  * @param {number|null} rapidDoseCount — how many rapid-acting doses were visible, null when unknown
  * @returns {{ available: boolean, reason: string|null, value: number|null, isZero: boolean }}
+ *   `value` is the RAW modelled remainder — never rounded here, so a display
+ *   rule cannot mutate the amount that totals and calculations use.
  */
 export function describeActiveInsulinEstimate(value, doseMathAvailable, rapidDoseCount = null) {
   if (!doseMathAvailable) {
@@ -36,13 +44,12 @@ export function describeActiveInsulinEstimate(value, doseMathAvailable, rapidDos
   if (value === null || value === undefined || !Number.isFinite(v) || v < 0) {
     return { available: false, reason: "not_computable", value: null, isZero: false };
   }
-  const rounded = Math.round(v * 10) / 10;
-  return { available: true, reason: null, value: rounded, isZero: rounded < 0.05 };
+  // Zero only at the model's own endpoint. No epsilon, no display rounding.
+  return { available: true, reason: null, value: v, isZero: v === 0 };
 }
 
 /** Short, neutral label for the follower card. Never advice, never a dose. */
 export function describeActiveInsulinLabel(estimate) {
   if (!estimate || !estimate.available) return "Unavailable";
-  if (estimate.isZero) return "None active";
-  return `${estimate.value.toFixed(1)} u`;
+  return formatRemainingLong(estimate.value);
 }

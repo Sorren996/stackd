@@ -19,7 +19,7 @@ import {
   isBolusInsulinType,
   isBasalInsulinType } from
 "@/lib/insulinPharmacology";
-import { IOB_FLOOR } from "@/lib/iobModel";
+import { formatRemaining as formatRemainingUnits } from "@/lib/remainingInsulin";
 import { getBasalRegimenStatus } from "@/lib/basalActivityModel";
 import { getGlucoseBeforeMeal } from "@/lib/glucoseBeforeMeal";
 import {
@@ -367,7 +367,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
   const bolusIOBBreakdown = mealCoverageDoses.
   map((dose) => {
     const iob = getDoseIOB(dose, now);
-    if (iob <= IOB_FLOOR || !isBolusInsulinType(dose.insulin_type)) return null;
+    if (iob <= 0 || !isBolusInsulinType(dose.insulin_type)) return null;
     const profile = INSULIN_PROFILES[dose.insulin_type];
     const status = getDoseStatus(dose, now);
     return {
@@ -392,7 +392,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
   const priorActiveIOB = priorDoseBreakdown.reduce((sum, dose) => sum + dose.iob, 0);
   const topPriorDose = priorDoseBreakdown[0] || null;
 
-  let value = `${activeIOB.toFixed(1)}u`;
+  let value = formatRemainingUnits(activeIOB);
   let status = "Active support";
   let color = "#4d5742";
   let sub = `${Math.round(mealGroup.carbs)}g carbs, ${loggedTotalUnits.toFixed(1)}u logged`;
@@ -411,8 +411,8 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
     status = "Glucose was below range at the time. Take care first.";
     color = "#9c3f2e";
   } else {
-    value = `${activeIOB.toFixed(1)}u`;
-    status = `${activeIOB.toFixed(1)}u active now. Your plan suggested ${grossDoseEstimate.toFixed(1)}u.`;
+    value = formatRemainingUnits(activeIOB);
+    status = `${formatRemainingUnits(activeIOB)} active now. Your plan suggested ${grossDoseEstimate.toFixed(1)}u.`;
     color = "#4d5742";
   }
 
@@ -454,7 +454,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
       "Started this meal";
       outcomeAssessment = {
         label: "In range",
-        message: `${startPart}, now at ${formatGlucose(latestGlucoseValue)} ${glucoseUnitLabel()}. ${activeIOB.toFixed(1)}u still active.`,
+        message: `${startPart}, now at ${formatGlucose(latestGlucoseValue)} ${glucoseUnitLabel()}. ${formatRemainingUnits(activeIOB)} still active.`,
         color: "#4d5742"
       };
       value = "In range";
@@ -465,7 +465,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
     else if (latestIsAfterMeal && latestLow) {
       outcomeAssessment = {
         label: "Below range",
-        message: `Glucose is at ${formatGlucose(latestGlucoseValue)} ${glucoseUnitLabel()}, below your range. ${activeIOB.toFixed(1)}u still active.`,
+        message: `Glucose is at ${formatGlucose(latestGlucoseValue)} ${glucoseUnitLabel()}, below your range. ${formatRemainingUnits(activeIOB)} still active.`,
         color: "#9c3f2e"
       };
       value = "Below range";
@@ -476,7 +476,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
     else if (latestIsAfterMeal && latestHigh) {
       outcomeAssessment = {
         label: "Above range",
-        message: `Glucose is at ${formatGlucose(latestGlucoseValue)} ${glucoseUnitLabel()}, above your range. ${activeIOB.toFixed(1)}u still active.`,
+        message: `Glucose is at ${formatGlucose(latestGlucoseValue)} ${glucoseUnitLabel()}, above your range. ${formatRemainingUnits(activeIOB)} still active.`,
         color: "#8a5a12"
       };
       value = "Above range";
@@ -774,9 +774,10 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, liveRea
     map((dose) => {
       const iob = getDoseIOB(dose, now);
       const doseTime = getDoseTime(dose);
-      // Fully-cleared doses (IOB at or below floor) are removed immediately —
-      // they no longer appear in the IOB card, meal review, or timeline.
-      if (iob <= IOB_FLOOR) return null;
+      // Doses whose model has reached its endpoint are removed immediately —
+      // they no longer appear in the IOB card, meal review, or timeline. Any
+      // positive remainder stays listed, however small.
+      if (iob <= 0) return null;
 
       const profile = getInsulinProfile(dose.insulin_type);
       const status = getDoseStatus(dose, now);
@@ -996,14 +997,13 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, liveRea
   const stackingAlertsEnabled =
   typeof window !== "undefined" && window.localStorage.getItem("stacking_alerts_enabled") !== "false";
 
-  // Counts rapid/short-acting doses that still hold meaningful insulin on
-  // board (IOB above the 0.49u floor). A dose at or below the floor is fully
-  // cleared and no longer counts as "stacking".
+  // Counts rapid/short-acting doses whose model still has a remainder. A dose
+  // counts until its own endpoint, never dropping out early.
   const activeRapidCount = useMemo(() => {
     const now = Date.now();
     return safeDoses.filter((dose) => {
       if (!["Rapid-Acting", "Short-Acting"].includes(getInsulinCategory(dose.insulin_type))) return false;
-      return getDoseIOB(dose, now) > IOB_FLOOR;
+      return getDoseIOB(dose, now) > 0;
     }).length;
   }, [safeDoses, nowMinute]);
 

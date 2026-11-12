@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Info } from "lucide-react";
 import { isBasalInsulinType } from "@/lib/insulinPharmacology";
-import { formatIOBValue } from "@/lib/iobModel";
+import { formatRemainingValue, REMAINING_ESTIMATE_NOTE } from "@/lib/remainingInsulin";
 import InfoPopover from "@/components/graph/InfoPopover";
 import BasalCoverageInfo from "./BasalCoverageInfo";
 import IobDecayChart from "./IobDecayChart";
@@ -85,7 +85,7 @@ export default function InsulinOnBoardCard({ totalUnits, breakdown, basalRegimen
 
       {/* Focal anchor — total bolus IOB */}
       <div className="mt-4 flex items-baseline gap-2">
-        <span className="anchor">{formatIOBValue(bolusUnits)}</span>
+        <span className="anchor">{formatRemainingValue(bolusUnits)}</span>
         <span className="text-[22px] font-light" style={{ color: PALETTE.muted }}>u</span>
       </div>
 
@@ -107,7 +107,7 @@ export default function InsulinOnBoardCard({ totalUnits, breakdown, basalRegimen
       <div className="mt-2">
         {hasBolus ? (
           bolusDoses.map((dose) => {
-            const isCleared = Boolean(dose.timingInfo?.isExpired) || dose.iob <= 0.005;
+            const isCleared = Boolean(dose.timingInfo?.isExpired) || dose.iob <= 0;
             const doseTime = formatClock(dose.time);
             const label = dose.shortName || dose.type?.split(" ")[0] || "Insulin";
             return (
