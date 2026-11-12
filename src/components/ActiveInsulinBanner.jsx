@@ -195,6 +195,23 @@ function sumDoseUnits(doses, selectUnits) {
   }, 0);
 }
 
+// The review outlives absorption. Once a meal has finished arriving the card
+// keeps showing that meal's post-meal behaviour — it only stops speaking about
+// "still in play" absorption. A meal logged earlier today (or, in the small
+// hours, one from the last eight hours) is therefore still reviewable.
+const REVIEW_AFTER_MEAL_MS = 8 * 60 * 60 * 1000;
+
+function isReviewableToday(mealTime, now) {
+  if (!Number.isFinite(mealTime)) return false;
+  const meal = new Date(mealTime);
+  const today = new Date(now);
+  const sameDay =
+    meal.getFullYear() === today.getFullYear() &&
+    meal.getMonth() === today.getMonth() &&
+    meal.getDate() === today.getDate();
+  return sameDay || now - mealTime <= REVIEW_AFTER_MEAL_MS;
+}
+
 function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latestGlucose, insulinSettings, targetGroup = null) {
   if (!insulinSettings.isComplete) {
     return {
@@ -210,13 +227,17 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
   let mealGroup = targetGroup;
   if (!mealGroup) {
     const groups = buildMealEventGroups(carbEntries, doses, insulinSettings, glucoseReadings, insulinSettings.targetLow).sort((a, b) => b.mealTime - a.mealTime);
-    // The one in-play window: scaled by the size of the meal, never shorter than
-    // the review window chosen in Settings. The projection reads the same rule,
-    // so the review never ends while the forecast still has carbs on board.
-    // Rescue carbs never open a meal review on their own, regardless of volume.
+    // The one in-play window: scaled by the size of the meal. The projection
+    // reads the same rule, so the review never ends while the forecast still
+    // has carbs on board. Rescue carbs never open a meal review on their own.
     mealGroup = groups.find(
       (group) => now - group.mealTime <= mealInPlayWindowMinutes(group.carbs, insulinSettings.outcomeWindowMinutes) * MINUTE_MS
     );
+    // Nothing still absorbing? The review is not blank just because absorption
+    // finished: the most recent meal of the day keeps its post-meal review.
+    if (!mealGroup) {
+      mealGroup = groups.find((group) => isReviewableToday(group.mealTime, now)) || null;
+    }
   }
 
   if (!mealGroup) {
@@ -239,9 +260,11 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
   const mealFatGrams = (mealGroup.carbEntries || []).reduce((s, e) => s + Number(e.fat_grams || 0), 0);
   const mealProteinGrams = (mealGroup.carbEntries || []).reduce((s, e) => s + Number(e.protein_grams || 0), 0);
   // The review's window ends exactly when the meal leaves play, so the chart's
-  // shading, the "still in play" copy and the forecast all agree.
+  // shading, the "still in play" copy and the forecast all agree. Absorption
+  // finished means the review keeps its figures but stops speaking about a meal
+  // that is still arriving.
   const outcomeWindowMs = mealInPlayWindowMinutes(mealGroup.carbs, insulinSettings.outcomeWindowMinutes) * MINUTE_MS;
-  const mealStillUnderReview = true;
+  const mealStillUnderReview = now - mealTime < outcomeWindowMs;
   const windowStart = mealGroup.start;
   const windowEnd = mealGroup.end;
   const pairedDoses = mealGroup.doses;
@@ -258,7 +281,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
   Number.isFinite(reading.time) &&
   Number.isFinite(reading.value) &&
   reading.time >= mealTime + 60 * MINUTE_MS &&
-  reading.time <= mealTime + insulinSettings.outcomeWindowMinutes * MINUTE_MS
+  reading.time <= mealTime + outcomeWindowMs
   );
   const peakOutcome = outcomeReadings.reduce((peak, reading) => !peak || reading.value > peak.value ? reading : peak, null);
   const lowOutcome = outcomeReadings.reduce((low, reading) => !low || reading.value < low.value ? reading : low, null);

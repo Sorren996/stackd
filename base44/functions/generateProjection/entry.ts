@@ -22,8 +22,13 @@ import { learnRescueCarbModel, observeRescueEpisodes, MIN_EPISODES } from "../..
 // the projection is persisted with their user_id for RLS isolation.
 
 export default async function (req) {
+  // Held outside the guarded body so the failure path can still log with them.
+  // Before this, the catch referenced a client declared inside the try, so the
+  // diagnostic write itself threw and no failure was ever recorded.
+  let base44: any = null;
+  let userId: string | null = null;
   try {
-    const base44 = createClientFromRequest(req);
+    base44 = createClientFromRequest(req);
     let body: any = {};
     try { body = await req.json(); } catch { /* workflow/scheduler may send empty body */ }
 
@@ -32,7 +37,6 @@ export default async function (req) {
     // Security: when user_id is passed in the body, the caller MUST be an
     // admin — this prevents a crafted request from generating projections
     // for another user's data.
-    let userId: string;
     if (body.user_id) {
       const caller = await base44.auth.me().catch(() => null);
       if (!caller || caller.role !== "admin") {
@@ -390,18 +394,29 @@ export default async function (req) {
       uncertainty_residual_count: uncertaintyCalibration.residualCount,
       data_quality: result.dataQuality,
     });
-  } catch (error) {
-    // Silent-failure guard: log every unhandled exception to DiagnosticReport
-    // so an 8-day silent outage is impossible. Without this, the catch
-    // swallows the error and returns a 500 that nobody checks.
+  } catch (error: any) {
+    // A failure is never reported as a server error. The client gets an honest
+    // abstain and the reason is logged with its message and stack, so a missing
+    // symbol or any other defect is visible in the logs instead of surfacing to
+    // the person as a broken screen.
+    console.error("[generateProjection] failed:", error?.message ?? "unknown_error");
+    console.error("[generateProjection] stack:", error?.stack ?? "no stack");
     try {
-      await base44.asServiceRole.entities.DiagnosticReport.create({
-        topic: `Projection generation failed — ${new Date().toISOString()}`,
-        report_text: `User: ${userId || "unknown"}\nError: ${error.message}\nStack: ${(error.stack || "").slice(0, 500)}`,
-        report_date: new Date().toISOString(),
-        item_count: 1,
-      });
+      if (base44) {
+        await base44.asServiceRole.entities.DiagnosticReport.create({
+          topic: `Projection generation failed — ${new Date().toISOString()}`,
+          report_text: `User: ${userId || "unknown"}\nError: ${error?.message ?? "unknown"}\nStack: ${(error?.stack || "").slice(0, 500)}`,
+          report_date: new Date().toISOString(),
+          item_count: 1,
+        });
+      }
     } catch { /* logging must never crash the function */ }
-    return Response.json({ error: error.message }, { status: 500 });
+    return Response.json({
+      ok: false,
+      abstained: true,
+      abstain_reason: "we could not build an estimate this time",
+      trajectory_length: 0,
+      error: error?.message ?? "unknown_error",
+    }, { status: 200 });
   }
 }

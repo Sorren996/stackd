@@ -72,7 +72,28 @@ export default async function (req: Request): Promise<Response> {
       hasState: Boolean(mealState),
     });
   } catch (error: any) {
-    console.error("[getMealModelResolution] error:", error.message);
-    return Response.json({ error: error.message }, { status: 500 });
+    // A failure is never reported as a server error: the client gets a neutral,
+    // empty resolution (baseline, no personalization) so the Meal Review card
+    // still renders, and the cause is logged with its message and stack.
+    console.error("[getMealModelResolution] failed:", error?.message ?? "unknown_error");
+    console.error("[getMealModelResolution] stack:", error?.stack ?? "no stack");
+    const neutralClass = {
+      eligible: false,
+      speedFactor: 1.0,
+      magnitudeFactor: 1.0,
+      reason: "unavailable",
+      source: "baseline",
+      sampleCount: 0,
+    };
+    return Response.json({
+      ok: false,
+      mealModelVersion: MEAL_RESPONSE_MODEL_VERSION_BASELINE,
+      baselineLocked: true,
+      resolutionReason: "unavailable",
+      classes: { fast: neutralClass, mixed: neutralClass, high_fat: neutralClass },
+      sampleCountsByClass: { fast: 0, mixed: 0, high_fat: 0 },
+      hasState: false,
+      error: error?.message ?? "unknown_error",
+    }, { status: 200 });
   }
 }

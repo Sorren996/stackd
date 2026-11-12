@@ -44,6 +44,21 @@ const FACTOR_EPSILON = 0.001;
 export type SpeedClass = "fast" | "mixed" | "high_fat";
 const SPEED_CLASSES: SpeedClass[] = ["fast", "mixed", "high_fat"];
 
+/**
+ * Per-speed-class absorption fallback factors, one entry for every class the
+ * meal model can emit. `sf` adjusts absorption timing, `mf` adjusts the glucose
+ * excursion — and 1.0 means "the generic profile", so these constants are the
+ * honest baseline for a class this person has not measured yet. Learned class
+ * factors always take precedence; the constants only stand in where nothing is
+ * learned. Exported so every consumer of a resolved meal model reads the same
+ * map instead of inventing its own fallback.
+ */
+export const CLASS_ABSORPTION_FALLBACKS: Record<SpeedClass, { sf: number; mf: number }> = {
+  fast: { sf: 1.0, mf: 1.0 },
+  mixed: { sf: 1.0, mf: 1.0 },
+  high_fat: { sf: 1.0, mf: 1.0 },
+};
+
 // ── Types ──────────────────────────────────────────────────────────────────
 
 export interface GeneralComponentResolution {
@@ -125,6 +140,13 @@ function resolveMealComponent(state: any | null): MealComponentResolution {
   const classes: Record<string, MealClassResolution> = {};
   const eligibleClasses: SpeedClass[] = [];
 
+  // Every class starts on the generic fallback, so the map is complete no
+  // matter which classes end up eligible below.
+  const classFallbacks: Record<string, { sf: number; mf: number }> = {};
+  for (const cls of SPEED_CLASSES) {
+    classFallbacks[cls] = { ...CLASS_ABSORPTION_FALLBACKS[cls] };
+  }
+
   for (const cls of SPEED_CLASSES) {
     const cp = params[cls];
     if (!cp) {
@@ -180,7 +202,11 @@ function resolveMealComponent(state: any | null): MealComponentResolution {
     const meanSpeed = eligibleClasses.reduce((s, c) => s + classes[c].speedFactor, 0) / eligibleClasses.length;
     const meanMagnitude = eligibleClasses.reduce((s, c) => s + classes[c].magnitudeFactor, 0) / eligibleClasses.length;
     for (const cls of SPEED_CLASSES) {
-      if (classes[cls].eligible) continue;
+      if (classes[cls].eligible) {
+        // A measured class carries its own learned factors.
+        classFallbacks[cls] = { sf: classes[cls].speedFactor, mf: classes[cls].magnitudeFactor };
+        continue;
+      }
       classes[cls] = {
         ...classes[cls],
         reason: `${classes[cls].reason}_class_fallback`,

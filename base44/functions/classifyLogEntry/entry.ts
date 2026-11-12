@@ -147,7 +147,7 @@ export default async function(req: Request): Promise<Response> {
 
     if (isCarb) {
       // Ambiguous carb: default by amount and quick-sugar status
-      if (carbs >= 20) {
+      if (Number(data.carbs) >= 20) {
         classification = 'meal';
         reasoning = 'A nourishing occasion to note on your wellness journey.';
       } else if (isQuickSugar(data.food_name)) {

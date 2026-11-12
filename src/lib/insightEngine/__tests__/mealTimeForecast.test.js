@@ -65,9 +65,11 @@ describe("meal-time projection is drawn", () => {
   });
 
   it("scales the in-play window with carb size, capped at 4.5 hours", () => {
-    expect(mealInPlayWindowMinutes(40, 105)).toBe(120);
-    expect(mealInPlayWindowMinutes(111, 105)).toBe(171);
-    expect(mealInPlayWindowMinutes(111, 240)).toBe(240);
+    // Three hours of base absorption, plus an hour per 60 g above 60 g. The
+    // review window chosen in Settings no longer stretches absorption.
+    expect(mealInPlayWindowMinutes(40, 105)).toBe(180);
+    expect(mealInPlayWindowMinutes(60, 240)).toBe(180);
+    expect(mealInPlayWindowMinutes(111, 240)).toBe(231);
     expect(mealInPlayWindowMinutes(400, 240)).toBe(270);
   });
 
