@@ -2,8 +2,9 @@
 //
 // Three tones, one timbre. Every note is a pure sine with the same envelope: a
 // 20 ms exponential attack, an exponential fall back to near-silence at
-// +420 ms, and the oscillator stopped at +450 ms. Only the notes, the peak gain
-// and the buzz differ:
+// +420 ms, and the oscillator stopped at +450 ms. The peak gain (.14) is
+// identical in all three, so no tone is louder or softer than the original:
+// only the notes and the buzz differ.
 //
 //   neutral  G5 → C6          the original two-note doorbell (unchanged)
 //   rising   G5 → B5 → D6     ascending, for a rising-fast alert
@@ -40,7 +41,7 @@ export const ALERT_TONES = {
   },
   rising: {
     label: "Rising",
-    gain: 0.16,
+    gain: 0.14,
     vibration: [18, 60, 18, 60, 18],
     notes: [
       { frequency: 784, at: 0 },
@@ -50,7 +51,7 @@ export const ALERT_TONES = {
   },
   falling: {
     label: "Falling",
-    gain: 0.16,
+    gain: 0.14,
     vibration: [18, 90, 18],
     notes: [
       { frequency: 1174.66, at: 0 },
@@ -78,8 +79,8 @@ export function alertToneFor(category) {
  * default tone stays in charge of every other category.
  */
 export const ALERT_SOUND_FILES = {
-  rising: "stackd_chime_rising.wav",
-  falling: "stackd_chime_falling.wav",
+  rising: "stackd_tone_rising.wav",
+  falling: "stackd_tone_falling.wav",
 };
 
 /** The bundled file for a tone, or null when the platform default applies. */

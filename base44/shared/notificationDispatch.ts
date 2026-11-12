@@ -263,8 +263,8 @@ export const PUSH_MESSAGE_FIELDS = ['action_url', 'content', 'title', 'user_id']
  * one would be a field the provider ignores and a promise this app cannot keep.
  */
 export const PUSH_SOUND_BY_CATEGORY: Record<string, string | null> = {
-  rising_fast: 'stackd_chime_rising.wav',
-  falling_fast: 'stackd_chime_falling.wav',
+  rising_fast: 'stackd_tone_rising.wav',
+  falling_fast: 'stackd_tone_falling.wav',
 };
 
 /** The native-bundle sound file a category asks for, or null for the default. */
