@@ -17,6 +17,7 @@ import { useIsLightTheme } from "@/lib/theme";
 import { getGraphTheme } from "@/lib/graphTheme";
 import { shouldAnchorToLatest } from "@/lib/graphAnchor";
 import { resolveScrollBounds, isAtResting, shouldReturnToResting, shouldFollowLatest } from "@/lib/graphScroll";
+import { newestDrawnPoint } from "@/lib/graphMarker";
 import { useGlucoseStaleness } from "@/hooks/useGlucoseStaleness";
 import { getLatestDexcomReading, formatReadingAge } from "@/lib/glucoseStaleness";
 import { formatGlucose, glucoseUnitLabel, getGlucoseUnits } from "@/lib/glucoseUnits";
@@ -718,6 +719,15 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     }
     return result;
   }, [doses, glucoseReadings, carbEntries, filters, domainStart, domainEnd, allCurvesMeta, glucoseMap, glucoseBucketSegments, maxBolusUnits, maxBasalUnits, effectiveMax, effectiveMin]);
+
+  // The newest point the glucose line actually DRAWS.
+  //
+  // The marker used to come from its own list, so it could name a sample the
+  // plotted rows did not carry — and a ReferenceDot outside the domain is
+  // silently dropped, leaving the line with no end dot. This reads the last
+  // plotted row that holds a glucose segment value, so the dot is by
+  // construction a point of the line it marks.
+  const newestDrawnGlucosePoint = useMemo(() => newestDrawnPoint(chartData), [chartData]);
 
   const doseKeys = useMemo(() => {
     const typeCount = new Map();
@@ -1572,12 +1582,12 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               )
               }
               {/* Current reading — rust dot, cream ring, soft halo. */}
-              {filters.glucose && latestGlucosePoint &&
+              {filters.glucose && newestDrawnGlucosePoint &&
                     <>
                   <ReferenceDot
                         yAxisId="glucose"
-                        x={latestGlucosePoint.time}
-                        y={Math.min(latestGlucosePoint.value, effectiveMax)}
+                        x={newestDrawnGlucosePoint.time}
+                        y={Math.min(newestDrawnGlucosePoint.value, effectiveMax)}
                         r={9}
                         fill="#8c4a28"
                         fillOpacity={0.12}
@@ -1585,8 +1595,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                         isFront />
                   <ReferenceDot
                         yAxisId="glucose"
-                        x={latestGlucosePoint.time}
-                        y={Math.min(latestGlucosePoint.value, effectiveMax)}
+                        x={newestDrawnGlucosePoint.time}
+                        y={Math.min(newestDrawnGlucosePoint.value, effectiveMax)}
                         r={3.6}
                         fill="#8c4a28"
                         stroke="#fdf8f1"
@@ -1790,14 +1800,14 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               It therefore translates with the line it marks at any scroll speed,
               and no frame repositions it from a scroll event — which is what
               used to leave it up to 15px off the curve during a swipe. */}
-          {filters.glucose && latestGlucosePoint && !isGlucoseStale &&
+          {filters.glucose && newestDrawnGlucosePoint &&
                 (() => {
-                  const markerValue = Math.min(latestGlucosePoint.value, effectiveMax);
+                  const markerValue = Math.min(newestDrawnGlucosePoint.value, effectiveMax);
                   return (
                     <div
                       className="pointer-events-none absolute z-10"
                       style={{
-                        left: (latestGlucosePoint.time - domainStart) / totalMs * chartWidth,
+                        left: (newestDrawnGlucosePoint.time - domainStart) / totalMs * chartWidth,
                         top: getGlucoseY(markerValue),
                         transform: "translate(-50%, -50%)",
                         width: 9,
