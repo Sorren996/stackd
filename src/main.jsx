@@ -8,22 +8,13 @@ import { logStartup } from '@/lib/startupDiagnostics'
 // app never started running its own code — the stall is native, before JS.
 logStartup('bootstrap')
 
-// Long-press and right-click menus belong to a web page, not to this app, so
-// the native menu is suppressed everywhere except inside fields — where cut,
-// copy, paste and spellcheck must keep working. Clicks, drags, scrolling and
-// focus behaviour are untouched, since only the context menu is affected.
-const EDITABLE_TARGETS =
-  'input, textarea, select, [contenteditable="true"], [contenteditable=""]';
-
-document.addEventListener(
-  'contextmenu',
-  (event) => {
-    const target = event.target;
-    if (target instanceof Element && target.closest(EDITABLE_TARGETS)) return;
-    event.preventDefault();
-  },
-  { capture: false }
-)
+// Long-press and right-click never open a copy menu on content. Fields keep
+// theirs, so cut, copy, paste and spellcheck still work while editing.
+document.addEventListener('contextmenu', (e) => {
+  const t = e.target;
+  if (t && t.closest && t.closest('input, textarea, select, [contenteditable="true"], [contenteditable=""]')) return;
+  e.preventDefault();
+}, { capture: false });
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <App />

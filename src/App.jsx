@@ -397,19 +397,30 @@ const AuthenticatedApp = () => {
 };
 
 
+// Belt-and-braces for iOS: the same guard on the app shell, so a long press
+// anywhere inside the app can never open the native copy/look-up menu. Fields
+// keep theirs, so editing and correcting text is unaffected.
+function blockNativeContextMenu(event) {
+  const target = event.target;
+  if (target && target.closest && target.closest('input, textarea, select, [contenteditable="true"], [contenteditable=""]')) return;
+  event.preventDefault();
+}
+
 function App() {
 
   return (
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
         <Router>
-          <ScrollToTop />
-          <ParallaxBackground />
-          {/* Records the app's own history entries so every page-level Back
-              arrow returns to the page the person actually came from. */}
-          <NavigationHistoryProvider>
-            <AuthenticatedApp />
-          </NavigationHistoryProvider>
+          <div onContextMenu={blockNativeContextMenu}>
+            <ScrollToTop />
+            <ParallaxBackground />
+            {/* Records the app's own history entries so every page-level Back
+                arrow returns to the page the person actually came from. */}
+            <NavigationHistoryProvider>
+              <AuthenticatedApp />
+            </NavigationHistoryProvider>
+          </div>
         </Router>
         <Toaster />
         {/* Position and safe-area offset live in the component itself, so no

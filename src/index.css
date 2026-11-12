@@ -199,53 +199,9 @@
 }
 
 @layer base {
-  /* This is an app, not a web page. Nothing highlights on long press, and no
-     magnifier or copy/look-up callout bubble appears anywhere — on paragraphs,
-     headings, labels, list items, policy copy or journal text. Selection is
-     switched back on only for fields that are typed into, in the next rule. */
-  *,
-  *::before,
-  *::after {
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-    -webkit-touch-callout: none;
-  }
-
   * {
     @apply border-border outline-ring/50;
     -webkit-tap-highlight-color: transparent;
-  }
-
-  html,
-  body {
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-    -webkit-touch-callout: none;
-  }
-
-  /* Typing and editing keep native behaviour: caret placement, in-field
-     selection, the magnifier, and the edit callout inside the field only. */
-  input,
-  textarea,
-  select,
-  [contenteditable="true"],
-  [contenteditable=""] {
-    -webkit-user-select: text;
-    -moz-user-select: text;
-    -ms-user-select: text;
-    user-select: text;
-    -webkit-touch-callout: default;
-  }
-
-  /* Interactive controls, tabs and icons: no selection, no callout. */
-  button, [role="button"], a, summary, svg, img {
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    user-select: none;
   }
 
   body {
@@ -841,3 +797,40 @@
   outline-offset: 2px;
   z-index: 2;
 }
+
+/* ============================================================
+   NO TEXT SELECTION — THE APP IS NOT A WEB PAGE
+
+   Unlayered and last in the file on purpose: layered rules can be
+   beaten by utilities, so this has to sit outside every layer to
+   win everywhere. Nothing highlights on long press: no selection
+   wash, no magnifier, no copy/look-up callout, and images cannot
+   be dragged or saved by long press. Fields that are typed into
+   keep native behaviour (caret, in-field selection, editing), so
+   the dose, glucose and meal forms read and correct exactly as
+   before.
+   ============================================================ */
+html, body {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+*, *::before, *::after {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+}
+input, textarea, select, [contenteditable="true"], [contenteditable=""] {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+  -webkit-user-drag: auto;
+}
+input, textarea { -webkit-user-modify: read-write; }
