@@ -435,9 +435,9 @@ export function computeEnhancedInsights(metrics, carbs, insulin, glucose, target
 
     if (Math.abs(morningTir - eveningTir) > 0.2) {
       if (morningTir > eveningTir) {
-        insights.push("Mostly steady morning → more variable evening.");
+        insights.push("More of the morning in your comfort zone than the evening.");
       } else {
-        insights.push("More variable morning → steadier evening.");
+        insights.push("More of the evening in your comfort zone than the morning.");
       }
     }
   }

@@ -100,17 +100,15 @@ export default function DayRecap({
 
   const hasReadings = metrics.hasData;
   const hasZoneShare = hasReadings && metrics.count >= 2 && metrics.tir != null;
-  // Only the "mostly" range wording earns a headline of its own. Below that
-  // tier the neutral heading plus the percentage and its caption carry the
-  // reading, so the day is never graded and nothing is said twice.
+  // Every percentage lands on a comfort-zone tier, so a day with enough
+  // readings ALWAYS has a headline above the number. The wording states where
+  // the time sat and never grades the day.
   const rangeQualifier = hasZoneShare ? getRangeSummaryQualifier(metrics.tir) : null;
-  const headline = rangeQualifier
+  const headline = hasZoneShare
     ? `${rangeQualifier}.`
-    : hasZoneShare
-      ? null
-      : hasReadings
-        ? "Only one reading."
-        : "No readings recorded.";
+    : hasReadings
+      ? "Only one reading."
+      : "No readings recorded.";
 
   const belowZone = Boolean(
     lowestReading && Number.isFinite(targetLow) && lowestReading.value < targetLow

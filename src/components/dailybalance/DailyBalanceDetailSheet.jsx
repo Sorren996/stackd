@@ -1,4 +1,5 @@
 import Sheet from "@/components/Sheet";
+import BackButton from "@/components/navigation/BackButton";
 import BalanceSpectrum from "./BalanceSpectrum";
 import { RANGE_NEUTRAL_LABEL, getRangeSummaryQualifier, describeDayShape } from "@/lib/dailyBalanceState";
 
@@ -58,13 +59,28 @@ export default function DailyBalanceDetailSheet({
   return (
     <Sheet open={open} onClose={onClose}>
       <div className="flex flex-col overflow-y-auto px-1">
-        {/* Header */}
-        <div className="px-6 pb-2">
+        {/* Standard page header: the app's own Back control + the day's title,
+            in the same row shape the Journal and settings sub-pages use. Back
+            closes this detail view and returns to the day underneath it. */}
+        <div className="flex items-center gap-3 px-6 pb-1 pt-1">
+          <BackButton
+            onPress={onClose}
+            label="Back to your day"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition"
+            style={{ color: PALETTE.ink }}
+          />
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-lg font-semibold" style={{ color: PALETTE.ink }}>
+              Your <span className="font-serif-italic" style={{ fontWeight: 400 }}>day</span>
+            </h1>
+            <p className="text-xs" style={{ color: PALETTE.faint }}>
+              {formatDate()}
+            </p>
+          </div>
+        </div>
+
+        <div className="px-6 pb-2 pt-3">
           <div className="section-label">{RANGE_NEUTRAL_LABEL}</div>
-          <p className="mt-1 text-xs" style={{ color: PALETTE.faint }}>
-            {formatDate()}
-          </p>
-          
         </div>
 
         {/* Hero: percentage + state */}

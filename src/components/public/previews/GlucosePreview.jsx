@@ -70,7 +70,7 @@ export default function GlucosePreview() {
         </PreviewCard>
 
         <div className="mt-3 grid grid-cols-2 gap-3">
-          <PreviewCard label="Daily balance">
+          <PreviewCard label="Time in your comfort zone">
             <span className="text-[22px] font-black leading-none tabular-nums" style={{ color: "#3f3830" }}>
               72%
             </span>

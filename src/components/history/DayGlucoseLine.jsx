@@ -127,12 +127,13 @@ export default function DayGlucoseLine({
 
   return (
     <div className="relative">
-      <span
-        className="pointer-events-none absolute left-0 top-0 z-10 text-[9px]"
-        style={{ color: TICK_FILL }}
-      >
+      {/* The unit sits in its own row ABOVE the plot, in normal flow, so it can
+          never be printed over the highest y-axis value — whatever that value
+          is (a 3-digit maximum, a low maximum) and however long the unit string
+          is ("mmol/L" as well as "mg/dL"). */}
+      <div className="pb-[3px] text-[9px]" style={{ color: TICK_FILL }}>
         {glucoseUnitLabel()}
-      </span>
+      </div>
       <ResponsiveContainer width="100%" height={height}>
         <ComposedChart data={rows} margin={{ top: 12, right: 10, left: 0, bottom: 0 }}>
           <XAxis

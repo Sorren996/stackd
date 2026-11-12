@@ -83,7 +83,7 @@ describe("shared daily balance reuses the patient calculation", () => {
     const result = computeSharedDailyBalance(readings, 70, 180, CHICAGO_TODAY_START);
     assert.equal(result.percent, 50); // 2 of 4 in range
     assert.equal(result.readingCount, 4);
-    assert.equal(result.label, "Time in your comfort zone");
+    assert.equal(result.label, "About half the day in your comfort zone");
   });
 
   test("the labels describe the range share, never a day grade", () => {
@@ -99,10 +99,10 @@ describe("shared daily balance reuses the patient calculation", () => {
       }
       return computeSharedDailyBalance(arr, 70, 180, CHICAGO_TODAY_START).label;
     };
-    assert.equal(at(90), "Mostly in your comfort zone");
+    assert.equal(at(90), "Most of the day in your comfort zone");
     assert.equal(at(80), "Mostly in your comfort zone");
-    assert.equal(at(60), "Time in your comfort zone");
-    assert.equal(at(40), "Time in your comfort zone");
+    assert.equal(at(60), "More in than out of your comfort zone");
+    assert.equal(at(40), "More out than in your comfort zone");
   });
 
   test("the day boundary follows the sharer, not the follower", () => {

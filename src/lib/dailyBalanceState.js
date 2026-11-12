@@ -14,23 +14,39 @@
 export const RANGE_NEUTRAL_LABEL = "Time in your comfort zone";
 export const RANGE_MOSTLY_LABEL = "Mostly in your comfort zone";
 
-// The existing 70% tier (previously "Mostly steady") is kept exactly — only
-// the words changed. At or above it the phrase may carry the qualifier; below
-// it the neutral heading stands alone and the percentage plus the above/below
-// breakdown do the explaining. An empty or unknown result is never described
-// as "mostly" anything.
+// Factual comfort-zone tiers. Each one describes where the day's time sat —
+// inside the person's own comfort zone, outside it, or an even split. No tier
+// grades the day, names a quality, or implies a cause, and every percentage
+// from 0 to 100 lands on one of them, so a headline always exists.
+const COMFORT_ZONE_TIERS = [
+  { min: 85, label: "Most of the day in your comfort zone" },
+  { min: 70, label: RANGE_MOSTLY_LABEL },
+  { min: 55, label: "More in than out of your comfort zone" },
+  { min: 45, label: "About half the day in your comfort zone" },
+  { min: 30, label: "More out than in your comfort zone" },
+  { min: -1, label: "Mostly outside your comfort zone" },
+];
+
+// The tier phrase for a percentage, or null when there is no number to
+// describe yet. Rounds first, so the boundary behaviour stays identical to the
+// figure the person was shown.
+export function getComfortZoneTier(percentage) {
+  if (percentage == null || !Number.isFinite(percentage)) return null;
+  const rounded = Math.round(percentage);
+  const tier = COMFORT_ZONE_TIERS.find((entry) => rounded >= entry.min);
+  return tier ? tier.label : null;
+}
+
+// The headline for a day. Never empty once a percentage exists: the neutral
+// heading above it names what is being measured, and this names the tier.
 export function getDailyBalanceState(percentage) {
-  if (percentage == null || !Number.isFinite(percentage)) {
-    return { label: "Waiting for today" };
-  }
-  return { label: Math.round(percentage) >= 70 ? RANGE_MOSTLY_LABEL : RANGE_NEUTRAL_LABEL };
+  return { label: getComfortZoneTier(percentage) || "Waiting for today" };
 }
 
 // The qualifier on its own, for surfaces that already print the neutral
-// heading and must not repeat it. null whenever there is nothing extra to say.
+// heading and must not repeat it. null only when there is no percentage yet.
 export function getRangeSummaryQualifier(percentage) {
-  if (percentage == null || !Number.isFinite(percentage)) return null;
-  return Math.round(percentage) >= 70 ? RANGE_MOSTLY_LABEL : null;
+  return getComfortZoneTier(percentage);
 }
 
 // Named periods of the day, used for the "What shaped today" observation.
@@ -51,10 +67,10 @@ function describePeriod(inRange, above, below) {
   const inRatio = inRange / total;
   const aboveRatio = above / total;
   const belowRatio = below / total;
-  if (inRatio >= 0.7) return "Mostly in your comfort zone";
-  if (aboveRatio >= 0.4 && aboveRatio > belowRatio) return "Mostly above range";
-  if (belowRatio >= 0.4 && belowRatio > aboveRatio) return "Mostly below range";
-  return "A mix of highs and lows";
+  if (inRatio >= 0.7) return RANGE_MOSTLY_LABEL;
+  if (aboveRatio >= 0.4 && aboveRatio > belowRatio) return "Mostly above your comfort zone";
+  if (belowRatio >= 0.4 && belowRatio > aboveRatio) return "Mostly below your comfort zone";
+  return "A mix of above and below";
 }
 
 // Builds an observational, period-by-period summary of today from the same

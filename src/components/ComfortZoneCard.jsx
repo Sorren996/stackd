@@ -19,13 +19,13 @@ export default function ComfortZoneCard({ percentage }) {
       style={{ background: "transparent", border: "none", boxShadow: "none" }}>
 
       <div className="relative z-10 mb-1 flex items-start justify-between gap-2">
-        <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "#746959" }}>Daily Balance</span>
+        <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "#746959" }}>Time in your comfort zone</span>
         
       </div>
 
       <div className="relative z-10 mt-1">
         <span className="text-4xl font-black leading-none" style={{ color: "#3f3830" }}>{displayValue}</span>
-        <p className="mt-1.5 text-[11px]" style={{ color: "#746959" }}>Time in Comfort Zone</p>
+        <p className="mt-1.5 text-[11px]" style={{ color: "#746959" }}>So far today</p>
       </div>
 
 

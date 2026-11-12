@@ -14,12 +14,19 @@ export default function BackButton({
   className = "",
   style,
   iconClassName = "h-5 w-5",
+  onPress,
   children,
 }) {
   const { goBack } = useBackNavigation();
 
   return (
-    <button type="button" onClick={() => goBack(fallback)} aria-label={label} className={className} style={style}>
+    <button
+      type="button"
+      onClick={() => (onPress ? onPress() : goBack(fallback))}
+      aria-label={label}
+      className={className}
+      style={style}
+    >
       {children ?? <ChevronLeft className={iconClassName} />}
     </button>
   );
