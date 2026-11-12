@@ -15,6 +15,7 @@ import InfoPopover from "@/components/graph/InfoPopover";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 import { useIsLightTheme } from "@/lib/theme";
 import { getGraphTheme } from "@/lib/graphTheme";
+import { shouldAnchorToLatest } from "@/lib/graphAnchor";
 import { useGlucoseStaleness } from "@/hooks/useGlucoseStaleness";
 import { getLatestDexcomReading, formatReadingAge } from "@/lib/glucoseStaleness";
 import { formatGlucose, glucoseUnitLabel, getGlucoseUnits } from "@/lib/glucoseUnits";
@@ -322,6 +323,10 @@ function FilterDropdown({ filters, onChange, anchorRect }) {
 export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries = [], onSelectLog = null, onDeleteLog = null, glucoseReadOnly = false, projection = null, snapshotNow, resumeRevision = 0, historyReady = true, historyLoading = false, historyError = false }) {
   const previousResume = useRef(resumeRevision);
   const previousNowPosition = useRef(null);
+  // Identity of the scroll container the last anchoring ran against. A newly
+  // mounted container starts at scrollLeft 0 — the oldest edge of the chart —
+  // which is never where the reader left off.
+  const lastScrollElRef = useRef(null);
   const [showFilter, setShowFilter] = useState(false);
   const [filterAnchorRect, setFilterAnchorRect] = useState(null);
   const [filters, setFilters] = useState({ glucose: true, insulin: true, carbs: true });
@@ -1226,8 +1231,15 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     if (!scrollRef.current) return;
     const resumed = previousResume.current !== resumeRevision;
     previousResume.current = resumeRevision;
-    const wasAtLatest = previousNowPosition.current == null || scrollRef.current.scrollLeft >= previousNowPosition.current - 2;
-    if (wasAtLatest) scrollRef.current.scrollLeft = nowScrollLeft;
+    const freshViewport = lastScrollElRef.current !== scrollRef.current;
+    lastScrollElRef.current = scrollRef.current;
+    const anchorToLatest = shouldAnchorToLatest({
+      resumed,
+      freshViewport,
+      previousNowPosition: previousNowPosition.current,
+      scrollLeft: scrollRef.current.scrollLeft,
+    });
+    if (anchorToLatest) scrollRef.current.scrollLeft = nowScrollLeft;
     previousNowPosition.current = nowScrollLeft;
     const position = scrollRef.current.scrollLeft;
     const latestValue = glucoseLinePoints.length > 0 ? glucoseLinePoints[glucoseLinePoints.length - 1].value : null;
@@ -1241,11 +1253,19 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     };
   }, [nowScrollLeft, latestGlucoseBucket, filters.glucose, glucoseLinePoints.length, positionedMonitoringIntervals, isGlucoseStale, glucoseUnits, resumeRevision]);
 
+  // The waiting state keeps the SAME root element as the chart, so the measured
+  // container and its ResizeObserver survive the swap. Returning a different
+  // root here detached the observer, which froze the chart width at its default
+  // and left the trace mis-scaled once data arrived.
   if (!historyReady || (!doses.length && !glucoseReadings.length && !carbEntries.length)) {
-    return <div ref={containerRef} className="flex min-h-[240px] items-center justify-center px-5 text-sm text-muted-foreground" role="status">
-      {!historyReady ? (historyLoading ? 'Loading saved history…' : 'Saved history is unavailable right now.') :
-        historyError ? 'Saved history is unavailable right now.' : 'No readings or logs in this window yet.'}
-    </div>;
+    return (
+      <div ref={containerRef} className="relative overflow-visible">
+        <div className="flex min-h-[240px] items-center justify-center px-5 text-center text-sm text-muted-foreground" role="status">
+          {!historyReady ? (historyLoading ? 'Loading saved history…' : 'Saved history is unavailable right now.') :
+            historyError ? 'Saved history is unavailable right now.' : 'No readings or logs in this window yet.'}
+        </div>
+      </div>
+    );
   }
 
   // Range-driven tick count: 3h/6h → 1h interval, 12h → 2h, 24h → 4h.

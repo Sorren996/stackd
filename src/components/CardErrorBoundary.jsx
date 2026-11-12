@@ -1,5 +1,6 @@
 import React from "react";
 import { queryClientInstance } from "@/lib/query-client";
+import { logStartup } from "@/lib/startupDiagnostics";
 
 /**
  * CardErrorBoundary — a local, per-card safety net.
@@ -34,6 +35,11 @@ export default class CardErrorBoundary extends React.Component {
 
   componentDidCatch(error, info) {
     console.error("Card render caught:", error, info);
+    // Codes only — never a message, payload or health value.
+    logStartup("card-crash", {
+      outcome: "error",
+      code: (error && typeof error.name === "string" && error.name) || "Error",
+    });
   }
 
   componentDidUpdate(prevProps) {
