@@ -1,4 +1,4 @@
-import { useMemo, useRef, useEffect, useState, useCallback } from "react";
+import { useMemo, useRef, useEffect, useLayoutEffect, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Area, XAxis, YAxis, Line, ComposedChart, ReferenceLine, ReferenceArea, ReferenceDot } from "recharts";
 import { generateActivityCurve, getDoseIOB, getInsulinProfile, isBasalInsulinType } from "@/lib/insulinPharmacology";
@@ -16,7 +16,7 @@ import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 import { useIsLightTheme } from "@/lib/theme";
 import { getGraphTheme } from "@/lib/graphTheme";
 import { shouldAnchorToLatest } from "@/lib/graphAnchor";
-import { resolveScrollBounds, isAtResting, shouldReturnToResting, shouldFollowLatest } from "@/lib/graphScroll";
+import { resolveScrollBounds, isAtResting, shouldFollowLatest } from "@/lib/graphScroll";
 import { newestDrawnPoint } from "@/lib/graphMarker";
 import { useGlucoseStaleness } from "@/hooks/useGlucoseStaleness";
 import { getLatestDexcomReading, formatReadingAge } from "@/lib/glucoseStaleness";
@@ -414,9 +414,13 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     return Number.isFinite(v) && v > 0 ? v : 240;
   });
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const target = graphViewportRef.current || containerRef.current;
     if (!target) return;
+    // Measure only the viewport, never the data's right edge. The first real
+    // width and its scroll correction commit before the initial paint.
+    const width = target.getBoundingClientRect().width;
+    if (width > 0) setContainerWidth(width);
     const ro = new ResizeObserver(([entry]) => {
       const w = entry.contentRect.width;
       // Ignore zero-width readings (the dashboard is hidden via `hidden` while
@@ -503,10 +507,9 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     [sortedGlucoseReadings]
   );
   const isGlucoseStale = useGlucoseStaleness(latestDexcomReading, dexcomConnected);
-  const latestGlucoseTime = latestGlucoseReading?.time ?? Math.round(stableNow / STEP_MS) * STEP_MS;
+  const latestGlucoseTime = latestGlucoseReading?.time ?? 0;
   const latestGlucoseBucket = isCandlestick ?
-  Math.floor(latestGlucoseTime / HOUR_MS) * HOUR_MS :
-  Math.round(latestGlucoseTime / STEP_MS) * STEP_MS;
+  Math.floor(latestGlucoseTime / HOUR_MS) * HOUR_MS : latestGlucoseTime;
   const futureHours = Math.max(FUTURE_HOURS, Math.ceil(viewWindow / 2));
   const domainStart = isCandlestick ?
   latestGlucoseBucket - CANDLESTICK_HISTORY_HOURS * HOUR_MS :
@@ -554,8 +557,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       const t = getReadingTime(g);
       const value = Number(getReadingValue(g));
       if (!Number.isFinite(t) || !Number.isFinite(value)) return;
-      const bucket = Math.round(t / STEP_MS) * STEP_MS;
-      map[bucket] = value;
+      map[t] = value;
     });
     return map;
   }, [filteredGlucoseReadings]);
@@ -587,7 +589,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     const byBucket = new Map();
     glucoseSegments.forEach((segment, index) => {
       segment.forEach((sample) => {
-        byBucket.set(Math.round(sample.time / STEP_MS) * STEP_MS, `glucose_seg_${index}`);
+        byBucket.set(sample.time, `glucose_seg_${index}`);
       });
     });
     return byBucket;
@@ -686,7 +688,11 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const chartData = useMemo(() => {
     if (!doses.length && !glucoseReadings.length && !carbEntries.length) return [];
     const result = [];
-    for (let t = domainStart; t <= domainEnd; t += STEP_MS) {
+    // Preserve exact sensor times on the same numeric axis as the marker.
+    const times = new Set(glucoseLinePoints.map(point => point.time));
+    for (let t = domainStart; t <= domainEnd; t += STEP_MS) times.add(t);
+    times.add(domainEnd);
+    for (const t of [...times].sort((a, b) => a - b)) {
       const point = { time: t, bg: effectiveMax };
       allCurvesMeta.forEach(({ dose, key, curve }) => {
         const doseUnits = getDoseUnits(dose);
@@ -723,7 +729,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       result.push(point);
     }
     return result;
-  }, [doses, glucoseReadings, carbEntries, filters, domainStart, domainEnd, allCurvesMeta, glucoseMap, glucoseBucketSegments, maxBolusUnits, maxBasalUnits, effectiveMax, effectiveMin]);
+  }, [doses, glucoseReadings, carbEntries, filters, domainStart, domainEnd, allCurvesMeta, glucoseLinePoints, glucoseMap, glucoseBucketSegments, maxBolusUnits, maxBasalUnits, effectiveMax, effectiveMin]);
 
   // The newest point the glucose line actually DRAWS.
   //
@@ -795,16 +801,12 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const visibleMs = viewWindow * 60 * 60 * 1000;
   const pxPerMin = containerWidth / (visibleMs / 60000);
   const chartWidth = Math.max(containerWidth, Math.round(totalMs / 60000 * pxPerMin));
-  const latestGlucoseX = (latestGlucoseBucket - domainStart) / totalMs * chartWidth;
+  const latestGlucoseX = ((newestDrawnGlucosePoint?.time ?? latestGlucoseBucket) - domainStart) / totalMs * chartWidth;
 
   // THE RESTING POSITION IS THE CENTRE OF THE VIEWPORT.
   //
-  // The newest reading belongs in the middle of the view: history to the left,
-  // the projection tail to the right. The content keeps the chart's full width,
-  // so that tail is on screen instead of being clipped at the reading. Every
-  // automatic write targets restingScrollLeft — never the end of the content,
-  // which sits up to half a viewport further right and is what parked the
-  // reading against the right edge.
+  // The latest drawn point ends selectable history. Half a viewport remains
+  // visible on its right for projections, without extra scrollable future space.
   const { restingScrollLeft, maxScrollLeft, contentWidth } = resolveScrollBounds({
     chartWidth,
     containerWidth,
@@ -1043,12 +1045,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     return Math.abs(a.time - time) <= Math.abs(b.time - time) ? a : b;
   };
 
-  // The marker sits on the reading the big number shows — the one nearest the
-  // centre of the view. At rest that is the newest reading, so the dot rests on
-  // the end of the line; as the view scrolls, it travels along the curve to
-  // whichever reading is now displayed, instead of being stranded on an earlier
-  // sample. It is moved imperatively from the same frame as the number, so it
-  // can never lag behind the scroll.
+  // The live marker uses the exact numeric x scale of the newest plotted row.
   const positionSelectionMarker = (reading) => {
     const el = selectionMarkerRef.current;
     if (!el || !reading || !Number.isFinite(reading.time)) return;
@@ -1082,10 +1079,10 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     const selected = getSelectedReading(centerTime);
     if (!selected || !Number.isFinite(selected.time)) return;
 
-    // Keep the marker on the reading the number is showing, and remember which
-    // reading that is so a window change can keep it in place.
+    // Keep the header's selected reading for zoom, independently of the live
+    // marker, which always belongs to the newest rendered point.
     anchorTimeRef.current = selected.time;
-    positionSelectionMarker(selected);
+    positionSelectionMarker(newestDrawnGlucosePoint);
 
     // Stale-reading contingency: when the CGM stream has gone quiet and the
     // viewport is centered in the gap past the last real reading, hide the
@@ -1180,21 +1177,10 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     }
   };
 
-  // ── Scroll gestures: observe, never correct mid-gesture ────────────────
-  //
-  // A scroll handler may not move the container. Writing scrollLeft there
-  // fights iOS momentum (iOS pushes past the end, the handler pulls it back,
-  // iOS pushes again), and that fight is what moved the now-guide up to 142px
-  // mid-swipe. This is the only correction, it runs once a gesture has genuinely
-  // finished, and it targets the resting offset — the centre of the viewport,
-  // never the end of the content — so a bounce resolves to centre. Panning into
-  // history is never pulled back.
+  // The native content extent is the live-edge clamp. Gesture settling only
+  // releases the busy flag; it must never perform a delayed position write.
   const settleScroll = () => {
     scrollBusyRef.current = false;
-    const el = scrollRef.current;
-    if (el && shouldReturnToResting(el.scrollLeft, restingScrollLeft)) {
-      el.scrollLeft = restingScrollLeft;
-    }
   };
 
   const scheduleScrollSettle = () => {
@@ -1219,6 +1205,12 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   // Finger down or momentum still running — either way the reader is moving the
   // viewport, so nothing here writes a position.
   const handleScrollPosition = (scrollLeft) => {
+    // Native extent already ends here; guard WebKit elastic offsets only on
+    // the future side. Negative/leftward momentum is deliberately untouched.
+    if (scrollLeft > maxScrollLeft) {
+      scrollLeft = maxScrollLeft;
+      if (scrollRef.current) scrollRef.current.scrollLeft = scrollLeft;
+    }
     scrollBusyRef.current = true;
     // Following the live edge is only allowed from the live edge. Panning away
     // latches it off until the reader comes back to the edge or taps Now.
@@ -1275,8 +1267,9 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     scheduleCenterGlucoseUpdate(restingScrollLeft);
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!scrollRef.current) return;
+    const wasAtEdge = atRestingRef.current;
     const resumed = previousResume.current !== resumeRevision;
     previousResume.current = resumeRevision;
     const freshViewport = lastScrollElRef.current !== scrollRef.current;
@@ -1307,9 +1300,14 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       const keepLeft = Math.min(Math.max(anchorX - containerWidth / 2, 0), Math.max(maxScrollLeft, 0));
       scrollRef.current.scrollLeft = keepLeft;
       atRestingRef.current = isAtResting(keepLeft, restingScrollLeft);
-    } else if (anchorToLatest && followAllowed) {
+    } else if (freshViewport || resumed || wasAtEdge || (anchorToLatest && followAllowed)) {
       scrollRef.current.scrollLeft = restingScrollLeft;
     }
+    if (scrollRef.current.scrollLeft > maxScrollLeft) {
+      scrollRef.current.scrollLeft = maxScrollLeft;
+    }
+    atRestingRef.current = isAtResting(scrollRef.current.scrollLeft, restingScrollLeft);
+    pendingScrollLeftRef.current = scrollRef.current.scrollLeft;
     previousNowPosition.current = restingScrollLeft;
     const position = scrollRef.current.scrollLeft;
     const latestValue = glucoseLinePoints.length > 0 ? glucoseLinePoints[glucoseLinePoints.length - 1].value : null;
@@ -1320,9 +1318,10 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
     return () => {
       if (scrollFrameRef.current) cancelAnimationFrame(scrollFrameRef.current);
+      scrollFrameRef.current = null;
       if (settleTimerRef.current) clearTimeout(settleTimerRef.current);
     };
-  }, [restingScrollLeft, latestGlucoseBucket, filters.glucose, glucoseLinePoints.length, positionedMonitoringIntervals, isGlucoseStale, glucoseUnits, resumeRevision, viewWindow, chartWidth]);
+  }, [restingScrollLeft, latestGlucoseBucket, filters.glucose, glucoseLinePoints, positionedMonitoringIntervals, isGlucoseStale, glucoseUnits, resumeRevision, viewWindow, chartWidth, historyReady]);
 
   // The waiting state keeps the SAME root element as the chart, so the measured
   // container and its ResizeObserver survive the swap. Returning a different
@@ -1488,7 +1487,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             onScroll={(event) => handleScrollPosition(event.currentTarget.scrollLeft)}>
         {/* The chart's full width: at rest the reading is centred and the
             projection tail continues past it to the right. */}
-        <div className="relative" style={{ width: contentWidth, height: isCandlestick ? CANDLESTICK_TOTAL_HEIGHT : twoRowHeight }}>
+        <div className="relative overflow-hidden" style={{ width: contentWidth, height: isCandlestick ? CANDLESTICK_TOTAL_HEIGHT : twoRowHeight }}>
           {isCandlestick ?
               <>
                 <CandlestickView
@@ -1535,7 +1534,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                     width={chartWidth}
                     height={GLUCOSE_CHART_HEIGHT}
                     data={chartData}
-                    margin={{ top: GLUCOSE_MARGIN_TOP, right: 0, left: -20, bottom: 0 }} className="opacity-100">
+                    margin={{ top: GLUCOSE_MARGIN_TOP, right: 0, left: 0, bottom: 0 }} className="opacity-100">
               {filters.glucose &&
                     <ReferenceArea
                       yAxisId="glucose"
@@ -1547,6 +1546,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
                     }
 
+              <XAxis dataKey="time" type="number" domain={[domainStart, domainEnd]} allowDataOverflow hide />
               <YAxis yAxisId="glucose" domain={[effectiveMin, effectiveMax]} allowDataOverflow hide />
 
               {filters.glucose && filteredGlucoseReadings.length > 0 &&
@@ -1671,7 +1671,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               never render outside the drawable area. */}
           {!isCandlestick && filters.glucose && (() => {
             const HALO_R = 9;
-            const newest = filteredGlucoseReadings[filteredGlucoseReadings.length - 1];
+            const newest = newestDrawnGlucosePoint;
             const newestValue = newest ? Number(getReadingValue(newest) ?? newest.value) : NaN;
             const clampX = (t) => Math.min(Math.max((t - domainStart) / totalMs * chartWidth, HALO_R), Math.max(HALO_R, chartWidth - HALO_R));
             const clampY = (v) => Math.min(
@@ -1701,7 +1701,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                     width={chartWidth}
                     height={insulinChartHeight + X_AXIS_HEIGHT + GRAPH_BOTTOM_INSET}
                     data={chartData}
-                    margin={{ top: dynamicInsulinMarginTop, right: 0, left: -20, bottom: GRAPH_BOTTOM_INSET }}>
+                    margin={{ top: dynamicInsulinMarginTop, right: 0, left: 0, bottom: GRAPH_BOTTOM_INSET }}>
               <XAxis
                       dataKey="time"
                       type="number"

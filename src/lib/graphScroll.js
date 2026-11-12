@@ -2,15 +2,9 @@
 //
 // THE RESTING POSITION IS THE CENTRE OF THE VIEWPORT.
 //
-// The newest reading belongs in the middle: history to the left, the projection
-// tail to the right. So the resting offset is simply nowX minus half a viewport,
-// bounded by the scrollable extent. Every automatic write goes to that one
-// number — the first paint, the Now control, a new reading while the reader is
-// sitting there, and the single correction after a gesture has genuinely
-// finished.
-//
-// Nothing in this module is called from a scroll handler, and nothing here runs
-// while a finger or iOS momentum is moving the viewport.
+// The newest rendered reading sits in the middle, with projection space on its
+// right. This resting offset is also the physical end of scrollable history:
+// future pixels may be visible, but cannot be scrolled into and snapped back.
 
 /** How far from the resting offset still counts as sitting at rest. */
 export const NEAR_EDGE_PX = 24;
@@ -31,17 +25,15 @@ export function resolveScrollBounds({ chartWidth, containerWidth, latestX }) {
     return { restingScrollLeft: 0, maxScrollLeft: 0, contentWidth: Math.max(0, viewport || 0) };
   }
 
-  const maxScrollLeft = Math.max(0, width - viewport);
-  // Centre the newest reading on it.
-  const centredOnLatest = Number.isFinite(Number(latestX)) ? Number(latestX) - viewport / 2 : maxScrollLeft;
-  const restingScrollLeft = Math.max(0, Math.min(maxScrollLeft, centredOnLatest));
-
+  // The newest rendered reading is the last selectable instant. Keep half a
+  // viewport for its projection, but do not make that future space scrollable.
+  const drawnLimit = Math.max(0, width - viewport);
+  const centredOnLatest = Number.isFinite(Number(latestX)) ? Number(latestX) - viewport / 2 : drawnLimit;
+  const maxScrollLeft = Math.max(0, Math.min(drawnLimit, centredOnLatest));
   return {
-    restingScrollLeft,
+    restingScrollLeft: maxScrollLeft,
     maxScrollLeft,
-    // The content keeps the chart's full width, so the projection tail stays
-    // visible to the right of the reading instead of being clipped at it.
-    contentWidth: Math.max(width, viewport),
+    contentWidth: maxScrollLeft + viewport,
   };
 }
 
