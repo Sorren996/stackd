@@ -11,16 +11,16 @@ const PALETTE = {
   // Soft, muted earthy tones that match the BalanceSpectrum gradient —
   // lighter than the WCAG text tokens so the bar reads as a calm summary,
   // not a danger indicator.
-  inRange: "#8a9789",   // muted sage — matches the spectrum's right (steady) end
-  above: "#c69a78",     // warm clay  — matches the spectrum's left end
-  below: "#b87f6a",     // muted clay-red for time below range
+  inRange: "#8a9789", // muted sage — matches the spectrum's right (steady) end
+  above: "#c69a78", // warm clay  — matches the spectrum's left end
+  below: "#b87f6a" // muted clay-red for time below range
 };
 
 function formatDate() {
   return new Date().toLocaleDateString(undefined, {
     weekday: "long",
     month: "long",
-    day: "numeric",
+    day: "numeric"
   });
 }
 
@@ -31,11 +31,11 @@ function formatDate() {
 function derivePercents(breakdown, percentage) {
   if (!breakdown) return null;
   const totalMin =
-    (breakdown.inRangeMin || 0) + (breakdown.aboveMin || 0) + (breakdown.belowMin || 0);
+  (breakdown.inRangeMin || 0) + (breakdown.aboveMin || 0) + (breakdown.belowMin || 0);
   if (!totalMin) return null;
   const inRange = Math.round(percentage || 0);
-  const above = Math.round(((breakdown.aboveMin || 0) / totalMin) * 100);
-  const below = Math.round(((breakdown.belowMin || 0) / totalMin) * 100);
+  const above = Math.round((breakdown.aboveMin || 0) / totalMin * 100);
+  const below = Math.round((breakdown.belowMin || 0) / totalMin * 100);
   return { inRange, above, below };
 }
 
@@ -47,7 +47,7 @@ export default function DailyBalanceDetailSheet({
   readings,
   targetLow,
   targetHigh,
-  coverage = '',
+  coverage = ''
 }) {
   const state = getDailyBalanceState(percentage);
   const hasData = percentage != null && Number.isFinite(percentage);
@@ -64,7 +64,7 @@ export default function DailyBalanceDetailSheet({
           <p className="mt-1 text-xs" style={{ color: PALETTE.faint }}>
             {formatDate()}
           </p>
-          {coverage && <p className="mt-1 text-xs text-muted-foreground">{coverage}</p>}
+          {coverage && <p className="mt-1 text-xs text-muted-foreground hidden">{coverage}</p>}
         </div>
 
         {/* Hero: percentage + state */}
@@ -73,25 +73,25 @@ export default function DailyBalanceDetailSheet({
             <span className="anchor-number" style={{ color: PALETTE.ink }}>
               {displayValue}
             </span>
-            {hasData && (
-              <span className="text-sm font-medium" style={{ color: PALETTE.sec }}>
+            {hasData &&
+            <span className="text-sm font-medium" style={{ color: PALETTE.sec }}>
                 {state.label}
               </span>
-            )}
+            }
           </div>
-          {hasData && (
-            <div className="mt-3">
+          {hasData &&
+          <div className="mt-3">
               <BalanceSpectrum percentage={percentage} markerSize={20} trackHeight={9} />
             </div>
-          )}
+          }
         </div>
 
         {/* Where the day went */}
-        {percents && (
-          <div className="px-6 pt-6">
+        {percents &&
+        <div className="px-6 pt-6">
             <div className="section-label">Where the day went</div>
             <div className="mt-3 flex h-2.5 w-full overflow-hidden rounded-full"
-              style={{ background: PALETTE.canvas }}>
+          style={{ background: PALETTE.canvas }}>
               <div style={{ width: `${percents.inRange}%`, background: PALETTE.inRange }} />
               <div style={{ width: `${percents.above}%`, background: PALETTE.above }} />
               <div style={{ width: `${percents.below}%`, background: PALETTE.below }} />
@@ -129,15 +129,15 @@ export default function DailyBalanceDetailSheet({
               </div>
             </div>
           </div>
-        )}
+        }
 
         {/* What shaped today */}
         <div className="px-6 pt-6">
           <div className="section-label">What shaped today</div>
           <div className="mt-3 space-y-2">
-            {shape.length > 0 ? (
-              shape.map((item) => (
-                <div key={item.label} className="flex items-baseline">
+            {shape.length > 0 ?
+            shape.map((item) =>
+            <div key={item.label} className="flex items-baseline">
                   <span className="text-xs font-medium" style={{ color: PALETTE.ink }}>
                     {item.label}
                   </span>
@@ -146,20 +146,20 @@ export default function DailyBalanceDetailSheet({
                     {item.description}
                   </span>
                 </div>
-              ))
-            ) : (
-              <p className="text-xs leading-relaxed" style={{ color: PALETTE.faint }}>
+            ) :
+
+            <p className="text-xs leading-relaxed" style={{ color: PALETTE.faint }}>
                 Still gathering today's picture — check back as more readings arrive.
               </p>
-            )}
+            }
           </div>
-          <p className="mt-4 text-[10px] leading-relaxed" style={{ color: PALETTE.faint }}>
+          <p className="mt-4 text-[10px] leading-relaxed hidden" style={{ color: PALETTE.faint }}>
             An observation of where the day spent time, not a judgment of it.
           </p>
         </div>
 
         <div className="h-4" />
       </div>
-    </Sheet>
-  );
+    </Sheet>);
+
 }
