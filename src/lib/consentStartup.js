@@ -1,4 +1,5 @@
 import { runStartupCheck, requestStatus } from '@/lib/startupRequest';
+import { startupEntityRead } from '@/lib/startupHttp';
 export { requestStatus } from '@/lib/startupRequest';
 
 export const acknowledgmentKey = (userId) => ['latest-acknowledgment', userId];
@@ -18,8 +19,8 @@ export const retryConsent = false;
 
 export async function loadAcknowledgments(client, userId, limit = 1, signal) {
   if (!userId) throw failure('SESSION_REQUIRED', 401);
-  return runStartupCheck(`consent:${userId}:${limit}`, 'consent', async () => {
-    const rows = await client.entities.UserAcknowledgment.filter({ created_by_id: userId }, '-accepted_at', limit);
+  return runStartupCheck(`consent:${userId}:${limit}`, 'consent', async deadlineSignal => {
+    const rows = await startupEntityRead(client, 'UserAcknowledgment', { created_by_id: userId }, '-accepted_at', limit, deadlineSignal);
     if (!Array.isArray(rows)) throw failure('INVALID_RESPONSE');
     if (rows.some(row => !row || row.created_by_id !== userId)) throw failure('OWNER_MISMATCH');
     return rows;

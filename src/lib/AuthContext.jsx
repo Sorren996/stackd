@@ -9,13 +9,16 @@ import {
   logStartup,
   startupErrorCode,
 } from '@/lib/startupDiagnostics';
-import { runStartupCheck, requestStatus } from '@/lib/startupRequest';
+import { runStartupCheck, requestStatus, confirmedSessionRejection } from '@/lib/startupRequest';
+import { withStartupSignal } from '@/lib/startupAwait';
+import softNavigation from '@/lib/softNavigation';
 import createStartupSession from '@/lib/startupSession';
 
 const AuthContext = createContext();
 
 const LOGOUT_CHANNEL_NAME = 'stackd-logout-sync';
-const SESSION_EXPIRED_EVENT = 'stackd-session-expired';
+// Survives a boot-only remount; only an actual account switch clears caches.
+let lastVerifiedUserId = null;
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -64,7 +67,7 @@ export const AuthProvider = ({ children }) => {
         if (event.data?.type === 'logout') {
           // Another tab initiated logout — clear local state and redirect
           performLocalLogout(false);
-          window.location.href = '/';
+          softNavigation('/');
         }
       };
       logoutChannelRef.current = channel;
@@ -76,7 +79,7 @@ export const AuthProvider = ({ children }) => {
     const handleStorageChange = (event) => {
       if (event.key === 'stackd-logout-signal' && event.newValue) {
         performLocalLogout(false);
-        window.location.href = '/';
+        softNavigation('/');
       }
     };
     window.addEventListener('storage', handleStorageChange);
@@ -154,7 +157,7 @@ export const AuthProvider = ({ children }) => {
         });
 
         const publicSettings = await runStartupCheck('public-settings', 'public-settings',
-          () => appClient.get(`/prod/public-settings/by-id/${appParams.appId}`), signal);
+          deadlineSignal => appClient.get(`/prod/public-settings/by-id/${appParams.appId}`, { signal: deadlineSignal }), signal);
         if (isCurrent()) setAppPublicSettings(publicSettings);
       } catch (appError) {
         if (!isCurrent()) return;
@@ -166,7 +169,9 @@ export const AuthProvider = ({ children }) => {
         } else if (reason) {
           setAuthError({ type: reason, message: appError.message });
         } else {
-          // Non-fatal: never strands a signed-in person on the marketing page.
+          // An unanswered bootstrap read is retryable, never a sign-out.
+          setStartupError({ type: appError?.startupCode === 'TIMEOUT' ? 'timeout' : 'unreachable',
+            startupCode: appError?.startupCode, status: requestStatus(appError) });
           logStartup('public-settings', {
             outcome: 'error',
             code: startupErrorCode(appError),
@@ -184,10 +189,9 @@ export const AuthProvider = ({ children }) => {
         if (!isCurrent()) return;
         // On a shared device, wipe the previous account's cached settings and
         // latest glucose before this session starts so no data crosses accounts.
-        if (cacheUserRef.current !== currentUser.id) {
-          queryClientInstance.clear();
-          cacheUserRef.current = currentUser.id;
-        }
+        if (lastVerifiedUserId && lastVerifiedUserId !== currentUser.id) queryClientInstance.clear();
+        lastVerifiedUserId = currentUser.id;
+        cacheUserRef.current = currentUser.id;
         // Device cache availability is not an authentication result.
         try { ensureLocalCacheOwnedBy(currentUser.id); } catch { /* Optional cache only. */ }
         setUser(currentUser);
@@ -197,16 +201,15 @@ export const AuthProvider = ({ children }) => {
       } catch (error) {
         if (!isCurrent()) return;
         const code = startupErrorCode(error);
-        setUser(null);
-        setIsAuthenticated(false);
         setAuthChecked(true);
 
-        if (code === STARTUP_CODES.UNAUTHORIZED) {
-          // Only the auth endpoint's rejection establishes session expiry.
-          cacheUserRef.current = null;
-          queryClientInstance.clear();
-          try { clearLocalSettingsCache(); } catch { /* Optional device cache. */ }
+        if (confirmedSessionRejection(error)) {
+          // A real HTTP denial from the session endpoint, while online.
+          // Hide protected views without deleting saved preferences or tokens.
+          setUser(null);
+          setIsAuthenticated(false);
           setAuthError({ type: 'auth_required', message: 'Authentication required' });
+          if (lastVerifiedUserId) softNavigation('/login');
         } else {
           // Transient: keep credentials, claim nothing, offer Retry.
           setStartupError({
@@ -256,45 +259,49 @@ export const AuthProvider = ({ children }) => {
    * Called when a protected request fails due to an expired session.
    * Clears all authenticated state, hides protected data, and redirects.
    */
-  const handleSessionExpired = useCallback(() => {
-    setSessionExpired(true);
-    performLocalLogout(true);
-    // A confirmed expired session returns to sign-in, not the consent form.
-    window.location.href = '/login';
+  const reportStartupFailure = useCallback((error) => {
+    setStartupError({ type: error?.startupCode === 'TIMEOUT' ? 'timeout' : 'unreachable',
+      code: startupErrorCode(error), status: requestStatus(error), startupCode: error?.startupCode });
+    setIsLoadingAuth(false);
+    setIsLoadingPublicSettings(false);
   }, []);
 
+  const handleSessionExpired = useCallback((error) => {
+    if (!confirmedSessionRejection(error)) { reportStartupFailure(error); return; }
+    setSessionExpired(true);
+    setUser(null);
+    setIsAuthenticated(false);
+    setAuthChecked(true);
+    setStartupError(null);
+    softNavigation('/login');
+  }, [reportStartupFailure]);
+
   const logout = async (shouldRedirect = true, redirectTo = '/') => {
-    // Prevent duplicate logout requests
     if (isLoggingOutRef.current) return;
     isLoggingOutRef.current = true;
-
     try {
-      // Always clear local state immediately so protected data is hidden
-      // even if the server request fails (offline, poor connectivity)
+      // Logout is deliberate, not recovery. Verify reachability before asking
+      // the SDK to visit its official cookie-clearing logout endpoint.
+      await withStartupSignal(async signal => {
+        if (navigator.onLine === false) throw Object.assign(new Error('Offline'), { startupCode: 'OFFLINE' });
+        const response = await fetch(`/api/apps/public/prod/public-settings/by-id/${appParams.appId}`, {
+          signal, cache: 'no-store', redirect: 'error',
+        });
+        if (!response.ok) throw new Error('Logout unavailable');
+      });
+      if (navigator.onLine === false) throw new Error('Offline');
       performLocalLogout(shouldRedirect);
-
-      // Attempt the official server-side logout. The destination is explicit so
-      // a deliberate action (such as closing an account) can land on the public
-      // sign-in instead of the page it started from.
-      if (shouldRedirect) {
-        await base44.auth.logout(redirectTo);
-      } else {
-        await base44.auth.logout();
-      }
-    } catch {
-      // Server logout failed — local state is already cleared.
-      // Redirect to the same destination the caller asked for.
-      if (shouldRedirect) {
-        window.location.href = redirectTo;
-      }
+      lastVerifiedUserId = null;
+      await base44.auth.logout(shouldRedirect ? redirectTo : undefined);
+    } catch (error) {
+      // Never navigate because the network or the logout request failed.
+      reportStartupFailure(error);
     } finally {
       isLoggingOutRef.current = false;
     }
   };
 
-  const navigateToLogin = () => {
-    base44.auth.redirectToLogin(window.location.href);
-  };
+  const navigateToLogin = () => softNavigation('/login');
 
   return (
     <AuthContext.Provider value={{ 
@@ -308,6 +315,7 @@ export const AuthProvider = ({ children }) => {
       sessionExpired,
       startupError,
       retryStartup: checkAppState,
+      reportStartupFailure,
       logout,
       navigateToLogin,
       checkUserAuth,

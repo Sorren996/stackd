@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { QueryClient, QueryObserver, onlineManager } from '@tanstack/react-query';
 import startupAwait from '../startupAwait.js';
 import startupTransport from '../startupTransport.js';
-import { requestModule, startupModule } from './startupTestModules.mjs';
+import { requestModule, startupModule, mockStartupClient } from './startupTestModules.mjs';
 const { runStartupCheck, retryAfterMs, retryableStartupError } = requestModule;
 const { loadStartupSetup } = await startupModule('startupSetup');
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -13,7 +13,7 @@ const deferred = () => { let resolve, reject; const promise = new Promise((a, b)
 test('bootstrap and session revalidation share one read, then retry freshly', async () => {
   const { default: createSession } = await startupModule('startupSession');
   const d = deferred(); let calls = 0;
-  const session = createSession({ auth: { me: () => { calls++; return calls === 1 ? d.promise : Promise.resolve({ id: 'a' }); } } });
+  const session = createSession(mockStartupClient({ auth: { me: () => { calls++; return calls === 1 ? d.promise : Promise.resolve({ id: 'a' }); } } }));
   const first = session.read(); const second = session.read();
   assert.equal(first, second); d.resolve({ id: 'a' });
   await Promise.all([first, second]); assert.equal(calls, 1);
@@ -22,9 +22,10 @@ test('bootstrap and session revalidation share one read, then retry freshly', as
 test('session retirement cannot apply a late identity or keep a rejected promise', async () => {
   const { default: createSession } = await startupModule('startupSession');
   const d = deferred(); let calls = 0;
-  const session = createSession({ auth: { me: () => { calls++; return calls === 1 ? d.promise : Promise.resolve({ id: 'b' }); } } });
+  const session = createSession(mockStartupClient({ auth: { me: () => { calls++; return calls === 1 ? d.promise : Promise.resolve({ id: 'b' }); } } }));
   const old = session.read(); const rejected = assert.rejects(old, { name: 'AbortError' });
-  await Promise.resolve(); session.retire(); await rejected;
+  while (calls === 0) await Promise.resolve();
+  session.retire(); await rejected;
   assert.deepEqual(await session.read(), { id: 'b' });
   d.resolve({ id: 'a' }); await sleep(5);
   assert.deepEqual(await session.read(), { id: 'b' });
@@ -83,28 +84,31 @@ test('network/5xx retries are bounded and a subsequent call is fresh', async () 
   assert.equal(calls, 3);
   assert.equal(await runStartupCheck('network', 'test', () => 'fresh'), 'fresh');
 });
-test('valid 13-second response is not discarded by the former 12-second deadline', async () => {
-  let calls = 0;
-  assert.equal(await runStartupCheck('slow', 'test', async () => { calls++; await sleep(13000); return 'verified'; }), 'verified');
-  assert.equal(calls, 1);
+test('a stalled startup aborts its transport at the ten-second total deadline', async () => {
+  let transportSignal;
+  const started = Date.now();
+  await assert.rejects(runStartupCheck('slow', 'test', signal => {
+    transportSignal = signal;
+    return new Promise(() => {});
+  }), { startupCode: 'TIMEOUT' });
+  assert.equal(transportSignal.aborted, true);
+  assert.ok(Date.now() - started < 11500);
+  assert.equal(await runStartupCheck('slow', 'test', () => 'fresh'), 'fresh');
 });
-test('background time does not consume the foreground deadline', async () => {
-  const doc = new EventTarget(); doc.visibilityState = 'visible';
+test('background time cannot leave startup waiting indefinitely', async () => {
+  const doc = new EventTarget(); doc.visibilityState = 'hidden';
   const previous = globalThis.document; globalThis.document = doc;
   try {
-    const d = deferred(); const pending = startupAwait(d.promise, undefined, 50);
-    doc.visibilityState = 'hidden'; doc.dispatchEvent(new Event('visibilitychange'));
-    await sleep(70);
-    doc.visibilityState = 'visible'; doc.dispatchEvent(new Event('visibilitychange'));
-    d.resolve('resumed'); assert.equal(await pending, 'resumed');
+    await assert.rejects(startupAwait(new Promise(() => {}), undefined, 25), { startupCode: 'TIMEOUT' });
   } finally { if (previous) globalThis.document = previous; else delete globalThis.document; }
 });
 test('aborted consumer ignores late failure and cannot replace a fresh query result', async () => {
   const cache = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const d = deferred();
-  const first = cache.fetchQuery({ queryKey: ['gate', 'a'], queryFn: ({ signal }) => runStartupCheck('cancel-a', 'test', () => d.promise, signal) });
+  let started = false;
+  const first = cache.fetchQuery({ queryKey: ['gate', 'a'], queryFn: ({ signal }) => runStartupCheck('cancel-a', 'test', () => { started = true; return d.promise; }, signal) });
   const rejection = assert.rejects(first);
-  await Promise.resolve(); // Let the underlying read start before unmount/cancel.
+  while (!started) await Promise.resolve(); // Cancel only after the transport starts.
   await cache.cancelQueries({ queryKey: ['gate', 'a'] }); await rejection;
   await cache.fetchQuery({ queryKey: ['gate', 'a'], queryFn: () => 'fresh' });
   d.reject(error(503)); await sleep(5);
@@ -128,7 +132,7 @@ function setupClient(results) {
     filter: async () => { calls.push(name); const value = results[name]; if (value instanceof Error) throw value; return value ?? []; },
     create: () => { throw new Error('No writes allowed'); }, update: () => { throw new Error('No writes allowed'); },
   }]));
-  return { entities, calls };
+  return mockStartupClient({ entities, calls });
 }
 test('confirmed setup reads settings once; new user still needs onboarding', async () => {
   const established = setupClient({ UserSettings: [{ id: 's', created_by_id: 'a', onboarding_completed: true, settings_confirmed: false }] });

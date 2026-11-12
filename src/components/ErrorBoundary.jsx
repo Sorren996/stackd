@@ -35,13 +35,12 @@ export default class ErrorBoundary extends React.Component {
   }
 
   /**
-   * A fresh launch, not a partial re-render: a full document load discards the
-   * errored boundary and every query that resolved against the broken state.
-   * `replace` so the back button cannot land on the crashed screen again.
+   * Restart the boot path without clearing saved state or navigating offline.
+   * The document watchdog owns the single, reachability-checked last resort.
    */
   handleRetry = () => {
     this.setState({ hasError: false, error: null, info: null });
-    window.location.replace("/");
+    window.__stackdBoot?.recover(true);
   };
 
   render() {

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { startupModule } from './startupTestModules.mjs';
+import { startupModule, mockStartupClient } from './startupTestModules.mjs';
 import { QueryClient } from '@tanstack/react-query';
 
 const { loadAcknowledgments, acknowledgmentKey, onboardingKey, retryConsent, consentFailureCode } = await startupModule('consentStartup');
@@ -9,7 +9,7 @@ const httpError = (status) => Object.assign(new Error('private payload must not 
 function mock(answers, identity = { id: 'account-a' }) {
   const calls = [];
   let authCalls = 0;
-  return { calls, get authCalls() { return authCalls; },
+  return mockStartupClient({ calls, get authCalls() { return authCalls; },
     entities: { UserAcknowledgment: { filter: async (...args) => {
       calls.push(args);
       const answer = answers.shift();
@@ -17,7 +17,7 @@ function mock(answers, identity = { id: 'account-a' }) {
       return answer;
     } } },
     auth: { me: async () => { authCalls++; if (identity instanceof Error) throw identity; return identity; } },
-  };
+  });
 }
 
 test('existing acknowledgment is returned unchanged through an explicit immutable-owner filter', async () => {
@@ -28,9 +28,9 @@ test('existing acknowledgment is returned unchanged through an explicit immutabl
 
 test('latest consent and full history never share differently sized responses', async () => {
   let calls = 0;
-  const client = { entities: { UserAcknowledgment: { filter: async (_query, _sort, limit) => {
+  const client = mockStartupClient({ entities: { UserAcknowledgment: { filter: async (_query, _sort, limit) => {
     calls++; return limit === 1 ? [record] : [record, { ...record, id: 'older' }];
-  } } } };
+  } } } });
   const [latest, history] = await Promise.all([loadAcknowledgments(client, 'account-a'), loadAcknowledgments(client, 'account-a', 50)]);
   assert.equal(latest.length, 1); assert.equal(history.length, 2); assert.equal(calls, 2);
 });

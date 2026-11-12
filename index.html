@@ -35,7 +35,151 @@
     <title>Stackd: your day with diabetes, brought together</title>
   </head>
   <body>
+    <style>
+      html, body { background: #f7f1e8; margin: 0; min-height: 100%; }
+      #stackd-boot-panel { position: fixed; inset: 0; z-index: 2147483647; background: #f7f1e8 !important; color: #3f3830; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom)); box-sizing: border-box; text-align: center; font-family: Montserrat, Arial, sans-serif; }
+      #stackd-boot-panel[hidden] { display: none; }
+      #stackd-boot-panel img { width: 80px; height: 80px; object-fit: contain; border-radius: 20px; }
+      #stackd-boot-panel h1 { color: #3f3830; font-size: 18px; margin: 32px 0 8px; }
+      #stackd-boot-panel p { color: #6b6153; max-width: 290px; font-size: 13px; line-height: 1.6; }
+      #stackd-boot-panel button { background: #3f3830; color: #f7f1e8; border: 0; border-radius: 16px; padding: 14px 28px; font: 600 14px Montserrat, Arial, sans-serif; margin-top: 16px; min-width: 200px; cursor: pointer; }
+      #stackd-boot-panel button:focus-visible { outline: 3px solid #8a4a24; outline-offset: 4px; }
+    </style>
     <div id="root"></div>
+    <section id="stackd-boot-panel" hidden role="alert" aria-labelledby="stackd-boot-title">
+      <img src="https://media.base44.com/images/public/6a1b93f234a8611ee1595134/1b816d1eb_stackdappiconver3.png" alt="Stackd" />
+      <h1 id="stackd-boot-title">Stackd didn't start properly</h1>
+      <p id="stackd-boot-message">Your data is safe. Please try again.</p>
+      <button id="stackd-boot-retry" type="button">Reload</button>
+    </section>
+    <script>
+      // Runs independently of the module, React, CSS downloads and the SDK.
+      (function () {
+        var panel = document.getElementById('stackd-boot-panel');
+        var title = document.getElementById('stackd-boot-title');
+        var message = document.getElementById('stackd-boot-message');
+        var button = document.getElementById('stackd-boot-retry');
+        var mode = null, watchTimer, pendingTimer, recoveryTimer;
+        var pendingStage = null, pendingSince = 0;
+        var attempted = false, recovering = false, replaced = false, generation = 0;
+        var hidden = document.visibilityState === 'hidden';
+        var releaseOnline;
+        var onlineGate = navigator.onLine === false ? new Promise(function (resolve) { releaseOnline = resolve; }) : Promise.resolve();
+        window.__stackdBooted = false;
+        function hasContent() {
+          var root = document.getElementById('root');
+          return !!(root && root.firstElementChild);
+        }
+        function show(kind) {
+          mode = navigator.onLine === false ? 'offline' : kind;
+          title.textContent = mode === 'offline' ? "You're offline" : mode === 'network' ? 'We could not reach Stackd just now' : "Stackd didn't start properly";
+          message.textContent = mode === 'offline' || mode === 'network' ? 'Your data is safe. Check your connection, then try again.' : 'Your data is safe. Please try again.';
+          button.textContent = mode === 'offline' ? 'Retry' : mode === 'network' ? 'Try again' : 'Reload';
+          panel.hidden = false;
+        }
+        function hide() { panel.hidden = true; mode = null; }
+        function watch() {
+          clearTimeout(watchTimer);
+          watchTimer = setTimeout(function () { if (!window.__stackdBooted) show('boot'); }, 8000);
+        }
+        // Only a successful same-origin document probe permits the last-resort
+        // reload. A radio/network failure always stays on this cream document.
+        async function replaceOnce(manual) {
+          if (replaced || navigator.onLine === false || document.visibilityState === 'hidden') { show('network'); return; }
+          var epoch = generation;
+          try {
+            if (!manual && Date.now() - Number(sessionStorage.getItem('stackd_boot_reload_at') || 0) < 60000) { show('boot'); return; }
+          } catch (_) { if (!manual) { show('boot'); return; } }
+          var controller = new AbortController();
+          var timer = setTimeout(function () { controller.abort(); }, 3000);
+          try {
+            var response = await fetch('/', { cache: 'no-store', credentials: 'same-origin', redirect: 'error', signal: controller.signal });
+            if (!response.ok || !/text\/html/i.test(response.headers.get('content-type') || '')) throw new Error('unreachable');
+            if (epoch !== generation || document.visibilityState === 'hidden' || navigator.onLine === false) return;
+            // Another completion may have restored the app while the probe ran.
+            if (!manual && hasContent()) return;
+            replaced = true;
+            try { sessionStorage.setItem('stackd_boot_reload_at', String(Date.now())); } catch (_) {}
+            window.location.replace(new URL('/', window.location.origin).href);
+          } catch (_) { show('network'); }
+          finally { clearTimeout(timer); }
+        }
+        function recover(manual) {
+          if (navigator.onLine === false) { show('offline'); return; }
+          if (recovering || (!manual && attempted)) return;
+          attempted = true; recovering = true;
+          var epoch = generation;
+          show('boot');
+          Promise.resolve().then(function () {
+            if (window.__stackdRestartBoot) return window.__stackdRestartBoot();
+          }).catch(function () { show('boot'); });
+          clearTimeout(recoveryTimer);
+          recoveryTimer = setTimeout(function () {
+            recovering = false;
+            if (epoch !== generation || document.visibilityState === 'hidden') return;
+            if (!hasContent()) replaceOnce(manual === true);
+            else if (window.__stackdBooted && !pendingSince && mode !== 'network') hide();
+          }, 3000);
+        }
+        function selfCheck() {
+          if (document.visibilityState === 'hidden') return;
+          if (navigator.onLine === false) { show('offline'); return; }
+          if (!hasContent() || (pendingSince && Date.now() - pendingSince >= 10000)) recover(false);
+        }
+        window.__stackdBoot = {
+          online: onlineGate,
+          painted: function () { clearTimeout(watchTimer); if (navigator.onLine !== false) hide(); },
+          pending: function (stage) {
+            if (stage === pendingStage) return;
+            clearTimeout(pendingTimer); pendingStage = stage; pendingSince = stage ? Date.now() : 0;
+            if (stage) pendingTimer = setTimeout(function () { if (pendingStage === stage) show('network'); }, 10500);
+          },
+          starting: function () { window.__stackdBooted = false; watch(); },
+          failure: function () { show('boot'); },
+          networkError: function () { show('network'); },
+          recover: recover
+        };
+        button.onclick = function () {
+          if (navigator.onLine === false) { show('offline'); return; }
+          if (releaseOnline) { releaseOnline(); releaseOnline = null; watch(); }
+          // A network failure never initiates a document navigation.
+          if (mode === 'network' || mode === 'offline') {
+            if (window.__stackdRetryStartup) window.__stackdRetryStartup();
+            else if (window.__stackdRestartBoot) window.__stackdRestartBoot().catch(function () { show('network'); });
+            hide();
+          } else if (window.__stackdRestartBoot) recover(true);
+          else replaceOnce(true);
+        };
+        window.addEventListener('offline', function () { show('offline'); });
+        window.addEventListener('online', function () {
+          var waiting = !!releaseOnline;
+          if (releaseOnline) { releaseOnline(); releaseOnline = null; watch(); }
+          if (mode === 'offline' && window.__stackdBooted) hide();
+          if (!waiting) selfCheck();
+        });
+        document.addEventListener('visibilitychange', function () {
+          if (document.visibilityState === 'hidden') {
+            hidden = true; generation++; clearTimeout(recoveryTimer); recovering = false;
+          } else {
+            if (hidden) { attempted = false; replaced = false; hidden = false; }
+            selfCheck();
+          }
+        });
+        window.addEventListener('pageshow', function (event) { if (event.persisted || window.__stackdBooted) selfCheck(); });
+        window.addEventListener('error', function (event) {
+          // Ignore failed images; an unavailable module or runtime crash matters.
+          if (event.target === window || (event.target && event.target.tagName === 'SCRIPT')) show('boot');
+        }, true);
+        window.addEventListener('unhandledrejection', function (event) {
+          var reason = event.reason;
+          if (reason && reason.name === 'AbortError') return;
+          var network = navigator.onLine === false || reason && (reason.startupCode || /network|fetch|timeout|offline|load failed/i.test(reason.message || ''));
+          show(network ? 'network' : 'boot');
+        });
+        if (navigator.onLine === false) show('offline');
+        watch();
+      })();
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

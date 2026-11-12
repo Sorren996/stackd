@@ -14,6 +14,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import Mfa from '@/pages/Mfa';
 import Landing from './pages/Landing';
 import Install from './pages/Install';
 import PrivacyPage from './pages/PrivacyPage';
@@ -55,6 +56,8 @@ import { ACKNOWLEDGMENT_VERSIONS, CHECKBOX_KEYS } from "@/lib/acknowledgmentConf
 import { cacheSettingsLocally } from "@/lib/userSettings";
 import { loadStartupSetup } from '@/lib/startupSetup';
 import useStartupRecovery from '@/hooks/useStartupRecovery';
+import useBootStatus from '@/hooks/useBootStatus';
+import { confirmedSessionRejection } from '@/lib/startupRequest';
 import {
   logStartup,
   startupErrorCode,
@@ -72,6 +75,7 @@ const AuthenticatedApp = () => {
     navigateToLogin,
     isAuthenticated,
     handleSessionExpired,
+    reportStartupFailure,
     startupError,
     retryStartup,
     checkSession,
@@ -108,14 +112,14 @@ const AuthenticatedApp = () => {
         if (active && current?.id !== user.id) await retryStartup();
       } catch (error) {
         if (!active) return;
-        if ([401, 403].includes(requestStatus(error))) handleSessionExpired();
-        else logStartup('session-check', { outcome: 'error', code: startupErrorCode(error) });
+        if (confirmedSessionRejection(error)) handleSessionExpired(error);
+        else reportStartupFailure(error);
       } finally {
         checking = false;
       }
     });
     return () => { active = false; setOnAuthFailure(null); };
-  }, [user?.id, handleSessionExpired, retryStartup, checkSession]);
+  }, [user?.id, handleSessionExpired, reportStartupFailure, retryStartup, checkSession]);
 
   const {
     data: latestAck,
@@ -185,14 +189,17 @@ const AuthenticatedApp = () => {
     if (preparedSetup?.userId === user.id && preparedSetup?.data === onboardingData) return;
     // Hydrate once per startup snapshot; later profile/consent checks must not
     // overwrite settings the person has since edited in the working view.
-    queryClientInstance.setQueryData(['user-settings'], onboardingData.settings);
+    const cachedSettings = queryClientInstance.getQueryState(['user-settings']);
+    const setupSnapshot = queryClientInstance.getQueryState(onboardingKey(user.id));
+    const settings = cachedSettings?.data && cachedSettings.dataUpdatedAt > (setupSnapshot?.dataUpdatedAt || 0)
+      ? cachedSettings.data : onboardingData.settings;
+    queryClientInstance.setQueryData(['user-settings'], settings);
     try {
-      cacheSettingsLocally(user.id, { ...onboardingData.settings,
-        settings_confirmed: onboardingData.settings?.settings_confirmed === true,
-        onboarding_completed: onboardingData.settings?.onboarding_completed === true });
+      cacheSettingsLocally(user.id, { ...settings,
+        settings_confirmed: settings?.settings_confirmed === true,
+        onboarding_completed: settings?.onboarding_completed === true });
       // Preserve the existing non-blocking timezone sync used by background notices.
       const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      const settings = onboardingData.settings;
       if (settings?.id && browserTz && settings.timezone !== browserTz) {
         base44.entities.UserSettings.update(settings.id, { timezone: browserTz }).catch(() => {});
       }
@@ -202,7 +209,7 @@ const AuthenticatedApp = () => {
     setPreparedSetup({ userId: user.id, data: onboardingData });
   }, [user?.id, onboardingData, onboardingError, needsAcknowledgment, profile.resolved, viewerMode, preparedSetup]);
 
-  const failedStage = startupError && !isAuthenticated ? 'auth' : profile.error ? 'profile' : ackError ? 'consent' : onboardingError ? 'setup' : null;
+  const failedStage = startupError ? 'auth' : profile.error ? 'profile' : ackError ? 'consent' : onboardingError ? 'setup' : null;
   const recoveryError = failedStage === 'auth' ? startupError : failedStage === 'profile' ? profile.error : failedStage === 'consent' ? ackFailure : failedStage === 'setup' ? onboardingFailure : null;
   const recovery = useStartupRecovery(`${user?.id || 'anon'}:${failedStage}`, recoveryError, () => {
     if (failedStage === 'auth') return retryStartup();
@@ -211,10 +218,24 @@ const AuthenticatedApp = () => {
     if (failedStage === 'setup') return refetchOnboarding({ cancelRefetch: false });
   });
 
+  const bootStage = failedStage ? null : isLoadingAuth || isLoadingPublicSettings ? 'auth'
+    : profile.resolving ? 'profile' : !isAuthenticated || viewerMode ? null
+    : ackLoading ? 'consent' : needsAcknowledgment ? null
+    : needsAcknowledgment == null || onboardingChecking || onboardingData == null
+      || preparedSetup?.userId !== user?.id || preparedSetup?.data !== onboardingData ? 'setup' : null;
+  useBootStatus(bootStage);
+  useEffect(() => {
+    window.__stackdRetryStartup = () => {
+      const work = failedStage ? recovery.retryNow() : window.__stackdRestartBoot?.();
+      Promise.resolve(work).catch(() => window.__stackdBoot?.networkError());
+    };
+    return () => { delete window.__stackdRetryStartup; };
+  }, [failedStage, recovery.retryNow]);
+
   // Still checking auth, or still resolving what this account is. A neutral
   // splash — never a patient empty state for someone who only follows along.
   // Every step behind this splash is bounded, so it cannot spin forever.
-  if (isLoadingPublicSettings || isLoadingAuth || profile.resolving) {
+  if (!startupError && (isLoadingPublicSettings || isLoadingAuth || profile.resolving)) {
     return (
       <AnimatePresence>
         <SplashScreen />
@@ -225,7 +246,7 @@ const AuthenticatedApp = () => {
   // A launch step did not answer inside its deadline. A calm bounded state with
   // an explicit Retry: nothing is claimed as signed in, and a network blip
   // never silently signs anyone out.
-  if (startupError && !isAuthenticated) {
+  if (startupError) {
     return (
       <StartupRecovery
         title={
@@ -236,8 +257,7 @@ const AuthenticatedApp = () => {
         message="Your data is safe. Check your connection, then try again."
         onRetry={recovery.retryNow}
         retrying={recovery.busy || isLoadingAuth || isLoadingPublicSettings}
-        showSignIn
-        onSignIn={() => { window.location.href = "/login"; }}
+
       />
     );
   }
@@ -255,6 +275,7 @@ const AuthenticatedApp = () => {
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/mfa" element={<Mfa />} />
         <Route path="/" element={<Landing />} />
         <Route path="/install" element={<Install />} />
         <Route path="/privacy" element={<PrivacyPage />} />

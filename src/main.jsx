@@ -1,6 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import App from '@/App.jsx'
+import BootRoot from '@/components/startup/BootRoot'
 import '@/index.css'
 import { logStartup } from '@/lib/startupDiagnostics'
 
@@ -16,6 +16,27 @@ document.addEventListener('contextmenu', (e) => {
   e.preventDefault();
 }, { capture: false });
 
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <App />
-)
+// Do not evaluate App (or its SDK imports) until the boot-time offline gate opens.
+let root;
+let starting;
+async function start() {
+  if (starting) return starting;
+  starting = (async () => {
+    await window.__stackdBoot?.online;
+    if (navigator.onLine === false) { window.__stackdBoot?.networkError(); return; }
+    window.__stackdBoot?.starting();
+    const [{ default: App }, { queryClientInstance }] = await Promise.all([
+      import('@/App.jsx'), import('@/lib/query-client'),
+    ]);
+    // Retire only bootstrap reads, never clear saved data or selection keys.
+    await queryClientInstance.cancelQueries({ predicate: query =>
+      ['access-profile', 'latest-acknowledgment', 'onboarding-check'].includes(query.queryKey[0])
+    });
+    root?.unmount();
+    root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<BootRoot App={App} />);
+  })().finally(() => { starting = null; });
+  return starting;
+}
+window.__stackdRestartBoot = start;
+start().catch(() => window.__stackdBoot?.failure());

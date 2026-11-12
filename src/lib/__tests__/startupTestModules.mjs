@@ -9,6 +9,21 @@ export const requestUrl = url(requestSource);
 export const requestModule = await import(requestUrl);
 export async function startupModule(name) {
   const source = (await readFile(new URL(`../${name}.js`, import.meta.url), 'utf8'))
-    .replaceAll('@/lib/startupRequest', requestUrl);
+    .replaceAll('@/lib/startupRequest', requestUrl)
+    .replaceAll('@/lib/startupAwait', file('startupAwait'))
+    .replaceAll('@/lib/startupHttp', file('startupHttp'));
   return import(url(source));
+}
+
+// Exercise the real cancellable HTTP adapter using the existing fixture data.
+export function mockStartupClient(client) {
+  client.getConfig = () => ({ appId: 'test-app' });
+  client.fetchWithAuth = async path => {
+    const url = new URL(path, 'https://example.test');
+    const entity = url.pathname.split('/entities/')[1];
+    const result = entity === 'User/me' ? await client.auth.me()
+      : await client.entities[entity].filter(JSON.parse(url.searchParams.get('q')), url.searchParams.get('sort'), Number(url.searchParams.get('limit')));
+    return Response.json(result);
+  };
+  return client;
 }

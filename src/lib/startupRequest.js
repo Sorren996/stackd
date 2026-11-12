@@ -1,4 +1,4 @@
-import startupAwait from '@/lib/startupAwait';
+import { withStartupSignal } from '@/lib/startupAwait';
 import startupTransport from '@/lib/startupTransport';
 import { logStartup } from '@/lib/startupDiagnostics';
 
@@ -30,7 +30,15 @@ const wait = (ms, signal) => new Promise((resolve, reject) => {
 });
 
 // QueryClient deduplicates by account/stage. Only retries reads; no writes or auth defaults.
-export async function runStartupCheck(key, stage, read, signal) {
+export function runStartupCheck(key, stage, read, signal) {
+  return withStartupSignal(deadlineSignal => executeStartupCheck(key, stage, read, deadlineSignal), signal);
+}
+
+export const confirmedSessionRejection = error => error?.httpResponse === true
+  && [401, 403].includes(requestStatus(error))
+  && (typeof navigator === 'undefined' || navigator.onLine !== false);
+
+async function executeStartupCheck(key, stage, read, signal) {
   const started = Date.now();
   for (let retryCount = 0; ; retryCount++) {
     signal?.throwIfAborted();
@@ -39,7 +47,7 @@ export async function runStartupCheck(key, stage, read, signal) {
     cooldowns.delete(key);
     try {
       if (typeof navigator !== 'undefined' && navigator.onLine === false) throw Object.assign(new Error('Offline'), { startupCode: 'OFFLINE' });
-      const result = await startupAwait(startupTransport(key, read, signal), signal);
+      const result = await startupTransport(key, () => read(signal), signal);
       signal?.throwIfAborted();
       logStartup(stage, { outcome: 'ok', status: null, durationMs: Date.now() - started, retryCount });
       return result;
