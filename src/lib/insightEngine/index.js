@@ -741,7 +741,6 @@ export function projectGlucose(snapshot, opts = {}) {
   // right whichever way glucose goes. So the half-width is narrowed to whatever
   // the floor and ceiling allow, and if that half-width collapses the engine
   // draws nothing rather than a confident centre.
-  const bandCollapsed = [];
   const trajectory = superposition.points.map((point) => {
     if (point.min_offset <= 0) {
       return {
@@ -756,7 +755,6 @@ export function projectGlucose(snapshot, opts = {}) {
       point.min_offset, snapshot.dataQuality, point.rate, uncertaintyCalibration, momentumBandMgdl
     );
     const halfWidth = Math.max(0, Math.min(sigma, point.value - GLUCOSE_FLOOR, GLUCOSE_CEILING - point.value));
-    if (sigma > 0 && halfWidth < 1) bandCollapsed.push(point.min_offset);
     return {
       time: point.time,
       min_offset: point.min_offset,
@@ -766,12 +764,16 @@ export function projectGlucose(snapshot, opts = {}) {
     };
   });
 
-  // The error bar has grown to the point where a single centre line would be
-  // false precision. No number is claimed: the engine abstains.
+  // ONLY genuinely wide uncertainty abstains. A band narrowed against the floor
+  // or the ceiling is a DISPLAY bound, not a doubt: a meal legitimately projects
+  // towards the top of the scale, and deleting the whole forecast because the
+  // band met the top of the chart is how an active meal made the projection
+  // vanish. The band narrows to whatever the bounds allow and the line is still
+  // drawn — a forecast that says "stays very high" is more use than no forecast.
   const sigmaCapped = trajectory.some((p) =>
     p.min_offset > 0 && (p.upper - p.lower) / 2 >= MAX_SIGMA_MGDL * 0.95
   );
-  if (sigmaCapped || bandCollapsed.length > 3) {
+  if (sigmaCapped) {
     return abstainedResult(
       "The range of likely outcomes is too wide right now to draw a single estimate.",
       confidence,

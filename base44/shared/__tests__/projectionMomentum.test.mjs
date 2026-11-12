@@ -235,3 +235,52 @@ test("the projection and the trend arrow speak about the same measurement", () =
   assert.ok(result.momentum.openingRate < 0, "the forecast must open in the same direction as the arrow");
   assert.ok(valueAt(result, 15) < 106, "and must actually be falling 15 minutes out");
 });
+
+// ── 7. A meal on board never hides the projection ──────────────────────────
+//
+// An active meal made the forecast disappear completely: the carbohydrate term
+// pushed the curve towards the top of the scale, the band was narrowed against
+// that ceiling, and a narrowed band was treated as "too wide to draw" — so the
+// one situation where a forecast is most wanted drew nothing at all. A display
+// bound is not a doubt.
+
+const meal = (carbs, minutesAgo) => ({ carbs, consumed_at: at(minutesAgo) });
+
+test("an unbolused meal still draws a forecast inside the scale, with a band around it", () => {
+  // 60 g with nothing else on board: the climb legitimately reaches the top.
+  const result = project(series([150, 160, 168, 175]), [meal(60, 20)], []);
+
+  assert.equal(result.trajectory.length, 25, "the whole two hours must be drawn");
+  assert.equal(result.trajectory[0].value, 175);
+  for (const point of result.trajectory) {
+    assert.ok(
+      point.lower <= point.value && point.value <= point.upper,
+      `the band must bracket its centre at +${point.min_offset} min (${point.lower} / ${point.value} / ${point.upper})`
+    );
+    assert.ok(point.value >= 40 && point.value <= 400, `+${point.min_offset} min is off the scale: ${point.value}`);
+  }
+  assert.ok(valueAt(result, 60) > 175, "an active meal should still be forecast to lift glucose");
+});
+
+test("a large meal with a bolus is drawn and turns down once the insulin overtakes it", () => {
+  const result = project(series([200, 215, 230, 245]), [meal(80, 25)], [dose(8, 20)]);
+
+  const values = result.trajectory.map((p) => p.value);
+  const peak = Math.max(...values);
+  const peakAt = result.trajectory[values.indexOf(peak)].min_offset;
+  assert.ok(peakAt > 0 && peakAt < 120, `the peak should sit inside the drawn horizon, got +${peakAt} min`);
+  assert.ok(valueAt(result, 120) < peak, "the insulin activity must bend the curve back down inside the horizon");
+});
+
+test("with a meal on board the curve still leaves along the measured velocity, not the meal's", () => {
+  // Glucose is falling even though a meal is still working: the arrow beside the
+  // reading says so, and the forecast has to open the same way.
+  const readings = series([190, 175, 160, 148]);
+  const result = project(readings, [meal(40, 40)], [dose(5, 25)]);
+
+  const measured = result.momentum.measuredVelocity;
+  assert.ok(measured < -1, `the series should measure a fall, got ${measured}`);
+  assert.ok(result.momentum.openingRate < 0, `the curve must open falling, got ${result.momentum.openingRate}`);
+  assert.ok(valueAt(result, 5) < valueAt(result, 0), "and must actually be lower five minutes out");
+  assert.equal(trendFromVelocity(measured).icon.startsWith("down"), true, "the arrow agrees with the same measurement");
+});
