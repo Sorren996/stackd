@@ -1,14 +1,12 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams, useLocation } from "react-router-dom";
-import BackButton from "@/components/navigation/BackButton";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import PageHeader from "@/components/editorial/PageHeader";
 import SectionCard from "@/components/editorial/SectionCard";
 import LedgerRow from "@/components/editorial/LedgerRow";
 import AnchorNumber from "@/components/editorial/AnchorNumber";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import EditLogSheet from "@/components/edit/EditLogSheet";
@@ -19,6 +17,7 @@ import HistoryMonthView from "@/components/history/HistoryMonthView";
 import HistoryWeekList from "@/components/history/HistoryWeekList";
 import MonthHeatmap from "@/components/history/MonthHeatmap";
 import DayRecap from "@/components/history/DayRecap";
+import JournalHeader from "@/components/history/JournalHeader";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 import { useAuth } from "@/lib/AuthContext";
 import { scrollToTop } from "@/lib/feedScroll";
@@ -100,6 +99,16 @@ export default function History() {
     () => allDays.find((d) => d.date === selectedDay) || null,
     [allDays, selectedDay]
   );
+
+  // Date paging for the recap header's chevrons: the days in order, and where
+  // the day being read sits among them.
+  const sortedDays = useMemo(
+    () => [...allDays].sort((a, b) => a.date.localeCompare(b.date)),
+    [allDays]
+  );
+  const dayIndex = selectedDay ? sortedDays.findIndex((d) => d.date === selectedDay) : -1;
+  const canPrevDay = dayIndex > 0;
+  const canNextDay = dayIndex >= 0 && dayIndex < sortedDays.length - 1;
 
   // Keep a ref of the current level so the URL-sync effect can detect whether
   // a navigation moved deeper or shallower and pick the slide direction.
@@ -363,50 +372,15 @@ export default function History() {
       {level === "month" ?
       <PageHeader italicWord="journal" /> :
 
-      <div className="flex items-center gap-3 px-1 pb-3">
-          <BackButton
-          fallback={journalFallback}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition"
-          style={{ color: "#f7f1e8" }} />
-          <div className="min-w-0 flex-1">
-            <h2 className="text-lg font-semibold truncate" style={{ color: "#f7f1e8" }}>
-              {headerTitle}
-            </h2>
-            <p className="text-xs font-medium" style={{ color: "#f7f1e8" }}>{headerSub}</p>
-          </div>
-        {level === "recap" && selectedDay && allDays.length > 1 &&
-        <div className="ml-auto flex items-center gap-1.5">
-            <button
-            type="button"
-            onClick={() => {
-              const sorted = [...allDays].sort((a, b) => a.date.localeCompare(b.date));
-              const idx = sorted.findIndex((d) => d.date === selectedDay);
-              if (idx > 0) handleSelectDay(sorted[idx - 1].date, -1, { replace: true });
-            }}
-            disabled={!allDays.some((d) => d.date < selectedDay)}
-            aria-label="Previous day"
-            className="flex h-8 w-8 items-center justify-center rounded-full transition disabled:opacity-30"
-            style={{ color: "#f7f1e8" }}>
-            
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <button
-            type="button"
-            onClick={() => {
-              const sorted = [...allDays].sort((a, b) => a.date.localeCompare(b.date));
-              const idx = sorted.findIndex((d) => d.date === selectedDay);
-              if (idx < sorted.length - 1) handleSelectDay(sorted[idx + 1].date, 1, { replace: true });
-            }}
-            disabled={!allDays.some((d) => d.date > selectedDay)}
-            aria-label="Next day"
-            className="flex h-8 w-8 items-center justify-center rounded-full transition disabled:opacity-30"
-            style={{ color: "#f7f1e8" }}>
-            
-              <ChevronRight className="h-5 w-5" />
-            </button>
-          </div>
-        }
-      </div>
+      <JournalHeader
+        title={headerTitle}
+        subtitle={headerSub}
+        fallback={journalFallback}
+        showDaySteps={level === "recap" && Boolean(selectedDay) && sortedDays.length > 1}
+        canPrev={canPrevDay}
+        canNext={canNextDay}
+        onPrevDay={() => handleSelectDay(sortedDays[dayIndex - 1].date, -1, { replace: true })}
+        onNextDay={() => handleSelectDay(sortedDays[dayIndex + 1].date, 1, { replace: true })} />
       }
 
       <AnimatePresence mode="wait" custom={direction}>

@@ -123,7 +123,7 @@ export default function DayRecap({
     <>
       <div className="editorial-surface rounded-2xl px-5 pb-3 pt-5">
         <p className="text-[10px] font-bold uppercase tracking-[0.16em]" style={{ color: "#746959" }}>
-          {isToday ? "Today so far" : dayLabel}
+          {isToday ? "Today so far" : "Your day"}
         </p>
 
         {headline && (
