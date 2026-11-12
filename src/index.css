@@ -199,33 +199,53 @@
 }
 
 @layer base {
-  /* Text selection is normal everywhere so users can copy/paste from their
-     journal and policy pages; only interactive controls suppress it. */
+  /* This is an app, not a web page. Nothing highlights on long press, and no
+     magnifier or copy/look-up callout bubble appears anywhere — on paragraphs,
+     headings, labels, list items, policy copy or journal text. Selection is
+     switched back on only for fields that are typed into, in the next rule. */
+  *,
+  *::before,
+  *::after {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+
   * {
     @apply border-border outline-ring/50;
-    -webkit-touch-callout: none;
     -webkit-tap-highlight-color: transparent;
   }
 
-  /* Readable text — paragraphs, policies, journal logs, disclaimers:
-     allow native text selection and the iOS long-press callout menu. */
-  p, h1, h2, h3, h4, h5, h6, li, blockquote, dd, dt, pre, code, figcaption {
-    -webkit-touch-callout: default;
-    -webkit-user-select: text;
-    -moz-user-select: text;
-    user-select: text;
+  html,
+  body {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
   }
 
-  /* Interactive controls, tabs, and icons: keep selection and callouts off. */
-  button, [role="button"], a, select, summary, svg, img {
+  /* Typing and editing keep native behaviour: caret placement, in-field
+     selection, the magnifier, and the edit callout inside the field only. */
+  input,
+  textarea,
+  select,
+  [contenteditable="true"],
+  [contenteditable=""] {
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+    -webkit-touch-callout: default;
+  }
+
+  /* Interactive controls, tabs and icons: no selection, no callout. */
+  button, [role="button"], a, summary, svg, img {
     -webkit-user-select: none;
     -moz-user-select: none;
     user-select: none;
-  }
-
-  /* Editable fields keep their native callout and selection. */
-  input, textarea, [contenteditable="true"] {
-    -webkit-touch-callout: default;
   }
 
   body {
