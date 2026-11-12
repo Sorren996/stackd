@@ -9,6 +9,7 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ScrollToTop from './components/ScrollToTop';
 import ParallaxBackground from './components/ParallaxBackground';
+import NavigationHistoryProvider from '@/components/navigation/NavigationHistoryProvider';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
@@ -404,7 +405,11 @@ function App() {
         <Router>
           <ScrollToTop />
           <ParallaxBackground />
-          <AuthenticatedApp />
+          {/* Records the app's own history entries so every page-level Back
+              arrow returns to the page the person actually came from. */}
+          <NavigationHistoryProvider>
+            <AuthenticatedApp />
+          </NavigationHistoryProvider>
         </Router>
         <Toaster />
         {/* Position and safe-area offset live in the component itself, so no

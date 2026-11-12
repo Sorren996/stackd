@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useSearchParams, useLocation } from "react-router-dom";
+import BackButton from "@/components/navigation/BackButton";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import PageHeader from "@/components/editorial/PageHeader";
@@ -43,7 +44,7 @@ function replaceCachedItem(queryClient, queryKey, updatedItem) {
 export default function History() {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
+  const location = useLocation();
   const levelOrder = { month: 0, days: 1, recap: 2 };
   const { connected: dexcomConnected } = useDexcomConnection();
   const { user } = useAuth();
@@ -111,6 +112,13 @@ export default function History() {
   // entry; the browser back button pops it and this effect re-derives the
   // active level, month, and day from the resolved params.
   useEffect(() => {
+    // The Journal stays mounted (hidden) behind the other tabs, and
+    // useSearchParams reflects whatever the router's CURRENT location is. Without
+    // this guard the hidden Journal would re-derive its own view from another
+    // tab's URL and forget the week or day the person was reading. It only ever
+    // follows its own route.
+    if (location.pathname !== "/history") return;
+
     const day = searchParams.get("day");
     const month = searchParams.get("month");
 
@@ -135,7 +143,7 @@ export default function History() {
     setSelectedDay(newDay);
     if (newLevel === "recap") requestAnimationFrame(() => scrollToTop());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
+  }, [searchParams, location.pathname]);
 
   const { data: recapData = {}, isLoading: loadingRecap } = useQuery({
     queryKey: ["history-day-recap", selectedDay],
@@ -289,23 +297,35 @@ export default function History() {
     onError: () => toast.error("Unable to update log. It may have been preserved.")
   });
 
+  // Drill-downs (Journal → month → day) are real pages, so they push an entry.
   const handleSelectMonth = (key) => {
+    if (level === "days" && selectedMonth === key) return;
     setDirection(1);
     setSearchParams({ month: key });
   };
 
-  const handleSelectDay = (date, dir = 1) => {
+  /**
+   * `replace` is for DATE PAGING (the previous/next day chevrons): it moves the
+   * day within the same view instead of stacking one history entry per tap, so
+   * Back from any day still returns to its week. Opening a day from the week
+   * list or the heatmap is a drill-down and keeps the default push.
+   */
+  const handleSelectDay = (date, dir = 1, { replace = false } = {}) => {
+    if (date === selectedDay && !replace) return;
     setDirection(dir);
     const params = {};
     if (selectedMonth) params.month = selectedMonth;
     params.day = date;
-    setSearchParams(params);
+    const next = new URLSearchParams(params).toString();
+    if (location.search.replace(/^\?/, "") === next) return;
+    setSearchParams(params, { replace });
     requestAnimationFrame(() => scrollToTop());
   };
 
-  const goBack = () => {
-    navigate(-1);
-  };
+  // Documented fallback when there is no trustworthy internal previous page:
+  // a day returns to its week, a week returns to the Journal root.
+  const journalFallback =
+    level === "recap" && selectedMonth ? `/history?month=${selectedMonth}` : "/history";
 
   let headerTitle = "Your Journal";
   let headerSub = "Reflecting on your last 9 months";
@@ -344,15 +364,10 @@ export default function History() {
       <PageHeader italicWord="journal" /> :
 
       <div className="flex items-center gap-3 px-1 pb-3">
-          <button
-          type="button"
-          onClick={goBack}
-          aria-label="Back"
+          <BackButton
+          fallback={journalFallback}
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition"
-          style={{ color: "#f7f1e8" }}>
-          
-            <ChevronLeft className="h-5 w-5" />
-          </button>
+          style={{ color: "#f7f1e8" }} />
           <div className="min-w-0 flex-1">
             <h2 className="text-lg font-semibold truncate" style={{ color: "#f7f1e8" }}>
               {headerTitle}
@@ -366,7 +381,7 @@ export default function History() {
             onClick={() => {
               const sorted = [...allDays].sort((a, b) => a.date.localeCompare(b.date));
               const idx = sorted.findIndex((d) => d.date === selectedDay);
-              if (idx > 0) handleSelectDay(sorted[idx - 1].date, -1);
+              if (idx > 0) handleSelectDay(sorted[idx - 1].date, -1, { replace: true });
             }}
             disabled={!allDays.some((d) => d.date < selectedDay)}
             aria-label="Previous day"
@@ -380,7 +395,7 @@ export default function History() {
             onClick={() => {
               const sorted = [...allDays].sort((a, b) => a.date.localeCompare(b.date));
               const idx = sorted.findIndex((d) => d.date === selectedDay);
-              if (idx < sorted.length - 1) handleSelectDay(sorted[idx + 1].date, 1);
+              if (idx < sorted.length - 1) handleSelectDay(sorted[idx + 1].date, 1, { replace: true });
             }}
             disabled={!allDays.some((d) => d.date > selectedDay)}
             aria-label="Next day"

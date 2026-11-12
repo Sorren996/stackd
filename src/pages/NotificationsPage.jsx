@@ -1,7 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/lib/AuthContext';
-import { useNavigate } from "react-router-dom";
-import { ChevronLeft } from "lucide-react";
+import BackButton from "@/components/navigation/BackButton";
 import NotificationHowItWorks from '@/components/notifications/NotificationHowItWorks';
 import SectionCard from "@/components/editorial/SectionCard";
 import useNotificationCenter from "@/hooks/useNotificationCenter";
@@ -22,7 +21,6 @@ import { SUPPLEMENT_NOTE } from "@/lib/notifications/notificationCopy";
  * tracks for themselves.
  */
 export default function NotificationsPage({ variant = "patient" }) {
-  const navigate = useNavigate();
   const { data, isLoading, isError, refetch } = useNotificationCenter();
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -49,15 +47,10 @@ export default function NotificationsPage({ variant = "patient" }) {
   return (
     <div className="mx-auto w-full min-w-0 max-w-md space-y-5 break-words pb-[calc(3rem+env(safe-area-inset-bottom))] pt-2">
       <div className="flex items-center gap-2 px-1 pb-1">
-        <button
-          type="button"
-          onClick={() => navigate(backTo)}
+        <BackButton
+          fallback={backTo}
           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg transition"
-          style={{ color: "#f7f1e8" }}
-          aria-label="Back"
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </button>
+          style={{ color: "#f7f1e8" }} />
         <h1 className="text-lg font-semibold" style={{ color: "#f7f1e8" }}>
           Your <span className="font-serif-italic" style={{ fontWeight: 400 }}>notifications</span>
         </h1>
