@@ -16,6 +16,7 @@ import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 import { useIsLightTheme } from "@/lib/theme";
 import { getGraphTheme } from "@/lib/graphTheme";
 import { shouldAnchorToLatest } from "@/lib/graphAnchor";
+import { resolveScrollBounds, isNearRightEdge, shouldFollowLatest } from "@/lib/graphScroll";
 import { useGlucoseStaleness } from "@/hooks/useGlucoseStaleness";
 import { getLatestDexcomReading, formatReadingAge } from "@/lib/glucoseStaleness";
 import { formatGlucose, glucoseUnitLabel, getGlucoseUnits } from "@/lib/glucoseUnits";
@@ -30,6 +31,9 @@ const STEP_MS = 3 * 60 * 1000;
 const HALF_HOUR_MS = 30 * 60 * 1000;
 const HISTORY_DAYS = 7;
 const FUTURE_HOURS = 3;
+
+// How long scroll silence marks a gesture (finger or iOS momentum) as finished.
+const SCROLL_SETTLE_MS = 150;
 const VISIBLE_HOURS = 6;
 const HOUR_MS = 60 * 60 * 1000;
 const CANDLESTICK_HISTORY_HOURS = 72;
@@ -121,32 +125,6 @@ function formatGlucoseDisplay(value) {
 function formatReadingTime(time) {
   if (!Number.isFinite(time)) return "-";
   return format(new Date(time), "h:mm a");
-}
-
-// Walk the actual rendered glucose <path> and return the point whose SVG x
-// matches targetX. The glucose line is monotone in x (time only moves
-// forward), so a binary search over path length converges reliably. Falls
-// back to the path endpoints when targetX lies outside the drawn range.
-function sampleGlucosePathAtX(pathEl, targetX) {
-  const totalLength = pathEl.getTotalLength();
-  if (!totalLength || !Number.isFinite(totalLength)) return null;
-
-  const first = pathEl.getPointAtLength(0);
-  const last = pathEl.getPointAtLength(totalLength);
-
-  if (targetX <= first.x) return { x: first.x, y: first.y };
-  if (targetX >= last.x) return { x: last.x, y: last.y };
-
-  let lo = 0;
-  let hi = totalLength;
-  for (let i = 0; i < 26; i += 1) {
-    const mid = (lo + hi) / 2;
-    const point = pathEl.getPointAtLength(mid);
-    if (point.x < targetX) lo = mid;else
-    hi = mid;
-  }
-  const point = pathEl.getPointAtLength((lo + hi) / 2);
-  return { x: point.x, y: point.y };
 }
 
 function buildMonotoneSegments(points, getValue) {
@@ -396,11 +374,16 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     }
   };
   const scrollRef = useRef(null);
-  const centerMarkerRef = useRef(null);
   const tickerRef = useRef(null);
   const tooltipTimeRef = useRef(null);
   const tooltipDateRef = useRef(null);
   const scrollFrameRef = useRef(null);
+  // True from a touch landing until 150ms after the last scroll event, so both
+  // the finger and the momentum it started count as an active gesture.
+  const scrollBusyRef = useRef(false);
+  // False once the reader has panned away from the live edge.
+  const nearRightEdgeRef = useRef(true);
+  const settleTimerRef = useRef(null);
   const prevLatestValueRef = useRef(null);
   const prevGlowStatusRef = useRef(null);
   const prevOverReferenceRef = useRef(false);
@@ -791,13 +774,23 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const pxPerMin = containerWidth / (visibleMs / 60000);
   const chartWidth = Math.max(containerWidth, Math.round(totalMs / 60000 * pxPerMin));
   const latestGlucoseX = (latestGlucoseBucket - domainStart) / totalMs * chartWidth;
-  const maxScrollLeft = Math.max(0, Math.min(chartWidth - containerWidth, latestGlucoseX - containerWidth / 2));
 
-  // Back to now: the newest real reading is centred in the viewport, so the
-  // marker and the large number sit on the freshest value instead of on a
-  // reading from hours earlier. maxScrollLeft IS that centring offset, capped
-  // so the chart never scrolls past the newest reading.
-  const nowScrollLeft = maxScrollLeft;
+  // THE SCROLL END IS THE "NOW" POSITION, BY CONSTRUCTION.
+  //
+  // The content is sized so its last scroll offset centres the newest reading:
+  // contentWidth = nowScrollLeft + one viewport. Nothing exists beyond that, so
+  // iOS momentum has no distance to travel into and no position ever needs
+  // correcting mid-gesture. The content used to run to the end of the future
+  // zone, leaving up to half a viewport of slack; momentum pushed past the real
+  // end, a scroll handler clamped it back, momentum pushed again — an
+  // oscillation that shook the now-guide and the curve while the finger was
+  // down. maxScrollLeft is now a fact about the content's size, never a position
+  // the code enforces afterwards.
+  const { nowScrollLeft, maxScrollLeft, contentWidth } = resolveScrollBounds({
+    chartWidth,
+    containerWidth,
+    latestX: latestGlucoseX
+  });
   const plotHeight = GLUCOSE_PLOT_HEIGHT;
 
   const mergedMonitoringIntervals = useMemo(() => {
@@ -1031,15 +1024,15 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     return Math.abs(a.time - time) <= Math.abs(b.time - time) ? a : b;
   };
 
+  // The centred reading's number, time and glow. The MARKER DOT is no longer
+  // drawn from here: it lives inside the scrollable content at the newest
+  // reading's own x, so it translates with the curve instead of being
+  // repositioned a frame late from a scroll event.
   const drawCenterGlucose = (scrollLeft, animate = false, suppressMotion = false) => {
-    const marker = centerMarkerRef.current;
     const timeEl = tooltipTimeRef.current;
     const dateEl = tooltipDateRef.current;
 
-    if (!filters.glucose || !glucoseLinePoints.length) {
-      if (marker) marker.style.opacity = "0";
-      return;
-    }
+    if (!filters.glucose || !glucoseLinePoints.length) return;
 
     const centerTime = getCenterTimeForScroll(scrollLeft);
 
@@ -1047,17 +1040,13 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     // nearest the viewport center. Its exact value drives the large number;
     // the marker can keep tracking the smooth line for visual continuity.
     const selected = getSelectedReading(centerTime);
-    if (!selected || !Number.isFinite(selected.time)) {
-      if (marker) marker.style.opacity = "0";
-      return;
-    }
+    if (!selected || !Number.isFinite(selected.time)) return;
 
     // Stale-reading contingency: when the CGM stream has gone quiet and the
     // viewport is centered in the gap past the last real reading, hide the
     // marker, show "--" in the ticker, and surface the last reading's age.
     const lastReadingTime = glucoseLinePoints.length ? glucoseLinePoints[glucoseLinePoints.length - 1].time : null;
     if (isGlucoseStale && lastReadingTime != null && centerTime >= lastReadingTime) {
-      if (marker) marker.style.opacity = "0";
       if (tickerRef.current) tickerRef.current.setValue("--", false);
       if (timeEl) timeEl.textContent = formatReadingAge(latestDexcomReading?.recorded_at) || "";
       if (dateEl) dateEl.textContent = "";
@@ -1075,41 +1064,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     const selectedKey = selected.id ?? selected.time;
     const shouldAnimate = !suppressMotion && lastSelectedKeyRef.current !== null && lastSelectedKeyRef.current !== selectedKey;
     lastSelectedKeyRef.current = selectedKey;
-
-    // Marker Y still samples the ACTUAL rendered glucose <path> so the dot
-    // stays glued to the smooth line (visual only). The NUMBER above is
-    // always the real reading — it is never derived from this pixel Y.
-    // Each run of readings is its own path, so sample them all and keep the
-    // one nearest the viewport centre.
-    const targetSvgX = scrollLeft + containerWidth / 2;
-    const pathEls = scrollRef.current?.querySelectorAll("path.stackd-glucose-trend") || [];
-    let markerY = null;
-    let markerDistance = Infinity;
-
-    pathEls.forEach((pathEl) => {
-      const sample = sampleGlucosePathAtX(pathEl, targetSvgX);
-      if (!sample || !Number.isFinite(sample.y)) return;
-      const distance = Math.abs(sample.x - targetSvgX);
-      if (distance < markerDistance) {
-        markerDistance = distance;
-        markerY = sample.y;
-      }
-    });
-
-    // Standing inside a genuine gap there is no line to sit on, so the marker
-    // uses the selected reading's own value.
-    if (markerY == null || !Number.isFinite(markerY) || markerDistance > 6) {
-      markerY = getGlucoseY(selectedValue);
-    }
-
-    if (marker) {
-      if (Number.isFinite(markerY)) {
-        marker.style.transform = `translate3d(-50%, ${markerY}px, 0) translateY(-50%)`;
-        marker.style.opacity = String(getHighRangeOpacity(selectedValue));
-      } else {
-        marker.style.opacity = "0";
-      }
-    }
 
     // Notify the card glow of the selected reading's glucose status. Only
     // dispatches when the status (high / low / in-range) changes, so this
@@ -1181,6 +1135,50 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     }
   };
 
+  // ── Scroll gestures: observe, never correct mid-gesture ────────────────
+  //
+  // A scroll handler may not move the container. Writing scrollLeft there
+  // fights iOS momentum (iOS pushes past the end, the handler pulls it back,
+  // iOS pushes again), and that fight is what moved the now-guide up to 142px
+  // mid-swipe. The only write left in this file is a single post-gesture
+  // correction, and it only runs if the browser still reports a position past
+  // the content end.
+  const settleScroll = () => {
+    scrollBusyRef.current = false;
+    const el = scrollRef.current;
+    if (el && el.scrollLeft > maxScrollLeft + 1) el.scrollLeft = maxScrollLeft;
+  };
+
+  const scheduleScrollSettle = () => {
+    if (settleTimerRef.current) clearTimeout(settleTimerRef.current);
+    settleTimerRef.current = setTimeout(() => {
+      settleTimerRef.current = null;
+      settleScroll();
+    }, SCROLL_SETTLE_MS);
+  };
+
+  const beginScrollGesture = () => {
+    scrollBusyRef.current = true;
+    if (settleTimerRef.current) clearTimeout(settleTimerRef.current);
+    settleTimerRef.current = null;
+  };
+
+  // The finger lifting does not end the gesture — iOS momentum keeps firing
+  // scroll events — so this only (re)arms the idle timer that decides when the
+  // movement is genuinely over.
+  const endScrollGesture = () => scheduleScrollSettle();
+
+  // Finger down or momentum still running — either way the reader is moving the
+  // viewport, so nothing here writes a position.
+  const handleScrollPosition = (scrollLeft) => {
+    scrollBusyRef.current = true;
+    // Following the live edge is only allowed from the live edge. Panning away
+    // latches it off until the reader comes back to the edge or taps Now.
+    nearRightEdgeRef.current = isNearRightEdge(scrollLeft, maxScrollLeft);
+    scheduleCenterGlucoseUpdate(scrollLeft);
+    scheduleScrollSettle();
+  };
+
   const scheduleCenterGlucoseUpdate = (scrollLeft) => {
     pendingScrollLeftRef.current = scrollLeft;
     if (scrollFrameRef.current) return;
@@ -1223,6 +1221,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const scrollToLatestGlucose = () => {
     if (!scrollRef.current) return;
 
+    // Tapping Now re-arms following, whatever the reader had latched off.
+    nearRightEdgeRef.current = true;
     scrollRef.current.scrollTo({ left: nowScrollLeft, behavior: "smooth" });
     scheduleCenterGlucoseUpdate(nowScrollLeft);
   };
@@ -1239,7 +1239,14 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       previousNowPosition: previousNowPosition.current,
       scrollLeft: scrollRef.current.scrollLeft,
     });
-    if (anchorToLatest) scrollRef.current.scrollLeft = nowScrollLeft;
+    // Auto-follow writes ONLY when the reader is not moving the viewport and was
+    // already sitting within 24px of the live edge. Once they pan away, nothing
+    // drags them back: the Now control is the way home.
+    const followAllowed = shouldFollowLatest({
+      busy: scrollBusyRef.current,
+      nearRightEdge: nearRightEdgeRef.current
+    });
+    if (anchorToLatest && followAllowed) scrollRef.current.scrollLeft = nowScrollLeft;
     previousNowPosition.current = nowScrollLeft;
     const position = scrollRef.current.scrollLeft;
     const latestValue = glucoseLinePoints.length > 0 ? glucoseLinePoints[glucoseLinePoints.length - 1].value : null;
@@ -1250,6 +1257,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
     return () => {
       if (scrollFrameRef.current) cancelAnimationFrame(scrollFrameRef.current);
+      if (settleTimerRef.current) clearTimeout(settleTimerRef.current);
     };
   }, [nowScrollLeft, latestGlucoseBucket, filters.glucose, glucoseLinePoints.length, positionedMonitoringIntervals, isGlucoseStale, glucoseUnits, resumeRevision]);
 
@@ -1375,19 +1383,6 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           <span className="text-[12px]" style={{ color: "#746959" }}>Not much logged in this window yet</span>
         </div>
       )}
-      {!isCandlestick && filters.glucose && glucoseLinePoints.length > 0 &&
-          <div
-            ref={centerMarkerRef}
-            className="pointer-events-none absolute left-1/2 top-0 z-10 opacity-0"
-            style={{
-              width: "9px",
-              height: "9px",
-              willChange: "transform, opacity"
-            }}>
-        <div className="absolute inset-0 rounded-full" style={{ background: "#9c5228", boxShadow: `0 0 6px #9c522866, 0 0 14px #9c522826` }} />
-        <div className="absolute -inset-[3px] rounded-full border" style={{ borderColor: "#eadccf" }} />
-      </div>
-          }
       {filters.glucose && filteredGlucoseReadings.length > 0 &&
           (() => {
             const candlePlotH = CHART_HEIGHT - CHART_MARGIN_TOP - X_AXIS_HEIGHT;
@@ -1415,17 +1410,22 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       <div
             ref={scrollRef}
             className="overflow-x-auto"
-            style={{ WebkitOverflowScrolling: "touch", scrollbarWidth: "none", overflowY: "hidden" }}
-            onScroll={(event) => {
-              const el = event.currentTarget;
-              if (el.scrollLeft > maxScrollLeft) {
-                el.scrollLeft = maxScrollLeft;
-                scheduleCenterGlucoseUpdate(maxScrollLeft);
-                return;
-              }
-              scheduleCenterGlucoseUpdate(el.scrollLeft);
-            }}>
-        <div className="relative" style={{ width: chartWidth, height: isCandlestick ? CANDLESTICK_TOTAL_HEIGHT : twoRowHeight }}>
+            style={{
+              WebkitOverflowScrolling: "touch",
+              // The end of the content is the end of the story: the browser is
+              // told not to rubber-band past it, so nothing has to be pulled
+              // back afterwards.
+              overscrollBehaviorX: "contain",
+              scrollbarWidth: "none",
+              overflowY: "hidden"
+            }}
+            onTouchStart={beginScrollGesture}
+            onTouchEnd={endScrollGesture}
+            onTouchCancel={endScrollGesture}
+            onScroll={(event) => handleScrollPosition(event.currentTarget.scrollLeft)}>
+        {/* Clipped at the content width, so no child can quietly extend the
+            scrollable area past the newest reading. */}
+        <div className="relative overflow-hidden" style={{ width: contentWidth, height: isCandlestick ? CANDLESTICK_TOTAL_HEIGHT : twoRowHeight }}>
           {isCandlestick ?
               <>
                 <CandlestickView
@@ -1783,6 +1783,30 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
 
                 })}
 
+          {/* The live marker, drawn INSIDE the scrollable content at the newest
+              reading's own x, through the same x and y functions the curve uses.
+              It therefore translates with the line it marks at any scroll speed,
+              and no frame repositions it from a scroll event — which is what
+              used to leave it up to 15px off the curve during a swipe. */}
+          {filters.glucose && latestGlucosePoint && !isGlucoseStale &&
+                (() => {
+                  const markerValue = Math.min(latestGlucosePoint.value, effectiveMax);
+                  return (
+                    <div
+                      className="pointer-events-none absolute z-10"
+                      style={{
+                        left: (latestGlucosePoint.time - domainStart) / totalMs * chartWidth,
+                        top: getGlucoseY(markerValue),
+                        transform: "translate(-50%, -50%)",
+                        width: 9,
+                        height: 9,
+                        opacity: getHighRangeOpacity(markerValue)
+                      }}>
+                      <div className="absolute inset-0 rounded-full" style={{ background: "#9c5228", boxShadow: "0 0 6px #9c522866, 0 0 14px #9c522826" }} />
+                      <div className="absolute -inset-[3px] rounded-full border" style={{ borderColor: "#eadccf" }} />
+                    </div>
+                  );
+                })()}
 
           </>
               }
