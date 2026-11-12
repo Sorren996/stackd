@@ -16,7 +16,7 @@ import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 import { useIsLightTheme } from "@/lib/theme";
 import { getGraphTheme } from "@/lib/graphTheme";
 import { shouldAnchorToLatest } from "@/lib/graphAnchor";
-import { resolveScrollBounds, isNearRightEdge, shouldFollowLatest } from "@/lib/graphScroll";
+import { resolveScrollBounds, isAtResting, shouldReturnToResting, shouldFollowLatest } from "@/lib/graphScroll";
 import { useGlucoseStaleness } from "@/hooks/useGlucoseStaleness";
 import { getLatestDexcomReading, formatReadingAge } from "@/lib/glucoseStaleness";
 import { formatGlucose, glucoseUnitLabel, getGlucoseUnits } from "@/lib/glucoseUnits";
@@ -382,7 +382,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   // the finger and the momentum it started count as an active gesture.
   const scrollBusyRef = useRef(false);
   // False once the reader has panned away from the live edge.
-  const nearRightEdgeRef = useRef(true);
+  const atRestingRef = useRef(true);
   const settleTimerRef = useRef(null);
   const prevLatestValueRef = useRef(null);
   const prevGlowStatusRef = useRef(null);
@@ -775,18 +775,15 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const chartWidth = Math.max(containerWidth, Math.round(totalMs / 60000 * pxPerMin));
   const latestGlucoseX = (latestGlucoseBucket - domainStart) / totalMs * chartWidth;
 
-  // THE SCROLL END IS THE "NOW" POSITION, BY CONSTRUCTION.
+  // THE RESTING POSITION IS THE CENTRE OF THE VIEWPORT.
   //
-  // The content is sized so its last scroll offset centres the newest reading:
-  // contentWidth = nowScrollLeft + one viewport. Nothing exists beyond that, so
-  // iOS momentum has no distance to travel into and no position ever needs
-  // correcting mid-gesture. The content used to run to the end of the future
-  // zone, leaving up to half a viewport of slack; momentum pushed past the real
-  // end, a scroll handler clamped it back, momentum pushed again — an
-  // oscillation that shook the now-guide and the curve while the finger was
-  // down. maxScrollLeft is now a fact about the content's size, never a position
-  // the code enforces afterwards.
-  const { nowScrollLeft, maxScrollLeft, contentWidth } = resolveScrollBounds({
+  // The newest reading belongs in the middle of the view: history to the left,
+  // the projection tail to the right. The content keeps the chart's full width,
+  // so that tail is on screen instead of being clipped at the reading. Every
+  // automatic write targets restingScrollLeft — never the end of the content,
+  // which sits up to half a viewport further right and is what parked the
+  // reading against the right edge.
+  const { restingScrollLeft, maxScrollLeft, contentWidth } = resolveScrollBounds({
     chartWidth,
     containerWidth,
     latestX: latestGlucoseX
@@ -1140,13 +1137,16 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   // A scroll handler may not move the container. Writing scrollLeft there
   // fights iOS momentum (iOS pushes past the end, the handler pulls it back,
   // iOS pushes again), and that fight is what moved the now-guide up to 142px
-  // mid-swipe. The only write left in this file is a single post-gesture
-  // correction, and it only runs if the browser still reports a position past
-  // the content end.
+  // mid-swipe. This is the only correction, it runs once a gesture has genuinely
+  // finished, and it targets the resting offset — the centre of the viewport,
+  // never the end of the content — so a bounce resolves to centre. Panning into
+  // history is never pulled back.
   const settleScroll = () => {
     scrollBusyRef.current = false;
     const el = scrollRef.current;
-    if (el && el.scrollLeft > maxScrollLeft + 1) el.scrollLeft = maxScrollLeft;
+    if (el && shouldReturnToResting(el.scrollLeft, restingScrollLeft)) {
+      el.scrollLeft = restingScrollLeft;
+    }
   };
 
   const scheduleScrollSettle = () => {
@@ -1174,7 +1174,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     scrollBusyRef.current = true;
     // Following the live edge is only allowed from the live edge. Panning away
     // latches it off until the reader comes back to the edge or taps Now.
-    nearRightEdgeRef.current = isNearRightEdge(scrollLeft, maxScrollLeft);
+    atRestingRef.current = isAtResting(scrollLeft, restingScrollLeft);
     scheduleCenterGlucoseUpdate(scrollLeft);
     scheduleScrollSettle();
   };
@@ -1222,9 +1222,9 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     if (!scrollRef.current) return;
 
     // Tapping Now re-arms following, whatever the reader had latched off.
-    nearRightEdgeRef.current = true;
-    scrollRef.current.scrollTo({ left: nowScrollLeft, behavior: "smooth" });
-    scheduleCenterGlucoseUpdate(nowScrollLeft);
+    atRestingRef.current = true;
+    scrollRef.current.scrollTo({ left: restingScrollLeft, behavior: "smooth" });
+    scheduleCenterGlucoseUpdate(restingScrollLeft);
   };
 
   useEffect(() => {
@@ -1240,14 +1240,16 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       scrollLeft: scrollRef.current.scrollLeft,
     });
     // Auto-follow writes ONLY when the reader is not moving the viewport and was
-    // already sitting within 24px of the live edge. Once they pan away, nothing
-    // drags them back: the Now control is the way home.
+    // already sitting within 24px of rest. Writing the new resting offset is the
+    // delta shift: the content moves with the reading, so the marker stays fixed
+    // in the centre instead of jumping. Once the reader pans away, nothing drags
+    // them back: the Now control is the way home.
     const followAllowed = shouldFollowLatest({
       busy: scrollBusyRef.current,
-      nearRightEdge: nearRightEdgeRef.current
+      atResting: atRestingRef.current
     });
-    if (anchorToLatest && followAllowed) scrollRef.current.scrollLeft = nowScrollLeft;
-    previousNowPosition.current = nowScrollLeft;
+    if (anchorToLatest && followAllowed) scrollRef.current.scrollLeft = restingScrollLeft;
+    previousNowPosition.current = restingScrollLeft;
     const position = scrollRef.current.scrollLeft;
     const latestValue = glucoseLinePoints.length > 0 ? glucoseLinePoints[glucoseLinePoints.length - 1].value : null;
     const shouldAnimate = !resumed && prevLatestValueRef.current !== null && latestValue !== null && latestValue !== prevLatestValueRef.current;
@@ -1259,7 +1261,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       if (scrollFrameRef.current) cancelAnimationFrame(scrollFrameRef.current);
       if (settleTimerRef.current) clearTimeout(settleTimerRef.current);
     };
-  }, [nowScrollLeft, latestGlucoseBucket, filters.glucose, glucoseLinePoints.length, positionedMonitoringIntervals, isGlucoseStale, glucoseUnits, resumeRevision]);
+  }, [restingScrollLeft, latestGlucoseBucket, filters.glucose, glucoseLinePoints.length, positionedMonitoringIntervals, isGlucoseStale, glucoseUnits, resumeRevision]);
 
   // The waiting state keeps the SAME root element as the chart, so the measured
   // container and its ResizeObserver survive the swap. Returning a different
@@ -1423,9 +1425,9 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             onTouchEnd={endScrollGesture}
             onTouchCancel={endScrollGesture}
             onScroll={(event) => handleScrollPosition(event.currentTarget.scrollLeft)}>
-        {/* Clipped at the content width, so no child can quietly extend the
-            scrollable area past the newest reading. */}
-        <div className="relative overflow-hidden" style={{ width: contentWidth, height: isCandlestick ? CANDLESTICK_TOTAL_HEIGHT : twoRowHeight }}>
+        {/* The chart's full width: at rest the reading is centred and the
+            projection tail continues past it to the right. */}
+        <div className="relative" style={{ width: contentWidth, height: isCandlestick ? CANDLESTICK_TOTAL_HEIGHT : twoRowHeight }}>
           {isCandlestick ?
               <>
                 <CandlestickView

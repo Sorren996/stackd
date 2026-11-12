@@ -1,66 +1,69 @@
-// Where the Daily Flow chart may scroll, and when it may follow new data.
+// Where the Daily Flow chart rests, and when it may follow new data.
 //
-// THE SCROLL END IS THE "NOW" POSITION, BY CONSTRUCTION.
+// THE RESTING POSITION IS THE CENTRE OF THE VIEWPORT.
 //
-// The chart's content used to run to the end of the future zone, which left up
-// to half a viewport of slack past the newest reading. iOS momentum pushed the
-// container into that slack, a scroll handler clamped it back, momentum pushed
-// again — an oscillation that moved the now-guide up to 142px and pulled the
-// curve out of alignment with its marker while the finger was down.
+// The newest reading belongs in the middle: history to the left, the projection
+// tail to the right. So the resting offset is simply nowX minus half a viewport,
+// bounded by the scrollable extent. Every automatic write goes to that one
+// number — the first paint, the Now control, a new reading while the reader is
+// sitting there, and the single correction after a gesture has genuinely
+// finished.
 //
-// So the content is sized to end exactly where the viewport centres the newest
-// reading: contentWidth = nowScrollLeft + one viewport. There is no slack left
-// to overscroll into, and no position ever has to be corrected afterwards.
-//
-// Nothing in this module writes a scroll position. It only answers where the
-// content ends and whether following is allowed.
+// Nothing in this module is called from a scroll handler, and nothing here runs
+// while a finger or iOS momentum is moving the viewport.
 
-/** How close to the live edge the reader must already be to keep following. */
+/** How far from the resting offset still counts as sitting at rest. */
 export const NEAR_EDGE_PX = 24;
 
 /**
- * The scroll geometry for the current chart and viewport.
+ * The resting scroll offset and the geometry around it.
  *
  * @param {object} input
  * @param {number} input.chartWidth      full drawn width of the chart
  * @param {number} input.containerWidth  visible viewport width
  * @param {number} input.latestX         x of the newest reading inside the content
- * @returns {{ nowScrollLeft: number, maxScrollLeft: number, contentWidth: number }}
+ * @returns {{ restingScrollLeft: number, maxScrollLeft: number, contentWidth: number }}
  */
 export function resolveScrollBounds({ chartWidth, containerWidth, latestX }) {
-  const width = Number(chartWidth);
   const viewport = Number(containerWidth);
-  const x = Number(latestX);
+  const width = Number(chartWidth);
   if (!(viewport > 0) || !Number.isFinite(width)) {
-    return { nowScrollLeft: 0, maxScrollLeft: 0, contentWidth: Math.max(0, viewport || 0) };
+    return { restingScrollLeft: 0, maxScrollLeft: 0, contentWidth: Math.max(0, viewport || 0) };
   }
 
-  // The furthest the browser could scroll if the content ran to the full chart.
-  const naturalMax = Math.max(0, width - viewport);
-  // The offset that puts the newest reading in the middle of the viewport.
-  const centredOnLatest = Number.isFinite(x) ? x - viewport / 2 : naturalMax;
-  const nowScrollLeft = Math.max(0, Math.min(naturalMax, centredOnLatest));
+  const maxScrollLeft = Math.max(0, width - viewport);
+  // Centre the newest reading on it.
+  const centredOnLatest = Number.isFinite(Number(latestX)) ? Number(latestX) - viewport / 2 : maxScrollLeft;
+  const restingScrollLeft = Math.max(0, Math.min(maxScrollLeft, centredOnLatest));
 
-  // The content ends here, so the browser's own maximum IS the now position and
-  // there is nothing beyond it to overscroll into.
   return {
-    nowScrollLeft,
-    maxScrollLeft: nowScrollLeft,
-    contentWidth: nowScrollLeft + viewport,
+    restingScrollLeft,
+    maxScrollLeft,
+    // The content keeps the chart's full width, so the projection tail stays
+    // visible to the right of the reading instead of being clipped at it.
+    contentWidth: Math.max(width, viewport),
   };
 }
 
-/** Is the reader sitting at the live edge, within a small tolerance? */
-export function isNearRightEdge(scrollLeft, maxScrollLeft, tolerance = NEAR_EDGE_PX) {
+/** Is the viewport sitting at its resting offset, within a small tolerance? */
+export function isAtResting(scrollLeft, restingScrollLeft, tolerance = NEAR_EDGE_PX) {
   if (!Number.isFinite(scrollLeft)) return true;
-  return scrollLeft >= Number(maxScrollLeft) - tolerance;
+  return Math.abs(scrollLeft - Number(restingScrollLeft)) <= tolerance;
+}
+
+/**
+ * A gesture ended somewhere past the resting offset — a bounce into the future
+ * zone. Panning into history (left of rest) is never pulled back here.
+ */
+export function shouldReturnToResting(scrollLeft, restingScrollLeft) {
+  if (!Number.isFinite(scrollLeft)) return false;
+  return scrollLeft > Number(restingScrollLeft) + 1;
 }
 
 /**
  * Following new data is only allowed when the reader is not moving the viewport
- * and was already at the live edge. Once they pan away, only the Now control
- * brings following back.
+ * and was already sitting at rest. Once they pan away, only Now brings it back.
  */
-export function shouldFollowLatest({ busy, nearRightEdge }) {
-  return !busy && nearRightEdge === true;
+export function shouldFollowLatest({ busy, atResting }) {
+  return !busy && atResting === true;
 }
