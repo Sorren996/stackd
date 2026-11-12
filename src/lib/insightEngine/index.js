@@ -758,6 +758,21 @@ export function projectGlucose(snapshot, opts = {}) {
   // right whichever way glucose goes. So the half-width is narrowed to whatever
   // the floor and ceiling allow, and if that half-width collapses the engine
   // draws nothing rather than a confident centre.
+  // ── The longest horizon that is still honest ───────────────────────────
+  // The band is what the reader is shown. When it would be too wide to be
+  // useful at a horizon, the horizon is shortened to the longest honest one
+  // (60 → 30 → 15) and THAT is drawn. A forecast is never withheld because its
+  // band is wide: width is how "we are less sure" is shown.
+  const usableHorizons = [...new Set([horizonMin, 60, 30, 15])]
+    .filter((h) => h <= horizonMin)
+    .sort((a, b) => b - a)
+    .filter((h) =>
+      computeSigmaAtOffset(h, snapshot.dataQuality, 0, uncertaintyCalibration, momentumBandMgdl) <= MAX_DRAWN_HALF_WIDTH_MGDL
+    );
+  // The longest honest horizon, or 15 minutes as the floor — a forecast is
+  // drawn either way.
+  const drawLimitMin = usableHorizons.length > 0 ? usableHorizons[0] : Math.min(15, horizonMin);
+
   const trajectory = [];
   let halfWidthSoFar = 0;
   for (const point of superposition.points) {
@@ -774,9 +789,8 @@ export function projectGlucose(snapshot, opts = {}) {
     const sigma = computeSigmaAtOffset(
       point.min_offset, snapshot.dataQuality, point.rate, uncertaintyCalibration, momentumBandMgdl
     );
-    // Unacceptable past this horizon: truncate and keep the earlier points, so
-    // the near-term line still draws.
-    if (sigma > MAX_DRAWN_HALF_WIDTH_MGDL) break;
+    // Stop at the honest horizon chosen above, keeping every earlier point.
+    if (point.min_offset > drawLimitMin) break;
     // Running maximum: the band grows with the horizon but never narrows.
     halfWidthSoFar = Math.max(halfWidthSoFar, sigma);
     trajectory.push({
@@ -854,7 +868,10 @@ export function projectGlucose(snapshot, opts = {}) {
 
   return {
     trajectory, anchor: snapshot.anchor, modelVersion, mealModelVersion,
-    generatedAt, horizonMinutes: horizonMin,
+    generatedAt,
+    // How far the drawn line actually reaches — shortened when the band would
+    // have been too wide to be useful.
+    horizonMinutes: drawLimitMin,
     confidence: Math.round(confidence * 100) / 100,
     abstained: false, abstainReason: null,
     dataQuality: snapshot.dataQuality,
@@ -898,6 +915,11 @@ export function projectGlucose(snapshot, opts = {}) {
           calibrated: uncertaintyCalibration.calibrated,
           sampleCount: uncertaintyCalibration.sampleCount,
           coverageObserved: uncertaintyCalibration.coverageObserved,
+          // Where this band's width came from, and how many residuals fed it.
+          bandSource: uncertaintyCalibration.bandSource ?? null,
+          residualCount: uncertaintyCalibration.residualCount ?? 0,
+          priorResidualCount: uncertaintyCalibration.priorResidualCount ?? 0,
+          volatilityScale: uncertaintyCalibration.volatilityScale ?? 1,
         }
       : null,
   };

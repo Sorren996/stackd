@@ -960,6 +960,21 @@ export function projectGlucose(
   // glucose goes. So the half-width is narrowed to whatever the floor and
   // ceiling allow, and if it collapses the engine abstains rather than claim a
   // centre.
+  // ── The longest horizon that is still honest ───────────────────────────
+  // The band is what the reader is shown. When it would be too wide to be
+  // useful at a horizon, the horizon is shortened to the longest honest one
+  // (60 → 30 → 15) and THAT is drawn. A forecast is never withheld because its
+  // band is wide: width is how "we are less sure" is shown.
+  const usableHorizons = [...new Set([horizonMin, 60, 30, 15])]
+    .filter((h) => h <= horizonMin)
+    .sort((a, b) => b - a)
+    .filter((h) =>
+      computeSigmaAtOffset(h, snapshot.dataQuality, 0, uncertaintyCalibration, momentumBandMgdl) <= MAX_DRAWN_HALF_WIDTH_MGDL
+    );
+  // The longest honest horizon, or 15 minutes as the floor — a forecast is
+  // drawn either way.
+  const drawLimitMin = usableHorizons.length > 0 ? usableHorizons[0] : Math.min(15, horizonMin);
+
   const trajectory: ProjectionPoint[] = [];
   let halfWidthSoFar = 0;
   for (const point of superposition.points) {
@@ -976,9 +991,8 @@ export function projectGlucose(
     const sigma = computeSigmaAtOffset(
       point.min_offset, snapshot.dataQuality, point.rate, uncertaintyCalibration, momentumBandMgdl
     );
-    // Unacceptable past this horizon: truncate and keep every earlier point, so
-    // the near-term line still draws instead of nothing drawing at all.
-    if (sigma > MAX_DRAWN_HALF_WIDTH_MGDL) break;
+    // Stop at the honest horizon chosen above, keeping every earlier point.
+    if (point.min_offset > drawLimitMin) break;
     // Carried forward as a running maximum, so the band is MONOTONE: it can grow
     // with the horizon but never narrow. The old clamp narrowed the width as the
     // projected value approached the top of the scale, which is how a band read
@@ -1098,6 +1112,9 @@ export function projectGlucose(
     // The measurement behind the opening rate, and the residual it produced.
     // Persisted with the projection so a forecast can be audited against the
     // trend it started from.
+    // How far the drawn line actually reaches — shortened when the band would
+    // have been too wide to be useful.
+    horizonMinutes: drawLimitMin,
     measuredVelocity: momentumInfo ? momentumInfo.measuredVelocity : null,
     momentum: momentumInfo,
     // Milestone 4: explicit model resolution provenance.
@@ -1115,6 +1132,13 @@ export function projectGlucose(
           calibrated: uncertaintyCalibration.calibrated,
           sampleCount: uncertaintyCalibration.sampleCount,
           coverageObserved: uncertaintyCalibration.coverageObserved,
+          // Where this band's width came from, and how many residuals fed it:
+          // "fitted" from this model's own scored forecasts, "prior" from the
+          // account's earlier scored forecasts, "heuristic" from nothing scored.
+          bandSource: uncertaintyCalibration.bandSource ?? null,
+          residualCount: uncertaintyCalibration.residualCount ?? 0,
+          priorResidualCount: uncertaintyCalibration.priorResidualCount ?? 0,
+          volatilityScale: uncertaintyCalibration.volatilityScale ?? 1,
         }
       : null,
   };

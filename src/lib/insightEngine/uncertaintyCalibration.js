@@ -85,10 +85,60 @@ function median(values) {
   return quantile(values, 0.5);
 }
 
-export function calibrateUncertainty(evaluatedProjections) {
-  const valid = evaluatedProjections.filter(
+// A prior measured on a different stretch of days is scaled by how volatile the
+// sensor is right now, so a clean afternoon does not inherit a rough week's width.
+const VOLATILITY_REFERENCE = 1.0;
+const MIN_VOLATILITY_SCALE = 0.6;
+const MAX_VOLATILITY_SCALE = 1.4;
+
+function volatilityScale(volatilitySd) {
+  const v = Number(volatilitySd);
+  if (!Number.isFinite(v) || v <= 0) return 1;
+  return Math.max(MIN_VOLATILITY_SCALE, Math.min(MAX_VOLATILITY_SCALE, v / VOLATILITY_REFERENCE));
+}
+
+function fitResiduals(rows) {
+  const rawByHorizon = {};
+  const horizonSampleCounts = {};
+  let total = 0;
+
+  for (const h of EVAL_HORIZONS) {
+    const residuals = [];
+    for (const p of rows) {
+      const horizonScores = (p.evaluation.horizons || []).filter(
+        (s) => s.horizon_min === h && s.scored && s.abs_error != null
+      );
+      for (const s of horizonScores) {
+        const signed = Number(s.error);
+        residuals.push(Number.isFinite(signed) ? signed : s.abs_error);
+      }
+    }
+    horizonSampleCounts[h] = residuals.length;
+    total += residuals.length;
+    if (residuals.length >= MIN_HORIZON_SAMPLES) {
+      const centre = median(residuals);
+      const halfWidth = quantile(residuals.map((r) => Math.abs(r - centre)), NOMINAL_BAND_COVERAGE);
+      rawByHorizon[h] = Math.min(MAX_SIGMA_MGDL, Math.max(MIN_SIGMA_FLOOR_MGDL, halfWidth));
+    }
+  }
+
+  return { rawByHorizon, horizonSampleCounts, total };
+}
+
+// THREE SOURCES, in order of preference, recorded as `bandSource`:
+//   "fitted"    — this shape model has its own scored outcomes.
+//   "prior"     — it has not been scored yet, so earlier model versions'
+//                 residuals are the starting band, scaled by current volatility.
+//                 This is what stops a new model deadlocking: a model that
+//                 abstains is never scored, and a model never scored can never
+//                 earn a band.
+//   "heuristic" — genuinely nothing scored yet (a new account).
+export function calibrateUncertainty(evaluatedProjections, options = {}) {
+  const valid = (evaluatedProjections || []).filter(
     (p) => p.evaluation && p.evaluation.status === "evaluated"
   );
+
+  const scale = volatilityScale(options.volatilitySd);
 
   if (valid.length < MIN_SAMPLES_FOR_CALIBRATION) {
     return {
@@ -100,33 +150,49 @@ export function calibrateUncertainty(evaluatedProjections) {
       horizonSampleCounts: {},
       coverageObserved: null,
       coverageSampleCount: 0,
+      bandSource: "heuristic",
+      residualCount: 0,
+      priorResidualCount: 0,
+      volatilityScale: 1,
     };
   }
 
-  const rawByHorizon = {};
-  const horizonSampleCounts = {};
+  const currentModelVersion = options.currentModelVersion || null;
+  const currentRows = currentModelVersion
+    ? valid.filter((p) => p.model_version === currentModelVersion)
+    : valid;
 
-  for (const h of EVAL_HORIZONS) {
-    const residuals = [];
-    for (const p of valid) {
-      const horizonScores = (p.evaluation.horizons || []).filter(
-        (s) => s.horizon_min === h && s.scored && s.abs_error != null
-      );
-      for (const s of horizonScores) {
-        const signed = Number(s.error);
-        residuals.push(Number.isFinite(signed) ? signed : s.abs_error);
-      }
-    }
-    horizonSampleCounts[h] = residuals.length;
-    if (residuals.length >= MIN_HORIZON_SAMPLES) {
-      const centre = median(residuals);
-      const halfWidth = quantile(residuals.map((r) => Math.abs(r - centre)), NOMINAL_BAND_COVERAGE);
-      rawByHorizon[h] = Math.min(MAX_SIGMA_MGDL, Math.max(MIN_SIGMA_FLOOR_MGDL, halfWidth));
-    }
+  const currentFit = fitResiduals(currentRows);
+  const fittedEnough = currentFit.total >= MIN_SAMPLES_FOR_CALIBRATION;
+  const fit = fittedEnough ? currentFit : fitResiduals(valid);
+  const bandSource = fittedEnough ? "fitted" : "prior";
+
+  if (fit.total < MIN_HORIZON_SAMPLES) {
+    return {
+      method: "heuristic",
+      version: UNCERTAINTY_VERSION,
+      sigmaByHorizon: {},
+      calibrated: false,
+      sampleCount: valid.length,
+      horizonSampleCounts: fit.horizonSampleCounts,
+      coverageObserved: null,
+      coverageSampleCount: 0,
+      bandSource: "heuristic",
+      residualCount: fit.total,
+      priorResidualCount: currentFit.total,
+      volatilityScale: 1,
+    };
+  }
+
+  // A prior measured earlier is scaled by how quiet the sensor is right now; a
+  // fitted band is used exactly as measured.
+  const rawForFit = {};
+  for (const [h, width] of Object.entries(fit.rawByHorizon)) {
+    rawForFit[Number(h)] = bandSource === "prior" ? width * scale : width;
   }
 
   // Fitted once, monotonically, saturating — never per-horizon in isolation.
-  const sigmaByHorizon = monotoneSaturatingFit(rawByHorizon);
+  const sigmaByHorizon = monotoneSaturatingFit(rawForFit);
 
   const withIntervals = valid.filter(
     (p) => p.evaluation.coverage != null && (p.evaluation.horizons || []).some((s) => s.scored && s.in_interval !== null)
@@ -159,9 +225,13 @@ export function calibrateUncertainty(evaluatedProjections) {
     sigmaByHorizon,
     calibrated: hasAnySigma,
     sampleCount: valid.length,
-    horizonSampleCounts,
+    horizonSampleCounts: fit.horizonSampleCounts,
     coverageObserved,
     coverageSampleCount,
+    bandSource: hasAnySigma ? bandSource : "heuristic",
+    residualCount: fit.total,
+    priorResidualCount: currentFit.total,
+    volatilityScale: bandSource === "prior" ? Math.round(scale * 100) / 100 : 1,
   };
 }
 

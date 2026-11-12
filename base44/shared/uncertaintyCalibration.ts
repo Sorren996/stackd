@@ -1,30 +1,33 @@
 // Stackd Insight Engine — Empirical Uncertainty Calibration (Milestone 4)
 //
 // Calibrates prediction-interval width (sigma) from the user's historical
-// out-of-sample forecast errors. When enough evaluated projections exist,
-// sigma at each horizon is set to the empirical mean absolute error (MAE)
-// at that horizon — a data-driven measure of how far off the model has
-// actually been. When insufficient evaluation data exists, the interval
-// falls back to the existing heuristic sigma and is explicitly marked as
-// "uncalibrated."
+// out-of-sample forecast errors.
+//
+// THREE SOURCES, IN ORDER OF PREFERENCE — and every projection records which one
+// it used, so a band can always be audited:
+//
+//   "fitted"  — the current shape model has its own scored outcomes. Sigma comes
+//               from that model's residuals alone.
+//   "prior"   — the current model has not been scored yet, but earlier scored
+//               forecasts (older model versions) exist. Those residuals are used
+//               as the STARTING band, scaled by how volatile the sensor is right
+//               now. This is what stops a new model from being deadlocked: a
+//               model that abstains produces no residuals, and a model with no
+//               residuals can never earn a band.
+//   "heuristic" — genuinely nothing scored yet (a new account). Marked
+//               uncalibrated, because it is.
 //
 // HONESTY PRINCIPLES:
-//   - An interval is NOT claimed to be "calibrated" until its coverage has
-//     been measured on suitable observations.
-//   - Intervals are NOT narrowed merely because a personalized model is
-//     active. Personalization without validation does not justify tighter
-//     intervals.
-//   - When the empirical data is insufficient, the interval is marked
-//     "uncalibrated" so consumers know it is a heuristic, not a measured
-//     error distribution.
-//   - Coverage is only reported when enough observations with intervals
-//     exist to compute it meaningfully.
+//   - An interval is NOT claimed to be "calibrated" until residuals exist.
+//   - Intervals are NOT narrowed merely because a personalized model is active.
+//   - Band width is never a reason to withhold a forecast. Width is how "we are
+//     less sure" is shown; the horizon is shortened instead (see the engine).
 //
 // Self-contained (no base44:runtime, no npm: imports).
 
 import { EVAL_HORIZONS } from "./forecastEvaluation.ts";
 
-export const UNCERTAINTY_VERSION = "1.0.0";
+export const UNCERTAINTY_VERSION = "1.1.0";
 
 // Minimum evaluated projections to calibrate uncertainty empirically.
 // Below this, the heuristic is used and the interval is marked uncalibrated.
@@ -99,6 +102,9 @@ export function monotoneSaturatingFit(rawByHorizon: Record<number, number>): Rec
   return out;
 }
 
+// Where a band's width came from. Recorded on every projection.
+export type BandSource = "fitted" | "prior" | "heuristic";
+
 export interface UncertaintyCalibration {
   method: "heuristic" | "empirical_calibrated";
   version: string;
@@ -108,62 +114,76 @@ export interface UncertaintyCalibration {
   horizonSampleCounts: Record<number, number>;  // observations per horizon
   coverageObserved: number | null;           // observed interval coverage (0-1)
   coverageSampleCount: number;              // projections with intervals used for coverage
+  // ── Audit ──
+  bandSource: BandSource;                   // fitted | prior | heuristic
+  residualCount: number;                    // residuals that produced this band
+  priorResidualCount: number;               // residuals from earlier model versions
+  volatilityScale: number;                  // multiplier applied to a prior band
 }
 
-// ── Calibration from evaluation history ────────────────────────────────────
+export interface CalibrationOptions {
+  // The shape model currently drawing forecasts. Residuals from this version are
+  // the only ones that describe it directly; earlier versions' residuals are the
+  // honest starting point until it has been scored itself.
+  currentModelVersion?: string;
+  // Reading-to-reading volatility right now, mg/dL per minute. A quieter sensor
+  // than the history deserves a slightly narrower prior.
+  volatilitySd?: number;
+}
 
-export function calibrateUncertainty(
-  evaluatedProjections: Array<{
-    evaluation?: {
-      status: string;
-      mae: number | null;
-      horizons?: Array<{
-        horizon_min: number;
-        scored: boolean;
-        abs_error: number | null;
-        in_interval: boolean | null;
-      }>;
-      coverage?: number | null;
-    };
-  }>
-): UncertaintyCalibration {
-  const valid = evaluatedProjections.filter(
-    (p) => p.evaluation && p.evaluation.status === "evaluated"
-  );
+// A prior measured on a different stretch of days is scaled by how volatile the
+// sensor is right now, so a clean afternoon does not inherit a rough week's width.
+const VOLATILITY_REFERENCE = 1.0;
+const MIN_VOLATILITY_SCALE = 0.6;
+const MAX_VOLATILITY_SCALE = 1.4;
 
-  if (valid.length < MIN_SAMPLES_FOR_CALIBRATION) {
-    return {
-      method: "heuristic",
-      version: UNCERTAINTY_VERSION,
-      sigmaByHorizon: {},
-      calibrated: false,
-      sampleCount: valid.length,
-      horizonSampleCounts: {},
-      coverageObserved: null,
-      coverageSampleCount: 0,
-    };
-  }
+function volatilityScale(volatilitySd: number | undefined): number {
+  const v = Number(volatilitySd);
+  if (!Number.isFinite(v) || v <= 0) return 1;
+  return Math.max(MIN_VOLATILITY_SCALE, Math.min(MAX_VOLATILITY_SCALE, v / VOLATILITY_REFERENCE));
+}
 
-  // Compute the RAW fitted width at each horizon from signed residuals, then fit
-  // it once — monotonically and saturating — across the horizon ladder.
+type EvaluatedProjection = {
+  model_version?: string;
+  evaluation?: {
+    status: string;
+    mae: number | null;
+    horizons?: Array<{
+      horizon_min: number;
+      scored: boolean;
+      abs_error: number | null;
+      in_interval: boolean | null;
+      error?: number | null;
+    }>;
+    coverage?: number | null;
+  };
+};
+
+function fitResiduals(rows: EvaluatedProjection[]): {
+  rawByHorizon: Record<number, number>;
+  horizonSampleCounts: Record<number, number>;
+  total: number;
+} {
   const rawByHorizon: Record<number, number> = {};
   const horizonSampleCounts: Record<number, number> = {};
+  let total = 0;
 
   for (const h of EVAL_HORIZONS) {
     const residuals: number[] = [];
-    for (const p of valid) {
+    for (const p of rows) {
       const horizonScores = p.evaluation!.horizons?.filter(
         (s) => s.horizon_min === h && s.scored && s.abs_error != null
       ) || [];
       for (const s of horizonScores) {
         // Signed residual where the evaluator stored one, so the band is centred
         // on where the model actually lands rather than on where it aimed.
-        const signed = Number((s as { error?: number | null }).error);
+        const signed = Number(s.error);
         residuals.push(Number.isFinite(signed) ? signed : (s.abs_error as number));
       }
     }
 
     horizonSampleCounts[h] = residuals.length;
+    total += residuals.length;
 
     if (residuals.length >= MIN_HORIZON_SAMPLES) {
       const centre = median(residuals);
@@ -176,9 +196,81 @@ export function calibrateUncertainty(
     }
   }
 
+  return { rawByHorizon, horizonSampleCounts, total };
+}
+
+// ── Calibration from evaluation history ────────────────────────────────────
+
+export function calibrateUncertainty(
+  evaluatedProjections: EvaluatedProjection[],
+  options: CalibrationOptions = {}
+): UncertaintyCalibration {
+  const valid = (evaluatedProjections || []).filter(
+    (p) => p.evaluation && p.evaluation.status === "evaluated"
+  );
+
+  const scale = volatilityScale(options.volatilitySd);
+
+  // Nothing scored at all: a genuinely new account. The heuristic stands and the
+  // interval says so.
+  if (valid.length < MIN_SAMPLES_FOR_CALIBRATION) {
+    return {
+      method: "heuristic",
+      version: UNCERTAINTY_VERSION,
+      sigmaByHorizon: {},
+      calibrated: false,
+      sampleCount: valid.length,
+      horizonSampleCounts: {},
+      coverageObserved: null,
+      coverageSampleCount: 0,
+      bandSource: "heuristic",
+      residualCount: 0,
+      priorResidualCount: 0,
+      volatilityScale: 1,
+    };
+  }
+
+  // The current model's own residuals — the only ones that describe it directly.
+  const currentModelVersion = options.currentModelVersion || null;
+  const currentRows = currentModelVersion
+    ? valid.filter((p) => p.model_version === currentModelVersion)
+    : valid;
+
+  const currentFit = fitResiduals(currentRows);
+  const fittedEnough = currentFit.total >= MIN_SAMPLES_FOR_CALIBRATION;
+
+  // The starting band: the current model's residuals when it has earned them,
+  // otherwise every scored forecast the account has (earlier model versions).
+  const fit = fittedEnough ? currentFit : fitResiduals(valid);
+  const bandSource: BandSource = fittedEnough ? "fitted" : "prior";
+
+  if (fit.total < MIN_HORIZON_SAMPLES) {
+    return {
+      method: "heuristic",
+      version: UNCERTAINTY_VERSION,
+      sigmaByHorizon: {},
+      calibrated: false,
+      sampleCount: valid.length,
+      horizonSampleCounts: fit.horizonSampleCounts,
+      coverageObserved: null,
+      coverageSampleCount: 0,
+      bandSource: "heuristic",
+      residualCount: fit.total,
+      priorResidualCount: currentFit.total,
+      volatilityScale: 1,
+    };
+  }
+
+  // A prior measured earlier is scaled by how quiet the sensor is right now; a
+  // fitted band is used exactly as measured.
+  const rawForFit: Record<number, number> = {};
+  for (const [h, width] of Object.entries(fit.rawByHorizon)) {
+    rawForFit[Number(h)] = bandSource === "prior" ? width * scale : width;
+  }
+
   // One fit for the whole ladder: carrying a running maximum makes the band
   // monotone (never narrower later), and saturation keeps it readable.
-  const sigmaByHorizon = monotoneSaturatingFit(rawByHorizon);
+  const sigmaByHorizon = monotoneSaturatingFit(rawForFit);
 
   // Compute observed coverage from projections that had intervals.
   const withIntervals = valid.filter(
@@ -190,7 +282,6 @@ export function calibrateUncertainty(
   let coverageSampleCount = 0;
 
   if (withIntervals.length >= MIN_HORIZON_SAMPLES) {
-    // Recompute coverage from horizon-level in_interval flags for accuracy.
     const allIntervalChecks: boolean[] = [];
     for (const p of withIntervals) {
       for (const s of (p.evaluation!.horizons || [])) {
@@ -214,9 +305,13 @@ export function calibrateUncertainty(
     sigmaByHorizon,
     calibrated: hasAnySigma,
     sampleCount: valid.length,
-    horizonSampleCounts,
+    horizonSampleCounts: fit.horizonSampleCounts,
     coverageObserved,
     coverageSampleCount,
+    bandSource: hasAnySigma ? bandSource : "heuristic",
+    residualCount: fit.total,
+    priorResidualCount: currentFit.total,
+    volatilityScale: bandSource === "prior" ? Math.round(scale * 100) / 100 : 1,
   };
 }
 

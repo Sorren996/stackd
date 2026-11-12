@@ -118,13 +118,6 @@ export default async function (req) {
     const mealModelState = (mealStateRows && mealStateRows.length > 0) ? mealStateRows[0] : null;
     const modelResolution = resolveModelComponents(modelState, mealModelState);
 
-    // ── Uncertainty calibration (Milestone 4) ──
-    // Calibrate prediction-interval width from the user's historical
-    // out-of-sample forecast errors. When enough evaluated projections exist,
-    // sigma is set to the empirical MAE at each horizon. Otherwise the
-    // heuristic is used and the interval is marked as uncalibrated.
-    const uncertaintyCalibration = calibrateUncertainty(evaluatedProjections || []);
-
     // ── Rescue-carb learning ────────────────────────────────────────────────
     // Rescue carbs are projected on their own fast absorption term. How much
     // and how quickly this person's glucose actually rises after one is learned
@@ -225,6 +218,18 @@ export default async function (req) {
 
     // Run the projection engine with the resolved model and calibrated uncertainty.
     const snapshot = normalizeInputs(readings, meals, doses, settings, now);
+
+    // ── Uncertainty calibration ──
+    // Seeded from the account's OWN scored forecasts: this shape model's
+    // residuals once it has them, and earlier model versions' residuals (scaled
+    // by how quiet the sensor is right now) until it does. A model that abstains
+    // is never scored, and a model that is never scored can never earn a band —
+    // an empty-set default would deadlock it permanently. The band's source and
+    // residual count are recorded on every projection.
+    const uncertaintyCalibration = calibrateUncertainty(evaluatedProjections || [], {
+      currentModelVersion: PROJECTION_MODEL_VERSION,
+      volatilitySd: Number(snapshot.dataQuality?.volatilitySd),
+    });
     // Let the engine resolve the horizon via the close-window rule (meals →
     // 60, insulin only → 30, momentum only → 20). Passing no horizonMin lets
     // resolveHorizonMin(snapshot) decide based on what's driving glucose.
@@ -303,6 +308,23 @@ export default async function (req) {
       status: "active",
     });
 
+    // ── One row per anchor, even under a race ─────────────────────────────
+    // Two callers (the hook and the workflow) can pass the existence check
+    // above at the same instant and both insert. The newest row wins and any
+    // other row for this same anchor is removed, so duplicate rows seconds
+    // apart for one anchor can never exist.
+    if (anchorIso) {
+      try {
+        const sameAnchor = await base44.asServiceRole.entities.GlucoseProjection.filter(
+          { user_id: userId, anchor_time: anchorIso }, "-generated_at", 5
+        );
+        const stale = sameAnchor.filter((row) => row.id !== projectionRecord.id);
+        await Promise.all(
+          stale.map((row) => base44.asServiceRole.entities.GlucoseProjection.delete(row.id))
+        );
+      } catch { /* the newest row still wins by generated_at */ }
+    }
+
     // Silent-failure guard: log persistent abstention so an 8-day outage is
     // never invisible. Only log when no successful projection exists in the
     // last 15 min — transient abstention (one reading with insufficient
@@ -364,6 +386,8 @@ export default async function (req) {
       is_integrated: modelResolution.isIntegrated,
       uncertainty_method: uncertaintyCalibration.method,
       uncertainty_calibrated: uncertaintyCalibration.calibrated,
+      uncertainty_band_source: uncertaintyCalibration.bandSource,
+      uncertainty_residual_count: uncertaintyCalibration.residualCount,
       data_quality: result.dataQuality,
     });
   } catch (error) {

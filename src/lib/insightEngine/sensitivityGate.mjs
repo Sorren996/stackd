@@ -27,8 +27,8 @@ await build({
   logLevel: "silent",
 });
 
-const { checkSensitivity } = await import(pathToFileURL(outfile).href);
-const failures = checkSensitivity();
+const { checkAll } = await import(pathToFileURL(outfile).href);
+const failures = checkAll();
 
 if (failures.length) {
   console.error("Sensitivity contract broken:");
