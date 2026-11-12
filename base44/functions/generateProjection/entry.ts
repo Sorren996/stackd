@@ -136,13 +136,28 @@ export default async function (req) {
     // the projection was generated.
     const inputSnapshot = buildInputSnapshot(readings, meals, doses, settings, modelResolution, now);
 
+    // ── One row per anchor ────────────────────────────────────────────────
+    // Two tabs (or the hook and the workflow) can reach this point with the
+    // same anchor. A second identical row is never useful, and it made the
+    // newest row flip between duplicates seconds apart, so the existing row
+    // for this anchor wins and nothing new is written.
+    const anchorIso = result.anchor ? new Date(result.anchor.time).toISOString() : null;
+    if (anchorIso) {
+      const existingForAnchor = await base44.asServiceRole.entities.GlucoseProjection.filter(
+        { user_id: userId, anchor_time: anchorIso }, "-generated_at", 1
+      );
+      if (existingForAnchor.length > 0) {
+        return Response.json({ ok: true, skipped: true, reason: "duplicate_anchor", anchor_time: anchorIso });
+      }
+    }
+
     // Persist the prediction with full provenance.
     const projectionRecord = await base44.asServiceRole.entities.GlucoseProjection.create({
       user_id: userId,
       generated_at: new Date(now).toISOString(),
       model_version: result.modelVersion,
       meal_response_model_version: result.mealModelVersion,
-      anchor_time: result.anchor ? new Date(result.anchor.time).toISOString() : null,
+      anchor_time: anchorIso,
       anchor_value: result.anchor ? result.anchor.value : null,
       horizon_minutes: result.horizonMinutes,
       trajectory: result.trajectory.map((p) => ({

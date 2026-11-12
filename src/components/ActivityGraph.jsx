@@ -25,7 +25,6 @@ import CandlestickView from "@/components/graph/CandlestickView";
 import ReferenceLabels from "@/components/graph/ReferenceLabels";
 import MealEditOverlay from "@/components/insulin/MealEditOverlay";
 import ProjectionOverlay from "@/components/graph/ProjectionOverlay";
-import { buildMealEventGroups, getActiveMealGroups } from "@/lib/concurrentMeals";
 
 const STEP_MS = 3 * 60 * 1000;
 const HALF_HOUR_MS = 30 * 60 * 1000;
@@ -418,7 +417,9 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
   const [graphHeight, setGraphHeight] = useState(readGraphHeight);
   const [highReference, setHighReference] = useState(readHighReference);
   const [glucoseUnits, setGlucoseUnitsState] = useState(getGlucoseUnits());
-  const [mealOutcomeWindowMin, setMealOutcomeWindowMin] = useState(() => {
+  // Kept in step with the meal window setting so the graph's settings listener
+  // stays whole; the projection no longer depends on it.
+  const [, setMealOutcomeWindowMin] = useState(() => {
     if (typeof window === "undefined") return 240;
     const v = Number(window.localStorage.getItem("meal_outcome_window_minutes"));
     return Number.isFinite(v) && v > 0 ? v : 240;
@@ -925,19 +926,18 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
     filter(Boolean);
   }, [filteredDoses, allCurvesMeta, maxBolusUnits, maxBasalUnits, maxVisibleUnits, domainStart, domainEnd, totalMs, chartWidth, dynamicInsulinMarginTop, stableNow]);
 
-  // Whether at least one meal is still within its glucose-response window.
-  // The future projection only renders when there is an open meal — once all
-  // meals close, the projection is hidden entirely (no flat/stale line).
-  const hasActiveMeals = useMemo(() => {
-    const groups = buildMealEventGroups(carbEntries, doses, {}, glucoseReadings, targetLow);
-    const active = getActiveMealGroups(groups, { outcomeWindowMinutes: mealOutcomeWindowMin }, stableNow);
-    return active.length > 0;
-  }, [carbEntries, doses, glucoseReadings, targetLow, mealOutcomeWindowMin, stableNow]);
-
   const getGlucoseY = useCallback((value) => {
     const clamped = Math.min(Math.max(value, effectiveMin), effectiveMax);
     return GLUCOSE_MARGIN_TOP + (effectiveMax - clamped) / (effectiveMax - effectiveMin) * plotHeight;
   }, [effectiveMin, effectiveMax, plotHeight]);
+
+  // The 24-hour (candlestick) window draws its own plot geometry, so the
+  // projection overlay maps onto that plot instead of the line chart's.
+  const candlePlotHeight = CHART_HEIGHT - CHART_MARGIN_TOP - X_AXIS_HEIGHT;
+  const getCandleGlucoseY = useCallback((value) => {
+    const clamped = Math.min(Math.max(value, effectiveMin), effectiveMax);
+    return CHART_MARGIN_TOP + (effectiveMax - clamped) / (effectiveMax - effectiveMin) * candlePlotHeight;
+  }, [effectiveMin, effectiveMax, candlePlotHeight]);
 
   const getHighRangeOpacity = (value) => {
     const pctFromTop = (effectiveMax - Math.min(value, effectiveMax)) / (effectiveMax - effectiveMin);
@@ -1427,20 +1427,40 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             }}>
         <div className="relative" style={{ width: chartWidth, height: isCandlestick ? CANDLESTICK_TOTAL_HEIGHT : twoRowHeight }}>
           {isCandlestick ?
-              <CandlestickView
-                glucoseReadings={filteredGlucoseReadings}
-                doses={filteredDoses}
-                carbEntries={filteredCarbEntries}
-                targetRange={targetRange}
-                chartWidth={chartWidth}
-                chartHeight={CHART_HEIGHT}
-                marginTop={CHART_MARGIN_TOP}
-                xAxisHeight={X_AXIS_HEIGHT}
-                domainStart={domainStart}
-                domainEnd={domainEnd}
-                glucoseMin={effectiveMin}
-                glucoseMax={effectiveMax}
-                highReference={highReference} /> :
+              <>
+                <CandlestickView
+                  glucoseReadings={filteredGlucoseReadings}
+                  doses={filteredDoses}
+                  carbEntries={filteredCarbEntries}
+                  targetRange={targetRange}
+                  chartWidth={chartWidth}
+                  chartHeight={CHART_HEIGHT}
+                  marginTop={CHART_MARGIN_TOP}
+                  xAxisHeight={X_AXIS_HEIGHT}
+                  domainStart={domainStart}
+                  domainEnd={domainEnd}
+                  glucoseMin={effectiveMin}
+                  glucoseMax={effectiveMax}
+                  highReference={highReference} />
+
+                {/* The projection belongs to every window that contains its
+                    points, the 24-hour view included. It maps onto this view's
+                    own plot geometry and clips at the edges like the rest. */}
+                {projection && (
+                  <ProjectionOverlay
+                    projection={projection}
+                    domainStart={domainStart}
+                    totalMs={totalMs}
+                    chartWidth={chartWidth}
+                    glucoseChartHeight={CHART_HEIGHT}
+                    glucoseMarginTop={CHART_MARGIN_TOP}
+                    plotHeight={candlePlotHeight}
+                    effectiveMin={effectiveMin}
+                    effectiveMax={effectiveMax}
+                    getGlucoseY={getCandleGlucoseY}
+                  />
+                )}
+              </> :
 
 
               <>
@@ -1574,7 +1594,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
           </div>
 
           {/* ── Projection overlay (future trajectory) ── */}
-          {projection && hasActiveMeals && !isCandlestick && (
+          {projection && (
             <ProjectionOverlay
               projection={projection}
               domainStart={domainStart}
@@ -1772,7 +1792,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             <div className="h-[2.75px] w-3 rounded-full" style={{ background: "#8c4a28" }} />
             <span className="text-[10px] font-medium" style={{ color: "#7a6b5d" }}>Glucose</span>
           </div>
-          {projection && hasActiveMeals && (
+          {projection && (
             <>
               <div className="flex items-center gap-1.5">
                 <div className="h-[2.5px] w-3 border-t-2 border-dashed" style={{ borderColor: "#c4965a", opacity: 0.9 }} />

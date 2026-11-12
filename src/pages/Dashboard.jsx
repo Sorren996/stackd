@@ -144,10 +144,10 @@ export default function Dashboard() {
       Number.isFinite(Date.parse(r.recorded_at)) && Date.parse(r.recorded_at) <= now)
       .sort((a, b) => Date.parse(b.recorded_at) - Date.parse(a.recorded_at));
   }, [glucoseReadings, latestGlucoseRows, now]);
+  // Generation follows the newest reading only; freshness is decided inside
+  // the hook by a single clock, so nothing here adds a second age rule.
   const projection = useLatestProjection({
     latestReadingTime: latestGlucoseRows[0]?.recorded_at || null,
-    latestMealTime: carbEntries[0]?.consumed_at || null,
-    latestDoseTime: doses[0]?.administered_at || null,
   });
 
   // ── Cadence-aware Dexcom refresh ──────────────────────────
@@ -423,7 +423,7 @@ export default function Dashboard() {
                   onSelectLog={setEditingLog}
                   onDeleteLog={handleDeleteLog}
                   glucoseReadOnly={dexcomConnected}
-                  projection={freshness.pending || !freshness.verified || !(now - Date.parse(latestGlucose?.recorded_at) < 8 * 60000) ? null : projection}
+                  projection={freshness.verified ? projection : null}
                   snapshotNow={now}
                   resumeRevision={freshness.revision}
                 />
