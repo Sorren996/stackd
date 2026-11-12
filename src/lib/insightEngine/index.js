@@ -23,8 +23,13 @@
 // so predictions are generated server-side with the same algorithm.
 
 // ── Model identity ──────────────────────────────────────────────────────────
-export const PROJECTION_MODEL_VERSION = "1.0.0-baseline";
-export const BASELINE_MODEL_VERSION = "1.0.0-baseline";
+// The shape engine is now the superposition model (v2). The old rate-balance
+// versions stay defined so historical rows keep their own label, but nothing
+// new is generated under them.
+export const PROJECTION_MODEL_VERSION = "2.0.0-superposition";
+export const BASELINE_MODEL_VERSION = "2.0.0-superposition";
+// DEPRECATED: learned multipliers are kept in shadow only and no longer shape
+// a projection, so no new projection is ever labelled personalized.
 export const PERSONALIZED_MODEL_VERSION = "1.1.0-personalized";
 
 // Meal-response model versions (Milestone 3). Separate from the general
@@ -35,6 +40,7 @@ export const MEAL_RESPONSE_MODEL_VERSION_PERSONALIZED = "1.1.0-meal-personalized
 
 import { extractEffectiveMealParams } from "./modelResolution";
 import { getEmpiricalSigma } from "./uncertaintyCalibration";
+import { projectSuperposition } from "./superposition";
 
 // ── Shadow evaluation (Milestone 4) ─────────────────────────────────────────
 export function replayProjection(
@@ -102,6 +108,18 @@ function deriveSpeedClass(entry) {
   const profile = entry?.absorption_profile || "medium";
   if (profile === "fast" || gi >= 70) return "fast";
   return "mixed";
+}
+
+// Which timing multiplier shapes this meal's absorption: the user's own
+// learned per-class adjustment when it has enough evidence, otherwise the
+// older per-class meal-model speed factor, otherwise none (published shape).
+function speedFactorForMeal(meal, settings, mealModelParams) {
+  const cls = deriveSpeedClass(meal);
+  const learned = settings?.absorptionSpeedFactors?.[cls];
+  if (Number.isFinite(learned) && learned > 0) return learned;
+  const params = mealModelParams?.[cls];
+  const sf = Number(params?.speedFactor);
+  return Number.isFinite(sf) && sf > 0 ? sf : 1;
 }
 
 // ── Speed-class baseline timing (matches base44/shared/carbAbsorptionProfile) ──
@@ -185,6 +203,15 @@ const MIN_CONFIDENCE = 0.15;
 const ABSTAIN_CONFIDENCE_THRESHOLD = 0.12;
 const UNCALIBRATED_MG_PER_GRAM = 3.0;
 const ABSORPTION_SHAPE_EXP = 3.0;
+
+// Honest abstention. Above this reading-to-reading volatility the shape model
+// cannot carry its own expected error below the internal bar, so it draws
+// nothing rather than a confident-looking line.
+const VOLATILITY_ABSTAIN_SD = 20;
+
+// A per-class absorption adjustment is only trusted once this many qualifying
+// meals have contributed to it.
+const MIN_ABSORPTION_SAMPLES = 20;
 
 // ── Math primitives ────────────────────────────────────────────────────────
 
@@ -335,6 +362,42 @@ function computeMomentum(readings, now) {
   return (last.value - first.value) / dtMin;
 }
 
+// Reading-to-reading volatility over the last 45 minutes: the standard
+// deviation of consecutive 5-minute differences. Steady sensor noise sits
+// low; a genuinely unstable stretch sits far above it, and the engine is not
+// entitled to project through that.
+function computeVolatilitySd(readings, now) {
+  const recent = readings.filter((r) => r.time >= now - 45 * MINUTE_MS);
+  if (recent.length < 3) return 0;
+  const diffs = [];
+  for (let i = 1; i < recent.length; i++) {
+    const dtMin = (recent[i].time - recent[i - 1].time) / MINUTE_MS;
+    if (!(dtMin > 0) || dtMin > 20) continue;
+    diffs.push((recent[i].value - recent[i - 1].value) / dtMin);
+  }
+  if (diffs.length < 2) return 0;
+  const mean = diffs.reduce((s, d) => s + d, 0) / diffs.length;
+  const variance = diffs.reduce((s, d) => s + (d - mean) * (d - mean), 0) / (diffs.length - 1);
+  return Math.sqrt(Math.max(0, variance));
+}
+
+// Per-class absorption timing learned from the user's own meals
+// (AbsorptionAdjustment.speed_factor). Only classes with enough evidence are
+// passed through; everything else keeps the published baseline shape.
+function readAbsorptionSpeedFactors(settings) {
+  const out = {};
+  const rows = Array.isArray(settings?.absorption_adjustments) ? settings.absorption_adjustments : [];
+  for (const row of rows) {
+    const cls = row?.speed_class;
+    const factor = Number(row?.speed_factor);
+    const samples = Number(row?.sample_size) || 0;
+    if (!["fast", "mixed", "high_fat"].includes(cls)) continue;
+    if (!Number.isFinite(factor) || factor <= 0 || samples < MIN_ABSORPTION_SAMPLES) continue;
+    out[cls] = Math.max(0.7, Math.min(1.45, factor));
+  }
+  return out;
+}
+
 function detectGap(readings, now) {
   if (readings.length < 2) return false;
   const cutoff = now - 6 * 60 * MINUTE_MS;
@@ -402,14 +465,17 @@ export function normalizeInputs(rawReadings, rawMeals, rawDoses, settings, now) 
   if (activeDoses.length > 2) confounders.push("multiple_active_doses");
   if (activeRescueCarbs.length > 0) confounders.push("active_rescue_carb");
 
+  const volatilitySd = computeVolatilitySd(readings, now);
+
   return {
     now, readings, activeMeals, activeRescueCarbs, activeDoses,
-    settings: { isf, unitsPer5g, targetLow, targetHigh },
+    settings: { isf, unitsPer5g, targetLow, targetHigh, absorptionSpeedFactors: readAbsorptionSpeedFactors(settings) },
     anchor, momentumMgDlPerMin: momentum,
     dataQuality: {
       staleReadings: stale, gapPresent, readingCount: readings.length,
       activeMealCount: activeMeals.length, activeRescueCarbCount: activeRescueCarbs.length,
       activeDoseCount: activeDoses.length, calibrated, confounders,
+      volatilitySd: Math.round(volatilitySd * 10) / 10,
     },
   };
 }
@@ -527,6 +593,12 @@ export function projectGlucose(snapshot, opts = {}) {
       : MEAL_RESPONSE_MODEL_VERSION_BASELINE;
   }
 
+  // The stored label describes the shape engine that actually produced this
+  // trajectory. Learned multipliers are recorded separately in
+  // model_resolution and never take part in the shape.
+  modelVersion = PROJECTION_MODEL_VERSION;
+  mealModelVersion = PROJECTION_MODEL_VERSION;
+
   if (!snapshot.anchor) {
     return {
       trajectory: [], anchor: null, modelVersion, mealModelVersion,
@@ -553,59 +625,80 @@ export function projectGlucose(snapshot, opts = {}) {
     };
   }
 
+  // ── Honest abstention ───────────────────────────────────────────────────
+  // Nothing to superpose, or the readings are moving too unevenly for a shape
+  // model to expect its own error to stay under the internal bar. Drawing
+  // nothing is the correct answer here — never a line pretending to be a
+  // forecast.
+  const structuralAbstain = !hasActiveInputs
+    ? "No meal or insulin on board to model."
+    : (Number(snapshot.dataQuality.volatilitySd) || 0) > VOLATILITY_ABSTAIN_SD
+      ? "Glucose is moving too unevenly right now to estimate a shape."
+      : null;
+
+  if (structuralAbstain) {
+    return {
+      trajectory: [], anchor: snapshot.anchor, modelVersion, mealModelVersion,
+      generatedAt, horizonMinutes: horizonMin, confidence,
+      abstained: true, abstainReason: structuralAbstain,
+      dataQuality: snapshot.dataQuality, uncertaintySummary: null,
+      inputProvenance: null, activeInputs: null,
+    };
+  }
+
   const isf = snapshot.settings.isf && snapshot.settings.isf > 0 ? snapshot.settings.isf : null;
   const unitsPer5g = snapshot.settings.unitsPer5g && snapshot.settings.unitsPer5g > 0 ? snapshot.settings.unitsPer5g : null;
   const mgPerGram = isf != null && unitsPer5g != null ? isf * (unitsPer5g / 5) : UNCALIBRATED_MG_PER_GRAM;
-  const insulinDropPerUnit = isf != null ? isf : null;
 
   const anchorTime = snapshot.anchor.time;
   const anchorValue = snapshot.anchor.value;
-  const trajectory = [];
-  let currentValue = anchorValue;
 
-  for (let offset = 0; offset <= horizonMin; offset += stepMin) {
-    const futureTime = anchorTime + offset * MINUTE_MS;
+  // ── Superposition on one shared 5-minute grid ───────────────────────────
+  // Insulin and carbs are summed as independent, area-normalised shapes.
+  // rateAdjustmentFactor is deliberately NOT applied here: it is retained as
+  // a diagnostic only, because a single global multiplier on the net rate was
+  // what let the old model extrapolate the recent trend instead of modelling
+  // insulin against carbohydrate.
+  const superposition = projectSuperposition({
+    anchorValue,
+    anchorTime,
+    readings: snapshot.readings,
+    meals: [
+      ...snapshot.activeMeals.map((meal) => ({
+        carbs: Number(meal.carbs) || 0,
+        consumedAt: new Date(meal.consumed_at).getTime(),
+        speedClass: deriveSpeedClass(meal),
+        speedFactor: speedFactorForMeal(meal, snapshot.settings, mealModelParams),
+      })),
+      // Rescue carbs absorb on the fast profile, with no personalization.
+      ...snapshot.activeRescueCarbs.map((meal) => ({
+        carbs: Number(meal.carbs) || 0,
+        consumedAt: new Date(meal.consumed_at).getTime(),
+        speedClass: "fast",
+        speedFactor: 1,
+      })),
+    ],
+    doses: snapshot.activeDoses.map((dose) => ({
+      units: Number(dose.units) || 0,
+      atTime: new Date(dose.administered_at || dose.created_at).getTime(),
+      insulinType: dose.insulin_type,
+    })),
+    isf,
+    mgPerGram,
+    horizonMin,
+    stepMin,
+  });
 
-    // Carb-driven rise (mg/dL/min).
-    // The speed factor is applied inside carbAppearanceRateGPerMin (timing).
-    // The magnitude factor is applied here per-meal (excursion magnitude).
-    // These are SEPARATE corrections: speedFactor shapes WHEN carbs hit,
-    // magnitudeFactor shapes HOW MUCH glucose rise they produce.
-    let carbRiseRate = 0;
-    for (const meal of snapshot.activeMeals) {
-      const mealSpeedClass = deriveSpeedClass(meal);
-      const mealClassParams = mealModelParams?.[mealSpeedClass];
-      const magnitudeFactor = mealClassParams?.magnitudeFactor != null
-        ? Number(mealClassParams.magnitudeFactor)
-        : 1.0;
-      carbRiseRate += carbAppearanceRateGPerMin(meal, futureTime, mealModelParams) * mgPerGram * magnitudeFactor;
-    }
-    // Rescue carbs: rapid absorption (fast-class profile), no personalization.
-    for (const rescue of snapshot.activeRescueCarbs) {
-      carbRiseRate += carbAppearanceRateGPerMin(rescue, futureTime, null) * mgPerGram;
-    }
-
-    let insulinDropRate = 0;
-    if (insulinDropPerUnit != null) {
-      for (const dose of snapshot.activeDoses) {
-        insulinDropRate += insulinActivityRateUnitsPerMin(dose, futureTime) * insulinDropPerUnit;
-      }
-    }
-
-    const momentum = snapshot.momentumMgDlPerMin * Math.exp(-offset / MOMENTUM_DECAY_MIN);
-    const netRate = (carbRiseRate - insulinDropRate + momentum) * rateAdjustmentFactor;
-
-    if (offset > 0) currentValue += netRate * stepMin;
-    currentValue = Math.max(20, Math.min(500, currentValue));
-
-    const sigma = computeSigmaAtOffset(offset, snapshot.dataQuality, netRate, uncertaintyCalibration);
-    trajectory.push({
-      time: futureTime, min_offset: offset,
-      value: Math.round(currentValue),
-      lower: Math.round(Math.max(20, currentValue - sigma)),
-      upper: Math.round(Math.min(500, currentValue + sigma)),
-    });
-  }
+  const trajectory = superposition.points.map((point) => {
+    const sigma = computeSigmaAtOffset(point.min_offset, snapshot.dataQuality, point.rate, uncertaintyCalibration);
+    return {
+      time: point.time,
+      min_offset: point.min_offset,
+      value: point.value,
+      lower: Math.round(Math.max(40, point.value - sigma)),
+      upper: Math.round(Math.min(400, point.value + sigma)),
+    };
+  });
 
   // Active speed classes (for meal-response evaluation grouping).
   const activeSpeedClasses = [...new Set(snapshot.activeMeals.map((m) => deriveSpeedClass(m)))];
@@ -697,8 +790,10 @@ export function projectGlucose(snapshot, opts = {}) {
     },
     modelResolution,
     effectiveParameters: {
+      // Diagnostics only — neither is applied to the projected shape.
       rateAdjustmentFactor,
       mealParams: mealModelParams,
+      shapeEngine: superposition.diagnostics,
     },
     uncertainty: uncertaintyCalibration
       ? {
