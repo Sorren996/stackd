@@ -131,6 +131,7 @@ export async function followShareReadings({
           inserted: Number(result.records_inserted),
           discovery_delay_s: delaySeconds ?? null,
           notification_dispatch: result?.notification_dispatch ?? null,
+          projection_dispatch: result?.projection_dispatch ?? null,
         }));
       }
     }

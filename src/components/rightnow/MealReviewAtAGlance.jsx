@@ -13,6 +13,7 @@ import { useMealModelResolution, entrySpeedFactorFromResolution, hasLearnedTimin
 import { getDoseTimingInfo, isBasalInsulinType } from "@/lib/insulinPharmacology";
 import { formatRemaining as formatRemainingUnits } from "@/lib/remainingInsulin";
 import { formatGlucose, glucoseUnitLabel } from "@/lib/glucoseUnits";
+import { markProjectionInputsChanged } from "@/lib/projection/projectionStaleness";
 
 
 // Minutes as words: "1 hr 11 min", "35 min".
@@ -344,6 +345,7 @@ export default function MealReviewAtAGlance({ mealInsight, glucoseReadings }) {
       queryClient.invalidateQueries({ queryKey: ["carb-entries"] });
       queryClient.invalidateQueries({ queryKey: ["carb-entries", "graph"] });
       queryClient.invalidateQueries({ queryKey: ["history-summary"] });
+      markProjectionInputsChanged();
       toast.success("Item removed");
     } catch {
       toast.error("Unable to remove item. Please try again.");

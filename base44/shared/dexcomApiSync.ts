@@ -4,6 +4,7 @@
 
 import { DEXCOM_TOKEN_URL, DEXCOM_API_BASE } from "./dexcomConfig.ts";
 import { notifyAfterPersist } from "./notificationIngest.ts";
+import { projectAfterPersist } from "./projectionGeneration.ts";
 import { upsertReadings, reconcileReadings } from "./readingPersistence.ts";
 
 const MAX_QUERY_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
@@ -317,6 +318,8 @@ export async function syncApiForConnection(
     if (diag.records_inserted > 0) {
       const notify = await notifyAfterPersist({ sr, ownerId: owner });
       diag.notification_dispatch = notify.dispatched ? "evaluated" : notify.reason;
+      const proj = await projectAfterPersist({ sr, userId: owner });
+      diag.projection_dispatch = proj.generated ? "generated" : (proj.skipped ? proj.reason : "failed");
     }
 
     if (newestSystemTime) {

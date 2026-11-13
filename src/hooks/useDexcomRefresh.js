@@ -13,6 +13,7 @@ import { requestGlucoseRefresh } from '@/lib/glucoseRefresh/coordinator';
 function invalidateGlucoseQueries(queryClient) {
   queryClient.invalidateQueries({ queryKey: ["latest-glucose"] }, { cancelRefetch: false });
   queryClient.invalidateQueries({ queryKey: ["glucose-readings"] }, { cancelRefetch: false });
+  queryClient.invalidateQueries({ queryKey: ["latest-projection"] }, { cancelRefetch: false });
   // Re-read the connection row so the stale-sync banner's "since last sync"
   // timer resets the moment last_fetched_at bumps forward.
   queryClient.invalidateQueries({ queryKey: ["dexcom-connection"] });

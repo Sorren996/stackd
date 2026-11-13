@@ -2,6 +2,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.54';
 import { secrets } from 'base44:runtime';
 import { DEXCOM_TOKEN_URL, DEXCOM_API_BASE } from "../../shared/dexcomConfig.ts";
 import { notifyAfterPersist } from "../../shared/notificationIngest.ts";
+import { projectAfterPersist } from "../../shared/projectionGeneration.ts";
 import { upsertReadings, reconcileReadings } from "../../shared/readingPersistence.ts";
 import { appOrigin } from "../../shared/sharingAccess.ts";
 
@@ -400,6 +401,8 @@ export default async function(req) {
         if (diag.records_inserted > 0) {
           const notify = await notifyAfterPersist({ sr, ownerId: owner, origin: appOrigin(req) });
           diag.notification_dispatch = notify.dispatched ? "evaluated" : notify.reason;
+          const proj = await projectAfterPersist({ sr, userId: owner });
+          diag.projection_dispatch = proj.generated ? "generated" : (proj.skipped ? proj.reason : "failed");
         }
 
         results.push(diag);

@@ -9,6 +9,7 @@ import { base44 } from "@/api/base44Client";
 // time the user returns to it.
 const ENTITY_QUERY_KEYS = {
   GlucoseReading: [["latest-glucose"], ["glucose-readings"]],
+  GlucoseProjection: [["latest-projection"]],
   InsulinDose: [["insulin-doses"]],
   CarbEntry: [["carb-entries"]],
 };

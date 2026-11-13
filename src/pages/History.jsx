@@ -21,6 +21,7 @@ import JournalHeader from "@/components/history/JournalHeader";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 import { useAuth } from "@/lib/AuthContext";
 import { scrollToTop } from "@/lib/feedScroll";
+import { markProjectionInputsChanged } from "@/lib/projection/projectionStaleness";
 
 function readTargetRange() {
   if (typeof window === "undefined") return { low: 70, high: 180 };
@@ -231,6 +232,7 @@ export default function History() {
     onSuccess: (_data, deletedId) => {
       queryClient.invalidateQueries({ queryKey: ["insulin-doses"] });
       queryClient.invalidateQueries({ queryKey: ["insulin-doses", "graph"] });
+      markProjectionInputsChanged();
       invalidateHistory();
       toast.success("Support gently removed");
       (async () => {
@@ -259,6 +261,7 @@ export default function History() {
     onSuccess: (_data, deletedId) => {
       queryClient.invalidateQueries({ queryKey: ["carb-entries"] });
       queryClient.invalidateQueries({ queryKey: ["carb-entries", "graph"] });
+      markProjectionInputsChanged();
       invalidateHistory();
       toast.success("Nourishment removed");
       (async () => {
@@ -298,6 +301,7 @@ export default function History() {
         queryClient.invalidateQueries({ queryKey: ["carb-entries", "graph"] });
       }
 
+      if (variables.type !== "glucose") markProjectionInputsChanged();
       invalidateHistory();
       toast.success("Moment updated");
       setEditingLog(null);

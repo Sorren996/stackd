@@ -3,6 +3,7 @@
 // Identical behavior to the original fetchDexcomShareReadings per-connection loop.
 
 import { notifyAfterPersist } from "./notificationIngest.ts";
+import { projectAfterPersist } from "./projectionGeneration.ts";
 import { upsertReadings, reconcileReadings } from "./readingPersistence.ts";
 import {
   DEXCOM_SHARE_BASE_URL_US,
@@ -501,6 +502,12 @@ export async function syncShareForConnection(
       const notify = await notifyAfterPersist({ sr, ownerId: owner, readingIds: insertedIds });
       diag.notification_dispatch = notify.dispatched ? "evaluated" : notify.reason;
       if (!notify.dispatched) diag.notification_dispatch_code = notify.code ?? null;
+
+      // Generate the glucose projection server-side right after ingestion and
+      // alert evaluation so the forecast is already anchored to this reading
+      // before the app is opened. Isolated: never blocks or fails ingestion.
+      const proj = await projectAfterPersist({ sr, userId: owner });
+      diag.projection_dispatch = proj.generated ? "generated" : (proj.skipped ? proj.reason : "failed");
     }
 
     if (latestTime) {

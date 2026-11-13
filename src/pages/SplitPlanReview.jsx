@@ -39,6 +39,7 @@ import {
   Plus,
 } from "lucide-react";
 import { toast } from "sonner";
+import { markProjectionInputsChanged } from "@/lib/projection/projectionStaleness";
 
 const MINUTE_MS = 60 * 1000;
 const GLUCOSE_STALE_THRESHOLD_MIN = 15;
@@ -193,6 +194,7 @@ export default function SplitPlanReview() {
       queryClient.invalidateQueries({ queryKey: ["insulin-doses", "graph"] });
       queryClient.invalidateQueries({ queryKey: ["split-plan", planId] });
       queryClient.invalidateQueries({ queryKey: ["split-plans"] });
+      markProjectionInputsChanged();
       toast.success(data.isModified ? "Follow-up logged, plan modified" : "Follow-up logged, plan completed");
       setShowLogSheet(false);
       setIsSubmitting(false);

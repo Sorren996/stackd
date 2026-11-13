@@ -3,31 +3,28 @@
 // Fetches the newest stored GlucoseProjection for the current user and keeps it
 // in step with the newest glucose reading.
 //
-// DRAWING RULE — one rule, one clock. A projection is drawn while the reading
-// it starts from (its anchor) is younger than PROJECTION_FRESH_MS. Nothing
-// else gates it here: no meal requirement, no second staleness clock. When the
-// newest row is too old to be current the line is hidden cleanly, and it comes
-// back the moment a fresh row lands. A stale trajectory is never drawn as if
-// it were happening now.
+// DRAWING RULE — one rule, one clock. A projection is drawn only while its
+// anchor covers the newest reading AND is younger than PROJECTION_FRESH_MS
+// (12 minutes). When the newest stored row is older than the newest reading or
+// older than 12 minutes, nothing is drawn until a current row lands.
 //
-// GENERATION RULE — data-driven. A new row is requested only when the stored
-// row cannot cover the newest reading: no row at all, or a row anchored before
-// that reading. A row already anchored at the newest reading is complete, so
-// two tabs asking at once cannot produce duplicate rows.
-//
-// After a request the read is retried on a short ladder until a row carrying
-// the new anchor appears, then it stops. Failures are logged, never swallowed.
+// GENERATION RULE — server-first, client fallback. Projections are generated on
+// the server whenever a reading is ingested or a dose/carb log changes. On
+// mount, foreground resume, or a newly arrived reading, this hook reads the
+// stored projection first; only if the server row is still missing or anchored
+// before the newest reading (or local log inputs were just changed) does the
+// client invoke generateProjection as a fallback.
 //
 // SAFETY: `projection` is only ever a non-abstained forecast with a trajectory,
 // so nothing draws a misleading empty line. When the engine genuinely withheld
-// one, `abstainNote` carries a short plain-language reason instead, so the chart
-// can say why rather than leave an unexplained gap.
+// one, `abstainNote` carries a short plain-language reason instead.
 
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useEffect, useRef, useState } from "react";
 import { subscribeProjectionInputsChanged } from "@/lib/projection/projectionStaleness";
 import { abstainNoteFor } from "@/lib/projection/projectionNote";
+import { useVisibilityRefresh } from "@/hooks/useVisibilityRefresh";
 
 // The single freshness window for drawing a projection.
 export const PROJECTION_FRESH_MS = 12 * 60 * 1000;
@@ -43,20 +40,32 @@ export function useLatestProjection({ latestReadingTime } = {}) {
     queryFn: () => base44.entities.GlucoseProjection.list("-generated_at", 1),
     refetchInterval: REFETCH_INTERVAL_MS,
     staleTime: 30 * 1000,
+    networkMode: "always",
+  });
+
+  // Re-read the server-generated projection immediately when returning to the
+  // app from the background, in parallel with the glucose reading refresh, so
+  // the forecast paints with no blank delay on reopen.
+  useVisibilityRefresh({
+    onRevalidate: (reason) => {
+      if (reason === "mount") return;
+      latestQuery.refetch({ cancelRefetch: false }).catch(() => {});
+    },
   });
 
   const projection = latestQuery.data?.[0] || null;
   const lastGenRef = useRef(0);
   const inFlightRef = useRef(false);
+  const checkedReadingMsRef = useRef(NaN);
   const ladderRef = useRef([]);
   // Bumped when a debounced request comes due, so a change that arrived inside
   // the debounce window is never recorded as handled and then forgotten.
   const [attempt, setAttempt] = useState(0);
 
   // Edits to meals or doses change the forecast's inputs without touching any
-  // timestamp, so the reading anchor alone cannot tell that a stored row is
-  // out of date. Every carb or dose write (create, edit, delete) marks the
-  // inputs as changed, and a mark newer than the stored row forces a rebuild.
+  // reading timestamp. Every carb or dose write marks the inputs as changed,
+  // and a mark newer than the stored row forces a rebuild if the server
+  // workflow hasn't already written one.
   const [inputsChangedAt, setInputsChangedAt] = useState(0);
   useEffect(() => subscribeProjectionInputsChanged((at) => setInputsChangedAt(at)), []);
 
@@ -68,10 +77,8 @@ export function useLatestProjection({ latestReadingTime } = {}) {
     Boolean(projection) &&
     (!Number.isFinite(readingMs) || (Number.isFinite(anchorMs) && anchorMs >= readingMs));
 
-  // Inputs edited since this row was drawn: rebuild even though the anchor is
-  // unchanged. The request is forced, because a row for the same anchor would
-  // otherwise be treated as complete and left alone.
-  const inputsStale = inputsChangedAt > 0 && (!Number.isFinite(generatedMs) || inputsChangedAt > generatedMs);
+  const inputsStale =
+    inputsChangedAt > 0 && (!Number.isFinite(generatedMs) || inputsChangedAt > generatedMs);
   const needsGeneration = !rowCoversReading || inputsStale;
 
   const clearLadder = () => {
@@ -81,35 +88,67 @@ export function useLatestProjection({ latestReadingTime } = {}) {
 
   useEffect(() => clearLadder, []);
 
-  const confirmLanded = async (target) => {
+  const confirmLanded = async (target, minGeneratedAt = 0) => {
     const res = await latestQuery.refetch().catch((error) => {
       console.error("[projection] refetch after generation failed", error);
       return null;
     });
     const row = res?.data?.[0] || null;
     const rowAnchor = row?.anchor_time ? Date.parse(row.anchor_time) : NaN;
-    const landed = Number.isFinite(rowAnchor) && (!Number.isFinite(target) || rowAnchor >= target);
-    if (landed) clearLadder();
+    const rowGen = row?.generated_at ? Date.parse(row.generated_at) : NaN;
+    const anchorOk = Number.isFinite(rowAnchor) && (!Number.isFinite(target) || rowAnchor >= target);
+    const genOk = !minGeneratedAt || (Number.isFinite(rowGen) && rowGen >= minGeneratedAt);
+    if (anchorOk && genOk) clearLadder();
   };
 
   useEffect(() => {
     if (!needsGeneration || inFlightRef.current) return;
-
-    // Debounce: coalesce a burst of changes into one request, and re-check
-    // afterwards instead of dropping the change on the floor.
-    const wait = Math.max(0, GENERATION_DEBOUNCE_MS - (Date.now() - lastGenRef.current));
-    if (wait > 0) {
-      const retry = setTimeout(() => setAttempt((n) => n + 1), wait + 50);
-      return () => clearTimeout(retry);
-    }
+    // Wait for an in-flight read (initial mount or foreground resume) before
+    // concluding that the server is missing a projection for this reading.
+    if (!inputsStale && (latestQuery.isPending || latestQuery.isFetching)) return;
 
     let cancelled = false;
-    const target = Number.isFinite(readingMs) ? readingMs : null;
-
-    lastGenRef.current = Date.now();
-    inFlightRef.current = true;
+    let retryTimer = null;
 
     (async () => {
+      // Check the server first when a newer reading arrived: ingestion already
+      // generates the projection server-side, so a single read usually resolves
+      // it immediately without invoking generateProjection.
+      if (
+        !inputsStale &&
+        Number.isFinite(readingMs) &&
+        checkedReadingMsRef.current !== readingMs
+      ) {
+        checkedReadingMsRef.current = readingMs;
+        inFlightRef.current = true;
+        try {
+          const res = await latestQuery.refetch().catch(() => null);
+          const freshRow = res?.data?.[0] || null;
+          const freshAnchor = freshRow?.anchor_time ? Date.parse(freshRow.anchor_time) : NaN;
+          if (Number.isFinite(freshAnchor) && freshAnchor >= readingMs) {
+            return;
+          }
+        } finally {
+          inFlightRef.current = false;
+        }
+        if (cancelled) return;
+      }
+
+      // Fallback: server row is still missing/behind or local inputs changed.
+      const wait = Math.max(0, GENERATION_DEBOUNCE_MS - (Date.now() - lastGenRef.current));
+      if (wait > 0) {
+        retryTimer = setTimeout(() => {
+          if (!cancelled) setAttempt((n) => n + 1);
+        }, wait + 50);
+        return;
+      }
+
+      const target = Number.isFinite(readingMs) ? readingMs : null;
+      const minGen = inputsStale ? inputsChangedAt : 0;
+
+      lastGenRef.current = Date.now();
+      inFlightRef.current = true;
+
       try {
         await base44.functions.invoke("generateProjection", inputsStale ? { force: true } : {});
       } catch (error) {
@@ -120,22 +159,26 @@ export function useLatestProjection({ latestReadingTime } = {}) {
 
       if (cancelled) return;
 
-      // Retry the read deterministically until the row with the new anchor is
-      // there, so the line appears without waiting for the next poll.
       clearLadder();
       ladderRef.current = POST_GENERATION_READ_MS.map((delay) =>
-        setTimeout(() => confirmLanded(target), delay)
+        setTimeout(() => confirmLanded(target, minGen), delay)
       );
     })();
 
     return () => {
       cancelled = true;
+      if (retryTimer) clearTimeout(retryTimer);
     };
-  }, [needsGeneration, inputsStale, readingMs, attempt]);
+  }, [needsGeneration, inputsStale, inputsChangedAt, readingMs, attempt, latestQuery.isPending, latestQuery.isFetching]);
 
-  // Too old to be current — draw nothing rather than a stale trajectory, and say
-  // nothing either: a reason about an old anchor would not be true of now.
-  if (!projection || !Number.isFinite(anchorMs) || Date.now() - anchorMs > PROJECTION_FRESH_MS) {
+  // Never draw a projection whose anchor is older than the newest reading or
+  // older than PROJECTION_FRESH_MS (~12 minutes).
+  if (
+    !projection ||
+    !Number.isFinite(anchorMs) ||
+    !rowCoversReading ||
+    Date.now() - anchorMs > PROJECTION_FRESH_MS
+  ) {
     return { projection: null, abstainNote: null };
   }
 

@@ -1,0 +1,47 @@
+{
+  "name": "Update Projection on Carb Change",
+  "description": "Regenerates the user's glucose projection on the server whenever a CarbEntry is created, edited, or deleted so the trajectory reflects the change without waiting for the next glucose reading.",
+  "trigger": {
+    "config": {
+      "trigger_type": "entity",
+      "entity_name": "CarbEntry",
+      "events": [
+        "create",
+        "update",
+        "delete"
+      ]
+    },
+    "condition": "${ .trigger.event_type != \"update\" or any((.trigger.changed_fields // [])[]; . != \"is_locked\" and . != \"updated_date\") }"
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "update_projection_on_carb_change",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "regenerate_projection": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "generateProjection",
+            "args": {
+              "workflow": true,
+              "force": true,
+              "user_id": "${ (.trigger.data // {}).user_id // (.trigger.data // {}).created_by_id // (.trigger.old_data // {}).user_id // (.trigger.old_data // {}).created_by_id }",
+              "entity_name": "${ .trigger.entity_name }",
+              "entity_id": "${ .trigger.entity_id }",
+              "event_type": "${ .trigger.event_type }"
+            }
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Regenerate projection",
+            "description": "Rebuild projection with updated meal inputs"
+          }
+        }
+      }
+    ]
+  }
+}

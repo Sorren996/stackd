@@ -21,7 +21,12 @@ function prependUnique(entries, current = []) {
 export function useCreateDoses() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ submittedDoses }) => base44.entities.InsulinDose.bulkCreate(submittedDoses),
+    // Single-record creates so server-side entity workflows (projection update,
+    // classification, analysis) fire on every logged dose.
+    mutationFn: ({ submittedDoses }) =>
+      submittedDoses.length === 1
+        ? base44.entities.InsulinDose.create(submittedDoses[0]).then((dose) => [dose])
+        : Promise.all(submittedDoses.map((dose) => base44.entities.InsulinDose.create(dose))),
     onMutate: ({ optimisticDoses }) => {
       const previousDoses = queryClient.getQueryData(["insulin-doses"]);
       const previousGraphDoses = queryClient.getQueryData(["insulin-doses", "graph"]);
@@ -88,7 +93,7 @@ export function useCreateCarbs() {
       const savePromise =
         submittedEntries.length === 1
           ? base44.entities.CarbEntry.create(submittedEntries[0]).then((entry) => [entry])
-          : base44.entities.CarbEntry.bulkCreate(submittedEntries);
+          : Promise.all(submittedEntries.map((entry) => base44.entities.CarbEntry.create(entry)));
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => reject(new Error("Carb save timed out after 10 seconds")), 10000);
       });

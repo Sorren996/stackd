@@ -1,6 +1,6 @@
 {
   "name": "Re-anchor Projection on New Reading",
-  "description": "Triggers a background projection re-anchoring when a new glucose reading arrives, so the cone stays current even when no page is open. Coalesces bursts via a 30s wait and a 25s throttle check in the function.",
+  "description": "Generates a server-side glucose projection immediately when a non-system GlucoseReading is created (e.g. manual logging), guarded by (user_id, anchor_time) so duplicate readings never create duplicate projections.",
   "trigger": {
     "config": {
       "trigger_type": "entity",
@@ -15,33 +15,27 @@
     "document": {
       "dsl": "1.0.0",
       "name": "reanchor_projection_on_reading",
-      "version": "1.0",
+      "version": "1.1",
       "namespace": "base44"
     },
     "do": [
-      {
-        "coalesce_burst": {
-          "wait": "PT30S",
-          "then": "generate_projection",
-          "x-base44": {
-            "title": "Coalesce burst",
-            "description": "Wait 30s so a burst of readings fires one generation"
-          }
-        }
-      },
       {
         "generate_projection": {
           "call": "invoke_backend_function",
           "with": {
             "function_name": "generateProjection",
             "args": {
-              "user_id": "${ .trigger.data.user_id // .trigger.data.created_by_id }"
+              "workflow": true,
+              "user_id": "${ (.trigger.data // {}).user_id // (.trigger.data // {}).created_by_id }",
+              "entity_name": "${ .trigger.entity_name }",
+              "entity_id": "${ .trigger.entity_id }",
+              "event_type": "${ .trigger.event_type }"
             }
           },
           "then": "end",
           "x-base44": {
             "title": "Generate projection",
-            "description": "Re-anchor to the latest reading"
+            "description": "Re-anchor to the newest reading once per anchor"
           }
         }
       }
