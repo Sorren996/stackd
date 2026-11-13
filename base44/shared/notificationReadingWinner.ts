@@ -17,6 +17,8 @@
 // and nothing is sent twice. Identity is the measured instant, so a corrected
 // value for the same recorded_at can never notify again.
 
+import { notificationAgeMinutes } from './notificationTiming.ts';
+
 export const READING_PRIORITY: Record<string, number> = {
   urgent_low: 50,
   custom_low: 40,
@@ -120,7 +122,8 @@ export function allReadingsCandidate({
   if (!list.length) return null;
 
   const newest = list.reduce((a, b) => (Number(b.at) > Number(a.at) ? b : a));
-  if (nowMs - Number(newest.at) > STREAM_MAX_AGE_MINUTES * 60_000) return null;
+  const age = notificationAgeMinutes(Number(newest.at), nowMs);
+  if (age == null || age > STREAM_MAX_AGE_MINUTES) return null;
 
   const episodeKey = `all-readings:${Math.floor(Number(newest.at) / 60_000)}`;
   return {

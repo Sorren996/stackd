@@ -23,12 +23,14 @@ export function mapDexcomTrend(rawTrend) {
   const pair = trendPresentation(rawTrend);
   return pair ? { ...pair, label: pair.word } : null;
 }
-export function resolveGlucoseTrend(latestReading, readings, { now = Date.now(), stale = false, below = false } = {}) {
+export function resolveGlucoseTrend(latestReading, readings, { now = Date.now(), stale = false, below = false, futureToleranceMinutes = 0 } = {}) {
   const source = latestReading?.source;
   const isSensor = source === 'dexcom' || source === 'dexcom_share';
   const at = Date.parse(latestReading?.recorded_at);
-  const age = (now - at) / 60000;
-  if (stale || source === 'system' || !Number.isFinite(at) || age < 0 || (isSensor ? age >= 8 : age > 15)) return null;
+  const rawAge = (now - at) / 60000;
+  const age = Math.max(0, rawAge);
+  // Push callers opt into sensor clock skew; other server consumers stay unchanged.
+  if (stale || source === 'system' || !Number.isFinite(at) || rawAge < -futureToleranceMinutes || (isSensor ? age >= 8 : age > 15)) return null;
   // An unusable sensor category is not permission to invent a replacement.
   const resolved = isSensor ? mapDexcomTrend(latestReading?.trend) : computeGlucoseTrend(readings);
   const pair = trendPresentation(resolved, { below });

@@ -1,5 +1,6 @@
 import { advanceNotificationEpisodes } from './notificationEpisodes.ts';
 import { resolveGlucoseTrend } from './glucoseTrend.ts';
+import { PUSH_FUTURE_TOLERANCE_MINUTES } from './notificationTiming.ts';
 import { lowBoundaries, lowStreamDecisions } from './notificationLowStream.ts';
 import { legacyEpisodeState } from './notificationLegacyEpisodes.ts';
 import {
@@ -150,7 +151,7 @@ export async function evaluateRecipient({ sr, ownerId, prefs, relationship = nul
     durationMinutes: decision.durationMinutes, trend: decision.sample.trend ?? null, nowMs,
     resolvedTrend: resolveGlucoseTrend(rows.find(row => Date.parse(row.recorded_at) === decision.sample.at) || { ...decision.sample, recorded_at: new Date(decision.sample.at).toISOString() },
       rows.filter(row => Date.parse(row.recorded_at) <= decision.sample.at),
-      { now: nowMs, below: decision.sample.value < settings?.target_range_low }),
+      { now: nowMs, futureToleranceMinutes: PUSH_FUTURE_TOLERANCE_MINUTES }),
     thresholdMgdl:
       decision.lowThreshold ??
       (decision.category === 'custom_low' ? prefs.custom_low_mgdl : null) ??

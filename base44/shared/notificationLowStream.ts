@@ -22,6 +22,7 @@
 // number measured twice is two events, and reprocessing one record is one.
 
 import { episodeSamples } from './notificationVelocity.ts';
+import { notificationAgeMinutes } from './notificationTiming.ts';
 
 /** Stable prefix for the per-reading identity used in the claim key. */
 export const LOW_STREAM_IDENTITY = 'low-stream:v1';
@@ -103,7 +104,7 @@ export function lowStreamDecisions({ rows, preferences, thresholds, nowMs, allow
     const created = Date.parse(String(row?.created_date ?? ''));
     // Backfilled measurements and readings predating a preference change do
     // not become a queue of old alerts. Missing legacy metadata is tolerated.
-    if (Number.isFinite(created) && (created - sample.at > STREAM_FRESH_MINUTES * 60_000 || created > nowMs)) continue;
+    if (Number.isFinite(created) && (created - sample.at > STREAM_FRESH_MINUTES * 60_000 || notificationAgeMinutes(created, nowMs) == null)) continue;
 
     const below = boundaries
       .filter((bound) => sample.value < bound.mgdl)

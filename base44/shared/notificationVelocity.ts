@@ -1,4 +1,5 @@
 import { normalizeTrendWord } from './notificationTrend.ts';
+import { notificationAgeMinutes } from './notificationTiming.ts';
 
 // Stackd-only fallback, NOT the Dexcom arrow/alert algorithm. Ingested rows
 // contain categorical trend strings only; they cannot define numeric velocity.
@@ -9,7 +10,8 @@ export function notificationVelocity(samples, nowMs) {
   const window = samples.slice(-4);
   if (window.length !== 4) return null;
   const last = window[3];
-  if (nowMs < last.at || nowMs - last.at > 10 * 60000) return null;
+  const age = notificationAgeMinutes(last.at, nowMs);
+  if (age == null || age > 10) return null;
   if (!['dexcom', 'dexcom_share'].includes(last.source)) return null;
   if (window.some(s => s.source !== last.source)) return null;
   const span = (last.at - window[0].at) / 60000;
@@ -38,7 +40,7 @@ export function episodeSamples(rows, nowMs) {
     const at = Date.parse(row.recorded_at);
     const value = row.value;
     const source = String(row.source || 'manual').toLowerCase();
-    if (!['manual', 'dexcom', 'dexcom_share'].includes(source) || typeof value !== 'number' || !Number.isFinite(value) || value <= 0 || !Number.isFinite(at) || at > nowMs) continue;
+    if (!['manual', 'dexcom', 'dexcom_share'].includes(source) || typeof value !== 'number' || !Number.isFinite(value) || value <= 0 || !Number.isFinite(at) || notificationAgeMinutes(at, nowMs) == null) continue;
     if (ids.has(row.id) && row.id) { const prior = ids.get(row.id); if (prior.at !== at || prior.value !== value || prior.source !== source) conflict = true; continue; }
     if (row.id) ids.set(row.id, { at, value, source });
     if (byTime.has(at)) { if (byTime.get(at).value !== value || byTime.get(at).source !== source) conflict = true; continue; }

@@ -193,7 +193,8 @@ test('velocity never mixes sources, manual, synthetic, missing, future, or stale
   assert.equal(notificationVelocity(episodeSamples(rows, current).samples, current + 11 * 60000), null);
   const gap = [row(0, 100), row(3, 110), row(11, 130), row(15, 145)];
   assert.equal(notificationVelocity(episodeSamples(gap, current).samples, current), null);
-  assert.equal(notificationVelocity(episodeSamples(rows, current - 1).samples, current - 1), null);
+  assert.ok(notificationVelocity(episodeSamples(rows, current - 1).samples, current - 1));
+  assert.equal(notificationVelocity(episodeSamples(rows, current - 120_001).samples, current - 120_001), null);
 });
 
 test('velocity sample ids/timestamps deduplicate and conflicting duplicates make pace unknown', () => {

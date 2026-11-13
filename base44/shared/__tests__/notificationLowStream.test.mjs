@@ -65,7 +65,7 @@ test('a comfort-only reading uses the real comfort boundary, not the custom one'
     category: items[0].category, value: 65, units: 'mg/dL', showDetails: true, nowMs: NOW, thresholdMgdl: items[0].lowThreshold,
   });
   assert.equal(copy.title, '65 mg/dL');
-  assert.equal(copy.body, 'Below your comfort zone');
+  assert.equal(copy.body, 'New reading');
 });
 
 test('the boundary itself is not below it, and 70 is not below a fixed-70 rule', () => {
@@ -193,7 +193,7 @@ test('quiet hours hold a boundary back instead of being bypassed', () => {
 
 test('stale, future, synthetic, backfilled and conflicting readings are never eligible', () => {
   const stale = reading(69, 9);
-  const future = { ...reading(69, 0), recorded_at: new Date(NOW + 60_000).toISOString() };
+  const future = { ...reading(69, 0), recorded_at: new Date(NOW + 120_001).toISOString() };
   const synthetic = reading(69, 2, { source: 'system' });
   const backfilled = reading(69, 30, { created_date: new Date(NOW).toISOString() });
   const ahead = reading(69, 2, { created_date: new Date(NOW + 5 * 60_000).toISOString() });
@@ -236,7 +236,7 @@ test('copy follows the recipient’s own units and stays private unless details 
     thresholdMgdl: 70, personName: 'Chris',
   });
   assert.equal(follower.title, 'Chris · 65 mg/dL');
-  assert.equal(follower.body, "Below Chris' comfort zone");
+  assert.equal(follower.body, "New reading");
 
   const priv = buildNotificationCopy({
     category: 'custom_low', value: 99, units: 'mg/dL', showDetails: false, nowMs: NOW, thresholdMgdl: 100,

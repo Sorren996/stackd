@@ -136,7 +136,7 @@ test('69, 68, 54, 53 submit four times, urgent at escalation, duplicate callback
     assert.equal(f.sends[0].content, 'Low glucose');
     // The urgent presentation is used only when urgent low was opted into.
     assert.equal(f.sends[2].title, '54 mg/dL');
-    assert.equal(f.sends[2].content, urgent ? 'Urgent low' : 'Low glucose');
+    assert.equal(f.sends[2].content, urgent ? 'Urgent low, act now.' : 'Low glucose');
     assert.deepEqual(f.deliveries.map(d => d.status), Array(4).fill('submitted'));
     await f.invoke({ rows, nowMs: now + 16 * 60000 });
     assert.equal(f.sends.length, 4);
@@ -185,7 +185,7 @@ test('an explicit service refusal is failed, never submitted, and is not resent 
   assert.equal(f.sends.length, 1); assert.equal(f.deliveries[0].status, 'failed'); assert.equal(f.deliveries[0].submitted_at, undefined);
 });
 
-test('all_readings dispatches the "{value} {unit} {arrow}" title and capitalised trend body, or comfort zone when trend is absent', async () => {
+test('all_readings dispatches the "{value} {unit} {arrow}" title and capitalised trend body', async () => {
   const f = fixture();
   f.preferences.categories = {};
   f.preferences.all_readings_enabled = true;
@@ -197,6 +197,29 @@ test('all_readings dispatches the "{value} {unit} {arrow}" title and capitalised
   assert.equal(f.sends.length, 1);
   assert.equal(f.sends[0].title, '124 mg/dL →');
   assert.equal(f.sends[0].content, 'Holding steady');
+});
+
+test('a Flat sensor reading four seconds ahead dispatches its arrow and word exactly once', async () => {
+  const f = fixture();
+  f.preferences.categories = {};
+  f.preferences.all_readings_enabled = true;
+  f.preferences.show_health_details = true;
+  const row = { id: 'skew-flat', source: 'dexcom_share', value: 131, trend: 'Flat', recorded_at: new Date(now + 4000).toISOString() };
+  await f.invoke({ rows: [row] });
+  assert.equal(f.sends.length, 1);
+  assert.equal(f.sends[0].title, '131 mg/dL →');
+  assert.equal(f.sends[0].content, 'Holding steady');
+  await f.invoke({ rows: [row], nowMs: now + 5000 });
+  assert.equal(f.sends.length, 1);
+});
+
+test('urgent low four seconds ahead keeps its arrow and exact action copy', async () => {
+  const f = fixture();
+  f.preferences.show_health_details = true;
+  await f.invoke({ rows: [{ ...readings[0], trend: 'SingleDown', recorded_at: new Date(now + 4000).toISOString() }] });
+  assert.equal(f.sends.length, 1);
+  assert.equal(f.sends[0].title, '54 mg/dL ↓');
+  assert.equal(f.sends[0].content, 'Urgent low, act now.');
 });
 
 test('custom_high dispatches the "{value} {unit} {arrow}" title and "At or above {level}" body', async () => {

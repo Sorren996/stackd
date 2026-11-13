@@ -65,18 +65,18 @@ test("display units follow the recipient, with the reading and custom threshold 
 
 // ── Exact two-line layout per category ────────────────────────────────────
 
-test("every category renders the exact two-line sentence-case body with no full stop or repeated value", () => {
+test("every category renders the requested exact two-line copy", () => {
   assert.deepEqual(copy({ category: "all_readings", value: 145, trend: "Flat" }), {
     title: "145 mg/dL →",
     body: "Holding steady",
   });
   assert.deepEqual(copy({ category: "all_readings", value: 145, trend: null }), {
     title: "145 mg/dL",
-    body: "In your comfort zone",
+    body: "New reading",
   });
   assert.deepEqual(copy({ category: "urgent_low", value: 50, trend: "SingleDown" }), {
     title: "50 mg/dL ↓",
-    body: "Urgent low",
+    body: "Urgent low, act now.",
   });
   assert.deepEqual(copy({ category: "low_glucose", value: 65, thresholdMgdl: 70, trend: "FortyFiveDown" }), {
     title: "65 mg/dL ↘",
@@ -88,7 +88,7 @@ test("every category renders the exact two-line sentence-case body with no full 
   });
   assert.deepEqual(copy({ category: "below_range", value: 65, thresholdMgdl: 70, trend: "Flat" }), {
     title: "65 mg/dL →",
-    body: "Below your comfort zone",
+    body: "Holding steady",
   });
   assert.deepEqual(copy({ category: "custom_high", value: 185, thresholdMgdl: 180, trend: "SingleUp" }), {
     title: "185 mg/dL ↑",
@@ -96,7 +96,7 @@ test("every category renders the exact two-line sentence-case body with no full 
   });
   assert.deepEqual(copy({ category: "above_range", value: 305, durationMinutes: 30, trend: "FortyFiveUp" }), {
     title: "305 mg/dL ↗",
-    body: "Above your comfort zone",
+    body: "Drifting up",
   });
   assert.deepEqual(copy({ category: "falling_fast", value: 120, trend: "DoubleDown" }), {
     title: "120 mg/dL ↓↓",
@@ -212,11 +212,11 @@ test("a private preview carries no value, trend, name or condition", () => {
 test("a follower notice applies the shared two-line layout and names whose reading it is only when details are on", () => {
   const detailed = copy({ category: "urgent_low", value: 54, trend: "SingleDown", personName: "Maria" });
   assert.equal(detailed.title, "Maria · 54 mg/dL ↓");
-  assert.equal(detailed.body, "Urgent low");
+  assert.equal(detailed.body, "Urgent low, act now.");
 
   const endsInS = copy({ category: "below_range", value: 62, trend: "Flat", personName: "Chris" });
   assert.equal(endsInS.title, "Chris · 62 mg/dL →");
-  assert.equal(endsInS.body, "Below Chris' comfort zone");
+  assert.equal(endsInS.body, "Holding steady");
 
   const customHighFollower = copy({
     category: "custom_high",

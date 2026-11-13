@@ -15,6 +15,7 @@
 //    decided, and a sustained condition is never inferred across a gap.
 
 import { sanitizeNotificationOptions } from './notificationOptions.ts';
+import { notificationAgeMinutes, PUSH_FUTURE_TOLERANCE_MINUTES } from './notificationTiming.ts';
 import { normalizeTrendWord } from './notificationTrend.ts';
 import { trendPresentation, trendGlyph } from './trendPresentation.ts';
 
@@ -69,7 +70,7 @@ export const MAX_READING_GAP_MINUTES = 20;
 export const EPISODE_LOOKBACK_MINUTES = 360;
 
 /** Readings this far in the future are treated as bad data, not as news. */
-export const FUTURE_TOLERANCE_MINUTES = 2;
+export const FUTURE_TOLERANCE_MINUTES = PUSH_FUTURE_TOLERANCE_MINUTES;
 
 /** The duration choices offered for a sustained high. Explicitly chosen, never defaulted. */
 export const ABOVE_RANGE_DURATION_CHOICES = [15, 30, 60] as const;
@@ -161,8 +162,8 @@ export function classifySample(value: unknown, targetLow: unknown, targetHigh: u
 
 export function isFreshSample(sample: Sample | null | undefined, nowMs: number): boolean {
   if (!sample) return false;
-  const ageMinutes = (nowMs - sample.at) / 60_000;
-  return ageMinutes >= 0 && ageMinutes <= NOTIFICATION_FRESHNESS_MINUTES;
+  const ageMinutes = notificationAgeMinutes(sample.at, nowMs);
+  return ageMinutes != null && ageMinutes <= NOTIFICATION_FRESHNESS_MINUTES;
 }
 
 // ── Episodes ──────────────────────────────────────────────────────────────
@@ -428,8 +429,8 @@ const PUSH_LABELS: Record<DeliveryCategory, string> = {
   custom_low: "Low glucose",
   custom_high: "High glucose",
   low_glucose: "Low glucose",
-  below_range: "Below comfort zone",
-  above_range: "Above comfort zone",
+  below_range: "Glucose",
+  above_range: "Glucose",
   falling_fast: "Falling fast",
   rising_fast: "Rising fast",
   missing_readings: "Readings haven't updated",
@@ -488,7 +489,7 @@ export function buildNotificationCopy(input: CopyInput): PushCopy {
   const units = unitLabel(input.units);
   const value = formatGlucoseValue(input.value, input.units);
   const resolved = 'resolvedTrend' in input ? input.resolvedTrend : input.trend;
-  const pair = trendPresentation(resolved, { below: input.resolvedTrend?.word === 'coming back up' });
+  const pair = trendPresentation(resolved);
   const arrow = pair ? trendGlyph(pair) : null;
   const title = `${lead}${value} ${units}${arrow ? ` ${arrow}` : ""}`;
 
@@ -497,35 +498,16 @@ export function buildNotificationCopy(input: CopyInput): PushCopy {
     rawThreshold != null && rawThreshold !== "" ? Number(rawThreshold) : NaN;
   const hasThreshold = Number.isFinite(numericThreshold) && numericThreshold > 0;
   const formattedThreshold = hasThreshold ? formatGlucoseValue(numericThreshold, input.units) : null;
-  const their = who ? possessive(who) : "your";
-
-  if (input.category === "all_readings") {
-    let streamBody = "";
-    if (pair && pair.word) {
-      streamBody = pair.word.charAt(0).toUpperCase() + pair.word.slice(1);
-    } else {
-      const v = Number(input.value);
-      const lowRaw = input.targetLow == null ? NaN : Number(input.targetLow);
-      const highRaw = input.targetHigh == null ? NaN : Number(input.targetHigh);
-      const low = Number.isFinite(lowRaw) && lowRaw > 0 ? lowRaw : 70;
-      const high = Number.isFinite(highRaw) && highRaw > 0 ? highRaw : 180;
-      streamBody =
-        Number.isFinite(v) && v < low
-          ? "Below your comfort zone"
-          : Number.isFinite(v) && v > high
-            ? "Above your comfort zone"
-            : "In your comfort zone";
-    }
-    return { title, body: streamBody };
+  if (["all_readings", "below_range", "above_range"].includes(input.category)) {
+    const body = pair ? pair.word.charAt(0).toUpperCase() + pair.word.slice(1) : "New reading";
+    return { title, body };
   }
 
   let body = "";
-  if (input.category === "urgent_low") body = "Urgent low";
+  if (input.category === "urgent_low") body = "Urgent low, act now.";
   else if (input.category === "low_glucose") body = "Low glucose";
   else if (input.category === "custom_low") body = formattedThreshold ? `Below ${formattedThreshold}` : "Low glucose";
-  else if (input.category === "below_range") body = `Below ${their} comfort zone`;
   else if (input.category === "custom_high") body = formattedThreshold ? `At or above ${formattedThreshold}` : "High glucose";
-  else if (input.category === "above_range") body = `Above ${their} comfort zone`;
   else if (input.category === "falling_fast") body = "Falling fast";
   else if (input.category === "rising_fast") body = "Rising fast";
   else if (input.category === "low_recovery") body = "Back in range";

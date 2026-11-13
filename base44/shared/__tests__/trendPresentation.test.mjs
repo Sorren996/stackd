@@ -53,7 +53,7 @@ for (const [trend, glyph, capWord] of levels) {
   });
 }
 
-test('stale pushes keep "{value} {unit}" with no arrow, and all_readings falls back to comfort zone body', () => {
+test('stale trend resolution returns no arrow; stream copy falls back to New reading', () => {
   const resolvedTrend = resolveGlucoseTrend(rows.at(-1), rows, { now: now + 8 * 60000 });
   assert.equal(resolvedTrend, null);
   for (const category of categories) {
@@ -87,7 +87,7 @@ test('below-zone override keeps arrow-only title; private previews remain privat
   assert.ok(!hidden.body.includes('100'));
 });
 
-test('all_readings uses capitalised trend word when trend exists, and comfort-zone status when trend is absent', () => {
+test('all_readings uses capitalised trend word or New reading when trend is absent', () => {
   const flatRows = [122, 123, 124, 124].map((value, i) => ({
     value,
     source: 'dexcom_share',
@@ -121,7 +121,7 @@ test('all_readings uses capitalised trend word when trend exists, and comfort-zo
     targetHigh: 180,
   });
   assert.equal(noTrendInZone.title, '124 mg/dL');
-  assert.equal(noTrendInZone.body, 'In your comfort zone');
+  assert.equal(noTrendInZone.body, 'New reading');
 
   const noTrendAbove = buildNotificationCopy({
     category: 'all_readings',
@@ -133,7 +133,7 @@ test('all_readings uses capitalised trend word when trend exists, and comfort-zo
     targetLow: 80,
     targetHigh: 160,
   });
-  assert.equal(noTrendAbove.body, 'Above your comfort zone');
+  assert.equal(noTrendAbove.body, 'New reading');
 
   const noTrendBelow = buildNotificationCopy({
     category: 'all_readings',
@@ -145,7 +145,7 @@ test('all_readings uses capitalised trend word when trend exists, and comfort-zo
     targetLow: 80,
     targetHigh: 160,
   });
-  assert.equal(noTrendBelow.body, 'Below your comfort zone');
+  assert.equal(noTrendBelow.body, 'New reading');
 
   const privatePreview = buildNotificationCopy({
     category: 'all_readings',
