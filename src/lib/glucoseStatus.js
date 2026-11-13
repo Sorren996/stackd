@@ -83,10 +83,7 @@ export function getGlucoseStatusLabel(value, targetLow, targetHigh) {
 // is never softened by the personal target low.
 export const URGENT_LOW_THRESHOLD = 55;
 
-// Direction is read from the most recent ~15–20 minutes of readings (the last
-// 3–4 points), comparing earliest to latest. A wider window abstains rather
-// than describing an old move as current.
-const DIRECTION_WINDOW_MINUTES = 20;
+// Direction comes from the resolved arrow, never from a separate value delta.
 
 // Zone for the Current Glucose card. Urgent low takes precedence over the
 // personal target low so a critically low reading never reads as ordinary.
@@ -101,25 +98,15 @@ export function getCurrentGlucoseZone(value, targetLow, targetHigh, stale = fals
   return { zone: "inRange", label: "In comfort zone" };
 }
 
-// Directional phrase from the last 3–4 readings, earliest vs latest:
-//   within ±5        → "holding steady"
-//   up more than 5   → "drifting up"  (more than 15 → "climbing")
-//   down more than 5 → "easing down"  (more than 15 → "falling")
-// Returns null (omit the line) when there are fewer than 3 readings, the
-// readings are stale, or the window is too wide to call "recent".
+// Compatibility entry point: the same resolved trend as the arrow.
 export function computeGlucoseDirection(readings, options = {}) {
   const latest = [...(readings || [])].sort((a, b) => Date.parse(b.recorded_at) - Date.parse(a.recorded_at))[0];
   return resolveGlucoseTrend(latest, readings, options)?.word || null;
 }
 
-// Direction phrase for display. An upward move while below the comfort zone
-// reads as an encouraging "coming back up" rather than "drifting up".
-export function describeDirection(direction, zone) {
-  if (!direction) return null;
-  if (zone === "below" && (direction === "drifting up" || direction === "climbing" || direction === "climbing fast")) {
-    return "coming back up";
-  }
-  return direction;
+// Direction is already zone-aware when resolved; do not reword it here.
+export function describeDirection(direction) {
+  return direction || null;
 }
 
 // The one observational line shown under the reading, or null. Urgent low gets

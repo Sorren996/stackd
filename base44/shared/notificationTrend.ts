@@ -11,21 +11,16 @@
 
 export type TrendDirection = "up" | "flat" | "down";
 
-const TRENDS: Record<string, { direction: TrendDirection; arrow: string }> = {
-  doubleup: { direction: "up", arrow: "↑↑" },
-  singleup: { direction: "up", arrow: "↑" },
-  fortyfiveup: { direction: "up", arrow: "↗" },
-  flat: { direction: "flat", arrow: "→" },
-  fortyfivedown: { direction: "down", arrow: "↘" },
-  singledown: { direction: "down", arrow: "↓" },
-  doubledown: { direction: "down", arrow: "↓↓" },
-};
+import { trendGlyph } from './trendPresentation.ts';
+
+// Alert eligibility keeps its original accepted sensor categories.
+const TREND_KEYS = new Set(['doubleup', 'singleup', 'fortyfiveup', 'flat', 'fortyfivedown', 'singledown', 'doubledown']);
 
 /** The recognised trend key, or null. Never guesses. */
 export function normalizeTrendWord(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const key = value.toLowerCase().replace(/[^a-z]/g, "");
-  return TRENDS[key] ? key : null;
+  return TREND_KEYS.has(key) ? key : null;
 }
 
 /**
@@ -34,10 +29,5 @@ export function normalizeTrendWord(value: unknown): string | null {
  * fast" shows nothing rather than a rising figure.
  */
 export function trendArrowFor(category: string, trend: unknown): string | null {
-  const key = normalizeTrendWord(trend);
-  if (!key) return null;
-  const entry = TRENDS[key];
-  if (category === "falling_fast" && entry.direction !== "down") return null;
-  if (category === "rising_fast" && entry.direction !== "up") return null;
-  return entry.arrow;
+  return trendGlyph(trend);
 }

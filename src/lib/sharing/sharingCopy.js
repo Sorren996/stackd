@@ -84,20 +84,7 @@ export function describeProjectionReason(reason) {
 }
 
 export function describeDirection(direction) {
-  switch (direction) {
-    case "climbing":
-      return "Rising quickly";
-    case "drifting up":
-      return "Drifting up";
-    case "falling":
-      return "Falling quickly";
-    case "drifting down":
-      return "Drifting down";
-    case "holding steady":
-      return "Holding steady";
-    default:
-      return null;
-  }
+  return direction || null;
 }
 
 export function describeZone(zone) {

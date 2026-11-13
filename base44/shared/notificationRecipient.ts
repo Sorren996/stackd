@@ -148,7 +148,7 @@ export async function evaluateRecipient({ sr, ownerId, prefs, relationship = nul
     readingAt: decision.sample.at, units: displaySettings?.glucose_units || 'mg/dL', timeZone: prefs.quiet_timezone || displaySettings?.timezone || 'UTC',
     showDetails: prefs.show_health_details === true, personName: relationship?.sharer_display_name,
     durationMinutes: decision.durationMinutes, trend: decision.sample.trend ?? null, nowMs,
-    resolvedTrend: resolveGlucoseTrend({ ...decision.sample, recorded_at: new Date(decision.sample.at).toISOString() },
+    resolvedTrend: resolveGlucoseTrend(rows.find(row => Date.parse(row.recorded_at) === decision.sample.at) || { ...decision.sample, recorded_at: new Date(decision.sample.at).toISOString() },
       rows.filter(row => Date.parse(row.recorded_at) <= decision.sample.at),
       { now: nowMs, below: decision.sample.value < settings?.target_range_low }),
     thresholdMgdl: decision.lowThreshold ?? null,

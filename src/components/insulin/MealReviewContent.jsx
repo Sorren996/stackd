@@ -19,15 +19,7 @@ const PALETTE = {
   hairline: "#eadccf",
 };
 
-const TREND_ARROW = {
-  "double_up": "⇈",
-  up: "↑",
-  "up-right": "↗",
-  right: "→",
-  "down-right": "↘",
-  down: "↓",
-  "double_down": "⇊",
-};
+import { trendGlyph } from '@/lib/trendPresentation';
 
 function formatClock(time) {
   if (!Number.isFinite(time)) return null;
@@ -64,7 +56,7 @@ export default function MealReviewContent({ mealInsight, monitoringStatus, gluco
   if (!mealInsight) return null;
 
   const d = mealInsight.details;
-  const trendArrow = glucoseTrend?.icon ? TREND_ARROW[glucoseTrend.icon] : null;
+  const trendArrow = trendGlyph(glucoseTrend);
   const trendLabel = glucoseTrend?.label || null;
 
   // ── NO ACTIVE MEAL ──────────────────────────────────────────────

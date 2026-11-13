@@ -1,4 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
+import { resolveGlucoseTrend } from '@/lib/glucoseTrend';
+import TrendArrow from '@/components/glucose/TrendArrow';
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
@@ -145,15 +147,7 @@ export default function SplitPlanReview() {
   const latestGlucose = glucoseReadings[0] || null;
   const secondGlucose = glucoseReadings[1] || null;
 
-  const trend = useMemo(() => {
-    if (!latestGlucose || !secondGlucose) return { icon: "right", label: "Stable" };
-    const diff = Number(latestGlucose.value) - Number(secondGlucose.value);
-    if (diff >= 7) return { icon: "up", label: "Rising" };
-    if (diff >= 4) return { icon: "up-right", label: "Slowly rising" };
-    if (diff >= -3) return { icon: "right", label: "Stable" };
-    if (diff >= -6) return { icon: "down-right", label: "Slowly falling" };
-    return { icon: "down", label: "Falling" };
-  }, [latestGlucose, secondGlucose]);
+  const trend = resolveGlucoseTrend(latestGlucose, glucoseReadings, { now, below: latestGlucose?.value < targetRange.low });
 
   const glucoseAgeMin = latestGlucose?.recorded_at
     ? Math.floor((now - new Date(latestGlucose.recorded_at).getTime()) / MINUTE_MS)
@@ -162,7 +156,7 @@ export default function SplitPlanReview() {
   const isGlucoseStale = glucoseAgeMin !== null && glucoseAgeMin > GLUCOSE_STALE_THRESHOLD_MIN;
   const isGlucoseMissing = !latestGlucose;
   const isGlucoseLow = latestGlucose && Number(latestGlucose.value) < targetRange.low;
-  const isGlucoseFalling = trend.icon === "down" || trend.icon === "down-right";
+  const isGlucoseFalling = ['down', 'down-right', 'double_down'].includes(trend?.icon);
 
   const activeIOB = useMemo(() => getTotalBolusIOB(doses, now), [doses, now]);
 
@@ -280,7 +274,7 @@ export default function SplitPlanReview() {
     );
   }
 
-  const TrendIcon = TREND_ICONS[trend.icon] || ArrowRight;
+
   const isTerminal = ["completed", "modified", "skipped", "expired", "cancelled"].includes(planStatus);
 
   return (
@@ -349,8 +343,8 @@ export default function SplitPlanReview() {
                 <span className="text-3xl font-bold text-white">{latestGlucose.value}</span>
                 <span className="text-xs text-white/40">mg/dL</span>
                 <div className="ml-auto flex items-center gap-1.5">
-                  <TrendIcon className="h-4 w-4" style={{ color: isGlucoseLow ? "#c97060" : "#5b6550" }} />
-                  <span className="text-xs font-medium text-white/60">{trend.label}</span>
+                  <TrendArrow icon={trend?.icon} label={trend?.word} className="h-4 w-4" style={{ color: isGlucoseLow ? "#c97060" : "#5b6550" }} />
+                  {trend && <span className="text-xs font-medium text-white/60">{trend.word}</span>}
                 </div>
               </div>
             )}

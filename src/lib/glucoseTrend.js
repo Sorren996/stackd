@@ -12,11 +12,8 @@
 // slopes) over the last 15 minutes, three samples minimum — and both map the
 // result through the same thresholds:
 //
-//   Rising          >= +3 mg/dL/min
-//   Slowly rising   >= +1
-//   Stable          > -1 and < +1
-//   Slowly falling  > -3 (down to -1)
-//   Falling         <= -3
+//   Magnitude <1: flat; 1–<2: angled; 2–<3: straight; >=3: double.
+//   Both signs use the same tiers. Presentation lives in trendPresentation.
 //
 // When the last 15 minutes hold fewer than three readings (a hand-logged day,
 // rather than a CGM), the same function is asked over a wider three-hour window
@@ -84,7 +81,7 @@ export function computeGlucoseTrend(readings) {
 // Maps a native Dexcom trend string to our icon/label format.
 // Dexcom returns camelCase strings like "doubleUp", "flat", "singleDown".
 // We normalize to handle snake_case and underscore variants too, then
-// map to the same five icon keys used by computeGlucoseTrend.
+// map to the same seven icon keys used by computeGlucoseTrend.
 export function mapDexcomTrend(rawTrend) {
   const pair = trendPresentation(rawTrend);
   return pair ? { ...pair, label: pair.word } : null;
@@ -95,8 +92,8 @@ export function mapDexcomTrend(rawTrend) {
  *
  * A sensor's OWN reported arrow is authoritative when the source supplies one,
  * so a genuine Dexcom DoubleDown renders as a double-down arrow labelled
- * "Falling quickly" instead of being re-derived from the numbers. Only when no
- * supplied arrow exists is a rate derived from the real readings, and when
+ * "falling fast" instead of being re-derived from the numbers. Only non-sensor
+ * readings use a rate derived from the real readings, and when
  * there is not enough evidence for either the answer is null — never the steady
  * arrow, which would assert something nobody measured.
  *
@@ -116,9 +113,8 @@ export function resolveGlucoseTrend(latestReading, readings, { now = Date.now(),
 }
 
 /**
- * The plain-language movement of the last few readings, for a tooltip's range
- * line. Always measured across the last three or four readings (never one), so
- * a single wiggle is not described as a climb or a fall.
+ * Compatibility word accessor. Resolves the newest reading's arrow first;
+ * it never calculates movement using a separate window or value difference.
  *
  * Returns null when there is not enough evidence to describe movement — the
  * caller then shows no movement line at all rather than "holding steady", which

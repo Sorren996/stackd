@@ -14,13 +14,7 @@ const PALETTE = {
   surface: "#fdf9f2",
 };
 
-const TREND_ARROW = {
-  up: "↑",
-  "up-right": "↗",
-  right: "→",
-  "down-right": "↘",
-  down: "↓",
-};
+import { trendGlyph } from '@/lib/trendPresentation';
 
 function formatElapsed(ms) {
   const totalMin = Math.max(0, Math.round(ms / 60000));
@@ -235,7 +229,7 @@ export default function MealBalanceTooltip({ mealInsight, open, onClose, monitor
   const hasCurrentGlucose = Number.isFinite(glucoseNow);
   const glucoseChange = hasCurrentGlucose && Number.isFinite(glucoseStart) ? glucoseNow - glucoseStart : null;
   const elapsedMs = Number.isFinite(mealTime) ? Date.now() - mealTime : null;
-  const trendArrow = glucoseTrend?.icon ? TREND_ARROW[glucoseTrend.icon] : null;
+  const trendArrow = trendGlyph(glucoseTrend);
   const peakAfterMs = Number.isFinite(peakOutcomeTime) && Number.isFinite(mealTime) ? peakOutcomeTime - mealTime : null;
 
   const openLogger = (mode) => {
@@ -286,7 +280,7 @@ export default function MealBalanceTooltip({ mealInsight, open, onClose, monitor
                     <span className="text-3xl font-black leading-none text-white">{formatGlucose(glucoseNow)}</span>
                     <span className="text-[11px] font-medium text-white/40">{glucoseUnitLabel()}</span>
                     {trendArrow && (
-                      <span className="ml-0.5 text-lg font-bold" style={{ color: glucoseTrend?.color || PALETTE.muted }}>
+                      <span role="img" aria-label={glucoseTrend?.word} className="ml-0.5 text-lg font-bold" style={{ color: glucoseTrend?.color || PALETTE.muted }}>
                         {trendArrow}
                       </span>
                     )}
@@ -480,11 +474,9 @@ export default function MealBalanceTooltip({ mealInsight, open, onClose, monitor
             <p className="mt-1.5 text-[10px] leading-relaxed italic" style={{ color: PALETTE.muted, opacity: 0.6 }}>
               {d.latestGlucoseValue === null || d.latestGlucoseValue === undefined
                 ? "Current glucose data is unavailable. Check your connected glucose source or monitor using your usual method."
-                : glucoseTrend?.label === "Rising" || glucoseTrend?.label === "Slowly rising"
-                  ? "Glucose is currently rising. Continue watching the trend and follow your established plan."
-                  : glucoseTrend?.label === "Falling" || glucoseTrend?.label === "Slowly falling"
-                    ? "Glucose is currently falling. Consider insulin already active and continue monitoring closely."
-                    : "Glucose is currently stable. Delayed changes may still occur during this monitoring period."}
+                : glucoseTrend?.word
+                  ? `Glucose is currently ${glucoseTrend.word}. ${['up', 'up-right', 'double_up'].includes(glucoseTrend.icon) ? 'Continue watching the trend and follow your established plan.' : ['down', 'down-right', 'double_down'].includes(glucoseTrend.icon) ? 'Consider insulin already active and continue monitoring closely.' : 'Delayed changes may still occur during this monitoring period.'}`
+                  : null}
             </p>
           </div>
         )}
