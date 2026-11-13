@@ -85,12 +85,12 @@ export default function DailyBalanceDetailSheet({
 
         {/* Hero: percentage + state */}
         <div className="px-6 pt-2">
-          <div className="flex items-baseline gap-2 mx-auto">
-            <span className="anchor-number" style={{ color: PALETTE.ink }}>
+          <div className="flex items-end gap-2" style={{ alignItems: "last baseline" }}>
+            <span className="anchor-number shrink-0" style={{ color: PALETTE.ink }}>
               {displayValue}
             </span>
             {hasData && qualifier &&
-            <span className="text-sm font-medium leading-snug my-3 py-3" style={{ color: PALETTE.sec }}>
+            <span className="text-sm font-medium leading-snug" style={{ color: PALETTE.sec }}>
                 {qualifier}
               </span>
             }
