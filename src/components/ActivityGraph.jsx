@@ -2,16 +2,15 @@ import { useMemo, useRef, useEffect, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Area, XAxis, YAxis, Line, ComposedChart, ReferenceLine, ReferenceArea, ReferenceDot } from "recharts";
 import { generateActivityCurve, getDoseIOB, getInsulinProfile, isBasalInsulinType } from "@/lib/insulinPharmacology";
-import { formatRemaining } from "@/lib/remainingInsulin";
 import { PROFILE_COLORS } from "@/lib/carbAbsorption";
 import { format } from "date-fns";
-import { CornerUpRight, SlidersHorizontal, Check, Pencil, Trash2, Info } from "lucide-react";
+import { CornerUpRight, SlidersHorizontal, Check, Info } from "lucide-react";
 import { HIGH_PROTEIN_FAT_MONITORING_HOURS, mergeMonitoringIntervals, hasDelayedRise } from "@/lib/mealMonitoring";
 import DelayedRiseCautionCard from "@/components/graph/DelayedRiseCautionCard";
 import { GLUCOSE_STATUS_COLORS, readHighReference, FIXED_LOW_REFERENCE } from "@/lib/glucoseStatus";
 import { canonicalGlucoseSeries, buildGlucoseSegments } from "@/lib/glucoseSeries";
 import { motion, AnimatePresence } from "framer-motion";
-import InfoPopover from "@/components/graph/InfoPopover";
+import ChartLogPopover from "@/components/graph/ChartLogPopover";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 import { useIsLightTheme } from "@/lib/theme";
 import { getGraphTheme } from "@/lib/graphTheme";
@@ -302,7 +301,7 @@ function FilterDropdown({ filters, onChange, anchorRect }) {
 
 }
 
-export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries = [], onSelectLog = null, onDeleteLog = null, glucoseReadOnly = false, projection = null, projectionNote = null, snapshotNow, resumeRevision = 0, historyReady = true, historyLoading = false, historyError = false }) {
+export default function ActivityGraph({ doses, activeInsulinBreakdown = [], glucoseReadings = [], carbEntries = [], onSelectLog = null, onDeleteLog = null, glucoseReadOnly = false, projection = null, projectionNote = null, snapshotNow, resumeRevision = 0, historyReady = true, historyLoading = false, historyError = false }) {
   const previousResume = useRef(resumeRevision);
   const previousNowPosition = useRef(null);
   // Identity of the scroll container the last anchoring ran against. A newly
@@ -1951,81 +1950,18 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       <DelayedRiseCautionCard carbEntries={carbEntries} />
       </div>
 
-      {activeMarker &&
-      <InfoPopover anchorRect={activeMarker.rect} onClose={closeMarker}>
-          {activeMarker.type === "carbs" &&
-        <div className="space-y-1.5">
-              {(() => {
-            const isRescue = activeMarker.item.is_rescue_carb === true || activeMarker.item.classification === "rescue_carbs";
-            return <>
-                  <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: isRescue ? "#8a6db8" : "#a89e8d" }}>{isRescue ? "Rescue Carb" : "Nourishment"}</span>
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="text-2xl font-black" style={{ color: "#3f3830" }}>{Math.round(activeMarker.item.carbs)}</span>
-                    <span className="text-xs" style={{ color: "#6b6153" }}>g {isRescue ? "rescue" : "carbs"}</span>
-                  </div>
-                  <p className="text-xs" style={{ color: "#3f3830" }}>{activeMarker.item.food_name || activeMarker.item.name || "Food"}</p>
-                  <p className="text-[11px]" style={{ color: "#746959" }}>{format(new Date(activeMarker.item.consumed_at), "h:mm a, MMM d")}</p>
-                </>;
-          })()}
-            </div>
-        }
-          {activeMarker.type === "insulin" &&
-        <div className="space-y-1.5">
-              <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "#746959" }}>Insulin</span>
-              <p className="text-sm font-bold" style={{ color: "#3f3830" }}>{activeMarker.item.insulin_type}</p>
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-2xl font-black" style={{ color: "#3f3830" }}>{Math.round(activeMarker.item.units)}</span>
-                <span className="text-xs" style={{ color: "#6b6153" }}>units</span>
-              </div>
-              {(() => {
-            const iob = getDoseIOB(activeMarker.item, Date.now());
-            // Any positive remainder reads as at least "1u" — the estimate is
-            // never rounded down to a confident-looking zero before the model's
-            // own endpoint.
-            return iob > 0 ?
-            <p className="text-[11px]" style={{ color: "#5b6550" }}>{formatRemaining(iob)} estimated active</p> :
-            <p className="text-[11px]" style={{ color: "#746959" }}>Estimate complete</p>;
-          })()}
-              <p className="text-[11px]" style={{ color: "#746959" }}>{format(new Date(activeMarker.item.administered_at), "h:mm a, MMM d")}</p>
-
-            </div>
-        }
-          {activeMarker.type === "glucose" &&
-        <div className="space-y-1.5">
-              <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "#746959" }}>Glucose</span>
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-3xl font-black tabular-nums" style={{ color: "#d0c0aeff" }}>{formatGlucose(activeMarker.item.value)}</span>
-                <span className="text-xs" style={{ color: "#6b6153" }}>{glucoseUnitLabel()}</span>
-              </div>
-              <p className="text-[11px]" style={{ color: "#746959" }}>{activeMarker.item.source === "dexcom" ? "CGM" : activeMarker.item.source === "system" ? "System" : "Manual"}, {format(new Date(activeMarker.item.recorded_at), "h:mm a, MMM d")}</p>
-
-            </div>
-        }
-
-          {(onSelectLog || onDeleteLog) && !(activeMarker.type === "glucose" && (activeMarker.item.source === "dexcom" || glucoseReadOnly)) &&
-        <div className="mt-4 flex gap-2">
-              {onSelectLog && !confirmDelete &&
-          <button type="button" onClick={handleEdit} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border py-2 text-xs font-semibold transition hover:opacity-70" style={{ borderColor: "#eadccf", background: "#fdf9f2", color: "#3f3830" }}>
-                  <Pencil className="h-3 w-3" /> Edit
-                </button>
-          }
-              {onDeleteLog && !confirmDelete &&
-          <button type="button" onClick={() => setConfirmDelete(true)} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border py-2 text-xs font-semibold transition hover:opacity-70" style={{ background: "rgba(200,112,96,0.06)", borderColor: "rgba(200,112,96,0.25)", color: "#c97060" }}>
-                  <Trash2 className="h-3 w-3" /> Remove
-                </button>
-          }
-              {confirmDelete &&
-          <>
-                  <button type="button" onClick={() => setConfirmDelete(false)} className="flex-1 rounded-xl border py-2 text-xs font-semibold transition hover:opacity-70" style={{ borderColor: "#eadccf", background: "#fdf9f2", color: "#3f3830" }}>Keep it</button>
-                  <button type="button" onClick={handleDelete} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border py-2 text-xs font-semibold transition hover:opacity-70" style={{ background: "rgba(200,112,96,0.15)", borderColor: "rgba(200,112,96,0.35)", color: "#c97060" }}>
-                    <Trash2 className="h-3 w-3" /> Confirm remove
-                  </button>
-                </>
-          }
-            </div>
-        }
-        </InfoPopover>
-      }
+      {activeMarker && (
+        <ChartLogPopover
+          activeMarker={activeMarker}
+          activeInsulinBreakdown={activeInsulinBreakdown}
+          glucoseReadOnly={glucoseReadOnly}
+          confirmDelete={confirmDelete}
+          onConfirmDeleteChange={setConfirmDelete}
+          onEdit={onSelectLog ? handleEdit : null}
+          onDelete={onDeleteLog ? handleDelete : null}
+          onClose={closeMarker}
+        />
+      )}
 
       {editingMeal &&
       <MealEditOverlay entries={editingMeal} onClose={() => setEditingMeal(null)} />

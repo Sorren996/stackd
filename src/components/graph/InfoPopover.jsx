@@ -6,7 +6,7 @@ const MARGIN = 8;
 
 // Lightweight, viewport-clamped contextual popover anchored to a screen rect.
 // Closes on outside click, Escape, or any scroll (including the chart's).
-export default function InfoPopover({ anchorRect, onClose, children }) {
+export default function InfoPopover({ anchorRect, onClose, editorial = false, children }) {
   const ref = useRef(null);
   const [pos, setPos] = useState({ left: 0, top: 0, ready: false });
 
@@ -52,14 +52,31 @@ export default function InfoPopover({ anchorRect, onClose, children }) {
         initial={{ opacity: 0, y: 6, scale: 0.96 }}
         animate={{ opacity: pos.ready ? 1 : 0, y: pos.ready ? 0 : 6, scale: pos.ready ? 1 : 0.96 }}
         transition={{ duration: 0.14 }}
-        className="stackd-popover fixed z-[300] w-[224px] rounded-2xl border p-3 text-left"
-        style={{
-          left: pos.left,
-          top: pos.top,
-          borderColor: "#eadccf",
-          background: "#fdf9f2",
-          boxShadow: "0 8px 28px rgba(63, 56, 48, 0.12), 0 2px 8px rgba(63, 56, 48, 0.06)",
-        }}
+        className={
+          editorial
+            ? "fixed z-[300] w-[224px] text-left"
+            : "stackd-popover fixed z-[300] w-[224px] rounded-2xl border p-3 text-left"
+        }
+        style={
+          editorial
+            ? {
+                left: pos.left,
+                top: pos.top,
+                boxSizing: "border-box",
+                background: "#FDF9F2",
+                border: "1px solid rgba(46,36,32,.14)",
+                borderRadius: 14,
+                padding: "14px 16px",
+                boxShadow: "none",
+              }
+            : {
+                left: pos.left,
+                top: pos.top,
+                borderColor: "#eadccf",
+                background: "#fdf9f2",
+                boxShadow: "0 8px 28px rgba(63, 56, 48, 0.12), 0 2px 8px rgba(63, 56, 48, 0.06)",
+              }
+        }
       >
         {children}
       </motion.div>

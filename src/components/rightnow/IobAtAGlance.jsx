@@ -6,6 +6,7 @@ import SwipeableRow from "@/components/SwipeableRow";
 import IobDecayChart from "@/components/insulin/IobDecayChart";
 import RemainingBar, { RemainingLegend } from "@/components/insulin/RemainingBars";
 import { isBasalInsulinType, getDoseStatus, getDoseTimingInfo } from "@/lib/insulinPharmacology";
+import { basalStatusLine } from "@/lib/basalStatusLine";
 import {
   formatRemaining as formatRemainingUnits,
   formatRemainingValue,
@@ -38,30 +39,7 @@ function fmtIob(u) {
   return formatRemainingUnits(u);
 }
 
-// Dynamic basal status derived from real elapsed time vs that basal's
-// published duration — mirrors bolusStatusLine so each basal dose row
-// reflects its actual phase instead of a single static "Ongoing" label.
-function basalStatusLine(dose, now) {
-  const doseObj = {
-    insulin_type: dose.type,
-    units: dose.units,
-    administered_at: new Date(dose.time).toISOString()
-  };
-  const status = getDoseStatus(doseObj, now);
-  const timing = getDoseTimingInfo(doseObj, now);
-  if (status.phase === "expired" || status.iob <= 0) {
-    return { label: "Estimate complete", remaining: null };
-  }
-  const remaining = formatRemaining(timing.remainingMin);
-  const map = {
-    waiting: { label: "Absorbing gently" },
-    steady: { label: "Steady background coverage" },
-    declining: { label: "Coverage winding down" },
-    low_activity: { label: "Lingering gently" }
-  };
-  const entry = map[status.phase] || { label: status.label };
-  return { label: entry.label, remaining };
-}
+
 
 function formatClock(time) {
   if (!Number.isFinite(time)) return null;

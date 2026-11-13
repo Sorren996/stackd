@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { cloneElement, isValidElement, useEffect, useMemo, useRef, useState } from "react";
 import {
   Info,
   X } from
@@ -1203,7 +1203,11 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, liveRea
           <div id="daily-flow-controls" className="flex items-center gap-2" />
         </div>
         <div className="relative pt-3 my-3">
-          <CardErrorBoundary>{graphSlot}</CardErrorBoundary>
+          <CardErrorBoundary>
+            {isValidElement(graphSlot)
+              ? cloneElement(graphSlot, { activeInsulinBreakdown })
+              : graphSlot}
+          </CardErrorBoundary>
         </div>
       </DashboardCard>
 
