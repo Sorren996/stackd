@@ -34,10 +34,10 @@ export default function DoseAndPlanSection({
 }) {
   const verdict =
     absDiff < 0.05
-      ? "Right on your plan"
+      ? "Right on your plan's math"
       : difference > 0
-        ? `${absDiff.toFixed(1)}u more than your plan`
-        : `${absDiff.toFixed(1)}u less than your plan`;
+        ? `${absDiff.toFixed(1)}u more than your plan's math`
+        : `${absDiff.toFixed(1)}u less than your plan's math`;
 
   const foodLabel = `Food, ${carbs} g at ${ratioLabel}`;
   const correctionNote = !correctionAvailable
@@ -61,7 +61,7 @@ export default function DoseAndPlanSection({
 
           <div className="space-y-1.5">
             <LedgerLine label="Your plan's math" value={`${planned.toFixed(1)}u`} />
-            <LedgerLine label="You took" value={`${taken.toFixed(1)}u`} strong tone={MR.rust} />
+            <LedgerLine label="You logged" value={`${taken.toFixed(1)}u`} strong tone={MR.rust} />
           </div>
 
           <p className="mt-3" style={{ ...SERIF_ITALIC, fontSize: 13, lineHeight: 1.6, color: MR.ink }}>
@@ -75,7 +75,7 @@ export default function DoseAndPlanSection({
       </div>
 
       <p className="mt-3" style={{ fontSize: 11, lineHeight: 1.6, color: MR.sec }}>
-        This just shows your plan's math. The dose is always yours.
+        Worked out from the ratios you entered from your care team, and shown only after you log a dose. Stackd does not recommend doses.
       </p>
     </div>
   );

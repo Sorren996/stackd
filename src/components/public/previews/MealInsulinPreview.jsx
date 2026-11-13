@@ -46,8 +46,8 @@ export default function MealInsulinPreview() {
             Optional estimate, waiting for you
           </p>
           <p className="mt-1 text-[11px] leading-relaxed" style={{ color: "#6b6153" }}>
-            From your description Stackd suggested 45 g carbs, 12 g protein and 9 g fat. You can change every value or
-            ignore the suggestion. Nothing is logged until you review it, and this is not treatment approval.
+            From your description Stackd estimated 45 g carbs, 12 g protein and 9 g fat. You can change every value or
+            ignore the estimate. Nothing is logged until you review it, and this is not treatment approval.
           </p>
         </div>
       </PreviewCard>

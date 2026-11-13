@@ -25,7 +25,7 @@ const FAQ = [
   },
   {
     q: "Do I have to use the meal estimates?",
-    a: "Never. Describing a meal or adding a photo is optional, and any numbers suggested are yours to edit or ignore. Nothing is saved until you review it, and you can log values by hand whenever you prefer.",
+    a: "Never. Describing a meal or adding a photo is optional, and any values it estimates are yours to edit or ignore. Nothing is saved until you review it, and you can log values by hand whenever you prefer.",
   },
   {
     q: "Can I use Stackd on my phone?",

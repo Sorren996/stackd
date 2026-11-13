@@ -17,7 +17,7 @@ const SUMMARY = [
   },
   {
     title: "Optional meal estimates",
-    body: "If you use the optional estimate from a meal description or photo, that text or image is sent to an AI service to produce the suggestion. Manual logging never uses it, and you can leave the feature unused entirely.",
+    body: "If you use the optional estimate from a meal description or photo, that text or image is sent to an AI service to produce the estimate. Manual logging never uses it, and you can leave the feature unused entirely.",
   },
   {
     title: "Removing it",

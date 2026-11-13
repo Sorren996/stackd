@@ -17,7 +17,7 @@ const POINTS = [
   },
   {
     title: "Optional estimates you review",
-    body: "Describe a meal or add a photo and Stackd can suggest the numbers. Every value is yours to change, and nothing is logged until you review it.",
+    body: "Describe a meal or add a photo and Stackd can estimate the carbs and nutrition. Every value is yours to change, and nothing is logged until you review it.",
   },
 ];
 

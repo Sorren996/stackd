@@ -29,8 +29,8 @@ const LOG_STEPS = [
 
 const ESTIMATE_STEPS = [
   "Describe a meal in your own words, or add a photo.",
-  "Stackd suggests carbohydrate, protein and fat values.",
-  "You change anything that looks wrong, or discard the suggestion.",
+  "Stackd estimates carbohydrate, protein and fat values.",
+  "You change anything that looks wrong, or discard the estimate.",
   "Only then is it saved as your log entry.",
 ];
 
@@ -109,7 +109,7 @@ export default function HowItWorks() {
         tone="paper"
         eyebrow="Optional meal estimates"
         title="A shortcut, never a verdict."
-        lede="Estimating a meal is optional from beginning to end, and every suggestion waits for your review before it becomes part of your log."
+        lede="Estimating a meal is optional from beginning to end, and every estimate waits for your review before it becomes part of your log."
       >
         <div className="grid gap-8 sm:grid-cols-2">
           <ol className="space-y-4">

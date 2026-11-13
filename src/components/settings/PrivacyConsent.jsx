@@ -79,10 +79,10 @@ export default function PrivacyConsent() {
           <div className="space-y-2">
             <p className="text-sm font-semibold" style={{ color: "#3f3830" }}>Your data is private & secure</p>
             <p className="text-xs leading-relaxed" style={{ color: "#6b6153" }}>
-              All health data logged in Stackd, including glucose readings, insulin doses, and carbohydrate entries, is stored securely and is only accessible by you. We do not share, sell, or transmit your personal health information to any third parties.
+              Your glucose readings, insulin doses and meal entries are stored securely. They are visible to you, and to anyone you choose to invite, only for the items you share and only until you remove them. If you connect Dexcom, Stackd retrieves your readings from Dexcom using the sign-in you provide. If you ask for a meal estimate, the meal description or photo you submit is sent to our AI service to produce it; your readings, doses and identity are not sent. We never sell your information.
             </p>
             <p className="text-xs leading-relaxed" style={{ color: "#6b6153" }}>
-              Data is encrypted in transit and at rest. You can delete your data at any time from this settings page.
+              Data is encrypted in transit and at rest. You can delete your account and its data at any time from this page.
             </p>
           </div>
         </div>

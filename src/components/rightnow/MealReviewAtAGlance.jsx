@@ -277,8 +277,8 @@ export default function MealReviewAtAGlance({ mealInsight, glucoseReadings }) {
     && Number.isFinite(d.mealInsulinUnitsPer5g) && d.mealInsulinUnitsPer5g > 0;
   const foodUnits = Number.isFinite(d.expectedMealUnits) ? d.expectedMealUnits : 0;
   const correctionUnits = Number.isFinite(d.correctionUnitsNeeded) && d.correctionUnitsNeeded > 0 ? d.correctionUnitsNeeded : 0;
-  const suggested = foodUnits + correctionUnits;
-  const difference = taken - suggested;
+  const plannedUnits = foodUnits + correctionUnits;
+  const difference = taken - plannedUnits;
   const absDiff = Math.abs(difference);
   const gramsPerUnit = Number.isFinite(d.gramsPerUnit) ? d.gramsPerUnit : 5 / d.mealInsulinUnitsPer5g;
   const ratioLabel = `1:${gramsPerUnit.toFixed(1)}`;
@@ -430,7 +430,7 @@ export default function MealReviewAtAGlance({ mealInsight, glucoseReadings }) {
             ? {
                 show: verdict.doseVerdict.show,
                 neutralLabel: verdict.doseVerdict.neutralLabel,
-                planned: suggested,
+                planned: plannedUnits,
                 taken,
                 foodUnits,
                 correctionValue,

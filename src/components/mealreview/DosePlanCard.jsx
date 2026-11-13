@@ -42,7 +42,7 @@ export default function DosePlanCard({ stillInPlay, insulin, dose, footer }) {
             }
             preview={
               <span className="tabular-nums" style={{ fontSize: 12.5, lineHeight: 1.4, color: MR.sec }}>
-                {dose.taken.toFixed(1)}u logged
+                {dose.taken > 0 ? `${dose.taken.toFixed(1)}u logged` : "No dose logged"}
               </span>
             }
           >

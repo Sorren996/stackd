@@ -362,6 +362,13 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
   const loggedMealUnits = sumDoseUnits(pairedDoses, (dose) => dose.meal_units ?? dose.units);
   const loggedCorrectionUnits = sumDoseUnits(pairedDoses, (dose) => dose.correction_units ?? 0);
   const loggedTotalUnits = loggedMealUnits + loggedCorrectionUnits;
+  // Safety gate. A units figure worked out from the saved plan (carbs divided
+  // by the ratio, plus any correction from sensitivity and the correction
+  // target) is only ever exposed for a meal that already has a logged dose
+  // paired to it. Until a dose is logged, the plan figures stay null, so no
+  // card, tooltip, detail row or label can render one. This lives at the data
+  // level on purpose: a hidden string alone would leave the figure readable.
+  const hasLoggedDose = loggedTotalUnits > 0;
   // Active insulin now (biexponential IOB, summed per bolus). This is the live
   // number the review reports. It is never interpreted as a shortfall as it
   // decays. The expected total is a point-in-time snapshot reference.
@@ -389,11 +396,11 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
   }
   const minutesSinceMeal = Math.round((now - mealTime) / MINUTE_MS);
   // Kept for backward compatibility but no longer drive prescriptive status.
-  const estimatedAdditionalUnits = Math.max(0, grossDoseEstimate - loggedTotalUnits);
-  const ratio = grossDoseEstimate > 0 ? loggedTotalUnits / grossDoseEstimate : null;
-  const mealRatio = expectedMealUnits > 0 ? loggedMealUnits / expectedMealUnits : null;
-  const coverageGapUnits = loggedTotalUnits - grossDoseEstimate;
-  const coverageGapAbs = Math.abs(coverageGapUnits);
+  const estimatedAdditionalUnits = hasLoggedDose ? Math.max(0, grossDoseEstimate - loggedTotalUnits) : null;
+  const ratio = hasLoggedDose && grossDoseEstimate > 0 ? loggedTotalUnits / grossDoseEstimate : null;
+  const mealRatio = hasLoggedDose && expectedMealUnits > 0 ? loggedMealUnits / expectedMealUnits : null;
+  const coverageGapUnits = hasLoggedDose ? loggedTotalUnits - grossDoseEstimate : null;
+  const coverageGapAbs = coverageGapUnits === null ? null : Math.abs(coverageGapUnits);
   const coveragePercent = ratio === null ? null : Math.round(ratio * 100);
   const mealCount = mealGroup.carbEntries.length;
   const doseCount = pairedDoses.length;
@@ -428,14 +435,20 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
   let value = formatRemainingUnits(activeIOB);
   let status = "Active support";
   let color = "#4d5742";
-  let sub = `${Math.round(mealGroup.carbs)}g carbs, ${loggedTotalUnits.toFixed(1)}u logged`;
+  let sub = hasLoggedDose ?
+  `${Math.round(mealGroup.carbs)}g carbs, ${loggedTotalUnits.toFixed(1)}u logged` :
+  `${Math.round(mealGroup.carbs)}g carbs`;
 
   // --- Descriptive status (describes, never prescribes) ---
   // The expected total is a point-in-time snapshot. Active IOB is the live
   // number. Falling active insulin is never treated as a shortfall or a
   // reason to dose more. The review reports what was taken, what is active,
   // and what glucose is doing.
-  if (ratio === null) {
+  if (!hasLoggedDose) {
+    value = formatRemainingUnits(activeIOB);
+    status = "No insulin logged for this meal.";
+    color = "#8a5a12";
+  } else if (ratio === null) {
     value = "Review";
     status = "Not enough data yet.";
     color = "#8a5a12";
@@ -445,7 +458,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
     color = "#9c3f2e";
   } else {
     value = formatRemainingUnits(activeIOB);
-    status = `${formatRemainingUnits(activeIOB)} active now. Your plan suggested ${grossDoseEstimate.toFixed(1)}u.`;
+    status = `${formatRemainingUnits(activeIOB)} active now. You logged ${loggedTotalUnits.toFixed(1)}u. Your plan's math was ${grossDoseEstimate.toFixed(1)}u.`;
     color = "#4d5742";
   }
 
@@ -472,11 +485,11 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
     glucoseDelta != null && glucoseDelta > 40 &&
     recentSlopeMgDlPerMin != null && recentSlopeMgDlPerMin > 0.5) {
       outcomeAssessment = {
-        label: "Not aligning yet",
-        message: "Dose may not be aligning entirely. Worth paying attention to the outcome.",
+        label: "Still rising",
+        message: "Glucose is still rising since this meal.",
         color: "#8a5a12"
       };
-      value = "Not aligning yet";
+      value = "Still rising";
       status = outcomeAssessment.message;
       color = "#8a5a12";
     }
@@ -541,8 +554,9 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
       },
       mealGroup,
       gramsPerUnit: gramsPerUnitDisplayed,
-      expectedMealUnits,
-      correctionUnitsNeeded,
+      // Null for a meal with no logged dose (see hasLoggedDose above).
+      expectedMealUnits: hasLoggedDose ? expectedMealUnits : null,
+      correctionUnitsNeeded: hasLoggedDose ? correctionUnitsNeeded : null,
       correctionGlucoseAvailable,
       correctionGlucoseLow,
       correctionTargetGlucose: insulinSettings.correctionTargetGlucose,
@@ -551,7 +565,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
       targetHigh: insulinSettings.targetHigh,
       correctionGlucoseValue: Number.isFinite(correctionGlucoseValue) ? correctionGlucoseValue : null,
       glucoseMinutesFromMeal,
-      grossDoseEstimate,
+      grossDoseEstimate: hasLoggedDose ? grossDoseEstimate : null,
       bolusIOB,
       activeIOB,
       recentSlopeMgDlPerMin,
@@ -560,7 +574,7 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
       priorActiveIOB,
       topPriorDose,
       estimatedAdditionalUnits,
-      expectedTotalUnits: grossDoseEstimate,
+      expectedTotalUnits: hasLoggedDose ? grossDoseEstimate : null,
       loggedMealUnits,
       loggedCorrectionUnits,
       loggedTotalUnits,
