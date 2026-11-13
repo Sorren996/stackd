@@ -74,8 +74,8 @@ describe("sendMyTestPushNotification", () => {
     assert.match(res.body.diagnostic.notes, /cannot tell from this project/i);
     assert.equal(calls.length, 1);
 
-    assert.equal(TEST_PUSH_TITLE, "145 mg/dL, Holding steady");
-    assert.equal(TEST_PUSH_MESSAGE, "In your comfort zone");
+    assert.equal(TEST_PUSH_TITLE, "145 mg/dL →");
+    assert.equal(TEST_PUSH_MESSAGE, "Holding steady");
     assert.deepEqual(calls[0], {
       user_id: "u-admin-recipient",
       title: TEST_PUSH_TITLE,
@@ -116,8 +116,8 @@ describe("sendMyTestPushNotification", () => {
     assert.equal(calls.length, 2);
     assert.deepEqual(calls[1], {
       user_id: "u-admin-fallback",
-      title: "145 mg/dL, Holding steady",
-      content: "In your comfort zone",
+      title: "145 mg/dL →",
+      content: "Holding steady",
       action_url: "https://stackdinsight.base44.app/",
     });
   });

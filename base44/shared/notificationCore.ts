@@ -437,17 +437,7 @@ const PUSH_LABELS: Record<DeliveryCategory, string> = {
   low_recovery: "Back in range",
 };
 
-/** A second, coalesced condition is named by its OWN threshold. */
-const COALESCED_PHRASES: Partial<Record<Category, string>> = {
-  urgent_low: "urgent-low level",
-  low_glucose: "below-70 alert level",
-  custom_low: "low alert level",
-  custom_high: "high alert level",
-  below_range: "comfort-zone low",
-  above_range: "comfort-zone high",
-  falling_fast: "fast-fall pace",
-  rising_fast: "fast-rise pace",
-};
+
 
 function possessive(name: string): string {
   return /s$/i.test(name) ? `${name}'` : `${name}'s`;
@@ -505,69 +495,41 @@ export function buildNotificationCopy(input: CopyInput): PushCopy {
   // level, the real comfort-zone bound, or the fixed 70 — so a reading of 99 is
   // never described as "below 70", and one reading never grows a second clause.
   const threshold = Number(input.thresholdMgdl);
-  if (
-    Number.isFinite(threshold) &&
-    (input.category === "low_glucose" || input.category === "custom_low" || input.category === "below_range")
-  ) {
-    return {
-      title: `${lead}Low glucose: ${value} ${units}${arrow ? ` ${arrow}` : ""}`,
-      body: `${who ? possessive(who) : "Your"} glucose is below ${formatGlucoseValue(threshold, units)} ${units}.`,
-    };
-  }
+  const title = `${lead}${value} ${units}${arrow ? ` ${arrow}` : ""}`;
+
   if (input.category === "all_readings") {
-    const v = Number(input.value);
-    const lowRaw = input.targetLow == null ? NaN : Number(input.targetLow);
-    const highRaw = input.targetHigh == null ? NaN : Number(input.targetHigh);
-    const low = Number.isFinite(lowRaw) && lowRaw > 0 ? lowRaw : 70;
-    const high = Number.isFinite(highRaw) && highRaw > 0 ? highRaw : 180;
-    const zoneBody =
-      Number.isFinite(v) && v < low
-        ? "Below your comfort zone"
-        : Number.isFinite(v) && v > high
-          ? "Above your comfort zone"
-          : "In your comfort zone";
-    return {
-      title: `${value} ${units}${arrow ? ` ${arrow}` : ""}`,
-      body: zoneBody,
-    };
+    let zoneBody = "";
+    if (pair && pair.word) {
+      zoneBody = pair.word.charAt(0).toUpperCase() + pair.word.slice(1);
+    } else {
+      const v = Number(input.value);
+      const lowRaw = input.targetLow == null ? NaN : Number(input.targetLow);
+      const highRaw = input.targetHigh == null ? NaN : Number(input.targetHigh);
+      const low = Number.isFinite(lowRaw) && lowRaw > 0 ? lowRaw : 70;
+      const high = Number.isFinite(highRaw) && highRaw > 0 ? highRaw : 180;
+      zoneBody =
+        Number.isFinite(v) && v < low
+          ? "Below your comfort zone"
+          : Number.isFinite(v) && v > high
+            ? "Above your comfort zone"
+            : "In your comfort zone";
+    }
+    return { title, body: zoneBody };
   }
 
-  const rapidChange = input.category === 'falling_fast' || input.category === 'rising_fast';
-  const titleLabel = rapidChange ? (pair ? pair.word[0].toUpperCase() + pair.word.slice(1) : 'Glucose') : PUSH_LABELS[input.category];
-  const title = `${lead}${titleLabel}: ${value} ${units}${arrow ? ` ${arrow}` : ""}`;
+  let body = "";
+  if (input.category === "urgent_low") body = "Urgent low";
+  else if (input.category === "low_glucose") body = "Low glucose";
+  else if (input.category === "custom_low") body = `Below ${formatGlucoseValue(threshold, units)}`;
+  else if (input.category === "below_range") body = "Below your comfort zone";
+  else if (input.category === "custom_high") body = `At or above ${formatGlucoseValue(threshold, units)}`;
+  else if (input.category === "above_range") body = "Above your comfort zone";
+  else if (input.category === "falling_fast") body = "Falling fast";
+  else if (input.category === "rising_fast") body = "Rising fast";
+  else if (input.category === "low_recovery") body = "Back in range";
+  else body = "Glucose update"; // Fallback
 
-  const subject = who ? possessive(who) : "Your";
-  const their = who ? possessive(who) : "your";
-  const held = Number(input.durationMinutes);
-  const sustained = Number.isFinite(held) && held > 0 ? ` and has stayed there for ${Math.round(held)} minutes` : "";
-
-  const bodies: Record<Exclude<DeliveryCategory, "missing_readings" | "all_readings">, string> = {
-    urgent_low: `${subject} glucose is critically low, below ${formatGlucoseValue(55, units)} ${units}.`,
-    low_glucose: `${subject} glucose is below ${formatGlucoseValue(70, units)} ${units}.`,
-    custom_low: `${subject} glucose is below ${their} low alert level.`,
-    custom_high: `${subject} glucose is above ${their} high alert level.`,
-    below_range: `${subject} glucose is below ${their} comfort zone.`,
-    above_range: `${subject} glucose is above ${their} comfort zone${sustained}.`,
-    falling_fast: `${subject} glucose ${pair ? `is ${pair.word} and ` : ''}has met the pace ${who ? `${who} set` : "you set"}.`,
-    rising_fast: `${subject} glucose ${pair ? `is ${pair.word} and ` : ''}has met the pace ${who ? `${who} set` : "you set"}.`,
-    low_recovery: `${subject} glucose is back in range.`,
-  };
-
-  return { title, body: `${bodies[input.category]}${coalescedClause(input)}` };
-}
-
-/** "It also meets your …" — only when several conditions coalesced into one send. */
-function coalescedClause(input: CopyInput): string {
-  const seen = new Set<string>();
-  const phrases: string[] = [];
-  for (const category of Array.isArray(input.coveredCategories) ? input.coveredCategories : []) {
-    if (typeof category !== "string" || category === input.category || seen.has(category)) continue;
-    seen.add(category);
-    const phrase = COALESCED_PHRASES[category as Category];
-    if (phrase) phrases.push(phrase);
-  }
-  if (!phrases.length) return "";
-  return ` It also meets your ${phrases.join(" and your ")}.`;
+  return { title, body };
 }
 
 // ── Quiet hours ───────────────────────────────────────────────────────────

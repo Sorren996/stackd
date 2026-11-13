@@ -8,8 +8,8 @@
 // Kept in a shared module so the authorization and recipient rules can be
 // exercised by mocked tests without any real delivery.
 
-export const TEST_PUSH_TITLE = "145 mg/dL, Holding steady";
-export const TEST_PUSH_MESSAGE = "In your comfort zone";
+export const TEST_PUSH_TITLE = "145 mg/dL →";
+export const TEST_PUSH_MESSAGE = "Holding steady";
 export const TEST_PUSH_IMAGE_URL =
   "https://media.base44.com/images/public/6ac18e6df0a84bf80842d5f0/38d56112a_stackd_push_arrow_flat.png";
 
