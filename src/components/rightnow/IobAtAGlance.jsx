@@ -271,7 +271,7 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
             })}
             </div>
             <p className="mt-3 text-[10px] leading-relaxed" style={{ color: PALETTE.faint }}>
-              Each bar is scaled to its own logged amount — the fill shows what fraction of that dose is still estimated to be active, not activity strength.
+              Each bar is sized to its own logged amount, so the fill shows how much of that dose is still active, not how strong it is.
             </p>
             
 
