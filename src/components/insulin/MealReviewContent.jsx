@@ -19,7 +19,7 @@ const PALETTE = {
   hairline: "#eadccf",
 };
 
-import { trendGlyph } from '@/lib/trendPresentation';
+
 
 function formatClock(time) {
   if (!Number.isFinite(time)) return null;
@@ -56,8 +56,7 @@ export default function MealReviewContent({ mealInsight, monitoringStatus, gluco
   if (!mealInsight) return null;
 
   const d = mealInsight.details;
-  const trendArrow = trendGlyph(glucoseTrend);
-  const trendLabel = glucoseTrend?.label || null;
+  const trendLabel = glucoseTrend?.word || null;
 
   // ── NO ACTIVE MEAL ──────────────────────────────────────────────
   if (!d || d.noActiveMeal) {

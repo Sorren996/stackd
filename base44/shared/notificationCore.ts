@@ -512,7 +512,9 @@ export function buildNotificationCopy(input: CopyInput): PushCopy {
       body: `${who ? possessive(who) : "Your"} glucose is below ${formatGlucoseValue(threshold, units)} ${units}.`,
     };
   }
-  const title = `${lead}${PUSH_LABELS[input.category]}: ${value} ${units}${arrow ? ` ${arrow}` : ""}`;
+  const rapidChange = input.category === 'falling_fast' || input.category === 'rising_fast';
+  const titleLabel = rapidChange ? (pair ? pair.word[0].toUpperCase() + pair.word.slice(1) : 'Glucose') : PUSH_LABELS[input.category];
+  const title = `${lead}${titleLabel}: ${value} ${units}${arrow ? ` ${arrow}` : ""}`;
 
   const subject = who ? possessive(who) : "Your";
   const their = who ? possessive(who) : "your";
@@ -526,8 +528,8 @@ export function buildNotificationCopy(input: CopyInput): PushCopy {
     custom_high: `${subject} glucose is above ${their} high alert level.`,
     below_range: `${subject} glucose is below ${their} comfort zone.`,
     above_range: `${subject} glucose is above ${their} comfort zone${sustained}.`,
-    falling_fast: `${subject} glucose is falling faster than the pace ${who ? `${who} set` : "you set"}.`,
-    rising_fast: `${subject} glucose is rising faster than the pace ${who ? `${who} set` : "you set"}.`,
+    falling_fast: `${subject} glucose ${pair ? `is ${pair.word} and ` : ''}has met the pace ${who ? `${who} set` : "you set"}.`,
+    rising_fast: `${subject} glucose ${pair ? `is ${pair.word} and ` : ''}has met the pace ${who ? `${who} set` : "you set"}.`,
     all_readings: `${subject} glucose is ${value} ${units}.`,
     low_recovery: `${subject} glucose is back in range.`,
   };

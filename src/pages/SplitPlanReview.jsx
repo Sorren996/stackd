@@ -43,13 +43,7 @@ import { toast } from "sonner";
 const MINUTE_MS = 60 * 1000;
 const GLUCOSE_STALE_THRESHOLD_MIN = 15;
 
-const TREND_ICONS = {
-  up: ArrowUp,
-  "up-right": ArrowUpRight,
-  right: ArrowRight,
-  "down-right": ArrowDownRight,
-  down: ArrowDown,
-};
+
 
 function readTargetRange() {
   if (typeof window === "undefined") return { low: 70, high: 180 };
@@ -145,7 +139,7 @@ export default function SplitPlanReview() {
   }, [carbEntries, mealTime]);
 
   const latestGlucose = glucoseReadings[0] || null;
-  const secondGlucose = glucoseReadings[1] || null;
+
 
   const trend = resolveGlucoseTrend(latestGlucose, glucoseReadings, { now, below: latestGlucose?.value < targetRange.low });
 
@@ -358,7 +352,7 @@ export default function SplitPlanReview() {
           {/* Caution states */}
           {isGlucoseFalling && !isGlucoseLow && (
             <CautionCard
-              title="Glucose is currently trending down"
+              title={`Glucose is currently ${trend.word}`}
               message="Review your established treatment plan and active insulin before making a dosing decision."
               color="#8a7f70"
             />
