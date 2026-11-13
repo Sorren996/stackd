@@ -3,6 +3,7 @@ import { HeartHandshake, Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
+import BackButton from "@/components/navigation/BackButton";
 import { NOTICE_VERSION } from "@/lib/access/profileApi";
 
 /**
@@ -13,7 +14,7 @@ import { NOTICE_VERSION } from "@/lib/access/profileApi";
  * Accepting is recorded as their own act, never on their behalf, and it is
  * separate from the patient medical acknowledgments, which stay untouched.
  */
-export default function SharedDataNotice() {
+export default function SharedDataNotice({ backFallback = "/following/settings" }) {
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -36,7 +37,14 @@ export default function SharedDataNotice() {
 
   return (
     <div className="mx-auto max-w-md space-y-4 pt-2">
-      <div className="flex items-center gap-2 px-1">
+      <div className="flex items-center gap-2 px-1 pb-1">
+        {/* This gate replaces the whole Following page, so the page-level Back
+            stays with it: the same arrow, in the same column, in normal flow. */}
+        <BackButton
+          fallback={backFallback}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg transition"
+          style={{ color: "#f7f1e8" }}
+        />
         <HeartHandshake className="h-5 w-5 shrink-0" style={{ color: "#fdf9f2" }} />
         <h1 className="text-lg font-semibold" style={{ color: "#fdf9f2" }}>
           Before you <span className="font-serif-italic" style={{ fontWeight: 400 }}>look in</span>

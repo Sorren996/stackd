@@ -42,10 +42,13 @@ export default function FollowingHome() {
   const navigate = useNavigate();
   const { following, pendingInvitations, isLoading, noticeAccepted, mode } = useAccessProfile();
 
-  // Following is reached from the account screen, so that is where Back lands
-  // when this page is opened cold (a deep link or a new tab). With real in-app
-  // history the shared Back button unwinds that instead — never a hardcoded hop.
-  const backFallback = mode === "follower" ? "/following/settings" : "/settings";
+  // Back unwinds real in-app history when there is an entry behind this page,
+  // so it returns to the exact screen the person came from (usually Profile)
+  // with its state intact. Only when the page was opened cold — a deep link or
+  // the installed app icon, with no history behind it — does it use this
+  // documented destination, and never as a hardcoded hop in the normal case.
+  // A viewer account has no Profile screen, so it returns to its own settings.
+  const backFallback = mode === "follower" ? "/following/settings" : "/settings/profile";
   const [selectedId, setSelectedId] = useState(null);
   const [prefsFor, setPrefsFor] = useState(null);
   const [link, setLink] = useState("");
@@ -90,7 +93,7 @@ export default function FollowingHome() {
 
   // The one notice that genuinely applies to viewing someone's shared data.
   if (people.length > 0 && !noticeAccepted) {
-    return <SharedDataNotice />;
+    return <SharedDataNotice backFallback={backFallback} />;
   }
 
   if (people.length === 0) {
@@ -147,7 +150,7 @@ export default function FollowingHome() {
 
   return (
     <div className="mx-auto max-w-md space-y-4 pt-2">
-      <div className="px-1">
+      <div className="flex items-center gap-2 px-1 pb-1">
         <BackButton
           fallback={backFallback}
           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg transition"
