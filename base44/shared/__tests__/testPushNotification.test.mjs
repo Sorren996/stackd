@@ -62,7 +62,16 @@ describe("sendMyTestPushNotification", () => {
     );
 
     assert.equal(res.status, 200);
-    assert.deepEqual(res.body, { ok: true });
+    assert.equal(res.body.ok, true);
+    assert.ok(res.body.diagnostic);
+    assert.match(res.body.diagnostic.transport, /Base44 Core\.SendPushNotification/);
+    assert.equal(res.body.diagnostic.image_url, TEST_PUSH_IMAGE_URL);
+    assert.ok(res.body.diagnostic.image_fields_set.includes("image"));
+    assert.ok(res.body.diagnostic.image_fields_set.includes("apns.fcm_options.image"));
+    assert.equal(res.body.diagnostic.mutable_content, false);
+    assert.equal(res.body.diagnostic.transport_accepts_image, false);
+    assert.equal(res.body.diagnostic.provider_response.status, 200);
+    assert.match(res.body.diagnostic.notes, /cannot tell from this project/i);
     assert.equal(calls.length, 1);
 
     assert.equal(TEST_PUSH_TITLE, "145 mg/dL, Holding steady");
@@ -99,7 +108,11 @@ describe("sendMyTestPushNotification", () => {
       2_500_000
     );
     assert.equal(res.status, 200);
-    assert.deepEqual(res.body, { ok: true });
+    assert.equal(res.body.ok, true);
+    assert.deepEqual(res.body.diagnostic.image_fields_set, []);
+    assert.equal(res.body.diagnostic.image_url, null);
+    assert.equal(res.body.diagnostic.mutable_content, false);
+    assert.equal(res.body.diagnostic.transport_accepts_image, false);
     assert.equal(calls.length, 2);
     assert.deepEqual(calls[1], {
       user_id: "u-admin-fallback",
@@ -107,6 +120,34 @@ describe("sendMyTestPushNotification", () => {
       content: "In your comfort zone",
       action_url: "https://stackdinsight.base44.app/",
     });
+  });
+
+  test("diagnostic never leaks device tokens, keys, secrets, or emails from provider response", async () => {
+    const client = {
+      asServiceRole: {
+        integrations: {
+          Core: {
+            SendPushNotification: async () => ({
+              ok: true,
+              sent: 1,
+              device_token: "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+              api_key: "sk_live_secret_value",
+              email: "owner@example.com",
+              detail: "Sent to owner@example.com token a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6",
+            }),
+          },
+        },
+      },
+    };
+    const res = await runTestPushNotification(
+      client,
+      { id: "u-admin-scrub", role: "admin", email: "owner@example.com" },
+      2_800_000
+    );
+    const json = JSON.stringify(res.body);
+    assert.equal(json.includes("owner@example.com"), false);
+    assert.equal(json.includes("sk_live_secret_value"), false);
+    assert.equal(json.includes("a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6"), false);
   });
 
   test("repeated taps are rate limited per account", async () => {

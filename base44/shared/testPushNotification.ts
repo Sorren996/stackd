@@ -45,6 +45,88 @@ function isExtraFieldsRejection(error: any) {
   );
 }
 
+export const RICH_IMAGE_FIELD_PATHS = [
+  "image",
+  "image_url",
+  "attachment_url",
+  "media_url",
+  "mutable_content",
+  "notification.image",
+  "fcm_options.image",
+  "apns.payload.aps.mutable-content",
+  "apns.fcm_options.image",
+  "aps.mutable-content",
+  "data.image",
+  "data.image_url",
+  "data.attachment_url",
+  "data.media_url",
+  "ios_attachments.thumbnail",
+  "big_picture",
+  "richContent.image",
+  "attachments",
+];
+
+const REDACTED_KEY_PATTERN =
+  /token|secret|key|auth|credential|password|email|user_id|app_owner|phone|device_id|registration/i;
+
+function scrubSensitiveText(input: string): string {
+  return String(input || "")
+    .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[redacted-email]")
+    .replace(/(Bearer\s+)[A-Za-z0-9._~+/-]+=*/gi, "$1[redacted]")
+    .replace(/\b[a-f0-9]{32,}\b/gi, "[redacted-token]")
+    .replace(/\b[A-Za-z0-9_-]{28,}\b/g, "[redacted-token]")
+    .slice(0, 300);
+}
+
+function summarizeProviderResponse(statusCode: number | null, raw: any) {
+  let message = "OK";
+  if (raw == null) {
+    message = "Accepted (empty response body)";
+  } else if (typeof raw === "string") {
+    message = scrubSensitiveText(raw) || "OK";
+  } else if (typeof raw === "object") {
+    const safe: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(raw)) {
+      if (REDACTED_KEY_PATTERN.test(k)) continue;
+      if (v == null || typeof v === "boolean" || typeof v === "number") {
+        safe[k] = v;
+      } else if (typeof v === "string") {
+        safe[k] = scrubSensitiveText(v);
+      } else if (Array.isArray(v)) {
+        safe[k] = `[array:${v.length}]`;
+      } else if (typeof v === "object") {
+        safe[k] = "[object]";
+      }
+    }
+    const serialized = JSON.stringify(safe);
+    message = serialized === "{}" ? "Accepted" : scrubSensitiveText(serialized);
+  } else {
+    message = scrubSensitiveText(String(raw));
+  }
+  return { status: statusCode, message };
+}
+
+function buildDiagnostic(params: {
+  fallbackUsed: boolean;
+  providerStatus: number | null;
+  providerRaw: any;
+}) {
+  return {
+    transport:
+      "Base44 Core.SendPushNotification (platform push API; documented input schema only accepts user_id, title, content, action_label, action_url)",
+    image_fields_set: params.fallbackUsed ? [] : [...RICH_IMAGE_FIELD_PATHS],
+    image_url: params.fallbackUsed ? null : TEST_PUSH_IMAGE_URL,
+    // Even though aps['mutable-content']=1 and apns.payload.aps['mutable-content']=1
+    // were passed in image_fields_set, Core.SendPushNotification strips undocumented
+    // keys and does not let app code set mutable-content on the outgoing APNs payload.
+    mutable_content: false,
+    transport_accepts_image: false,
+    provider_response: summarizeProviderResponse(params.providerStatus, params.providerRaw),
+    notes:
+      "cannot tell from this project whether the iOS wrapper includes a Notification Service Extension, because the native Xcode/Capacitor project lives outside this repository in Base44's build pipeline.",
+  };
+}
+
 export function buildRichTestPushFields(imageUrl: string = TEST_PUSH_IMAGE_URL) {
   return {
     // Base44 / generic snake_case & common top-level fields
@@ -108,6 +190,10 @@ export async function runTestPushNotification(
   // Claim the slot before sending so a double tap cannot slip through.
   lastSendByUser.set(user.id, nowMs);
 
+  let fallbackUsed = false;
+  let providerRaw: any = null;
+  let providerStatus: number | null = 200;
+
   try {
     const baseMessage = {
       user_id: user.id,
@@ -131,10 +217,13 @@ export async function runTestPushNotification(
       if (response?.ok === false || response?.success === false) {
         throw Object.assign(new Error("extra fields rejected"), { status: 422 });
       }
+      providerRaw = response;
+      providerStatus = typeof response?.status === "number" ? response.status : 200;
     } catch (richError: any) {
       if (!isExtraFieldsRejection(richError)) {
         throw richError;
       }
+      fallbackUsed = true;
       console.warn(
         JSON.stringify({
           diagStage: "PUSH_PAYLOAD_TEST_FALLBACK",
@@ -143,14 +232,23 @@ export async function runTestPushNotification(
           fields: Object.keys(baseMessage).sort(),
         })
       );
-      await base44.asServiceRole.integrations.Core.SendPushNotification(baseMessage);
+      const fallbackResponse = await base44.asServiceRole.integrations.Core.SendPushNotification(
+        baseMessage
+      );
+      providerRaw = {
+        rich_rejected_status: Number(richError?.status ?? richError?.statusCode ?? 422),
+        rich_rejected_message: scrubSensitiveText(String(richError?.message || "rejected")),
+        fallback_result: summarizeProviderResponse(200, fallbackResponse).message,
+      };
+      providerStatus = typeof fallbackResponse?.status === "number" ? fallbackResponse.status : 200;
     }
   } catch (error: any) {
     lastSendByUser.delete(user.id);
+    const errStatus = Number(error?.status ?? error?.statusCode ?? 0) || null;
     console.error(
       "[sendMyTestPushNotification] push send failed:",
-      error?.status || "",
-      error?.message || ""
+      errStatus || "",
+      scrubSensitiveText(String(error?.message || ""))
     );
     const unavailable = isUnavailable(error);
     return {
@@ -159,11 +257,26 @@ export async function runTestPushNotification(
         error: unavailable
           ? "Push notifications are not available for this app yet. Confirm native push is enabled for the iOS build, then try again."
           : "We could not submit the test notification. Please try again in a moment.",
+        diagnostic: buildDiagnostic({
+          fallbackUsed,
+          providerStatus: errStatus,
+          providerRaw: String(error?.message || "push send failed"),
+        }),
       },
     };
   }
 
   // The API accepting the send is not proof of delivery, so only that is
   // reported — never "delivered" or "received".
-  return { status: 200, body: { ok: true } };
+  return {
+    status: 200,
+    body: {
+      ok: true,
+      diagnostic: buildDiagnostic({
+        fallbackUsed,
+        providerStatus,
+        providerRaw,
+      }),
+    },
+  };
 }

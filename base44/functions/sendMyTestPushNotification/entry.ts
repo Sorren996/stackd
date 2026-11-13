@@ -19,8 +19,7 @@ export default async function (req: Request): Promise<Response> {
       .me()
       .catch((e: any) => (e?.status === 401 ? null : Promise.reject(e)));
 
-    // The app's own public origin, taken from the platform-set header, so the
-    // rich-attachment diagnostic test carries the same tapping link a real alert carries.
+    // Returns { ok, diagnostic } (or an error) for the authenticated admin's test push.
     const { status, body } = await runTestPushNotification(base44, user, Date.now(), appOrigin(req));
     return Response.json(body, { status });
   } catch (error: any) {
