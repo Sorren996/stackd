@@ -60,8 +60,8 @@ export default function DailyBalanceDetailSheet({
     <Sheet open={open} onClose={onClose}>
       <div className="flex flex-col overflow-y-auto px-1">
         {/* Standard page header: the app's own Back control + the day's title,
-             in the same row shape the Journal and settings sub-pages use. Back
-             closes this detail view and returns to the day underneath it. */}
+              in the same row shape the Journal and settings sub-pages use. Back
+              closes this detail view and returns to the day underneath it. */}
         <div className="flex items-center gap-3 px-6 pb-1 pt-1">
           <BackButton
             onPress={onClose}
@@ -85,7 +85,7 @@ export default function DailyBalanceDetailSheet({
 
         {/* Hero: percentage + state */}
         <div className="px-6 pt-2">
-          <div className="flex items-baseline gap-2">
+          <div className="flex items-baseline gap-2 mx-auto">
             <span className="anchor-number" style={{ color: PALETTE.ink }}>
               {displayValue}
             </span>
