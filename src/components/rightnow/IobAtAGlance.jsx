@@ -297,7 +297,7 @@ export default function IobAtAGlance({ totalUnits, breakdown, basalRegimenStatus
             <div className="mt-3">
                   <IobDecayChart bolusDoses={bolusDoses} basalDoses={[]} now={now} />
                   <p className="mt-2 text-[10px] leading-relaxed" style={{ color: PALETTE.faint }}>
-                    Curves show <span style={{ fontWeight: 600 }}>activity scaled to each dose's logged units</span> on a shared scale — a larger dose renders taller. Solid curves are activity already underway; the dashed mustard line projects the remaining tail. Your estimated live insulin on board in units is shown above.
+                    Each curve shows <span style={{ fontWeight: 600 }}>activity scaled to its dose's logged units</span>, so a bigger dose draws taller. Solid lines are activity already underway. The dashed mustard line is the tail still to come, and your live estimate in units sits above.
                   </p>
                 </div>
             }
