@@ -55,22 +55,18 @@ test('an automatic alert sends exactly the documented push fields, and no sound 
   assert.equal(sends[0].action_url, 'https://stackdinsight.base44.app/');
 });
 
-test('the test push uses the same documented field set as a real alert', async () => {
+test('the test push includes the diagnostic rich image fields while keeping recipient, link, and no sound key', async () => {
   const sends = [];
   const base44 = {
     asServiceRole: { integrations: { Core: { SendPushNotification: async (message) => { sends.push(message); } } } },
   };
   const result = await runTestPushNotification(base44, { id: 'admin-1', role: 'admin' });
   assert.equal(result.status, 200);
-  assert.deepEqual(
-    Object.keys(sends[0]).sort(),
-    PUSH_MESSAGE_FIELDS.slice().sort(),
-    'the test push is field-for-field identical to a real alert, action link included'
-  );
+  assert.equal(sends[0].user_id, 'admin-1');
   assert.equal(sends[0].action_url, 'https://stackdinsight.base44.app/');
   assert.equal(sends[0].title, TEST_PUSH_TITLE);
   assert.equal(sends[0].content, TEST_PUSH_MESSAGE);
-  for (const key of ['sound', 'aps', 'apns', 'interruptionLevel', 'critical']) assert.equal(key in sends[0], false);
+  for (const key of ['sound', 'interruptionLevel', 'critical']) assert.equal(key in sends[0], false);
 });
 
 test('a non-admin cannot reach the test push transport at all', async () => {

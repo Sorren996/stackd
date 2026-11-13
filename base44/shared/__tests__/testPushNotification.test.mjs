@@ -13,6 +13,8 @@ import {
   runTestPushNotification,
   TEST_PUSH_TITLE,
   TEST_PUSH_MESSAGE,
+  TEST_PUSH_IMAGE_URL,
+  buildRichTestPushFields,
 } from "../testPushNotification.ts";
 
 function fakeClient() {
@@ -63,13 +65,46 @@ describe("sendMyTestPushNotification", () => {
     assert.deepEqual(res.body, { ok: true });
     assert.equal(calls.length, 1);
 
-    // Exactly the same four fields a real self alert sends: the recipient is the
-    // authenticated account, the copy is fixed, and the link is the app's own
-    // home route — never a caller-supplied value.
+    assert.equal(TEST_PUSH_TITLE, "145 mg/dL, Holding steady");
+    assert.equal(TEST_PUSH_MESSAGE, "In your comfort zone");
     assert.deepEqual(calls[0], {
       user_id: "u-admin-recipient",
       title: TEST_PUSH_TITLE,
       content: TEST_PUSH_MESSAGE,
+      action_url: "https://stackdinsight.base44.app/",
+      ...buildRichTestPushFields(TEST_PUSH_IMAGE_URL),
+    });
+  });
+
+  test("falls back to plain 4-field payload when transport rejects extra image fields", async () => {
+    const calls = [];
+    const client = {
+      asServiceRole: {
+        integrations: {
+          Core: {
+            SendPushNotification: async (args) => {
+              calls.push(args);
+              if (calls.length === 1) {
+                throw Object.assign(new Error("Extra inputs are not permitted"), { status: 422 });
+              }
+              return { ok: true };
+            },
+          },
+        },
+      },
+    };
+    const res = await runTestPushNotification(
+      client,
+      { id: "u-admin-fallback", role: "admin" },
+      2_500_000
+    );
+    assert.equal(res.status, 200);
+    assert.deepEqual(res.body, { ok: true });
+    assert.equal(calls.length, 2);
+    assert.deepEqual(calls[1], {
+      user_id: "u-admin-fallback",
+      title: "145 mg/dL, Holding steady",
+      content: "In your comfort zone",
       action_url: "https://stackdinsight.base44.app/",
     });
   });

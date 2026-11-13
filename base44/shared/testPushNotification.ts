@@ -8,9 +8,10 @@
 // Kept in a shared module so the authorization and recipient rules can be
 // exercised by mocked tests without any real delivery.
 
-export const TEST_PUSH_TITLE = "Stackd test notification";
-export const TEST_PUSH_MESSAGE =
-  "This is a delivery test. No glucose alert has been triggered.";
+export const TEST_PUSH_TITLE = "145 mg/dL, Holding steady";
+export const TEST_PUSH_MESSAGE = "In your comfort zone";
+export const TEST_PUSH_IMAGE_URL =
+  "https://media.base44.com/images/public/6ac18e6df0a84bf80842d5f0/38d56112a_stackd_push_arrow_flat.png";
 
 // Fallback origin, used only when the caller cannot supply the app's own public
 // origin (for example in a unit test).
@@ -25,6 +26,54 @@ const lastSendByUser = new Map<string, number>();
 function isUnavailable(error: any) {
   const detail = String(error?.message || "");
   return /not configured|not available|no device|no push|credential|502|503/i.test(detail);
+}
+
+function isExtraFieldsRejection(error: any) {
+  if (isUnavailable(error)) return false;
+  const status = Number(error?.status ?? error?.statusCode ?? 0);
+  const detail = String(error?.message || "");
+  if (
+    /no device|no registered device|not registered|no (push )?subscription|has no device|no token|missing token|outside the app|not a member|no such user|unknown user/i.test(
+      detail
+    )
+  ) {
+    return false;
+  }
+  if (status === 400 || status === 422) return true;
+  return /extra|field|schema|validation|invalid|unexpected|unrecognized|not permitted|forbidden|attachment|image|mutable|apns|fcm/i.test(
+    detail
+  );
+}
+
+export function buildRichTestPushFields(imageUrl: string = TEST_PUSH_IMAGE_URL) {
+  return {
+    // Base44 / generic snake_case & common top-level fields
+    image: imageUrl,
+    image_url: imageUrl,
+    attachment_url: imageUrl,
+    media_url: imageUrl,
+    mutable_content: true,
+    // FCM HTTP v1 fields
+    notification: { image: imageUrl },
+    fcm_options: { image: imageUrl },
+    apns: {
+      payload: { aps: { "mutable-content": 1 } },
+      fcm_options: { image: imageUrl },
+    },
+    // APNs direct fields + custom payload keys a Notification Service Extension may inspect
+    aps: { "mutable-content": 1 },
+    data: {
+      image: imageUrl,
+      image_url: imageUrl,
+      attachment_url: imageUrl,
+      media_url: imageUrl,
+    },
+    // Common provider SDK fields (OneSignal / Expo / generic attachments)
+    ios_attachments: { thumbnail: imageUrl },
+    big_picture: imageUrl,
+    richContent: { image: imageUrl },
+    attachments: [{ url: imageUrl, type: "image/png" }],
+  };
 }
 
 /**
@@ -60,24 +109,42 @@ export async function runTestPushNotification(
   lastSendByUser.set(user.id, nowMs);
 
   try {
-    // The same four documented fields as a real alert (see PUSH_MESSAGE_FIELDS
-    // in notificationDispatch.ts): recipient, title, body, and the tapping link.
-    // A real self alert opens "/" (destinationFor("self")), so the test carries
-    // that same link rather than a shorter payload. That makes a locked-phone
-    // test a faithful reproduction of an automatic alert — one fewer difference
-    // to explain when the two behave differently.
-    //
-    // This is payload parity only. It is NOT a sound fix: the integration
-    // accepts no sound, interruption level or APNs key, so neither path can ask
-    // for an audible alert. Field names only are logged, never the text.
-    const message = {
+    const baseMessage = {
       user_id: user.id,
       title: TEST_PUSH_TITLE,
       content: TEST_PUSH_MESSAGE,
       action_url: `${String(origin || "").replace(/\/+$/, "") || DEFAULT_PUSH_ORIGIN}/`,
     };
-    console.log(JSON.stringify({ diagStage: 'PUSH_PAYLOAD_TEST', fields: Object.keys(message).sort() }));
-    await base44.asServiceRole.integrations.Core.SendPushNotification(message);
+    const richMessage = {
+      ...baseMessage,
+      ...buildRichTestPushFields(TEST_PUSH_IMAGE_URL),
+    };
+    console.log(
+      JSON.stringify({
+        diagStage: "PUSH_PAYLOAD_TEST",
+        mode: "rich_image_diagnostic",
+        fields: Object.keys(richMessage).sort(),
+      })
+    );
+    try {
+      const response = await base44.asServiceRole.integrations.Core.SendPushNotification(richMessage);
+      if (response?.ok === false || response?.success === false) {
+        throw Object.assign(new Error("extra fields rejected"), { status: 422 });
+      }
+    } catch (richError: any) {
+      if (!isExtraFieldsRejection(richError)) {
+        throw richError;
+      }
+      console.warn(
+        JSON.stringify({
+          diagStage: "PUSH_PAYLOAD_TEST_FALLBACK",
+          status: richError?.status || null,
+          detail: String(richError?.message || "").slice(0, 200),
+          fields: Object.keys(baseMessage).sort(),
+        })
+      );
+      await base44.asServiceRole.integrations.Core.SendPushNotification(baseMessage);
+    }
   } catch (error: any) {
     lastSendByUser.delete(user.id);
     console.error(
