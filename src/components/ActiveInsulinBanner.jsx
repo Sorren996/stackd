@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Info,
   X } from
@@ -51,6 +51,7 @@ import { deriveGlucoseFreshness } from "@/lib/glucoseRefresh/verification";
 import { isRescueCarbEntry } from "@/lib/rescueCarbDetection";
 import { GLUCOSE_STATUS_COLORS, classifyGlucose, readHighReference, FIXED_LOW_REFERENCE, getCurrentGlucoseZone, computeGlucoseDirection, describeDirection, getCurrentGlucoseNote } from "@/lib/glucoseStatus";
 import AnchorNumber from "@/components/editorial/AnchorNumber";
+import GlucoseTicker from "@/components/graph/GlucoseTicker";
 import HairlineSection from "@/components/editorial/HairlineSection";
 import CardErrorBoundary from "@/components/CardErrorBoundary";
 import { format } from "date-fns";
@@ -1028,6 +1029,25 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, liveRea
   const statusCopyStale = liveReadingPending || liveReadingUnverified || isGlucoseStale || comfortLabelStale ||
     !Number.isFinite(sourceTime) || sourceTime > Date.now() || latestGlucose?.source === 'system';
 
+  // The hero number rolls on exactly one trigger: a genuinely new reading, i.e.
+  // a new record identity (its id, else its recorded_at). A re-render, a poll
+  // returning the same measurement, a unit switch and a changed trend arrow all
+  // swap instantly, and so do the saved and unavailable states. The ticker
+  // itself never animates its first paint, and it snaps by itself whenever the
+  // string length changes (99 → 100, or a switch to mmol/L).
+  const heroTickerRef = useRef(null);
+  const heroReadingKeyRef = useRef(null);
+  const heroNumberText = glucoseValue != null ? formatGlucose(glucoseValue) : "-";
+  const heroReadingKey = latestGlucose?.id || latestGlucose?.recorded_at || null;
+  useEffect(() => {
+    const ticker = heroTickerRef.current;
+    if (!ticker) return;
+    const previousKey = heroReadingKeyRef.current;
+    heroReadingKeyRef.current = heroReadingKey;
+    const isNewReading = previousKey != null && heroReadingKey != null && previousKey !== heroReadingKey;
+    ticker.setValue(heroNumberText, isNewReading && !statusCopyStale);
+  }, [heroReadingKey, heroNumberText, statusCopyStale]);
+
   const glucoseZone = getCurrentGlucoseZone(glucoseValue, targetLow, targetHigh, statusCopyStale);
   // Direction is read from the last 3–4 readings (~15–20 min), never a single
   // reading, and is omitted entirely when the data is thin or old.
@@ -1093,8 +1113,33 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, liveRea
         </div>
         <div className="relative min-h-[132px]" aria-busy={liveReadingRefreshing}>
           {liveReadingPending && !latestGlucose ? <LiveReadingPlaceholder /> : <div>
+        {/* The reading rolls in the same ticker the Daily Flow mini hero uses:
+            same component, same 500 ms and curve, same per-digit direction. It
+            takes the anchor's own class and style, so the type is unchanged,
+            and its per-digit width reservation means the unit and the trend
+            arrow beside it never shift during a roll. */}
         <AnchorNumber
-          value={glucoseValue != null ? formatGlucose(glucoseValue) : "-"}
+          valueNode={({ className, style }) => (
+            <>
+              {/* Spoken once, in full. The rolling layers are hidden from
+                  assistive technology and carry no live region, so a screen
+                  reader hears "119 mg/dL" rather than every frame. */}
+              <span className="sr-only">
+                {glucoseValue != null ? `${heroNumberText} ${glucoseUnitLabel()}` : heroNumberText}
+              </span>
+              {/* The anchor class and style sit on the ticker's own wrapper, so
+                  the digits inherit the hero's type exactly. The zero-width
+                  strut beside them only supplies the text baseline the wrapper
+                  reports: the ticker's masked digit columns report their bottom
+                  edge instead, and without this the unit and the trend arrow
+                  would sit a descender lower than they do today. It draws
+                  nothing and takes no width. */}
+              <span className={className} style={style}>
+                <GlucoseTicker ref={heroTickerRef} ariaHidden initialValue={heroNumberText} />
+                <span aria-hidden="true" style={{ display: "inline-block", lineHeight: 1 }}>{"\u200b"}</span>
+              </span>
+            </>
+          )}
           unit={glucoseUnitLabel()}
           caption={statusCopyStale ? (latestGlucose ? 'Last known reading' : 'Reading unavailable') : rangeCardLabel}
           trendIcon={!statusCopyStale && glucoseValue != null && trend ? <TrendMark trend={trend} /> : null}

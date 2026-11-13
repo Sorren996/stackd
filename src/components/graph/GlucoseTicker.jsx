@@ -50,7 +50,7 @@ function DigitSlot({ digit, direction }) {
 // Imperative API via ref:
 //   setValue(value, animate) — animate=true triggers per-digit rolling,
 //   animate=false updates instantly (used during scroll-driven updates).
-const GlucoseTicker = forwardRef(({ className = "", initialValue = "" }, ref) => {
+const GlucoseTicker = forwardRef(({ className = "", initialValue = "", style, ariaHidden = false }, ref) => {
   const initStr = String(initialValue ?? "");
   const [state, setState] = useState({
     digits: initStr.split(""),
@@ -88,7 +88,11 @@ const GlucoseTicker = forwardRef(({ className = "", initialValue = "" }, ref) =>
   );
 
   return (
-    <span className={className} style={{ display: "inline-flex" }}>
+    <span
+      className={className}
+      style={{ display: "inline-flex", ...style }}
+      aria-hidden={ariaHidden ? "true" : undefined}
+    >
       {state.digits.map((d, i) => (
         <DigitSlot key={i} digit={d} direction={state.directions[i] || "none"} />
       ))}

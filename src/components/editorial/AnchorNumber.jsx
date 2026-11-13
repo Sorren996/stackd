@@ -4,13 +4,19 @@
  *
  * Optional `dot` renders a small status dot before the caption.
  */
-export default function AnchorNumber({ value, unit, caption, dot, dotColor = "#5b6550", subcaption, trendIcon = null, trendColor = "#6b6153", gathering = false }) {
+export default function AnchorNumber({ value, valueNode = null, unit, caption, dot, dotColor = "#5b6550", subcaption, trendIcon = null, trendColor = "#6b6153", gathering = false }) {
+  // The anchor's type lives here, once. A caller that needs its own numeral
+  // component (the rolling ticker) is handed this class and style, so a larger
+  // number can roll without its size, weight, spacing or colour drifting.
+  const numberStyle = { color: "#3a2f28", ...(gathering ? { fontSize: 28, fontWeight: 400, opacity: 0.65 } : {}) };
+  const number = typeof valueNode === "function" ?
+  valueNode({ className: "anchor-number", style: numberStyle }) :
+  valueNode ?? <span className="anchor-number" style={numberStyle}>{value}</span>;
+
   return (
     <div className="py-3 px-1">
       <div className="flex items-baseline gap-1.5">
-        <span className="anchor-number" style={{ color: "#3a2f28", ...(gathering ? { fontSize: 28, fontWeight: 400, opacity: 0.65 } : {}) }}>
-          {value}
-        </span>
+        {number}
         {unit &&
         <span className="text-sm font-normal" style={{ color: "#7a6b5d" }}>
             {unit}
