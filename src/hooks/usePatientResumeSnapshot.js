@@ -11,9 +11,14 @@ const ENTRIES = [
   ['graphDosesSource', ['insulin-doses', 'graph']],
   ['graphCarbsSource', ['carb-entries', 'graph']],
 ];
-export default function usePatientResumeSnapshot(userId, values, requestRefresh) {
+export default function usePatientResumeSnapshot(userId, values, requestRefresh, { visibleScreen = true } = {}) {
   const client = useQueryClient();
   const keys = useMemo(() => ENTRIES.map(([, key]) => [...key, userId]), [userId]);
+  // What a resume actually re-reads: the latest reading always, plus this
+  // screen's own sections only while it is the screen in front of the person.
+  // Every other section keeps its cached values until it is looked at, so a
+  // resume never starts six reads at once or holds the first paint behind them.
+  const resumeKeys = useMemo(() => (visibleScreen ? keys : keys.slice(0, 1)), [keys, visibleScreen]);
   useIsFetching({ predicate: q => keys.some(key => JSON.stringify(key) === JSON.stringify(q.queryKey)) });
   const [clock, setClock] = useState(() => ({ now: Date.now(), revision: 0 }));
   // Only the newest revalidation round may report or publish; a round retired by
@@ -27,7 +32,7 @@ export default function usePatientResumeSnapshot(userId, values, requestRefresh)
     setClock(v => ({ now: Date.now(), revision: v.revision + 1 }));
     logStartup('resume', { code: String(reason || 'unknown').toUpperCase() });
 
-    const work = keys.map(async (queryKey) => {
+    const work = resumeKeys.map(async (queryKey) => {
       // A query still marked in flight on resume began before the WebView was
       // suspended. Joining that promise can wait for ever, so it is retired and
       // re-read instead — one bounded read per section, no refresh loop.

@@ -46,7 +46,10 @@ function stampFooter(flow) {
 // Returns { filename, blob, audit } — audit lists any paint that fell outside
 // its reserved block or the A4 safe area (expected to be empty).
 export async function composeReportsPdf(reports, reportIds = []) {
-  const flow = new Flow();
+  // Loaded at the point of export only, so neither jsPDF nor its html2canvas
+  // sibling is in the bundle a page load pays for.
+  const { jsPDF } = await import("jspdf");
+  const flow = new Flow(jsPDF);
   renderCover(flow, reports);
 
   const wanted = new Set(reportIds.length ? reportIds : ORDER);

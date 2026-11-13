@@ -1,5 +1,7 @@
+import { Suspense } from "react";
 import { useNavigate, Outlet } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
+import RouteFallback from "@/components/RouteFallback";
 import PullToRefresh from "@/components/PullToRefresh";
 import FollowerNav from "@/components/follower/FollowerNav";
 import HeaderBackdrop from "@/components/header/HeaderBackdrop";
@@ -59,7 +61,11 @@ export default function FollowerLayout() {
               paddingBottom: "calc(72px + 32px + env(safe-area-inset-bottom))",
             }}
           >
-            <Outlet />
+            {/* The viewer's pages are their own chunks; the bar and header stay
+                put while one arrives. */}
+            <Suspense fallback={<RouteFallback />}>
+              <Outlet />
+            </Suspense>
           </div>
         </PullToRefresh>
       </main>

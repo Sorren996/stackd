@@ -1,10 +1,9 @@
-import { memo, useEffect, useState } from "react";
+import { Suspense, memo, useEffect, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import Dashboard from "../pages/Dashboard";
-import HistoryPage from "../pages/History";
-import SettingsPage from "../pages/Settings";
-import AnalyticsPage from "../pages/Analytics";
+import { LazyHistory, LazyAnalytics, LazySettings, prefetchTabsOnIdle } from "@/routes/lazyPages";
+import RouteFallback from "@/components/RouteFallback";
 import UnifiedBottomNav from "./UnifiedBottomNav";
 import { useRealtimeLogSync } from "@/hooks/useRealtimeLogSync";
 import { useDexcomRefresh } from "@/hooks/useDexcomRefresh";
@@ -53,10 +52,12 @@ function useForegroundRepaint() {
 
 // The header's own backdrop (blur + slate veil) lives in HeaderBackdrop so the
 // header stays slate whatever cream content scrolls beneath it.
+// Home is the eager path and paints first. The other three tabs live in their
+// own chunks, mounted the first time they are opened.
 const CachedDashboard = memo(Dashboard);
-const CachedHistoryPage = memo(HistoryPage);
-const CachedSettingsPage = memo(SettingsPage);
-const CachedAnalyticsPage = memo(AnalyticsPage);
+const CachedHistoryPage = memo(LazyHistory);
+const CachedSettingsPage = memo(LazySettings);
+const CachedAnalyticsPage = memo(LazyAnalytics);
 
 export default function Layout() {
   const { user } = useAuth();
@@ -67,11 +68,14 @@ export default function Layout() {
   const isHistoryRoute = location.pathname === "/history";
   const isAnalyticsRoute = location.pathname === "/analytics";
   const isKeepAliveRoute = isDashboardRoute || isHistoryRoute || isAnalyticsRoute || isSettingsRoute;
+  // A tab mounts the first time it is opened and then stays mounted, so a cold
+  // start runs only the screen in front of the person instead of every tab at
+  // once.
   const [visitedTabs, setVisitedTabs] = useState(() => ({
     dashboard: true,
-    history: true,
-    analytics: true,
-    settings: true,
+    history: isHistoryRoute,
+    analytics: isAnalyticsRoute,
+    settings: isSettingsRoute,
   }));
 
   // Keeps every page's cached log data fresh the instant a record changes —
@@ -129,6 +133,16 @@ export default function Layout() {
       setVisitedTabs((tabs) => (tabs.settings ? tabs : { ...tabs, settings: true }));
     }
   }, [isDashboardRoute, isHistoryRoute, isAnalyticsRoute, isSettingsRoute]);
+
+  // Warm the other tabs' chunks once this screen has painted, so a later tap
+  // finds the code already on the device.
+  useEffect(() => prefetchTabsOnIdle(), []);
+
+  // The route is read here as well as in the state, so a tab is mounted on its
+  // very first render — no empty frame while the state effect catches up.
+  const showHistory = visitedTabs.history || isHistoryRoute;
+  const showAnalytics = visitedTabs.analytics || isAnalyticsRoute;
+  const showSettings = visitedTabs.settings || isSettingsRoute;
 
   const handleLogoClick = () => {
     navigate("/");
@@ -195,22 +209,32 @@ export default function Layout() {
             <div hidden={!isDashboardRoute}>
               <CachedDashboard key={user?.id} />
             </div>
-            {visitedTabs.history && (
+            {showHistory && (
               <div hidden={!isHistoryRoute}>
-                <CachedHistoryPage />
+                <Suspense fallback={<RouteFallback />}>
+                  <CachedHistoryPage />
+                </Suspense>
               </div>
             )}
-            {visitedTabs.analytics && (
+            {showAnalytics && (
               <div hidden={!isAnalyticsRoute}>
-                <CachedAnalyticsPage />
+                <Suspense fallback={<RouteFallback />}>
+                  <CachedAnalyticsPage />
+                </Suspense>
               </div>
             )}
-            {visitedTabs.settings && (
+            {showSettings && (
               <div hidden={!isSettingsRoute}>
-                <CachedSettingsPage />
+                <Suspense fallback={<RouteFallback />}>
+                  <CachedSettingsPage />
+                </Suspense>
               </div>
             )}
-            {!isKeepAliveRoute && <Outlet />}
+            {!isKeepAliveRoute && (
+              <Suspense fallback={<RouteFallback />}>
+                <Outlet />
+              </Suspense>
+            )}
           </div>
         </PullToRefresh>
       </main>

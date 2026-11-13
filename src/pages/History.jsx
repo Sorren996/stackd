@@ -77,12 +77,11 @@ export default function History() {
       });
       return res.data;
     },
+    // A saved summary paints immediately; past staleTime it revalidates behind
+    // the paint, and a failed read leaves no data, so the next mount reads
+    // again regardless of staleTime.
     staleTime: 30 * 1000,
-    gcTime: 30 * 60 * 1000,
-    // Always refetch on mount so a transient error from a previous load is
-    // never stuck behind staleTime — the keep-alive Layout means this page
-    // stays mounted (hidden) when the user navigates to another tab.
-    refetchOnMount: "always"
+    gcTime: 30 * 60 * 1000
   });
 
   const allDays = summary?.days || [];

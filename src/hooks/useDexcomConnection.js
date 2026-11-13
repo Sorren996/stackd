@@ -12,11 +12,12 @@ export function useDexcomConnection() {
     queryFn: () => base44.entities.DexcomConnection.list("-created_date", 1),
     staleTime: 30 * 1000,
     gcTime: 10 * 60 * 1000,
-    // Always refetch when a component using the hook mounts, even if a
-    // (possibly errored) result is still cached as "fresh". This keeps the
-    // connection status honest after a transient fetch failure, without
-    // waiting for staleTime to expire — the keep-alive Layout means pages
-    // stay mounted (hidden), so a failed first load otherwise sticks.
+    // The one query that keeps its mount refetch, deliberately. `connected`
+    // decides which readings are even plotted (the chart draws CGM readings
+    // only for a connected account) and whether manual logging is offered, so
+    // a stale "connected" would quietly hide the person's own entries. It never
+    // blocks a paint — cached data renders while this revalidates — and it is
+    // one small row, not a series.
     refetchOnMount: "always",
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,

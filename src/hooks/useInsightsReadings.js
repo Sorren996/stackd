@@ -18,9 +18,9 @@ export default function useInsightsReadings(rangeDays) {
       const readings = await fetchAllGlucoseReadings({ userId: user.id, start, end, signal });
       return { readings, end: end.toISOString() };
     },
-    // A range change or authorized remount revalidates even an empty cached result.
+    // A range change or authorized remount revalidates even an empty cached
+    // result — staleTime 0 already guarantees that, without a blocking read.
     staleTime: 0,
-    refetchOnMount: "always",
     placeholderData: undefined,
     retry: (count, error) => {
       const status = Number(error?.status || error?.response?.status);

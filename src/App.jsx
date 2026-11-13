@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster"
 import { Toaster as SonnerToaster } from "@/components/ui/sonner"
 import { QueryClientProvider, useQuery } from '@tanstack/react-query'
@@ -16,32 +16,9 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import Mfa from '@/pages/Mfa';
 import Landing from './pages/Landing';
-import Install from './pages/Install';
-import PrivacyPage from './pages/PrivacyPage';
-import PublicContactPage from './pages/PublicContactPage';
-import HowItWorks from './pages/HowItWorks';
-import SharingExplained from './pages/SharingExplained';
-import TermsPage from './pages/TermsPage';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
-import History from './pages/History';
-import Insights from './pages/Insights';
-import Analytics from './pages/Analytics';
-import Settings from './pages/Settings';
-import InsulinSettingsPage from './pages/InsulinSettingsPage';
-import ProfileSettingsPage from './pages/ProfileSettingsPage';
-import PrivacyConsentPage from './pages/PrivacyConsentPage';
-import DisplaySettingsPage from './pages/DisplaySettingsPage';
-import SupportCreatorPage from './pages/SupportCreatorPage';
-import DexcomSettingsPage from './pages/DexcomSettingsPage';
-import SharingPage from './pages/SharingPage';
-import NotificationsPage from './pages/NotificationsPage';
-import FollowingHome from './pages/FollowingHome';
-import FollowerSettings from './pages/FollowerSettings';
 import FollowerLayout from '@/components/follower/FollowerLayout';
-import FollowInvite from './pages/FollowInvite';
-import ContactSupportPage from './pages/ContactSupportPage';
-import SupportInbox from './pages/SupportInbox';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AdminRoute from '@/components/AdminRoute';
 import { Navigate } from 'react-router-dom';
@@ -50,8 +27,23 @@ import { AnimatePresence } from "framer-motion";
 import { base44 } from "@/api/base44Client";
 import RequiredAcknowledgments from "@/pages/RequiredAcknowledgments";
 import Onboarding from "@/pages/Onboarding";
-import SplitPlanReview from "@/pages/SplitPlanReview";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import RouteFallback from "@/components/RouteFallback";
+// Route-level chunks: everything whose only purpose is a report, a form or a
+// sub-page. Auth, the startup gates, the shells and Home stay eager above.
+import {
+  LazyHistory, LazyAnalytics, LazySettings, LazyInsights,
+  LazyInsulinSettings, LazyProfileSettings, LazyPrivacyConsent,
+  LazyDisplaySettings, LazySupportCreator, LazyDexcomSettings,
+  LazySharing, LazyNotifications, LazyContactSupport, LazySupportInbox,
+  LazySplitPlanReview, LazyFollowingHome, LazyFollowerSettings,
+  LazyFollowInvite, LazyInstall, LazyPrivacy, LazyTerms, LazyPublicContact,
+  LazyHowItWorks, LazySharingExplained,
+} from '@/routes/lazyPages';
+
+// A lazily loaded screen keeps the shell around it: the fallback reserves the
+// page's height and paints nothing, so a first visit never flashes or jumps.
+const page = (element) => <Suspense fallback={<RouteFallback />}>{element}</Suspense>;
 import { ACKNOWLEDGMENT_VERSIONS, CHECKBOX_KEYS } from "@/lib/acknowledgmentConfig";
 import { cacheSettingsLocally } from "@/lib/userSettings";
 import { loadStartupSetup } from '@/lib/startupSetup';
@@ -277,13 +269,13 @@ const AuthenticatedApp = () => {
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/mfa" element={<Mfa />} />
         <Route path="/" element={<Landing />} />
-        <Route path="/install" element={<Install />} />
-        <Route path="/privacy" element={<PrivacyPage />} />
-        <Route path="/terms" element={<TermsPage />} />
-        <Route path="/contact" element={<PublicContactPage />} />
-        <Route path="/how-it-works" element={<HowItWorks />} />
-        <Route path="/sharing" element={<SharingExplained />} />
-        <Route path="/follow" element={<FollowInvite />} />
+        <Route path="/install" element={page(<LazyInstall />)} />
+        <Route path="/privacy" element={page(<LazyPrivacy />)} />
+        <Route path="/terms" element={page(<LazyTerms />)} />
+        <Route path="/contact" element={page(<LazyPublicContact />)} />
+        <Route path="/how-it-works" element={page(<LazyHowItWorks />)} />
+        <Route path="/sharing" element={page(<LazySharingExplained />)} />
+        <Route path="/follow" element={page(<LazyFollowInvite />)} />
         <Route path="*" element={<SplashScreen showAuth />} />
       </Routes>
     );
@@ -316,14 +308,14 @@ const AuthenticatedApp = () => {
       <ErrorBoundary>
         <Routes>
           <Route element={<FollowerLayout />}>
-            <Route path="/" element={<FollowingHome />} />
-            <Route path="/following/settings" element={<FollowerSettings />} />
-            <Route path="/following/notifications" element={<NotificationsPage variant="follower" />} />
+            <Route path="/" element={<LazyFollowingHome />} />
+            <Route path="/following/settings" element={<LazyFollowerSettings />} />
+            <Route path="/following/notifications" element={<LazyNotifications variant="follower" />} />
             {/* Kept so an existing bookmark still lands on something real. */}
-            <Route path="/shared" element={<FollowingHome />} />
-            <Route path="/follow" element={<FollowInvite />} />
+            <Route path="/shared" element={<LazyFollowingHome />} />
+            <Route path="/follow" element={<LazyFollowInvite />} />
           </Route>
-          <Route path="/install" element={<Install />} />
+          <Route path="/install" element={page(<LazyInstall />)} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </ErrorBoundary>
@@ -389,27 +381,27 @@ const AuthenticatedApp = () => {
         <Routes>
           <Route element={<Layout />}>
             <Route path="/" element={<Dashboard />} />
-            <Route path="/history" element={<History />} />
+            <Route path="/history" element={<LazyHistory />} />
             <Route element={<AdminRoute />}>
-              <Route path="/insights" element={<Insights />} />
+              <Route path="/insights" element={<LazyInsights />} />
             </Route>
-            <Route path="/analytics" element={<Analytics />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/settings/insulin" element={<InsulinSettingsPage />} />
-            <Route path="/settings/profile" element={<ProfileSettingsPage />} />
-            <Route path="/settings/privacy-consent" element={<PrivacyConsentPage />} />
-            <Route path="/settings/display" element={<DisplaySettingsPage />} />
-            <Route path="/settings/support-creator" element={<SupportCreatorPage />} />
-            <Route path="/settings/dexcom" element={<DexcomSettingsPage />} />
-            <Route path="/settings/sharing" element={<SharingPage />} />
-            <Route path="/settings/notifications" element={<NotificationsPage />} />
-            <Route path="/shared" element={<FollowingHome />} />
-            <Route path="/follow" element={<FollowInvite />} />
-            <Route path="/settings/contact-support" element={<ContactSupportPage />} />
-            <Route path="/settings/support-inbox" element={<SupportInbox />} />
-            <Route path="/split-plan/:planId" element={<SplitPlanReview />} />
+            <Route path="/analytics" element={<LazyAnalytics />} />
+            <Route path="/settings" element={<LazySettings />} />
+            <Route path="/settings/insulin" element={<LazyInsulinSettings />} />
+            <Route path="/settings/profile" element={<LazyProfileSettings />} />
+            <Route path="/settings/privacy-consent" element={<LazyPrivacyConsent />} />
+            <Route path="/settings/display" element={<LazyDisplaySettings />} />
+            <Route path="/settings/support-creator" element={<LazySupportCreator />} />
+            <Route path="/settings/dexcom" element={<LazyDexcomSettings />} />
+            <Route path="/settings/sharing" element={<LazySharing />} />
+            <Route path="/settings/notifications" element={<LazyNotifications />} />
+            <Route path="/shared" element={<LazyFollowingHome />} />
+            <Route path="/follow" element={<LazyFollowInvite />} />
+            <Route path="/settings/contact-support" element={<LazyContactSupport />} />
+            <Route path="/settings/support-inbox" element={<LazySupportInbox />} />
+            <Route path="/split-plan/:planId" element={<LazySplitPlanReview />} />
           </Route>
-          <Route path="/install" element={<Install />} />
+          <Route path="/install" element={page(<LazyInstall />)} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </ErrorBoundary>

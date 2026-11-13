@@ -41,7 +41,9 @@ export default function SharerDashboard({ relationship, onOpenPrefs }) {
     gcTime: 0,
     retry: false,
     networkMode: 'always',
-    refetchOnMount: 'always',
+    // gcTime 0 drops this cache the moment the screen closes, so a remount is
+    // always a real read: no stale shared view can be shown without the
+    // blocking mount fetch this used to require.
     refetchOnWindowFocus: false,
     refetchInterval: 60000,
   });

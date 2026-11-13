@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
-import moment from "moment";
+import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, Leaf, Sparkles, Heart, ExternalLink, X, AlertCircle, Hourglass } from "lucide-react";
 import { NumberPadField } from "@/components/FormInputFields";
@@ -294,7 +294,7 @@ export default function SupportCreator() {
                 key={record.id}
                 label={formatCents(record.amount_cents)}
                 value={record.support_type === "monthly" ? "monthly" : "gift"}
-                timestamp={moment(record.created_date).format("MMM D, YYYY")}
+                timestamp={Number.isFinite(Date.parse(record.created_date)) ? format(new Date(record.created_date), "MMM d, yyyy") : ""}
               />
             ))}
           </div>

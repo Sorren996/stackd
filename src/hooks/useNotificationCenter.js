@@ -14,8 +14,9 @@ export default function useNotificationCenter() {
     queryKey: ["notification-center", user?.id],
     enabled: isAuthenticated && Boolean(user?.id) && !isLoadingAuth,
     queryFn: getNotificationCenter,
+    // staleTime 0 makes every mount revalidate on its own, so the explicit
+    // mount refetch added nothing but a blocking read.
     staleTime: 0,
-    refetchOnMount: "always",
     retry: 1,
   });
 }

@@ -19,9 +19,17 @@ function isAuthError(error) {
 export const queryClientInstance = new QueryClient({
   defaultOptions: {
     queries: {
+      // Cache-first defaults: a screen paints what it already has and
+      // revalidates quietly behind it, so a tab tap never waits on the network.
+      // Every per-query option still wins over these — no query's own staleTime
+      // is lowered or removed by them.
+      staleTime: 60 * 1000,
+      gcTime: 10 * 60 * 1000,
       refetchOnWindowFocus: false,
+      refetchOnReconnect: true,
+      // One retry, and never for an auth failure: a 401/403 will not succeed on
+      // a second attempt and must reach the auth handler immediately.
       retry: (failureCount, error) => {
-        // Don't retry auth failures — they won't succeed
         if (isAuthError(error) || (error?.status || error?.response?.status) === 403) return false;
         return failureCount < 1;
       },

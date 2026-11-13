@@ -1,4 +1,3 @@
-import { jsPDF } from "jspdf";
 import { PAGE_W, PAGE_H, BOX, FLOW_BOTTOM, LINE, ASCENT, INK } from "@/lib/pdf/theme";
 
 const EPS = 0.05;
@@ -19,8 +18,10 @@ const round = (n) => Math.round(n * 10) / 10;
 //   anything outside is recorded in `violations`.
 // ─────────────────────────────────────────────────────────────────────────────
 export default class Flow {
-  constructor() {
-    this.doc = new jsPDF({ unit: "pt", format: "a4", compress: true });
+  // jsPDF is handed in by the export path, which loads it on demand: the PDF
+  // engine (and html2canvas behind it) never sits in the initial bundle.
+  constructor(JsPDF) {
+    this.doc = new JsPDF({ unit: "pt", format: "a4", compress: true });
     this.page = 1;
     this.y = BOX.y;
     this.block = null;

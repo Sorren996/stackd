@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import ActivityGraph from "../components/ActivityGraph";
@@ -46,6 +47,7 @@ function replaceCachedItem(queryClient, queryKey, updatedItem) {
 
 export default function Dashboard() {
   const queryClient = useQueryClient();
+  const { pathname } = useLocation();
   const { user } = useAuth();
   const [showAllDoses, setShowAllDoses] = useState(false);
   const [editingLog, setEditingLog] = useState(null);
@@ -105,7 +107,6 @@ export default function Dashboard() {
     staleTime: GRAPH_DATA_MS,
     refetchInterval: dexcomConnected ? 120_000 : false,
     gcTime: 30 * 60 * 1000,
-    refetchOnMount: 'always',
   });
 
 
@@ -143,7 +144,12 @@ export default function Dashboard() {
     doses: rawDoses, latestGlucoseRows: rawLatestGlucoseRows, glucoseReadings: rawGlucoseReadings,
     carbEntries: rawCarbEntries, graphDosesSource: rawGraphDoses, graphCarbsSource: rawGraphCarbs,
     confirmedAt: latestGlucoseUpdatedAt, verified: latestQuerySuccess && isFetchedAfterMount,
-  }, requestRefresh);
+  }, requestRefresh, {
+    // The shell keeps this screen mounted behind the other tabs, so a resume
+    // re-reads its whole snapshot only while it is the screen in front of the
+    // person. Anywhere else it refreshes just the latest reading.
+    visibleScreen: pathname === "/",
+  });
   const historyReady = historyLoadedAt > 0 && !freshness.blocked;
   const { doses, latestGlucoseRows, glucoseReadings, carbEntries, graphDosesSource, graphCarbsSource } = freshness.snapshot;
   const now = freshness.now;

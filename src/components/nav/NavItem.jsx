@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import NavLabel from "@/components/nav/NavLabel";
+import { prefetchTab } from "@/routes/lazyPages";
 
 /**
  * One destination. Each item fills its own grid slot, so the four page items are
@@ -21,6 +22,11 @@ export default function NavItem({ item, active, onPress }) {
     <Link
       to={path}
       onClick={onPress}
+      // The press starts the destination's chunk fetch, so the tap does not
+      // wait for code. Both signals are cheap and idempotent: the browser
+      // serves a chunk that is already fetched from its module cache.
+      onTouchStart={() => prefetchTab(path)}
+      onPointerDown={() => prefetchTab(path)}
       aria-label={label}
       aria-current={active ? "page" : undefined}
       className="flex h-full min-w-0 flex-col items-center justify-end gap-[3px]"
