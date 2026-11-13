@@ -61,7 +61,7 @@ export default function DailyBalanceSection({
         </div>
 
         {hasData && !isGathering &&
-        <p className="mt-1 px-1 text-[11px]" style={{ color: "#746959" }}>
+        <p className="mt-1 px-1 text-[11px] hidden" style={{ color: "#746959" }}>
             So far today
           </p>
         }
@@ -72,7 +72,7 @@ export default function DailyBalanceSection({
           <div className="mt-3 px-1">
               <BalanceSpectrum percentage={percentage} />
             </div>
-          <p className="mt-1.5 px-1 text-center text-[10px]" style={{ color: "#746959" }}>
+          <p className="mt-1.5 px-1 text-[10px] text-left" style={{ color: "#746959" }}>
               Tap for more info
             </p>
           </>
