@@ -5,6 +5,16 @@
     <link rel="icon" type="image/png" href="https://media.base44.com/images/public/6a1b93f234a8611ee1595134/1b816d1eb_stackdappiconver3.png" />
     <link rel="apple-touch-icon" href="https://media.base44.com/images/public/6a1b93f234a8611ee1595134/1b816d1eb_stackdappiconver3.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
+    <!-- Web fonts are fetched directly from the document head, not by an
+         @import inside the stylesheet: the browser discovers them while it is
+         still parsing the HTML, so the font request starts in parallel with
+         our own CSS instead of waiting for it to download and parse first.
+         Montserrat's axis starts at 300 because 300 is the lightest weight the
+         app uses; the italic axis stays, a few inline styles rely on it. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300..900;1,300..900&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..700&display=swap" />
     <link rel="manifest" href="/manifest.json" />
     <meta name="description" content="See glucose trends, logged insulin, meals and patterns in one calm place, with sharing you control. Stackd is a companion app for recording and seeing your own information, not a medical device." />
     <meta property="og:type" content="website" />
