@@ -152,6 +152,8 @@ export async function evaluateRecipient({ sr, ownerId, prefs, relationship = nul
       rows.filter(row => Date.parse(row.recorded_at) <= decision.sample.at),
       { now: nowMs, below: decision.sample.value < settings?.target_range_low }),
     thresholdMgdl: decision.lowThreshold ?? null,
+    targetLow: settings?.target_range_low ?? null,
+    targetHigh: settings?.target_range_high ?? null,
     coveredCategories: lowFamily ? [] : covered.map(c => c.category) });
   const episodeEvent = `${decision.episodeKey}${decision.repeatIndex ? `:repeat:${decision.repeatIndex}` : ''}`;
   // Recipient plus reading identity. Per category keys are what let one reading

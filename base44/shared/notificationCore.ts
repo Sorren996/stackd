@@ -409,6 +409,8 @@ export interface CopyInput {
    * reading met instead of a generic phrase.
    */
   thresholdMgdl?: number | null;
+  targetLow?: number | null;
+  targetHigh?: number | null;
 }
 
 export interface PushCopy {
@@ -512,6 +514,24 @@ export function buildNotificationCopy(input: CopyInput): PushCopy {
       body: `${who ? possessive(who) : "Your"} glucose is below ${formatGlucoseValue(threshold, units)} ${units}.`,
     };
   }
+  if (input.category === "all_readings") {
+    const v = Number(input.value);
+    const lowRaw = input.targetLow == null ? NaN : Number(input.targetLow);
+    const highRaw = input.targetHigh == null ? NaN : Number(input.targetHigh);
+    const low = Number.isFinite(lowRaw) && lowRaw > 0 ? lowRaw : 70;
+    const high = Number.isFinite(highRaw) && highRaw > 0 ? highRaw : 180;
+    const zoneBody =
+      Number.isFinite(v) && v < low
+        ? "Below your comfort zone"
+        : Number.isFinite(v) && v > high
+          ? "Above your comfort zone"
+          : "In your comfort zone";
+    return {
+      title: `${value} ${units}${arrow ? ` ${arrow}` : ""}`,
+      body: zoneBody,
+    };
+  }
+
   const rapidChange = input.category === 'falling_fast' || input.category === 'rising_fast';
   const titleLabel = rapidChange ? (pair ? pair.word[0].toUpperCase() + pair.word.slice(1) : 'Glucose') : PUSH_LABELS[input.category];
   const title = `${lead}${titleLabel}: ${value} ${units}${arrow ? ` ${arrow}` : ""}`;
@@ -521,7 +541,7 @@ export function buildNotificationCopy(input: CopyInput): PushCopy {
   const held = Number(input.durationMinutes);
   const sustained = Number.isFinite(held) && held > 0 ? ` and has stayed there for ${Math.round(held)} minutes` : "";
 
-  const bodies: Record<Exclude<DeliveryCategory, "missing_readings">, string> = {
+  const bodies: Record<Exclude<DeliveryCategory, "missing_readings" | "all_readings">, string> = {
     urgent_low: `${subject} glucose is critically low, below ${formatGlucoseValue(55, units)} ${units}.`,
     low_glucose: `${subject} glucose is below ${formatGlucoseValue(70, units)} ${units}.`,
     custom_low: `${subject} glucose is below ${their} low alert level.`,
@@ -530,7 +550,6 @@ export function buildNotificationCopy(input: CopyInput): PushCopy {
     above_range: `${subject} glucose is above ${their} comfort zone${sustained}.`,
     falling_fast: `${subject} glucose ${pair ? `is ${pair.word} and ` : ''}has met the pace ${who ? `${who} set` : "you set"}.`,
     rising_fast: `${subject} glucose ${pair ? `is ${pair.word} and ` : ''}has met the pace ${who ? `${who} set` : "you set"}.`,
-    all_readings: `${subject} glucose is ${value} ${units}.`,
     low_recovery: `${subject} glucose is back in range.`,
   };
 

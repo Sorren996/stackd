@@ -182,3 +182,17 @@ test('an explicit service refusal is failed, never submitted, and is not resent 
   await f.invoke(); await f.invoke();
   assert.equal(f.sends.length, 1); assert.equal(f.deliveries[0].status, 'failed'); assert.equal(f.deliveries[0].submitted_at, undefined);
 });
+
+test('all_readings dispatches the clean reading title and comfort-zone body from stored settings', async () => {
+  const f = fixture();
+  f.preferences.categories = {};
+  f.preferences.all_readings_enabled = true;
+  f.preferences.show_health_details = true;
+  await f.invoke({
+    rows: [{ id: 'r-124', source: 'dexcom_share', value: 124, trend: 'Flat', recorded_at: new Date(now).toISOString() }],
+    settings: { target_range_low: 70, target_range_high: 180, glucose_units: 'mg/dL' },
+  });
+  assert.equal(f.sends.length, 1);
+  assert.equal(f.sends[0].title, '124 mg/dL → holding steady');
+  assert.equal(f.sends[0].content, 'In your comfort zone');
+});

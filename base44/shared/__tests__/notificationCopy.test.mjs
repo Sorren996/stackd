@@ -19,7 +19,7 @@ const NOW = Date.parse("2026-11-06T12:00:00.000Z");
 const fresh = (minutesAgo) => NOW - minutesAgo * 60_000;
 
 const copy = (overrides = {}) =>
-  buildNotificationCopy({ units: "mg/dL", timeZone: "UTC", showDetails: true, nowMs: NOW, ...overrides });
+  buildNotificationCopy({ units: "mg/dL", timeZone: "UTC", showDetails: true, nowMs: NOW, targetLow: 70, targetHigh: 180, ...overrides });
 
 // ── Arrows: only ever the source's own verified trend ─────────────────────
 
