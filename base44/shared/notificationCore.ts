@@ -489,45 +489,47 @@ export function buildNotificationCopy(input: CopyInput): PushCopy {
   const value = formatGlucoseValue(input.value, input.units);
   const resolved = 'resolvedTrend' in input ? input.resolvedTrend : input.trend;
   const pair = trendPresentation(resolved, { below: input.resolvedTrend?.word === 'coming back up' });
-  const arrow = pair ? `${trendGlyph(pair)} ${pair.word}` : null;
-
-  // A per-reading low states the boundary it actually met — the chosen custom
-  // level, the real comfort-zone bound, or the fixed 70 — so a reading of 99 is
-  // never described as "below 70", and one reading never grows a second clause.
-  const threshold = Number(input.thresholdMgdl);
+  const arrow = pair ? trendGlyph(pair) : null;
   const title = `${lead}${value} ${units}${arrow ? ` ${arrow}` : ""}`;
 
+  const rawThreshold = input.thresholdMgdl;
+  const numericThreshold =
+    rawThreshold != null && rawThreshold !== "" ? Number(rawThreshold) : NaN;
+  const hasThreshold = Number.isFinite(numericThreshold) && numericThreshold > 0;
+  const formattedThreshold = hasThreshold ? formatGlucoseValue(numericThreshold, input.units) : null;
+  const their = who ? possessive(who) : "your";
+
   if (input.category === "all_readings") {
-    let zoneBody = "";
+    let streamBody = "";
     if (pair && pair.word) {
-      zoneBody = pair.word.charAt(0).toUpperCase() + pair.word.slice(1);
+      streamBody = pair.word.charAt(0).toUpperCase() + pair.word.slice(1);
     } else {
       const v = Number(input.value);
       const lowRaw = input.targetLow == null ? NaN : Number(input.targetLow);
       const highRaw = input.targetHigh == null ? NaN : Number(input.targetHigh);
       const low = Number.isFinite(lowRaw) && lowRaw > 0 ? lowRaw : 70;
       const high = Number.isFinite(highRaw) && highRaw > 0 ? highRaw : 180;
-      zoneBody =
+      streamBody =
         Number.isFinite(v) && v < low
           ? "Below your comfort zone"
           : Number.isFinite(v) && v > high
             ? "Above your comfort zone"
             : "In your comfort zone";
     }
-    return { title, body: zoneBody };
+    return { title, body: streamBody };
   }
 
   let body = "";
   if (input.category === "urgent_low") body = "Urgent low";
   else if (input.category === "low_glucose") body = "Low glucose";
-  else if (input.category === "custom_low") body = `Below ${formatGlucoseValue(threshold, units)}`;
-  else if (input.category === "below_range") body = "Below your comfort zone";
-  else if (input.category === "custom_high") body = `At or above ${formatGlucoseValue(threshold, units)}`;
-  else if (input.category === "above_range") body = "Above your comfort zone";
+  else if (input.category === "custom_low") body = formattedThreshold ? `Below ${formattedThreshold}` : "Low glucose";
+  else if (input.category === "below_range") body = `Below ${their} comfort zone`;
+  else if (input.category === "custom_high") body = formattedThreshold ? `At or above ${formattedThreshold}` : "High glucose";
+  else if (input.category === "above_range") body = `Above ${their} comfort zone`;
   else if (input.category === "falling_fast") body = "Falling fast";
   else if (input.category === "rising_fast") body = "Rising fast";
   else if (input.category === "low_recovery") body = "Back in range";
-  else body = "Glucose update"; // Fallback
+  else body = "Glucose update";
 
   return { title, body };
 }

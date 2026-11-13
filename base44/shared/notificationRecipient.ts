@@ -151,7 +151,11 @@ export async function evaluateRecipient({ sr, ownerId, prefs, relationship = nul
     resolvedTrend: resolveGlucoseTrend(rows.find(row => Date.parse(row.recorded_at) === decision.sample.at) || { ...decision.sample, recorded_at: new Date(decision.sample.at).toISOString() },
       rows.filter(row => Date.parse(row.recorded_at) <= decision.sample.at),
       { now: nowMs, below: decision.sample.value < settings?.target_range_low }),
-    thresholdMgdl: decision.lowThreshold ?? (decision.category === 'custom_high' ? prefs.custom_high_mgdl : null) ?? null,
+    thresholdMgdl:
+      decision.lowThreshold ??
+      (decision.category === 'custom_low' ? prefs.custom_low_mgdl : null) ??
+      (decision.category === 'custom_high' ? prefs.custom_high_mgdl : null) ??
+      null,
     targetLow: settings?.target_range_low ?? null,
     targetHigh: settings?.target_range_high ?? null,
     coveredCategories: lowFamily ? [] : covered.map(c => c.category) });
