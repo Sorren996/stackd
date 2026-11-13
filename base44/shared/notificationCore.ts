@@ -15,7 +15,8 @@
 //    decided, and a sustained condition is never inferred across a gap.
 
 import { sanitizeNotificationOptions } from './notificationOptions.ts';
-import { normalizeTrendWord, trendArrowFor } from './notificationTrend.ts';
+import { normalizeTrendWord } from './notificationTrend.ts';
+import { trendPresentation, trendGlyph } from './trendPresentation.ts';
 
 // ── Categories and timings ────────────────────────────────────────────────
 
@@ -397,6 +398,7 @@ export interface CopyInput {
   durationMinutes?: number | null;
   /** The triggering sample's own source trend, when it reported one. */
   trend?: string | null;
+  resolvedTrend?: { icon: string; word: string } | null;
   /** Now, used only to state a genuinely measured age. */
   nowMs?: number | null;
   /** Every category this one send covers, after coalescing. */
@@ -493,7 +495,9 @@ export function buildNotificationCopy(input: CopyInput): PushCopy {
 
   const units = unitLabel(input.units);
   const value = formatGlucoseValue(input.value, input.units);
-  const arrow = trendArrowFor(input.category, input.trend);
+  const resolved = 'resolvedTrend' in input ? input.resolvedTrend : input.trend;
+  const pair = trendPresentation(resolved, { below: input.resolvedTrend?.word === 'coming back up' });
+  const arrow = pair ? `${trendGlyph(pair)} ${pair.word}` : null;
 
   // A per-reading low states the boundary it actually met — the chosen custom
   // level, the real comfort-zone bound, or the fixed 70 — so a reading of 99 is

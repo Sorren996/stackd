@@ -9,6 +9,8 @@
 // real readings, three samples minimum, and nothing at all — never a zero —
 // when the series is too short, too old, duplicated, or interpolated.
 
+import { trendLevelFromRate } from './trendPresentation.ts';
+
 export const VELOCITY_WINDOW_MIN = 15;
 export const VELOCITY_MIN_SAMPLES = 3;
 export const VELOCITY_STALE_MIN = 15;
@@ -119,12 +121,7 @@ export function measureVelocity(
   };
 }
 
-export function trendFromVelocity(velocity: number | null): { icon: string; label: string } | null {
-  if (!Number.isFinite(Number(velocity))) return null;
-  const rate = Number(velocity);
-  if (rate >= TREND_FAST_RATE) return { icon: "double_up", label: "Rising quickly" };
-  if (rate >= TREND_SLOW_RATE) return { icon: "up-right", label: "Slowly rising" };
-  if (rate > -TREND_SLOW_RATE) return { icon: "right", label: "Stable" };
-  if (rate > -TREND_FAST_RATE) return { icon: "down-right", label: "Slowly falling" };
-  return { icon: "double_down", label: "Falling quickly" };
+export function trendFromVelocity(velocity: number | null) {
+  const pair = trendLevelFromRate(velocity);
+  return pair ? { ...pair, label: pair.word } : null;
 }

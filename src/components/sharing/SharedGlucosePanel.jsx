@@ -45,8 +45,8 @@ export default function SharedGlucosePanel({ glucose, reason, now = Date.now(), 
   // the readings with the same mapping. Below two readings nothing is derived,
   // so no steady arrow is ever implied from thin data.
   const trend =
-    !stale && glucose.direction != null
-      ? resolveGlucoseTrend(latest, realReadings)
+    !stale
+      ? resolveGlucoseTrend(latest, realReadings, { now, below: latest?.value < glucose.target_low })
       : null;
   const zone = describeZone(glucose.zone);
 
@@ -69,7 +69,7 @@ export default function SharedGlucosePanel({ glucose, reason, now = Date.now(), 
         {/* The direction is written out below, so the arrow itself is
             decorative when one exists; with no direction it announces that
             instead of staying silent. */}
-        <TrendArrow icon={trend?.icon} className="self-center" size={20} style={{ color: "#3f3830" }} />
+        <TrendArrow icon={trend?.icon} label={trend?.word} className="self-center" size={20} style={{ color: "#3f3830" }} />
         {!stale && zone && (
           <span
             className="ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em]"

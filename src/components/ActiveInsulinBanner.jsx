@@ -49,7 +49,7 @@ import { useDexcomRefresh } from "@/hooks/useDexcomRefresh";
 import { useAuth } from "@/lib/AuthContext";
 import { deriveGlucoseFreshness } from "@/lib/glucoseRefresh/verification";
 import { isRescueCarbEntry } from "@/lib/rescueCarbDetection";
-import { GLUCOSE_STATUS_COLORS, classifyGlucose, readHighReference, FIXED_LOW_REFERENCE, getCurrentGlucoseZone, computeGlucoseDirection, describeDirection, getCurrentGlucoseNote } from "@/lib/glucoseStatus";
+import { GLUCOSE_STATUS_COLORS, classifyGlucose, readHighReference, FIXED_LOW_REFERENCE, getCurrentGlucoseZone, describeDirection, getCurrentGlucoseNote } from "@/lib/glucoseStatus";
 import AnchorNumber from "@/components/editorial/AnchorNumber";
 import GlucoseTicker from "@/components/graph/GlucoseTicker";
 import HairlineSection from "@/components/editorial/HairlineSection";
@@ -1013,7 +1013,9 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, liveRea
   // makes a genuine Dexcom double-down draw as a double-down. Both Dexcom
   // sources are honoured (the API and Share, which is what a connected Share
   // account writes), and when nothing is known no arrow is drawn.
-  const trend = useMemo(() => resolveGlucoseTrend(latestGlucose, safeGlucoseReadings), [latestGlucose, safeGlucoseReadings]);
+  const resolvedTrend = useMemo(() => resolveGlucoseTrend(latestGlucose, safeGlucoseReadings, {
+    below: latestGlucose?.value < targetRange.low,
+  }), [latestGlucose, safeGlucoseReadings, targetRange.low]);
 
   const glucoseValue = latestGlucose?.value;
   const targetLow = targetRange.low;
@@ -1065,7 +1067,8 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, liveRea
   const glucoseZone = getCurrentGlucoseZone(glucoseValue, targetLow, targetHigh, statusCopyStale);
   // Direction is read from the last 3–4 readings (~15–20 min), never a single
   // reading, and is omitted entirely when the data is thin or old.
-  const rawDirection = computeGlucoseDirection(safeGlucoseReadings, { stale: statusCopyStale });
+  const trend = statusCopyStale ? null : resolvedTrend;
+  const rawDirection = trend?.word || null;
   const displayDirection =
   glucoseZone.zone === "urgentLow" ? null : describeDirection(rawDirection, glucoseZone.zone);
   const rangeCardLabel =

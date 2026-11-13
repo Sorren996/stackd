@@ -26,6 +26,7 @@
 // Relative, not the @/ alias: this module is imported directly by the
 // node-runnable trend-mark test, where the alias does not resolve.
 import { measureVelocity, trendFromVelocity } from "./insightEngine/measuredVelocity.js";
+import { trendPresentation } from './trendPresentation.js';
 
 const WIDE_WINDOW_MIN = 180;
 
@@ -85,23 +86,8 @@ export function computeGlucoseTrend(readings) {
 // We normalize to handle snake_case and underscore variants too, then
 // map to the same five icon keys used by computeGlucoseTrend.
 export function mapDexcomTrend(rawTrend) {
-  if (!rawTrend || typeof rawTrend !== "string") return null;
-
-  const t = rawTrend
-    .replace(/([A-Z])/g, "_$1")
-    .toLowerCase()
-    .replace(/^_/, "")
-    .trim();
-
-  if (t === "double_up" || t === "up_up") return { icon: "double_up", label: "Rising quickly" };
-  if (t === "single_up" || t === "up") return { icon: "up", label: "Rising" };
-  if (t === "forty_five_up" || t === "down_up") return { icon: "up-right", label: "Slowly rising" };
-  if (t === "flat") return { icon: "right", label: "Stable" };
-  if (t === "forty_five_down" || t === "up_down") return { icon: "down-right", label: "Slowly falling" };
-  if (t === "single_down" || t === "down") return { icon: "down", label: "Falling" };
-  if (t === "double_down" || t === "down_down") return { icon: "double_down", label: "Falling quickly" };
-
-  return null;
+  const pair = trendPresentation(rawTrend);
+  return pair ? { ...pair, label: pair.word } : null;
 }
 
 /**
@@ -117,14 +103,16 @@ export function mapDexcomTrend(rawTrend) {
  * Both Dexcom sources count: the official API ("dexcom") and the Share service
  * ("dexcom_share"), which is what a Share-connected account writes.
  */
-export function resolveGlucoseTrend(latestReading, readings) {
+export function resolveGlucoseTrend(latestReading, readings, { now = Date.now(), stale = false, below = false } = {}) {
   const source = latestReading?.source;
-  const isSensor = source === "dexcom" || source === "dexcom_share";
-  const supplied = isSensor ? mapDexcomTrend(latestReading?.trend) : null;
-  if (supplied) return { ...supplied, origin: "sensor" };
-
-  const derived = computeGlucoseTrend(readings);
-  return derived ? { ...derived, origin: "derived" } : null;
+  const isSensor = source === 'dexcom' || source === 'dexcom_share';
+  const at = Date.parse(latestReading?.recorded_at);
+  const age = (now - at) / 60000;
+  if (stale || source === 'system' || !Number.isFinite(at) || age < 0 || (isSensor ? age >= 8 : age > 15)) return null;
+  // An unusable sensor category is not permission to invent a replacement.
+  const resolved = isSensor ? mapDexcomTrend(latestReading?.trend) : computeGlucoseTrend(readings);
+  const pair = trendPresentation(resolved, { below });
+  return pair ? { ...pair, label: pair.word, origin: isSensor ? 'sensor' : 'derived' } : null;
 }
 
 /**
@@ -136,20 +124,7 @@ export function resolveGlucoseTrend(latestReading, readings) {
  * caller then shows no movement line at all rather than "holding steady", which
  * would claim something nobody measured.
  */
-const TREND_WORD_BY_ICON = {
-  double_up: "climbing",
-  up: "climbing",
-  "up-right": "still rising",
-  right: "holding steady",
-  "down-right": "easing down",
-  down: "falling",
-  double_down: "falling",
-};
-
-export function glucoseTrendWord(readings) {
-  if (!Array.isArray(readings) || readings.length < 2) return null;
-  const recent = readings.slice(-4);
-  const trend = computeGlucoseTrend(recent);
-  if (!trend) return null;
-  return TREND_WORD_BY_ICON[trend.icon] || null;
+export function glucoseTrendWord(readings, options = {}) {
+  const latest = [...(readings || [])].sort((a, b) => Date.parse(b.recorded_at) - Date.parse(a.recorded_at))[0];
+  return resolveGlucoseTrend(latest, readings, options)?.word || null;
 }

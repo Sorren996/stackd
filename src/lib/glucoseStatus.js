@@ -6,6 +6,8 @@
 
 
 
+import { resolveGlucoseTrend } from './glucoseTrend.js';
+
 export const GLUCOSE_STATUS_COLORS = {
   inRange: "#4d5742", // sage — in-range/positive (WCAG 6.8:1)
   high: "#d58814ff",   // mustard — above range (WCAG 5.3:1)
@@ -105,34 +107,16 @@ export function getCurrentGlucoseZone(value, targetLow, targetHigh, stale = fals
 //   down more than 5 → "easing down"  (more than 15 → "falling")
 // Returns null (omit the line) when there are fewer than 3 readings, the
 // readings are stale, or the window is too wide to call "recent".
-export function computeGlucoseDirection(readings, { stale = false } = {}) {
-  if (stale || !Array.isArray(readings)) return null;
-  const points = readings
-    .filter((r) => r && r.source !== "system")
-    .map((r) => ({ t: new Date(r.recorded_at).getTime(), v: Number(r.value) }))
-    .filter((p) => Number.isFinite(p.t) && Number.isFinite(p.v))
-    .sort((a, b) => a.t - b.t);
-  if (points.length < 3) return null;
-
-  const recent = points.slice(-4);
-  const first = recent[0];
-  const last = recent[recent.length - 1];
-  const spanMinutes = (last.t - first.t) / 60000;
-  if (spanMinutes <= 0 || spanMinutes > DIRECTION_WINDOW_MINUTES) return null;
-
-  const delta = last.v - first.v;
-  if (Math.abs(delta) <= 5) return "holding steady";
-  if (delta > 15) return "climbing";
-  if (delta > 5) return "drifting up";
-  if (delta < -15) return "falling";
-  return "easing down";
+export function computeGlucoseDirection(readings, options = {}) {
+  const latest = [...(readings || [])].sort((a, b) => Date.parse(b.recorded_at) - Date.parse(a.recorded_at))[0];
+  return resolveGlucoseTrend(latest, readings, options)?.word || null;
 }
 
 // Direction phrase for display. An upward move while below the comfort zone
 // reads as an encouraging "coming back up" rather than "drifting up".
 export function describeDirection(direction, zone) {
   if (!direction) return null;
-  if (zone === "below" && (direction === "drifting up" || direction === "climbing")) {
+  if (zone === "below" && (direction === "drifting up" || direction === "climbing" || direction === "climbing fast")) {
     return "coming back up";
   }
   return direction;
@@ -146,7 +130,7 @@ export function getCurrentGlucoseNote(zone, direction, stale = false) {
   if (zone === "urgentLow") {
     const base = "Your glucose is critically low right now. Act immediately.";
     const trendingDown =
-      direction === "holding steady" || direction === "easing down" || direction === "falling";
+      direction === "holding steady" || direction === "easing down" || direction === "falling" || direction === "falling fast";
     return trendingDown ? `${base} Still trending down.` : base;
   }
   if (zone === "below") return "Watch your next few readings.";

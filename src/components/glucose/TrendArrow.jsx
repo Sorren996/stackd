@@ -1,4 +1,5 @@
-import { ArrowUp, ArrowUpRight, ArrowRight, ArrowDownRight, ArrowDown, ChevronsUp, ChevronsDown, Minus } from "lucide-react";
+import { ArrowUp, ArrowUpRight, ArrowRight, ArrowDownRight, ArrowDown, ChevronsUp, ChevronsDown } from "lucide-react";
+import { trendPresentation } from '@/lib/trendPresentation';
 
 /**
  * The one trend-arrow mapping.
@@ -25,20 +26,10 @@ export const TREND_ICONS = {
  * steady arrow would make an unknown reading look like a measured one.
  */
 export default function TrendArrow({ icon, className, style, size = 24, label = null }) {
-  const Icon = icon ? TREND_ICONS[icon] : null;
-
-  if (!Icon) {
-    return (
-      <Minus
-        className={className}
-        style={{ ...style, opacity: 0.55 }}
-        size={size}
-        strokeWidth={2.5}
-        role="img"
-        aria-label={label || "Direction not available"}
-      />
-    );
-  }
+  const pair = trendPresentation(icon, { below: label === 'coming back up' });
+  const Icon = pair ? TREND_ICONS[pair.icon] : null;
+  if (!Icon) return null;
+  label = pair.word;
 
   return (
     <Icon

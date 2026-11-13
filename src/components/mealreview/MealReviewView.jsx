@@ -21,15 +21,7 @@ import { formatReadingAge } from "@/lib/glucoseStaleness";
  * Works identically for one meal and for several overlapping ones.
  */
 
-const TREND_PHRASE = {
-  "Rising quickly": "rising quickly",
-  "Rising": "rising",
-  "Slowly rising": "easing up",
-  "Stable": "steady",
-  "Slowly falling": "easing down",
-  "Falling": "falling",
-  "Falling quickly": "falling quickly",
-};
+
 
 // Minutes as words, so a timing reads as a sentence rather than a code:
 // "1 hr 11 min", "35 min".
@@ -142,7 +134,7 @@ export default function MealReviewView({ meals = null, mealInsight = null, gluco
   // Direction is only spoken when the app already computed it from several
   // recent readings and the newest reading is current. Otherwise the sentence
   // is left out entirely rather than filled with a guess.
-  const trendPhrase = glucoseTrend?.label ? TREND_PHRASE[glucoseTrend.label] || null : null;
+  const trendPhrase = glucoseTrend?.word || null;
   const showDirection = Boolean(trendPhrase) && readingAgeMin != null && readingAgeMin <= 20;
   const sentence = showDirection ? `Your glucose is ${trendPhrase} now.` : null;
 

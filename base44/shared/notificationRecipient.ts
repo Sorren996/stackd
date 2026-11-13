@@ -1,4 +1,5 @@
 import { advanceNotificationEpisodes } from './notificationEpisodes.ts';
+import { resolveGlucoseTrend } from './glucoseTrend.ts';
 import { lowBoundaries, lowStreamDecisions } from './notificationLowStream.ts';
 import { legacyEpisodeState } from './notificationLegacyEpisodes.ts';
 import {
@@ -147,6 +148,9 @@ export async function evaluateRecipient({ sr, ownerId, prefs, relationship = nul
     readingAt: decision.sample.at, units: displaySettings?.glucose_units || 'mg/dL', timeZone: prefs.quiet_timezone || displaySettings?.timezone || 'UTC',
     showDetails: prefs.show_health_details === true, personName: relationship?.sharer_display_name,
     durationMinutes: decision.durationMinutes, trend: decision.sample.trend ?? null, nowMs,
+    resolvedTrend: resolveGlucoseTrend({ ...decision.sample, recorded_at: new Date(decision.sample.at).toISOString() },
+      rows.filter(row => Date.parse(row.recorded_at) <= decision.sample.at),
+      { now: nowMs, below: decision.sample.value < settings?.target_range_low }),
     thresholdMgdl: decision.lowThreshold ?? null,
     coveredCategories: lowFamily ? [] : covered.map(c => c.category) });
   const episodeEvent = `${decision.episodeKey}${decision.repeatIndex ? `:repeat:${decision.repeatIndex}` : ''}`;

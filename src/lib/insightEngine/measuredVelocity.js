@@ -17,6 +17,8 @@
 // old, has two readings at the same instant, or contains a carried-forward
 // (interpolated) sample. "We cannot measure" is never flattened into "steady".
 
+import { trendLevelFromRate } from '../trendPresentation.js';
+
 export const VELOCITY_WINDOW_MIN = 15;
 export const VELOCITY_MIN_SAMPLES = 3;
 export const VELOCITY_STALE_MIN = 15;
@@ -127,11 +129,6 @@ export function measureVelocity(rawReadings, atTime, options = {}) {
 // The one mapping from a measured rate to the arrow beside the reading. Labels
 // and icons are unchanged; only the way the rate is measured has.
 export function trendFromVelocity(velocity) {
-  if (!Number.isFinite(Number(velocity))) return null;
-  const rate = Number(velocity);
-  if (rate >= TREND_FAST_RATE) return { icon: "double_up", label: "Rising quickly" };
-  if (rate >= TREND_SLOW_RATE) return { icon: "up-right", label: "Slowly rising" };
-  if (rate > -TREND_SLOW_RATE) return { icon: "right", label: "Stable" };
-  if (rate > -TREND_FAST_RATE) return { icon: "down-right", label: "Slowly falling" };
-  return { icon: "double_down", label: "Falling quickly" };
+  const pair = trendLevelFromRate(velocity);
+  return pair ? { ...pair, label: pair.word } : null;
 }

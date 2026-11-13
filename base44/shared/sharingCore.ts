@@ -12,6 +12,8 @@
 // Written in erasable TypeScript (no enums, no namespaces, no parameter
 // properties) so Node can run it under --experimental-strip-types.
 
+import { resolveGlucoseTrend } from './glucoseTrend.ts';
+
 // ── Scope model ────────────────────────────────────────────────────────────
 
 export type ScopeKey = "glucose" | "insulin" | "location" | "urgent_low_call";
@@ -373,20 +375,7 @@ export function computeSharedDirection(
   now: unknown = Date.now()
 ): string | null {
   const points = sortReadingsAsc(readings).filter(isRealReading);
-  if (points.length < MIN_READINGS_FOR_DIRECTION) return null;
-  const recent = points.slice(-4);
-  const first = recent[0];
-  const last = recent[recent.length - 1];
-  const spanMinutes =
-    (new Date(String(last.recorded_at)).getTime() - new Date(String(first.recorded_at)).getTime()) /
-    60000;
-  if (spanMinutes <= 0 || spanMinutes > DIRECTION_WINDOW_MINUTES) return null;
-  const delta = Number(last.value) - Number(first.value);
-  if (Math.abs(delta) <= 5) return "holding steady";
-  if (delta > 15) return "climbing";
-  if (delta > 5) return "drifting up";
-  if (delta < -15) return "falling";
-  return "easing down";
+  return resolveGlucoseTrend(points[points.length - 1], points, { now: Number(now) })?.word || null;
 }
 
 /** Neutral zone label — describes the data, never proposes treatment. */
@@ -721,7 +710,7 @@ export function projectResource(resource: Resource, ctx: ProjectionContext): Pro
         latest: latest ? shape(latest) : null,
         latest_age_minutes: readingAgeMinutes(latest, now),
         stale: isStaleReading(latest, now),
-        direction: isStaleReading(latest, now) ? null : computeSharedDirection(windowReadings, now),
+        direction: resolveGlucoseTrend(latest, windowReadings, { now, stale: isStaleReading(latest, now), below: Number(latest?.value) < Number(ctx.targetLow) })?.word || null,
         zone: sharedGlucoseZone(
           latest?.value,
           ctx.targetLow,

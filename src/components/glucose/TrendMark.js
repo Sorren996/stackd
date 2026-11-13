@@ -8,6 +8,7 @@
 // lookup. That lookup is what took the whole dashboard down for anyone with no
 // reading to show yet.
 import { createElement } from "react";
+import { trendPresentation } from '../../lib/trendPresentation.js';
 import {
   ArrowUp,
   ArrowUpRight,
@@ -45,6 +46,6 @@ export default function TrendMark({ trend = null, size = 30, strokeWidth = 2.5, 
     className,
     style,
     role: "img",
-    "aria-label": trend?.label || "Glucose trend",
+    "aria-label": trendPresentation(trend, { below: trend?.word === 'coming back up' })?.word,
   });
 }
