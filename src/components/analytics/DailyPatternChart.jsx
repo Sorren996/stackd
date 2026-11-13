@@ -59,7 +59,7 @@ export default function DailyPatternChart({ hourlyAverages, targetLow, targetHig
       <div className="pt-3">
         <p className="text-[11px] mb-2" style={{ color: "#6b6153" }}>Average glucose throughout the day</p>
 
-        <div className="h-48">
+        <div className="h-48 w-full min-w-0">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={hourlyAverages} margin={{ top: 6, right: 4, left: -8, bottom: 0 }}>
               <defs>

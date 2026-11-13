@@ -155,7 +155,16 @@ export default function Layout() {
     >
       <header
         className="fixed inset-x-0 top-0 z-50"
-        style={{ paddingTop: "env(safe-area-inset-top)", background: "transparent" }}
+        style={{
+          // Pinned to both viewport edges AND explicitly full width, so it can
+          // never leave a gap on either side. Still blur only — no colour.
+          top: 0,
+          left: 0,
+          right: 0,
+          width: "100%",
+          paddingTop: "env(safe-area-inset-top)",
+          background: "transparent",
+        }}
       >
         {/* Progressive blur only — behind the logo, never on it. The logo row
             is its own z-10 foreground layer, so it stays sharp and fixed. */}
@@ -191,14 +200,14 @@ export default function Layout() {
           height: "100dvh",
         }}
       >
-        <PullToRefresh onRefresh={handleRefresh}>
+        <PullToRefresh onRefresh={handleRefresh} lockHorizontalPan={!isDashboardRoute}>
           {/* Clearance lives inside the scroll content (not on the viewport)
               so cards scroll visibly beneath the frosted nav, while the last
               card can still scroll fully clear of it. The nav sits at 28px
               from the bottom (60px tall), so the last card needs ~60+28+32px
               of breathing room to scroll fully above the frosted bar. */}
           <div
-            className="min-w-0 w-full"
+            className="page-clip min-w-0 w-full"
             style={{
               // One shared clearance for the whole stack: logo bar + the blur's
               // own fade footprint + a consistent gap. Because it sits on the

@@ -22,7 +22,7 @@ const RESIST    = 0.55; // rubber-band damping
 const MIN_SPIN  = 2500; // ms minimum spinner time
 const MAX_SPIN  = 6000; // ms hard cap
 
-export default function PullToRefresh({ onRefresh, children }) {
+export default function PullToRefresh({ onRefresh, children, lockHorizontalPan = false }) {
   const [spin, setSpin] = useState(false);
   const wrapRef = useRef(null), contentRef = useRef(null), spinRef = useRef(null);
   const S = useRef({ y0: 0, tracking: false, pull: 0, armed: false, refreshing: false, gen: 0 }).current;
@@ -130,9 +130,14 @@ export default function PullToRefresh({ onRefresh, children }) {
         // band it into empty space (revealing the field behind the fixed header)
         // even with nothing wider than the screen inside. `hidden` removes the
         // gesture outright, and descendant scrollers keep scrolling normally.
+        // A sideways swipe can never pan the document here. The lock is passed
+        // in by the shell and is OFF on Home, whose glucose chart is the one
+        // intended horizontal scroller: touch-action is intersected up the
+        // ancestor chain, so locking here would freeze that chart's pan.
         style={{
           height: "100%",
           maxWidth: "100%",
+          touchAction: lockHorizontalPan ? "pan-y" : undefined,
           overflowY: "auto",
           overflowX: "hidden",
           overscrollBehaviorY: "contain",

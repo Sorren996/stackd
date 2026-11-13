@@ -57,7 +57,7 @@ export default function TimeOfDayLine({ averages, targetLow, targetHigh, hasEnou
         </span>
       </div>
 
-      <div style={{ height: 150 }}>
+      <div style={{ height: 150, width: "100%", minWidth: 0 }}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={averages} margin={{ top: 6, right: 8, left: -10, bottom: 0 }}>
             <CartesianGrid horizontal vertical={false} stroke="#efe5d8" strokeDasharray="3 5" />

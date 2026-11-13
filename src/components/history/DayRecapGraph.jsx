@@ -72,7 +72,10 @@ function EventPopover({ event, onClose }) {
       />
       <div
         className="pointer-events-none absolute z-[61] -translate-x-1/2 -translate-y-full"
-        style={{ left: event.cx, top: event.cy - 10 }}
+        // Centred on the tapped point, but held inside the chart: the card is
+        // ~140px narrower than this tooltip can be, so an unclamped anchor at
+        // either end pushed the card's scrollable width past the viewport.
+        style={{ left: `clamp(148px, ${event.cx}px, calc(100% - 148px))`, top: event.cy - 10 }}
       >
         <div
           className="pointer-events-auto w-max max-w-[280px] rounded-xl border px-3.5 py-3 shadow-xl"
@@ -273,7 +276,7 @@ export default function DayRecapGraph({ glucose, carbs, insulin, targetLow, targ
         boxShadow: "0 2px 12px rgba(63, 56, 48, 0.06)",
       }}
     >
-      <div className="relative">
+      <div className="relative w-full min-w-0">
       <ResponsiveContainer width="100%" height={200}>
         <ComposedChart data={data} margin={{ top: 10, right: 34, left: 8, bottom: 4 }}>
           <defs>

@@ -33,7 +33,7 @@ export default function FollowerLayout() {
     >
       <header
         className="fixed inset-x-0 top-0 z-50"
-        style={{ paddingTop: "env(safe-area-inset-top)", background: "transparent" }}
+        style={{ top: 0, left: 0, right: 0, width: "100%", paddingTop: "env(safe-area-inset-top)", background: "transparent" }}
       >
         {/* Same progressive blur-only effect as the patient header. */}
         <HeaderBackdrop />
@@ -56,7 +56,7 @@ export default function FollowerLayout() {
       <main className="relative mx-auto w-full max-w-6xl px-4 overflow-x-hidden" style={{ height: "100dvh" }}>
         <PullToRefresh onRefresh={handleRefresh}>
           <div
-            className="min-w-0 w-full"
+            className="page-clip min-w-0 w-full"
             style={{
               // Same shared clearance as the patient shell: bar + blur tail + gap.
               paddingTop: CONTENT_TOP_PADDING,

@@ -427,6 +427,18 @@
     scrollbar-width: none;
   }
 
+  /* ── Cross-axis clip for the routed content wrapper ─────────
+     `clip` never creates a scroll container, so vertical scrolling and
+     iOS vertical rubber-banding are untouched; `hidden` is the fallback
+     where clip is unsupported. Only the cross axis is named — overflow-y
+     stays `visible`, which is a legal pairing with `clip`, so nothing
+     inside is ever clipped vertically. */
+  .page-clip {
+    max-width: 100%;
+    overflow-x: hidden;
+    overflow-x: clip;
+  }
+
   /* ── Approved mockup CSS templates ────────────────────────── */
 
   /* Page header — "Your <em>day</em>" */
