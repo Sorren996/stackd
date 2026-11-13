@@ -228,6 +228,18 @@
     overscroll-behavior: none;
   }
 
+  /* The document itself never moves sideways. The app's own vertical scroller
+     is an inner element, so clipping the root here costs nothing — it simply
+     means no page can be dragged left or right and no descendant that happens
+     to be wider than the viewport can start one. Horizontal scrolling that is
+     genuinely intended (the Home glucose chart, a chip row) lives inside its
+     own element, which keeps scrolling exactly as before. */
+  html, body {
+    max-width: 100%;
+    overflow-x: hidden;
+    overscroll-behavior-x: none;
+  }
+
   input, textarea, select,
   input::placeholder, textarea::placeholder,
   input[type="date"], input[type="time"], input[type="datetime-local"],

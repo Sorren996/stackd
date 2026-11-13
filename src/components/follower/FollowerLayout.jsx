@@ -27,7 +27,10 @@ export default function FollowerLayout() {
       .catch(() => {});
 
   return (
-    <div className="isolate relative min-h-screen overflow-x-hidden" style={{ background: "#4C6770" }}>
+    <div
+      className="isolate relative min-h-screen w-full max-w-full overflow-x-hidden"
+      style={{ background: "#4C6770", overscrollBehaviorX: "none" }}
+    >
       <header
         className="fixed inset-x-0 top-0 z-50"
         style={{ paddingTop: "env(safe-area-inset-top)", background: "transparent" }}

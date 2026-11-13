@@ -149,7 +149,10 @@ export default function Layout() {
   };
 
   return (
-    <div className="isolate relative min-h-screen overflow-x-hidden bg-field text-foreground">
+    <div
+      className="isolate relative min-h-screen w-full max-w-full overflow-x-hidden bg-field text-foreground"
+      style={{ overscrollBehaviorX: "none" }}
+    >
       <header
         className="fixed inset-x-0 top-0 z-50"
         style={{ paddingTop: "env(safe-area-inset-top)", background: "transparent" }}

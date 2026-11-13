@@ -124,7 +124,21 @@ export default function PullToRefresh({ onRefresh, children }) {
       </div>
       <div ref={wrapRef}
         data-refresh-scroll
-        style={{ height: "100%", overflowY: "auto", overscrollBehaviorY: "contain", WebkitOverflowScrolling: "touch" }}
+        // The cross axis is CLIPPED, not left to compute itself. With only
+        // overflowY declared, CSS resolves overflowX to `auto`, which turns this
+        // into a horizontally pannable box: WebKit let a sideways drag rubber-
+        // band it into empty space (revealing the field behind the fixed header)
+        // even with nothing wider than the screen inside. `hidden` removes the
+        // gesture outright, and descendant scrollers keep scrolling normally.
+        style={{
+          height: "100%",
+          maxWidth: "100%",
+          overflowY: "auto",
+          overflowX: "hidden",
+          overscrollBehaviorY: "contain",
+          overscrollBehaviorX: "none",
+          WebkitOverflowScrolling: "touch",
+        }}
         onTouchStart={onStart} onTouchMove={onMove} onTouchEnd={onEnd} onTouchCancel={onEnd}>
         <div ref={contentRef} style={{ position: "relative", willChange: "transform" }}>
           {children}

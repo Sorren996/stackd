@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { BellRing, HeartHandshake, LogOut } from "lucide-react";
 import SectionCard from "@/components/editorial/SectionCard";
+import BackButton from "@/components/navigation/BackButton";
 import { Button } from "@/components/ui/button";
 import FollowerPrefsSheet from "@/components/sharing/FollowerPrefsSheet";
 import useAccessProfile from "@/hooks/useAccessProfile";
@@ -50,9 +51,17 @@ export default function FollowerSettings() {
 
   return (
     <div className="mx-auto max-w-md space-y-4 pt-2">
-      <h1 className="px-1 text-lg font-semibold" style={{ color: "#fdf9f2" }}>
-        Your <span className="font-serif-italic" style={{ fontWeight: 400 }}>settings</span>
-      </h1>
+      <div className="flex items-center gap-2 px-1 pb-1">
+        <BackButton
+          fallback="/"
+          label="Back to Following"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg transition"
+          style={{ color: "#f7f1e8" }}
+        />
+        <h1 className="text-lg font-semibold" style={{ color: "#fdf9f2" }}>
+          Your <span className="font-serif-italic" style={{ fontWeight: 400 }}>settings</span>
+        </h1>
+      </div>
 
       <SectionCard label="Notifications">
         <Link

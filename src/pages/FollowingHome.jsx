@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Link2, Mail, Sparkles } from "lucide-react";
 import SectionCard from "@/components/editorial/SectionCard";
+import BackButton from "@/components/navigation/BackButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import SharerDashboard from "@/components/follower/SharerDashboard";
@@ -39,7 +40,12 @@ function extractToken(value) {
 export default function FollowingHome() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { following, pendingInvitations, isLoading, noticeAccepted } = useAccessProfile();
+  const { following, pendingInvitations, isLoading, noticeAccepted, mode } = useAccessProfile();
+
+  // Following is reached from the account screen, so that is where Back lands
+  // when this page is opened cold (a deep link or a new tab). With real in-app
+  // history the shared Back button unwinds that instead — never a hardcoded hop.
+  const backFallback = mode === "follower" ? "/following/settings" : "/settings";
   const [selectedId, setSelectedId] = useState(null);
   const [prefsFor, setPrefsFor] = useState(null);
   const [link, setLink] = useState("");
@@ -90,9 +96,16 @@ export default function FollowingHome() {
   if (people.length === 0) {
     return (
       <div className="mx-auto max-w-md space-y-4 pt-2">
-        <h1 className="px-1 text-lg font-semibold" style={{ color: "#fdf9f2" }}>
-          Following <span className="font-serif-italic" style={{ fontWeight: 400 }}>along</span>
-        </h1>
+        <div className="flex items-center gap-2 px-1 pb-1">
+          <BackButton
+            fallback={backFallback}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg transition"
+            style={{ color: "#f7f1e8" }}
+          />
+          <h1 className="text-lg font-semibold" style={{ color: "#fdf9f2" }}>
+            Following <span className="font-serif-italic" style={{ fontWeight: 400 }}>along</span>
+          </h1>
+        </div>
 
         {pendingInvitations.length > 0 ? (
           <SectionCard label="You're invited">
@@ -134,6 +147,14 @@ export default function FollowingHome() {
 
   return (
     <div className="mx-auto max-w-md space-y-4 pt-2">
+      <div className="px-1">
+        <BackButton
+          fallback={backFallback}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg transition"
+          style={{ color: "#f7f1e8" }}
+        />
+      </div>
+
       {people.length > 1 && (
         <div role="tablist" aria-label="People you follow" className="flex gap-2 overflow-x-auto px-1 pb-1">
           {people.map((relationship) => {

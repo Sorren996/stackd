@@ -360,7 +360,13 @@ export default function History() {
   }
 
   return (
-    <div className="mx-auto max-w-md space-y-6 pt-2">
+    // The Journal is a reading column, never a sideways surface: its own width
+    // is capped to the viewport and the cross axis is not pannable, so a drag
+    // here can only ever scroll the page up and down.
+    <div
+      className="mx-auto w-full min-w-0 max-w-md space-y-6 pt-2"
+      style={{ touchAction: "pan-y" }}
+    >
       <EditLogSheet
         log={editingLog}
         onClose={() => setEditingLog(null)}

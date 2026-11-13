@@ -126,7 +126,9 @@ export default function DayGlucoseLine({
     : null;
 
   return (
-    <div className="relative">
+    // width:100% + min-width:0 so the ResponsiveContainer measures the card and
+    // never a min-content width of its own — the chart can't outgrow its parent.
+    <div className="relative w-full min-w-0">
       {/* The unit sits in its own row ABOVE the plot, in normal flow, so it can
           never be printed over the highest y-axis value — whatever that value
           is (a 3-digit maximum, a low maximum) and however long the unit string
