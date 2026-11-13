@@ -1396,9 +1396,9 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       })()}
       <div className="relative">
       {/* Compact reading row — the selected reading's number and unit on the
-             left, its time and date and the way back to now on the right. It sits
-             in normal flow above the trace, replacing the tall stacked block that
-             used to float over the top of the chart and leave dead space. */}
+                   left, its time and date and the way back to now on the right. It sits
+                   in normal flow above the trace, replacing the tall stacked block that
+                   used to float over the top of the chart and leave dead space. */}
       <div className="resume-chart-row relative flex items-center gap-2 px-[18px] pb-1.5">
         <div className="resume-chart-reading flex min-w-0 items-end gap-2">
           {filters.glucose && glucoseLinePoints.length > 0 &&
@@ -1420,10 +1420,10 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             </>
             }
           {/* Time over weekday/date, directly after the divider inside the same
-                 left-aligned reading group. Both lines use leading-none and the
-                 3px bottom padding lifts the stack so the date's bottom edge lands
-                 on the same baseline as the glucose number and mg/dL, rather than
-                 hanging below it. */}
+                       left-aligned reading group. Both lines use leading-none and the
+                       3px bottom padding lifts the stack so the date's bottom edge lands
+                       on the same baseline as the glucose number and mg/dL, rather than
+                       hanging below it. */}
           <span className="flex min-w-0 flex-col pb-[3px]" style={{ color: "#7a6b5d" }}>
             <span ref={tooltipTimeRef} className="text-[11px] font-medium leading-none tabular-nums" />
             <span ref={tooltipDateRef} className="mt-[3px] truncate text-[10px] leading-none" />
@@ -1491,11 +1491,11 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
             onTouchCancel={endScrollGesture}
             onScroll={(event) => handleScrollPosition(event.currentTarget.scrollLeft)}>
         {/* The chart's full width: at rest the reading is centred and the
-                 projection tail continues past it to the right. */}
+                           projection tail continues past it to the right. */}
         <div className="relative" style={{ width: contentWidth, height: isCandlestick ? CANDLESTICK_TOTAL_HEIGHT : twoRowHeight }}>
           {/* No forecast, but a reason. When the engine withholds a trajectory it
-                   is because the evidence is genuinely absent, so the future area says
-                   so quietly, in the graph's own type — never a bare gap. */}
+                             is because the evidence is genuinely absent, so the future area says
+                             so quietly, in the graph's own type — never a bare gap. */}
           {!projection && projectionNote && (() => {
                 const nowX = (stableNow - domainStart) / totalMs * chartWidth;
                 const noteWidth = 176;
@@ -1526,8 +1526,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                   highReference={highReference} />
 
                 {/* The projection belongs to every window that contains its
-                     points, the 24-hour view included. It maps onto this view's
-                     own plot geometry and clips at the edges like the rest. */}
+                       points, the 24-hour view included. It maps onto this view's
+                       own plot geometry and clips at the edges like the rest. */}
                 {projection &&
                 <ProjectionOverlay
                   projection={projection}
@@ -1571,7 +1571,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               {filters.glucose && filteredGlucoseReadings.length > 0 &&
                     <>
                   {/* The comfort zone as a status band: quiet sage wash with two
-                           thin solid sage edges, using the user's own thresholds. */}
+                                     thin solid sage edges, using the user's own thresholds. */}
                   <ReferenceArea
                         yAxisId="glucose"
                         y1={targetLow}
@@ -1610,9 +1610,9 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                     }
 
               {/* One smooth line per contiguous run of readings. Readings on
-                         their normal cadence flow through as a single curve; a
-                         genuinely missing sample ends its run, leaving real blank
-                         space until readings resume and a new smooth line starts. */}
+                                       their normal cadence flow through as a single curve; a
+                                       genuinely missing sample ends its run, leaving real blank
+                                       space until readings resume and a new smooth line starts. */}
               {filters.glucose && filteredGlucoseReadings.length > 0 &&
                     glucoseSegments.map((segment, index) =>
                     <Line
@@ -1635,8 +1635,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                     }
 
               {/* A lone reading between two gaps has no line to draw, and the
-                         newest reading always carries a marker, so nothing real ever
-                         disappears from the trace. */}
+                                       newest reading always carries a marker, so nothing real ever
+                                       disappears from the trace. */}
               {filters.glucose && glucoseIsolatedPoints.
                     filter((point) => point.time !== newestDrawnGlucosePoint?.time).
                     map((point) =>
@@ -1654,11 +1654,11 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                     )
                     }
               {/* The current-reading marker is NOT a chart annotation. It is
-                         painted by the glucose line itself, through that line's own dot
-                         renderer (see renderNewestMarker above), because an annotation
-                         placed beside the plot is what left a dot hovering over older
-                         data while the curve moved. Anything added here as a separate
-                         overlay element would bring that bug back. */}
+                                       painted by the glucose line itself, through that line's own dot
+                                       renderer (see renderNewestMarker above), because an annotation
+                                       placed beside the plot is what left a dot hovering over older
+                                       data while the curve moved. Anything added here as a separate
+                                       overlay element would bring that bug back. */}
             </ComposedChart>
           </div>
 
@@ -1681,13 +1681,13 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                 }
 
           {/* ── The selection marker ──
-                     One dot, drawn inside the chart's own content coordinates, sitting
-                     on the reading the big number shows. It starts on the newest
-                     reading and is then moved by positionSelectionMarker() from the
-                     same animation frame that updates the number, so scrolling carries
-                     it along the line to the displayed sample instead of leaving it on
-                     an earlier one. Coordinates are clamped inside the plot so it can
-                     never render outside the drawable area. */}
+                                   One dot, drawn inside the chart's own content coordinates, sitting
+                                   on the reading the big number shows. It starts on the newest
+                                   reading and is then moved by positionSelectionMarker() from the
+                                   same animation frame that updates the number, so scrolling carries
+                                   it along the line to the displayed sample instead of leaving it on
+                                   an earlier one. Coordinates are clamped inside the plot so it can
+                                   never render outside the drawable area. */}
           {!isCandlestick && filters.glucose && (() => {
                   const HALO_R = 9;
                   const newest = filteredGlucoseReadings[filteredGlucoseReadings.length - 1];
@@ -1738,7 +1738,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
               <ReferenceLine yAxisId="insulin" y={0} stroke="#e6dccd" strokeWidth={1} />
 
               {/* The same faint "now" marker as the glucose row, continued
-                         through the insulin lane on this chart's own coordinates. */}
+                                       through the insulin lane on this chart's own coordinates. */}
               {filters.glucose &&
                     <ReferenceLine
                       x={stableNow}
@@ -1885,15 +1885,15 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                 })}
 
           {/* There is exactly ONE end-of-line marker, and it is the pair of
-                     ReferenceDots drawn inside the glucose chart's own SVG (above).
-                     A second, DOM-positioned copy used to live here: an absolutely
-                     positioned div whose `left` was computed from the chart width. An
-                     overlay element like that is a sibling of the plot rather than a
-                     child of its coordinate space, so it can sit still on screen while
-                     the curve travels under it — which is exactly the "planted dot"
-                     that was measured. Nothing may be positioned here again: the marker
-                     must stay inside the SVG, mapped by the chart's own x and y scales,
-                     so it can only ever move with the line it marks. */}
+                                   ReferenceDots drawn inside the glucose chart's own SVG (above).
+                                   A second, DOM-positioned copy used to live here: an absolutely
+                                   positioned div whose `left` was computed from the chart width. An
+                                   overlay element like that is a sibling of the plot rather than a
+                                   child of its coordinate space, so it can sit still on screen while
+                                   the curve travels under it — which is exactly the "planted dot"
+                                   that was measured. Nothing may be positioned here again: the marker
+                                   must stay inside the SVG, mapped by the chart's own x and y scales,
+                                   so it can only ever move with the line it marks. */}
 
           </>
               }
@@ -1902,7 +1902,7 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
       </div>
       <div className="px-3 mt-1.5 space-y-1">
         {/* Row 1: received / projected / selected — the three states of the
-               trace, in the graph's own words. */}
+                     trace, in the graph's own words. */}
         <div className="flex items-center gap-x-3 gap-y-1 flex-wrap">
           <div className="flex items-center gap-1.5">
             <div className="h-[2.75px] w-3 rounded-full" style={{ background: "#8c4a28" }} />
@@ -1915,8 +1915,8 @@ export default function ActivityGraph({ doses, glucoseReadings = [], carbEntries
                 <span className="text-[10px] font-medium" style={{ color: "#7a6b5d" }}>projected</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <div className="h-2 w-2 rounded-full hidden" style={{ border: "1.5px solid #8C4A28", background: "rgba(140,74,40,0.12)" }} />
-                <span className="text-[10px] font-medium hidden" style={{ color: "#7a6b5d" }}>selected</span>
+                
+                
               </div>
             </>
             }
