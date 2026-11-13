@@ -132,9 +132,11 @@ test('69, 68, 54, 53 submit four times, urgent at escalation, duplicate callback
       await f.invoke({ rows, nowMs: at });
     }
     assert.equal(f.sends.length, 4);
-    assert.match(f.sends[0].title, /Low glucose/);
+    assert.equal(f.sends[0].title, '69 mg/dL');
+    assert.equal(f.sends[0].content, 'Low glucose');
     // The urgent presentation is used only when urgent low was opted into.
-    assert.match(f.sends[2].title, urgent ? /Urgent low/ : /Low glucose/);
+    assert.equal(f.sends[2].title, '54 mg/dL');
+    assert.equal(f.sends[2].content, urgent ? 'Urgent low' : 'Low glucose');
     assert.deepEqual(f.deliveries.map(d => d.status), Array(4).fill('submitted'));
     await f.invoke({ rows, nowMs: now + 16 * 60000 });
     assert.equal(f.sends.length, 4);
@@ -183,7 +185,7 @@ test('an explicit service refusal is failed, never submitted, and is not resent 
   assert.equal(f.sends.length, 1); assert.equal(f.deliveries[0].status, 'failed'); assert.equal(f.deliveries[0].submitted_at, undefined);
 });
 
-test('all_readings dispatches the clean reading title and comfort-zone body from stored settings', async () => {
+test('all_readings dispatches the "{value} {unit} {arrow}" title and capitalised trend body, or comfort zone when trend is absent', async () => {
   const f = fixture();
   f.preferences.categories = {};
   f.preferences.all_readings_enabled = true;
@@ -193,6 +195,21 @@ test('all_readings dispatches the clean reading title and comfort-zone body from
     settings: { target_range_low: 70, target_range_high: 180, glucose_units: 'mg/dL' },
   });
   assert.equal(f.sends.length, 1);
-  assert.equal(f.sends[0].title, '124 mg/dL → holding steady');
-  assert.equal(f.sends[0].content, 'In your comfort zone');
+  assert.equal(f.sends[0].title, '124 mg/dL →');
+  assert.equal(f.sends[0].content, 'Holding steady');
+});
+
+test('custom_high dispatches the "{value} {unit} {arrow}" title and "At or above {level}" body', async () => {
+  const f = fixture();
+  f.preferences.categories = { custom_high: true };
+  f.preferences.custom_high_mgdl = 180;
+  f.preferences.custom_high_minutes = 0;
+  f.preferences.show_health_details = true;
+  await f.invoke({
+    rows: [{ id: 'r-185', source: 'dexcom_share', value: 185, trend: 'SingleUp', recorded_at: new Date(now).toISOString() }],
+    settings: { target_range_low: 70, target_range_high: 180, glucose_units: 'mg/dL' },
+  });
+  assert.equal(f.sends.length, 1);
+  assert.equal(f.sends[0].title, '185 mg/dL ↑');
+  assert.equal(f.sends[0].content, 'At or above 180');
 });

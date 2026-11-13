@@ -13,8 +13,6 @@ import {
   runTestPushNotification,
   TEST_PUSH_TITLE,
   TEST_PUSH_MESSAGE,
-  TEST_PUSH_IMAGE_URL,
-  buildRichTestPushFields,
 } from "../testPushNotification.ts";
 
 function fakeClient() {
@@ -53,7 +51,7 @@ describe("sendMyTestPushNotification", () => {
     assert.equal(calls.length, 0);
   });
 
-  test("an admin send goes to the caller only, with the fixed copy", async () => {
+  test("an admin send goes to the caller only, with the shared two-line layout and no image or diagnostic fields", async () => {
     const { client, calls } = fakeClient();
     const res = await runTestPushNotification(
       client,
@@ -62,92 +60,17 @@ describe("sendMyTestPushNotification", () => {
     );
 
     assert.equal(res.status, 200);
-    assert.equal(res.body.ok, true);
-    assert.ok(res.body.diagnostic);
-    assert.match(res.body.diagnostic.transport, /Base44 Core\.SendPushNotification/);
-    assert.equal(res.body.diagnostic.image_url, TEST_PUSH_IMAGE_URL);
-    assert.ok(res.body.diagnostic.image_fields_set.includes("image"));
-    assert.ok(res.body.diagnostic.image_fields_set.includes("apns.fcm_options.image"));
-    assert.equal(res.body.diagnostic.mutable_content, false);
-    assert.equal(res.body.diagnostic.transport_accepts_image, false);
-    assert.equal(res.body.diagnostic.provider_response.status, 200);
-    assert.match(res.body.diagnostic.notes, /cannot tell from this project/i);
+    assert.deepEqual(res.body, { ok: true });
     assert.equal(calls.length, 1);
 
     assert.equal(TEST_PUSH_TITLE, "145 mg/dL →");
     assert.equal(TEST_PUSH_MESSAGE, "Holding steady");
     assert.deepEqual(calls[0], {
       user_id: "u-admin-recipient",
-      title: TEST_PUSH_TITLE,
-      content: TEST_PUSH_MESSAGE,
-      action_url: "https://stackdinsight.base44.app/",
-      ...buildRichTestPushFields(TEST_PUSH_IMAGE_URL),
-    });
-  });
-
-  test("falls back to plain 4-field payload when transport rejects extra image fields", async () => {
-    const calls = [];
-    const client = {
-      asServiceRole: {
-        integrations: {
-          Core: {
-            SendPushNotification: async (args) => {
-              calls.push(args);
-              if (calls.length === 1) {
-                throw Object.assign(new Error("Extra inputs are not permitted"), { status: 422 });
-              }
-              return { ok: true };
-            },
-          },
-        },
-      },
-    };
-    const res = await runTestPushNotification(
-      client,
-      { id: "u-admin-fallback", role: "admin" },
-      2_500_000
-    );
-    assert.equal(res.status, 200);
-    assert.equal(res.body.ok, true);
-    assert.deepEqual(res.body.diagnostic.image_fields_set, []);
-    assert.equal(res.body.diagnostic.image_url, null);
-    assert.equal(res.body.diagnostic.mutable_content, false);
-    assert.equal(res.body.diagnostic.transport_accepts_image, false);
-    assert.equal(calls.length, 2);
-    assert.deepEqual(calls[1], {
-      user_id: "u-admin-fallback",
       title: "145 mg/dL →",
       content: "Holding steady",
       action_url: "https://stackdinsight.base44.app/",
     });
-  });
-
-  test("diagnostic never leaks device tokens, keys, secrets, or emails from provider response", async () => {
-    const client = {
-      asServiceRole: {
-        integrations: {
-          Core: {
-            SendPushNotification: async () => ({
-              ok: true,
-              sent: 1,
-              device_token: "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
-              api_key: "sk_live_secret_value",
-              email: "owner@example.com",
-              detail: "Sent to owner@example.com token a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6",
-            }),
-          },
-        },
-      },
-    };
-    const res = await runTestPushNotification(
-      client,
-      { id: "u-admin-scrub", role: "admin", email: "owner@example.com" },
-      2_800_000
-    );
-    const json = JSON.stringify(res.body);
-    assert.equal(json.includes("owner@example.com"), false);
-    assert.equal(json.includes("sk_live_secret_value"), false);
-    assert.equal(json.includes("a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6"), false);
   });
 
   test("repeated taps are rate limited per account", async () => {
@@ -182,6 +105,7 @@ describe("sendMyTestPushNotification", () => {
     assert.equal(first.status, 503);
     assert.match(first.body.error, /not available/i);
     assert.equal(first.body.ok, undefined);
+    assert.equal(first.body.diagnostic, undefined);
 
     // The cooldown was released, so a genuine retry is attempted rather than
     // being blocked behind the failed tap.

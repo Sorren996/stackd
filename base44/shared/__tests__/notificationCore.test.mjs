@@ -257,8 +257,8 @@ test("previews are generic unless health details are explicitly enabled", () => 
     timeZone: "UTC",
     showDetails: true,
   });
-  assert.equal(detailed.title, "Urgent low: 52 mg/dL");
-  assert.match(detailed.body, /critically low/);
+  assert.equal(detailed.title, "52 mg/dL");
+  assert.equal(detailed.body, "Urgent low");
 });
 
 test("a follower preview never names the person unless details are on", () => {
@@ -275,7 +275,8 @@ test("a follower preview never names the person unless details are on", () => {
     showDetails: true,
     personName: "Sam",
   });
-  assert.match(detailed.title, /^Sam · /);
+  assert.equal(detailed.title, "Sam · 62 mg/dL");
+  assert.equal(detailed.body, "Below Sam's comfort zone");
 });
 
 test("the missing-readings wording states the age and receipt time and nothing more", () => {

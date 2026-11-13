@@ -180,7 +180,10 @@ test("the test notification sends the same auditable shape, and no sound", async
 
   assert.equal(result.status, 200);
   assert.equal(sends.length, 1);
-  assert.ok(!("sound" in sends[0]), "the test path must not send an unsupported sound field");
+  assert.deepEqual(fieldsOf(sends[0]), PUSH_MESSAGE_FIELDS);
+  for (const field of NOT_REQUESTABLE) {
+    assert.ok(!(field in sends[0]), `the test path must not send ${field}`);
+  }
   assert.equal(sends[0].user_id, "u-admin-sound-schema");
   assert.equal(sends[0].title, TEST_PUSH_TITLE);
   assert.equal(sends[0].content, TEST_PUSH_MESSAGE);

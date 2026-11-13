@@ -51,8 +51,8 @@ test('a custom-low-only reading states its own chosen level', () => {
     category: item.category, value: item.sample.value, units: 'mg/dL',
     showDetails: true, nowMs: NOW, thresholdMgdl: item.lowThreshold,
   });
-  assert.equal(copy.title, 'Low glucose: 99 mg/dL');
-  assert.equal(copy.body, 'Your glucose is below 100 mg/dL.');
+  assert.equal(copy.title, '99 mg/dL');
+  assert.equal(copy.body, 'Below 100');
   assert.doesNotMatch(copy.body, /70/, 'a reading of 99 is never described as below 70');
 });
 
@@ -64,7 +64,8 @@ test('a comfort-only reading uses the real comfort boundary, not the custom one'
   const copy = buildNotificationCopy({
     category: items[0].category, value: 65, units: 'mg/dL', showDetails: true, nowMs: NOW, thresholdMgdl: items[0].lowThreshold,
   });
-  assert.equal(copy.body, 'Your glucose is below 70 mg/dL.');
+  assert.equal(copy.title, '65 mg/dL');
+  assert.equal(copy.body, 'Below your comfort zone');
 });
 
 test('the boundary itself is not below it, and 70 is not below a fixed-70 rule', () => {
@@ -227,15 +228,15 @@ test('copy follows the recipient’s own units and stays private unless details 
   const mmol = buildNotificationCopy({
     category: 'custom_low', value: 99, units: 'mmol/L', showDetails: true, nowMs: NOW, thresholdMgdl: 100,
   });
-  assert.equal(mmol.title, 'Low glucose: 5.5 mmol/L');
-  assert.equal(mmol.body, 'Your glucose is below 5.6 mmol/L.');
+  assert.equal(mmol.title, '5.5 mmol/L');
+  assert.equal(mmol.body, 'Below 5.6');
 
   const follower = buildNotificationCopy({
     category: 'below_range', value: 65, units: 'mg/dL', showDetails: true, nowMs: NOW,
     thresholdMgdl: 70, personName: 'Chris',
   });
-  assert.equal(follower.title, 'Chris · Low glucose: 65 mg/dL');
-  assert.equal(follower.body, "Chris' glucose is below 70 mg/dL.");
+  assert.equal(follower.title, 'Chris · 65 mg/dL');
+  assert.equal(follower.body, "Below Chris' comfort zone");
 
   const priv = buildNotificationCopy({
     category: 'custom_low', value: 99, units: 'mg/dL', showDetails: false, nowMs: NOW, thresholdMgdl: 100,
