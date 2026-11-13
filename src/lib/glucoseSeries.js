@@ -93,9 +93,13 @@ export function mergeReadingSeries(current, incoming) {
     if (!existing || rowWrittenAt(row) >= rowWrittenAt(existing)) byMoment.set(key, row);
   }
 
-  return Array.from(byMoment.values()).sort(
+  const merged = Array.from(byMoment.values()).sort(
     (a, b) => (new Date(b.recorded_at).getTime() || 0) - (new Date(a.recorded_at).getTime() || 0)
   );
+  // A poll that brought nothing new returns the previous array, so every memo
+  // downstream (canonical series, chart rows) is skipped instead of rebuilt.
+  if (merged.length === prev.length && merged.every((row, i) => row === prev[i])) return prev;
+  return merged;
 }
 
 /** The newest real reading, or null when there is none. */

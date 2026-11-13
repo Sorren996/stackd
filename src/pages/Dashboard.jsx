@@ -31,6 +31,10 @@ const EMPTY = [];
 const FRESH_DATA_MS = 60 * 1000;
 const GRAPH_DATA_MS = 5 * 60 * 1000;
 const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
+// The Home chart's window: the last 24 hours plus a 2 hour margin, so the left
+// edge still holds real readings after an overnight pan. Older days stay on the
+// Journal's day view, which keeps its own queries.
+const GRAPH_WINDOW_MS = 26 * 60 * 60 * 1000;
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 const TWO_DAYS_MS = 48 * 60 * 60 * 1000;
 
@@ -72,10 +76,8 @@ export default function Dashboard() {
     staleTime: 30 * 1000,
     refetchInterval: dexcomConnected ? 60_000 : false,
     gcTime: GRAPH_DATA_MS,
-    // A cold launch always re-reads the account's already-saved readings. This
-    // is a database read, not a Dexcom poll: it never waits for the sensor, and
-    // a same-as-before reading is a valid answer that keeps its true age.
-    refetchOnMount: "always",
+    // A tab switch paints the saved reading from cache and revalidates quietly
+    // once it is older than staleTime, instead of blocking the mount on a read.
     // The cached reading carries the moment it was saved, so an old
     // observation is immediately stale and revalidates instead of passing as
     // fresh. Only the account that saved it can read it back.
@@ -92,7 +94,7 @@ export default function Dashboard() {
   const { data: rawGlucoseReadings = EMPTY, dataUpdatedAt: historyLoadedAt, isFetching: historyFetching, error: historyError } = useQuery({
     queryKey: ["glucose-readings", "graph", user.id],
     queryFn: async ({ signal }) => {
-      const fresh = await boundedRead(() => base44.entities.GlucoseReading.filter({ $or: [{ user_id: user.id }, { created_by_id: user.id }], recorded_at: { $gte: new Date(Date.now() - FOURTEEN_DAYS_MS).toISOString() } }, "-recorded_at", 5000), signal);
+      const fresh = await boundedRead(() => base44.entities.GlucoseReading.filter({ $or: [{ user_id: user.id }, { created_by_id: user.id }], recorded_at: { $gte: new Date(Date.now() - GRAPH_WINDOW_MS).toISOString() } }, "-recorded_at", 400), signal);
       // Never step the chart back: a slower refetch that returns an older
       // newest reading is dropped, and duplicate timestamps collapse to the
       // most recently written row.

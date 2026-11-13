@@ -30,14 +30,18 @@ import ProjectionOverlay from "@/components/graph/ProjectionOverlay";
 
 const STEP_MS = 3 * 60 * 1000;
 const HALF_HOUR_MS = 30 * 60 * 1000;
-const HISTORY_DAYS = 7;
+// How far the plot's domain reaches behind the newest reading. The Home chart
+// loads 26 hours of readings, so the domain covers one day and the left edge is
+// always backed by real data. Older days live on the Journal's day view.
+const HISTORY_DAYS = 1;
 const FUTURE_HOURS = 3;
 
 // How long scroll silence marks a gesture (finger or iOS momentum) as finished.
 const SCROLL_SETTLE_MS = 150;
 const VISIBLE_HOURS = 6;
 const HOUR_MS = 60 * 60 * 1000;
-const CANDLESTICK_HISTORY_HOURS = 72;
+// The extended (24 hour) view plots the same one day of history.
+const CANDLESTICK_HISTORY_HOURS = 24;
 const CANDLESTICK_FUTURE_HOURS = 12;
 const CHART_HEIGHT = 305;
 const CANDLESTICK_TOTAL_HEIGHT = 425;

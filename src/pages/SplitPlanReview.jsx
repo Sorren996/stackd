@@ -85,8 +85,14 @@ export default function SplitPlanReview() {
   });
 
   const { data: glucoseReadings = [] } = useQuery({
-    queryKey: ["glucose-readings", "graph"],
-    queryFn: () => base44.entities.GlucoseReading.list("-recorded_at", 5000),
+    // Its own key so it can never be mistaken for the Home chart's cache entry,
+    // and only the last 26 hours rather than the whole history.
+    queryKey: ["glucose-readings", "split-plan", planId],
+    queryFn: () => base44.entities.GlucoseReading.filter(
+      { recorded_at: { $gte: new Date(Date.now() - 26 * 60 * 60 * 1000).toISOString() } },
+      "-recorded_at", 400
+    ),
+    enabled: Boolean(planId),
   });
 
   const { data: doses = [] } = useQuery({
