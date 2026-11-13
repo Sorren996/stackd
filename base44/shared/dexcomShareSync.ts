@@ -506,7 +506,14 @@ export async function syncShareForConnection(
       // Generate the glucose projection server-side right after ingestion and
       // alert evaluation so the forecast is already anchored to this reading
       // before the app is opened. Isolated: never blocks or fails ingestion.
-      const proj = await projectAfterPersist({ sr, userId: owner });
+      const anchorTimestamp = latestTime
+        ? new Date(latestTime).toISOString()
+        : (diag.inserted_timestamps?.[0] ?? null);
+      const proj = await projectAfterPersist({ sr, userId: owner, anchorTimestamp }).catch(() => ({
+        generated: false,
+        skipped: false,
+        reason: "projection_error",
+      }));
       diag.projection_dispatch = proj.generated ? "generated" : (proj.skipped ? proj.reason : "failed");
     }
 

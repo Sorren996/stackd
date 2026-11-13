@@ -318,7 +318,14 @@ export async function syncApiForConnection(
     if (diag.records_inserted > 0) {
       const notify = await notifyAfterPersist({ sr, ownerId: owner });
       diag.notification_dispatch = notify.dispatched ? "evaluated" : notify.reason;
-      const proj = await projectAfterPersist({ sr, userId: owner });
+      const anchorTimestamp = newestSystemTime
+        ? newestSystemTime.toISOString()
+        : (diag.inserted_timestamps?.[0] ?? null);
+      const proj = await projectAfterPersist({ sr, userId: owner, anchorTimestamp }).catch(() => ({
+        generated: false,
+        skipped: false,
+        reason: "projection_error",
+      }));
       diag.projection_dispatch = proj.generated ? "generated" : (proj.skipped ? proj.reason : "failed");
     }
 

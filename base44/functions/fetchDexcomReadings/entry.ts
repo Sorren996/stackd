@@ -401,7 +401,12 @@ export default async function(req) {
         if (diag.records_inserted > 0) {
           const notify = await notifyAfterPersist({ sr, ownerId: owner, origin: appOrigin(req) });
           diag.notification_dispatch = notify.dispatched ? "evaluated" : notify.reason;
-          const proj = await projectAfterPersist({ sr, userId: owner });
+          const anchorTimestamp = newestSystemTime ? newestSystemTime.toISOString() : null;
+          const proj = await projectAfterPersist({ sr, userId: owner, anchorTimestamp }).catch(() => ({
+            generated: false,
+            skipped: false,
+            reason: "projection_error",
+          }));
           diag.projection_dispatch = proj.generated ? "generated" : (proj.skipped ? proj.reason : "failed");
         }
 
