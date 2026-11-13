@@ -80,7 +80,6 @@ export default function Settings() {
         <LedgerRow label="Profile" value={user?.email || "Name & email"} to="/settings/profile" />
         <LedgerRow label="Privacy & Consent" value="Consent & controls" to="/settings/privacy-consent" />
         <LedgerRow label="Contact & Support" value="Help & feedback" to="/settings/contact-support" />
-        {!nativeIOS && <LedgerRow label="Support the Creator" value="Optional gifts" to="/settings/support-creator" />}
         <LedgerRow
           label={isLoggingOut ? "Logging out..." : "Log Out"}
           onClick={handleLogout}

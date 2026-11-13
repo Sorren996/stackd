@@ -19,7 +19,6 @@ export const LazyInsulinSettings = lazy(() => import("@/pages/InsulinSettingsPag
 export const LazyProfileSettings = lazy(() => import("@/pages/ProfileSettingsPage"));
 export const LazyPrivacyConsent = lazy(() => import("@/pages/PrivacyConsentPage"));
 export const LazyDisplaySettings = lazy(() => import("@/pages/DisplaySettingsPage"));
-export const LazySupportCreator = lazy(() => import("@/pages/SupportCreatorPage"));
 export const LazyDexcomSettings = lazy(() => import("@/pages/DexcomSettingsPage"));
 export const LazySharing = lazy(() => import("@/pages/SharingPage"));
 export const LazyNotifications = lazy(() => import("@/pages/NotificationsPage"));

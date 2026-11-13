@@ -1,7 +1,6 @@
 // Detects whether the web app is running inside the native iOS Capacitor shell.
 // Capacitor injects window.Capacitor with isNativePlatform() and getPlatform().
-// Used to comply with App Store guidelines (e.g. hiding external purchase
-// links) and to suppress in-app-only affordances like "Add to Home Screen".
+// Used to suppress browser-only affordances like "Add to Home Screen".
 
 export function isNativeIOS() {
   try {
