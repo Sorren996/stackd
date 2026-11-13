@@ -60,15 +60,15 @@ export default function DailyBalanceDetailSheet({
     <Sheet open={open} onClose={onClose}>
       <div className="flex flex-col overflow-y-auto px-1">
         {/* Standard page header: the app's own Back control + the day's title,
-            in the same row shape the Journal and settings sub-pages use. Back
-            closes this detail view and returns to the day underneath it. */}
+             in the same row shape the Journal and settings sub-pages use. Back
+             closes this detail view and returns to the day underneath it. */}
         <div className="flex items-center gap-3 px-6 pb-1 pt-1">
           <BackButton
             onPress={onClose}
             label="Back to your day"
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition"
-            style={{ color: PALETTE.ink }}
-          />
+            style={{ color: PALETTE.ink }} />
+          
           <div className="min-w-0 flex-1">
             <h1 className="truncate text-lg font-semibold" style={{ color: PALETTE.ink }}>
               Your <span className="font-serif-italic" style={{ fontWeight: 400 }}>day</span>
@@ -90,7 +90,7 @@ export default function DailyBalanceDetailSheet({
               {displayValue}
             </span>
             {hasData && qualifier &&
-            <span className="text-sm font-medium leading-snug" style={{ color: PALETTE.sec }}>
+            <span className="text-sm font-medium leading-snug my-3 py-3" style={{ color: PALETTE.sec }}>
                 {qualifier}
               </span>
             }
