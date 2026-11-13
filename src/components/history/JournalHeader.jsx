@@ -1,18 +1,20 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import BackButton from "@/components/navigation/BackButton";
-import { HEADER_BLUR_HEIGHT } from "@/lib/layoutMetrics";
 
 /**
- * The pinned header shared by the Journal's two sub-views — a month's day list
- * and a single day's recap — so both behave identically.
+ * The title row shared by the Journal's three views — the month list, a month's
+ * week group and a single day's recap — so all three behave identically.
  *
- * It sticks at the exact edge where the app's fixed logo bar and its
- * progressive blur finish (HEADER_BLUR_HEIGHT, safe-area included), so the
- * title and Back control stay on screen while the page scrolls. The band
- * carries the page's own slate field colour, so nothing shows through it, and
- * it bleeds into the page gutters by the same amount it pads back, which means
- * cards disappear cleanly at the band's edges while the row's content stays on
- * the cards' own left edge.
+ * It sits in normal document flow at the top of the page content and scrolls
+ * out of view with the page, exactly like the title row on every other page. It
+ * is deliberately NOT pinned: a pinned band left a strip of moving content
+ * between the logo header and the bar, which read as the title being welded to
+ * the logo header. Nothing here covers content, so it carries no background,
+ * and it uses the same small horizontal inset as the other page titles (and as
+ * the cards below it) instead of bleeding into the page gutters.
+ *
+ * Behaviours are unchanged: Back follows real navigation history, and the day
+ * chevrons page between days rather than navigating.
  *
  * This title is the only place the day's date is shown; the day card below it
  * no longer repeats it.
@@ -28,10 +30,7 @@ export default function JournalHeader({
   onNextDay,
 }) {
   return (
-    <div
-      className="sticky z-30 -mx-4 flex items-center gap-3 px-5 pb-3 pt-2"
-      style={{ top: HEADER_BLUR_HEIGHT, background: "var(--site-field)" }}
-    >
+    <div className="flex items-center gap-3 px-1 pb-3 pt-2">
       <BackButton
         fallback={fallback}
         className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition"
