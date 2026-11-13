@@ -60,11 +60,11 @@ export default function DailyBalanceSection({
           }
         </div>
 
-        {hasData && !isGathering &&
-        <p className="mt-1 px-1 text-[11px] hidden" style={{ color: "#746959" }}>
-            So far today
-          </p>
-        }
+        
+
+
+
+        
 
         {hasData && coverage && <p className="mt-2 px-1 text-xs text-muted-foreground hidden">{coverage}</p>}
         {hasData &&
