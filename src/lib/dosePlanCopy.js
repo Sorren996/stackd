@@ -38,7 +38,7 @@ export const DOSE_TERMS = {
   //   TOWARD — it is not a threshold that triggers anything, and changing it
   //   never changes an alert, a comfort-zone band or a notification.
   correctionTarget: {
-    label: 'Glucose target for corrections',
+    label: 'Correction Target',
     medical: 'Correction target',
     unit: 'mg/dL',
     helper: 'The target glucose level used in correction calculations.',
