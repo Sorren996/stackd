@@ -3,6 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, HeartPulse, Unlink, Sparkles, Lock, Eye, EyeOff, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
+import { disconnectDexcom } from "@/lib/dexcomDisconnect";
 import DexcomSyncStatus from "@/components/DexcomSyncStatus";
 import SectionCard from "@/components/editorial/SectionCard";
 
@@ -61,8 +62,8 @@ export default function DexcomConnect() {
   const handleDisconnect = async () => {
     setDisconnecting(true);
     try {
-      await base44.entities.DexcomConnection.deleteMany({});
-      queryClient.invalidateQueries(["dexcom-connection"]);
+      // The one disconnect path, shared with the manual-glucose switch.
+      await disconnectDexcom(queryClient);
       toast.success("Glucose source disconnected. Your Dexcom credentials have been removed.");
     } catch {
       toast.error("Something didn't go as expected. Please try again.");

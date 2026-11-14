@@ -24,6 +24,7 @@ import {
 } from "@/components/nav/navGeometry";
 import { resolveTabPress } from "@/components/nav/tabPress";
 import { scrollToTop } from "@/lib/feedScroll";
+import { readManualGlucoseEnabled } from "@/lib/manualGlucose";
 
 const EASE_OUT = [0.16, 1, 0.3, 1];
 
@@ -35,12 +36,6 @@ const navItems = [
   { key: "history", path: "/history", label: "Journal", Icon: BookOpen },
   { key: "settings", path: "/settings", label: "Profile", Icon: CircleUser },
 ];
-
-function readManualGlucoseEnabled() {
-  if (typeof window === "undefined") return true;
-  const raw = window.localStorage.getItem("manual_glucose_logging_enabled");
-  return raw === null ? true : raw === "true";
-}
 
 export default function UnifiedBottomNav() {
   const location = useLocation();
@@ -64,17 +59,18 @@ export default function UnifiedBottomNav() {
   const { connected: dexcomConnected } = useDexcomConnection();
 
   // Fanned options, ordered left (Glucose) → centre (Insulin) → right (Carbs).
-  // Glucose is offered when hand-logging is switched on, OR whenever no CGM is
-  // connected — with no sensor there is no other way to log a reading. With a
-  // CGM connected, the Settings switch is the authority. Both inputs are reactive:
-  // the switch dispatches "insulin-settings-updated" and the connection state
-  // comes from the shared connection query, so nothing needs a reload.
+  // Sensor and hand-entered readings are mutually exclusive: Glucose is offered
+  // only when no CGM is feeding the app AND hand-logging is switched on. A
+  // connected sensor wins over the switch, whatever it says. Both inputs are
+  // reactive — the switch dispatches "insulin-settings-updated" and the
+  // connection state comes from the shared connection query — so the option
+  // appears the moment the switch is flipped, with no reload.
   const actions = useMemo(() => {
     const list = [
       { id: "insulin", label: "Insulin", Icon: Syringe, mode: "insulin" },
       { id: "carbs", label: "Carbs", Icon: Utensils, mode: "carbs" },
     ];
-    if (manualGlucoseEnabled || !dexcomConnected) {
+    if (manualGlucoseEnabled && !dexcomConnected) {
       list.unshift({ id: "glucose", label: "Glucose", Icon: Droplets, mode: "glucose" });
     }
     return list;

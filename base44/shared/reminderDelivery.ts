@@ -320,6 +320,18 @@ async function sendSensorReminders({ sr, ownerId, settings, ledger, nowMs, absol
   const startedAtMs = Date.parse(settings?.sensor_session_started_at);
   if (!Number.isFinite(startedAtMs)) return;
 
+  // A sensor prompt only belongs to an account whose sensor is actually feeding
+  // the app. Logging by hand disconnects the source, and hand-entered readings
+  // are not a sensor session — so a disconnected account is never prompted
+  // about wear time it is no longer using.
+  const connection = asArray(
+    await sr.entities.DexcomConnection.filter(
+      { created_by_id: ownerId },
+      { sort: "-created_date", limit: 1 }
+    )
+  )[0];
+  if (String(connection?.status ?? "").toLowerCase() !== "connected") return;
+
   for (const stage of sensorStages(startedAtMs, settings?.cgm_model)) {
     if (!sensorStageDue(stage.atMs, nowMs)) continue;
     const episodeKey = `sensor:${startedAtMs}:${stage.stage}`;

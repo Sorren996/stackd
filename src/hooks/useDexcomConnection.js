@@ -1,5 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { readManualGlucoseEnabled, storeManualGlucoseEnabled } from "@/lib/manualGlucose";
 
 /**
  * Returns the current user's Dexcom connection status.
@@ -25,5 +27,19 @@ export function useDexcomConnection() {
 
   const connection = data?.[0];
   const connected = !!connection && connection.status === "connected";
+
+  // A sensor and hand-entered readings never share the same line. The moment a
+  // connection is established or re-established, hand-logging steps aside —
+  // whichever screen did the connecting. Readings already saved on either side
+  // are never touched; they stay in the chart and the journal.
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    if (!connected || !connection?.id) return;
+    if (!readManualGlucoseEnabled()) return;
+    storeManualGlucoseEnabled(false)
+      .then(() => queryClient.invalidateQueries({ queryKey: ["user-settings"] }))
+      .catch(() => {});
+  }, [connected, connection?.id, queryClient]);
+
   return { connected, connection, isLoading };
 }

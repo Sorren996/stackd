@@ -34,10 +34,14 @@ const GENERATION_DEBOUNCE_MS = 20 * 1000;
 // Deterministic post-generation reads: soon, a little later, then a last look.
 const POST_GENERATION_READ_MS = [1500, 4000, 10000];
 
-export function useLatestProjection({ latestReadingTime } = {}) {
+export function useLatestProjection({ latestReadingTime, enabled = true } = {}) {
+  // A forecast needs a continuous stream to extend. With no sensor feeding the
+  // app there is nothing to project from, so an account logging by hand neither
+  // reads nor generates a projection at all.
   const latestQuery = useQuery({
     queryKey: ["latest-projection"],
     queryFn: () => base44.entities.GlucoseProjection.list("-generated_at", 1),
+    enabled,
     refetchInterval: REFETCH_INTERVAL_MS,
     staleTime: 30 * 1000,
     networkMode: "always",
@@ -102,7 +106,7 @@ export function useLatestProjection({ latestReadingTime } = {}) {
   };
 
   useEffect(() => {
-    if (!needsGeneration || inFlightRef.current) return;
+    if (!enabled || !needsGeneration || inFlightRef.current) return;
     // Wait for an in-flight read (initial mount or foreground resume) before
     // concluding that the server is missing a projection for this reading.
     if (!inputsStale && (latestQuery.isPending || latestQuery.isFetching)) return;
@@ -169,11 +173,12 @@ export function useLatestProjection({ latestReadingTime } = {}) {
       cancelled = true;
       if (retryTimer) clearTimeout(retryTimer);
     };
-  }, [needsGeneration, inputsStale, inputsChangedAt, readingMs, attempt, latestQuery.isPending, latestQuery.isFetching]);
+  }, [enabled, needsGeneration, inputsStale, inputsChangedAt, readingMs, attempt, latestQuery.isPending, latestQuery.isFetching]);
 
   // Never draw a projection whose anchor is older than the newest reading or
   // older than PROJECTION_FRESH_MS (~12 minutes).
   if (
+    !enabled ||
     !projection ||
     !Number.isFinite(anchorMs) ||
     !rowCoversReading ||

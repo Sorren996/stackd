@@ -1,4 +1,11 @@
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { useUserSettings } from "@/hooks/useUserSettings";
+import { useDexcomConnection } from "@/hooks/useDexcomConnection";
+import { cacheManualGlucoseEnabled } from "@/lib/manualGlucose";
+import { disconnectDexcom } from "@/lib/dexcomDisconnect";
+import DeleteConfirmDialog from "@/components/insulin/DeleteConfirmDialog";
 import { Check, Loader2, Gauge, Droplets } from "lucide-react";
 import { getGlucoseUnits, setGlucoseUnits, formatGlucose, formatGlucoseAbsDelta, glucoseUnitLabel } from "@/lib/glucoseUnits";
 import {
@@ -27,14 +34,47 @@ export default function DisplaySettings() {
   const currentHigh = Number.isFinite(settings?.high_glucose_reference)
     ? Math.max(HIGH_REFERENCE_MIN, Math.min(HIGH_REFERENCE_MAX, Math.round(settings.high_glucose_reference / HIGH_REFERENCE_STEP) * HIGH_REFERENCE_STEP))
     : HIGH_REFERENCE_DEFAULT;
-  const manualGlucoseEnabled = settings?.manual_glucose_logging_enabled !== false;
+  const queryClient = useQueryClient();
+  const { connected: dexcomConnected } = useDexcomConnection();
+  const [confirmingDisconnect, setConfirmingDisconnect] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+  // Sensor and hand-entered readings can't share the same line, so the switch
+  // only ever reads as on while no CGM is feeding the app.
+  const manualGlucoseEnabled =
+    settings?.manual_glucose_logging_enabled !== false && !dexcomConnected;
+
+  const setManualGlucose = (next) => {
+    cacheManualGlucoseEnabled(next);
+    save({ manual_glucose_logging_enabled: next });
+  };
 
   const handleToggleManualGlucose = () => {
-    if (isSaving) return;
-    const next = !manualGlucoseEnabled;
-    localStorage.setItem("manual_glucose_logging_enabled", String(next));
-    window.dispatchEvent(new Event("insulin-settings-updated"));
-    save({ manual_glucose_logging_enabled: next });
+    if (isSaving || disconnecting) return;
+    if (manualGlucoseEnabled) {
+      setManualGlucose(false);
+      return;
+    }
+    // Never quietly kill a working connection: confirm first.
+    if (dexcomConnected) {
+      setConfirmingDisconnect(true);
+      return;
+    }
+    setManualGlucose(true);
+  };
+
+  const handleConfirmDisconnect = async () => {
+    setDisconnecting(true);
+    try {
+      await disconnectDexcom(queryClient);
+      setManualGlucose(true);
+      setConfirmingDisconnect(false);
+      toast.success("Dexcom is disconnected. Log readings by hand whenever you like.");
+    } catch {
+      toast.error("Something didn't go as expected. Please try again.");
+      setConfirmingDisconnect(false);
+    } finally {
+      setDisconnecting(false);
+    }
   };
 
   const handleSelectHeight = (value) => {
@@ -147,14 +187,21 @@ export default function DisplaySettings() {
         <button
           type="button"
           onClick={handleToggleManualGlucose}
-          disabled={isSaving}
+          disabled={isSaving || disconnecting}
           className="w-full flex items-center justify-between gap-4 pt-3 pb-2 text-left transition active:opacity-70"
         >
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold" style={{ color: "#3f3830" }}>Log glucose by hand</p>
             <p className="text-xs mt-0.5 leading-relaxed" style={{ color: "#746959" }}>
-              Show Glucose in the logging menu so you can add fingerstick readings. Turn off if your sensor provides readings automatically.
+              Turn this on to log readings yourself.
             </p>
+            {/* Stated quietly, before the toggle is touched, so the
+                disconnect is never a surprise after the fact. */}
+            {dexcomConnected && (
+              <p className="text-xs mt-1.5 leading-relaxed" style={{ color: "#9c5228" }}>
+                Your Dexcom G7 will disconnect, because sensor and hand-entered readings can't share the same line. Turning it back off won't reconnect it. You'll do that from Sensor.
+              </p>
+            )}
           </div>
           <span
             className="relative h-7 w-12 shrink-0 rounded-full border transition-colors"
@@ -171,7 +218,25 @@ export default function DisplaySettings() {
             />
           </span>
         </button>
+        {/* The way back is the Sensor screen's own connect entry, named here so
+            nobody has to hunt for it after switching hand-logging off. */}
+        {!dexcomConnected && (
+          <p className="pb-2 text-[11px] leading-relaxed" style={{ color: "#746959" }}>
+            Reconnect a sensor any time from Sensor. Readings you've already logged stay in your chart and journal.
+          </p>
+        )}
       </SectionCard>
+
+      {confirmingDisconnect && (
+        <DeleteConfirmDialog
+          title="Disconnect Dexcom G7 and log by hand?"
+          message="Your sensor readings already saved stay in your chart and journal. You can reconnect any time from Sensor."
+          confirmLabel="Disconnect and log by hand"
+          cancelLabel="Cancel"
+          onCancel={() => setConfirmingDisconnect(false)}
+          onConfirm={handleConfirmDisconnect}
+        />
+      )}
 
       <SectionCard>
         <p className="text-[10px] leading-relaxed" style={{ color: "#746959" }}>

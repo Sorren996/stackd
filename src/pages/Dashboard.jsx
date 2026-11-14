@@ -184,6 +184,8 @@ export default function Dashboard() {
   // the hook by a single clock, so nothing here adds a second age rule.
   const { projection, abstainNote } = useLatestProjection({
     latestReadingTime: latestGlucoseRows[0]?.recorded_at || null,
+    // Only a live sensor gives a forecast something to extend.
+    enabled: dexcomConnected,
   });
 
   // ── Cadence-aware Dexcom refresh ──────────────────────────
