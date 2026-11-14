@@ -10,6 +10,14 @@
 
 export const SCRUB_HYSTERESIS_PX = 8;
 
+// The edge between what happened and what is estimated is soft, not a wall.
+// The newest reading holds for a few pixels of travel past it before the marker
+// may step into the future, so entering the estimate resists the finger instead
+// of latching the moment the pointer crosses the anchor. Past that band the
+// ordinary snap takes over, the marker still only ever lands on a real model
+// point, and the far end of the region remains the projection's horizon.
+export const SCRUB_ENTRY_RESISTANCE_PX = 4;
+
 // How far past the midpoint the pointer must travel toward the other point
 // before the selection follows it.
 export function resolveScrubPoint(points, localX, current, hysteresisPx = SCRUB_HYSTERESIS_PX) {
@@ -22,6 +30,16 @@ export function resolveScrubPoint(points, localX, current, hysteresisPx = SCRUB_
   // pointer travels, so nothing is re-set while the finger sits there.
   if (localX <= first.x) return first;
   if (localX >= last.x) return last;
+
+  // Resistance at the anchor: the newest reading keeps the marker for the first
+  // few pixels of travel past it, then the snap below takes over.
+  if (
+    current === first &&
+    first.kind === "reading" &&
+    localX < first.x + SCRUB_ENTRY_RESISTANCE_PX
+  ) {
+    return first;
+  }
 
   // The two points either side of the pointer.
   let lo = 0;

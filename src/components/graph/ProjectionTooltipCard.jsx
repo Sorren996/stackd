@@ -12,7 +12,7 @@
 //   • the range line reads "likely between X and Y" — never "High ~" / "Low ~",
 //     and never a tilde.
 
-import { formatGlucose, glucoseUnitLabel, isMmolMode } from "@/lib/glucoseUnits";
+import { formatGlucose, glucoseUnitLabel } from "@/lib/glucoseUnits";
 
 // The card's box is fixed, never content-sized. A reading card ("21 min ago",
 // value) and a forecast card ("estimated in 20 min", value, a two-line range)
@@ -44,9 +44,10 @@ function rangeFor(point) {
   if (point.lower != null && point.upper != null) {
     const lower = formatGlucose(point.lower);
     const upper = formatGlucose(point.upper);
-    // In mmol/L a narrow band can round both endpoints to the same number, so
-    // the line says it once instead of printing the same value twice.
-    if (isMmolMode() && lower === upper) return `likely around ${lower} ${glucoseUnitLabel()}`;
+    // A narrow band can round both endpoints to the same number (most often in
+    // mmol/L), so the line says it once instead of printing the same value
+    // twice. Compared on what is actually rendered, never on the raw numbers.
+    if (lower === upper) return `likely around ${lower} ${glucoseUnitLabel()}`;
     return `likely between ${lower} and ${upper} ${glucoseUnitLabel()}`;
   }
   return null;

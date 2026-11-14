@@ -27,6 +27,7 @@ import ReferenceLabels from "@/components/graph/ReferenceLabels";
 import MealEditOverlay from "@/components/insulin/MealEditOverlay";
 import { clusterCarbGroups, findMealGroupAtTime } from "@/lib/concurrentMeals";
 import ProjectionOverlay from "@/components/graph/ProjectionOverlay";
+import ProjectionEstimateStrip from "@/components/graph/ProjectionEstimateStrip";
 
 const STEP_MS = 3 * 60 * 1000;
 // How far the plot's domain reaches behind the newest reading. The Home chart
@@ -318,8 +319,18 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
     const el = document.getElementById("daily-flow-controls");
     if (el) setControlsPortalEl(el);
   }, []);
+
+  // No projection, no future region: the strip can never keep a stale estimate.
+  useEffect(() => {
+    if (!projection) setForecastEstimate(null);
+  }, [projection]);
   const isCandlestick = viewWindow === 24;
   const [activeMarker, setActiveMarker] = useState(null);
+  // The forecast point the reader is holding, reported by the projection
+  // overlay. It is drawn above the chart instead of in a card over it.
+  const [forecastEstimate, setForecastEstimate] = useState(null);
+  // Bumped by Now, which releases any scrub and lets the estimate fade out.
+  const [scrubReset, setScrubReset] = useState(0);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [selectedDoseKey, setSelectedDoseKey] = useState(null);
   const [editingMeal, setEditingMeal] = useState(null);
@@ -1455,7 +1466,12 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
         <div className="ml-auto flex shrink-0 items-center">
           <button
               type="button"
-              onClick={scrollToLatestGlucose}
+              onClick={() => {
+                // Now returns to the newest reading AND releases the scrub, so
+                // an estimate picked up from the dashed line fades away.
+                setScrubReset((n) => n + 1);
+                scrollToLatestGlucose();
+              }}
               className="flex h-7 shrink-0 items-center gap-1 rounded-full px-2 transition hover:opacity-70 self-center"
               style={{ background: "#f3ece0", color: "#8a4a2a" }}
               aria-label="Back to now">
@@ -1464,6 +1480,10 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
             </button>
         </div>
       </div>
+      {/* The estimate slot: inside the card, directly above the plot and
+          beneath the reading row, left aligned and always the same height — so
+          the chart never moves when the future begins or ends. */}
+      {projection && <ProjectionEstimateStrip point={forecastEstimate} />}
       <div
           ref={graphViewportRef}
           className="relative overflow-hidden"
@@ -1564,7 +1584,9 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
                   effectiveMax={effectiveMax}
                   getGlucoseY={getCandleGlucoseY}
                   latestReading={latestGlucosePoint}
-                  readings={filteredGlucoseReadings} />
+                  readings={filteredGlucoseReadings}
+                  onForecastSelect={setForecastEstimate}
+                  resetSignal={scrubReset} />
 
                 }
               </> :
@@ -1699,7 +1721,9 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
                   effectiveMax={effectiveMax}
                   getGlucoseY={getGlucoseY}
                   latestReading={latestGlucosePoint}
-                  readings={filteredGlucoseReadings} />
+                  readings={filteredGlucoseReadings}
+                  onForecastSelect={setForecastEstimate}
+                  resetSignal={scrubReset} />
 
                 }
 

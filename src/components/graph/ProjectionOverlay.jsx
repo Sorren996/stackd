@@ -93,6 +93,13 @@ export default function ProjectionOverlay({
   getGlucoseY,
   latestReading = null,
   readings = [],
+  // A forecast point is described by the estimate strip above the chart, so it
+  // is reported to the parent instead of opening the cream card. A real reading
+  // still opens the card: it is a measurement, not an estimate.
+  onForecastSelect = null,
+  // Bumped by the Now button, which returns to the newest reading and fades the
+  // strip out by releasing the scrub.
+  resetSignal = 0,
 }) {
   const [activePoint, setActivePoint] = useState(null);
   const [scrubbing, setScrubbing] = useState(false);
@@ -120,6 +127,22 @@ export default function ProjectionOverlay({
     activePointRef.current = next;
     setActivePoint(next);
   }, []);
+
+  // One report per selection change, never per frame. The parent draws the
+  // estimate strip from this; null clears it and the strip fades itself out.
+  useEffect(() => {
+    if (!onForecastSelect) return;
+    onForecastSelect(activePoint && activePoint.kind === "forecast" ? activePoint : null);
+  }, [activePoint, onForecastSelect]);
+
+  // The Now button releases the scrub, so the marker returns to the newest
+  // reading and the strip fades away with it.
+  const lastResetRef = useRef(resetSignal);
+  useEffect(() => {
+    if (resetSignal === lastResetRef.current) return;
+    lastResetRef.current = resetSignal;
+    select(null);
+  }, [resetSignal, select]);
 
   // Latest pointer x and the pending frame: pointermove records only the x, and
   // the snap is resolved once per animation frame.
@@ -404,13 +427,17 @@ export default function ProjectionOverlay({
     return () => el.removeEventListener("touchmove", onTouchMove);
   }, [points]);
 
+  // Only a real reading opens the cream card. A forecast point is described by
+  // the estimate strip above the chart, so it never gets a card of its own.
+  const cardPoint = activePoint && activePoint.kind === "reading" ? activePoint : null;
+
   // Resolve the card's position: above the selected point, flipped below when
   // it would cross the top of the plot, clamped inside the visible plot box on
   // both axes and never over the floating nav. The card's box is a fixed size,
-  // so switching between a reading and a forecast point cannot move it, and the
-  // flip only changes once the point has cleared the deadband.
+  // so it cannot move under the reader's finger, and the flip only changes once
+  // the point has cleared the deadband.
   useLayoutEffect(() => {
-    if (!activePoint || !svgRef.current) {
+    if (!cardPoint || !svgRef.current) {
       flippedRef.current = false;
       setPos((prev) => (prev.ready || prev.left || prev.top
         ? { left: 0, top: 0, ready: false, flipped: false }
@@ -424,8 +451,8 @@ export default function ProjectionOverlay({
     const vw = window.innerWidth;
     const vh = window.innerHeight;
 
-    const pointLeft = rect.left + activePoint.x;
-    const pointTop = rect.top + activePoint.y;
+    const pointLeft = rect.left + cardPoint.x;
+    const pointTop = rect.top + cardPoint.y;
 
     // Space left above the marker inside the plot once gap and card are placed;
     // negative means the card does not fit above it.
@@ -446,7 +473,7 @@ export default function ProjectionOverlay({
         ? prev
         : { left, top, ready: true, flipped }
     ));
-  }, [activePoint, nowMs]);
+  }, [cardPoint, nowMs]);
 
   // Dismiss on tap outside, scroll, Escape or resize — but never while a scrub
   // is in flight or in the moment just after it. A one-pixel scroll nudge used
@@ -528,13 +555,6 @@ export default function ProjectionOverlay({
   // the estimate stops. No number is attached to it.
   const endPoint = points[points.length - 1];
 
-  // A short stub from the marker toward the card, so the card is visibly tied to
-  // the point it describes.
-  const STUB_PX = 10;
-  const stubEnd = selected
-    ? selected.y + (pos.flipped ? STUB_PX : -STUB_PX)
-    : 0;
-
   return (
     <>
       <div className="sr-only" aria-live="polite">
@@ -573,21 +593,12 @@ export default function ProjectionOverlay({
             style={{ pointerEvents: "none" }}
           />
         )}
-        {/* Active point marker — a rust dot inside a 12% halo, with a short stub
-            tying it to the card. */}
+        {/* Active point marker — a rust dot inside a 12% halo, and nothing else.
+            No drop line, no tick, no connector to the axis and no stub toward a
+            card: the estimate is described in the strip above the chart, and a
+            reading opens the card on its own. */}
         {selected && (
           <>
-            <line
-              x1={selected.x}
-              y1={selected.y}
-              x2={selected.x}
-              y2={stubEnd}
-              stroke="#8C4A28"
-              strokeWidth={1}
-              strokeOpacity={0.45}
-              strokeLinecap="round"
-              style={{ pointerEvents: "none" }}
-            />
             <circle
               cx={selected.x}
               cy={selected.y}
@@ -626,7 +637,7 @@ export default function ProjectionOverlay({
         />
       </svg>
 
-      {selected && createPortal(
+      {selected && selected.kind === "reading" && createPortal(
         <AnimatePresence>
           {/* Opacity only: a vertical entrance would animate every time the
               card flipped between a reading and a forecast point. */}

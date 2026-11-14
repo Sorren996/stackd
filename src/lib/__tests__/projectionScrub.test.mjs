@@ -33,6 +33,21 @@ test("past the last point the last point latches", () => {
   assert.equal(resolveScrubPoint(points, 400, firstForecast), firstForecast);
 });
 
+test("the newest reading resists before the marker steps into the future", () => {
+  const points = [reading, firstForecast]; // 100 → 140
+  // A couple of pixels past the anchor, the marker still holds the reading.
+  assert.equal(resolveScrubPoint(points, 102, reading), reading);
+  // Past the resistance band the ordinary snap takes over, and it still only
+  // ever resolves to a real model point — never a position in between.
+  assert.equal(resolveScrubPoint(points, 130, reading), firstForecast);
+});
+
+test("the future region ends at the projection horizon", () => {
+  const horizon = point(180);
+  const points = [reading, firstForecast, horizon];
+  assert.equal(resolveScrubPoint(points, 1000, horizon), horizon);
+});
+
 test("before the first point the reading latches", () => {
   const points = [reading, firstForecast];
   assert.equal(resolveScrubPoint(points, -20, firstForecast), reading);
