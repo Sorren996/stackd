@@ -1,8 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { useAuth } from "@/lib/AuthContext";
 import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 import { useSensorSession } from "@/hooks/useSensorSession";
 import useNotificationCenter from "@/hooks/useNotificationCenter";
+import { loadReminders, remindersKey } from "@/lib/reminders/reminderApi";
+import { reminderCountLabel } from "@/lib/reminders/reminderCopy";
 import {
   attentionItems,
   insulinRatioLabel,
@@ -20,9 +23,18 @@ import {
  * nothing here saves, decides or changes a setting.
  */
 export default function useSettingsSummaries() {
+  const { user } = useAuth();
   const { connection, isLoading: connectionLoading } = useDexcomConnection();
   const session = useSensorSession();
   const notifications = useNotificationCenter();
+
+  // The same query the Reminders page uses, so a switch flipped there is
+  // reflected in this row without a second read.
+  const { data: reminders } = useQuery({
+    queryKey: remindersKey(user?.id),
+    queryFn: loadReminders,
+    enabled: Boolean(user?.id),
+  });
 
   const { data: latestReadings = [] } = useQuery({
     queryKey: ["settings-latest-reading"],
@@ -69,6 +81,7 @@ export default function useSettingsSummaries() {
     notificationsLabel: notifications.data
       ? notificationsSummary({ personal, units: notifications.data?.thresholds?.units })
       : "",
+    remindersLabel: Array.isArray(reminders) ? reminderCountLabel(reminders) : "",
     insulinLabel: settingsReady
       ? insulinRatioLabel(session.settings?.meal_insulin_units_per_5g) || "Not set yet"
       : "",

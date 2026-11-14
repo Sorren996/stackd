@@ -395,7 +395,9 @@ const AuthenticatedApp = () => {
             <Route path="/settings/sensor" element={<LazySensorSession />} />
             <Route path="/settings/sharing" element={<LazySharing />} />
             <Route path="/settings/notifications" element={<LazyNotifications />} />
-            <Route path="/settings/notifications/reminders" element={<LazyReminders />} />
+            <Route path="/settings/reminders" element={<LazyReminders />} />
+            {/* The earlier placement. Kept as a redirect so no bookmark dangles. */}
+            <Route path="/settings/notifications/reminders" element={<Navigate to="/settings/reminders" replace />} />
             <Route path="/shared" element={<LazyFollowingHome />} />
             <Route path="/follow" element={<LazyFollowInvite />} />
             <Route path="/settings/contact-support" element={<LazyContactSupport />} />

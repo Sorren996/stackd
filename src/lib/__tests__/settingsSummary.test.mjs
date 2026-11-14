@@ -154,6 +154,8 @@ test("the settings page renders its rows in the approved order", async () => {
   const expectedOrder = [
     "/settings/sensor",
     "/settings/notifications",
+    // Reminders sits directly under Notifications and is its own page.
+    "/settings/reminders",
     "/settings/insulin",
     "/settings/display",
     "/settings/sharing",

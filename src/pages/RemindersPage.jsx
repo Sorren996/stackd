@@ -83,7 +83,7 @@ export default function RemindersPage() {
       <div>
         <div className="flex items-center gap-2 px-1 pb-1">
           <BackButton
-            fallback="/settings/notifications"
+            fallback="/settings"
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg transition"
             style={{ color: "#f7f1e8" }}
           />

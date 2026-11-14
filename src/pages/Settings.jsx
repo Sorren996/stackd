@@ -27,7 +27,7 @@ export default function Settings() {
   const { logout, user } = useAuth();
   const queryClient = useQueryClient();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const { band, attention, sensorLabel, sensorNote, notificationsLabel, insulinLabel } = useSettingsSummaries();
+  const { band, attention, sensorLabel, sensorNote, notificationsLabel, remindersLabel, insulinLabel } = useSettingsSummaries();
   const graphHeight = readGraphHeight();
   const nativeIOS = isNativeIOS();
 
@@ -61,6 +61,7 @@ export default function Settings() {
 
       <SectionCard label="Your setup">
         <LedgerRow label="Notifications" value={notificationsLabel} to="/settings/notifications" />
+        <LedgerRow label="Reminders" value={remindersLabel} to="/settings/reminders" />
         <LedgerRow
           label="Insulin"
           value={insulinLabel}
