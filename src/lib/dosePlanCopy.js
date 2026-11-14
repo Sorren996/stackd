@@ -22,7 +22,7 @@ export const DOSE_TERMS = {
       'Stackd uses it for meal and correction insulin estimates. Long-acting (basal) insulin is not part of that calculation.',
   },
   mealRatio: {
-    label: 'Meal insulin per 5 g carbs',
+    label: 'Insulin to Carb Ratio',
     medical: 'Carb ratio',
     unit: 'units per 5 grams of carbs',
     helper: 'Units of insulin for 5 grams of carbs',
