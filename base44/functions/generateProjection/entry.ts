@@ -1,5 +1,6 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.61";
 import { generateProjectionForUser } from "../../shared/projectionGeneration.ts";
+import { normalizeInputs, projectGlucose } from '../../shared/insightEngine.ts';
 
 // Stackd Insight Engine — Glucose Projection Generator (HTTP entry point)
 //
@@ -68,6 +69,21 @@ export default async function (req: Request): Promise<Response> {
       userId = authenticatedUser.id;
     }
 
+    if (body?.replay_projection_id) {
+      if (typeof body.replay_projection_id !== 'string') return Response.json({error:'Invalid projection reference'},{status:400});
+      const record = await base44.asServiceRole.entities.GlucoseProjection.get(body.replay_projection_id).catch(e=>e.status===404?null:Promise.reject(e));
+      if (!record || (record.user_id || record.created_by_id) !== userId) return Response.json({error:'Projection not found'},{status:404});
+      const saved=record.input_snapshot;
+      if (!saved?.readings || !saved?.meals || !saved?.doses) return Response.json({error:'Saved inputs unavailable'},{status:400});
+      const at=Date.parse(record.generated_at);
+      const result=projectGlucose(normalizeInputs(saved.readings,saved.meals,saved.doses,saved.settings,at),{mealForecastState:saved.meal_forecast_state||null});
+      return Response.json({read_only:true,model_version:result.modelVersion,anchor:result.anchor,
+        carb_rate_at_anchor:result.effectiveParameters?.shapeEngine?.carbRateAtAnchor,
+        active_carbs:result.effectiveParameters?.shapeEngine?.activeCarbs,
+        carb_sensitivity_mgdl_per_gram:result.effectiveParameters?.shapeEngine?.carbSensitivity,
+        meal_components:result.effectiveParameters?.shapeEngine?.mealComponents,
+        opening:result.momentum,trajectory:result.trajectory});
+    }
     const forceRefresh = body?.force === true;
     const payload = await generateProjectionForUser({
       sr: base44.asServiceRole,

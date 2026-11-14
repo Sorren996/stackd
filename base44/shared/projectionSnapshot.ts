@@ -152,6 +152,7 @@ export function buildInputSnapshot(
     meals: availableMeals,
     doses: availableDoses,
     settings: {
+      timezone: settings?.timezone || 'UTC',
       insulin_sensitivity_mgdl_per_unit: Number(settings?.insulin_sensitivity_mgdl_per_unit) || null,
       meal_insulin_units_per_5g: Number(settings?.meal_insulin_units_per_5g) || null,
       target_range_low: Number(settings?.target_range_low) || null,
@@ -221,6 +222,7 @@ export function replayFromSnapshot(
     modelResolution: alternativeResolution,
     uncertaintyCalibration: uncertaintyCalibration ?? null,
     previousProjection: snapshot.previous_projection ?? null,
+    mealForecastState: snapshot.meal_forecast_state ?? null,
   });
 
   return {

@@ -4,102 +4,146 @@
   "properties": {
     "user_id": {
       "type": "string",
-      "description": "Explicit user ID for service-role created projections, so the owning user can read them."
+      "description": "Owner ID for server-created projections."
     },
     "generated_at": {
       "type": "string",
-      "format": "date-time",
-      "description": "When the projection was generated. This is the prediction timestamp \u2014 only information available at this time was used."
+      "format": "date-time"
     },
     "model_version": {
-      "type": "string",
-      "description": "Version of the projection model that produced this prediction: '1.0.0-baseline' or '1.1.0-personalized'. Used to compare baseline vs personalized performance."
+      "type": "string"
     },
     "meal_response_model_version": {
-      "type": "string",
-      "description": "Version of the meal-response model active when this prediction was made: '1.0.0-meal-baseline' or '1.1.0-meal-personalized'. Separate from the general forecast model version so meal-response personalization can be evaluated independently."
+      "type": "string"
     },
     "anchor_time": {
       "type": "string",
-      "format": "date-time",
-      "description": "Time of the latest valid CGM reading the projection starts from."
+      "format": "date-time"
     },
     "anchor_value": {
-      "type": "number",
-      "description": "Glucose value at the anchor reading (mg/dL). The trajectory's first point is this value exactly."
+      "type": "number"
     },
     "measured_velocity_mgdl_per_min": {
-      "type": "number",
-      "description": "Audit trail: the robust measured velocity at the anchor, in mg/dL per minute (Theil\u2013Sen slope over the last 15 minutes of real readings, three samples minimum). Null when the series was too short, stale, duplicated or interpolated, in which case no momentum was applied and the mechanistic shapes stood alone. This is the same measurement the trend arrow beside the reading uses."
+      "type": "number"
     },
     "applied_momentum": {
-      "type": "object",
-      "description": "Audit trail: what the forecast did with the measured velocity. Contains measuredVelocity, appliedStart (the residual actually carried, capped at \u00b13 mg/dL/min), openingRate (the trajectory's rate at the anchor), mechanisticRateAtAnchor (what the carb, rescue and insulin terms alone claimed there), tauMin (25-minute decay constant), cap, damped (true when a fast fall with no insulin or carbs on board was scaled back as likely sensor compression, with the band widened instead), method, sampleCount, spanMin, unusableReason. Null when no velocity could be measured."
+      "type": "object"
+    },
+    "carb_rate_at_anchor": {
+      "type": "number",
+      "description": "Sum of positive meal and rescue appearance rates at the anchor, mg/dL/min, before summing with support and momentum."
+    },
+    "active_carbs": {
+      "type": "number",
+      "description": "Grams not yet absorbed, computed from the exact per-entry curves used in this forecast."
+    },
+    "carb_sensitivity_mgdl_per_gram": {
+      "type": "number",
+      "description": "Forecast conversion from the person's saved ratio and sensitivity, never written back to settings."
+    },
+    "meal_components": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "carbs": {
+            "type": "number"
+          },
+          "onset": {
+            "type": "number"
+          },
+          "peak": {
+            "type": "number"
+          },
+          "duration": {
+            "type": "number"
+          },
+          "amplitude": {
+            "type": "number"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "theoretical",
+              "learned"
+            ]
+          },
+          "sample_count": {
+            "type": "number"
+          },
+          "learning_weight": {
+            "type": "number"
+          },
+          "bucket": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "carbs",
+          "onset",
+          "peak",
+          "duration",
+          "amplitude",
+          "source"
+        ]
+      }
     },
     "horizon_minutes": {
-      "type": "number",
-      "description": "How far forward the projection extends in minutes."
+      "type": "number"
     },
     "trajectory": {
       "type": "array",
       "items": {
         "type": "object"
       },
-      "default": [],
-      "description": "Time-indexed projected glucose values, each { time, min_offset, value, lower, upper }. The first point (min_offset 0) is the anchor reading exactly. Empty when the engine abstained."
+      "default": []
     },
     "uncertainty_summary": {
-      "type": "object",
-      "description": "Calibrated uncertainty metadata: base_sigma, widening factors, band type."
+      "type": "object"
     },
     "data_quality": {
-      "type": "object",
-      "description": "Data quality and confounder flags at generation time: stale_readings, gap_present, reading_count, active_meal_count, active_dose_count, calibrated, confounders."
+      "type": "object"
     },
     "input_snapshot": {
       "type": "object",
-      "description": "Milestone 5.1: immutable, user-scoped snapshot of the exact model inputs available at generation time. Contains compact copies of readings, meals, doses, and settings filtered by created_date <= generated_at (not event time). Used by shadow evaluation to replay alternative model configurations without future-data leakage. Legacy projections without this field are ineligible for trustworthy shadow comparison."
+      "description": "Immutable available-at-generation readings, meals, support, settings and forecast-only learning state for leakage-free replay."
     },
     "input_provenance": {
-      "type": "object",
-      "description": "Compact summary of inputs used (counts, time range, settings hash) for auditability \u2014 never full raw data."
+      "type": "object"
     },
     "active_inputs": {
-      "type": "object",
-      "description": "Summary of active carbs and insulin at generation time: total_active_carb_grams, total_active_insulin_units, meal_count, dose_count, active_speed_classes."
+      "type": "object"
     },
     "model_resolution": {
-      "type": "object",
-      "description": "Milestone 4: explicit model arbitration provenance. Records which model components (general forecast-bias correction, per-class meal-response correction) were eligible, their effective values, and the selection/rejection reason for each. Contains: general {eligible, effectiveValue, reason, source}, meal {eligible, classes, reason, eligibleClasses}, modelVersion, mealModelVersion, isIntegrated, resolutionReason."
+      "type": "object"
     },
     "effective_parameters": {
-      "type": "object",
-      "description": "Milestone 4: the exact parameter values used to generate this projection. Contains: rateAdjustmentFactor (number), mealParams (per-class {speedFactor, magnitudeFactor} or null). Immutable once persisted \u2014 represents the model state at generation time."
+      "type": "object"
     },
     "uncertainty_info": {
-      "type": "object",
-      "description": "Milestone 4: uncertainty method and calibration status. Contains: method ('heuristic' or 'empirical_calibrated'), version, calibrated (boolean), sampleCount (evaluated projections used for calibration), coverageObserved (measured interval coverage or null when insufficient). An interval is NOT claimed to be calibrated until coverage has been measured on suitable observations."
+      "type": "object"
     },
     "shadow_evaluation": {
-      "type": "object",
-      "description": "Milestone 4: shadow evaluation results comparing alternative model configurations on the same eligible observations. Contains per-config metrics (baseline, general_personalized, meal_personalized, integrated) with mae, bias, coverage, valid_count. Only populated by the evaluation pipeline after the forecast window has elapsed. Does not modify the original trajectory. Milestone 5.1: shadow replay now uses the immutable input_snapshot, not current records."
+      "type": "object"
     },
     "shadow_eligibility": {
-      "type": "object",
-      "description": "Milestone 5.1: whether this projection is eligible for trustworthy shadow comparison. Contains: eligible (boolean), reason (string). Legacy projections without a valid input_snapshot are marked ineligible with reason 'missing_snapshot' or 'invalid_snapshot'."
+      "type": "object"
     },
     "confidence": {
-      "type": "number",
-      "description": "Overall confidence in the projection, 0 to 1. Low confidence widens the uncertainty band."
+      "type": "number"
     },
     "abstained": {
       "type": "boolean",
-      "default": false,
-      "description": "Whether the engine abstained from producing a trajectory due to insufficient evidence."
+      "default": false
     },
     "abstain_reason": {
-      "type": "string",
-      "description": "Why the engine abstained, when abstained is true."
+      "type": "string"
     },
     "status": {
       "type": "string",
@@ -110,17 +154,14 @@
         "unscorable",
         "superseded"
       ],
-      "default": "active",
-      "description": "Lifecycle state: active (awaiting evaluation), processing (claimed by a worker for evaluation), evaluated (scored against actuals), unscorable (no observations), superseded (replaced by a newer projection)."
+      "default": "active"
     },
     "locked_at": {
       "type": "string",
-      "format": "date-time",
-      "description": "Milestone 5.1: when a worker atomically claimed this projection for evaluation (status transitioned to 'processing'). Cleared when evaluation completes. Used for stale-claim recovery: a projection stuck in 'processing' with an old locked_at is reset to 'active'."
+      "format": "date-time"
     },
     "evaluation": {
-      "type": "object",
-      "description": "Filled by the evaluation pipeline when actual outcomes are compared: status (evaluated/unscorable), reason, horizons [{horizon_min, scored, predicted, actual, error, abs_error, in_interval, exclusion_reason}], mae, bias, coverage, valid_count, excluded_count, exclusions, evaluation_version, evaluated_at."
+      "type": "object"
     }
   },
   "required": [

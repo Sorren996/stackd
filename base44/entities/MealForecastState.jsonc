@@ -1,0 +1,66 @@
+{
+  "name": "MealForecastState",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string"
+    },
+    "model_version": {
+      "type": "string"
+    },
+    "timezone": {
+      "type": "string"
+    },
+    "buckets": {
+      "type": "object",
+      "description": "Forecast-only response fits keyed by local three-hour time bucket and carb-size band; never used by support calculations."
+    },
+    "learned_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "history": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "description": "Last twelve parameter versions, counts and training cutoffs."
+    }
+  },
+  "required": [
+    "user_id",
+    "model_version",
+    "timezone",
+    "buckets",
+    "learned_at"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "data.user_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

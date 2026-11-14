@@ -44,6 +44,6 @@ test('duplicate timestamps including corrections count once in projection inputs
 });
 test('stored model label and split-rate diagnostics describe the actual engine',()=>{
   const result=projectGlucose(normalizeInputs(readings.map(r=>({...r,recorded_at:new Date(r.time).toISOString()})),[],[{units:26,administered_at:new Date(dose.atTime).toISOString(),insulin_type:'NovoLog'}],{insulin_sensitivity_mgdl_per_unit:10,meal_insulin_units_per_5g:1.5},at('09:45')));
-  assert.equal(result.modelVersion,'2.2.0-activity-led');
+  assert.equal(result.modelVersion,'2.3.0-meal-context');
   assert.equal(result.effectiveParameters.shapeEngine.splitRates.length,25);
 });

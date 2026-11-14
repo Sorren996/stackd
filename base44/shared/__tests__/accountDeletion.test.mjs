@@ -130,7 +130,8 @@ test("the whole plan fits inside one delete burst", async () => {
   // function is one caller for every account. Crossing it is what reported a
   // populated account's records as unremovable, so the plan is budgeted.
   const deletes = sr.state.calls.filter((c) => c.op === "deleteMany").length;
-  assert.ok(deletes <= 45, `${deletes} deletes issued in one burst`);
+  // Includes the forecast-only meal state; still fourteen calls below the burst cap.
+  assert.ok(deletes <= 46, `${deletes} deletes issued in one burst`);
 });
 
 test("a rate-limited delete is retried, not reported as unremovable data", async () => {

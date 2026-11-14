@@ -26,8 +26,8 @@
 // The shape engine is now the superposition model (v2). The old rate-balance
 // versions stay defined so historical rows keep their own label, but nothing
 // new is generated under them.
-export const PROJECTION_MODEL_VERSION = "2.2.0-activity-led";
-export const BASELINE_MODEL_VERSION = "2.2.0-activity-led";
+export const PROJECTION_MODEL_VERSION = "2.3.0-meal-context";
+export const BASELINE_MODEL_VERSION = "2.3.0-meal-context";
 // DEPRECATED: learned multipliers are kept in shadow only and no longer shape
 // a projection, so no new projection is ever labelled personalized.
 export const PERSONALIZED_MODEL_VERSION = "1.1.0-personalized";
@@ -41,6 +41,7 @@ export const MEAL_RESPONSE_MODEL_VERSION_PERSONALIZED = "1.1.0-meal-personalized
 import { extractEffectiveMealParams } from "./modelResolution";
 import { getEmpiricalSigma, saturateHalfWidth, UNCERTAINTY_CEILING_MGDL } from "./uncertaintyCalibration";
 import { mealInPlayWindowMinutes } from "../mealInPlayWindow";
+import { resolveForecastMeal } from './mealForecastContext.js';
 import { getInsulinProfile } from '../insulinPharmacology';
 import { projectSuperposition, GLUCOSE_FLOOR, GLUCOSE_CEILING, rescueShapeFor, rescueAbsorptionRate } from "./superposition";
 
@@ -333,7 +334,7 @@ export function insulinActivityRateUnitsPerMin(dose, atTime) {
 // term in the engine (rescueShapeFor: peak 20–30 min, spent by 45–60), are
 // never counted as meals for confounding or meal-response learning, and are
 // never part of insulin coverage. Informational inputs to a forecast only.
-const RESCUE_WINDOW_MIN = 60;
+const RESCUE_WINDOW_MIN = 75;
 
 // How long a logged meal is treated as still delivering carbohydrate. This is
 // the same setting the meal review reads (meal_outcome_window_minutes), so the
@@ -454,7 +455,7 @@ export function normalizeInputs(rawReadings, rawMeals, rawDoses, settings, now) 
     if (!Number.isFinite(mealTime)) return false;
     // Size-scaled in-play window — the same rule the graph and the meal review
     // read, so a big meal is never treated as over mid-absorption.
-    const inPlayMin = mealInPlayWindowMinutes(m.carbs, mealOutcomeWindowMin);
+    const inPlayMin = resolveForecastMeal(m, null, settings?.timezone || 'UTC', deriveSpeedClass(m)).shape.durationMin;
     return mealTime <= now && mealTime + inPlayMin * MINUTE_MS > now;
   });
 
@@ -497,6 +498,7 @@ export function normalizeInputs(rawReadings, rawMeals, rawDoses, settings, now) 
       isf, unitsPer5g, targetLow, targetHigh,
       absorptionSpeedFactors: readAbsorptionSpeedFactors(settings),
       mealOutcomeWindowMin,
+      timezone: settings?.timezone || 'UTC',
     },
     anchor, momentumMgDlPerMin: momentum,
     dataQuality: {
@@ -728,12 +730,7 @@ export function projectGlucose(snapshot, opts = {}) {
     anchorValue,
     anchorTime,
     readings: snapshot.readings,
-    meals: snapshot.activeMeals.map((meal) => ({
-      carbs: Number(meal.carbs) || 0,
-      consumedAt: new Date(meal.consumed_at).getTime(),
-      speedClass: deriveSpeedClass(meal),
-      speedFactor: speedFactorForMeal(meal, snapshot.settings, mealModelParams),
-    })),
+    meals: snapshot.activeMeals.map((meal) => resolveForecastMeal(meal, opts.mealForecastState, snapshot.settings.timezone, deriveSpeedClass(meal))),
     // Rescue carbs are THEIR OWN term with their own short curve and their own
     // logged grams — never a share of a meal's carbohydrate, and never the
     // meal's long tail. Magnitude is capped at the grams logged.
@@ -758,7 +755,7 @@ export function projectGlucose(snapshot, opts = {}) {
   // What the shape did with the measured trend, kept for audit and for the band.
   const shapeDiagnostics = superposition.diagnostics || {};
   const momentum = shapeDiagnostics.momentum || null;
-  const momentumBandMgdl = momentum?.damped ? 10 : 0;
+  const momentumBandMgdl = (momentum?.damped ? 10 : 0) + Math.max(0, ...(shapeDiagnostics.mealComponents||[]).map(m=>10*(1-(m.learning_weight||0))));
 
   // ── The band ───────────────────────────────────────────────────────────
   // Two rules: offset 0 IS the reading (lower = upper = the value on screen),
@@ -819,62 +816,10 @@ export function projectGlucose(snapshot, opts = {}) {
   // Active speed classes (for meal-response evaluation grouping).
   const activeSpeedClasses = [...new Set(snapshot.activeMeals.map((m) => deriveSpeedClass(m)))];
 
-  const totalActiveCarbGrams = snapshot.activeMeals.reduce((s, m) => {
-    const mealTime = new Date(m.consumed_at).getTime();
-    const elapsed = (snapshot.now - mealTime) / MINUTE_MS;
-    const speedClass = deriveSpeedClass(m);
-    const classParams = mealModelParams?.[speedClass];
-    const speedFactor = classParams?.speedFactor != null ? Number(classParams.speedFactor) : null;
-    const params = deriveCurveParams(m, speedFactor);
-    const rateFn = params.dualWave && params.secondPeakMinutes != null
-      ? (t) => dualWaveRate(t, params.peakMinutes, params.secondPeakMinutes, params.blend)
-      : (t) => gammaRate(t, params.peakMinutes, ABSORPTION_SHAPE_EXP);
-    const step = 2;
-    let totalArea = 0;
-    for (let t = 0; t < params.durationMinutes; t += step) {
-      totalArea += ((rateFn(t) + rateFn(t + step)) / 2) * step;
-    }
-    if (totalArea <= 0) return s;
-    let elapsedArea = 0;
-    const cap = Math.min(elapsed, params.durationMinutes);
-    for (let t = 0; t < cap; t += step) {
-      elapsedArea += ((rateFn(t) + rateFn(t + step)) / 2) * step;
-    }
-    const fraction = Math.max(0, Math.min(1, elapsedArea / totalArea));
-    return s + Number(m.carbs) * (1 - fraction);
-  }, 0);
+  const totalActiveCarbGrams = shapeDiagnostics.activeCarbs || 0;
 
-  // Rescue carb grams still on board, using the rescue's own curve.
-  const totalActiveRescueCarbGrams = snapshot.activeRescueCarbs.reduce((s, m) => {
-    const mealTime = new Date(m.consumed_at).getTime();
-    const elapsed = (snapshot.now - mealTime) / MINUTE_MS;
-    const shape = rescueShapeFor(rescueSpeed);
-    const rateFn = (t) => rescueAbsorptionRate(t, shape);
-    const step = 1;
-    let totalArea = 0;
-    for (let t = 0; t < shape.durationMin; t += step) {
-      totalArea += ((rateFn(t) + rateFn(t + step)) / 2) * step;
-    }
-    if (totalArea <= 0) return s;
-    let elapsedArea = 0;
-    const cap = Math.min(elapsed, shape.durationMin);
-    for (let t = 0; t < cap; t += step) {
-      elapsedArea += ((rateFn(t) + rateFn(t + step)) / 2) * step;
-    }
-    const fraction = Math.max(0, Math.min(1, elapsedArea / totalArea));
-    return s + Number(m.carbs) * (1 - fraction);
-  }, 0);
-
-  const totalActiveInsulinUnits = snapshot.activeDoses.reduce((s, d) => {
-    const units = Number(d?.units) || 0;
-    const doseTime = new Date(d?.administered_at || d?.created_at).getTime();
-    const elapsed = (snapshot.now - doseTime) / MINUTE_MS;
-    const dia = getDoseTierDIA(units);
-    if (elapsed >= dia) return s;
-    const x = elapsed / dia;
-    const iobFrac = Math.pow(1 - x, 7) + 7 * x * Math.pow(1 - x, 6) + 21 * x * x * Math.pow(1 - x, 5);
-    return s + units * Math.max(0, iobFrac);
-  }, 0);
+  // These summaries use exactly the same curves as the forecast.
+  const totalActiveRescueCarbGrams = shapeDiagnostics.activeRescueCarbs || 0;
 
   return {
     trajectory, anchor: snapshot.anchor, modelVersion, mealModelVersion,
@@ -895,8 +840,8 @@ export function projectGlucose(snapshot, opts = {}) {
       settingsCalibrated: snapshot.dataQuality.calibrated,
     },
     activeInputs: {
-      totalActiveCarbGrams: Math.round(totalActiveCarbGrams + totalActiveRescueCarbGrams),
-      totalActiveInsulinUnits: Math.round(totalActiveInsulinUnits * 10) / 10,
+      totalActiveCarbGrams: Math.round(totalActiveCarbGrams),
+      totalActiveInsulinUnits: Math.round(shapeDiagnostics.activeInsulinUnits * 10) / 10,
       mealCount: snapshot.activeMeals.length,
       rescueCarbGrams: Math.round(totalActiveRescueCarbGrams),
       rescueCarbCount: snapshot.activeRescueCarbs.length,

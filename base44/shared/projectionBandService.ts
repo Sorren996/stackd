@@ -1,6 +1,6 @@
 import { readPages } from './projectionResidualScoring.ts';
 import { flattenResiduals, fitResidualBand, applyResidualBand } from './residualBandMath.ts';
-export async function residualBandForUser(sr,userId,trajectory,volatilitySd,now=Date.now(),persist=true,modelVersion=null) {
+export async function residualBandForUser(sr,userId,trajectory,volatilitySd,now=Date.now(),persist=true,modelVersion=null,mealComponents=[]) {
   const [records,states] = await Promise.all([
     readPages(sr.entities.ProjectionResidual,{user_id:userId},'-generated_at'),
     sr.entities.ProjectionBandState.filter({user_id:userId},{sort:'created_date',limit:1})
@@ -10,6 +10,15 @@ export async function residualBandForUser(sr,userId,trajectory,volatilitySd,now=
   const state=states.items[0];
   const fit=fitResidualBand(rows,volatilitySd,trajectory,rows.length ? state||{} : {},now);
   const band=applyResidualBand(trajectory,fit);
+  if (mealComponents.length) {
+    const evidenceGap=Math.max(...mealComponents.map(m=>1-(m.learning_weight||0)));
+    const scale=1+0.25*evidenceGap;
+    const widened=band.trajectory.map(p=>({...p,lower:p.value-(p.value-p.lower)*scale,upper:p.value+(p.upper-p.value)*scale}));
+    const stop=widened.findIndex(p=>(p.upper-p.lower)/2>45);
+    band.trajectory=stop<0?widened:widened.slice(0,Math.max(1,stop));
+    band.summary.trajectoryEndsAtMinutes=band.trajectory.at(-1)?.min_offset||0;
+    band.summary.mealEvidenceAdjustment={scale,minimumSamples:Math.min(...mealComponents.map(m=>m.sample_count||0)),validated:false};
+  }
   const anchorAt=trajectory[0]?.time;
   if (anchorAt != null) {
     const anchorIso=new Date(anchorAt).toISOString();

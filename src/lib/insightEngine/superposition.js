@@ -66,11 +66,11 @@
 // anywhere in the app. When the engine expects its own error to exceed the
 // internal bar it returns nothing at all rather than a confident-looking line.
 
-import { measureVelocity, VELOCITY_MAX_MGDL_PER_MIN } from "./measuredVelocity";
+import { measureVelocity, VELOCITY_MAX_MGDL_PER_MIN } from "./measuredVelocity.js";
 import { getInsulinProfile } from '../insulinPharmacology.js';
 import { projectionOpening, MOMENTUM_TAU, clampRate } from './projectionOpening.js';
 
-export const SUPERPOSITION_MODEL_VERSION = "2.2.0-activity-led";
+export const SUPERPOSITION_MODEL_VERSION = "2.3.0-meal-context";
 
 export const GRID_MIN = 5;
 const MINUTE_MS = 60 * 1000;
@@ -161,43 +161,27 @@ export function insulinActionFraction(minSinceDose, shape) {
 // Peak appearance 45–90 min for mixed / high-fat meals, earlier for fast
 // carbohydrate, and a high-fat tail that keeps delivering for 3–5 h.
 const CARB_SHAPES = {
-  fast: { firstPeakMin: 35, durationMin: 150, secondPeakMin: null, blend: 0, secondShapeExp: 2.2 },
-  mixed: { firstPeakMin: 65, durationMin: 210, secondPeakMin: null, blend: 0, secondShapeExp: 2.2 },
-  high_fat: { firstPeakMin: 50, durationMin: 300, secondPeakMin: 150, blend: 0.65, secondShapeExp: 2.0 },
+  fast: { onsetMin: 5, firstPeakMin: 20, durationMin: 75, secondPeakMin: null, blend: 0, secondShapeExp: 2.2 },
+  mixed: { onsetMin: 10, firstPeakMin: 55, durationMin: 210, secondPeakMin: null, blend: 0, secondShapeExp: 2.2 },
+  high_fat: { onsetMin: 10, firstPeakMin: 55, durationMin: 300, secondPeakMin: 150, blend: 0.15, secondShapeExp: 2.0 },
 };
 
 export function carbShapeFor(speedClass, speedFactor) {
-  const base = CARB_SHAPES[speedClass] || CARB_SHAPES.mixed;
-  // A learned per-class speed factor (AbsorptionAdjustment.speed_factor)
-  // scales WHEN the carbs land: <1 earlier, >1 later. Clamped so a single
-  // class can never invert the shape.
-  const s = Number.isFinite(speedFactor) && speedFactor > 0
-    ? Math.max(0.7, Math.min(1.45, speedFactor))
-    : 1;
-  const firstPeakMin = Math.max(20, Math.min(120, base.firstPeakMin * s));
-  const durationMin = Math.max(90, Math.min(360, base.durationMin * s));
-  const secondPeakMin = base.secondPeakMin == null
-    ? null
-    : Math.max(firstPeakMin + 40, Math.min(durationMin - 20, base.secondPeakMin * s));
-  return {
-    firstPeakMin,
-    durationMin,
-    secondPeakMin,
-    blend: base.blend,
-    secondShapeExp: base.secondShapeExp,
-    shapeExp: 3.0,
-  };
+  const base = CARB_SHAPES[String(speedClass || 'mixed')] || CARB_SHAPES.mixed;
+  return { ...base, shapeExp: 3.0 };
 }
 
 function carbRateRaw(t, shape) {
-  const single = gammaRate(t, shape.firstPeakMin, shape.shapeExp);
+  const onset = shape.onsetMin || 0;
+  if (t <= onset || t >= shape.durationMin) return 0;
+  const single = gammaRate(t - onset, shape.firstPeakMin - onset, shape.shapeExp);
   if (!shape.secondPeakMin || !(shape.blend > 0)) return single;
-  const second = gammaRate(t, shape.secondPeakMin, shape.secondShapeExp);
+  const second = gammaRate(t - onset, shape.secondPeakMin - onset, shape.secondShapeExp);
   return single * (1 - shape.blend) + second * shape.blend;
 }
 
 function carbAuc(shape) {
-  const key = `carb|${shape.firstPeakMin}|${shape.durationMin}|${shape.secondPeakMin}|${shape.blend}|${shape.shapeExp}|${shape.secondShapeExp}`;
+  const key = `carb|${shape.onsetMin || 0}|${shape.firstPeakMin}|${shape.durationMin}|${shape.secondPeakMin}|${shape.blend}|${shape.shapeExp}|${shape.secondShapeExp}`;
   const cached = aucCache.get(key);
   if (cached != null) return cached;
   let area = 0;
@@ -238,14 +222,15 @@ export function carbAbsorptionFraction(minSinceMeal, shape) {
 // by 45–60. It therefore gets its own term with its own shape, so it can never
 // inherit a meal's high-fat tail, and the mass it contributes is exactly the
 // grams logged for the rescue — never a share of some larger meal.
-export const RESCUE_PEAK_MIN = 25;
-export const RESCUE_DURATION_MIN = 60;
+export const RESCUE_PEAK_MIN = 20;
+export const RESCUE_DURATION_MIN = 75;
 
 export function rescueShapeFor(speedFactor) {
   const s = Number.isFinite(speedFactor) && speedFactor > 0
     ? Math.max(0.75, Math.min(1.35, speedFactor))
     : 1;
   return {
+    onsetMin: 5,
     firstPeakMin: Math.max(15, Math.min(35, RESCUE_PEAK_MIN * s)),
     durationMin: Math.max(45, Math.min(75, RESCUE_DURATION_MIN * s)),
     secondPeakMin: null,
@@ -341,9 +326,11 @@ export function projectSuperposition(inputs) {
   const mealTerms = (meals || [])
     .filter((m) => m && Number(m.carbs) > 0 && Number.isFinite(Number(m.consumedAt)))
     .map((m) => ({
+      ...m,
       carbs: Number(m.carbs),
       consumedAt: Number(m.consumedAt),
-      shape: carbShapeFor(m.speedClass || "mixed", m.speedFactor),
+      amplitudeFactor: Number(m.amplitudeFactor) > 0 ? Number(m.amplitudeFactor) : 1,
+      shape: m.shape || carbShapeFor(m.speedClass || "mixed", m.speedFactor),
     }));
 
   // Rescue carbs are their own term: their own mass (exactly the grams logged)
@@ -362,7 +349,7 @@ export function projectSuperposition(inputs) {
     let rate = 0;
     for (const m of mealTerms) {
       const elapsed = tMin - (m.consumedAt - anchorTime) / MINUTE_MS;
-      rate += m.carbs * carbSensitivity * carbAbsorptionRate(elapsed, m.shape);
+      rate += m.carbs * carbSensitivity * m.amplitudeFactor * carbAbsorptionRate(elapsed, m.shape);
     }
     return rate;
   };
@@ -437,6 +424,11 @@ export function projectSuperposition(inputs) {
       lowCrossingMinutes: anchor >= 70 ? points.find(p => p.min_offset > 0 && p.value < 70)?.min_offset ?? null : null,
       lagCorrection: 0,
       carbSensitivity: carbSensitivity,
+      carbRateAtAnchor: carbRateAt(0) + rescueRateAt(0),
+      activeCarbs: mealTerms.reduce((sum,m)=>sum+m.carbs*(1-carbAbsorptionFraction((anchorTime-m.consumedAt)/MINUTE_MS,m.shape)),0) + rescueTerms.reduce((sum,r)=>sum+r.grams*(1-carbAbsorptionFraction((anchorTime-r.atTime)/MINUTE_MS,r.shape)),0),
+      activeRescueCarbs: rescueTerms.reduce((sum,r)=>sum+r.grams*(1-carbAbsorptionFraction((anchorTime-r.atTime)/MINUTE_MS,r.shape)),0),
+      activeInsulinUnits: activeUnits,
+      mealComponents: mealTerms.map(m=>({id:m.id,carbs:m.carbs,onset:m.shape.onsetMin||0,peak:m.shape.firstPeakMin,duration:m.shape.durationMin,amplitude:m.carbs*(carbSensitivity||0)*m.amplitudeFactor,source:m.source||'theoretical',sample_count:m.sampleCount||0,learning_weight:m.learningWeight||0,bucket:m.bucket,kind:'meal'})).concat(rescueTerms.map(r=>({carbs:r.grams,onset:r.shape.onsetMin||0,peak:r.shape.firstPeakMin,duration:r.shape.durationMin,amplitude:r.grams*(carbSensitivity||0)*r.magnitude,source:'theoretical',kind:'rescue'}))),
       insulinSensitivity,
       rateAtAnchor: Math.round(mechanisticRateAtAnchor * 1000) / 1000,
       splitRates: points.map(p => ({ min_offset: p.min_offset, insulin: -p.insulinRate, carbs: p.carbRate, rescue: p.rescueRate, momentum: p.momentumRate, stability: p.stabilityRate, total: p.rate })),

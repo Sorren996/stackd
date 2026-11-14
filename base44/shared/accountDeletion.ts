@@ -78,6 +78,7 @@ const KEYED: Array<{ entity: string; fields: string[] }> = [
   { entity: 'NotificationLedger', fields: ['user_id'] },
   { entity: 'ProjectionResidual', fields: ['user_id'] },
   { entity: 'ProjectionBandState', fields: ['user_id'] },
+  { entity: 'MealForecastState', fields: ['user_id'] },
   { entity: 'ProjectionInputChange', fields: ['user_id'] },
   { entity: 'SharedAccess', fields: ['sharer_user_id', 'follower_user_id'] },
   { entity: 'SharedInvitation', fields: ['sharer_user_id'] },

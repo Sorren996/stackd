@@ -10,6 +10,7 @@ import { buildInputSnapshot } from "./projectionSnapshot.ts";
 import { residualBandForUser } from "./projectionBandService.ts";
 import { reconcileReadings } from './readingPersistence.ts';
 import { completeDoseJoin } from './projectionDoseGuard.ts';
+import { loadMealForecastState } from './mealForecastService.ts';
 import { learnRescueCarbModel, observeRescueEpisodes, MIN_EPISODES } from "./rescueCarbLearning.ts";
 
 // Shared server-side GlucoseProjection generator.
@@ -415,7 +416,9 @@ async function runGenerateProjectionForUser({
     volatilitySd: Number(snapshot.dataQuality?.volatilitySd),
   });
 
+  const mealForecastState = await loadMealForecastState(sr, normalizedUserId, settings, now);
   const result = projectGlucose(snapshot, {
+    mealForecastState,
     modelResolution,
     uncertaintyCalibration,
     rescueParams,
@@ -426,7 +429,8 @@ async function runGenerateProjectionForUser({
   // are replaced, using this user's clean, signed, per-horizon residuals.
   if (!result.abstained && result.trajectory.length) {
     const band = await residualBandForUser(sr, normalizedUserId, result.trajectory,
-      Number(snapshot.dataQuality?.volatilitySd), now, true, result.modelVersion);
+      Number(snapshot.dataQuality?.volatilitySd), now, true, result.modelVersion,
+      result.effectiveParameters?.shapeEngine?.mealComponents || []);
     result.trajectory = band.trajectory;
     result.horizonMinutes = band.summary.trajectoryEndsAtMinutes;
     result.uncertaintySummary = {
@@ -435,12 +439,13 @@ async function runGenerateProjectionForUser({
         bandSource: uncertaintyCalibration.bandSource, usedOnlyBelow30Samples: true },
     };
     result.uncertainty = { ...result.uncertainty, method: band.summary.method,
-      version: band.summary.version, calibrated: !band.summary.defaultBlend && !band.summary.contextAdjustment,
+      version: band.summary.version, calibrated: !band.summary.defaultBlend && !band.summary.contextAdjustment && !band.summary.mealEvidenceAdjustment,
       sampleCount: band.summary.sampleCount, coverageObserved: band.summary.coverage,
       bandSource: 'user_residual_quantiles', residualCount: band.summary.sampleCount };
   }
 
-  const inputSnapshot = { ...buildInputSnapshot(readings, meals, doses, settings, modelResolution, now), previous_projection: previousProjection };
+  const inputSnapshot = { ...buildInputSnapshot(readings, meals, doses, settings, modelResolution, now), previous_projection: previousProjection,
+    meal_forecast_state: mealForecastState ? {model_version:mealForecastState.model_version,timezone:mealForecastState.timezone,buckets:mealForecastState.buckets,learned_at:mealForecastState.learned_at} : null };
   const anchorIso = result.anchor ? new Date(result.anchor.time).toISOString() : null;
 
   const recordPayload = {
@@ -452,6 +457,10 @@ async function runGenerateProjectionForUser({
     anchor_value: result.anchor ? result.anchor.value : null,
     measured_velocity_mgdl_per_min: result.measuredVelocity ?? null,
     applied_momentum: result.momentum ?? null,
+    carb_rate_at_anchor: result.effectiveParameters?.shapeEngine?.carbRateAtAnchor ?? 0,
+    active_carbs: result.effectiveParameters?.shapeEngine?.activeCarbs ?? 0,
+    carb_sensitivity_mgdl_per_gram: result.effectiveParameters?.shapeEngine?.carbSensitivity ?? mgPerGram,
+    meal_components: result.effectiveParameters?.shapeEngine?.mealComponents ?? [],
     horizon_minutes: result.horizonMinutes,
     trajectory: result.trajectory.map((p: any) => ({
       time: new Date(p.time).toISOString(),
