@@ -8,6 +8,7 @@ import { MR } from "./mealReviewTheme";
 import { analyzeGlucoseResponse } from "@/lib/mealGlucoseResponse";
 import { formatGlucose, glucoseUnitLabel } from "@/lib/glucoseUnits";
 import { formatReadingAge } from "@/lib/glucoseStaleness";
+import { markMealReviewOpened } from "@/lib/mealReviewState";
 
 /**
  * Meal Review — one card, one story.
@@ -125,6 +126,24 @@ export default function MealReviewView({ meals = null, mealInsight = null, gluco
   const targetLow = primary?.targetLow ?? 70;
   const targetHigh = primary?.targetHigh ?? 180;
   const singleMeal = entries.length === 1;
+
+  // Opening a meal's review is recorded once on the meal itself, so the reminder
+  // worker can tell an opened review from an untouched one. A single meal's
+  // review is open as soon as this view is; otherwise a row is open once its
+  // accordion is — which is also how the reminder's own link arrives.
+  const openedMealIds = useMemo(() => {
+    const ids = new Set();
+    if (singleMeal && primary?.mealId) ids.add(primary.mealId);
+    entries.forEach((entry) => {
+      if (entry.mealId && openIds.includes(entry.id)) ids.add(entry.mealId);
+    });
+    return [...ids];
+  }, [entries, openIds, singleMeal, primary?.mealId]);
+  const openedKey = openedMealIds.join("|");
+  useEffect(() => {
+    if (!openedKey) return;
+    for (const id of openedKey.split("|")) markMealReviewOpened(id).catch(() => {});
+  }, [openedKey]);
 
   const analysis = useMemo(() => {
     if (!Number.isFinite(windowFrom)) return {};

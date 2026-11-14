@@ -4,6 +4,8 @@ import {
   X } from
 "lucide-react";
 import TrendMark from "@/components/glucose/TrendMark";
+import { useQueryClient } from "@tanstack/react-query";
+import { mealReviewState, migrateLegacyResolvedMeals } from "@/lib/mealReviewState";
 import { formatMonitoringEndTime } from "@/lib/mealMonitoring";
 import { useMonitoringStatus } from "@/hooks/useMonitoringStatus";
 import {
@@ -765,6 +767,7 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, liveRea
   const [clockMinute, setNowMinute] = useState(() => Math.floor(Date.now() / MINUTE_MS));
   const nowMinute = snapshotNow ? Math.floor(snapshotNow / MINUTE_MS) : clockMinute;
   const { connected: dexcomConnected } = useDexcomConnection();
+  const queryClient = useQueryClient();
   const safeDoses = Array.isArray(doses) ? doses : [];
   const safeGlucoseReadings = Array.isArray(glucoseReadings) ? glucoseReadings : [];
   const safeCarbEntries = Array.isArray(carbEntries) ? carbEntries : [];
@@ -902,32 +905,39 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, liveRea
 
   );
 
-  const [resolvedMealIds, setResolvedMealIds] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem("resolved_meal_ids") || "[]");
-    } catch {
-      return [];
+  // A meal's verdict on its review lives on the meal record itself, written by
+  // the review card and read by the reminder worker on the server — so it
+  // survives a device change and the retry can be answered.
+  const reviewStateByMealId = useMemo(() => {
+    const map = new Map();
+    for (const entry of safeCarbEntries) {
+      const state = mealReviewState(entry);
+      if (state) map.set(entry.id, state);
     }
-  });
+    return map;
+  }, [safeCarbEntries]);
+
+  // One-time: the ids this device kept before the state lived on the meal.
+  useEffect(() => {
+    migrateLegacyResolvedMeals()
+      .then((moved) => {
+        if (moved) queryClient.invalidateQueries({ queryKey: ["carb-entries"] });
+      })
+      .catch(() => {});
+  }, []);
 
   const currentMealId = mealInsightRaw?.details?.meal?.id;
-  const isMealResolved = Boolean(currentMealId && resolvedMealIds.includes(currentMealId));
+  const currentMealReviewState = currentMealId ? reviewStateByMealId.get(currentMealId) || null : null;
+  const isMealResolved = currentMealReviewState === "reviewed";
 
-  // When the user marks a meal as resolved, override the review flag so both
-  // the card and tooltip present the completed state immediately.
-  const mealInsight =
-  isMealResolved && mealInsightRaw?.details ?
+  // Reviewed keeps the card in its completed state; dismissed takes it away.
+  const mealInsight = !mealInsightRaw?.details ?
+  mealInsightRaw :
+  currentMealReviewState === "dismissed" ?
+  null :
+  isMealResolved ?
   { ...mealInsightRaw, details: { ...mealInsightRaw.details, mealStillUnderReview: false } } :
   mealInsightRaw;
-
-  const handleResolveMeal = () => {
-    if (!currentMealId) return;
-    const updated = [...resolvedMealIds, currentMealId];
-    setResolvedMealIds(updated);
-    try {
-      localStorage.setItem("resolved_meal_ids", JSON.stringify(updated));
-    } catch {}
-  };
 
   // Active meals still within their glucose-response window. When 2+ meals
   // are active, the Meal Review renders one full card per meal (most recent
@@ -942,17 +952,18 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, liveRea
       .map((group) => {
         const rawInsight = computeMealAlignmentInsight(safeDoses, safeCarbEntries, safeGlucoseReadings, latestGlucose, insulinSettings, group);
         const mealId = rawInsight?.details?.meal?.id;
-        const resolved = mealId && resolvedMealIds.includes(mealId);
-        const insight = resolved && rawInsight?.details
+        const mealState = mealId ? reviewStateByMealId.get(mealId) || null : null;
+        const insight = mealState === "reviewed" && rawInsight?.details
           ? { ...rawInsight, details: { ...rawInsight.details, mealStillUnderReview: false } }
           : rawInsight;
         const name = group.carbEntries[0]?.food_name || group.carbEntries[0]?.name || "Meal";
         const carbs = group.carbs;
         const units = (group.doses || []).reduce((s, d) => s + (Number(d.units) || 0), 0);
-        return { group, insight, name, mealTime: group.mealTime, carbs, units, _resolved: Boolean(resolved) };
+        // Either verdict takes that meal's card out of the stack.
+        return { group, insight, name, mealTime: group.mealTime, carbs, units, _settled: Boolean(mealState) };
       })
-      .filter((meal) => !meal._resolved);
-  }, [safeDoses, safeCarbEntries, safeGlucoseReadings, latestGlucose, insulinSettings, nowMinute, resolvedMealIds]);
+      .filter((meal) => !meal._settled);
+  }, [safeDoses, safeCarbEntries, safeGlucoseReadings, latestGlucose, insulinSettings, nowMinute, reviewStateByMealId]);
 
   const netActiveCarbs = worstPoint?.net ?? 0;
   const netPeakTime = worstPoint?.time ?? null;
@@ -1237,7 +1248,6 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, liveRea
           const dose = safeDoses.find((d) => d.id === id);
           if (dose) onDeleteDose({ type: "insulin", item: dose });
         } : null}
-        onResolve={handleResolveMeal}
         onAddLog={() => {
           if (typeof window !== "undefined") {
             window.dispatchEvent(new Event("stackd-open-log-menu"));

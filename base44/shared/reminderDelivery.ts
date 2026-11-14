@@ -23,6 +23,7 @@ import {
   groupDueItems,
   mealReviewDestination,
   mealReviewFireState,
+  mealReviewSendDecision,
   mergedReminderCopy,
   reminderCopy,
   sensorStageDue,
@@ -158,9 +159,13 @@ async function sendOwnerReminders({ sr, ownerId, reminders, quiet, ledger, nowMs
     if (!state.firstDue && !state.retryDue) continue;
     const mealAtMs = Date.parse(String(meal?.consumed_at ?? ""));
     if (!Number.isFinite(mealAtMs)) continue;
-    // Already reviewed: cancelled silently, so the retry never lands either.
-    if (await mealReviewedSince(sr, ownerId, meal, mealAtMs)) {
-      await cancelMealReminder(sr, meal.id);
+    // The meal itself is re-read here, at the moment the prompt would go out —
+    // never the copy this sweep started with. A meal the person has reviewed or
+    // dismissed goes quiet, and so does one that has since been deleted.
+    const freshMeal = await readMealForSend(sr, meal.id);
+    const decision = mealReviewSendDecision(freshMeal, state.firstDue ? "first" : "retry");
+    if (!decision.send) {
+      if (freshMeal) await cancelMealReminder(sr, freshMeal.id);
       counters.skipped += 1;
       continue;
     }
@@ -274,6 +279,13 @@ async function sendOwnerReminders({ sr, ownerId, reminders, quiet, ledger, nowMs
               meals.length === mealIds.length &&
               meals.every((meal: any) => meal?.reminder_state === "scheduled" || meal?.reminder_state === "sent");
             if (!waiting) return { ok: false, reason: "meal_reminder_cancelled" };
+            // Read again seconds before the send, for the same reason the retry
+            // is: a review opened or settled in the meantime is not chased.
+            for (const item of members.filter((member) => member.mealId)) {
+              const freshMeal = meals.find((meal: any) => String(meal?.id) === String(item.mealId)) || null;
+              const decision = mealReviewSendDecision(freshMeal, item.kind);
+              if (!decision.send) return { ok: false, reason: decision.reason };
+            }
           }
           return { ok: true };
         },
@@ -423,21 +435,11 @@ function basalLoggedToday(doses: any[], timeZone: unknown, dateKey: string): boo
 }
 
 /**
- * Whether that meal has already been reviewed — either its analysis is complete
- * or a reflection has been written since it was logged. Anything less than a
- * record is not treated as reviewed, so the prompt is never withheld on a guess.
+ * That meal's own record, freshly read for one send decision. Null means the
+ * record is gone, which is itself the answer: nothing is owed to a deleted meal.
  */
-async function mealReviewedSince(sr: any, ownerId: string, meal: any, mealAtMs: number): Promise<boolean> {
-  if (meal?.id) {
-    const analyses = asArray(await sr.entities.MealResponseAnalysis.filter(
-      { meal_log_id: meal.id, analysis_status: "complete" },
-      { limit: 1 }
-    ));
-    if (analyses.length) return true;
-  }
-  const reflections = asArray(await sr.entities.JournalEntry.filter(
-    { created_by_id: ownerId, entry_date: { $gte: new Date(mealAtMs).toISOString() } },
-    { limit: 1 }
-  ));
-  return reflections.length > 0;
+async function readMealForSend(sr: any, mealId: any): Promise<any | null> {
+  if (!mealId) return null;
+  const rows = asArray(await sr.entities.CarbEntry.filter({ id: String(mealId) }, { limit: 1 }));
+  return rows[0] || null;
 }

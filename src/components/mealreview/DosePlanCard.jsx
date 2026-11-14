@@ -13,7 +13,7 @@ import { MR, SERIF, SERIF_ITALIC } from "./mealReviewTheme";
  * where the numbers come from, and every modeled figure stays inside a
  * disclosure so an estimate is never read as a measurement.
  */
-export default function DosePlanCard({ stillInPlay, insulin, dose, footer }) {
+export default function DosePlanCard({ stillInPlay, insulin, dose, footer, actions }) {
   return (
     <div>
       <div className="px-5 pt-5">
@@ -53,6 +53,7 @@ export default function DosePlanCard({ stillInPlay, insulin, dose, footer }) {
 
       <div className="mx-5 mt-1 border-t" style={{ borderColor: MR.hairline }} />
       <WhatYouAteSection {...footer} />
+      {actions}
     </div>
   );
 }

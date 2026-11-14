@@ -109,6 +109,28 @@
       "format": "date-time",
       "description": "When this meal's first review prompt was sent. The single retry is measured fifteen minutes from this moment, so a delayed sweep can never shorten it."
     },
+    "review_state": {
+      "type": "string",
+      "enum": [
+        "reviewed",
+        "dismissed"
+      ],
+      "enumColors": [
+        "green",
+        "gray"
+      ],
+      "description": "The person's own verdict on this meal's review, written from the review card and read by the reminder worker on the server. reviewed = they went through it; dismissed = they chose not now. Missing or null means the review is still gathering, which is the existing computed behaviour, so older records need no migration. Dismissed is never counted as reviewed."
+    },
+    "reviewed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When review_state was last written. Stored beside the state itself so the record explains when it was settled."
+    },
+    "review_opened_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "The first time this meal's review was opened, written once and never overwritten. An opened review silences the reminder's single retry; the first prompt may still arrive if it is already due."
+    },
     "is_locked": {
       "type": "boolean",
       "default": false,

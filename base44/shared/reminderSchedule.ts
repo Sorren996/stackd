@@ -224,6 +224,29 @@ export function mealReviewFireState(meal: any, nowMs: number) {
   };
 }
 
+/**
+ * What is still owed to this meal at the moment a prompt would go out, read
+ * from the meal record itself rather than from anything cached when the
+ * reminder was scheduled.
+ *
+ * - The record is gone: nothing is owed.
+ * - The person reviewed or dismissed the meal: the prompt and its retry are
+ *   both closed, because either way they have already dealt with it.
+ * - They opened the review but left no verdict: the first prompt may still go
+ *   out if it is due, but the retry never follows one they did not answer.
+ */
+export function mealReviewSendDecision(meal: any, kind: "first" | "retry") {
+  if (!meal || !meal.id) return { send: false, reason: "meal_deleted" };
+  const reviewState = String(meal?.review_state || "");
+  if (reviewState === "reviewed" || reviewState === "dismissed") {
+    return { send: false, reason: "meal_review_settled" };
+  }
+  if (kind === "retry" && Boolean(meal?.review_opened_at)) {
+    return { send: false, reason: "meal_review_opened" };
+  }
+  return { send: true, reason: "waiting" };
+}
+
 /** Opening this link lands on the home screen with that meal's review open. */
 export function mealReviewDestination(mealId: unknown): string {
   const id = String(mealId ?? "").trim();

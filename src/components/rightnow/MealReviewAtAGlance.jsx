@@ -7,6 +7,8 @@ import { MR } from "@/components/mealreview/mealReviewTheme";
 import { base44 } from "@/api/base44Client";
 import { generateMealGlucoseResponse, analyzeGlucoseResponse } from "@/lib/mealGlucoseResponse";
 import MealEditOverlay from "@/components/insulin/MealEditOverlay";
+import MealReviewActions from "@/components/mealreview/MealReviewActions";
+import { DISMISSED, REVIEWED, mealReviewState, settleMealReview } from "@/lib/mealReviewState";
 import { getCarbAbsorptionAt, getMealWindowMinutes, deriveDualWaveBlend, getAbsorptionModel } from "@/lib/carbAbsorption";
 import { reconcileMealNarrative } from "@/lib/mealNarrativeReconciler";
 import { useMealModelResolution, entrySpeedFactorFromResolution, hasLearnedTimingFromResolution, learnedTimingCaptionFromResolution, deriveSpeedClass } from "@/hooks/useMealModelResolution";
@@ -71,6 +73,28 @@ export default function MealReviewAtAGlance({ mealInsight, glucoseReadings }) {
   const { resolution } = useMealModelResolution(Boolean(mealInsight));
 
   const d = mealInsight?.details;
+
+  // The verdict is written to the meal's own record — the same field the
+  // reminder worker reads on the server — so it survives a device change.
+  const mealRecordId = d?.meal?.id || null;
+  const [settledNow, setSettledNow] = useState(null);
+  const [settling, setSettling] = useState(false);
+  const settledState = settledNow || mealReviewState(d?.meal);
+  const settle = async (state) => {
+    if (!mealRecordId || settling) return;
+    setSettling(true);
+    try {
+      await settleMealReview(mealRecordId, state);
+      setSettledNow(state);
+      queryClient.invalidateQueries({ queryKey: ["carb-entries"] });
+      queryClient.invalidateQueries({ queryKey: ["carb-entries", "graph"] });
+    } catch {
+      toast.error("That did not save. Please try again.");
+    } finally {
+      setSettling(false);
+    }
+  };
+
   const mealTime = d?.meal?.time ?? now;
   const carbEntries = d?.mealGroup?.carbEntries || (d?.meal ? [d.meal] : []);
   const targetLow = d?.targetLow || 70;
@@ -463,6 +487,14 @@ export default function MealReviewAtAGlance({ mealInsight, glucoseReadings }) {
             : null,
           rescueGrams,
         }}
+        actions={
+          <MealReviewActions
+            settled={Boolean(settledState)}
+            busy={settling}
+            onResolve={() => settle(REVIEWED)}
+            onNotNow={() => settle(DISMISSED)}
+          />
+        }
       />
 
       {editEntries && <MealEditOverlay entries={editEntries} onClose={() => setEditEntries(null)} />}
