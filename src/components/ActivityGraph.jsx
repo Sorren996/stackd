@@ -1605,6 +1605,7 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
                   getGlucoseY={getCandleGlucoseY}
                   latestReading={latestGlucosePoint}
                   readings={scrubReadings}
+                  scrollContainerRef={scrollRef}
                   onForecastSelect={setForecastEstimate}
                   resetSignal={scrubReset} />
 
@@ -1742,6 +1743,7 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
                   getGlucoseY={getGlucoseY}
                   latestReading={latestGlucosePoint}
                   readings={scrubReadings}
+                  scrollContainerRef={scrollRef}
                   onForecastSelect={setForecastEstimate}
                   resetSignal={scrubReset} />
 

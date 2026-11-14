@@ -13,9 +13,8 @@
 //   - The uncertainty band is #AF751B at 10% opacity, no stroke, also smoothed.
 //   - No confidence percentages, model versions, or parameter values are shown
 //     to the user — just the visual trajectory.
-//   - Tapping a point opens an editorial card: WHEN, WHAT, HOW SURE.
-//   - Tap-hold-drag scrubs through every forecast point; keyboard arrows step
-//     point by point; Escape dismisses.
+//   - Tapping a past reading opens an editorial card: WHEN, WHAT, HOW SURE.
+//   - Dragging scrubs: the marker follows the finger, the readout snaps.
 //
 // TWO RULES THIS FILE EXISTS TO ENFORCE:
 //
@@ -32,6 +31,20 @@
 //      draws over it and the card can never select a forecast point that has
 //      since become a real reading.
 //
+// ONE GESTURE MODEL. There is no separate hit area, snap list and offset
+// animator any more, because three mechanisms placing the same dot is what made
+// the scrub fight itself:
+//
+//   - POSITION comes from the finger. While the plot is being scrubbed the dot
+//     sits exactly at the finger's x (clamped to the first reading and the last
+//     forecast point) and at the y the drawn polyline has at that x, so it rides
+//     the trace — readings and dashes alike — instead of hopping between points.
+//   - THE READOUT snaps. Finger x becomes a time in the chart's content space,
+//     and the entry with the nearest own time supplies the numbers: a forecast
+//     point feeds the estimate strip, a reading feeds nothing mid-drag.
+//   - THE GESTURE is claimed once. Horizontal movement belongs to the scrub, the
+//     scroll container is pinned for its duration, and a scrub never cancels.
+//
 // SAFETY: This is an informational wellness estimate, never a clinical
 // prediction.
 
@@ -47,7 +60,9 @@ import { useServerNow } from "@/lib/serverClock";
 import { onGlucoseUnitsChange } from "@/lib/glucoseUnits";
 import { monotoneXPath } from "@/lib/monotonePath";
 import {
-  resolveScrubPoint,
+  nearestPointByTime,
+  interpolatePolylineY,
+  timeAtContentX,
   resolveCardFlip,
   resolveGestureIntent,
 } from "@/lib/projection/projectionScrub";
@@ -61,19 +76,29 @@ const NAV_CLEARANCE = BAR_HEIGHT + 34;
 // tail of a scrub cannot blink the card away.
 const DISMISS_GRACE_MS = 350;
 
-// The visible plot box: the horizontally scrollable window the chart is seen
-// through. The card is clamped to this rather than to the whole viewport, so it
-// can never drift outside the plot.
-function plotBoxFor(el) {
+// The horizontally scrollable window the chart is seen through. It is both the
+// content-space origin for the scrub mapping and the box the card is clamped to.
+function scrollParentOf(el) {
   let node = el?.parentElement;
   while (node) {
     const style = window.getComputedStyle(node);
-    if (/(auto|scroll)/.test(style.overflowX) && node.clientWidth > 0) {
-      return node.getBoundingClientRect();
-    }
+    if (/(auto|scroll)/.test(style.overflowX) && node.clientWidth > 0) return node;
     node = node.parentElement;
   }
   return null;
+}
+
+// The vertical scroller a cancelled gesture hands its movement to.
+function verticalScrollerOf(el) {
+  let node = el?.parentElement;
+  while (node) {
+    const style = window.getComputedStyle(node);
+    if (/(auto|scroll)/.test(style.overflowY) && node.scrollHeight > node.clientHeight + 1) {
+      return node;
+    }
+    node = node.parentElement;
+  }
+  return document.scrollingElement || null;
 }
 
 function pointAgeSeconds(point, nowMs) {
@@ -94,6 +119,9 @@ export default function ProjectionOverlay({
   getGlucoseY,
   latestReading = null,
   readings = [],
+  // The chart's own scroll container. The plot is wider than the screen, so a
+  // clientX only means a time once the scroll offset is added back in.
+  scrollContainerRef = null,
   // A forecast point is described by the estimate strip above the chart, so it
   // is reported to the parent instead of opening the cream card. A real reading
   // still opens the card: it is a measurement, not an estimate.
@@ -102,19 +130,35 @@ export default function ProjectionOverlay({
   // strip out by releasing the scrub.
   resetSignal = 0,
 }) {
+  // The snapped entry: what the numbers show.
   const [activePoint, setActivePoint] = useState(null);
+  // The finger's own position, in the chart's content space: where the dot is.
+  const [finger, setFinger] = useState(null);
   const [scrubbing, setScrubbing] = useState(false);
   // The cream card belongs to a tap and only to a tap: a drag never opens it,
   // and it closes the moment a drag begins.
   const [cardShown, setCardShown] = useState(false);
   const svgRef = useRef(null);
   const hitRef = useRef(null);
-  // Gesture state machine: "idle" | "pending" | "scrubbing" | "cancelled"
+
+  // Gesture state machine: "idle" | "pending" | "scrubbing" | "cancelled".
+  // One decision, made on the first movement, never revisited.
   const gestureStateRef = useRef("idle");
-  const scrubbingRef = useRef(false);
-  const downPosRef = useRef({ x: 0, y: 0 });
+  const tapStartRef = useRef({ x: 0, y: 0 });
+  const pointerPosRef = useRef(null);
   const pointerIdRef = useRef(null);
-  const svgRectRef = useRef(null);
+  // The entries this gesture works against. A reading that arrives mid-drag must
+  // not move the trace under the finger, so the projection is frozen for as long
+  // as the finger is down.
+  const gesturePointsRef = useRef(null);
+  const frameRef = useRef(null);
+  // The pinned scroll container: the chart must not pan while a scrub is running.
+  const pinRef = useRef(null);
+  // Where a gesture cancelled to a scroll sends its vertical movement.
+  const handoffRef = useRef(null);
+  // The dot's current position, so a frame that has not moved it costs nothing.
+  const fingerRef = useRef(null);
+
   const [pos, setPos] = useState({ left: 0, top: 0, ready: false, flipped: false });
   const nowMs = useServerNow();
   // The card prints glucose in the reader's chosen unit, so a change of that
@@ -123,7 +167,7 @@ export default function ProjectionOverlay({
   useEffect(() => onGlucoseUnitsChange(() => setUnitsTick((t) => t + 1)), []);
 
   // The one resolved selection, readable synchronously by the per-frame scrub
-  // resolver, so a frame can tell whether the point actually changed.
+  // resolver, so a frame can tell whether the entry actually changed.
   const activePointRef = useRef(null);
   const select = useCallback((next) => {
     if (activePointRef.current === next) return;
@@ -146,19 +190,14 @@ export default function ProjectionOverlay({
     lastResetRef.current = resetSignal;
     select(null);
     setCardShown(false);
+    fingerRef.current = null;
+    setFinger(null);
   }, [resetSignal, select]);
 
-  // Latest pointer x and the pending frame: pointermove records only the x, and
-  // the snap is resolved once per animation frame.
-  const pointerXRef = useRef(null);
-  const frameRef = useRef(null);
-  // The points this gesture started against. A reading that arrives mid-gesture
-  // must not re-clamp the selection under the finger.
-  const gesturePointsRef = useRef(null);
+  // The current flip, kept so the card's deadband has something to compare to.
+  const flippedRef = useRef(false);
   // Scroll and resize dismissal are held off during a gesture and just after it.
   const dismissSuppressUntilRef = useRef(0);
-  // The current flip, kept so the deadband has something to compare against.
-  const flippedRef = useRef(false);
 
   // The newest real reading: the tip of the solid line, and the only place the
   // dashed line may start. Without one there is nothing to anchor to.
@@ -228,10 +267,10 @@ export default function ProjectionOverlay({
   const hasFuture = forecastPoints.length > 0;
 
   // ── One list for the whole plot ───────────────────────────────────────
-  // Every drawn reading, then the anchor, then the forecast grid. This is what
-  // the finger snaps along: one gesture crosses from the solid line into the
-  // dashes and back, and nothing in the middle is skipped. Readings only ever
-  // resolve to their own drawn positions — no interpolation.
+  // Every drawn reading, then the anchor, then the forecast grid. This is the
+  // polyline the marker is read off and the set of entries the readout snaps to:
+  // one gesture crosses from the solid line into the dashes and back, and
+  // nothing in the middle is skipped.
   const merged = useMemo(() => {
     const project = (time, value, kind) => ({
       time,
@@ -265,30 +304,20 @@ export default function ProjectionOverlay({
     return [...past, ...points];
   }, [readings, points, anchorReading, domainStart, totalMs, chartWidth, getGlucoseY]);
 
-  // The points this gesture is snapping to, readable from a frame callback
-  // without re-creating it. A reading that lands mid-drag cannot move them.
   const mergedRef = useRef(merged);
   mergedRef.current = merged;
 
-  // ── One snap per animation frame ──────────────────────────────────────
-  // pointermove stores the latest x and asks for a single resolution on the next
-  // frame. resolveScrubPoint holds the current selection until the pointer is
-  // 8px past the midpoint and latches at both ends, and when the resolved point
-  // is the one already selected, `select` skips the state update entirely.
-  const resolveAtPointer = useCallback(() => {
-    if (frameRef.current != null) return;
-    frameRef.current = requestAnimationFrame(() => {
-      frameRef.current = null;
-      const rect = svgRectRef.current;
-      const clientX = pointerXRef.current;
-      if (!rect || clientX == null) return;
-      const source = gesturePointsRef.current || mergedRef.current;
-      if (!source.length) return;
-      const localX = clientX - rect.left;
-      const next = resolveScrubPoint(source, localX, activePointRef.current);
-      if (next) select(next);
-    });
-  }, [select]);
+  // ── Content-space mapping ─────────────────────────────────────────────
+  // The plot lives inside a horizontally scrolling container, so the finger's
+  // clientX is only meaningful once the container's own rect and scroll offset
+  // are added back in. This is the chart's content space, the same space the
+  // chart's own x values live in.
+  const contentXOf = useCallback((clientX) => {
+    const el = scrollContainerRef?.current || scrollParentOf(hitRef.current);
+    if (!el) return clientX;
+    const rect = el.getBoundingClientRect();
+    return clientX - rect.left + el.scrollLeft;
+  }, [scrollContainerRef]);
 
   const cancelFrame = useCallback(() => {
     if (frameRef.current != null) {
@@ -297,51 +326,96 @@ export default function ProjectionOverlay({
     }
   }, []);
 
-  // ── Gesture intent: one decision, made once ──────────────────────────
-  // The hit layer covers the whole plot. The first movement decides: sideways
-  // means scrubbing, and it stays scrubbing until pointer up even if the finger
-  // then drifts vertically; vertical means the page scrolls and no marker ever
-  // appears. Nothing re-decides mid-gesture, so a scrub can never be dropped
-  // and read as a tap.
-  const lockScrub = useCallback(() => {
-    if (gestureStateRef.current !== "pending") return;
-    gestureStateRef.current = "scrubbing";
-    scrubbingRef.current = true;
-    setScrubbing(true);
-    try {
-      if (hitRef.current && pointerIdRef.current != null) {
-        hitRef.current.setPointerCapture(pointerIdRef.current);
-      }
-    } catch {
-      /* pointer capture unsupported — events still arrive on the layer */
+  // ── One scrub frame ───────────────────────────────────────────────────
+  // Position comes from the finger; the numbers come from the entry nearest that
+  // position in time. The dot is clamped to the first reading and the last
+  // forecast point, and its y is the drawn polyline's y at that x — so it rides
+  // the line instead of hopping between entries.
+  const applyScrub = useCallback(() => {
+    frameRef.current = null;
+    const source = gesturePointsRef.current;
+    const pointer = pointerPosRef.current;
+    if (!source || !source.length || !pointer) return;
+
+    const contentX = contentXOf(pointer.clientX);
+    // The dot stops at the first reading and the last forecast point, and never
+    // leaves the plot.
+    const lower = Math.max(source[0].x, 0);
+    const upper = Math.min(source[source.length - 1].x, chartWidth);
+    const clampedX = Math.min(Math.max(contentX, lower), Math.max(lower, upper));
+    const y = interpolatePolylineY(source, clampedX);
+    const prev = fingerRef.current;
+    if (!prev || Math.abs(prev.x - clampedX) > 0.5 || Math.abs(prev.y - y) > 0.5) {
+      fingerRef.current = { x: clampedX, y };
+      setFinger(fingerRef.current);
     }
+
+    const time = timeAtContentX(contentX, domainStart, totalMs, chartWidth);
+    const nearest = nearestPointByTime(source, time);
+    if (nearest) select(nearest);
+  }, [contentXOf, domainStart, totalMs, chartWidth, select]);
+
+  const scheduleScrub = useCallback(() => {
+    if (frameRef.current != null) return;
+    frameRef.current = requestAnimationFrame(applyScrub);
+  }, [applyScrub]);
+
+  // ── Pinning the scroller ──────────────────────────────────────────────
+  // For as long as the finger is down the chart does not pan: the offset is
+  // saved on pointerdown, held there, and restored on release.
+  const releasePin = useCallback(() => {
+    const pin = pinRef.current;
+    if (!pin) return;
+    pin.el.removeEventListener("scroll", pin.onScroll);
+    pin.el.scrollLeft = pin.left;
+    pinRef.current = null;
   }, []);
+
+  const pinScroller = useCallback(() => {
+    releasePin();
+    const el = scrollContainerRef?.current || scrollParentOf(hitRef.current);
+    if (!el) return;
+    const left = el.scrollLeft;
+    const onScroll = () => {
+      if (el.scrollLeft !== left) el.scrollLeft = left;
+    };
+    pinRef.current = { el, left, onScroll };
+    el.addEventListener("scroll", onScroll, { passive: true });
+  }, [releasePin, scrollContainerRef]);
+
+  useEffect(() => () => {
+    cancelFrame();
+    releasePin();
+  }, [cancelFrame, releasePin]);
 
   const handlePointerDown = useCallback((e) => {
     if (!merged.length || !e.isPrimary) return;
     // A press closes whatever card was open: it comes back only if this gesture
     // ends as a tap on a reading.
     setCardShown(false);
+    fingerRef.current = null;
+    setFinger(null);
     gestureStateRef.current = "pending";
-    // Freeze the plotted points for this gesture: a reading that lands mid-drag
-    // must not move the selection under the finger.
     gesturePointsRef.current = merged;
-    downPosRef.current = { x: e.clientX, y: e.clientY };
-    pointerXRef.current = e.clientX;
+    tapStartRef.current = { x: e.clientX, y: e.clientY };
+    pointerPosRef.current = { clientX: e.clientX };
     pointerIdRef.current = e.pointerId;
-    if (svgRef.current) svgRectRef.current = svgRef.current.getBoundingClientRect();
-    scrubbingRef.current = false;
-    setScrubbing(false);
-  }, [merged]);
+    pinScroller();
+    handoffRef.current = { el: verticalScrollerOf(hitRef.current), lastY: e.clientY };
+    try {
+      hitRef.current?.setPointerCapture(e.pointerId);
+    } catch {
+      /* pointer capture unsupported — events still arrive on the layer */
+    }
+  }, [merged, pinScroller]);
 
   const handlePointerMove = useCallback((e) => {
     const state = gestureStateRef.current;
-    if (state === "idle" || state === "cancelled") return;
 
     if (state === "pending") {
       const intent = resolveGestureIntent(
-        e.clientX - downPosRef.current.x,
-        e.clientY - downPosRef.current.y
+        e.clientX - tapStartRef.current.x,
+        e.clientY - tapStartRef.current.y
       );
       // A few pixels either way is not a decision yet.
       if (!intent) return;
@@ -349,64 +423,80 @@ export default function ProjectionOverlay({
         gestureStateRef.current = "cancelled";
         return;
       }
-      lockScrub();
+      // Locked: from here the scrub owns the gesture, whatever the finger does.
+      gestureStateRef.current = "scrubbing";
+      setScrubbing(true);
     }
 
-    pointerXRef.current = e.clientX;
-    resolveAtPointer();
-  }, [lockScrub, resolveAtPointer]);
+    if (gestureStateRef.current === "scrubbing") {
+      // The plot owns this gesture: the browser must not pan, scroll or zoom.
+      if (e.cancelable) e.preventDefault();
+      pointerPosRef.current = { clientX: e.clientX };
+      scheduleScrub();
+      return;
+    }
 
-  const handlePointerUp = useCallback(() => {
-    try {
-      if (hitRef.current && pointerIdRef.current != null) {
-        hitRef.current.releasePointerCapture(pointerIdRef.current);
+    if (gestureStateRef.current === "cancelled") {
+      // Cancelled before it began: the page follows the finger by hand, because
+      // the scrub layer's own touch-action is none.
+      const handoff = handoffRef.current;
+      if (handoff?.el) {
+        const dy = e.clientY - handoff.lastY;
+        handoff.lastY = e.clientY;
+        if (dy) handoff.el.scrollTop -= dy;
       }
+    }
+  }, [scheduleScrub]);
+
+  const endGesture = useCallback(() => {
+    try {
+      if (pointerIdRef.current != null) hitRef.current?.releasePointerCapture(pointerIdRef.current);
     } catch {
       /* already released or never captured */
     }
-
     cancelFrame();
+    releasePin();
     const state = gestureStateRef.current;
     gestureStateRef.current = "idle";
     pointerIdRef.current = null;
+    pointerPosRef.current = null;
     gesturePointsRef.current = null;
+    handoffRef.current = null;
     // A scroll or resize nudge just after the finger lifts must not dismiss.
     dismissSuppressUntilRef.current = Date.now() + DISMISS_GRACE_MS;
-
     if (state === "scrubbing") {
-      scrubbingRef.current = false;
       setScrubbing(false);
-      // The selection stays exactly where the finger left it: a forecast keeps
-      // its strip, a reading simply parks the marker. A drag never opens the
-      // card — only a tap does.
-    } else if (state === "pending") {
-      // A tap picks the nearest point outright, not the hysteresis result, and
-      // a real reading is the one thing that opens the cream card.
-      if (svgRectRef.current) {
-        const localX = downPosRef.current.x - svgRectRef.current.left;
-        const nearest = resolveScrubPoint(mergedRef.current, localX, null);
-        if (nearest) {
-          const same = activePointRef.current
-            && activePointRef.current.x === nearest.x
-            && activePointRef.current.kind === nearest.kind;
-          select(same ? null : nearest);
-          setCardShown(!same && nearest.kind === "reading");
-        }
-      }
     }
-  }, [cancelFrame, select]);
+    // The dot falls back from the finger to the entry the numbers show.
+    fingerRef.current = null;
+    setFinger(null);
+    return state;
+  }, [cancelFrame, releasePin]);
+
+  const handlePointerUp = useCallback(() => {
+    const state = endGesture();
+    if (state !== "pending") return;
+
+    // A tap, not a drag: the nearest entry decides, and only a past reading
+    // opens its card.
+    const contentX = contentXOf(tapStartRef.current.x);
+    const time = timeAtContentX(contentX, domainStart, totalMs, chartWidth);
+    const nearest = nearestPointByTime(mergedRef.current, time);
+    if (nearest && nearest.kind === "reading") {
+      const same = activePointRef.current
+        && activePointRef.current.x === nearest.x
+        && activePointRef.current.kind === nearest.kind;
+      select(same ? null : nearest);
+      setCardShown(!same);
+    } else {
+      select(null);
+      setCardShown(false);
+    }
+  }, [endGesture, contentXOf, domainStart, totalMs, chartWidth, select]);
 
   const handlePointerCancel = useCallback(() => {
-    cancelFrame();
-    gestureStateRef.current = "idle";
-    pointerIdRef.current = null;
-    gesturePointsRef.current = null;
-    dismissSuppressUntilRef.current = Date.now() + DISMISS_GRACE_MS;
-    if (scrubbingRef.current) {
-      scrubbingRef.current = false;
-      setScrubbing(false);
-    }
-  }, [cancelFrame]);
+    endGesture();
+  }, [endGesture]);
 
   // ── Keyboard accessibility ───────────────────────────────────────────
   // Arrow keys step through the same merged list the finger uses: readings
@@ -438,6 +528,8 @@ export default function ProjectionOverlay({
         e.preventDefault();
         select(null);
         setCardShown(false);
+        fingerRef.current = null;
+        setFinger(null);
         break;
       }
       case "Enter":
@@ -453,14 +545,14 @@ export default function ProjectionOverlay({
     }
   }, [merged, activePoint, select]);
 
-  // Non-passive touch listener — only locks down scrolling AFTER the intent is
-  // locked to scrubbing, so a vertical swipe still scrolls the dashboard and a
-  // scrub is never cancelled by the finger drifting downward.
+  // Non-passive touch listener: while a scrub is running the browser is told not
+  // to treat the movement as a scroll. touch-action is none on the layer itself,
+  // so this is the belt to that braces.
   useEffect(() => {
     const el = hitRef.current;
     if (!el) return;
     const onTouchMove = (e) => {
-      if (gestureStateRef.current === "scrubbing") e.preventDefault();
+      if (gestureStateRef.current === "scrubbing" && e.cancelable) e.preventDefault();
     };
     el.addEventListener("touchmove", onTouchMove, { passive: false });
     return () => el.removeEventListener("touchmove", onTouchMove);
@@ -470,11 +562,11 @@ export default function ProjectionOverlay({
   // forecast point never does: the strip above the chart is its surface.
   const cardPoint = cardShown && activePoint && activePoint.kind === "reading" ? activePoint : null;
 
-  // Resolve the card's position: above the selected point, flipped below when
-  // it would cross the top of the plot, clamped inside the visible plot box on
-  // both axes and never over the floating nav. The card's box is a fixed size,
-  // so it cannot move under the reader's finger, and the flip only changes once
-  // the point has cleared the deadband.
+  // Resolve the card's position: above the point, flipped below when it would
+  // cross the top of the plot, clamped inside the visible plot box on both axes
+  // and never over the floating nav. The card's box is a fixed size, so it
+  // cannot move under the reader's finger, and the flip only changes once the
+  // point has cleared the deadband.
   useLayoutEffect(() => {
     if (!cardPoint || !svgRef.current) {
       flippedRef.current = false;
@@ -484,7 +576,8 @@ export default function ProjectionOverlay({
       return;
     }
     const rect = svgRef.current.getBoundingClientRect();
-    const plot = plotBoxFor(svgRef.current) || rect;
+    const scrollEl = scrollContainerRef?.current || scrollParentOf(svgRef.current);
+    const plot = scrollEl ? scrollEl.getBoundingClientRect() : rect;
     const width = CARD_WIDTH_PX;
     const height = CARD_HEIGHT_PX;
     const vw = window.innerWidth;
@@ -512,11 +605,10 @@ export default function ProjectionOverlay({
         ? prev
         : { left, top, ready: true, flipped }
     ));
-  }, [cardPoint, nowMs]);
+  }, [cardPoint, nowMs, scrollContainerRef]);
 
   // Dismiss on tap outside, scroll, Escape or resize — but never while a scrub
-  // is in flight or in the moment just after it. A one-pixel scroll nudge used
-  // to clear the card mid-drag and the next pointermove put it back: the blink.
+  // is in flight or in the moment just after it.
   useEffect(() => {
     if (!activePoint) return;
     const holdsCard = () => (
@@ -527,15 +619,25 @@ export default function ProjectionOverlay({
     const onDown = (e) => {
       if (e.target?.closest?.("[data-projection-scrub]")) return;
       select(null);
+      setCardShown(false);
     };
     const onEsc = (e) => {
-      if (e.key === "Escape") select(null);
+      if (e.key === "Escape") {
+        select(null);
+        setCardShown(false);
+      }
     };
     const onScroll = () => {
-      if (!holdsCard()) select(null);
+      if (!holdsCard()) {
+        select(null);
+        setCardShown(false);
+      }
     };
     const onResize = () => {
-      if (!holdsCard()) select(null);
+      if (!holdsCard()) {
+        select(null);
+        setCardShown(false);
+      }
     };
     document.addEventListener("mousedown", onDown);
     document.addEventListener("touchstart", onDown, { passive: true });
@@ -554,7 +656,7 @@ export default function ProjectionOverlay({
   // The layer only exists when there is something to sit on.
   if (merged.length === 0) return null;
 
-  // The selected point, carrying the facts its card needs.
+  // The selected entry, carrying the facts its card needs.
   // A past reading is labelled by its own age against server time — never as a
   // forecast, so a clock skew cannot produce a phantom "now" plus "+1m".
   const selected = activePoint
@@ -602,9 +704,10 @@ export default function ProjectionOverlay({
   // the estimate stops. No number is attached to it.
   const endPoint = points[points.length - 1];
 
-  // Where the marker is drawn: exactly on the snapped point, and nowhere else.
-  // It stops at the earliest reading and at the last forecast point.
-  const markerX = selected ? selected.x : 0;
+  // Where the dot is drawn. Under the finger while a scrub is running, and on
+  // the entry the numbers show at rest. Nothing else moves it, and it stops at
+  // the first reading and the last forecast point.
+  const marker = finger || (activePoint ? { x: activePoint.x, y: activePoint.y } : null);
 
   return (
     <>
@@ -641,24 +744,23 @@ export default function ProjectionOverlay({
             style={{ pointerEvents: "none" }}
           />
         )}
-        {/* Active point marker — a rust dot inside a 12% halo, and nothing else,
-            for a reading and for an estimate alike. No drop line, no tick, no
-            connector to the axis and no stub under the future marker: a forecast
-            is described in the strip above the chart, a reading opens the card
-            on its own. */}
-        {selected && (
+        {/* The dot: a rust point inside a halo, and nothing else, for a reading
+            and for an estimate alike. No drop line, no tick, no connector to the
+            axis: a forecast is described in the strip above the chart, a reading
+            opens the card on its own. */}
+        {marker && (
           <>
             <circle
-              cx={markerX}
-              cy={selected.y}
+              cx={marker.x}
+              cy={marker.y}
               r={9}
               fill="#8C4A28"
               fillOpacity={scrubbing ? 0.2 : 0.12}
               style={{ pointerEvents: "none" }}
             />
             <circle
-              cx={markerX}
-              cy={selected.y}
+              cx={marker.x}
+              cy={marker.y}
               r={3.6}
               fill="#8C4A28"
               stroke="#FDF9F2"
@@ -667,12 +769,12 @@ export default function ProjectionOverlay({
             />
           </>
         )}
-        {/* The one scrub layer: a transparent hit area over the whole plot, with
-            the only set of pointer handlers. Everything above it in this svg is
-            inert (pointerEvents: none), so the dashed line can no longer compete
-            for touches or be the sole doorway into the future. touchAction is
-            pan-y, so vertical drags still scroll the page; the intent lock in
-            handlePointerMove decides whether a horizontal drag scrubs. */}
+        {/* The one scrub layer: a transparent area over the whole plot, and the
+            only set of pointer handlers. Everything above it in this svg is
+            inert (pointerEvents: none), so the dashed line cannot compete for
+            touches. touch-action is none, because horizontal movement here
+            belongs to the scrub and not to the scroller; a gesture whose first
+            movement is clearly vertical is handed to the page by hand. */}
         <rect
           ref={hitRef}
           data-projection-scrub
@@ -681,7 +783,7 @@ export default function ProjectionOverlay({
           width={chartWidth}
           height={plotHeight}
           fill="transparent"
-          style={{ cursor: "pointer", touchAction: "pan-y", pointerEvents: "all" }}
+          style={{ cursor: "pointer", touchAction: "none", pointerEvents: "all" }}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
@@ -689,17 +791,18 @@ export default function ProjectionOverlay({
         />
       </svg>
 
-      {/* The cream card exists only for a real reading. An estimate is described
-          by the strip, so no portal node is created and nothing is measured. */}
+      {/* The cream card exists only for a tapped reading. An estimate is
+          described by the strip, so no portal node is created and nothing is
+          measured. */}
       {cardPoint && createPortal(
         <AnimatePresence>
-          {/* Opacity only: a vertical entrance would animate every time the
-              card flipped between a reading and a forecast point. */}
+          {/* Opacity only: a vertical entrance would animate every time the card
+              flipped between a reading and a forecast point. */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: pos.ready ? 1 : 0 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: scrubbing ? 0 : 0.14 }}
+            transition={{ duration: 0.14 }}
             className="fixed z-[300] pointer-events-none"
             style={{ left: pos.left, top: pos.top }}
           >
