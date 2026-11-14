@@ -33,7 +33,7 @@ export default function MealPhotoChip({ onEstimate }) {
     } catch (error) {
       toast.error(
         error?.response?.data?.error ||
-          "Could not estimate this meal. You can still enter carbs yourself."
+        "Could not estimate this meal. You can still enter carbs yourself."
       );
     } finally {
       setLoading(false);
@@ -48,8 +48,8 @@ export default function MealPhotoChip({ onEstimate }) {
         onClick={() => inputRef.current?.click()}
         disabled={loading}
         className="flex h-10 items-center gap-1.5 rounded-full px-4 text-sm font-semibold transition active:scale-95 disabled:opacity-40"
-        style={{ background: "rgba(156,82,40,0.12)", color: COPPER }}
-      >
+        style={{ background: "rgba(156,82,40,0.12)", color: COPPER }}>
+        
         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
         {loading ? "Estimating..." : "Estimate from photo"}
       </button>
@@ -59,11 +59,11 @@ export default function MealPhotoChip({ onEstimate }) {
         accept="image/*"
         capture="environment"
         className="hidden"
-        onChange={(e) => handleFile(e.target.files?.[0])}
-      />
-      <span className="text-xs" style={{ color: FAINT }}>
+        onChange={(e) => handleFile(e.target.files?.[0])} />
+      
+      <span className="text-xs hidden" style={{ color: FAINT }}>
         {estimated ? "A starting point. Adjust it to fit your meal." : "Optional · only the photo is shared"}
       </span>
-    </div>
-  );
+    </div>);
+
 }

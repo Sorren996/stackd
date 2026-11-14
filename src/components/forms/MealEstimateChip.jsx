@@ -36,14 +36,14 @@ export default function MealEstimateChip({ description, onEstimate }) {
         onClick={handleEstimate}
         disabled={disabled}
         className="flex h-10 items-center gap-1.5 rounded-full px-4 text-sm font-semibold transition active:scale-95 disabled:opacity-40"
-        style={{ background: "rgba(156,82,40,0.12)", color: COPPER }}
-      >
+        style={{ background: "rgba(156,82,40,0.12)", color: COPPER }}>
+        
         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
         {loading ? "Estimating..." : "Estimate with AI"}
       </button>
-      <span className="text-xs" style={{ color: FAINT }}>
+      <span className="text-xs hidden" style={{ color: FAINT }}>
         {estimated ? "A starting point. Adjust it to fit your meal." : text.length < 2 ? "Optional · name your meal first" : "Optional · only the meal name is shared"}
       </span>
-    </div>
-  );
+    </div>);
+
 }
