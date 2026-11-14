@@ -1,0 +1,108 @@
+{
+  "name": "RiseContext",
+  "type": "object",
+  "properties": {
+    "window_start": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "window_end": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "event_key": {
+      "type": "string"
+    },
+    "tag": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "meal",
+        "stress",
+        "illness",
+        "poor_sleep",
+        "caffeine",
+        "site_sensor_change",
+        "coming_up_from_low",
+        "nothing",
+        "not_now"
+      ],
+      "enumColors": [
+        "gray",
+        "green",
+        "blue",
+        "purple",
+        "pink",
+        "yellow",
+        "blue",
+        "green",
+        "gray",
+        "gray"
+      ]
+    },
+    "rise_magnitude": {
+      "type": "number"
+    },
+    "peak_value": {
+      "type": "number"
+    },
+    "active_bolus_units": {
+      "type": "number"
+    },
+    "meal_confirmed": {
+      "type": "boolean",
+      "default": false
+    },
+    "meal_id": {
+      "type": "string"
+    },
+    "time_bucket": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 7
+    },
+    "responded_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "window_start",
+    "window_end",
+    "event_key",
+    "tag",
+    "time_bucket"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

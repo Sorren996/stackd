@@ -752,6 +752,8 @@
   outline-offset: 1px;
 }
 
+.rise-prompt { border-color: rgba(46,36,32,.14); box-shadow: none; }
+
 /* Resume guards keep the existing boxes mounted, including scroll and tabs. */
 .resume-placeholder { display: none; }
 [data-freshness="updating"] .resume-chart-reading { visibility: hidden; }
