@@ -29,14 +29,20 @@ export function flattenResiduals(records, now = Date.now()) {
   return [...unique.values()];
 }
 const plainQuantile = (values, q) => weightedQuantile(values.map(residual => ({ residual, generated_at: '2000-01-01T00:00:00Z' })), q, Date.parse('2000-01-01T00:00:00Z'));
-export function coverageGuard(rows, previous = {}) {
+export function coverageGuard(rows, previous = {}, referenceForRow = null) {
   const last = rows.filter(r => typeof r.covered === 'boolean').sort((a,b) => Date.parse(b.actual_at) - Date.parse(a.actual_at) || Date.parse(b.generated_at) - Date.parse(a.generated_at) || a.horizon - b.horizon || a.projection_id.localeCompare(b.projection_id)).slice(0,50);
   const coverage = last.length ? last.filter(r => r.covered).length / last.length : null;
-  const key = last.map(r => `${r.projection_id}:${r.horizon}:${r.residual}:${r.covered}`).join('|');
-  let scale = Number(previous.coverage_scale) || 1;
+  const key = (referenceForRow ? 'candidate_intervals:' : '') + last.map(r => `${r.projection_id}:${r.horizon}:${r.residual}:${r.covered}`).join('|');
+  // Old-scale values were relative to legacy shown widths, not candidate widths.
+  const sameReference = !referenceForRow || String(previous.coverage_key || '').startsWith('candidate_intervals:');
+  let scale = sameReference ? Number(previous.coverage_scale) || 1 : 1;
   let action = 'hold';
-  // Ratios use the actual PRE-GUARD interval stored with each shown band.
-  const ratios = last.filter(r => Number.isFinite(r.base_lower) && Number.isFinite(r.base_upper) && r.base_upper > r.base_lower)
+  // Coverage always measures the band actually shown. Scaling is expressed
+  // against the candidate percentile interval, not a legacy band's width:
+  // otherwise replacing a wide old band AND applying its shrink ratio would
+  // tighten twice and immediately under-cover.
+  const ratios = last.map(r => ({ ...r, ...(referenceForRow?.(r) || {}) }))
+    .filter(r => Number.isFinite(r.base_lower) && Number.isFinite(r.base_upper) && r.base_upper > r.base_lower)
     .map(r => Math.abs(r.residual - (r.base_lower+r.base_upper)/2) / ((r.base_upper-r.base_lower)/2));
   const measuredScale = ratios.length ? plainQuantile(ratios,0.8) : null;
   if (last.length === 50 && key !== previous.coverage_key && measuredScale != null) {
@@ -59,7 +65,7 @@ function shadowBias(rows, now) {
     evidenceImproves: count >= 30 && corrected < baseline, mode: 'shadow_only' };
 }
 export function fitResidualBand(rows, volatilitySd, defaultTrajectory, previous, now = Date.now()) {
-  const guard = coverageGuard(rows,previous);
+  const referenceIntervals = {};
   const volatilityRows = rows.filter(r => Number.isFinite(r.volatility_sd)).map(r => ({ ...r, residual: r.volatility_sd }));
   const threshold = weightedQuantile(volatilityRows,0.5,now);
   const byHorizon = {};
@@ -76,11 +82,25 @@ export function fitResidualBand(rows, volatilitySd, defaultTrajectory, previous,
     const q10 = weightedQuantile(selected,0.1,now), q90 = weightedQuantile(selected,0.9,now);
     const low = n ? blend*q10+(1-blend)*fallbackLow : fallbackLow;
     const high = n ? blend*q90+(1-blend)*fallbackHigh : fallbackHigh;
+    const reference = selectedRows => {
+      const count = selectedRows.length, weight = count < 30 ? count/(count+30) : 1;
+      const lower = count ? weight*weightedQuantile(selectedRows,0.1,now)+(1-weight)*fallbackLow : fallbackLow;
+      const upper = count ? weight*weightedQuantile(selectedRows,0.9,now)+(1-weight)*fallbackHigh : fallbackHigh;
+      const centre = (lower+upper)/2, half = Math.max(8,(upper-lower)/2);
+      return {base_lower:centre-half,base_upper:centre+half};
+    };
+    referenceIntervals[h] = {pooled:reference(all),calm:reference(calm),volatile:reference(volatile),split};
     byHorizon[h] = { sampleCount: all.length, fitSampleCount:n, q10, q90, medianResidual:weightedQuantile(selected,0.5,now),
       mae: all.length ? roundBand(all.reduce((s,r)=>s+Math.abs(r.residual),0)/all.length) : null,
       bucket: split ? (volatilitySd <= threshold ? 'calm':'volatile') : 'pooled', calmCount:calm.length, volatileCount:volatile.length,
       personalWeight:blend, defaultBlend:blend < 1, baseLower:low, baseUpper:high, shadowBias:shadowBias(selected,now) };
   }
+  const guard = coverageGuard(rows,previous,r => {
+    const refs = referenceIntervals[r.horizon];
+    if (!refs) return null;
+    const bucket = refs.split && Number.isFinite(r.volatility_sd) ? (r.volatility_sd <= threshold ? 'calm' : 'volatile') : 'pooled';
+    return refs[bucket];
+  });
   return { byHorizon, guard, volatilityThreshold:threshold, sampleCount:rows.length, now };
 }
 function interpolateFit(fit, h) {

@@ -15,7 +15,13 @@ const ms = s => Date.parse(s);
 const rescue = m => m.is_rescue_carb === true || m.classification === 'rescue_carbs';
 const mealFields = ['consumed_at','carbs','fat_grams','protein_grams','glycemic_index','absorption_profile','is_rescue_carb'];
 const doseFields = ['administered_at','insulin_type','units'];
-const fieldValue = (r,k) => k === 'is_rescue_carb' ? rescue(r) : (r[k] ?? (['carbs','fat_grams','protein_grams','glycemic_index','units'].includes(k) ? 0 : ''));
+const fieldValue = (r,k) => {
+  if(k === 'is_rescue_carb') return rescue(r);
+  if(k === 'absorption_profile') return String(r[k] || 'medium');
+  if(['consumed_at','administered_at'].includes(k)) return ms(r[k]);
+  if(['carbs','fat_grams','protein_grams','glycemic_index','units','meal_units','correction_units'].includes(k)) return Number(r[k]) || 0;
+  return r[k] ?? '';
+};
 export const meaningfulInputChange = (name,oldRow,row) => (name === 'CarbEntry' ? mealFields : [...doseFields,'meal_units','correction_units']).some(k=>fieldValue(oldRow||{},k)!==fieldValue(row||{},k));
 function changedBefore(projection, target, meals, doses, changes) {
   const generated = ms(projection.generated_at), snapshot = projection.input_snapshot;

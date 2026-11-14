@@ -7,7 +7,7 @@ const defaultLine=Array.from({length:25},(_,i)=>({min_offset:i*5,time:now+i*5*M,
 const sample=(h,r,i=0,v=0.4)=>({horizon:h,residual:r,generated_at:iso(now-3*60*M-i*M),actual_at:iso(now-60*M-i*M),volatility_sd:v,projection_id:`p${i}`,covered:true,base_lower:-30,base_upper:30});
 test('signed weighted residual quantiles retain asymmetry and decay over fourteen days',()=>{
  const rows=[{residual:-10,generated_at:iso(now-14*86400000)},{residual:30,generated_at:iso(now)}];
- assert.equal(weightedQuantile(rows,.5,now),10);
+ assert.ok(Math.abs(weightedQuantile(rows,.5,now)-10)<1e-9);
  const r=Array.from({length:60},(_,i)=>sample(30,i<30?-2:18,i));
  const f=fitResidualBand(r,.4,defaultLine,{},now);
  assert.equal(f.byHorizon[30].personalWeight,1);
@@ -33,6 +33,13 @@ test('coverage guard widens and tightens from errors measured against the band s
  const over=Array.from({length:50},(_,i)=>({...sample(30,i%2?-4:4,i),covered:true,base_lower:-20,base_upper:20}));
  assert.ok(coverageGuard(over,{}).scale<1);
 });
+test('legacy over-coverage does not shrink newly fitted percentiles twice',()=>{
+ const rows=[15,30,45,60,90,120].flatMap(h=>Array.from({length:60},(_,i)=>({...sample(h,i%2?-20:20,i),base_lower:-80,base_upper:80,covered:true})));
+ const fit=fitResidualBand(rows,.4,defaultLine,{},now);
+ assert.ok(fit.guard.scale>=.99);
+ const point=applyResidualBand(defaultLine,fit).fullTrajectory.find(p=>p.min_offset===30);
+ assert.ok((point.upper-point.lower)/2>=19.99);
+});
 test('truncate at last useful five-minute point, retaining at least thirty minutes',()=>{
  const rows=[15,30,45,60,90,120].flatMap(h=>Array.from({length:40},(_,i)=>sample(h,i%2?h:-h,i)));
  const b=applyResidualBand(defaultLine,fitResidualBand(rows,.4,defaultLine,{},now));
@@ -53,6 +60,13 @@ test('new dose, new rescue carbs, edits and deletes exclude affected horizon, no
  assert.equal(scoreStoredProjection(p,[reading],[meal],[],[],now).scores.length,0);
  assert.equal(scoreStoredProjection(p,[reading],[],[],[{changed_at:iso(generated+20*M)}],now).scores.length,0);
  assert.equal(scoreStoredProjection(p,[reading],[],[],[{changed_at:iso(generated+50*M)}],now).scores.length,1);
+});
+test('normalized defaults are not mistaken for a historical input edit',()=>{
+ const meal={id:'m',consumed_at:iso(generated-30*M),created_date:iso(generated-40*M),carbs:20,absorption_profile:null};
+ const saved={...meal,absorption_profile:'medium',carbs:20};
+ const projected={...p,input_snapshot:{meals:[saved],doses:[]}};
+ assert.equal(scoreStoredProjection(projected,[reading],[meal],[],[],now).scores.length,1);
+ assert.equal(scoreStoredProjection(projected,[reading],[{...meal,carbs:40}],[],[],now).scores.length,0);
 });
 test('duplicate scoring cannot double count a projection/horizon',()=>{
  const record=scoreStoredProjection(p,[reading],[],[],[],now);assert.equal(flattenResiduals([record,record],now).length,1);
