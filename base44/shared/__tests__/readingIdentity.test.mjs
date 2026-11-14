@@ -10,7 +10,7 @@ function sandbox(initial=[]) {
     update:async(id,patch)=>{const row=rows.find(r=>r.id===id);assert.ok(row);Object.assign(row,patch,{updated_date:'2026-11-14T10:00:00Z'});return row;},
     deleteMany:async(q)=>{assert.ok(JSON.stringify(q).includes('owner'));const ids=q.$and.find(x=>x.id).id.$in;rows=rows.filter(r=>!ids.includes(r.id));},
   };
-  return {sr:{entities:{GlucoseReading:reading,GlucoseProjection:{filter:async()=>({items:[],has_more:false})}}},getRows:()=>rows};
+  return {sr:{entities:{DexcomConnection:{filter:async()=>({items:[]})},GlucoseReading:reading,GlucoseProjection:{filter:async()=>({items:[],has_more:false})}}},getRows:()=>rows};
 }
 test('repeated batches and in-batch corrections keep one user/moment identity',async()=>{
   const s=sandbox();

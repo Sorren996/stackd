@@ -51,7 +51,7 @@ export type DeletionQuery = { label: string; entity: string; query: Record<strin
 const CREATOR_OWNED = [
   'InsulinDose', 'CarbEntry', 'JournalEntry', 'UserSettings', 'DexcomConnection',
   'SplitDosePlan', 'SplitDosePreset', 'UserAcknowledgment', 'SupportTicket', 'CreatorSupport',
-  'FollowerNotice', 'AuditLog',
+  'FollowerNotice', 'AuditLog', 'RiseContext',
 ];
 
 /** Rows that may be user-created OR server-created with an explicit user_id. */

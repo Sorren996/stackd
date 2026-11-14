@@ -15,11 +15,14 @@ export function detectUnloggedRise(readings, meals, doses, settings, now) {
   if(meals.some(m=>{const t=Date.parse(m.consumed_at);return t<=end.time && (end.time-t<=4*3600000 || t+mealInPlayWindowMinutes(m.carbs)*60000>end.time);})) return null;
   let start=null;
   for(const [minutes,rise] of [[20,25],[60,40]]) {
-    const window=points.filter(r=>r.time>=end.time-(minutes+3)*60000 && r.time<=end.time);
-    const first=window[0]; if(!first || end.time-first.time<(minutes-3)*60000 || end.value-first.value<rise) continue;
-    if(window.some((r,i)=>i && r.time-window[i-1].time>8*60000)) continue;
-    if(end.value<Math.max(...window.map(r=>r.value))-5) continue;
-    start=first; break;
+    for(const first of points.filter(r=>r.time>=end.time-63*60000)) {
+      const window=points.filter(r=>r.time>=first.time && r.time<=end.time);
+      const finish=window.find(r=>r.time-first.time>=(minutes-3)*60000 && r.time-first.time<=(minutes+3)*60000 && r.value-first.value>=rise);
+      if(!finish || end.value<Math.max(...window.map(r=>r.value))-5) continue;
+      if(window.some((r,i)=>i && r.time-window[i-1].time>8*60000)) continue;
+      start=first; break;
+    }
+    if(start) break;
   }
   if(!start) return null;
   const bolus=doses.filter(d=>!isBasalInsulinType(d.insulin_type) && Date.parse(d.administered_at)>=start.time-45*60000 && Date.parse(d.administered_at)<=end.time).sort((a,b)=>Date.parse(b.administered_at)-Date.parse(a.administered_at))[0];

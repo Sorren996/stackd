@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-const load=async(name)=>`data:text/javascript;base64,${Buffer.from(await readFile(new URL(`../${name}.js`,import.meta.url),'utf8')).toString('base64')}`;
+const load=async(name)=>new URL(`../${name}.js`,import.meta.url).href;
 let source=await readFile(new URL('../risePrompt.js',import.meta.url),'utf8');
 for(const name of ['glucoseSeries','mealInPlayWindow','insulinPharmacology']) source=source.replace(`@/lib/${name}`,await load(name));
 const {detectUnloggedRise,promptDecision,promptQuiet}=await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
@@ -12,7 +12,7 @@ const settings={settings_confirmed:true,meal_insulin_units_per_5g:1.5};
 const context={recent:[],todayCount:0,patterns:[],preferences:{}};
 test('the morning rise prefills about 85g from one bolus and the personal ratio',()=>{
   const event=detectUnloggedRise(readings,[],doses,settings,at('09:35'));
-  assert.equal(event.estimate_carbs,85);assert.equal(event.window_start,new Date(at('09:15')).toISOString());
+  assert.equal(event.estimate_carbs,85);assert.equal(event.window_start,new Date(at('09:05')).toISOString());
   assert.equal(promptDecision(event,context,at('09:35'),'UTC').kind,'prompt');
 });
 test('known food, stale data and interrupted sensor windows do not prompt',()=>{
