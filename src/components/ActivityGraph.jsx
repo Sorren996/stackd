@@ -1,6 +1,6 @@
 import { useMemo, useRef, useEffect, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { Area, XAxis, YAxis, Line, ComposedChart, ReferenceLine, ReferenceArea, ReferenceDot } from "recharts";
+import { Area, XAxis, YAxis, Line, ComposedChart, ReferenceLine, ReferenceArea } from "recharts";
 import { generateActivityCurve, getDoseIOB, getInsulinProfile, isBasalInsulinType } from "@/lib/insulinPharmacology";
 import { PROFILE_COLORS } from "@/lib/carbAbsorption";
 import { format } from "date-fns";
@@ -16,9 +16,7 @@ import { useIsLightTheme } from "@/lib/theme";
 import { getGraphTheme } from "@/lib/graphTheme";
 import { shouldAnchorToLatest } from "@/lib/graphAnchor";
 import { resolveScrollBounds, isAtResting, shouldReturnToResting, shouldFollowLatest } from "@/lib/graphScroll";
-import { newestDrawnPoint } from "@/lib/graphMarker";
-import { useGlucoseStaleness } from "@/hooks/useGlucoseStaleness";
-import { getLatestDexcomReading, formatReadingAge } from "@/lib/glucoseStaleness";
+import { buildScrubEntries, nearestEntry, positionTimeOf, projectionEndTime, FORECAST_KIND } from "@/lib/graphScrub";
 import { formatGlucose, glucoseUnitLabel, getGlucoseUnits } from "@/lib/glucoseUnits";
 import GlucoseTicker from "@/components/graph/GlucoseTicker";
 import TimeViewToggle from "@/components/graph/TimeViewToggle";
@@ -320,6 +318,10 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
 
   const isCandlestick = viewWindow === 24;
   const [activeMarker, setActiveMarker] = useState(null);
+  // THE SCRUB POSITION — the one number the marker, the readout and the strip
+  // all read from. 0 is the newest received reading, which is also where it
+  // starts on load; 1 is the final forecast point.
+  const [scrubPosition, setScrubPosition] = useState(0);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [selectedDoseKey, setSelectedDoseKey] = useState(null);
   const [editingMeal, setEditingMeal] = useState(null);
@@ -369,11 +371,11 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
     // action, never a request to open this reading.
     if (e?.target && e.target !== e.currentTarget && e.target.closest?.("button, a")) return;
     if (!filteredGlucoseReadings.length) return;
-    const scrollLeft = scrollRef.current?.scrollLeft ?? maxScrollLeft;
-    const centerTime = getCenterTimeForScroll(scrollLeft);
+    // The reading the readout is showing — the one under the marker.
+    const selectionTime = scrubTime ?? getCenterTimeForScroll(scrollRef.current?.scrollLeft ?? maxScrollLeft);
     let nearest = null;
     for (const reading of filteredGlucoseReadings) {
-      const dist = Math.abs(reading.time - centerTime);
+      const dist = Math.abs(reading.time - selectionTime);
       if (!nearest || dist < nearest.dist) nearest = { reading, dist };
     }
     if (nearest?.reading) {
@@ -391,7 +393,6 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
   // False once the reader has panned away from the live edge.
   const atRestingRef = useRef(true);
   const settleTimerRef = useRef(null);
-  const prevLatestValueRef = useRef(null);
   const prevGlowStatusRef = useRef(null);
   const prevOverReferenceRef = useRef(false);
   const lastSelectedKeyRef = useRef(null);
@@ -505,32 +506,23 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
   );
 
   const latestGlucoseReading = sortedGlucoseReadings[sortedGlucoseReadings.length - 1];
-  const latestDexcomReading = useMemo(
-    () => getLatestDexcomReading(sortedGlucoseReadings),
-    [sortedGlucoseReadings]
-  );
-  const isGlucoseStale = useGlucoseStaleness(latestDexcomReading, dexcomConnected);
   const latestGlucoseTime = latestGlucoseReading?.time ?? Math.round(stableNow / STEP_MS) * STEP_MS;
   const latestGlucoseBucket = isCandlestick ?
   Math.floor(latestGlucoseTime / HOUR_MS) * HOUR_MS :
   Math.round(latestGlucoseTime / STEP_MS) * STEP_MS;
-  // THE PLOT ENDS AT THE HORIZON. There is no future pad any more: the domain
-  // runs to the last point the projection actually drew and stops there, so the
-  // plot holds no empty space beyond the forecast. Without a projection there is
-  // no future region at all — the newest reading is the right-hand edge.
-  const projectionHorizonMs = (() => {
-    if (!projection || projection.abstained) return 0;
-    const declared = Number(projection?.horizon_minutes);
-    const lastOffset = Array.isArray(projection?.trajectory) ?
-    projection.trajectory.reduce((max, p) => Math.max(max, Number(p?.min_offset) || 0), 0) :
-    0;
-    const minutes = Math.max(Number.isFinite(declared) ? declared : 0, lastOffset);
-    return minutes > 0 ? minutes * 60000 : 0;
-  })();
+  // THE PLOT ENDS AT B. B is the final forecast point the projection actually
+  // drew — never a declared horizon it did not reach — or the newest reading
+  // when there is no projection. The plot's right edge is B plus a few pixels of
+  // breathing room, so the marker can stand on B without being cut in half; any
+  // more than that would leave empty space the drag could not reach.
+  const forecastEndTime = projectionEndTime(projection);
   const domainStart = isCandlestick ?
   latestGlucoseBucket - CANDLESTICK_HISTORY_HOURS * HOUR_MS :
   latestGlucoseBucket - HISTORY_DAYS * 24 * HOUR_MS;
-  const domainEnd = latestGlucoseBucket + projectionHorizonMs;
+  const domainEndPadMs = containerWidth > 0 ?
+  Math.round((14 * viewWindow * 60 * 60 * 1000) / containerWidth) :
+  4 * 60000;
+  const domainEnd = Math.max(latestGlucoseBucket, forecastEndTime ?? 0) + domainEndPadMs;
   const filteredGlucoseReadings = useMemo(() =>
   filters.glucose ?
   sortedGlucoseReadings.filter((reading) => reading.time >= domainStart && reading.time <= domainEnd) :
@@ -605,23 +597,26 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
     return buildGlucoseSegments(samples);
   }, [filteredGlucoseReadings]);
 
-  // Which run of readings each chart bucket belongs to, so every sample lands
-  // on its own run's line.
-  const glucoseBucketSegments = useMemo(() => {
-    const byBucket = new Map();
-    glucoseSegments.forEach((segment, index) => {
-      segment.forEach((sample) => {
-        byBucket.set(Math.round(sample.time / STEP_MS) * STEP_MS, `glucose_seg_${index}`);
-      });
-    });
-    return byBucket;
-  }, [glucoseSegments]);
+  // ── The scrub model ───────────────────────────────────────────────────────
+  // Every drawn reading and every forecast point in one merged list. A is the
+  // newest received reading; B is the final forecast point, or A when there is
+  // no projection. The position is the only variable: the marker, the readout
+  // and the strip are all derived from it here, so none of them can be wired to
+  // something else.
+  const scrub = useMemo(() => buildScrubEntries({
+    segments: glucoseSegments,
+    trajectory: projection?.trajectory,
+    abstained: Boolean(projection?.abstained)
+  }), [glucoseSegments, projection]);
 
-  // A run that holds a single reading has no line to draw, so it keeps a
-  // visible marker instead of disappearing.
-  const glucoseIsolatedPoints = useMemo(
-    () => glucoseSegments.filter((segment) => segment.length === 1).map((segment) => segment[0]),
-    [glucoseSegments]
+  const scrubAnchor = scrub.anchor;
+  const scrubHorizon = scrub.horizon;
+  const scrubTime = positionTimeOf(scrubAnchor, scrubHorizon, scrubPosition);
+  // The readout names the drawn point nearest the marker, so the numbers are
+  // always real points while the dot moves continuously.
+  const scrubEntry = useMemo(
+    () => nearestEntry(scrub.entries, scrubTime),
+    [scrub.entries, scrubTime]
   );
 
   const maxBolusUnits = useMemo(
@@ -741,22 +736,11 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
       });
       if (glucoseMap[t] !== undefined) {
         point.glucose = Math.min(glucoseMap[t], effectiveMax);
-        const segmentKey = glucoseBucketSegments.get(t);
-        if (segmentKey) point[segmentKey] = Math.min(glucoseMap[t], effectiveMax);
       }
       result.push(point);
     }
     return result;
-  }, [doses, glucoseReadings, carbEntries, filters, domainStart, domainEnd, allCurvesMeta, glucoseMap, glucoseBucketSegments, maxBolusUnits, maxBasalUnits, effectiveMax, effectiveMin]);
-
-  // The newest point the glucose line actually DRAWS.
-  //
-  // The marker used to come from its own list, so it could name a sample the
-  // plotted rows did not carry — and a ReferenceDot outside the domain is
-  // silently dropped, leaving the line with no end dot. This reads the last
-  // plotted row that holds a glucose segment value, so the dot is by
-  // construction a point of the line it marks.
-  const newestDrawnGlucosePoint = useMemo(() => newestDrawnPoint(chartData), [chartData]);
+  }, [doses, glucoseReadings, carbEntries, filters, domainStart, domainEnd, allCurvesMeta, glucoseMap, maxBolusUnits, maxBasalUnits, effectiveMax, effectiveMin]);
 
   // The end-of-line marker is a plain element placed INSIDE the scrollable
   // content, at the newest reading's own x in the chart's coordinate space
@@ -1043,95 +1027,38 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
     };
   };
 
-  // Returns the single REAL Dexcom data point nearest the given time. The
-  // large glucose number is always this reading's exact value — never an
-  // interpolated value computed between readings or from the marker's pixel
-  // position on the line. Readings are sorted by time, so a binary search
-  // finds the nearest point cheaply (runs inside the scroll rAF loop).
-  const getSelectedReading = (time) => {
-    if (!filteredGlucoseReadings.length) return null;
-    const first = filteredGlucoseReadings[0];
-    const last = filteredGlucoseReadings[filteredGlucoseReadings.length - 1];
-    if (time <= first.time) return first;
-    if (time >= last.time) return last;
+  // ── The readout is bound to the scrub position ────────────────────────────
+  // Whatever the marker sits on is what the number says. Nothing else writes
+  // this row — not a scroll handler, not a timer — so the value beside the chart
+  // and the marker on it can never be showing different moments.
+  useEffect(() => {
+    if (!filters.glucose || !scrubEntry || !Number.isFinite(scrubEntry.time)) return;
 
-    let lo = 0;
-    let hi = filteredGlucoseReadings.length - 1;
-    while (lo < hi) {
-      const mid = lo + hi >> 1;
-      if (filteredGlucoseReadings[mid].time < time) lo = mid + 1;else
-      hi = mid;
-    }
-    const a = filteredGlucoseReadings[lo - 1];
-    const b = filteredGlucoseReadings[lo];
-    return Math.abs(a.time - time) <= Math.abs(b.time - time) ? a : b;
-  };
+    // Clamped for the display scale only; the value is the point's own.
+    const value = Math.min(Math.max(scrubEntry.value, effectiveMin), effectiveMax);
+    const key = `${scrubEntry.kind}:${scrubEntry.time}:${scrubEntry.value}`;
+    const shouldAnimate = lastSelectedKeyRef.current !== null && lastSelectedKeyRef.current !== key;
+    lastSelectedKeyRef.current = key;
+    // Remembered so a change of time window can keep the same point in place.
+    anchorTimeRef.current = scrubEntry.time;
 
-  // The centred reading's number, time and glow. The dot itself is NOT drawn
-  // here: the glucose plot's own overlay owns the one and only marker (see
-  // ProjectionOverlay), so this component draws no dot at all.
-  const drawCenterGlucose = (scrollLeft, animate = false, suppressMotion = false) => {
-    const timeEl = tooltipTimeRef.current;
-    const dateEl = tooltipDateRef.current;
+    if (tickerRef.current) tickerRef.current.setValue(formatGlucoseDisplay(value), shouldAnimate);
+    if (tooltipTimeRef.current) tooltipTimeRef.current.textContent = formatReadingTime(scrubEntry.time);
+    if (tooltipDateRef.current) tooltipDateRef.current.textContent = format(new Date(scrubEntry.time), "EEEE, MMM d");
 
-    if (!filters.glucose || !glucoseLinePoints.length) return;
-
-    const centerTime = getCenterTimeForScroll(scrollLeft);
-
-    // The selected data point is always a REAL Dexcom reading — the one
-    // nearest the viewport center. Its exact value drives the large number;
-    // the marker can keep tracking the smooth line for visual continuity.
-    const selected = getSelectedReading(centerTime);
-    if (!selected || !Number.isFinite(selected.time)) return;
-
-    // Remember which reading the number is showing, so a window change can keep
-    // it in place.
-    anchorTimeRef.current = selected.time;
-
-    // Stale-reading contingency: when the CGM stream has gone quiet and the
-    // viewport is centered in the gap past the last real reading, hide the
-    // marker, show "--" in the ticker, and surface the last reading's age.
-    const lastReadingTime = glucoseLinePoints.length ? glucoseLinePoints[glucoseLinePoints.length - 1].time : null;
-    if (isGlucoseStale && lastReadingTime != null && centerTime >= lastReadingTime) {
-      if (tickerRef.current) tickerRef.current.setValue("--", false);
-      if (timeEl) timeEl.textContent = formatReadingAge(latestDexcomReading?.recorded_at) || "";
-      if (dateEl) dateEl.textContent = "";
-      return;
-    }
-
-    // The displayed value is the selected reading's REAL glucose value —
-    // clamped only for display scale, never interpolated.
-    const selectedValue = Math.min(Math.max(selected.value, effectiveMin), effectiveMax);
-
-    // Animate ONLY when the selected data point changes from one real
-    // reading to another — not on every scroll frame. This keeps the number
-    // perfectly static between readings and fires the existing rolling
-    // animation precisely when the active reading changes (panning or live).
-    const selectedKey = selected.id ?? selected.time;
-    const shouldAnimate = !suppressMotion && lastSelectedKeyRef.current !== null && lastSelectedKeyRef.current !== selectedKey;
-    lastSelectedKeyRef.current = selectedKey;
-
-    // Notify the card glow of the selected reading's glucose status. Only
-    // dispatches when the status (high / low / in-range) changes, so this
-    // does NOT fire on every scroll frame — just on transitions.
+    // The card glow follows the same point, and only ever fires when the status
+    // actually changes rather than on every step of a drag.
     const glowStatus =
-    selectedValue > targetHigh ? "high" :
-    selectedValue < targetLow ? "low" :
+    value > targetHigh ? "high" :
+    value < targetLow ? "low" :
     "in_range";
-    const overReference = selectedValue > highReference || selectedValue < FIXED_LOW_REFERENCE;
+    const overReference = value > highReference || value < FIXED_LOW_REFERENCE;
     if (glowStatus !== prevGlowStatusRef.current || overReference !== prevOverReferenceRef.current) {
       prevGlowStatusRef.current = glowStatus;
       prevOverReferenceRef.current = overReference;
       window.dispatchEvent(new CustomEvent("stackd-center-glucose-status", { detail: { status: glowStatus, overReference } }));
     }
-
-    // The ticker rolls only when the selected reading changes; between
-    // readings setValue receives the same string and no-ops, so the number
-    // stays perfectly static until the next real Dexcom data point.
-    if (tickerRef.current) tickerRef.current.setValue(formatGlucoseDisplay(selectedValue), shouldAnimate);
-    if (timeEl) timeEl.textContent = formatReadingTime(selected.time);
-    if (dateEl) dateEl.textContent = Number.isFinite(selected.time) ? format(new Date(selected.time), "EEEE, MMM d") : "";
-  };
+  }, [scrubEntry, filters.glucose, effectiveMin, effectiveMax, targetLow, targetHigh, highReference]);
 
   const updateMonitoringOverlay = (scrollLeft) => {
     const centerTime = getCenterTimeForScroll(scrollLeft);
@@ -1224,17 +1151,19 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
     // Following the live edge is only allowed from the live edge. Panning away
     // latches it off until the reader comes back to the edge or taps Now.
     atRestingRef.current = isAtResting(scrollLeft, restingScrollLeft);
-    scheduleCenterGlucoseUpdate(scrollLeft);
+    scheduleMonitoringOverlayUpdate(scrollLeft);
     scheduleScrollSettle();
   };
 
-  const scheduleCenterGlucoseUpdate = (scrollLeft) => {
+  // Scrolling only moves the viewport. It never writes the readout or the
+  // marker: both belong to the scrub position, so panning history leaves the
+  // number pointing at the point the marker is actually on.
+  const scheduleMonitoringOverlayUpdate = (scrollLeft) => {
     pendingScrollLeftRef.current = scrollLeft;
     if (scrollFrameRef.current) return;
 
     scrollFrameRef.current = requestAnimationFrame(() => {
       scrollFrameRef.current = null;
-      drawCenterGlucose(pendingScrollLeftRef.current);
       updateMonitoringOverlay(pendingScrollLeftRef.current);
     });
   };
@@ -1247,33 +1176,16 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
     };
   }, []);
 
-  // Refresh relative time labels ("just now", "Xm ago") every 30 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const scrollLeft = scrollRef.current?.scrollLeft ?? maxScrollLeft;
-      const centerTime = getCenterTimeForScroll(scrollLeft);
-      const lastReadingTime = glucoseLinePoints.length ? glucoseLinePoints[glucoseLinePoints.length - 1].time : null;
-      if (isGlucoseStale && lastReadingTime != null && centerTime >= lastReadingTime) {
-        if (tooltipTimeRef.current) tooltipTimeRef.current.textContent = formatReadingAge(latestDexcomReading?.recorded_at) || "";
-        return;
-      }
-      const selected = getSelectedReading(centerTime);
-      if (selected && tooltipTimeRef.current) {
-        tooltipTimeRef.current.textContent = formatReadingTime(selected.time);
-      }
-    }, 30000);
-    return () => clearInterval(interval);
-  }, [maxScrollLeft, glucoseLinePoints, isGlucoseStale, latestDexcomReading]);
-
-  // Back to the present: the viewport centres the newest real reading, so the
-  // marker and the large number land on the freshest value.
+  // Back to the present: the position returns to A, the viewport centres the
+  // newest real reading, and the marker and the number land on the freshest
+  // value together.
   const scrollToLatestGlucose = () => {
     if (!scrollRef.current) return;
 
     // Tapping Now re-arms following, whatever the reader had latched off.
     atRestingRef.current = true;
+    setScrubPosition(0);
     scrollRef.current.scrollTo({ left: restingScrollLeft, behavior: "smooth" });
-    scheduleCenterGlucoseUpdate(restingScrollLeft);
   };
 
   useEffect(() => {
@@ -1312,18 +1224,13 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
       scrollRef.current.scrollLeft = restingScrollLeft;
     }
     previousNowPosition.current = restingScrollLeft;
-    const position = scrollRef.current.scrollLeft;
-    const latestValue = glucoseLinePoints.length > 0 ? glucoseLinePoints[glucoseLinePoints.length - 1].value : null;
-    const shouldAnimate = !resumed && prevLatestValueRef.current !== null && latestValue !== null && latestValue !== prevLatestValueRef.current;
-    prevLatestValueRef.current = latestValue;
-    drawCenterGlucose(position, shouldAnimate, resumed);
-    updateMonitoringOverlay(position);
+    updateMonitoringOverlay(scrollRef.current.scrollLeft);
 
     return () => {
       if (scrollFrameRef.current) cancelAnimationFrame(scrollFrameRef.current);
       if (settleTimerRef.current) clearTimeout(settleTimerRef.current);
     };
-  }, [restingScrollLeft, latestGlucoseBucket, filters.glucose, glucoseLinePoints.length, positionedMonitoringIntervals, isGlucoseStale, glucoseUnits, resumeRevision, viewWindow, chartWidth]);
+  }, [restingScrollLeft, latestGlucoseBucket, filters.glucose, glucoseLinePoints.length, positionedMonitoringIntervals, glucoseUnits, resumeRevision, viewWindow, chartWidth]);
 
   // The waiting state keeps the SAME root element as the chart, so the measured
   // container and its ResizeObserver survive the swap. Returning a different
@@ -1358,8 +1265,13 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
   // The projection layer draws the dashed tail (and the one marker). It is
   // mounted whenever there is a trace to draw, and it responds to a tap on a
   // past reading only — never to a drag.
-  const projectionReadings = filters.glucose ? glucoseLinePoints : [];
-  const showProjectionLayer = Boolean(projection) || projectionReadings.length > 0;
+  // The trace layer draws the readings AND the forecast as one line, so it is
+  // mounted whenever there is a glucose trace to draw. It is the only place a
+  // glucose marker is ever painted.
+  const showTraceLayer = filters.glucose && (glucoseLinePoints.length > 0 || Boolean(projection));
+  // The strip describes the forecast point the readout is on; when the readout
+  // is on a received reading it falls back to the horizon itself.
+  const stripPoint = scrubEntry?.kind === FORECAST_KIND ? scrubEntry : null;
 
   return (
     <div ref={containerRef} className="relative overflow-visible">
@@ -1460,10 +1372,10 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
       </div>
       {/* The estimate slot: inside the card, directly above the plot and
           beneath the reading row, always the same height — so the chart never
-          moves when a forecast appears or ends. It needs no interaction: with a
-          projection it shows that projection's horizon continuously, and with
-          none it is simply empty. */}
-      <ProjectionEstimateStrip projection={projection} />
+          moves when a forecast appears or ends. It reads the same scrub
+          position as the marker: on a forecast point it describes that point,
+          and on a received reading it describes the horizon. */}
+      <ProjectionEstimateStrip projection={projection} point={stripPoint} />
       <div
           ref={graphViewportRef}
           className="relative overflow-hidden"
@@ -1549,12 +1461,15 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
                   glucoseMax={effectiveMax}
                   highReference={highReference} />
 
-                {/* The projection belongs to every window that contains its
-                       points, the 24-hour view included. It maps onto this view's
-                       own plot geometry and clips at the edges like the rest. */}
-                {showProjectionLayer &&
+                {/* The forecast belongs to every window that contains its
+                       points, the 24-hour view included. This view draws candles
+                       rather than a line and keeps its own hourly taps, so the
+                       layer adds only the dashes and the marker there. */}
+                {showTraceLayer &&
                 <ProjectionOverlay
-                  projection={projection}
+                  entries={scrub.entries}
+                  anchor={scrubAnchor}
+                  horizon={scrubHorizon}
                   domainStart={domainStart}
                   totalMs={totalMs}
                   chartWidth={chartWidth}
@@ -1562,8 +1477,9 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
                   glucoseMarginTop={CHART_MARGIN_TOP}
                   plotHeight={candlePlotHeight}
                   getGlucoseY={getCandleGlucoseY}
-                  latestReading={latestGlucosePoint}
-                  readings={projectionReadings}
+                  showReadingLine={false}
+                  interactive={false}
+                  position={scrubPosition}
                   scrollContainerRef={scrollRef} />
 
                 }
@@ -1632,63 +1548,25 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
                 </>
                     }
 
-              {/* One smooth line per contiguous run of readings. Readings on
-                                       their normal cadence flow through as a single curve; a
-                                       genuinely missing sample ends its run, leaving real blank
-                                       space until readings resume and a new smooth line starts. */}
-              {filters.glucose && filteredGlucoseReadings.length > 0 &&
-                    glucoseSegments.map((segment, index) =>
-                    <Line
-                      key={`glucose_seg_${index}`}
-                      yAxisId="glucose"
-                      type="monotoneX"
-                      dataKey={`glucose_seg_${index}`}
-                      name="Glucose"
-                      className="stackd-glucose-trend"
-                      stroke="#8c4a28"
-                      strokeWidth={2.75}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      dot={false}
-                      activeDot={false}
-                      connectNulls
-                      isAnimationActive={false} />
-
-                    )
-                    }
-
-              {/* A lone reading between two gaps has no line to draw, and the
-                                       newest reading always carries a marker, so nothing real ever
-                                       disappears from the trace. */}
-              {filters.glucose && glucoseIsolatedPoints.
-                    filter((point) => point.time !== newestDrawnGlucosePoint?.time).
-                    map((point) =>
-                    <ReferenceDot
-                      key={`glucose_lone_${point.time}`}
-                      yAxisId="glucose"
-                      x={point.time}
-                      y={Math.min(point.value, effectiveMax)}
-                      r={2.6}
-                      fill="#8d8672"
-                      stroke="#fdf9f2"
-                      strokeWidth={1.2}
-                      isFront />
-
-                    )
-                    }
-              {/* The current-reading marker is NOT a chart annotation. It is
-                                       painted by the glucose line itself, through that line's own dot
-                                       renderer (see renderNewestMarker above), because an annotation
-                                       placed beside the plot is what left a dot hovering over older
-                                       data while the curve moved. Anything added here as a separate
-                                       overlay element would bring that bug back. */}
+              {/* THE GLUCOSE TRACE IS NOT DRAWN HERE.
+                                       Readings and forecast are one path in the trace layer below,
+                                       built from one merged array, so the measured line, the dashes
+                                       and the marker all come from the same points and can never be
+                                       drawn out of step. Nothing above may plot a glucose series or a
+                                       glucose dot: that is what put a second marker on the plot. */}
             </ComposedChart>
           </div>
 
-          {/* ── The projection: its dashed tail and the one marker ── */}
-          {showProjectionLayer &&
+          {/* ── THE TRACE: one line, one hit layer, one marker ──
+              The readings are solid to A (the newest received reading); the
+              forecast is dashed from A to B (the final forecast point). Both
+              come from one merged array, and the marker's x and y come from the
+              same position, so the dot is always on the line it describes. */}
+          {showTraceLayer &&
                 <ProjectionOverlay
-                  projection={projection}
+                  entries={scrub.entries}
+                  anchor={scrubAnchor}
+                  horizon={scrubHorizon}
                   domainStart={domainStart}
                   totalMs={totalMs}
                   chartWidth={chartWidth}
@@ -1696,16 +1574,11 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
                   glucoseMarginTop={GLUCOSE_MARGIN_TOP}
                   plotHeight={plotHeight}
                   getGlucoseY={getGlucoseY}
-                  latestReading={latestGlucosePoint}
-                  readings={projectionReadings}
+                  position={scrubPosition}
+                  onPositionChange={setScrubPosition}
                   scrollContainerRef={scrollRef} />
 
                 }
-
-          {/* There is no dot here. The glucose plot's overlay draws the single
-              marker that exists on screen, on the newest reading or on the
-              reading whose card is open, so a second halo can never be painted
-              beside it. */}
 
           {/* ── Insulin row (lower) — one shared timeline ── */}
           <div style={{ position: "absolute", top: INSULIN_ROW_TOP, left: 0 }}>
@@ -1888,16 +1761,10 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
 
                 })}
 
-          {/* There is exactly ONE end-of-line marker, and it is the pair of
-                                   ReferenceDots drawn inside the glucose chart's own SVG (above).
-                                   A second, DOM-positioned copy used to live here: an absolutely
-                                   positioned div whose `left` was computed from the chart width. An
-                                   overlay element like that is a sibling of the plot rather than a
-                                   child of its coordinate space, so it can sit still on screen while
-                                   the curve travels under it — which is exactly the "planted dot"
-                                   that was measured. Nothing may be positioned here again: the marker
-                                   must stay inside the SVG, mapped by the chart's own x and y scales,
-                                   so it can only ever move with the line it marks. */}
+          {/* Nothing is positioned here. The one marker on screen is drawn
+                                   last inside the trace layer's own svg, at the coordinate the
+                                   scrub position gives it, so it can only ever move with the
+                                   line it marks. */}
 
           </>
               }

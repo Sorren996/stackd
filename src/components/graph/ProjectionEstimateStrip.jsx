@@ -1,11 +1,12 @@
 // The projection estimate strip.
 //
-// It needs no interaction. Whenever a projection exists the strip shows that
-// projection's FINAL forecast point — the horizon — continuously: an amber dot,
-// the eyebrow ("estimated in 180 min", taken from that point's own offset), the
-// estimate with its unit, and the range it was drawn with. It stays put while
-// the reader pans through history, because it lives above the plot rather than
-// inside the scroller.
+// It reads the same single position as the marker: when the scrub is on a
+// forecast point, the strip describes THAT point — an amber dot, the eyebrow
+// ("estimated in 180 min", taken from the point's own offset), the estimate
+// with its unit, and the range it was drawn with. When the readout is on a
+// received reading, there is no forecast point under it to describe, so the
+// strip falls back to the projection's horizon and the slot never empties while
+// a forecast exists.
 //
 // THE SLOT IS FIXED. The strip occupies exactly STRIP_SLOT_PX whether or not
 // there is a projection, so the plot, its scale and its axis never move as a
@@ -49,8 +50,9 @@ function horizonPoint(projection) {
   };
 }
 
-export default function ProjectionEstimateStrip({ projection }) {
-  const copy = projectionCardCopy(horizonPoint(projection));
+export default function ProjectionEstimateStrip({ projection, point = null }) {
+  // The forecast point the readout is on, else the horizon.
+  const copy = projectionCardCopy(point?.kind === "forecast" ? point : horizonPoint(projection));
 
   return (
     <div
