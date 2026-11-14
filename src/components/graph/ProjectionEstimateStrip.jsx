@@ -1,20 +1,22 @@
 // The projection estimate strip.
 //
-// A forecast point used to open the cream card over the chart. It no longer
-// does: picking up the dashed line describes the estimate in one quiet strip
-// that lives inside the chart card, directly above the plot and beneath the
-// reading row. The cream card stays for real readings only, because a reading
-// is a measurement to look at, not an estimate to compare against the trace.
+// It needs no interaction. Whenever a projection exists the strip shows that
+// projection's FINAL forecast point — the horizon — continuously: an amber dot,
+// the eyebrow ("estimated in 180 min", taken from that point's own offset), the
+// estimate with its unit, and the range it was drawn with. It stays put while
+// the reader pans through history, because it lives above the plot rather than
+// inside the scroller.
 //
 // THE SLOT IS FIXED. The strip occupies exactly STRIP_SLOT_PX whether or not
-// there is an estimate to show, so the plot, its scale and its axis never move
-// as the finger crosses into the future and back out again. The empty state is
-// invisible, never absent.
+// there is a projection, so the plot, its scale and its axis never move as a
+// forecast appears or ends. A strip with nothing to say is invisible, never
+// absent.
 //
-// Copy is not invented here: the eyebrow ("estimated in 30 min", in words) and
-// the value with its unit come from the same helper the cream card uses, so the
-// two can never drift. The value goes through that helper's unit formatting, so
-// mmol/L converts and carries its own label.
+// Copy is not invented here: the eyebrow and the value with its unit come from
+// the same helper the reading card uses, so the two can never drift. The value
+// goes through that helper's unit formatting, so mmol/L converts and carries its
+// own label, and the range collapses to "likely around X" when its ends round to
+// the same number.
 
 import { AnimatePresence, motion } from "framer-motion";
 import { projectionCardCopy } from "@/components/graph/ProjectionTooltipCard";
@@ -25,8 +27,30 @@ export const STRIP_SLOT_PX = 46;
 
 const REVEAL = { duration: 0.18, ease: [0.32, 0.72, 0.25, 1] };
 
-export default function ProjectionEstimateStrip({ point }) {
-  const copy = point && point.kind === "forecast" ? projectionCardCopy(point) : null;
+// The final forecast point of the projection, in the shape the card copy
+// helper understands. Null when there is no projection to describe.
+function horizonPoint(projection) {
+  if (!projection || projection.abstained) return null;
+  const trajectory = Array.isArray(projection.trajectory) ? projection.trajectory : [];
+  let last = null;
+  for (const p of trajectory) {
+    const value = Number(p?.value);
+    if (Number.isFinite(value)) last = { ...p, value };
+  }
+  if (!last) return null;
+
+  const offset = Number(last.min_offset);
+  return {
+    kind: "forecast",
+    value: last.value,
+    minOffset: Number.isFinite(offset) ? offset : null,
+    lower: Number.isFinite(Number(last.lower)) ? Number(last.lower) : null,
+    upper: Number.isFinite(Number(last.upper)) ? Number(last.upper) : null,
+  };
+}
+
+export default function ProjectionEstimateStrip({ projection }) {
+  const copy = projectionCardCopy(horizonPoint(projection));
 
   return (
     <div
@@ -38,8 +62,6 @@ export default function ProjectionEstimateStrip({ point }) {
         {copy && (
           <motion.div
             key="estimate"
-            // Fade plus a short upward slide, in and out: the only thing that
-            // moves when the future begins or ends.
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 6 }}
