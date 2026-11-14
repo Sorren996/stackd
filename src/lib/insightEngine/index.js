@@ -26,8 +26,8 @@
 // The shape engine is now the superposition model (v2). The old rate-balance
 // versions stay defined so historical rows keep their own label, but nothing
 // new is generated under them.
-export const PROJECTION_MODEL_VERSION = "2.0.0-superposition";
-export const BASELINE_MODEL_VERSION = "2.0.0-superposition";
+export const PROJECTION_MODEL_VERSION = "2.2.0-activity-led";
+export const BASELINE_MODEL_VERSION = "2.2.0-activity-led";
 // DEPRECATED: learned multipliers are kept in shadow only and no longer shape
 // a projection, so no new projection is ever labelled personalized.
 export const PERSONALIZED_MODEL_VERSION = "1.1.0-personalized";
@@ -348,12 +348,13 @@ function parseReadings(raw) {
   if (!Array.isArray(raw)) return [];
   const seen = new Set();
   const parsed = [];
-  for (const r of raw) {
-    if (!r) continue;
+  const ordered = [...raw].sort((a,b) => Date.parse(b?.updated_date || b?.created_date || 0) - Date.parse(a?.updated_date || a?.created_date || 0));
+  for (const r of ordered) {
+    if (!r || r.source === 'system' || r.is_interpolated) continue;
     const time = new Date(r.recorded_at).getTime();
     const value = Number(r.value);
     if (!Number.isFinite(time) || !Number.isFinite(value)) continue;
-    const key = `${time}|${value}`;
+    const key = String(time);
     if (seen.has(key)) continue;
     seen.add(key);
     parsed.push({ time, value, source: String(r.source || "manual") });
@@ -749,6 +750,7 @@ export function projectGlucose(snapshot, opts = {}) {
     mgPerGram,
     horizonMin,
     stepMin,
+    previousProjection: opts.previousProjection,
   });
 
   // What the shape did with the measured trend, kept for audit and for the band.

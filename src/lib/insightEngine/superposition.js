@@ -67,36 +67,15 @@
 // internal bar it returns nothing at all rather than a confident-looking line.
 
 import { measureVelocity, VELOCITY_MAX_MGDL_PER_MIN } from "./measuredVelocity";
+import { getInsulinProfile } from '../insulinPharmacology.js';
+import { projectionOpening, MOMENTUM_TAU, clampRate } from './projectionOpening.js';
 
-export const SUPERPOSITION_MODEL_VERSION = "2.1.0-momentum";
+export const SUPERPOSITION_MODEL_VERSION = "2.2.0-activity-led";
 
 export const GRID_MIN = 5;
 const MINUTE_MS = 60 * 1000;
 
-// ── Insulin action shapes ──────────────────────────────────────────────────
-// basePeakMin / baseDurationMin describe a SMALL dose; the dose-dependence
-// below moves both values for larger doses.
-const INSULIN_SHAPES = {
-  faster_aspart: { basePeakMin: 55, baseDurationMin: 210 },
-  lispro_aabc: { basePeakMin: 50, baseDurationMin: 200 },
-  glulisine: { basePeakMin: 65, baseDurationMin: 220 },
-  lispro: { basePeakMin: 70, baseDurationMin: 230 },
-  aspart: { basePeakMin: 75, baseDurationMin: 235 },
-  regular: { basePeakMin: 105, baseDurationMin: 330 },
-};
-
-// Dose-dependence: peak later by up to 45 min (small dose ≈ 60–90 min peak,
-// large dose ≈ 105–120 min), duration longer by up to 2 h (≈4 h at small
-// doses, ≈6 h at large doses).
-const PEAK_SHIFT_PER_UNIT_MIN = 2.25;
-const PEAK_SHIFT_CAP_MIN = 45;
-const DURATION_SHIFT_PER_UNIT_MIN = 6;
-const DURATION_SHIFT_CAP_MIN = 120;
-const MAX_DURATION_MIN = 360;
-
-// Gamma activity shape. k controls the asymmetry: a fast onset, a clear peak
-// and a long tail, which is the documented action profile of a subcutaneous
-// bolus.
+// Product-registry timings; dose size scales magnitude, never peak or duration.
 const INSULIN_SHAPE_EXP = 2.2;
 
 const BASAL_HINTS = [
@@ -122,20 +101,9 @@ function insulinFamily(insulinType) {
 
 // The shape of one bolus: where it peaks, how long it lasts, how it is skewed.
 export function insulinShapeFor(units, insulinType) {
-  const family = insulinFamily(insulinType);
-  const base = INSULIN_SHAPES[family] || INSULIN_SHAPES.aspart;
-  const u = Math.max(0.5, Math.min(60, Number(units) || 0));
-  const peakMin = base.basePeakMin + Math.min(PEAK_SHIFT_CAP_MIN, u * PEAK_SHIFT_PER_UNIT_MIN);
-  const durationMin = Math.min(
-    MAX_DURATION_MIN,
-    base.baseDurationMin + Math.min(DURATION_SHIFT_CAP_MIN, u * DURATION_SHIFT_PER_UNIT_MIN)
-  );
-  return {
-    family,
-    peakMin: Math.round(peakMin * 10) / 10,
-    durationMin: Math.round(durationMin * 10) / 10,
-    shapeExp: INSULIN_SHAPE_EXP,
-  };
+  const profile = getInsulinProfile(insulinType || 'NovoLog');
+  return { family: insulinFamily(insulinType), onsetMin: profile.onset, peakMin: profile.peak,
+    durationMin: profile.duration, shapeExp: INSULIN_SHAPE_EXP };
 }
 
 // ── Numerical shape primitives ─────────────────────────────────────────────
@@ -169,22 +137,22 @@ function gammaAuc(peakMin, durationMin, shapeExp) {
 export function insulinActivityRate(minSinceDose, shape) {
   if (!(minSinceDose > 0) || !shape) return 0;
   if (minSinceDose >= shape.durationMin) return 0;
-  const area = gammaAuc(shape.peakMin, shape.durationMin, shape.shapeExp);
+  const area = gammaAuc(shape.peakMin - shape.onsetMin, shape.durationMin - shape.onsetMin, shape.shapeExp);
   if (!(area > 0)) return 0;
-  return gammaRate(minSinceDose, shape.peakMin, shape.shapeExp) / area;
+  return gammaRate(minSinceDose - shape.onsetMin, shape.peakMin - shape.onsetMin, shape.shapeExp) / area;
 }
 
 // Fraction of the dose's total glucose-lowering effect already delivered.
 export function insulinActionFraction(minSinceDose, shape) {
   if (!(minSinceDose > 0) || !shape) return 0;
   if (minSinceDose >= shape.durationMin) return 1;
-  const area = gammaAuc(shape.peakMin, shape.durationMin, shape.shapeExp);
+  const area = gammaAuc(shape.peakMin - shape.onsetMin, shape.durationMin - shape.onsetMin, shape.shapeExp);
   if (!(area > 0)) return 0;
   let delivered = 0;
   const step = 1;
   const cap = Math.min(minSinceDose, shape.durationMin);
   for (let t = 0; t < cap; t += step) {
-    delivered += ((gammaRate(t, shape.peakMin, shape.shapeExp) + gammaRate(t + step, shape.peakMin, shape.shapeExp)) / 2) * step;
+    delivered += ((gammaRate(t - shape.onsetMin, shape.peakMin - shape.onsetMin, shape.shapeExp) + gammaRate(t + step - shape.onsetMin, shape.peakMin - shape.onsetMin, shape.shapeExp)) / 2) * step;
   }
   return Math.max(0, Math.min(1, delivered / area));
 }
@@ -293,11 +261,9 @@ export function rescueAbsorptionRate(minSinceRescue, shape) {
 }
 
 // ── Momentum ───────────────────────────────────────────────────────────────
-// The residual that makes the curve leave the anchor at the speed glucose is
-// actually moving. It decays on a 25-minute time constant, so it is most of the
-// opening rate, a third of it by 25 minutes, and under a tenth by 60 — by which
-// point the insulin and carb terms are the whole story.
-export const MOMENTUM_TAU_MIN = 25;
+// A bounded measured offset, decaying over twelve minutes. It does not cancel
+// the mechanistic rate and is smaller still with substantial insulin on board.
+export const MOMENTUM_TAU_MIN = MOMENTUM_TAU;
 // A single reading-to-reading swing cannot be allowed to bend the curve harder
 // than this, whatever the fit says.
 export const MAX_MOMENTUM_MGDL_PER_MIN = VELOCITY_MAX_MGDL_PER_MIN;
@@ -354,6 +320,7 @@ export function projectSuperposition(inputs) {
     mgPerGram,
     horizonMin = 120,
     stepMin = GRID_MIN,
+    previousProjection = null,
   } = inputs || {};
 
   const horizon = Math.max(5, Math.min(180, Number(horizonMin) || 120));
@@ -422,28 +389,14 @@ export function projectSuperposition(inputs) {
 
   const mechanisticRateAtAnchor = carbRateAt(0) + rescueRateAt(0) - insulinRateAt(0);
 
-  // ── Opening rate ───────────────────────────────────────────────────────
-  // The measured velocity is the rate the curve must leave the anchor at. The
-  // mechanistic shapes already claim `mechanisticRateAtAnchor`, so the residual
-  // carried by momentum is the difference: at offset 0 the total rate IS the
-  // measured velocity, and as that residual decays the shapes take over without
-  // a seam. With nothing measurable nothing is added — the shapes stand alone
-  // rather than a zero being invented.
   const measured = measureVelocity(readings, anchorTime);
   const measuredVelocity = measured.velocity;
-
-  let momentumStart = 0;
-  let momentumDamped = false;
-  if (measuredVelocity != null) {
-    momentumStart = measuredVelocity - mechanisticRateAtAnchor;
-    const nothingOnBoard = mealTerms.length === 0 && rescueTerms.length === 0 && doseTerms.length === 0;
-    if (measuredVelocity <= UNEXPLAINED_FALL_RATE && nothingOnBoard) {
-      momentumStart *= UNEXPLAINED_FALL_SCALE;
-      momentumDamped = true;
-    }
-    momentumStart = clampMomentum(momentumStart);
-  }
-  const openingRate = mechanisticRateAtAnchor + momentumStart;
+  const activeUnits = doseTerms.reduce((sum, d) => sum + d.units * (1 - insulinActionFraction((anchorTime-d.atTime)/MINUTE_MS,d.shape)),0);
+  const opening = projectionOpening({ readings, anchorTime, velocity: measuredVelocity,
+    activeUnits, insulinRate: insulinRateAt(0), mechanism: mechanisticRateAtAnchor, previous: previousProjection });
+  const momentumStart = opening.momentum;
+  const momentumDamped = opening.damped;
+  const openingRate = opening.openingRate;
 
   // Offset 0 is the reading itself — the same number the solid line ends on.
   let value = anchor;
@@ -455,7 +408,8 @@ export function projectSuperposition(inputs) {
     const rescueRate = rescueRateAt(offset);
     const insulinRate = insulinRateAt(offset);
     const momentum = momentumRate(offset, momentumStart);
-    const rate = carbRate + rescueRate - insulinRate + momentum;
+    const stabilityRate = opening.stabilityOffset * Math.exp(-offset / MOMENTUM_TAU_MIN);
+    const rate = clampRate(carbRate + rescueRate - insulinRate + momentum + stabilityRate);
 
     // Trapezoid across the step, so a segment's slope is the average of the two
     // endpoints and the first point is the anchor exactly, never a step past it.
@@ -472,6 +426,7 @@ export function projectSuperposition(inputs) {
       rescueRate,
       insulinRate,
       momentumRate: momentum,
+      stabilityRate,
     });
   }
 
@@ -479,24 +434,29 @@ export function projectSuperposition(inputs) {
     points,
     diagnostics: {
       version: SUPERPOSITION_MODEL_VERSION,
+      lowCrossingMinutes: anchor >= 70 ? points.find(p => p.min_offset > 0 && p.value < 70)?.min_offset ?? null : null,
       lagCorrection: 0,
       carbSensitivity: carbSensitivity,
       insulinSensitivity,
       rateAtAnchor: Math.round(mechanisticRateAtAnchor * 1000) / 1000,
+      splitRates: points.map(p => ({ min_offset: p.min_offset, insulin: -p.insulinRate, carbs: p.carbRate, rescue: p.rescueRate, momentum: p.momentumRate, stability: p.stabilityRate, total: p.rate })),
       momentum: {
+        ...opening,
         measuredVelocity,
         appliedStart: Math.round(momentumStart * 1000) / 1000,
         openingRate: Math.round(openingRate * 1000) / 1000,
         mechanisticRateAtAnchor: Math.round(mechanisticRateAtAnchor * 1000) / 1000,
         tauMin: MOMENTUM_TAU_MIN,
-        cap: MAX_MOMENTUM_MGDL_PER_MIN,
+        cap: opening.cap,
+        measuredVelocityCap: MAX_MOMENTUM_MGDL_PER_MIN,
+        summedRateCap: 4.5,
         damped: momentumDamped,
         method: measured.method,
         sampleCount: measured.sampleCount,
         spanMin: measured.spanMin,
         unusableReason: measured.reason,
       },
-      doseTerms: doseTerms.map((d) => ({ units: d.units, peakMin: d.shape.peakMin, durationMin: d.shape.durationMin, family: d.shape.family })),
+      doseTerms: doseTerms.map((d) => ({ units: d.units, onsetMin: d.shape.onsetMin, peakMin: d.shape.peakMin, durationMin: d.shape.durationMin, family: d.shape.family })),
       mealTerms: mealTerms.map((m) => ({ carbs: m.carbs, peakMin: Math.round(m.shape.firstPeakMin), durationMin: Math.round(m.shape.durationMin) })),
       rescueTerms: rescueTerms.map((r) => ({ grams: r.grams, peakMin: Math.round(r.shape.firstPeakMin), durationMin: Math.round(r.shape.durationMin) })),
     },

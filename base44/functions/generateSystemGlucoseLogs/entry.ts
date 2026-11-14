@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
+import { upsertReadings } from '../../shared/readingPersistence.ts';
 
 // Triggered when a user logs a new glucose reading (manual or CGM). Fills the
 // gap between the previous real reading and the new one with "system"
@@ -61,7 +62,7 @@ export default async function(req) {
 
     // Find the most recent real reading before this one for the same user.
     const candidates = await sr.entities.GlucoseReading.filter(
-      { recorded_at: { $lt: current.recorded_at } },
+      { $or: [{user_id: owner}, {created_by_id: owner}], recorded_at: { $lt: current.recorded_at } },
       '-recorded_at',
       50
     );
@@ -102,7 +103,7 @@ export default async function(req) {
     }
 
     if (toCreate.length) {
-      await sr.entities.GlucoseReading.bulkCreate(toCreate);
+      await upsertReadings({sr, ownerId: owner, rows: toCreate});
     }
 
     return Response.json({

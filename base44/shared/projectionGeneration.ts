@@ -8,6 +8,7 @@ import { resolveModelComponents } from "./modelResolution.ts";
 import { calibrateUncertainty } from "./uncertaintyCalibration.ts";
 import { buildInputSnapshot } from "./projectionSnapshot.ts";
 import { residualBandForUser } from "./projectionBandService.ts";
+import { reconcileReadings } from './readingPersistence.ts';
 import { learnRescueCarbModel, observeRescueEpisodes, MIN_EPISODES } from "./rescueCarbLearning.ts";
 
 // Shared server-side GlucoseProjection generator.
@@ -102,6 +103,9 @@ async function runGenerateProjectionForUser({
     return { ok: false, skipped: true, reason: "user_load_failed" };
   }
 
+  // Also covers manual-entry events and legacy owner-only reading rows.
+  await reconcileReadings({sr, ownerId: normalizedUserId,
+    sinceIso: new Date(now - 24 * 60 * 60000).toISOString(), untilIso: new Date(now).toISOString()});
   const callerAnchorIso = normalizeIsoTimestamp(anchorTimestamp);
   if (!forceRefresh && callerAnchorIso) {
     const cacheKey = `${normalizedUserId}|${callerAnchorIso}`;
@@ -377,8 +381,21 @@ async function runGenerateProjectionForUser({
     }
   }
 
-  // Run the projection engine with the resolved model and calibrated uncertainty.
+  // Count unique observed moments, including when old duplicate rows remain.
   const snapshot = normalizeInputs(readings, meals, doses, settings, now);
+  const priorRows = snapshot.anchor ? await sr.entities.GlucoseProjection.filter({
+    $and: [{$or: [{user_id: normalizedUserId}, {created_by_id: normalizedUserId}]},
+      {model_version: PROJECTION_MODEL_VERSION, abstained: false,
+       generated_at: {$lte: new Date(now).toISOString()},
+       anchor_time: {$lt: new Date(snapshot.anchor.time).toISOString(),
+         $gte: new Date(snapshot.anchor.time - 15 * 60000).toISOString()}}]
+  }, '-anchor_time', 1) : [];
+  const prior = priorRows[0];
+  const previousProjection = prior?.applied_momentum ? {
+    measuredVelocity: prior.applied_momentum.measuredVelocity,
+    acceptedSign: prior.applied_momentum.acceptedSign,
+    openingRate: prior.applied_momentum.openingRate,
+  } : null;
 
   const uncertaintyCalibration = calibrateUncertainty(evaluatedProjections || [], {
     currentModelVersion: PROJECTION_MODEL_VERSION,
@@ -389,13 +406,14 @@ async function runGenerateProjectionForUser({
     modelResolution,
     uncertaintyCalibration,
     rescueParams,
+    previousProjection,
   });
 
   // The median trajectory is untouched. Only its interval and useful drawn horizon
   // are replaced, using this user's clean, signed, per-horizon residuals.
   if (!result.abstained && result.trajectory.length) {
     const band = await residualBandForUser(sr, normalizedUserId, result.trajectory,
-      Number(snapshot.dataQuality?.volatilitySd), now);
+      Number(snapshot.dataQuality?.volatilitySd), now, true, result.modelVersion);
     result.trajectory = band.trajectory;
     result.horizonMinutes = band.summary.trajectoryEndsAtMinutes;
     result.uncertaintySummary = {
@@ -409,7 +427,7 @@ async function runGenerateProjectionForUser({
       bandSource: 'user_residual_quantiles', residualCount: band.summary.sampleCount };
   }
 
-  const inputSnapshot = buildInputSnapshot(readings, meals, doses, settings, modelResolution, now);
+  const inputSnapshot = { ...buildInputSnapshot(readings, meals, doses, settings, modelResolution, now), previous_projection: previousProjection };
   const anchorIso = result.anchor ? new Date(result.anchor.time).toISOString() : null;
 
   const recordPayload = {

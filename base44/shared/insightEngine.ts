@@ -114,8 +114,8 @@ export function replayProjection(
 // ── Model identity ──────────────────────────────────────────────────────────
 // The shape engine is the superposition model (v2). Historical rows keep their
 // old label; nothing new is generated under the rate-balance versions.
-export const PROJECTION_MODEL_VERSION = "2.0.0-superposition";
-export const BASELINE_MODEL_VERSION = "2.0.0-superposition";
+export const PROJECTION_MODEL_VERSION = "2.2.0-activity-led";
+export const BASELINE_MODEL_VERSION = "2.2.0-activity-led";
 // DEPRECATED: learned multipliers are kept in shadow only and never shape a
 // projection, so no new projection is labelled personalized.
 export const PERSONALIZED_MODEL_VERSION = "1.1.0-personalized";
@@ -418,12 +418,13 @@ function parseReadings(raw: any[]): { time: number; value: number; source: strin
   if (!Array.isArray(raw)) return [];
   const seen = new Set<string>();
   const parsed: { time: number; value: number; source: string }[] = [];
-  for (const r of raw) {
-    if (!r) continue;
+  const ordered = [...raw].sort((a,b) => Date.parse(b?.updated_date || b?.created_date || 0) - Date.parse(a?.updated_date || a?.created_date || 0));
+  for (const r of ordered) {
+    if (!r || r.source === 'system' || r.is_interpolated) continue;
     const time = new Date(r.recorded_at).getTime();
     const value = Number(r.value);
     if (!Number.isFinite(time) || !Number.isFinite(value)) continue;
-    const key = `${time}|${value}`;
+    const key = String(time);
     if (seen.has(key)) continue; // deduplicate
     seen.add(key);
     parsed.push({ time, value, source: String(r.source || "manual") });
@@ -774,6 +775,7 @@ export function projectGlucose(
   opts: {
     horizonMin?: number;
     stepMin?: number;
+    previousProjection?: any;
     modelParams?: { rateAdjustmentFactor?: number } | null;
     mealModelParams?: { [key: string]: { speedFactor: number; magnitudeFactor: number } } | null;
     modelResolution?: ModelResolution | null;
@@ -949,6 +951,7 @@ export function projectGlucose(
     mgPerGram,
     horizonMin,
     stepMin,
+    previousProjection: opts.previousProjection,
   });
 
   // What the shape did with the measured trend, kept for audit and for the band.

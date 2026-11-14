@@ -18,14 +18,15 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { projectionCardCopy } from "@/components/graph/ProjectionTooltipCard";
 import GlucoseTicker from "@/components/graph/GlucoseTicker";
+import { formatGlucose } from '@/lib/glucoseUnits';
 
-// 8px lead-in + 12px eyebrow + 4px gap + 22px value. Only the strip's own
-// contents ever animate; this height is a constant.
-export const STRIP_SLOT_PX = 46;
+// Reserve the eyebrow, estimate and optional heads-up line at all times.
+// Only the strip's own contents animate; this height is a constant.
+export const STRIP_SLOT_PX = 64;
 
 const REVEAL = { duration: 0.18, ease: [0.32, 0.72, 0.25, 1] };
 
-export default function ProjectionEstimateStrip({ selectionSource }) {
+export default function ProjectionEstimateStrip({ selectionSource, lowCrossingMinutes }) {
   const [shown, setShown] = useState(false);
   const textRefs = useRef({});
   const point = selectionSource.getSnapshot();
@@ -96,6 +97,11 @@ export default function ProjectionEstimateStrip({ selectionSource }) {
                 {copy.range}
               </span>
             </div>
+            {Number.isFinite(lowCrossingMinutes) && lowCrossingMinutes > 0 && (
+              <p className="mt-1 text-[10px] leading-none text-mustard-text">
+                Heading below {formatGlucose(70)} in about {Math.round(lowCrossingMinutes / 5) * 5} min
+              </p>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

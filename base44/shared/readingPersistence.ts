@@ -18,7 +18,7 @@
 //
 // SAFETY: only shapes storage. Never interprets a value.
 
-import { scoreReadingWindow } from './projectionResidualScoring.ts';
+import { scoreReadingWindow, readPages, ownerQuery } from './projectionResidualScoring.ts';
 
 function momentOf(recordedAt: unknown): number | null {
   const t = new Date(recordedAt as string).getTime();
@@ -50,24 +50,25 @@ export async function upsertReadings({
   ownerId: string;
   rows: any[];
 }): Promise<UpsertResult> {
-  const batch = (Array.isArray(rows) ? rows : []).filter(
-    (row) => row && momentOf(row.recorded_at) != null
-  );
+  const uniqueBatch = new Map<number, any>();
+  for (const row of Array.isArray(rows) ? rows : []) {
+    const moment = momentOf(row?.recorded_at);
+    if (moment == null) continue;
+    const previous = uniqueBatch.get(moment);
+    if (previous && previous.source !== 'system' && row.source === 'system') continue;
+    uniqueBatch.set(moment, {...row, user_id: ownerId, recorded_at: new Date(moment).toISOString()});
+  }
+  const batch = [...uniqueBatch.values()];
   const result: UpsertResult = { inserted: 0, updated: 0, insertedIds: [], insertedTimestamps: [] };
   if (!batch.length) return result;
 
   const moments = batch.map((row) => momentOf(row.recorded_at) as number).sort((a, b) => a - b);
-  const existing = await sr.entities.GlucoseReading.filter(
-    {
-      user_id: ownerId,
-      recorded_at: {
-        $gte: new Date(moments[0] - 1000).toISOString(),
-        $lte: new Date(moments[moments.length - 1] + 1000).toISOString(),
-      },
-    },
-    '-recorded_at',
-    500
-  );
+  const existing = await readPages(sr.entities.GlucoseReading, {
+    $and: [ownerQuery(ownerId), {recorded_at: {
+      $gte: new Date(moments[0] - 1000).toISOString(),
+      $lte: new Date(moments[moments.length - 1] + 1000).toISOString(),
+    }}]
+  }, '-recorded_at');
 
   const storedByMoment = new Map<number, any>();
   for (const row of Array.isArray(existing) ? existing : []) {
@@ -88,6 +89,11 @@ export async function upsertReadings({
       storedByMoment.set(moment, row);
       continue;
     }
+    if (found.source !== 'system' && row.source === 'system') continue;
+    if (found.source === 'system' && row.source !== 'system') {
+      toUpdate.push({ id: found.id, value: Number(row.value), trend: row.trend ?? null, source: row.source } as any);
+      continue;
+    }
     const sameValue = Number(found.value) === Number(row.value);
     const sameTrend = (row.trend ?? null) === (found.trend ?? null);
     if (!sameValue || !sameTrend) {
@@ -106,12 +112,14 @@ export async function upsertReadings({
   if (toUpdate.length) {
     const updates = await Promise.allSettled(
       toUpdate.map((row) =>
-        sr.entities.GlucoseReading.update(row.id, { value: row.value, trend: row.trend })
+        sr.entities.GlucoseReading.update(row.id, { value: row.value, trend: row.trend,
+          ...((row as any).source ? {source: (row as any).source} : {}) })
       )
     );
     result.updated = updates.filter((entry) => entry.status === 'fulfilled').length;
   }
 
+  await reconcileReadings({ sr, ownerId, sinceIso: new Date(moments[0] - 1000).toISOString(), untilIso: new Date(moments[moments.length-1] + 1000).toISOString() });
   if (result.inserted || result.updated) {
     try {
       await scoreReadingWindow(sr, ownerId, moments[0], moments[moments.length - 1]);
@@ -133,16 +141,16 @@ export async function reconcileReadings({
   sr,
   ownerId,
   sinceIso,
+  untilIso = new Date().toISOString(),
 }: {
   sr: any;
   ownerId: string;
   sinceIso: string;
+  untilIso?: string;
 }): Promise<number> {
-  const rows = await sr.entities.GlucoseReading.filter(
-    { user_id: ownerId, recorded_at: { $gte: sinceIso } },
-    '-recorded_at',
-    500
-  );
+  const rows = await readPages(sr.entities.GlucoseReading, {
+    $and: [ownerQuery(ownerId), {recorded_at: {$gte: sinceIso, $lte: untilIso}}]
+  }, '-recorded_at');
   const groups = new Map<number, any[]>();
   for (const row of Array.isArray(rows) ? rows : []) {
     const moment = momentOf(row?.recorded_at);
@@ -155,13 +163,14 @@ export async function reconcileReadings({
   const extras: string[] = [];
   for (const list of groups.values()) {
     if (list.length < 2) continue;
-    const keep = list.reduce((best, row) => (writtenAt(row) > writtenAt(best) ? row : best), list[0]);
+    const keep = list.sort((a,b) => Number(a.source === 'system') - Number(b.source === 'system')
+      || writtenAt(b) - writtenAt(a) || String(b.id).localeCompare(String(a.id)))[0];
     for (const row of list) if (row.id !== keep.id) extras.push(row.id);
   }
   if (!extras.length) return 0;
 
-  await Promise.allSettled(
-    extras.slice(0, 50).map((id) => sr.entities.GlucoseReading.delete(id))
-  );
+  for (let index=0; index<extras.length; index+=500) {
+    await sr.entities.GlucoseReading.deleteMany({$and: [ownerQuery(ownerId), {id: {$in: extras.slice(index,index+500)}}]});
+  }
   return extras.length;
 }

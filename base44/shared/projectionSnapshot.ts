@@ -59,6 +59,7 @@ export interface InputSnapshot {
     target_range_high: number | null;
   };
   model_resolution: ModelResolution | null;
+  previous_projection?: any;
 }
 
 export interface SnapshotReplayResult {
@@ -219,6 +220,7 @@ export function replayFromSnapshot(
     horizonMin: horizonMinutes,
     modelResolution: alternativeResolution,
     uncertaintyCalibration: uncertaintyCalibration ?? null,
+    previousProjection: snapshot.previous_projection ?? null,
   });
 
   return {

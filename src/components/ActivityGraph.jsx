@@ -1391,7 +1391,7 @@ function ActivityGraph({ doses, activeInsulinBreakdown = [], glucoseReadings = [
           moves when a forecast appears or ends. It describes the model point
           nearest the centre only while the centre is after the newest reading;
           at rest and on past readings it remains empty. */}
-      <ProjectionEstimateStrip selectionSource={selectionSource} />
+      <ProjectionEstimateStrip selectionSource={selectionSource} lowCrossingMinutes={projection?.effective_parameters?.shapeEngine?.lowCrossingMinutes} />
       <div
           ref={graphViewportRef}
           className="relative overflow-hidden"
