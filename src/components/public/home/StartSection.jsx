@@ -11,7 +11,7 @@ const PATHS = [
   {
     icon: PenLine,
     title: "Or enter readings by hand",
-    body: "Manual glucose logging is on by default and can be turned off if a sensor already covers you. Both paths lead to the same dashboard.",
+    body: "Add readings by hand whenever no sensor is connected. Once a sensor is flowing, that path steps aside on its own. Both lead to the same dashboard.",
   },
 ];
 

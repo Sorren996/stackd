@@ -1,5 +1,5 @@
 import { useUserSettings } from "@/hooks/useUserSettings";
-import { Check, Loader2, Gauge, Droplets } from "lucide-react";
+import { Check, Loader2, Gauge } from "lucide-react";
 import { getGlucoseUnits, setGlucoseUnits, formatGlucose, formatGlucoseAbsDelta, glucoseUnitLabel } from "@/lib/glucoseUnits";
 import {
   HIGH_REFERENCE_DEFAULT,
@@ -27,16 +27,6 @@ export default function DisplaySettings() {
   const currentHigh = Number.isFinite(settings?.high_glucose_reference)
     ? Math.max(HIGH_REFERENCE_MIN, Math.min(HIGH_REFERENCE_MAX, Math.round(settings.high_glucose_reference / HIGH_REFERENCE_STEP) * HIGH_REFERENCE_STEP))
     : HIGH_REFERENCE_DEFAULT;
-  const manualGlucoseEnabled = settings?.manual_glucose_logging_enabled !== false;
-
-  const handleToggleManualGlucose = () => {
-    if (isSaving) return;
-    const next = !manualGlucoseEnabled;
-    localStorage.setItem("manual_glucose_logging_enabled", String(next));
-    window.dispatchEvent(new Event("insulin-settings-updated"));
-    save({ manual_glucose_logging_enabled: next });
-  };
-
   const handleSelectHeight = (value) => {
     if (value === currentHeight || isSaving) return;
     localStorage.setItem("graph_height", String(value));
@@ -141,36 +131,6 @@ export default function DisplaySettings() {
         <p className="text-[11px] leading-relaxed" style={{ color: "#746959" }}>
           Your chart scale sets the normal upper limit of your glucose graph across every Your Flow view. Whenever a real reading rises above or dips below your chosen scale, the graph gently expands to show the true value without changing your saved preference.
         </p>
-      </SectionCard>
-
-      <SectionCard label="Manual Glucose">
-        <button
-          type="button"
-          onClick={handleToggleManualGlucose}
-          disabled={isSaving}
-          className="w-full flex items-center justify-between gap-4 pt-3 pb-2 text-left transition active:opacity-70"
-        >
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold" style={{ color: "#3f3830" }}>Log glucose by hand</p>
-            <p className="text-xs mt-0.5 leading-relaxed" style={{ color: "#746959" }}>
-              Show Glucose in the logging menu so you can add fingerstick readings. Turn off if your sensor provides readings automatically.
-            </p>
-          </div>
-          <span
-            className="relative h-7 w-12 shrink-0 rounded-full border transition-colors"
-            style={{
-              background: manualGlucoseEnabled
-                ? "#5b6550"
-                : "rgba(63, 56, 48, 0.10)",
-              borderColor: manualGlucoseEnabled ? "#5b6550" : "#eadccf",
-            }}
-          >
-            <span
-              className="absolute top-1/2 h-5 w-5 -translate-y-1/2 rounded-full shadow-md transition-all"
-              style={{ left: manualGlucoseEnabled ? "calc(100% - 22px)" : "2px", background: manualGlucoseEnabled ? "#fdf9f2" : "#f7f1e8" }}
-            />
-          </span>
-        </button>
       </SectionCard>
 
       <SectionCard>

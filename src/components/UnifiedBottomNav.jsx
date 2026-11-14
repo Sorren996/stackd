@@ -38,12 +38,6 @@ const navItems = [
 
 
 
-function readManualGlucoseEnabled() {
-  if (typeof window === "undefined") return true;
-  const raw = window.localStorage.getItem("manual_glucose_logging_enabled");
-  return raw === null ? true : raw === "true";
-}
-
 export default function UnifiedBottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -62,22 +56,23 @@ export default function UnifiedBottomNav() {
   const [doseFormOpen, setDoseFormOpen] = useState(false);
   const [doseFormPreloaded, setDoseFormPreloaded] = useState(false);
   const [combinedSheetOpen, setCombinedSheetOpen] = useState(false);
-  const [manualGlucoseEnabled, setManualGlucoseEnabled] = useState(readManualGlucoseEnabled);
   const { connected: dexcomConnected } = useDexcomConnection();
 
   // Fanned options, ordered left (Glucose) → centre (Insulin) → right (Carbs).
-  // Glucose stays gated exactly as before: hidden when manual logging is off,
-  // or when a CGM is already supplying readings.
+  // Glucose is offered exactly when nothing is supplying readings: a CGM that
+  // is connected hides it, and no CGM shows it. The connection state comes from
+  // the shared connection query, so connecting or disconnecting updates this
+  // list immediately, without a reload.
   const actions = useMemo(() => {
     const list = [
       { id: "insulin", label: "Insulin", Icon: Syringe, mode: "insulin" },
       { id: "carbs", label: "Carbs", Icon: Utensils, mode: "carbs" },
     ];
-    if (manualGlucoseEnabled && !dexcomConnected) {
+    if (!dexcomConnected) {
       list.unshift({ id: "glucose", label: "Glucose", Icon: Droplets, mode: "glucose" });
     }
     return list;
-  }, [manualGlucoseEnabled, dexcomConnected]);
+  }, [dexcomConnected]);
 
   useEffect(() => {
     setExpanded(false);
@@ -107,17 +102,6 @@ export default function UnifiedBottomNav() {
     // tab main page that is already mounted and merely re-revealed.
     requestAnimationFrame(() => scrollToTop());
   };
-
-  useEffect(() => {
-    if (typeof window === "undefined") return undefined;
-    const refresh = () => setManualGlucoseEnabled(readManualGlucoseEnabled());
-    window.addEventListener("insulin-settings-updated", refresh);
-    window.addEventListener("storage", refresh);
-    return () => {
-      window.removeEventListener("insulin-settings-updated", refresh);
-      window.removeEventListener("storage", refresh);
-    };
-  }, []);
 
   // Preload the DoseForm sheet on idle so it opens instantly on tap.
   useEffect(() => {

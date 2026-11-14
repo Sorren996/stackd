@@ -13,7 +13,7 @@ const FAQ = [
   },
   {
     q: "Where does the glucose data come from?",
-    a: "From a supported Dexcom Share account you connect yourself, from readings you enter by hand, or both. Manual logging can be switched off if a sensor already covers you.",
+    a: "From a supported Dexcom Share account you connect yourself, from readings you enter by hand, or both. Logging by hand steps aside on its own once a sensor is connected.",
   },
   {
     q: "What can someone I share with see?",
