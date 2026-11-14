@@ -15,17 +15,15 @@
 //   Magnitude <1: flat; 1–<2: angled; 2–<3: straight; >=3: double.
 //   Both signs use the same tiers. Presentation lives in trendPresentation.
 //
-// When the last 15 minutes hold fewer than three readings (a hand-logged day,
-// rather than a CGM), the same function is asked over a wider three-hour window
-// so the arrow still exists. Where both surfaces have a measurement, they have
-// the same one.
+// An arrow is only ever drawn from sensor-cadence readings: measureVelocity
+// ignores hand-logged points, and the last 15 minutes must hold enough of them.
+// A lone fingerstick, or a day of them, therefore shows no arrow rather than a
+// direction invented from single points.
 
 // Relative, not the @/ alias: this module is imported directly by the
 // node-runnable trend-mark test, where the alias does not resolve.
 import { measureVelocity, trendFromVelocity } from "./insightEngine/measuredVelocity.js";
 import { trendPresentation } from './trendPresentation.js';
-
-const WIDE_WINDOW_MIN = 180;
 
 /**
  * Every arrow this mapping can produce, and the complete set a glucose card may
@@ -68,13 +66,8 @@ export function computeGlucoseTrend(readings) {
   const measured = measureVelocity(samples, newest);
   if (measured.velocity != null) return trendFromVelocity(measured.velocity);
 
-  // Only a thin window falls back — a stale, duplicated or interpolated series
-  // is reported as no arrow rather than measured over a longer stretch.
-  if (measured.reason === "too_few_readings") {
-    const wide = measureVelocity(samples, newest, { windowMin: WIDE_WINDOW_MIN, minSamples: 2 });
-    if (wide.velocity != null) return trendFromVelocity(wide.velocity);
-  }
-
+  // No wider fallback: stretching the window to reach a second sample is how a
+  // pair of fingersticks hours apart used to become an arrow.
   return null;
 }
 

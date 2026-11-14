@@ -688,7 +688,13 @@ export function projectGlucose(snapshot, opts = {}) {
   // Abstain only for absent evidence. A wide band, several doses on board or an
   // uncalibrated plan are reasons to be LESS SURE — drawn as a wider band, never
   // as an empty forecast.
-  if (snapshot.readings.length < MIN_READINGS_TO_PROJECT) {
+  // A hand-logged point is an instant, not a grid point. Without enough
+  // *measured* readings the forecast would be invented from sparse notes, so
+  // this stays the abstain answer it already was.
+  const measuredReadings = snapshot.readings.filter((r) => r.source !== "manual");
+  // With only hand-logged notes there is no level to stand on, so the answer
+  // stays the same abstention it always was.
+  if (measuredReadings.length < MIN_READINGS_TO_PROJECT) {
     return abstainedResult("Not enough recent readings yet — a few more samples will bring the estimate back.", confidence, snapshot.anchor);
   }
 

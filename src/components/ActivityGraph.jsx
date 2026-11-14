@@ -493,11 +493,13 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
   const filteredCarbEntries = filters.carbs ? carbEntries.map(normalizeCarbEntry).filter((entry) => entry.carbs > 0 && entry.consumed_at) : [];
 
   // One canonical real-reading series feeds the current marker, the selected
-  // reading and the chart: ordered by sensor time, one point per sensor
-  // timestamp, carry-forward rows excluded.
+  // reading and the chart: ordered by time, one point per timestamp,
+  // carry-forward rows excluded. A hand-logged reading is a real point at its
+  // own time, so it belongs on this same line — never a second series, and
+  // never dropped because a sensor is also connected.
   const sortedGlucoseReadings = useMemo(() =>
-  canonicalGlucoseSeries(glucoseReadings, { cgmOnly: dexcomConnected }),
-  [glucoseReadings, dexcomConnected]
+  canonicalGlucoseSeries(glucoseReadings),
+  [glucoseReadings]
   );
 
   const latestGlucoseReading = sortedGlucoseReadings[sortedGlucoseReadings.length - 1];

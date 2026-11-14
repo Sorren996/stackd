@@ -71,7 +71,10 @@ export function measureVelocity(
     ? Math.max(2, Number(options.minSamples))
     : VELOCITY_MIN_SAMPLES;
 
-  const points = normalizeReadingSamples(rawReadings);
+  // A hand-logged point is an instant, not a sensor grid point: it may stand as
+  // a level, but it never takes part in a rate. With manual samples dropped, a
+  // series of fingersticks alone has nothing to measure and no arrow is drawn.
+  const points = normalizeReadingSamples(rawReadings).filter((p) => p.source !== "manual");
   const newest = points.length ? points[points.length - 1] : null;
   const anchorMs = Number.isFinite(Number(atTime)) ? Number(atTime) : newest?.t;
 

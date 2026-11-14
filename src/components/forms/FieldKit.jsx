@@ -441,6 +441,18 @@ export function StepperField({
             pattern={decimals > 0 ? "[0-9]*[.,]?[0-9]*" : "[0-9]*"}
             value={value}
             onChange={(e) => onChange(clean(e.target.value))}
+            onPaste={(e) => {
+              // A value over the ceiling is refused outright, never pasted in
+              // and trimmed afterwards.
+              if (cap === null) return;
+              const el = e.currentTarget;
+              const pasted = e.clipboardData?.getData("text") ?? "";
+              const next = clean(
+                `${String(value).slice(0, el.selectionStart ?? 0)}${pasted}${String(value).slice(el.selectionEnd ?? 0)}`
+              );
+              const n = Number(next);
+              if (Number.isFinite(n) && n > cap) e.preventDefault();
+            }}
             onFocus={(e) => e.currentTarget.select()}
             onBlur={(e) => emit(Number(e.target.value))}
             placeholder="0"

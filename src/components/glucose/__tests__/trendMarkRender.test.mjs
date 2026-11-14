@@ -102,16 +102,17 @@ test('a valid derived arrow keeps its own direction', () => {
   // the last 15 minutes, three samples minimum), so a "Rising quickly" arrow has
   // to be earned by a measured climb of 3 mg/dL/min or more: +15 mg/dL every
   // five minutes.
+  const now = Date.parse(at(0));
   const rising = [reading(90, -10), reading(105, -5), reading(120, 0)];
-  const trend = resolveGlucoseTrend(rising[2], rising);
+  const trend = resolveGlucoseTrend(rising[2], rising, { now });
   assert.equal(trend.icon, 'double_up');
   assert.equal(trend.origin, 'derived');
   assert.ok(render(trend).includes('lucide-chevrons-up'));
 
-  const steady = [reading(120, 0), reading(121, 20)];
-  const held = resolveGlucoseTrend(steady[1], steady);
-  assert.equal(held.icon, 'right');
-  assert.ok(render(held).includes('lucide-arrow-right'));
+  // Two hand-logged points twenty minutes apart are two instants, not a rate.
+  // No wider window is searched to turn them into a direction.
+  const sparse = [reading(121, -20, { source: 'manual' }), reading(120, 0, { source: 'manual' })];
+  drawsNothing(resolveGlucoseTrend(sparse[1], sparse, { now }));
 });
 
 test('every arrow the resolver can name has a mark, and no two share one', () => {

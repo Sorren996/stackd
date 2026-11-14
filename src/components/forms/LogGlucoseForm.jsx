@@ -107,6 +107,7 @@ export default function LogGlucoseForm({ open, onClose }) {
     const submittedReading = {
       value: numericValue,
       recorded_at: dt.toISOString(),
+      source: "manual",
       notes: notes || undefined,
     };
     const optimisticReading = {

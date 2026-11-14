@@ -1,7 +1,6 @@
 // Backend mirror of src/lib/glucoseTrend.js resolution; presentation is shared by all server consumers.
 import { measureVelocity, trendFromVelocity } from './measuredVelocity.ts';
 import { trendPresentation } from './trendPresentation.ts';
-const WIDE_WINDOW_MIN = 180;
 export function computeGlucoseTrend(readings) {
   if (!Array.isArray(readings) || readings.length < 2) return null;
   const samples = readings.map((r) => ({
@@ -11,12 +10,10 @@ export function computeGlucoseTrend(readings) {
   if (samples.length < 2) return null;
   const newest = samples.map((r) => new Date(r.recorded_at).getTime()).filter(Number.isFinite).sort((a, b) => b - a)[0];
   if (!Number.isFinite(newest)) return null;
+  // Sensor cadence only: measureVelocity ignores hand-logged points, and there
+  // is no wider fallback, so a lone fingerstick never becomes a direction.
   const measured = measureVelocity(samples, newest);
   if (measured.velocity != null) return trendFromVelocity(measured.velocity);
-  if (measured.reason === 'too_few_readings') {
-    const wide = measureVelocity(samples, newest, { windowMin: WIDE_WINDOW_MIN, minSamples: 2 });
-    if (wide.velocity != null) return trendFromVelocity(wide.velocity);
-  }
   return null;
 }
 export function mapDexcomTrend(rawTrend) {

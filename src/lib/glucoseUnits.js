@@ -119,10 +119,10 @@ export function parseGlucoseInput(displayValue) {
 
 /**
  * Highest glucose value the entry screens accept, stated once in mg/dL.
- * 500 mg/dL reads as 27.8 mmol/L, and it is converted by the same helper as
+ * 600 mg/dL reads as 33.3 mmol/L, and it is converted by the same helper as
  * every other displayed value so the ceiling can never drift from the unit.
  */
-export const GLUCOSE_MAX_MGDL = 500;
+export const GLUCOSE_MAX_MGDL = 600;
 
 /** That ceiling, expressed in whichever unit is currently displayed. */
 export function glucoseInputMax() {

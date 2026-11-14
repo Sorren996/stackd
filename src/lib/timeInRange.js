@@ -5,8 +5,9 @@
 // everywhere for the same set of readings.
 //
 // METHOD: Duration-weighted. Glucose is linearly interpolated between
-// consecutive readings; each segment is classified in-range / above / below
-// by its midpoint value. The percentage is (in-range minutes) / (total
+// consecutive sensor readings; each segment is classified in-range / above /
+// below by its midpoint value. Hand-logged readings carry no elapsed time, so
+// they are excluded from the timeline rather than spread across minutes. The percentage is (in-range minutes) / (total
 // covered minutes). Both numerator and denominator cover the SAME span
 // (from the first reading to the last reading, or to `now` if `extendToNow`
 // is true), so 100% in-range readings always return exactly 100%.
@@ -37,7 +38,12 @@ export function computeTirPercent(readings, targetLow, targetHigh, opts = {}) {
   const now = opts.now != null ? new Date(opts.now).getTime() : Date.now();
   const extendToNow = opts.extendToNow !== false;
 
+  // A hand-logged reading is a single instant, not a stream. Holding it forward
+  // (or backward) across the gap would spread one fingerstick over minutes of
+  // the day, so it takes no part in the elapsed-time timeline at all. A day of
+  // manual notes only therefore reports no percentage rather than a made one.
   const points = readings
+    .filter((r) => r.source !== "manual")
     .map((r) => ({ t: new Date(r.recorded_at || r.recordedAt || r.time).getTime(), v: Number(r.value) }))
     .filter((p) => Number.isFinite(p.t) && Number.isFinite(p.v) && p.t <= now)
     .sort((a, b) => a.t - b.t);

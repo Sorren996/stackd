@@ -867,7 +867,11 @@ export function projectGlucose(
   // LESS SURE, and less sure is drawn as a wider band. The only reasons left are
   // the ones above (no fresh reading) and this one — too few readings to
   // establish a level at all.
-  if (snapshot.readings.length < MIN_READINGS_TO_PROJECT) {
+  // A hand-logged point is an instant, not a grid point. Without enough
+  // *measured* readings the forecast would be invented from sparse notes, so
+  // this stays the abstain answer it already was.
+  const measuredReadings = snapshot.readings.filter((r) => r.source !== "manual");
+  if (measuredReadings.length < MIN_READINGS_TO_PROJECT) {
     return {
       trajectory: [],
       anchor: snapshot.anchor,

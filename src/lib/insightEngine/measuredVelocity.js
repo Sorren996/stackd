@@ -11,7 +11,8 @@
 // the last 15 minutes of real readings. Compared with a two-point difference it
 // survives a single bad sample: three points at 100, 60, 55 give a median slope
 // of a fall rather than the cliff the middle sample implies. It needs THREE
-// samples, because two points cannot be checked against each other.
+// samples, because two points cannot be checked against each other, and those
+// samples must be sensor readings: a hand-logged point is a level, never a rate.
 //
 // It returns nothing at all — never a zero — when the series is too short, too
 // old, has two readings at the same instant, or contains a carried-forward
@@ -73,7 +74,10 @@ export function measureVelocity(rawReadings, atTime, options = {}) {
     ? Math.max(2, Number(options.minSamples))
     : VELOCITY_MIN_SAMPLES;
 
-  const points = normalizeReadingSamples(rawReadings);
+  // A hand-logged point is an instant, not a sensor grid point: it may stand as
+  // a level, but it never takes part in a rate. With manual samples dropped, a
+  // series of fingersticks alone has nothing to measure and no arrow is drawn.
+  const points = normalizeReadingSamples(rawReadings).filter((p) => p.source !== "manual");
   const newest = points.length ? points[points.length - 1] : null;
   const anchorMs = Number.isFinite(Number(atTime)) ? Number(atTime) : newest?.t;
 
