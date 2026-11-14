@@ -12,6 +12,8 @@
 //   • the range line reads "likely between X and Y" — never "High ~" / "Low ~",
 //     and never a tilde.
 
+import { formatGlucose, glucoseUnitLabel, isMmolMode } from "@/lib/glucoseUnits";
+
 // The card's box is fixed, never content-sized. A reading card ("21 min ago",
 // value) and a forecast card ("estimated in 20 min", value, a two-line range)
 // are different shapes, and a card that resized between them would move its own
@@ -40,7 +42,12 @@ function eyebrowFor(point) {
 function rangeFor(point) {
   if (point.kind !== "forecast") return null;
   if (point.lower != null && point.upper != null) {
-    return `likely between ${point.lower} and ${point.upper}`;
+    const lower = formatGlucose(point.lower);
+    const upper = formatGlucose(point.upper);
+    // In mmol/L a narrow band can round both endpoints to the same number, so
+    // the line says it once instead of printing the same value twice.
+    if (isMmolMode() && lower === upper) return `likely around ${lower} ${glucoseUnitLabel()}`;
+    return `likely between ${lower} and ${upper} ${glucoseUnitLabel()}`;
   }
   return null;
 }
@@ -48,9 +55,14 @@ function rangeFor(point) {
 /** Every string this card will show, used by the aria-live announcements. */
 export function projectionCardCopy(point) {
   if (!point) return null;
+  const value = formatGlucose(point.value);
+  const unit = glucoseUnitLabel();
   return {
     eyebrow: eyebrowFor(point),
-    value: String(Math.round(point.value)),
+    value,
+    unit,
+    // The spoken label reads as one sentence, with the unit after the number.
+    valueLabel: `${value} ${unit}`,
     range: rangeFor(point),
   };
 }
@@ -100,9 +112,22 @@ export default function ProjectionTooltipCard({ point }) {
           fontVariantNumeric: "tabular-nums",
           marginTop: 4,
           letterSpacing: "-0.01em",
+          whiteSpace: "nowrap",
         }}
       >
         {copy.value}
+        <span
+          style={{
+            fontFamily: "var(--font-sans, 'Montserrat', system-ui)",
+            fontSize: 13,
+            fontWeight: 500,
+            letterSpacing: ".01em",
+            color: "#8F7E6B",
+            marginLeft: 4,
+          }}
+        >
+          {copy.unit}
+        </span>
       </div>
       {/* Always rendered, so a reading card and a two-line forecast card are
           exactly the same height. */}

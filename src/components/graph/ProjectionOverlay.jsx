@@ -44,6 +44,7 @@ import ProjectionTooltipCard, {
   CARD_HEIGHT_PX,
 } from "@/components/graph/ProjectionTooltipCard";
 import { useServerNow } from "@/lib/serverClock";
+import { onGlucoseUnitsChange } from "@/lib/glucoseUnits";
 import { monotoneXPath } from "@/lib/monotonePath";
 import { resolveScrubPoint, resolveCardFlip } from "@/lib/projection/projectionScrub";
 import { BAR_HEIGHT } from "@/components/nav/navGeometry";
@@ -106,6 +107,10 @@ export default function ProjectionOverlay({
   const holdTimerRef = useRef(null);
   const [pos, setPos] = useState({ left: 0, top: 0, ready: false, flipped: false });
   const nowMs = useServerNow();
+  // The card prints glucose in the reader's chosen unit, so a change of that
+  // setting must repaint it at once rather than at the next clock tick.
+  const [, setUnitsTick] = useState(0);
+  useEffect(() => onGlucoseUnitsChange(() => setUnitsTick((t) => t + 1)), []);
 
   // The one resolved selection, readable synchronously by the per-frame scrub
   // resolver, so a frame can tell whether the point actually changed.
@@ -495,7 +500,7 @@ export default function ProjectionOverlay({
   const selectedCopy = projectionCardCopy(selected);
 
   const ariaLabel = selectedCopy
-    ? `Projected glucose ${selectedCopy.value}, ${selectedCopy.eyebrow}` +
+    ? `Projected glucose ${selectedCopy.valueLabel}, ${selectedCopy.eyebrow}` +
       (selectedCopy.range ? `, ${selectedCopy.range}` : "") +
       `. Use arrow keys to step through the points.`
     : "Projected glucose trajectory. Press Enter to open, then use arrow keys to step through the points.";
@@ -534,7 +539,7 @@ export default function ProjectionOverlay({
     <>
       <div className="sr-only" aria-live="polite">
         {selectedCopy
-          ? `Projected glucose ${selectedCopy.value}, ${selectedCopy.eyebrow}` +
+          ? `Projected glucose ${selectedCopy.valueLabel}, ${selectedCopy.eyebrow}` +
             (selectedCopy.range ? `, ${selectedCopy.range}` : "")
           : ""}
       </div>
