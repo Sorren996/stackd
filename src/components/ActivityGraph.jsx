@@ -34,7 +34,6 @@ const STEP_MS = 3 * 60 * 1000;
 // loads 26 hours of readings, so the domain covers one day and the left edge is
 // always backed by real data. Older days live on the Journal's day view.
 const HISTORY_DAYS = 1;
-const FUTURE_HOURS = 3;
 
 // How long scroll silence marks a gesture (finger or iOS momentum) as finished.
 const SCROLL_SETTLE_MS = 150;
@@ -42,7 +41,6 @@ const VISIBLE_HOURS = 6;
 const HOUR_MS = 60 * 60 * 1000;
 // The extended (24 hour) view plots the same one day of history.
 const CANDLESTICK_HISTORY_HOURS = 24;
-const CANDLESTICK_FUTURE_HOURS = 12;
 const CHART_HEIGHT = 305;
 const CANDLESTICK_TOTAL_HEIGHT = 425;
 const CHART_MARGIN_TOP = 70;
@@ -320,17 +318,8 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
     if (el) setControlsPortalEl(el);
   }, []);
 
-  // No projection, no future region: the strip can never keep a stale estimate.
-  useEffect(() => {
-    if (!projection) setForecastEstimate(null);
-  }, [projection]);
   const isCandlestick = viewWindow === 24;
   const [activeMarker, setActiveMarker] = useState(null);
-  // The forecast point the reader is holding, reported by the projection
-  // overlay. It is drawn above the chart instead of in a card over it.
-  const [forecastEstimate, setForecastEstimate] = useState(null);
-  // Bumped by Now, which releases any scrub and lets the estimate fade out.
-  const [scrubReset, setScrubReset] = useState(0);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [selectedDoseKey, setSelectedDoseKey] = useState(null);
   const [editingMeal, setEditingMeal] = useState(null);
@@ -525,26 +514,23 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
   const latestGlucoseBucket = isCandlestick ?
   Math.floor(latestGlucoseTime / HOUR_MS) * HOUR_MS :
   Math.round(latestGlucoseTime / STEP_MS) * STEP_MS;
-  // The future region is sized to the projection itself: three hours of room, or
-  // the projection's own horizon plus a ten-minute tail when that reaches
-  // further. Without that room the last forecast points fall past the plot's
-  // right edge and are dropped, leaving the marker almost nothing to travel.
+  // THE PLOT ENDS AT THE HORIZON. There is no future pad any more: the domain
+  // runs to the last point the projection actually drew and stops there, so the
+  // plot holds no empty space beyond the forecast. Without a projection there is
+  // no future region at all — the newest reading is the right-hand edge.
   const projectionHorizonMs = (() => {
+    if (!projection || projection.abstained) return 0;
     const declared = Number(projection?.horizon_minutes);
     const lastOffset = Array.isArray(projection?.trajectory) ?
     projection.trajectory.reduce((max, p) => Math.max(max, Number(p?.min_offset) || 0), 0) :
     0;
     const minutes = Math.max(Number.isFinite(declared) ? declared : 0, lastOffset);
-    return minutes > 0 ? (minutes + 10) * 60000 : 0;
+    return minutes > 0 ? minutes * 60000 : 0;
   })();
-  const futureHours = Math.max(FUTURE_HOURS, Math.ceil(viewWindow / 2));
   const domainStart = isCandlestick ?
   latestGlucoseBucket - CANDLESTICK_HISTORY_HOURS * HOUR_MS :
   latestGlucoseBucket - HISTORY_DAYS * 24 * HOUR_MS;
-  const domainEnd = latestGlucoseBucket + Math.max(
-    isCandlestick ? CANDLESTICK_FUTURE_HOURS * HOUR_MS : futureHours * HOUR_MS,
-    projectionHorizonMs
-  );
+  const domainEnd = latestGlucoseBucket + projectionHorizonMs;
   const filteredGlucoseReadings = useMemo(() =>
   filters.glucose ?
   sortedGlucoseReadings.filter((reading) => reading.time >= domainStart && reading.time <= domainEnd) :
@@ -1120,7 +1106,7 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
     // Animate ONLY when the selected data point changes from one real
     // reading to another — not on every scroll frame. This keeps the number
     // perfectly static between readings and fires the existing rolling
-    // animation precisely when the active reading changes (scrub or live).
+    // animation precisely when the active reading changes (panning or live).
     const selectedKey = selected.id ?? selected.time;
     const shouldAnimate = !suppressMotion && lastSelectedKeyRef.current !== null && lastSelectedKeyRef.current !== selectedKey;
     lastSelectedKeyRef.current = selectedKey;
@@ -1369,12 +1355,11 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
   // The newest real reading — the point the marker always sits on.
   const latestGlucosePoint = glucoseLinePoints.length ? glucoseLinePoints[glucoseLinePoints.length - 1] : null;
 
-  // The scrub layer covers the whole plot, so it is mounted whenever there is
-  // something to sit on: the trajectory when the engine produced one, otherwise
-  // the drawn readings themselves. Without a projection the newest reading is
-  // the right-hand boundary and the marker never moves into empty chart.
-  const scrubReadings = filters.glucose ? glucoseLinePoints : [];
-  const showScrubLayer = Boolean(projection) || scrubReadings.length > 0;
+  // The projection layer draws the dashed tail (and the one marker). It is
+  // mounted whenever there is a trace to draw, and it responds to a tap on a
+  // past reading only — never to a drag.
+  const projectionReadings = filters.glucose ? glucoseLinePoints : [];
+  const showProjectionLayer = Boolean(projection) || projectionReadings.length > 0;
 
   return (
     <div ref={containerRef} className="relative overflow-visible">
@@ -1463,9 +1448,6 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
           <button
               type="button"
               onClick={() => {
-                // Now returns to the newest reading AND releases the scrub, so
-                // an estimate picked up from the dashed line fades away.
-                setScrubReset((n) => n + 1);
                 scrollToLatestGlucose();
               }}
               className="flex h-7 shrink-0 items-center gap-1 rounded-full px-2 transition hover:opacity-70 self-center"
@@ -1477,9 +1459,11 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
         </div>
       </div>
       {/* The estimate slot: inside the card, directly above the plot and
-          beneath the reading row, left aligned and always the same height — so
-          the chart never moves when the future begins or ends. */}
-      {projection && <ProjectionEstimateStrip point={forecastEstimate} />}
+          beneath the reading row, always the same height — so the chart never
+          moves when a forecast appears or ends. It needs no interaction: with a
+          projection it shows that projection's horizon continuously, and with
+          none it is simply empty. */}
+      <ProjectionEstimateStrip projection={projection} />
       <div
           ref={graphViewportRef}
           className="relative overflow-hidden"
@@ -1568,7 +1552,7 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
                 {/* The projection belongs to every window that contains its
                        points, the 24-hour view included. It maps onto this view's
                        own plot geometry and clips at the edges like the rest. */}
-                {showScrubLayer &&
+                {showProjectionLayer &&
                 <ProjectionOverlay
                   projection={projection}
                   domainStart={domainStart}
@@ -1577,14 +1561,10 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
                   glucoseChartHeight={CHART_HEIGHT}
                   glucoseMarginTop={CHART_MARGIN_TOP}
                   plotHeight={candlePlotHeight}
-                  effectiveMin={effectiveMin}
-                  effectiveMax={effectiveMax}
                   getGlucoseY={getCandleGlucoseY}
                   latestReading={latestGlucosePoint}
-                  readings={scrubReadings}
-                  scrollContainerRef={scrollRef}
-                  onForecastSelect={setForecastEstimate}
-                  resetSignal={scrubReset} />
+                  readings={projectionReadings}
+                  scrollContainerRef={scrollRef} />
 
                 }
               </> :
@@ -1705,8 +1685,8 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
             </ComposedChart>
           </div>
 
-          {/* ── The scrub layer: readings, then the future trajectory ── */}
-          {showScrubLayer &&
+          {/* ── The projection: its dashed tail and the one marker ── */}
+          {showProjectionLayer &&
                 <ProjectionOverlay
                   projection={projection}
                   domainStart={domainStart}
@@ -1715,20 +1695,17 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
                   glucoseChartHeight={GLUCOSE_CHART_HEIGHT}
                   glucoseMarginTop={GLUCOSE_MARGIN_TOP}
                   plotHeight={plotHeight}
-                  effectiveMin={effectiveMin}
-                  effectiveMax={effectiveMax}
                   getGlucoseY={getGlucoseY}
                   latestReading={latestGlucosePoint}
-                  readings={scrubReadings}
-                  scrollContainerRef={scrollRef}
-                  onForecastSelect={setForecastEstimate}
-                  resetSignal={scrubReset} />
+                  readings={projectionReadings}
+                  scrollContainerRef={scrollRef} />
 
                 }
 
           {/* There is no dot here. The glucose plot's overlay draws the single
-              marker that exists on screen, from the same point array it scrubs,
-              so a second halo can never be painted beside it. */}
+              marker that exists on screen, on the newest reading or on the
+              reading whose card is open, so a second halo can never be painted
+              beside it. */}
 
           {/* ── Insulin row (lower) — one shared timeline ── */}
           <div style={{ position: "absolute", top: INSULIN_ROW_TOP, left: 0 }}>
