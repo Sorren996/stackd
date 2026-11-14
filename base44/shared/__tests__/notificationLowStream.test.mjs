@@ -43,7 +43,7 @@ test('custom 100 plus comfort 70 with 99, 95, 69, 65 sends four, never six', () 
   assert.equal(items[2].coveredEvents.length, 2);
 });
 
-test('a custom-low-only reading states its own chosen level', () => {
+test('a custom-low-only reading carries the trend word, never its level', () => {
   const [item] = decide({ custom_low: true }, [reading(99, 3)], { preferences: { custom_low_mgdl: 100 } });
   assert.equal(item.category, 'custom_low');
   assert.equal(item.lowThreshold, 100);
@@ -52,8 +52,8 @@ test('a custom-low-only reading states its own chosen level', () => {
     showDetails: true, nowMs: NOW, thresholdMgdl: item.lowThreshold,
   });
   assert.equal(copy.title, '99 mg/dL');
-  assert.equal(copy.body, 'Below 100');
-  assert.doesNotMatch(copy.body, /70/, 'a reading of 99 is never described as below 70');
+  assert.equal(copy.body, 'New reading');
+  assert.doesNotMatch(copy.body, /70|100/, 'no boundary ever reaches a preview');
 });
 
 test('a comfort-only reading uses the real comfort boundary, not the custom one', () => {
@@ -226,10 +226,10 @@ test('the legacy "below comfort zone at exactly 70" choice stays the low stream'
 
 test('copy follows the recipient’s own units and stays private unless details are on', () => {
   const mmol = buildNotificationCopy({
-    category: 'custom_low', value: 99, units: 'mmol/L', showDetails: true, nowMs: NOW, thresholdMgdl: 100,
+    category: 'custom_low', value: 99, units: 'mmol/L', showDetails: true, nowMs: NOW,
   });
   assert.equal(mmol.title, '5.5 mmol/L');
-  assert.equal(mmol.body, 'Below 5.6');
+  assert.equal(mmol.body, 'New reading');
 
   const follower = buildNotificationCopy({
     category: 'below_range', value: 65, units: 'mg/dL', showDetails: true, nowMs: NOW,

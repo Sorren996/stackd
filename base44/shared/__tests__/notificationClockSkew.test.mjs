@@ -61,6 +61,6 @@ test('no generated push contains comfort-zone wording, including followers and p
   const categories = ['all_readings', 'below_range', 'above_range', 'urgent_low', 'low_glucose', 'custom_low', 'custom_high', 'falling_fast', 'rising_fast', 'missing_readings', 'low_recovery'];
   for (const category of categories) for (const showDetails of [false, true]) for (const personName of [null, 'Sam']) for (const trend of [null, ...pairs.map(p => p[0])]) {
     const copy = buildNotificationCopy({ category, showDetails, personName, value: 131, trend, thresholdMgdl: 100, readingAt: now - 20 * 60000, nowMs: now });
-    assert.doesNotMatch(`${copy.title} ${copy.body}`, /comfort zone/i);
+    assert.doesNotMatch(`${copy.title} ${copy.body}`, /comfort zone|below |at or above |low glucose/i);
   }
 });

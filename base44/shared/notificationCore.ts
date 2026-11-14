@@ -405,11 +405,9 @@ export interface CopyInput {
   /** Every category this one send covers, after coalescing. */
   coveredCategories?: string[] | null;
   /**
-   * The low boundary this reading sits strictly below, in mg/dL. Supplied only
-   * by the per-reading low stream, so the body can state the real boundary the
-   * reading met instead of a generic phrase.
+   * The person's own range. Used only to word a rising arrow below that range
+   * as "coming back up"; a threshold is never printed in a preview.
    */
-  thresholdMgdl?: number | null;
   targetLow?: number | null;
   targetHigh?: number | null;
 }
@@ -489,31 +487,21 @@ export function buildNotificationCopy(input: CopyInput): PushCopy {
   const units = unitLabel(input.units);
   const value = formatGlucoseValue(input.value, input.units);
   const resolved = 'resolvedTrend' in input ? input.resolvedTrend : input.trend;
-  const pair = trendPresentation(resolved);
+  const targetLow = Number(input.targetLow);
+  // A rising arrow under the person's own range reads "coming back up". This is
+  // wording only: it never prints the boundary the reading sits below.
+  const below =
+    (resolved as { word?: string } | null)?.word === "coming back up" ||
+    (Number.isFinite(targetLow) && Number(input.value) < targetLow);
+  const pair = trendPresentation(resolved, { below });
   const arrow = pair ? trendGlyph(pair) : null;
   const title = `${lead}${value} ${units}${arrow ? ` ${arrow}` : ""}`;
 
-  const rawThreshold = input.thresholdMgdl;
-  const numericThreshold =
-    rawThreshold != null && rawThreshold !== "" ? Number(rawThreshold) : NaN;
-  const hasThreshold = Number.isFinite(numericThreshold) && numericThreshold > 0;
-  const formattedThreshold = hasThreshold ? formatGlucoseValue(numericThreshold, input.units) : null;
-  if (["all_readings", "below_range", "above_range"].includes(input.category)) {
-    const body = pair ? pair.word.charAt(0).toUpperCase() + pair.word.slice(1) : "New reading";
-    return { title, body };
-  }
-
-  let body = "";
-  if (input.category === "urgent_low") body = "Urgent low, act now.";
-  else if (input.category === "low_glucose") body = "Low glucose";
-  else if (input.category === "custom_low") body = formattedThreshold ? `Below ${formattedThreshold}` : "Low glucose";
-  else if (input.category === "custom_high") body = formattedThreshold ? `At or above ${formattedThreshold}` : "High glucose";
-  else if (input.category === "falling_fast") body = "Falling fast";
-  else if (input.category === "rising_fast") body = "Rising fast";
-  else if (input.category === "low_recovery") body = "Back in range";
-  else body = "Glucose update";
-
-  return { title, body };
+  // Every glucose preview repeats what the arrow already says — the trend word,
+  // capitalised. No threshold, level or zone name ever reaches a preview.
+  if (input.category === "urgent_low") return { title, body: "Urgent low, act now." };
+  if (input.category === "low_recovery") return { title, body: "Back in range" };
+  return { title, body: pair ? pair.word.charAt(0).toUpperCase() + pair.word.slice(1) : "New reading" };
 }
 
 // ── Quiet hours ───────────────────────────────────────────────────────────

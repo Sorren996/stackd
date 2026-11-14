@@ -152,11 +152,6 @@ export async function evaluateRecipient({ sr, ownerId, prefs, relationship = nul
     resolvedTrend: resolveGlucoseTrend(rows.find(row => Date.parse(row.recorded_at) === decision.sample.at) || { ...decision.sample, recorded_at: new Date(decision.sample.at).toISOString() },
       rows.filter(row => Date.parse(row.recorded_at) <= decision.sample.at),
       { now: nowMs, futureToleranceMinutes: PUSH_FUTURE_TOLERANCE_MINUTES }),
-    thresholdMgdl:
-      decision.lowThreshold ??
-      (decision.category === 'custom_low' ? prefs.custom_low_mgdl : null) ??
-      (decision.category === 'custom_high' ? prefs.custom_high_mgdl : null) ??
-      null,
     targetLow: settings?.target_range_low ?? null,
     targetHigh: settings?.target_range_high ?? null,
     coveredCategories: lowFamily ? [] : covered.map(c => c.category) });
@@ -188,6 +183,10 @@ export async function evaluateRecipient({ sr, ownerId, prefs, relationship = nul
     },
     createRecord: row => sr.entities.NotificationDelivery.create(row),
     updateRecord: (id, patch) => sr.entities.NotificationDelivery.update(id, patch),
+    // One transport request per reading: a row already recorded for this event
+    // key means the push may have been accepted, so it is never sent again.
+    alreadySent: async key => array(await sr.entities.NotificationDelivery.filter(
+      { event_key: key, status: { $in: ['submitted', 'unknown', 'claimed'] } }, { limit: 1 })).length > 0,
     // Nothing left the server when the recipient could not be addressed, so the
     // claim is released and the notice is retried rather than dropped.
     releaseClaim: async key => {

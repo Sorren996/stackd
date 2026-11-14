@@ -35,7 +35,11 @@ function fixture({ follower = false, beforeRecheck, failSend = false } = {}) {
     NotificationPreference: { get: async () => { beforeRecheck?.(preferences, relationship); return preferences; } },
     FollowNotificationPreference: { get: async () => { beforeRecheck?.(preferences, relationship); return preferences; } },
     SharedAccess: { get: async () => relationship },
-    NotificationDelivery: { create: async row => { const r = { ...row, id: `delivery:${deliveries.length}` }; deliveries.push(r); return r; }, update: async (id, patch) => Object.assign(deliveries.find(d => d.id === id), patch) },
+    NotificationDelivery: {
+      filter: async (query = {}) => ({ items: deliveries.filter(d => d.event_key === query.event_key && (query.status?.$in || []).includes(d.status)) }),
+      create: async row => { const r = { ...row, id: `delivery:${deliveries.length}` }; deliveries.push(r); return r; },
+      update: async (id, patch) => Object.assign(deliveries.find(d => d.id === id), patch),
+    },
   }, integrations: { Core: { SendPushNotification: async message => { sends.push(message); if (failSend) throw Object.assign(new Error('timeout'), { status: 504 }); } } } };
   const invoke = (extra = {}) => evaluateRecipient({ sr, ownerId: 'owner', prefs: structuredClone(preferences), relationship: relationship && structuredClone(relationship), settings, rows: readings, nowMs: now, absoluteUrl: path => `https://stackdinsight.base44.app${path}`, ...extra });
   return { sr, ledger, deliveries, sends, preferences, relationship, invoke };
@@ -133,10 +137,10 @@ test('69, 68, 54, 53 submit four times, urgent at escalation, duplicate callback
     }
     assert.equal(f.sends.length, 4);
     assert.equal(f.sends[0].title, '69 mg/dL');
-    assert.equal(f.sends[0].content, 'Low glucose');
+    assert.equal(f.sends[0].content, 'New reading');
     // The urgent presentation is used only when urgent low was opted into.
     assert.equal(f.sends[2].title, '54 mg/dL');
-    assert.equal(f.sends[2].content, urgent ? 'Urgent low, act now.' : 'Low glucose');
+    assert.equal(f.sends[2].content, urgent ? 'Urgent low, act now.' : 'New reading');
     assert.deepEqual(f.deliveries.map(d => d.status), Array(4).fill('submitted'));
     await f.invoke({ rows, nowMs: now + 16 * 60000 });
     assert.equal(f.sends.length, 4);
@@ -199,6 +203,33 @@ test('all_readings dispatches the "{value} {unit} {arrow}" title and capitalised
   assert.equal(f.sends[0].content, 'Holding steady');
 });
 
+test('a custom-low 97 with a Flat trend sends "97 mg/dL →" / "Holding steady"', async () => {
+  const f = fixture();
+  f.preferences.categories = { custom_low: true };
+  f.preferences.custom_low_mgdl = 100;
+  f.preferences.show_health_details = true;
+  await f.invoke({ rows: [{ id: 'r-97', source: 'dexcom_share', value: 97, trend: 'Flat', recorded_at: new Date(now).toISOString() }] });
+  assert.equal(f.sends.length, 1);
+  assert.equal(f.sends[0].title, '97 mg/dL →');
+  assert.equal(f.sends[0].content, 'Holding steady');
+  assert.equal(f.deliveries[0].category, 'custom_low');
+});
+
+test('a released claim can never re-send a push that was already accepted', async () => {
+  const f = fixture();
+  f.preferences.show_health_details = true;
+  await f.invoke();
+  await f.invoke({ nowMs: now + 5_000 });
+  assert.equal(f.sends.length, 1, 'two builds of the same reading send one banner');
+  // The claim was handed back while the push had already gone out: the delivery
+  // row is the durable record, so a later pass still cannot send it again.
+  f.ledger.claimed_keys = [];
+  f.ledger.episode_state = {};
+  await f.invoke({ nowMs: now + 60_000 });
+  assert.equal(f.sends.length, 1);
+  assert.equal(f.deliveries.length, 1);
+});
+
 test('a Flat sensor reading four seconds ahead dispatches its arrow and word exactly once', async () => {
   const f = fixture();
   f.preferences.categories = {};
@@ -222,7 +253,7 @@ test('urgent low four seconds ahead keeps its arrow and exact action copy', asyn
   assert.equal(f.sends[0].content, 'Urgent low, act now.');
 });
 
-test('custom_high dispatches the "{value} {unit} {arrow}" title and "At or above {level}" body', async () => {
+test('custom_high dispatches the "{value} {unit} {arrow}" title and the capitalised trend body', async () => {
   const f = fixture();
   f.preferences.categories = { custom_high: true };
   f.preferences.custom_high_mgdl = 180;
@@ -234,5 +265,5 @@ test('custom_high dispatches the "{value} {unit} {arrow}" title and "At or above
   });
   assert.equal(f.sends.length, 1);
   assert.equal(f.sends[0].title, '185 mg/dL ↑');
-  assert.equal(f.sends[0].content, 'At or above 180');
+  assert.equal(f.sends[0].content, 'Climbing');
 });

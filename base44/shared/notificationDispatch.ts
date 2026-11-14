@@ -68,6 +68,13 @@ export interface DispatchDeps {
   send: (message: { user_id: string; title: string; content: string; action_url: string }) => Promise<any>;
   /** Gives an unspent claim back: nothing left the server. */
   releaseClaim?: (eventKey: string) => Promise<void>;
+  /**
+   * Durable record of a send that already left the server for this event key.
+   * The ledger claim can be handed back (a recipient the transport could not
+   * address yet), so the delivery row — written before transport — is what
+   * guarantees a retry never re-sends a push that was already accepted.
+   */
+  alreadySent?: (eventKey: string) => Promise<boolean>;
   /** Schedules a bounded backoff retry for a recipient with no device yet. */
   scheduleRetry?: (reason: string) => Promise<void>;
   nowMs: number;
@@ -118,6 +125,20 @@ export async function dispatchNotification(
   // 4. Atomic claim. Exactly one caller wins a given event key.
   const claimed = await deps.claim(input.eventKey);
   if (!claimed) return { status: "duplicate", reason: "already_claimed", deliveryId: null };
+
+  // 4b. A push already handed to the service for this key is never sent again,
+  //     even when a released claim let this attempt through. "unknown" counts as
+  //     sent, and so does a lingering "claimed" row (the row is written before
+  //     transport, so the message may already be out).
+  if (deps.alreadySent) {
+    try {
+      if (await deps.alreadySent(input.eventKey)) {
+        return { status: "duplicate", reason: "already_sent", deliveryId: null };
+      }
+    } catch {
+      // A failed lookup must not swallow a legitimate notice; the claim holds.
+    }
+  }
 
   // 5. Record the attempt before anything leaves the server.
   let delivery: any = null;

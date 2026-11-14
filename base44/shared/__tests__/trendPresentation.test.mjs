@@ -77,10 +77,10 @@ test('below-zone override keeps arrow-only title; private previews remain privat
     rows,
     { now, below: true }
   );
-  const input = { category: 'custom_low', value: 60, units: 'mg/dL', resolvedTrend, showDetails: true, thresholdMgdl: 100 };
+  const input = { category: 'custom_low', value: 60, units: 'mg/dL', resolvedTrend, showDetails: true, targetLow: 70 };
   const shown = buildNotificationCopy(input);
   assert.equal(shown.title, '60 mg/dL ↑↑');
-  assert.equal(shown.body, 'Below 100');
+  assert.equal(shown.body, 'Coming back up');
 
   const hidden = buildNotificationCopy({ ...input, showDetails: false });
   assert.ok(!hidden.title.includes('↑'));

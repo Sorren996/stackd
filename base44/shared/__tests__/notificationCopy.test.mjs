@@ -55,11 +55,11 @@ test("an absent, unrecognised or unusable trend outputs '{value} {unit}' with no
   }
 });
 
-test("display units follow the recipient, with the reading and custom threshold converted", () => {
-  assert.equal(copy({ category: "custom_high", value: 305, thresholdMgdl: 180, units: "mg/dL" }).title, "305 mg/dL");
-  assert.equal(copy({ category: "custom_high", value: 305, thresholdMgdl: 180, units: "mg/dL" }).body, "At or above 180");
-  assert.equal(copy({ category: "custom_high", value: 305, thresholdMgdl: 180, units: "mmol/L" }).title, "16.9 mmol/L");
-  assert.equal(copy({ category: "custom_high", value: 305, thresholdMgdl: 180, units: "mmol/L" }).body, "At or above 10.0");
+test("display units follow the recipient, and the body carries the trend, never a threshold", () => {
+  assert.equal(copy({ category: "custom_high", value: 305, units: "mg/dL" }).title, "305 mg/dL");
+  assert.equal(copy({ category: "custom_high", value: 305, units: "mg/dL" }).body, "New reading");
+  assert.equal(copy({ category: "custom_high", value: 305, units: "mmol/L" }).title, "16.9 mmol/L");
+  assert.equal(copy({ category: "custom_high", value: 305, units: "mmol/L", trend: "Flat" }).body, "Holding steady");
   assert.equal(copy({ category: "urgent_low", value: 54, units: "mmol/L", trend: "SingleDown" }).title, "3.0 mmol/L ↓");
 });
 
@@ -78,13 +78,13 @@ test("every category renders the requested exact two-line copy", () => {
     title: "50 mg/dL ↓",
     body: "Urgent low, act now.",
   });
-  assert.deepEqual(copy({ category: "low_glucose", value: 65, thresholdMgdl: 70, trend: "FortyFiveDown" }), {
+  assert.deepEqual(copy({ category: "low_glucose", value: 65, trend: "FortyFiveDown" }), {
     title: "65 mg/dL ↘",
-    body: "Low glucose",
+    body: "Easing down",
   });
-  assert.deepEqual(copy({ category: "custom_low", value: 95, thresholdMgdl: 100, trend: "FortyFiveDown" }), {
+  assert.deepEqual(copy({ category: "custom_low", value: 95, trend: "FortyFiveDown" }), {
     title: "95 mg/dL ↘",
-    body: "Below 100",
+    body: "Easing down",
   });
   assert.deepEqual(copy({ category: "below_range", value: 65, thresholdMgdl: 70, trend: "Flat" }), {
     title: "65 mg/dL →",
@@ -92,7 +92,7 @@ test("every category renders the requested exact two-line copy", () => {
   });
   assert.deepEqual(copy({ category: "custom_high", value: 185, thresholdMgdl: 180, trend: "SingleUp" }), {
     title: "185 mg/dL ↑",
-    body: "At or above 180",
+    body: "Climbing",
   });
   assert.deepEqual(copy({ category: "above_range", value: 305, durationMinutes: 30, trend: "FortyFiveUp" }), {
     title: "305 mg/dL ↗",
@@ -104,7 +104,7 @@ test("every category renders the requested exact two-line copy", () => {
   });
   assert.deepEqual(copy({ category: "rising_fast", value: 165, trend: "DoubleUp" }), {
     title: "165 mg/dL ↑↑",
-    body: "Rising fast",
+    body: "Climbing fast",
   });
 });
 
@@ -221,12 +221,11 @@ test("a follower notice applies the shared two-line layout and names whose readi
   const customHighFollower = copy({
     category: "custom_high",
     value: 192,
-    thresholdMgdl: 180,
     trend: "SingleUp",
     personName: "Maria",
   });
   assert.equal(customHighFollower.title, "Maria · 192 mg/dL ↑");
-  assert.equal(customHighFollower.body, "At or above 180");
+  assert.equal(customHighFollower.body, "Climbing");
 
   const priv = copy({ category: "urgent_low", value: 54, personName: "Maria", showDetails: false });
   assert.ok(!`${priv.title} ${priv.body}`.includes("Maria"));
