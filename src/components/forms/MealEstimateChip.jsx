@@ -41,9 +41,9 @@ export default function MealEstimateChip({ description, onEstimate }) {
         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
         {loading ? "Estimating..." : "Estimate with AI"}
       </button>
-      <span className="text-xs hidden" style={{ color: FAINT }}>
-        {estimated ? "A starting point. Adjust it to fit your meal." : text.length < 2 ? "Optional · name your meal first" : "Optional · only the meal name is shared"}
-      </span>
+      
+
+      
     </div>);
 
 }

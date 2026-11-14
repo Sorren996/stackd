@@ -61,9 +61,9 @@ export default function MealPhotoChip({ onEstimate }) {
         className="hidden"
         onChange={(e) => handleFile(e.target.files?.[0])} />
       
-      <span className="text-xs hidden" style={{ color: FAINT }}>
-        {estimated ? "A starting point. Adjust it to fit your meal." : "Optional · only the photo is shared"}
-      </span>
+      
+
+      
     </div>);
 
 }
