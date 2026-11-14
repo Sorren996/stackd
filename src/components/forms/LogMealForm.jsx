@@ -7,6 +7,7 @@ import MealEstimateChip from "@/components/forms/MealEstimateChip";
 import MealPhotoChip from "@/components/forms/MealPhotoChip";
 import MealReviewReminderChip from "@/components/forms/MealReviewReminderChip";
 import useMealReminderSetting from "@/hooks/useMealReminderSetting";
+import { armMealReminder, clearMealReminder } from "@/lib/mealReminderIntent";
 import {
   TapStepper,
   TripleSegmented,
@@ -79,6 +80,7 @@ export default function LogMealForm({ open, onClose }) {
     setTime(new Date().toTimeString().slice(0, 5));
     setEstMacros(null);
     setRemindMe(false);
+    clearMealReminder();
   }, [open]);
 
   const carbsNum = Number(carbs) || 0;
@@ -172,8 +174,8 @@ export default function LogMealForm({ open, onClose }) {
             delayMinutes={mealReminderDelay}
             reminderAtMs={reminderAtMs}
             armed={remindMe}
-            onArm={() => setRemindMe(true)}
-            onUndo={() => setRemindMe(false)}
+            onArm={() => { armMealReminder(mealReminderDelay); setRemindMe(true); }}
+            onUndo={() => { clearMealReminder(); setRemindMe(false); }}
           />
           <button
             type="button"

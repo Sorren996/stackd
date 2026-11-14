@@ -3,6 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import { writeCachedLatestGlucose } from "@/lib/latestGlucoseCache";
 import { markProjectionInputsChanged } from "@/lib/projection/projectionStaleness";
+import { applyMealReminderToSaved } from "@/lib/mealReminderIntent";
 
 function asList(value) {
   if (Array.isArray(value)) return value;
@@ -97,7 +98,10 @@ export function useCreateCarbs() {
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => reject(new Error("Carb save timed out after 10 seconds")), 10000);
       });
-      return Promise.race([savePromise, timeoutPromise]);
+      const saved = await Promise.race([savePromise, timeoutPromise]);
+      // A reminder armed before this meal existed is written onto the record
+      // now, from the meal's own time, so the tap is never lost.
+      return await applyMealReminderToSaved(saved);
     },
     onMutate: ({ optimisticEntries }) => {
       const previousCarbs = queryClient.getQueryData(["carb-entries"]);

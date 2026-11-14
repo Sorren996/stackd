@@ -363,6 +363,11 @@ function dispatchDeps({ sr, ownerId, ledger, nowMs, absoluteUrl, recheck }: {
     nowMs,
     absoluteUrl,
     recheck,
+    // The one push transport, the same integration the reading alerts use.
+    // Without it a reminder was claimed and recorded but never handed to the
+    // push service, so it was stored as transport_unknown and nothing arrived.
+    send: (message: { user_id: string; title: string; content: string; action_url: string }) =>
+      sr.integrations.Core.SendPushNotification(message),
     // The same atomic claim the reading alerts use: one caller wins a key.
     claim: async (key: string) => {
       const result = await sr.entities.NotificationLedger.updateMany(

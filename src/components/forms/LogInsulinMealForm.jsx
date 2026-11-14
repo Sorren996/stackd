@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import LogSheetShell from "@/components/forms/LogSheetShell";
 import MealReviewReminderChip from "@/components/forms/MealReviewReminderChip";
 import useMealReminderSetting from "@/hooks/useMealReminderSetting";
+import { armMealReminder, clearMealReminder } from "@/lib/mealReminderIntent";
 import {
   TapStepper,
   InsulinChips,
@@ -93,6 +94,7 @@ export default function LogInsulinMealForm({ open, onClose }) {
     setDate(getTodayDateValue());
     setTime(new Date().toTimeString().slice(0, 5));
     setRemindMe(false);
+    clearMealReminder();
   }, [open]);
 
   useEffect(() => {
@@ -206,8 +208,8 @@ export default function LogInsulinMealForm({ open, onClose }) {
             delayMinutes={mealReminderDelay}
             reminderAtMs={buildTimestampNoFuture(date, time)?.getTime() + mealReminderDelay * 60000}
             armed={remindMe}
-            onArm={() => setRemindMe(true)}
-            onUndo={() => setRemindMe(false)}
+            onArm={() => { armMealReminder(mealReminderDelay); setRemindMe(true); }}
+            onUndo={() => { clearMealReminder(); setRemindMe(false); }}
           />
           <button
             type="button"
