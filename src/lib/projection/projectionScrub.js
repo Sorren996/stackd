@@ -23,23 +23,9 @@ export function resolveGestureIntent(dx, dy, slop = SCRUB_LOCK_SLOP_PX) {
   return Math.abs(dx) >= Math.abs(dy) ? "scrub" : "scroll";
 }
 
-// The rubber band at both ends of the trace. The selection latches to the end
-// point, but the marker keeps following the finger by a fraction of its travel,
-// so the edge gives instead of feeling like a wall. The offset is signed: right
-// past the horizon, left before the earliest reading.
-export const RUBBER_BAND_FACTOR = 0.35;
-
-export function resolveRubberBand(localX, firstX, lastX, options = {}) {
-  const {
-    factor = RUBBER_BAND_FACTOR,
-    startTravel = 10,
-    endTravel = 24,
-  } = options;
-  if (!Number.isFinite(localX) || !Number.isFinite(firstX) || !Number.isFinite(lastX)) return 0;
-  if (localX > lastX) return Math.min((localX - lastX) * factor, endTravel);
-  if (localX < firstX) return Math.max((localX - firstX) * factor, -startTravel);
-  return 0;
-}
+// The marker stops dead at the ends of the trace: at the earliest reading and at
+// the last forecast point. There is no give past either end — the plot carries
+// three hours of future, so the ends are a boundary, not a wall.
 
 // How far past the midpoint the pointer must travel toward the other point
 // before the selection follows it.

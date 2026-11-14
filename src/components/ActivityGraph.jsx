@@ -526,13 +526,26 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
   const latestGlucoseBucket = isCandlestick ?
   Math.floor(latestGlucoseTime / HOUR_MS) * HOUR_MS :
   Math.round(latestGlucoseTime / STEP_MS) * STEP_MS;
+  // The future region is sized to the projection itself: three hours of room, or
+  // the projection's own horizon plus a ten-minute tail when that reaches
+  // further. Without that room the last forecast points fall past the plot's
+  // right edge and are dropped, leaving the marker almost nothing to travel.
+  const projectionHorizonMs = (() => {
+    const declared = Number(projection?.horizon_minutes);
+    const lastOffset = Array.isArray(projection?.trajectory) ?
+    projection.trajectory.reduce((max, p) => Math.max(max, Number(p?.min_offset) || 0), 0) :
+    0;
+    const minutes = Math.max(Number.isFinite(declared) ? declared : 0, lastOffset);
+    return minutes > 0 ? (minutes + 10) * 60000 : 0;
+  })();
   const futureHours = Math.max(FUTURE_HOURS, Math.ceil(viewWindow / 2));
   const domainStart = isCandlestick ?
   latestGlucoseBucket - CANDLESTICK_HISTORY_HOURS * HOUR_MS :
   latestGlucoseBucket - HISTORY_DAYS * 24 * HOUR_MS;
-  const domainEnd = isCandlestick ?
-  latestGlucoseBucket + CANDLESTICK_FUTURE_HOURS * HOUR_MS :
-  latestGlucoseBucket + futureHours * HOUR_MS;
+  const domainEnd = latestGlucoseBucket + Math.max(
+    isCandlestick ? CANDLESTICK_FUTURE_HOURS * HOUR_MS : futureHours * HOUR_MS,
+    projectionHorizonMs
+  );
   const filteredGlucoseReadings = useMemo(() =>
   filters.glucose ?
   sortedGlucoseReadings.filter((reading) => reading.time >= domainStart && reading.time <= domainEnd) :

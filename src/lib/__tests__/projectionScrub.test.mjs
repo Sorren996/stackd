@@ -4,7 +4,6 @@ import {
   resolveScrubPoint,
   resolveCardFlip,
   resolveGestureIntent,
-  resolveRubberBand,
 } from "../projection/projectionScrub.js";
 
 const point = (x, kind = "forecast") => ({ x, kind });
@@ -68,21 +67,6 @@ test("intent locks on the first movement: sideways scrubs, vertical scrolls", ()
   assert.equal(resolveGestureIntent(5, 5), "scrub");
   // A clearly vertical start is a page scroll.
   assert.equal(resolveGestureIntent(1, 9), "scroll");
-});
-
-test("the rubber band gives past the horizon and before the earliest reading", () => {
-  // Inside the trace there is no give at all.
-  assert.equal(resolveRubberBand(120, 100, 200), 0);
-  // Past the horizon: 35% of the travel, capped at 24px.
-  assert.equal(resolveRubberBand(220, 100, 200), 7);
-  assert.equal(resolveRubberBand(400, 100, 200), 24);
-  // Before the earliest reading: a small give, capped at 10px.
-  assert.equal(resolveRubberBand(80, 100, 200), -7);
-  assert.equal(resolveRubberBand(-100, 100, 200), -10);
-});
-
-test("without a projection the give past the newest reading is almost none", () => {
-  assert.equal(resolveRubberBand(240, 100, 200, { endTravel: 4 }), 4);
 });
 
 test("the future region ends at the projection horizon", () => {

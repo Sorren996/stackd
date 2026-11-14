@@ -37,7 +37,7 @@
 
 import { useMemo, useState, useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, animate, motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import ProjectionTooltipCard, {
   projectionCardCopy,
   CARD_WIDTH_PX,
@@ -50,20 +50,11 @@ import {
   resolveScrubPoint,
   resolveCardFlip,
   resolveGestureIntent,
-  resolveRubberBand,
 } from "@/lib/projection/projectionScrub";
 import { BAR_HEIGHT } from "@/components/nav/navGeometry";
 
 const MARGIN = 8;
 const CARD_GAP = 12; // px between the marker and the card
-// How far the marker may be pulled past either end of the trace. The horizon
-// gives a clear amount of travel; the earliest reading gives a small give, and
-// with no trajectory at all the newest reading gives almost none — the marker
-// never wanders into empty chart.
-const HORIZON_TRAVEL_PX = 24;
-const START_TRAVEL_PX = 10;
-const NO_FUTURE_TRAVEL_PX = 4;
-const SETTLE_MS = 180; // release: the marker settles back to the end point
 // The floating pill nav never gets a card on top of it.
 const NAV_CLEARANCE = BAR_HEIGHT + 34;
 // Scroll and resize dismissal stay quiet for a moment after a gesture, so the
@@ -113,8 +104,9 @@ export default function ProjectionOverlay({
 }) {
   const [activePoint, setActivePoint] = useState(null);
   const [scrubbing, setScrubbing] = useState(false);
-  // The rubber band, in px. Zero except while the finger is held past an end.
-  const [overscroll, setOverscroll] = useState(0);
+  // The cream card belongs to a tap and only to a tap: a drag never opens it,
+  // and it closes the moment a drag begins.
+  const [cardShown, setCardShown] = useState(false);
   const svgRef = useRef(null);
   const hitRef = useRef(null);
   // Gesture state machine: "idle" | "pending" | "scrubbing" | "cancelled"
@@ -123,8 +115,6 @@ export default function ProjectionOverlay({
   const downPosRef = useRef({ x: 0, y: 0 });
   const pointerIdRef = useRef(null);
   const svgRectRef = useRef(null);
-  const overscrollRef = useRef(0);
-  const settleRef = useRef(null);
   const [pos, setPos] = useState({ left: 0, top: 0, ready: false, flipped: false });
   const nowMs = useServerNow();
   // The card prints glucose in the reader's chosen unit, so a change of that
@@ -155,13 +145,7 @@ export default function ProjectionOverlay({
     if (resetSignal === lastResetRef.current) return;
     lastResetRef.current = resetSignal;
     select(null);
-    // Any rubber band in flight comes back with it.
-    if (settleRef.current) {
-      settleRef.current.stop();
-      settleRef.current = null;
-    }
-    overscrollRef.current = 0;
-    setOverscroll(0);
+    setCardShown(false);
   }, [resetSignal, select]);
 
   // Latest pointer x and the pending frame: pointermove records only the x, and
@@ -235,7 +219,9 @@ export default function ProjectionOverlay({
     return plotted.map((p) => {
       const x = ((p.time - domainStart) / totalMs) * chartWidth;
       return { ...p, x, y: getGlucoseY(p.value) };
-    }).filter((p) => Number.isFinite(p.x) && p.x >= 0 && p.x <= chartWidth);
+      // Every forecast point the engine produced is kept: the plot's future
+      // region is sized to the horizon, so none of them may be dropped here.
+    }).filter((p) => Number.isFinite(p.x));
   }, [projection, domainStart, totalMs, chartWidth, getGlucoseY, anchorReading]);
 
   const forecastPoints = useMemo(() => points.filter((p) => p.kind === "forecast"), [points]);
@@ -288,9 +274,7 @@ export default function ProjectionOverlay({
   // pointermove stores the latest x and asks for a single resolution on the next
   // frame. resolveScrubPoint holds the current selection until the pointer is
   // 8px past the midpoint and latches at both ends, and when the resolved point
-  // is the one already selected, `select` skips the state update entirely. The
-  // same frame resolves the rubber band, so the marker's give and its snap can
-  // never disagree.
+  // is the one already selected, `select` skips the state update entirely.
   const resolveAtPointer = useCallback(() => {
     if (frameRef.current != null) return;
     frameRef.current = requestAnimationFrame(() => {
@@ -303,16 +287,8 @@ export default function ProjectionOverlay({
       const localX = clientX - rect.left;
       const next = resolveScrubPoint(source, localX, activePointRef.current);
       if (next) select(next);
-      const band = resolveRubberBand(localX, source[0].x, source[source.length - 1].x, {
-        startTravel: START_TRAVEL_PX,
-        endTravel: hasFuture ? HORIZON_TRAVEL_PX : NO_FUTURE_TRAVEL_PX,
-      });
-      if (band !== overscrollRef.current) {
-        overscrollRef.current = band;
-        setOverscroll(band);
-      }
     });
-  }, [select, hasFuture]);
+  }, [select]);
 
   const cancelFrame = useCallback(() => {
     if (frameRef.current != null) {
@@ -320,35 +296,6 @@ export default function ProjectionOverlay({
       frameRef.current = null;
     }
   }, []);
-
-  // ── Release: the marker settles back to the end point ────────────────
-  const stopSettle = useCallback(() => {
-    if (settleRef.current) {
-      settleRef.current.stop();
-      settleRef.current = null;
-    }
-  }, []);
-
-  const settleBand = useCallback(() => {
-    stopSettle();
-    const from = overscrollRef.current;
-    if (!from) return;
-    settleRef.current = animate(from, 0, {
-      duration: SETTLE_MS / 1000,
-      ease: [0.32, 0.72, 0.25, 1],
-      onUpdate: (value) => {
-        overscrollRef.current = value;
-        setOverscroll(value);
-      },
-      onComplete: () => {
-        settleRef.current = null;
-        overscrollRef.current = 0;
-        setOverscroll(0);
-      },
-    });
-  }, [stopSettle]);
-
-  useEffect(() => () => stopSettle(), [stopSettle]);
 
   // ── Gesture intent: one decision, made once ──────────────────────────
   // The hit layer covers the whole plot. The first movement decides: sideways
@@ -372,7 +319,9 @@ export default function ProjectionOverlay({
 
   const handlePointerDown = useCallback((e) => {
     if (!merged.length || !e.isPrimary) return;
-    stopSettle();
+    // A press closes whatever card was open: it comes back only if this gesture
+    // ends as a tap on a reading.
+    setCardShown(false);
     gestureStateRef.current = "pending";
     // Freeze the plotted points for this gesture: a reading that lands mid-drag
     // must not move the selection under the finger.
@@ -383,7 +332,7 @@ export default function ProjectionOverlay({
     if (svgRef.current) svgRectRef.current = svgRef.current.getBoundingClientRect();
     scrubbingRef.current = false;
     setScrubbing(false);
-  }, [merged, stopSettle]);
+  }, [merged]);
 
   const handlePointerMove = useCallback((e) => {
     const state = gestureStateRef.current;
@@ -427,10 +376,12 @@ export default function ProjectionOverlay({
     if (state === "scrubbing") {
       scrubbingRef.current = false;
       setScrubbing(false);
-      // The band gives back over 180ms; the selection stays where it landed.
-      settleBand();
+      // The selection stays exactly where the finger left it: a forecast keeps
+      // its strip, a reading simply parks the marker. A drag never opens the
+      // card — only a tap does.
     } else if (state === "pending") {
-      // A tap picks the nearest point outright, not the hysteresis result.
+      // A tap picks the nearest point outright, not the hysteresis result, and
+      // a real reading is the one thing that opens the cream card.
       if (svgRectRef.current) {
         const localX = downPosRef.current.x - svgRectRef.current.left;
         const nearest = resolveScrubPoint(mergedRef.current, localX, null);
@@ -439,10 +390,11 @@ export default function ProjectionOverlay({
             && activePointRef.current.x === nearest.x
             && activePointRef.current.kind === nearest.kind;
           select(same ? null : nearest);
+          setCardShown(!same && nearest.kind === "reading");
         }
       }
     }
-  }, [cancelFrame, select, settleBand]);
+  }, [cancelFrame, select]);
 
   const handlePointerCancel = useCallback(() => {
     cancelFrame();
@@ -454,8 +406,7 @@ export default function ProjectionOverlay({
       scrubbingRef.current = false;
       setScrubbing(false);
     }
-    settleBand();
-  }, [cancelFrame, settleBand]);
+  }, [cancelFrame]);
 
   // ── Keyboard accessibility ───────────────────────────────────────────
   // Arrow keys step through the same merged list the finger uses: readings
@@ -472,6 +423,7 @@ export default function ProjectionOverlay({
         e.preventDefault();
         const next = currentIndex < 0 ? 0 : Math.min(currentIndex + 1, merged.length - 1);
         select(merged[next]);
+        setCardShown(merged[next].kind === "reading");
         break;
       }
       case "ArrowLeft":
@@ -479,17 +431,21 @@ export default function ProjectionOverlay({
         e.preventDefault();
         const prev = currentIndex < 0 ? merged.length - 1 : Math.max(currentIndex - 1, 0);
         select(merged[prev]);
+        setCardShown(merged[prev].kind === "reading");
         break;
       }
       case "Escape": {
         e.preventDefault();
         select(null);
+        setCardShown(false);
         break;
       }
       case "Enter":
       case " ": {
         e.preventDefault();
-        select(activePointRef.current ? null : merged[0]);
+        const opening = !activePointRef.current;
+        select(opening ? merged[0] : null);
+        setCardShown(opening && merged[0].kind === "reading");
         break;
       }
       default:
@@ -510,9 +466,9 @@ export default function ProjectionOverlay({
     return () => el.removeEventListener("touchmove", onTouchMove);
   }, [merged.length]);
 
-  // Only a real reading opens the cream card. A forecast point is described by
-  // the estimate strip above the chart, so it never gets a card of its own.
-  const cardPoint = activePoint && activePoint.kind === "reading" ? activePoint : null;
+  // Only a tap on a real reading opens the cream card. A drag never does, and a
+  // forecast point never does: the strip above the chart is its surface.
+  const cardPoint = cardShown && activePoint && activePoint.kind === "reading" ? activePoint : null;
 
   // Resolve the card's position: above the selected point, flipped below when
   // it would cross the top of the plot, clamped inside the visible plot box on
@@ -646,10 +602,9 @@ export default function ProjectionOverlay({
   // the estimate stops. No number is attached to it.
   const endPoint = points[points.length - 1];
 
-  // Where the marker is drawn. It follows the snapped point exactly, plus the
-  // rubber band's give at whichever end the finger has pushed past — a few
-  // pixels of travel while the selection itself stays on the end point.
-  const markerX = selected ? selected.x + overscroll : 0;
+  // Where the marker is drawn: exactly on the snapped point, and nowhere else.
+  // It stops at the earliest reading and at the last forecast point.
+  const markerX = selected ? selected.x : 0;
 
   return (
     <>
