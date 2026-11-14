@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import PageHeader from "@/components/editorial/PageHeader";
 import SectionCard from "@/components/editorial/SectionCard";
 import LedgerRow from "@/components/editorial/LedgerRow";
-import SettingsStatusBand from "@/components/settings/SettingsStatusBand";
+import GlucoseSourceCard from "@/components/settings/GlucoseSourceCard";
 import NeedsAttention from "@/components/settings/NeedsAttention";
 import AdminTestNotification from "@/components/settings/AdminTestNotification";
 import useSettingsSummaries from "@/hooks/useSettingsSummaries";
@@ -18,16 +18,17 @@ function readGraphHeight() {
 }
 
 /**
- * Settings is a hub, never a second copy: the band says what the sensor is
- * doing, each row carries the one value that matters, and every row opens the
- * screen that owns that setting. Groups follow how often they are reached —
- * the sensor first, then what Stackd does, then people, privacy, help and app.
+ * Settings is a hub, never a second copy: one Glucose source card says where
+ * readings come from, each row carries the one value that matters, and every
+ * row opens the screen that owns that setting. Groups follow how often they are
+ * reached — glucose first, then what Stackd does, then people, privacy, help
+ * and app.
  */
 export default function Settings() {
   const { logout, user } = useAuth();
   const queryClient = useQueryClient();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const { band, attention, sensorLabel, sensorNote, notificationsLabel, remindersLabel, insulinLabel } = useSettingsSummaries();
+  const { band, connected, sensorModelLabel, attention, sensorNote, notificationsLabel, remindersLabel, insulinLabel } = useSettingsSummaries();
   const graphHeight = readGraphHeight();
   const nativeIOS = isNativeIOS();
 
@@ -46,18 +47,15 @@ export default function Settings() {
     <div className="mx-auto max-w-md space-y-4 pb-4 pt-2">
       <PageHeader italicWord="profile" rightText="synced just now" />
 
-      {/* Full width, above every group: the sensor at a glance, or the fix. */}
-      <SettingsStatusBand band={band} />
+      {/* One card for where glucose comes from: the connection, the session
+          and the way in to hand logging. Nothing Dexcom-related sits outside it. */}
+      <GlucoseSourceCard
+        band={band}
+        connected={connected}
+        modelLabel={sensorModelLabel}
+        sensorNote={sensorNote}
+      />
       <NeedsAttention items={attention} />
-
-      <SectionCard label="Sensor">
-        <LedgerRow
-          label="Sensor session"
-          value={sensorLabel}
-          note={sensorNote}
-          to="/settings/sensor"
-        />
-      </SectionCard>
 
       <SectionCard label="Your setup">
         <LedgerRow label="Notifications" value={notificationsLabel} to="/settings/notifications" />

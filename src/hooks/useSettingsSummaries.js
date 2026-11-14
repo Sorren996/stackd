@@ -75,6 +75,8 @@ export default function useSettingsSummaries() {
 
   return {
     band: connectionLoading && !connection ? null : statusBand(now),
+    connected: connection?.status === "connected",
+    sensorModelLabel: session.modelMeta?.label || "Dexcom G7",
     attention: settingsReady ? attentionItems({ personal, sensor, ...now }) : [],
     sensorLabel: !settingsReady ? "" : sensor.hasSession ? sensor.value : "No sensor session",
     sensorNote: !settingsReady ? "" : sensor.hasSession ? sensor.note : "Start a new session",

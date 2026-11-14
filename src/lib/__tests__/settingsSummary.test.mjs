@@ -147,12 +147,24 @@ test("the insulin row shows the stored carb ratio, or claims none", () => {
   assert.equal(insulinRatioLabel(null), null);
 });
 
+// One card names every glucose source, in one order: connection, session, hand
+// logging. Nothing Dexcom-related lives in a second card at this level.
+test("the glucose source card holds the connection, the session and hand logging", async () => {
+  const source = await readFile(
+    new URL("../../components/settings/GlucoseSourceCard.jsx", import.meta.url),
+    "utf8"
+  );
+  const order = [...source.matchAll(/to="(\/[^"]*)"/g)].map((match) => match[1]);
+  assert.deepEqual(order, ["/settings/dexcom", "/settings/sensor", "/settings/manual-glucose"]);
+  assert.ok(source.includes("Sensor session"), "the session row is present");
+  assert.ok(source.includes("Log manually"), "the hand-logging row is present");
+});
+
 // The approved order is structural, so it is checked against the page itself.
 test("the settings page renders its rows in the approved order", async () => {
   const source = await readFile(new URL("../../pages/Settings.jsx", import.meta.url), "utf8");
   const order = [...source.matchAll(/to="(\/[^"]*)"/g)].map((match) => match[1]);
   const expectedOrder = [
-    "/settings/sensor",
     "/settings/notifications",
     // Reminders sits directly under Notifications and is its own page.
     "/settings/reminders",
@@ -170,8 +182,8 @@ test("the settings page renders its rows in the approved order", async () => {
   ];
   assert.deepEqual(order, expectedOrder);
   assert.ok(
-    source.indexOf("<SettingsStatusBand") < source.indexOf("<SectionCard"),
-    "the status band sits above every group"
+    source.indexOf("<GlucoseSourceCard") < source.indexOf("<SectionCard"),
+    "the glucose source card sits above every group"
   );
   assert.ok(
     source.indexOf("Sign out") > source.lastIndexOf("<SectionCard label="),

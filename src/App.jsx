@@ -34,7 +34,7 @@ import RouteFallback from "@/components/RouteFallback";
 import {
   LazyHistory, LazyAnalytics, LazySettings, LazyInsights,
   LazyInsulinSettings, LazyProfileSettings, LazyPrivacyConsent,
-  LazyDisplaySettings, LazyDexcomSettings, LazySensorSession,
+  LazyDisplaySettings, LazyDexcomSettings, LazySensorSession, LazyManualGlucose,
   LazySharing, LazyNotifications, LazyReminders, LazyContactSupport, LazySupportInbox,
   LazySplitPlanReview, LazyFollowingHome, LazyFollowerSettings,
   LazyFollowInvite, LazyInstall, LazyPrivacy, LazyTerms, LazyPublicContact,
@@ -393,6 +393,7 @@ const AuthenticatedApp = () => {
             <Route path="/settings/display" element={<LazyDisplaySettings />} />
             <Route path="/settings/dexcom" element={<LazyDexcomSettings />} />
             <Route path="/settings/sensor" element={<LazySensorSession />} />
+            <Route path="/settings/manual-glucose" element={<LazyManualGlucose />} />
             <Route path="/settings/sharing" element={<LazySharing />} />
             <Route path="/settings/notifications" element={<LazyNotifications />} />
             <Route path="/settings/reminders" element={<LazyReminders />} />
