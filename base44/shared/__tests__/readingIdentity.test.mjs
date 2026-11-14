@@ -29,3 +29,8 @@ test('a carry-forward cannot overwrite an observed point',async()=>{
   await upsertReadings({sr:s.sr,ownerId:'owner',rows:[{recorded_at:time,value:110,source:'system'}]});
   assert.equal(s.getRows().length,1);assert.equal(s.getRows()[0].value,103);assert.equal(s.getRows()[0].source,'manual');
 });
+test('the same sensor moment in three accounts is not a per-user duplicate',async()=>{
+  const s=sandbox(['owner','second','third'].map((user_id,i)=>({id:`r${i}`,user_id,created_by_id:'service',recorded_at:time,value:133,source:'dexcom_share'})));
+  assert.equal(await reconcileReadings({sr:s.sr,ownerId:'owner',sinceIso:time,untilIso:time}),0);
+  assert.equal(s.getRows().length,3);
+});
