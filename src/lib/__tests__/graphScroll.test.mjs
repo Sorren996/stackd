@@ -7,15 +7,13 @@
 //     was still down.
 //
 // So: the resting offset is the centre of the viewport, the content keeps its
-// full width so the tail is visible, and only a finished gesture may be pulled
-// back to rest.
+// full width so the tail is reachable. Settling never pulls it back to rest.
 
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
   resolveScrollBounds,
   isAtResting,
-  shouldReturnToResting,
   shouldFollowLatest,
   NEAR_EDGE_PX,
 } from "../graphScroll.js";
@@ -90,13 +88,24 @@ test("a viewport within 24px of rest counts as sitting at rest", () => {
   assert.equal(isAtResting(undefined, resting), true, "no position yet means nothing to protect");
 });
 
-test("a bounce past rest returns to rest; panning into history is left alone", () => {
-  const resting = 500;
-  assert.equal(shouldReturnToResting(900, resting), true, "parked in the future zone");
-  assert.equal(shouldReturnToResting(resting + 1, resting), false, "still rest, within the write threshold");
-  assert.equal(shouldReturnToResting(resting - 300, resting), false, "the reader is reading history");
-  assert.equal(shouldReturnToResting(resting, resting), false);
-});
+for (const hours of [3, 6, 12]) {
+  for (const withForecast of [false, true]) {
+    test(`${hours}h native right edge centres ${withForecast ? "the horizon" : "the newest reading"}`, () => {
+      const latest = 24 * 3600000;
+      const horizon = withForecast ? latest + 3 * 3600000 : latest;
+      const visibleMs = hours * 3600000;
+      const domainEnd = horizon + visibleMs / 2;
+      const chartWidth = domainEnd / visibleMs * viewport;
+      const latestX = latest / domainEnd * chartWidth;
+      const horizonX = horizon / domainEnd * chartWidth;
+      const bounds = resolveScrollBounds({ chartWidth, containerWidth: viewport, latestX });
+      assert.ok(Math.abs(horizonX - bounds.maxScrollLeft - viewport / 2) < 1e-9);
+      assert.ok(Math.abs(latestX - bounds.restingScrollLeft - viewport / 2) < 1e-9);
+      assert.equal(bounds.contentWidth, chartWidth);
+      if (withForecast) assert.ok(bounds.maxScrollLeft > bounds.restingScrollLeft);
+    });
+  }
+}
 
 test("no auto-follow while the viewport is being moved, or after panning away", () => {
   assert.equal(shouldFollowLatest({ busy: false, atResting: true }), true);

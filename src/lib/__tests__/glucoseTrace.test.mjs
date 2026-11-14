@@ -8,7 +8,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { buildGlucoseSegments, GLUCOSE_GAP_BREAK_MS } from "../glucoseSeries.js";
-import { monotoneXPath } from "../monotonePath.js";
+import { monotoneXPath, monotoneXValue } from "../monotonePath.js";
 
 const at = (hhmm) => new Date(`2026-10-30T${hhmm}:00.000Z`).getTime();
 const sample = (hhmm, value) => ({ time: at(hhmm), value });
@@ -147,6 +147,7 @@ test("smoothing never overshoots past the samples that bound it", () => {
     for (let step = 1; step < 20; step += 1) {
       const point = cubicAt(previous, segment.c1, segment.c2, segment.end, step / 20);
       assert.ok(point.y >= low && point.y <= high, `overshoot at interval ${index}: ${point.y}`);
+      assert.ok(Math.abs(monotoneXValue(points, point.x) - point.y) < 1e-9, "centre marker follows the exact drawn cubic");
     }
     previous = segment.end;
   });

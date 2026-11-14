@@ -1250,8 +1250,8 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
   // mounted whenever there is a glucose trace to draw. It is the only place a
   // glucose marker is ever painted.
   const showTraceLayer = filters.glucose && (glucoseLinePoints.length > 0 || Boolean(projection));
-  // The strip describes the forecast point the readout is on; when the readout
-  // is on a received reading it falls back to the horizon itself.
+  // Only a real forecast point nearest the viewport centre fills the strip.
+  // At rest and throughout history the strip's reserved slot stays empty.
   const stripPoint = scrubEntry?.kind === FORECAST_KIND ? scrubEntry : null;
 
   return (
@@ -1353,9 +1353,9 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
       </div>
       {/* The estimate slot: inside the card, directly above the plot and
           beneath the reading row, always the same height — so the chart never
-          moves when a forecast appears or ends. It reads the same scrub
-          position as the marker: on a forecast point it describes that point,
-          and on a received reading it describes the horizon. */}
+          moves when a forecast appears or ends. It describes the model point
+          nearest the centre only while the centre is after the newest reading;
+          at rest and on past readings it remains empty. */}
       <ProjectionEstimateStrip projection={projection} point={stripPoint} />
       <div
           ref={graphViewportRef}
