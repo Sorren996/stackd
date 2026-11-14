@@ -404,6 +404,7 @@ function ActivityGraph({ doses, activeInsulinBreakdown = [], glucoseReadings = [
   const prevGlowStatusRef = useRef(null);
   const prevOverReferenceRef = useRef(false);
   const lastSelectedKeyRef = useRef(null);
+  const lastTickedRef = useRef(null);
   const tickerReseatRef = useRef(false);
   // The reading the marker sits on, and the window it was picked in, so a
   // window change can carry that same reading across the new scale.
@@ -1026,14 +1027,15 @@ function ActivityGraph({ doses, activeInsulinBreakdown = [], glucoseReadings = [
 
   // Scroll frames write only refs/DOM. Small subscribers own their visibility;
   // nothing here schedules a render of the chart or its Recharts descendants.
-  const handleSelectionFrame = (entry, { instant = false } = {}) => {
+  const handleSelectionFrame = (entry) => {
     const previousEntry = scrubEntryRef.current;
-    // Four or more skipped samples (or a gap over 15 minutes) is a jump.
-    const largeJump = previousEntry && entry && (Math.abs(entry.selectionIndex - previousEntry.selectionIndex) > 3
-      || Math.abs(entry.time - previousEntry.time) > 15 * 60000);
-    const reseating = instant || tickerReseatRef.current || lastViewWindowRef.current !== viewWindow;
+    // Only explicit re-seats and jumps across more than two reading steps
+    // suppress the roll. Finger-down and native momentum never suppress it.
+    const selectionJump = previousEntry && entry && (Math.abs(entry.selectionIndex - previousEntry.selectionIndex) > 2
+      || Math.abs(entry.time - previousEntry.time) > 10 * 60000);
+    const suppressForReseat = tickerReseatRef.current || lastViewWindowRef.current !== viewWindow || Boolean(selectionJump);
     scrubEntryRef.current = entry;
-    selectionSource.publish(entry ? { ...entry, animateValue: Boolean(previousEntry && !reseating && !largeJump) } : null);
+    selectionSource.publish(entry ? { ...entry, animateValue: Boolean(previousEntry && !suppressForReseat) } : null);
     if (!filters.glucose || !entry || !Number.isFinite(entry.time)) return;
     // The zoom effect must retain the centre from BEFORE its scale changed.
     if (lastViewWindowRef.current === viewWindow) anchorTimeRef.current = entry.centreTime ?? entry.time;
@@ -1043,10 +1045,13 @@ function ActivityGraph({ doses, activeInsulinBreakdown = [], glucoseReadings = [
     const displayValue = formatGlucoseDisplay(value);
     const key = `${headerEntry.kind}:${headerEntry.time}:${displayValue}`;
     const previous = lastSelectedKeyRef.current;
-    // Normal scroll frames animate only a changed value, never restart an
-    // unchanged digit merely because another scroll frame arrived.
-    if (previous?.displayValue !== displayValue || reseating) {
-      tickerRef.current?.setValue(displayValue, Boolean(previous && !reseating && !largeJump));
+    // Track only values actually delivered to the mounted ticker, separately
+    // from selection identity. A changed key with equal text keeps its roll.
+    if (tickerRef.current && (previous?.key !== key || lastTickedRef.current !== displayValue || suppressForReseat)) {
+      const animatable = lastTickedRef.current !== null
+        && lastTickedRef.current.length === displayValue.length && !suppressForReseat;
+      tickerRef.current.setValue(displayValue, animatable);
+      lastTickedRef.current = displayValue;
     }
     if (previous?.key !== key) {
       if (tooltipTimeRef.current) tooltipTimeRef.current.textContent = formatReadingTime(headerEntry.time);
@@ -1064,7 +1069,7 @@ function ActivityGraph({ doses, activeInsulinBreakdown = [], glucoseReadings = [
 
   // Display preferences can change without changing the selected sample.
   useEffect(() => {
-    handleSelectionFrame(scrubEntryRef.current, { instant: true });
+    handleSelectionFrame(scrubEntryRef.current);
   }, [glucoseUnits, targetLow, targetHigh, highReference, effectiveMin, effectiveMax]);
 
   const updateMonitoringOverlay = (scrollLeft) => {
