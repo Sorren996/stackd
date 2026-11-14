@@ -73,7 +73,8 @@ function applyNewTimeToISO(originalISO, timeValue) {
  *   value); changing the time moves the meal marker on the graph (all items
  *   share the new consumed_at).
  * - Each item uses the same FieldKit components as the create form (name text
- *   field + 5g carb stepper), prefilled with the record's current values.
+ *   field + 5g carb stepper + its own rescue toggle), prefilled with that
+ *   record's own values. One item's flags are never written to its neighbours.
  * - Deleting the last remaining item deletes the entire meal log and closes
  *   the sheet automatically.
  */
@@ -85,15 +86,12 @@ export default function MealEditOverlay({ entries, onClose }) {
       food_name: e.food_name || e.name || "",
       carbs: String(e.carbs ?? ""),
       consumed_at: e.consumed_at,
+      // The rescue flag belongs to the item, seeded from that item's own record.
+      is_rescue_carb: e.is_rescue_carb === true,
     }))
   );
   const [mealDate, setMealDate] = useState(() => toDateInputValue(entries?.[0]?.consumed_at));
   const [mealTime, setMealTime] = useState(() => toTimeInputValue(entries?.[0]?.consumed_at));
-  // Prefilled from the record, so the same "Rescue carbs" control offered when
-  // this meal was logged can be changed afterwards.
-  const [rescue, setRescue] = useState(
-    () => (entries || []).some((e) => e.is_rescue_carb === true || e.classification === "rescue_carbs")
-  );
   const [isSaving, setIsSaving] = useState(false);
   const [pendingDelete, setPendingDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -112,6 +110,7 @@ export default function MealEditOverlay({ entries, onClose }) {
         food_name: "",
         carbs: "",
         consumed_at: entries[0]?.consumed_at || new Date().toISOString(),
+        is_rescue_carb: false,
       },
     ]);
   };
@@ -175,10 +174,12 @@ export default function MealEditOverlay({ entries, onClose }) {
     setIsSaving(true);
     try {
       for (const item of validItems.filter((i) => i.id)) {
+        // Each row keeps its own flag: saving one item's change can never
+        // convert its neighbours.
         const update = {
           food_name: item.food_name.trim(),
           carbs: Number(item.carbs),
-          is_rescue_carb: rescue,
+          is_rescue_carb: item.is_rescue_carb === true,
         };
         if (newConsumedAt) update.consumed_at = newConsumedAt;
         await base44.entities.CarbEntry.update(item.id, update);
@@ -189,7 +190,7 @@ export default function MealEditOverlay({ entries, onClose }) {
           food_name: item.food_name.trim(),
           carbs: Number(item.carbs),
           consumed_at: newConsumedAt || item.consumed_at,
-          is_rescue_carb: rescue,
+          is_rescue_carb: item.is_rescue_carb === true,
         });
       }
 
@@ -258,28 +259,6 @@ export default function MealEditOverlay({ entries, onClose }) {
             </div>
           </div>
 
-          {/* Rescue carbs — the same control offered when this meal was logged,
-              prefilled from the record, so it can be turned on or off later. */}
-          <div>
-            <span
-              style={{
-                textTransform: "uppercase",
-                letterSpacing: "0.16em",
-                fontWeight: 700,
-                fontSize: "10px",
-                color: FAINT,
-              }}
-            >
-              Kind of carbs
-            </span>
-            <div className="mt-1.5">
-              <RescueChip checked={rescue} onChange={setRescue} />
-            </div>
-            <p className="mt-1.5 text-xs" style={{ color: PALETTE.faint }}>
-              Small, quick carbs taken to lift glucose. They are projected on their own fast curve and stay out of meal coverage maths.
-            </p>
-          </div>
-
           <div className="space-y-4">
             {items.map((item, index) => (
               <div
@@ -302,6 +281,17 @@ export default function MealEditOverlay({ entries, onClose }) {
                     step={5}
                     presets={[15, 30, 45, 60]}
                   />
+                </div>
+                {/* Rescue carbs — this item's own flag, so a meal with several
+                    items can hold both ordinary and rescue carbs at once. */}
+                <div className="mt-3 flex items-center justify-between gap-3">
+                  <RescueChip
+                    checked={item.is_rescue_carb === true}
+                    onChange={(checked) => updateItem(index, "is_rescue_carb", checked)}
+                  />
+                  <span className="text-[11px] leading-snug" style={{ color: PALETTE.faint }}>
+                    Lifts glucose on its own, kept out of meal maths
+                  </span>
                 </div>
                 <button
                   type="button"

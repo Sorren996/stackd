@@ -52,6 +52,74 @@ export function isMealCoverageInsulin(dose, insulinSettings = {}) {
 // closest among groups whose pairing window contains the dose. This prevents
 // a dose from one meal being pooled into a nearby meal's insulin total.
 
+// ── Carb-only clustering (the one definition of "one meal") ───────────────
+// A meal is a chain of carb entries whose consecutive gaps are 30 minutes or
+// less. Rescue carbs are excluded: they are a treatment, never part of a meal.
+// The review cards, the chart's tap-to-edit selection and the item editor all
+// read this, so they can never disagree about what one meal is.
+export function clusterCarbGroups(carbEntries, glucoseReadings = [], doses = [], targetLow = 70) {
+  const carbEvents = (Array.isArray(carbEntries) ? carbEntries : [])
+    .filter((entry) => {
+      if (entry.is_rescue_carb === true || entry.classification === "rescue_carbs") return false;
+      if (entry.classification === "meal" || entry.classification === "snack") return true;
+      return !isRescueCarbEntry(entry, glucoseReadings, doses, targetLow);
+    })
+    .map((entry) => ({
+      type: "carb",
+      time: getEntryTime(entry),
+      carbs: Number(entry.carbs),
+      entry,
+    }))
+    .filter(
+      (event) => Number.isFinite(event.time) && Number.isFinite(event.carbs) && event.carbs > 0
+    );
+
+  const carbGroups = [];
+  carbEvents
+    .sort((a, b) => a.time - b.time)
+    .forEach((event) => {
+      const lastGroup = carbGroups[carbGroups.length - 1];
+      if (!lastGroup || event.time - lastGroup.end > MEAL_GROUP_WINDOW_MS) {
+        carbGroups.push({ start: event.time, end: event.time, carbEvents: [event] });
+        return;
+      }
+      lastGroup.end = event.time;
+      lastGroup.carbEvents.push(event);
+    });
+
+  return carbGroups.map((group) => {
+    const carbs = group.carbEvents.reduce((sum, event) => sum + event.carbs, 0);
+    const carbTimeTotal = group.carbEvents.reduce((sum, event) => sum + event.time * event.carbs, 0);
+    const mealTime = carbs > 0 ? carbTimeTotal / carbs : group.start;
+    return {
+      ...group,
+      mealTime,
+      carbs,
+      carbLogStart: group.start,
+      carbLogEnd: group.end,
+      carbEntries: group.carbEvents.map((event) => event.entry),
+    };
+  });
+}
+
+// The one cluster whose logged carbohydrate span contains this moment. Clusters
+// never overlap, so the only tie is an exact boundary instant, where the
+// nearest mealTime wins. Never a symmetric window around the tap.
+export function findMealGroupAtTime(groups, timeMs) {
+  if (!Number.isFinite(timeMs)) return null;
+  const hits = (Array.isArray(groups) ? groups : []).filter(
+    (group) =>
+      Number.isFinite(group?.carbLogStart) &&
+      Number.isFinite(group?.carbLogEnd) &&
+      timeMs >= group.carbLogStart &&
+      timeMs <= group.carbLogEnd
+  );
+  if (!hits.length) return null;
+  return hits.reduce((best, group) =>
+    Math.abs(group.mealTime - timeMs) < Math.abs(best.mealTime - timeMs) ? group : best
+  );
+}
+
 export function buildMealEventGroups(
   carbEntries,
   doses,
@@ -73,22 +141,6 @@ export function buildMealEventGroups(
     outcomeWindowMs
   );
 
-  const carbEvents = (Array.isArray(carbEntries) ? carbEntries : [])
-    .filter((entry) => {
-      if (entry.is_rescue_carb === true || entry.classification === "rescue_carbs") return false;
-      if (entry.classification === "meal" || entry.classification === "snack") return true;
-      return !isRescueCarbEntry(entry, glucoseReadings, doses, targetLow);
-    })
-    .map((entry) => ({
-      type: "carb",
-      time: getEntryTime(entry),
-      carbs: Number(entry.carbs),
-      entry,
-    }))
-    .filter(
-      (event) => Number.isFinite(event.time) && Number.isFinite(event.carbs) && event.carbs > 0
-    );
-
   const doseEvents = (Array.isArray(doses) ? doses : [])
     .filter(
       (dose) =>
@@ -104,34 +156,15 @@ export function buildMealEventGroups(
       (event) => Number.isFinite(event.time) && Number.isFinite(event.units) && event.units > 0
     );
 
-  const carbGroups = [];
-  carbEvents
-    .sort((a, b) => a.time - b.time)
-    .forEach((event) => {
-      const lastGroup = carbGroups[carbGroups.length - 1];
-      if (!lastGroup || event.time - lastGroup.end > MEAL_GROUP_WINDOW_MS) {
-        carbGroups.push({ start: event.time, end: event.time, carbEvents: [event] });
-        return;
-      }
-      lastGroup.end = event.time;
-      lastGroup.carbEvents.push(event);
-    });
-
-  const groupsWithWindows = carbGroups.map((group) => {
-    const carbs = group.carbEvents.reduce((sum, event) => sum + event.carbs, 0);
-    const carbTimeTotal = group.carbEvents.reduce((sum, event) => sum + event.time * event.carbs, 0);
-    const mealTime = carbs > 0 ? carbTimeTotal / carbs : group.start;
-    const pairingStart = group.start - preMealWindowMs;
-    const pairingEnd = group.end + postMealWindowMs;
-    return {
+  // The same clusters the review cards, the chart's tap selection and the item
+  // editor all use; only the dose-pairing window is added here.
+  const groupsWithWindows = clusterCarbGroups(carbEntries, glucoseReadings, doses, targetLow).map(
+    (group) => ({
       ...group,
-      mealTime,
-      pairingStart,
-      pairingEnd,
-      carbs,
-      carbEntries: group.carbEvents.map((event) => event.entry),
-    };
-  });
+      pairingStart: group.start - preMealWindowMs,
+      pairingEnd: group.end + postMealWindowMs,
+    })
+  );
 
   const groupDoses = groupsWithWindows.map(() => []);
   doseEvents.forEach((doseEvent) => {

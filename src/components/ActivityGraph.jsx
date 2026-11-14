@@ -25,10 +25,10 @@ import TimeViewToggle from "@/components/graph/TimeViewToggle";
 import CandlestickView from "@/components/graph/CandlestickView";
 import ReferenceLabels from "@/components/graph/ReferenceLabels";
 import MealEditOverlay from "@/components/insulin/MealEditOverlay";
+import { clusterCarbGroups, findMealGroupAtTime } from "@/lib/concurrentMeals";
 import ProjectionOverlay from "@/components/graph/ProjectionOverlay";
 
 const STEP_MS = 3 * 60 * 1000;
-const HALF_HOUR_MS = 30 * 60 * 1000;
 // How far the plot's domain reaches behind the newest reading. The Home chart
 // loads 26 hours of readings, so the domain covers one day and the left edge is
 // always backed by real data. Older days live on the Journal's day view.
@@ -1862,11 +1862,22 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
                         onClick={(e) => {
                           e.stopPropagation();
                           const tappedTime = new Date(entry.consumed_at).getTime();
-                          const group = filteredCarbEntries.filter((ce) => {
-                            const t = new Date(ce.consumed_at).getTime();
-                            return Math.abs(t - tappedTime) <= 30 * 60 * 1000;
-                          });
-                          setEditingMeal(group);
+                          // A rescue carb is never part of a meal: it opens on
+                          // its own, so treatment carbs can't drag a meal in.
+                          if (isRescue) {
+                            setEditingMeal([entry]);
+                            return;
+                          }
+                          // The exact cluster that was tapped — the same 30-minute
+                          // chained groups the review cards use, so the editor
+                          // never sweeps in a neighbouring meal.
+                          const groups = clusterCarbGroups(
+                            filteredCarbEntries,
+                            glucoseReadings,
+                            doses
+                          );
+                          const group = findMealGroupAtTime(groups, tappedTime);
+                          setEditingMeal(group?.carbEntries?.length ? group.carbEntries : [entry]);
                         }}>
                         
                   <div

@@ -405,6 +405,12 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
   const coverageGapAbs = coverageGapUnits === null ? null : Math.abs(coverageGapUnits);
   const coveragePercent = ratio === null ? null : Math.round(ratio * 100);
   const mealCount = mealGroup.carbEntries.length;
+  // One item is named by itself; a group is named as the group, so a card never
+  // presents the first food's name over the whole group's grams.
+  const mealGroupName =
+    mealCount === 1
+      ? mealGroup.carbEntries[0]?.food_name || mealGroup.carbEntries[0]?.name || "Meal"
+      : `${mealCount} foods`;
   const doseCount = pairedDoses.length;
   const bolusIOBBreakdown = mealCoverageDoses.
   map((dose) => {
@@ -549,11 +555,20 @@ function computeMealAlignmentInsight(doses, carbEntries, glucoseReadings, latest
     color,
     sub,
     details: {
-      meal: {
-        ...mealGroup.carbEntries[0],
-        carbs: mealGroup.carbs,
-        time: mealTime
-      },
+      // A single-item meal keeps its own record. A group keeps its identity (the
+      // first entry's id, which the review verdict is stored against) but is
+      // labelled as the group, and its items stay listed separately.
+      meal:
+        mealCount === 1
+          ? { ...mealGroup.carbEntries[0], carbs: mealGroup.carbs, time: mealTime }
+          : {
+              id: mealGroup.carbEntries[0]?.id,
+              food_name: mealGroupName,
+              name: mealGroupName,
+              item_count: mealCount,
+              carbs: mealGroup.carbs,
+              time: mealTime
+            },
       mealGroup,
       gramsPerUnit: gramsPerUnitDisplayed,
       // Null for a meal with no logged dose (see hasLoggedDose above).
@@ -956,7 +971,12 @@ export default function ActiveInsulinBanner({ doses = [], latestGlucose, liveRea
         const insight = mealState === "reviewed" && rawInsight?.details
           ? { ...rawInsight, details: { ...rawInsight.details, mealStillUnderReview: false } }
           : rawInsight;
-        const name = group.carbEntries[0]?.food_name || group.carbEntries[0]?.name || "Meal";
+        // A group of several foods is labelled as the group, never by its first
+        // item's name over the whole group's grams.
+        const name =
+          group.carbEntries.length === 1
+            ? group.carbEntries[0]?.food_name || group.carbEntries[0]?.name || "Meal"
+            : `${group.carbEntries.length} foods`;
         const carbs = group.carbs;
         const units = (group.doses || []).reduce((s, d) => s + (Number(d.units) || 0), 0);
         // Either verdict takes that meal's card out of the stack.
