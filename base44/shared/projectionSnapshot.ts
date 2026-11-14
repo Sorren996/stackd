@@ -114,6 +114,8 @@ export function buildInputSnapshot(
       return Number.isFinite(createdDate) && createdDate <= generatedAtMs;
     })
     .map((m) => ({
+      id: m.id,
+      updated_date: m.updated_date,
       consumed_at: m.consumed_at,
       carbs: Number(m.carbs) || 0,
       fat_grams: Number(m.fat_grams) || 0,
@@ -135,6 +137,8 @@ export function buildInputSnapshot(
       return Number.isFinite(createdDate) && createdDate <= generatedAtMs;
     })
     .map((d) => ({
+      id: d.id,
+      updated_date: d.updated_date,
       administered_at: d.administered_at,
       insulin_type: String(d.insulin_type || ""),
       units: Number(d.units) || 0,

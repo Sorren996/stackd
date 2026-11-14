@@ -1,0 +1,42 @@
+{
+  "name": "Score forecast residuals on reading",
+  "description": "Scores stored forecast points against each real new or corrected reading within 2.5 minutes; bulk sensor ingestion uses the same scorer directly.",
+  "trigger": {
+    "config": {
+      "trigger_type": "entity",
+      "entity_name": "GlucoseReading",
+      "events": [
+        "create",
+        "update"
+      ]
+    },
+    "condition": "${ .trigger.data.source != \"system\" }"
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "score_forecast_residuals_on_reading",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "score_residuals": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "calibrateProjectionBands",
+            "args": {
+              "action": "score_reading",
+              "reading_id": "${ .trigger.entity_id }"
+            }
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Score forecast residuals",
+            "description": "Per-user observed errors and shown-band coverage"
+          }
+        }
+      }
+    ]
+  }
+}

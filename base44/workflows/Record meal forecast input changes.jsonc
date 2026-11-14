@@ -1,0 +1,47 @@
+{
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "record_meal_forecast_input_changes",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "record_change": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "calibrateProjectionBands",
+            "args": {
+              "action": "input_change",
+              "entity_name": "${ .trigger.entity_name }",
+              "entity_id": "${ .trigger.entity_id }",
+              "event_type": "${ .trigger.event_type }",
+              "data": "${ .trigger.data }",
+              "old_data": "${ .trigger.old_data }"
+            }
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Record meal input change",
+            "description": "Keep unanticipated changes out of residual fitting"
+          }
+        }
+      }
+    ]
+  },
+  "description": "Records only model-relevant meal and rescue-carbohydrate changes, then excludes affected forecast residuals.",
+  "name": "Record meal forecast input changes",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "create",
+        "update",
+        "delete"
+      ],
+      "entity_name": "CarbEntry"
+    }
+  }
+}

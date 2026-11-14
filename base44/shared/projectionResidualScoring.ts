@@ -98,6 +98,17 @@ export async function scoreProjectionPage(sr,userId,projections,now=Date.now()) 
   if(updates.length) await sr.entities.ProjectionResidual.bulkUpdate(updates);
   return {scored,excluded,projections:projections.length};
 }
+export async function scoreReadingWindow(sr,userId,firstReadingMs,lastReadingMs,now=Date.now()) {
+  const query={$and:[ownerQuery(userId),{generated_at:{$gte:new Date(firstReadingMs-130*MINUTE).toISOString(),$lte:new Date(Math.min(now,lastReadingMs+3*MINUTE)).toISOString()}}]};
+  let cursor,scored=0;
+  do {
+    const page=await sr.entities.GlucoseProjection.filter(query,{sort:'generated_at',limit:100,...(cursor?{cursor}:{})});
+    const result=await scoreProjectionPage(sr,userId,page.items,now);
+    scored+=result.scored;
+    cursor=page.has_more?page.next_cursor:null;
+  } while(cursor);
+  return {scored};
+}
 export async function scoreRecentProjections(sr,userId,now=Date.now(),readingAt=null) {
   const end = readingAt ? ms(readingAt) : now;
   const projections=await readPages(sr.entities.GlucoseProjection,{$and:[ownerQuery(userId),{generated_at:{$gte:new Date(end-130*MINUTE).toISOString(),$lte:new Date(Math.min(now,end)).toISOString()}}]},'generated_at');

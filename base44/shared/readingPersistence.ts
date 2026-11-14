@@ -18,6 +18,8 @@
 //
 // SAFETY: only shapes storage. Never interprets a value.
 
+import { scoreReadingWindow } from './projectionResidualScoring.ts';
+
 function momentOf(recordedAt: unknown): number | null {
   const t = new Date(recordedAt as string).getTime();
   return Number.isFinite(t) ? t : null;
@@ -110,6 +112,15 @@ export async function upsertReadings({
     result.updated = updates.filter((entry) => entry.status === 'fulfilled').length;
   }
 
+  if (result.inserted || result.updated) {
+    try {
+      await scoreReadingWindow(sr, ownerId, moments[0], moments[moments.length - 1]);
+    } catch (error) {
+      // A scoring outage never blocks saved readings or notification delivery.
+      // The next reading and the explicit backfill share the same idempotent scorer.
+      console.error('Projection residual scoring failed', error.name);
+    }
+  }
   return result;
 }
 

@@ -7,6 +7,7 @@ import {
 import { resolveModelComponents } from "./modelResolution.ts";
 import { calibrateUncertainty } from "./uncertaintyCalibration.ts";
 import { buildInputSnapshot } from "./projectionSnapshot.ts";
+import { residualBandForUser } from "./projectionBandService.ts";
 import { learnRescueCarbModel, observeRescueEpisodes, MIN_EPISODES } from "./rescueCarbLearning.ts";
 
 // Shared server-side GlucoseProjection generator.
@@ -390,6 +391,24 @@ async function runGenerateProjectionForUser({
     rescueParams,
   });
 
+  // The median trajectory is untouched. Only its interval and useful drawn horizon
+  // are replaced, using this user's clean, signed, per-horizon residuals.
+  if (!result.abstained && result.trajectory.length) {
+    const band = await residualBandForUser(sr, normalizedUserId, result.trajectory,
+      Number(snapshot.dataQuality?.volatilitySd), now);
+    result.trajectory = band.trajectory;
+    result.horizonMinutes = band.summary.trajectoryEndsAtMinutes;
+    result.uncertaintySummary = {
+      ...band.summary,
+      defaultSource: { ...result.uncertaintySummary, method: uncertaintyCalibration.method,
+        bandSource: uncertaintyCalibration.bandSource, usedOnlyBelow30Samples: true },
+    };
+    result.uncertainty = { ...result.uncertainty, method: band.summary.method,
+      version: band.summary.version, calibrated: !band.summary.defaultBlend,
+      sampleCount: band.summary.sampleCount, coverageObserved: band.summary.coverage,
+      bandSource: 'user_residual_quantiles', residualCount: band.summary.sampleCount };
+  }
+
   const inputSnapshot = buildInputSnapshot(readings, meals, doses, settings, modelResolution, now);
   const anchorIso = result.anchor ? new Date(result.anchor.time).toISOString() : null;
 
@@ -570,10 +589,10 @@ async function runGenerateProjectionForUser({
     meal_response_model_version: result.mealModelVersion,
     resolution_reason: modelResolution.resolutionReason,
     is_integrated: modelResolution.isIntegrated,
-    uncertainty_method: uncertaintyCalibration.method,
-    uncertainty_calibrated: uncertaintyCalibration.calibrated,
-    uncertainty_band_source: uncertaintyCalibration.bandSource,
-    uncertainty_residual_count: uncertaintyCalibration.residualCount,
+    uncertainty_method: result.uncertainty?.method ?? uncertaintyCalibration.method,
+    uncertainty_calibrated: result.uncertainty?.calibrated ?? false,
+    uncertainty_band_source: result.uncertainty?.bandSource ?? uncertaintyCalibration.bandSource,
+    uncertainty_residual_count: result.uncertainty?.residualCount ?? 0,
     data_quality: result.dataQuality,
   };
 }
