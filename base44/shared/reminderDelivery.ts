@@ -105,7 +105,7 @@ export async function runReminderSweep({ sr, nowMs, absoluteUrl }: SweepInput) {
         enabled: true,
         startHour: prefs.quiet_start_hour,
         endHour: prefs.quiet_end_hour,
-        timeZone: prefs.quiet_timezone || settings?.timezone || "UTC",
+        timeZone: settings?.timezone || prefs.quiet_timezone || "UTC",
         urgentDuringQuiet: false,
       }
       : null;
@@ -115,17 +115,23 @@ export async function runReminderSweep({ sr, nowMs, absoluteUrl }: SweepInput) {
       (row: any) => (row?.user_id || row?.created_by_id) === ownerId && row?.enabled === true
     );
 
-    await sendOwnerReminders({ sr, ownerId, reminders: own, quiet, ledger, nowMs, absoluteUrl, counters });
+    await sendOwnerReminders({ sr, ownerId, reminders: own, settings, quiet, ledger, nowMs, absoluteUrl, counters });
     await sendSensorReminders({ sr, ownerId, settings, ledger, nowMs, absoluteUrl, counters });
   }
 
   return counters;
 }
 
-async function sendOwnerReminders({ sr, ownerId, reminders, quiet, ledger, nowMs, absoluteUrl, counters }: {
-  sr: any; ownerId: string; reminders: any[]; quiet: QuietHours | null; ledger: any;
+async function sendOwnerReminders({ sr, ownerId, reminders, settings, quiet, ledger, nowMs, absoluteUrl, counters }: {
+  sr: any; ownerId: string; reminders: any[]; settings: any; quiet: QuietHours | null; ledger: any;
   nowMs: number; absoluteUrl: (path: string) => string; counters: SweepCounters;
 }) {
+  // Every reminder is evaluated and worded in the person's own device timezone,
+  // which the app keeps on their settings, so a prompt still lands on the clock
+  // in front of them after they travel. A stored row zone is only the fallback
+  // for an account with no device zone on file yet.
+  const deviceZone = settings?.timezone || null;
+  const inDeviceZone = (row: any) => (deviceZone ? { ...row, timezone: deviceZone } : row);
   // Meal review reminders are kept ON THE MEAL they belong to, one per meal that
   // asked for one. The settings row carries only whether the feature is on and
   // how long the delay is — a meal never has a weekly schedule to consult.
@@ -179,7 +185,7 @@ async function sendOwnerReminders({ sr, ownerId, reminders, quiet, ledger, nowMs
       kind: state.firstDue ? "first" : "retry",
       key: `meal:${meal.id}`,
       scheduledAtMs: state.scheduledAtMs,
-      copy: reminderCopy(mealReminder, mealAtMs),
+      copy: reminderCopy(inDeviceZone(mealReminder), mealAtMs),
       destination: mealReviewDestination(meal.id),
       reminder: mealReminder,
       mealId: String(meal.id),
@@ -192,9 +198,9 @@ async function sendOwnerReminders({ sr, ownerId, reminders, quiet, ledger, nowMs
     // The meal row is expressed per meal above, so it has no clock of its own.
     if (type === "meal") continue;
 
-    const state = clockFireState(reminder, nowMs);
+    const state = clockFireState(inDeviceZone(reminder), nowMs);
     if (!state.firstDue && !state.retryDue) continue;
-    if (type === "basal" && basalLoggedToday(basalDoses, reminder?.timezone, state.dateKey)) {
+    if (type === "basal" && basalLoggedToday(basalDoses, deviceZone || reminder?.timezone, state.dateKey)) {
       counters.skipped += 1;
       continue;
     }
@@ -212,7 +218,7 @@ async function sendOwnerReminders({ sr, ownerId, reminders, quiet, ledger, nowMs
       kind: state.firstDue ? "first" : "retry",
       key: `${reminder.id}:${state.dateKey}`,
       scheduledAtMs: state.scheduledAtMs,
-      copy: reminderCopy(reminder),
+      copy: reminderCopy(inDeviceZone(reminder)),
       destination: REMINDER_DESTINATION,
       mealId: null,
       dateKey: state.dateKey,

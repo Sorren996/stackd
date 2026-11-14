@@ -10,7 +10,9 @@ import HourSelect, { hourLabel } from "@/components/notifications/HourSelect";
  * accordion, and it changes nothing about the alerts above it.
  */
 export default function AllReadingsSettings({ draft, pendingKeys = [], disabled = false, onChange }) {
-  const zone = draft.all_readings_pause_timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  // The pause window follows the device's zone, so it means the same hours
+  // wherever the person is; a stored zone is only the fallback.
+  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone || draft.all_readings_pause_timezone || "UTC";
   const on = draft.all_readings_enabled === true;
   const paused = draft.all_readings_pause_enabled === true;
   const startHour = draft.all_readings_pause_start_hour ?? 22;

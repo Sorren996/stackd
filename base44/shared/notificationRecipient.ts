@@ -16,8 +16,11 @@ import { OWNER_MODEL_VERSION, withLegacyMirrors } from './notificationModel.ts';
 import { DEVICE_RETRY_BASE_MS, NOT_MEMBER_REASON } from './notificationReachability.ts';
 
 const array = page => Array.isArray(page) ? page : page?.items || [];
+// Quiet hours follow the device the person is holding: the zone their settings
+// carry is the one the app last saw the browser in, and a stored zone is only
+// used when that is missing.
 const quietFrom = (prefs, zone) => ({ enabled: prefs.quiet_hours_enabled, startHour: prefs.quiet_start_hour,
-  endHour: prefs.quiet_end_hour, timeZone: prefs.quiet_timezone || zone || 'UTC', urgentDuringQuiet: prefs.urgent_during_quiet });
+  endHour: prefs.quiet_end_hour, timeZone: zone || prefs.quiet_timezone || 'UTC', urgentDuringQuiet: prefs.urgent_during_quiet });
 export function recipientAuthorized(prefs, relationship, ownerId, recipientId, categories, now) {
   if (!prefs || prefs.user_id !== recipientId || prefs.master_enabled !== true) return false;
   if (relationship) {
@@ -154,7 +157,7 @@ export async function evaluateRecipient({ sr, ownerId, prefs: storedPreferences,
   // Built from the triggering measurement itself: its value, its timestamp and
   // its own source trend. A later fetch never substitutes for what fired it.
   const copy = buildNotificationCopy({ category: decision.category, value: decision.sample.value,
-    readingAt: decision.sample.at, units: displaySettings?.glucose_units || 'mg/dL', timeZone: prefs.quiet_timezone || displaySettings?.timezone || 'UTC',
+    readingAt: decision.sample.at, units: displaySettings?.glucose_units || 'mg/dL', timeZone: displaySettings?.timezone || prefs.quiet_timezone || 'UTC',
     showDetails: prefs.show_health_details === true, personName: relationship?.sharer_display_name,
     durationMinutes: decision.durationMinutes, trend: decision.sample.trend ?? null, nowMs,
     resolvedTrend: resolveGlucoseTrend(rows.find(row => Date.parse(row.recorded_at) === decision.sample.at) || { ...decision.sample, recorded_at: new Date(decision.sample.at).toISOString() },
