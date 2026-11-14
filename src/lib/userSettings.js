@@ -23,6 +23,7 @@ const LOCAL_KEYS = [
   "high_glucose_reference",
   "cgm_model",
   "sensor_session_started_at",
+  "manual_glucose_logging_enabled",
   "settings_confirmed",
   "onboarding_completed",
 ];
@@ -57,7 +58,7 @@ function readLocalSettings() {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed) && parsed.length) result[key] = parsed;
       } catch {}
-    } else if (["stacking_alerts_enabled", "coach_reviews_enabled", "coach_insight_notifications_enabled", "coach_exclude_journal"].includes(key)) {
+    } else if (["stacking_alerts_enabled", "coach_reviews_enabled", "coach_insight_notifications_enabled", "coach_exclude_journal", "manual_glucose_logging_enabled"].includes(key)) {
       result[key] = raw === "true";
     } else {
       const num = Number(raw);
@@ -128,6 +129,10 @@ function validateSettings(raw) {
 
   if (typeof raw.coach_exclude_journal === "boolean") {
     sanitized.coach_exclude_journal = raw.coach_exclude_journal;
+  }
+
+  if (typeof raw.manual_glucose_logging_enabled === "boolean") {
+    sanitized.manual_glucose_logging_enabled = raw.manual_glucose_logging_enabled;
   }
 
   if (typeof raw.settings_confirmed === "boolean") {

@@ -36,7 +36,11 @@ const navItems = [
   { key: "settings", path: "/settings", label: "Profile", Icon: CircleUser },
 ];
 
-
+function readManualGlucoseEnabled() {
+  if (typeof window === "undefined") return true;
+  const raw = window.localStorage.getItem("manual_glucose_logging_enabled");
+  return raw === null ? true : raw === "true";
+}
 
 export default function UnifiedBottomNav() {
   const location = useLocation();
@@ -56,23 +60,25 @@ export default function UnifiedBottomNav() {
   const [doseFormOpen, setDoseFormOpen] = useState(false);
   const [doseFormPreloaded, setDoseFormPreloaded] = useState(false);
   const [combinedSheetOpen, setCombinedSheetOpen] = useState(false);
+  const [manualGlucoseEnabled, setManualGlucoseEnabled] = useState(readManualGlucoseEnabled);
   const { connected: dexcomConnected } = useDexcomConnection();
 
   // Fanned options, ordered left (Glucose) → centre (Insulin) → right (Carbs).
-  // Glucose is offered exactly when nothing is supplying readings: a CGM that
-  // is connected hides it, and no CGM shows it. The connection state comes from
-  // the shared connection query, so connecting or disconnecting updates this
-  // list immediately, without a reload.
+  // Glucose is offered when hand-logging is switched on, OR whenever no CGM is
+  // connected — with no sensor there is no other way to log a reading. With a
+  // CGM connected, the Settings switch is the authority. Both inputs are reactive:
+  // the switch dispatches "insulin-settings-updated" and the connection state
+  // comes from the shared connection query, so nothing needs a reload.
   const actions = useMemo(() => {
     const list = [
       { id: "insulin", label: "Insulin", Icon: Syringe, mode: "insulin" },
       { id: "carbs", label: "Carbs", Icon: Utensils, mode: "carbs" },
     ];
-    if (!dexcomConnected) {
+    if (manualGlucoseEnabled || !dexcomConnected) {
       list.unshift({ id: "glucose", label: "Glucose", Icon: Droplets, mode: "glucose" });
     }
     return list;
-  }, [dexcomConnected]);
+  }, [manualGlucoseEnabled, dexcomConnected]);
 
   useEffect(() => {
     setExpanded(false);
@@ -102,6 +108,17 @@ export default function UnifiedBottomNav() {
     // tab main page that is already mounted and merely re-revealed.
     requestAnimationFrame(() => scrollToTop());
   };
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const refresh = () => setManualGlucoseEnabled(readManualGlucoseEnabled());
+    window.addEventListener("insulin-settings-updated", refresh);
+    window.addEventListener("storage", refresh);
+    return () => {
+      window.removeEventListener("insulin-settings-updated", refresh);
+      window.removeEventListener("storage", refresh);
+    };
+  }, []);
 
   // Preload the DoseForm sheet on idle so it opens instantly on tap.
   useEffect(() => {
