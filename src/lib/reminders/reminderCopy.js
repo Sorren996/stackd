@@ -75,6 +75,25 @@ export function mealDelayLabel(delayMinutes) {
   return `${delay} minutes after you log a meal`;
 }
 
+/** Just the delay as words: "2 hours", "90 minutes", "3 hours". */
+export function mealDelayPhrase(delayMinutes) {
+  const delay = Number(delayMinutes) || 120;
+  if (delay % 60 === 0) return `${delay / 60} hours`;
+  return `${delay} minutes`;
+}
+
+/** The meal form's one affordance: "Remind me to review this in 2 hours". */
+export function mealReminderPromptLabel(delayMinutes) {
+  return `Remind me to review this in ${mealDelayPhrase(delayMinutes)}`;
+}
+
+/** "8:14 PM" for a moment, in the device's own zone. */
+export function formatClockAt(timestamp) {
+  const at = Number(timestamp);
+  if (!Number.isFinite(at)) return null;
+  return new Date(at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", hour12: true });
+}
+
 /** The one timing line shown under a reminder's name. */
 export function reminderTimingLine(row) {
   if (row?.type === "meal") return mealDelayLabel(row?.delay_minutes);

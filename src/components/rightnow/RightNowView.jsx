@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import IobAtAGlance from "./IobAtAGlance";
 import MealReviewView from "@/components/mealreview/MealReviewView";
@@ -37,7 +37,13 @@ export default function RightNowView({
   onAddLog,
   glucoseReadings,
 }) {
-  const [tab, setTab] = useState("iob");
+  // A meal's review reminder opens that meal's review: the link carries its id,
+  // so the card is already open on arrival instead of hunting for the meal.
+  const focusMealId = useMemo(
+    () => (typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("meal")),
+    []
+  );
+  const [tab, setTab] = useState(focusMealId ? "meal" : "iob");
   const selectTab = (id) => { if (id !== tab) setTab(id); };
   const activeIndex = TAB_ORDER.indexOf(tab);
   const hasStack = Array.isArray(activeMeals) && activeMeals.length >= 2;
@@ -117,6 +123,7 @@ export default function RightNowView({
                   mealInsight={mealInsight}
                   glucoseTrend={glucoseTrend}
                   glucoseReadings={glucoseReadings}
+                  focusMealId={focusMealId}
                 />
               </CardErrorBoundary>
             )}

@@ -10,7 +10,7 @@ import { focusRing, primaryStyle, secondaryStyle } from '@/lib/notifications/not
  */
 export default function ChoiceRow({ label, options, value, onChange, disabled = false }) {
   return <fieldset disabled={disabled} className="min-w-0 pb-3 pt-1">
-    <legend className="pb-2 text-sm" style={{ color: '#2E2420' }}>{label}</legend>
+    {label ? <legend className="pb-2 text-sm" style={{ color: '#2E2420' }}>{label}</legend> : null}
     <div className="flex flex-wrap gap-2">
       {options.map(option => {
         // Compared as text so a worded choice (rising / falling / both) and a

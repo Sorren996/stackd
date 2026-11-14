@@ -10,7 +10,8 @@ import {
   createLimitError,
   daysLabel,
   groupDueItems,
-  mealFireState,
+  mealReviewDestination,
+  mealReviewFireState,
   mergedReminderCopy,
   reminderCopy,
   reminderCountLabel,
@@ -60,13 +61,38 @@ test("a reminder only fires on the days it was given", () => {
   assert.equal(clockFireState(basal({ days: [6] }), CHICAGO_2104).firstDue, true); // Saturday
 });
 
-test("the meal reminder is measured from the meal itself", () => {
+test("a meal review reminder is one meal's own moment, and never needs a day", () => {
   const mealAt = CHICAGO_2104;
-  const reminder = { type: "meal", name: "Meal review", delay_minutes: 120, timezone: "America/Chicago" };
-  const state = mealFireState(reminder, mealAt, mealAt + 2 * 60 * 60_000 + 60_000);
-  assert.equal(state.firstDue, true);
-  assert.equal(state.scheduledAtMs, mealAt + 120 * 60_000);
-  assert.equal(mealFireState(reminder, mealAt, mealAt + 60 * 60_000).firstDue, false);
+  const dueAt = mealAt + 120 * 60_000;
+  const meal = { id: "meal-1", reminder_at: new Date(dueAt).toISOString(), reminder_state: "scheduled" };
+
+  assert.equal(mealReviewFireState(meal, dueAt + 60_000).firstDue, true);
+  assert.equal(mealReviewFireState(meal, dueAt).scheduledAtMs, dueAt);
+  assert.equal(mealReviewFireState(meal, mealAt + 60 * 60_000).firstDue, false);
+  // The settings row never schedules anything: a meal with no reminder_at is silent.
+  assert.equal(mealReviewFireState({ reminder_state: "scheduled" }, dueAt).firstDue, false);
+  // Cancelled, or already sent, is never the first prompt again.
+  assert.equal(mealReviewFireState({ ...meal, reminder_state: "cancelled" }, dueAt + 60_000).firstDue, false);
+  assert.equal(mealReviewFireState({ ...meal, reminder_state: "sent" }, dueAt + 60_000).firstDue, false);
+});
+
+test("the single retry follows fifteen minutes after the prompt was actually sent", () => {
+  const dueAt = CHICAGO_2104;
+  const sentAt = dueAt + 4 * 60_000; // a sweep that ran a few minutes late
+  const meal = {
+    id: "meal-1",
+    reminder_at: new Date(dueAt).toISOString(),
+    reminder_state: "sent",
+    reminder_sent_at: new Date(sentAt).toISOString(),
+  };
+  assert.equal(mealReviewFireState(meal, sentAt + 5 * 60_000).retryDue, false);
+  assert.equal(mealReviewFireState(meal, sentAt + RETRY_MINUTES * 60_000 + 60_000).retryDue, true);
+  assert.equal(mealReviewFireState(meal, sentAt + (RETRY_MINUTES + 20) * 60_000).retryDue, false);
+});
+
+test("a meal reminder opens that meal, not a settings page", () => {
+  assert.equal(mealReviewDestination("meal 1"), "/?meal=meal%201");
+  assert.equal(mealReviewDestination(null), "/");
 });
 
 test("reminders due within ten minutes are one push", () => {

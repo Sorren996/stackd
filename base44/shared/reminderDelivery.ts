@@ -21,7 +21,8 @@ import {
   SENSOR_REMINDER_TITLE,
   clockFireState,
   groupDueItems,
-  mealFireState,
+  mealReviewDestination,
+  mealReviewFireState,
   mergedReminderCopy,
   reminderCopy,
   sensorStageDue,
@@ -31,8 +32,6 @@ import {
 
 export const REMINDER_DESTINATION = "/settings/notifications/reminders";
 
-/** How far back a logged meal can still be the one a reminder is about. */
-const MEAL_LOOKBACK_HOURS = 8;
 /** How far back a logged basal can count as "today's". */
 const BASAL_LOOKBACK_HOURS = 26;
 
@@ -47,6 +46,20 @@ interface SweepCounters {
   merged: number;
   sensor: number;
   skipped: number;
+}
+
+/** One reminder that is due now, whichever kind it is. */
+interface DueItem {
+  kind: "first" | "retry";
+  /** Stable identity: the reminder row plus its day, or the meal plus its id. */
+  key: string;
+  scheduledAtMs: number;
+  copy: { title: string; body: string };
+  destination: string;
+  reminder: any;
+  /** The meal this prompt is about, or null for a clock reminder. */
+  mealId: string | null;
+  dateKey: string;
 }
 
 /**
@@ -68,6 +81,16 @@ export async function runReminderSweep({ sr, nowMs, absoluteUrl }: SweepInput) {
   for (const row of settingsRows) {
     const id = row?.created_by_id || row?.user_id;
     if (id && row?.sensor_session_started_at && SENSOR_DURATION_DAYS[String(row?.cgm_model)]) owners.add(id);
+  }
+  // A meal's own review reminder lives on the meal, so its owner is in this
+  // sweep even when nothing else is switched on.
+  const heldMealReviews = asArray(await sr.entities.CarbEntry.filter(
+    { reminder_state: { $in: ["scheduled", "sent"] } },
+    { sort: "-consumed_at", limit: 200 }
+  ));
+  for (const row of heldMealReviews) {
+    const id = row?.created_by_id || row?.user_id;
+    if (id) owners.add(id);
   }
 
   for (const ownerId of owners) {
@@ -102,82 +125,104 @@ async function sendOwnerReminders({ sr, ownerId, reminders, quiet, ledger, nowMs
   sr: any; ownerId: string; reminders: any[]; quiet: QuietHours | null; ledger: any;
   nowMs: number; absoluteUrl: (path: string) => string; counters: SweepCounters;
 }) {
-  if (!reminders.length) return;
+  // Meal review reminders are kept ON THE MEAL they belong to, one per meal that
+  // asked for one. The settings row carries only whether the feature is on and
+  // how long the delay is — a meal never has a weekly schedule to consult.
+  const heldMealReviews = asArray(await sr.entities.CarbEntry.filter(
+    { created_by_id: ownerId, reminder_state: { $in: ["scheduled", "sent"] } },
+    { sort: "-consumed_at", limit: 20 }
+  ));
+
+  if (!reminders.length) {
+    // Meal review is off, so any promise it still holds is closed in silence.
+    for (const meal of heldMealReviews) await cancelMealReminder(sr, meal.id);
+    return;
+  }
 
   const basalDoses = asArray(await sr.entities.InsulinDose.filter(
     { administered_at: { $gte: new Date(nowMs - BASAL_LOOKBACK_HOURS * 3600_000).toISOString() } },
     { sort: "-administered_at", limit: 50 }
   )).filter((dose: any) => (dose?.created_by_id || dose?.user_id) === ownerId);
 
-  const meals = asArray(await sr.entities.CarbEntry.filter(
-    { consumed_at: { $gte: new Date(nowMs - MEAL_LOOKBACK_HOURS * 3600_000).toISOString() } },
-    { sort: "-consumed_at", limit: 50 }
-  )).filter((meal: any) => (meal?.created_by_id || meal?.user_id) === ownerId && meal?.classification !== "rescue_carbs");
+  const mealReminder = reminders.find((row: any) => String(row?.type) === "meal") || null;
+  const mealReviewRows = mealReminder ? heldMealReviews : [];
+  if (!mealReminder) {
+    // Off means off: nothing already promised by this feature may still fire.
+    for (const meal of heldMealReviews) await cancelMealReminder(sr, meal.id);
+  }
 
-  const latestMeal = meals[0] || null;
+  const due: DueItem[] = [];
 
-  const due: Array<{ reminder: any; kind: "first" | "retry"; dateKey: string; scheduledAtMs: number; copy: { title: string; body: string } }> = [];
+  for (const meal of mealReviewRows) {
+    const state = mealReviewFireState(meal, nowMs);
+    if (!state.firstDue && !state.retryDue) continue;
+    const mealAtMs = Date.parse(String(meal?.consumed_at ?? ""));
+    if (!Number.isFinite(mealAtMs)) continue;
+    // Already reviewed: cancelled silently, so the retry never lands either.
+    if (await mealReviewedSince(sr, ownerId, meal, mealAtMs)) {
+      await cancelMealReminder(sr, meal.id);
+      counters.skipped += 1;
+      continue;
+    }
+    if (mealReminder?.skip_quiet !== false && isHeldByQuietHours(REMINDER_CATEGORY, quiet, nowMs)) {
+      // Skipped inside quiet hours, never deferred to after them.
+      await cancelMealReminder(sr, meal.id);
+      counters.skipped += 1;
+      continue;
+    }
+    due.push({
+      kind: state.firstDue ? "first" : "retry",
+      key: `meal:${meal.id}`,
+      scheduledAtMs: state.scheduledAtMs,
+      copy: reminderCopy(mealReminder, mealAtMs),
+      destination: mealReviewDestination(meal.id),
+      reminder: mealReminder,
+      mealId: String(meal.id),
+      dateKey: "",
+    });
+  }
 
   for (const reminder of reminders) {
     const type = String(reminder?.type || "");
-    let firstDue = false;
-    let retryDue = false;
-    let dateKey = "";
-    let scheduledAtMs = nowMs;
-    let copy: { title: string; body: string } = { title: "", body: "" };
+    // The meal row is expressed per meal above, so it has no clock of its own.
+    if (type === "meal") continue;
 
-    if (type === "meal") {
-      if (!latestMeal) continue;
-      const mealAtMs = Date.parse(latestMeal.consumed_at);
-      if (!Number.isFinite(mealAtMs)) continue;
-      const state = mealFireState(reminder, mealAtMs, nowMs);
-      firstDue = state.firstDue;
-      retryDue = state.retryDue;
-      dateKey = state.dateKey;
-      scheduledAtMs = state.scheduledAtMs;
-      if (!firstDue && !retryDue) continue;
-      // The condition behind the prompt, checked before both the first send and
-      // the retry: once that meal has been reviewed there is nothing to say.
-      if (await mealReviewedSince(sr, ownerId, latestMeal, mealAtMs)) {
-        counters.skipped += 1;
-        continue;
-      }
-      copy = reminderCopy(reminder, mealAtMs);
-    } else {
-      const state = clockFireState(reminder, nowMs);
-      firstDue = state.firstDue;
-      retryDue = state.retryDue;
-      dateKey = state.dateKey;
-      scheduledAtMs = state.scheduledAtMs;
-      if (!firstDue && !retryDue) continue;
-      if (type === "basal" && basalLoggedToday(basalDoses, reminder?.timezone, dateKey)) {
-        counters.skipped += 1;
-        continue;
-      }
-      copy = reminderCopy(reminder);
+    const state = clockFireState(reminder, nowMs);
+    if (!state.firstDue && !state.retryDue) continue;
+    if (type === "basal" && basalLoggedToday(basalDoses, reminder?.timezone, state.dateKey)) {
+      counters.skipped += 1;
+      continue;
     }
 
     if (reminder?.skip_quiet !== false && isHeldByQuietHours(REMINDER_CATEGORY, quiet, nowMs)) {
       // Skipped, not stacked up for later: the day is closed either way, so the
       // retry cannot resurface after quiet hours have ended.
-      await markSent(sr, reminder, firstDue ? "first" : "retry", dateKey);
+      await markSent(sr, reminder, state.firstDue ? "first" : "retry", state.dateKey);
       counters.skipped += 1;
       continue;
     }
 
     due.push({
       reminder,
-      kind: firstDue ? "first" : "retry",
-      dateKey,
-      scheduledAtMs,
-      copy,
+      kind: state.firstDue ? "first" : "retry",
+      key: `${reminder.id}:${state.dateKey}`,
+      scheduledAtMs: state.scheduledAtMs,
+      copy: reminderCopy(reminder),
+      destination: REMINDER_DESTINATION,
+      mealId: null,
+      dateKey: state.dateKey,
     });
   }
 
   // Two (or three) reminders landing within ten minutes arrive as one push.
   for (const group of groupDueItems(due)) {
     const members = group;
-    const episodeKey = members.map((item) => `${item.reminder.id}:${item.dateKey}:${item.kind}`).join("+");
+    const episodeKey = members.map((item) => `${item.key}:${item.kind}`).join("+");
+    // One destination when every member opens the same place; a merged push
+    // that spans different places simply opens the home screen.
+    const destination = members.every((item) => item.destination === members[0].destination)
+      ? members[0].destination
+      : "/";
     const eventKey = notificationEventKey(REMINDER_CATEGORY, ownerId, ownerId, episodeKey);
     const copy = members.length > 1
       ? mergedReminderCopy(members.map((item) => item.copy.title))
@@ -197,30 +242,49 @@ async function sendOwnerReminders({ sr, ownerId, reminders, quiet, ledger, nowMs
         expiresAtMs: nowMs + 60_000,
         copy,
         detailShown: false,
-        destination: REMINDER_DESTINATION,
+        destination,
         quiet: null,
         // Whether it is still the thing the person asked for, re-read moments
         // before the send. A reminder switched off in the meantime goes quiet.
         coveredEvents: members.map((item) => ({
           category: REMINDER_CATEGORY,
-          episodeKey: `${item.reminder.id}:${item.dateKey}:${item.kind}`,
+          episodeKey: `${item.key}:${item.kind}`,
         })),
       },
       dispatchDeps({
         sr, ownerId, ledger, nowMs, absoluteUrl,
         recheck: async () => {
-          const fresh = asArray(await sr.entities.Reminder.filter(
-            { id: { $in: members.map((item) => item.reminder.id) } },
-            { limit: 5 }
-          ));
-          const stillOn = fresh.length === members.length && fresh.every((row: any) => row?.enabled === true);
-          return stillOn ? { ok: true } : { ok: false, reason: "reminder_off" };
+          const clockIds = members.filter((item) => !item.mealId).map((item) => item.reminder.id);
+          if (clockIds.length) {
+            const fresh = asArray(await sr.entities.Reminder.filter({ id: { $in: clockIds } }, { limit: 5 }));
+            const stillOn = fresh.length === clockIds.length && fresh.every((row: any) => row?.enabled === true);
+            if (!stillOn) return { ok: false, reason: "reminder_off" };
+          }
+          const mealIds = members.filter((item) => item.mealId).map((item) => String(item.mealId));
+          if (mealIds.length) {
+            // The feature must still be on, and every meal must still be waiting
+            // for its own prompt — an undone or reviewed meal goes quiet.
+            const mealRows = asArray(await sr.entities.Reminder.filter(
+              { created_by_id: ownerId, type: "meal" },
+              { limit: 1 }
+            ));
+            if (mealRows[0]?.enabled !== true) return { ok: false, reason: "meal_review_off" };
+            const meals = asArray(await sr.entities.CarbEntry.filter({ id: { $in: mealIds } }, { limit: 5 }));
+            const waiting =
+              meals.length === mealIds.length &&
+              meals.every((meal: any) => meal?.reminder_state === "scheduled" || meal?.reminder_state === "sent");
+            if (!waiting) return { ok: false, reason: "meal_reminder_cancelled" };
+          }
+          return { ok: true };
         },
       })
     );
 
     if (outcome.status === "duplicate") continue;
-    for (const item of members) await markSent(sr, item.reminder, item.kind, item.dateKey);
+    for (const item of members) {
+      if (item.mealId) await markMealReminderSent(sr, item.mealId, item.kind, nowMs);
+      else await markSent(sr, item.reminder, item.kind, item.dateKey);
+    }
     counters.reminders += 1;
     if (members.length > 1) counters.merged += 1;
   }
@@ -318,6 +382,26 @@ async function ensureLedger(sr: any, ownerId: string) {
   ));
   if (held.length) return held[0];
   return await sr.entities.NotificationLedger.create({ user_id: ownerId, scope_key: "self", claimed_keys: [] });
+}
+
+/**
+ * The meal's own state after a send. The first prompt moves it to "sent" and
+ * records when, so the single retry is measured fifteen minutes from that
+ * moment rather than from a sweep that may have run late. The retry itself
+ * needs no further mark: its ledger claim is what makes it happen once.
+ */
+async function markMealReminderSent(sr: any, mealId: string, kind: "first" | "retry", nowMs: number) {
+  if (kind === "retry") return;
+  await sr.entities.CarbEntry.update(mealId, {
+    reminder_state: "sent",
+    reminder_sent_at: new Date(nowMs).toISOString(),
+  });
+}
+
+/** Quietly closes a meal's reminder without sending anything. */
+async function cancelMealReminder(sr: any, mealId: string) {
+  if (!mealId) return;
+  await sr.entities.CarbEntry.update(mealId, { reminder_state: "cancelled" });
 }
 
 async function markSent(sr: any, reminder: any, kind: "first" | "retry", dateKey: string) {

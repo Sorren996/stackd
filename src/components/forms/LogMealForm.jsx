@@ -5,6 +5,8 @@ import { toast } from "sonner";
 import LogSheetShell from "@/components/forms/LogSheetShell";
 import MealEstimateChip from "@/components/forms/MealEstimateChip";
 import MealPhotoChip from "@/components/forms/MealPhotoChip";
+import MealReviewReminderChip from "@/components/forms/MealReviewReminderChip";
+import useMealReminderSetting from "@/hooks/useMealReminderSetting";
 import {
   TapStepper,
   TripleSegmented,
@@ -59,7 +61,10 @@ export default function LogMealForm({ open, onClose }) {
   // override the Low/Med/High preset grams so the stored curve reflects the
   // food's real composition. Cleared when the user manually changes a level.
   const [estMacros, setEstMacros] = useState(null);
+  // This meal's own review reminder. Off on every new meal, never inherited.
+  const [remindMe, setRemindMe] = useState(false);
 
+  const { enabled: mealReminderOn, delayMinutes: mealReminderDelay } = useMealReminderSetting();
   const createCarb = useCreateCarbs();
 
   useEffect(() => {
@@ -73,6 +78,7 @@ export default function LogMealForm({ open, onClose }) {
     setDate(getTodayDateValue());
     setTime(new Date().toTimeString().slice(0, 5));
     setEstMacros(null);
+    setRemindMe(false);
   }, [open]);
 
   const carbsNum = Number(carbs) || 0;
@@ -86,6 +92,18 @@ export default function LogMealForm({ open, onClose }) {
   const speed_class = estMacros?.speed_class ?? null;
   const dual_wave = estMacros?.dual_wave ?? null;
   const qualifiesDelayed = hasDelayedRise({ fat_grams, protein_grams, carbs: carbsNum });
+
+  // The moment this meal's review reminder would arrive: the meal's own logged
+  // time plus the delay chosen in settings. Nothing is scheduled by the setting
+  // itself — only by this meal asking for it.
+  const mealAtMs = (() => {
+    const [hours, minutes] = String(time || "").split(":").map(Number);
+    if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
+    const at = date ? new Date(`${date}T00:00:00`) : new Date();
+    at.setHours(hours, minutes, 0, 0);
+    return at.getTime();
+  })();
+  const reminderAtMs = mealAtMs == null ? null : mealAtMs + mealReminderDelay * 60000;
 
   const canSubmit = carbsNum > 0 && !logging;
 
@@ -119,6 +137,10 @@ export default function LogMealForm({ open, onClose }) {
       speed_class,
       dual_wave,
       notes: notes || undefined,
+      // A rescue carb is not a meal to review, so it never carries a reminder.
+      ...(remindMe && mealReminderOn && reminderAtMs && !isRescue
+        ? { reminder_at: new Date(reminderAtMs).toISOString(), reminder_state: "scheduled" }
+        : {}),
     };
     const submittedEntries = [entry];
     const optimisticEntries = [{ ...entry, id: `optimistic-carb-${Date.now()}`, created_date: new Date().toISOString() }];
@@ -144,15 +166,25 @@ export default function LogMealForm({ open, onClose }) {
       onClose={onClose}
       title="Log meal"
       footer={
-        <button
-          type="button"
-          onClick={handleSubmit}
-          disabled={!canSubmit}
-          className="w-full rounded-2xl py-4 text-base font-semibold transition disabled:opacity-40"
-          style={{ background: COPPER, color: CREAM, boxShadow: "0 4px 16px rgba(156,82,40,0.25)" }}
-        >
-          {logging ? "Logging..." : carbsNum ? `Log ${carbsNum}g of carbs` : "Add carbs"}
-        </button>
+        <div className="space-y-3">
+          <MealReviewReminderChip
+            enabled={mealReminderOn}
+            delayMinutes={mealReminderDelay}
+            reminderAtMs={reminderAtMs}
+            armed={remindMe}
+            onArm={() => setRemindMe(true)}
+            onUndo={() => setRemindMe(false)}
+          />
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={!canSubmit}
+            className="w-full rounded-2xl py-4 text-base font-semibold transition disabled:opacity-40"
+            style={{ background: COPPER, color: CREAM, boxShadow: "0 4px 16px rgba(156,82,40,0.25)" }}
+          >
+            {logging ? "Logging..." : carbsNum ? `Log ${carbsNum}g of carbs` : "Add carbs"}
+          </button>
+        </div>
       }
     >
       <div className="space-y-5">

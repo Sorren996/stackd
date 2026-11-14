@@ -6,6 +6,8 @@ import { useCreateDoses, useCreateCarbs } from "@/hooks/useLogMutations";
 import { hasDelayedRise } from "@/lib/mealMonitoring";
 import { toast } from "sonner";
 import LogSheetShell from "@/components/forms/LogSheetShell";
+import MealReviewReminderChip from "@/components/forms/MealReviewReminderChip";
+import useMealReminderSetting from "@/hooks/useMealReminderSetting";
 import {
   TapStepper,
   InsulinChips,
@@ -72,7 +74,10 @@ export default function LogInsulinMealForm({ open, onClose }) {
   const [time, setTime] = useState(() => new Date().toTimeString().slice(0, 5));
   const [insulinLibrary, setInsulinLibrary] = useState(readInsulinLibrary);
   const [logging, setLogging] = useState(false);
+  // This meal's own review reminder. Off on every new meal, never inherited.
+  const [remindMe, setRemindMe] = useState(false);
 
+  const { enabled: mealReminderOn, delayMinutes: mealReminderDelay } = useMealReminderSetting();
   const createDoses = useCreateDoses();
   const createCarb = useCreateCarbs();
 
@@ -87,6 +92,7 @@ export default function LogInsulinMealForm({ open, onClose }) {
     setSharedNotes("");
     setDate(getTodayDateValue());
     setTime(new Date().toTimeString().slice(0, 5));
+    setRemindMe(false);
   }, [open]);
 
   useEffect(() => {
@@ -170,6 +176,12 @@ export default function LogInsulinMealForm({ open, onClose }) {
         fat_grams: fatGrams,
         protein_grams: proteinGrams,
         notes: sharedNotes || undefined,
+        ...(remindMe && mealReminderOn && !isRescue
+          ? {
+            reminder_at: new Date(timestamp.getTime() + mealReminderDelay * 60000).toISOString(),
+            reminder_state: "scheduled",
+          }
+          : {}),
       };
       const optimisticEntries = [{ ...entry, id: `optimistic-carb-${Date.now()}`, created_date: new Date().toISOString() }];
       createCarb.mutate({ submittedEntries: [entry], optimisticEntries, splitPlan: null });
@@ -188,15 +200,25 @@ export default function LogInsulinMealForm({ open, onClose }) {
       title="Log meal + support"
       detent="tall"
       footer={
-        <button
-          type="button"
-          onClick={handleSubmit}
-          disabled={!canSubmit}
-          className="w-full rounded-2xl py-4 text-base font-semibold transition disabled:opacity-40"
-          style={{ background: COPPER, color: CREAM, boxShadow: "0 4px 16px rgba(156,82,40,0.25)" }}
-        >
-          {logging ? "Logging..." : "Log both"}
-        </button>
+        <div className="space-y-3">
+          <MealReviewReminderChip
+            enabled={mealReminderOn}
+            delayMinutes={mealReminderDelay}
+            reminderAtMs={buildTimestampNoFuture(date, time)?.getTime() + mealReminderDelay * 60000}
+            armed={remindMe}
+            onArm={() => setRemindMe(true)}
+            onUndo={() => setRemindMe(false)}
+          />
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={!canSubmit}
+            className="w-full rounded-2xl py-4 text-base font-semibold transition disabled:opacity-40"
+            style={{ background: COPPER, color: CREAM, boxShadow: "0 4px 16px rgba(156,82,40,0.25)" }}
+          >
+            {logging ? "Logging..." : "Log both"}
+          </button>
+        </div>
       }
     >
       {/* ── Meal section ── */}

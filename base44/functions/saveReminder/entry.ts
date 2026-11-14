@@ -12,6 +12,25 @@ import { createClientFromRequest } from "npm:@base44/sdk@0.8.54";
 import { ok, fail, currentUser, readBody, asArray } from "../../shared/sharingAccess.ts";
 import { createLimitError, reminderPayload } from "../../shared/reminderSchedule.ts";
 
+/**
+ * Switching Meal review off closes every per-meal reminder that has not fired
+ * yet. Those promises live on the meals themselves, so they are cancelled here
+ * rather than left to fire from a feature the person has just turned off.
+ */
+async function cancelPendingMealReminders(base44: any, userId: string) {
+  try {
+    await base44.asServiceRole.entities.CarbEntry.updateMany(
+      { created_by_id: userId, reminder_state: "scheduled" },
+      { $set: { reminder_state: "cancelled" } }
+    );
+  } catch (error: any) {
+    console.error(JSON.stringify({
+      diagStage: "CANCEL_PENDING_MEAL_REMINDERS_FAILED",
+      error_name: String(error?.name || "Error").slice(0, 40),
+    }));
+  }
+}
+
 async function loadOwned(base44: any, id: string, userId: string) {
   try {
     const row = await base44.entities.Reminder.get(id);
@@ -47,6 +66,9 @@ export default async function (req: Request): Promise<Response> {
     const row = await loadOwned(base44, id, user.id);
     if (!row) return fail("not_found", 404);
     const updated = await base44.entities.Reminder.update(id, { enabled: body?.enabled === true });
+    if (String(row.type) === "meal" && body?.enabled !== true) {
+      await cancelPendingMealReminders(base44, user.id);
+    }
     return ok({ reminder: updated });
   }
 
@@ -58,6 +80,9 @@ export default async function (req: Request): Promise<Response> {
     if (!row) return fail("not_found", 404);
     if (String(row.type) !== String(parsed.value.type)) return fail("type_mismatch", 400);
     const updated = await base44.entities.Reminder.update(row.id, { ...parsed.value, user_id: user.id });
+    if (parsed.value.type === "meal" && parsed.value.enabled !== true) {
+      await cancelPendingMealReminders(base44, user.id);
+    }
     return ok({ reminder: updated });
   }
 

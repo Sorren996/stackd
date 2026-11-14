@@ -51,7 +51,7 @@ function periodLabel(time) {
   return null;
 }
 
-export default function MealReviewView({ meals = null, mealInsight = null, glucoseReadings, glucoseTrend }) {
+export default function MealReviewView({ meals = null, mealInsight = null, glucoseReadings, glucoseTrend, focusMealId = null }) {
   const now = Date.now();
 
   // One normalised list for both cases: several overlapping meals, or the
@@ -85,6 +85,8 @@ export default function MealReviewView({ meals = null, mealInsight = null, gluco
           targetLow: d.targetLow || 70,
           targetHigh: d.targetHigh || 180,
           hasMeal: Boolean(d.meal),
+          // The log entry a reminder points at, so its link can open this row.
+          mealId: String(d.meal?.id || ""),
         };
       })
       .sort((a, b) => (b.time ?? 0) - (a.time ?? 0));
@@ -99,6 +101,14 @@ export default function MealReviewView({ meals = null, mealInsight = null, gluco
     const ids = idsKey ? idsKey.split("|") : [];
     setOpenIds((prev) => prev.filter((id) => ids.includes(id)));
   }, [idsKey]);
+
+  // Arriving from that meal's own reminder: its row is already open.
+  useEffect(() => {
+    if (!focusMealId) return;
+    const match = entries.find((entry) => entry.mealId && entry.mealId === String(focusMealId));
+    if (!match) return;
+    setOpenIds((prev) => (prev.includes(match.id) ? prev : [...prev, match.id]));
+  }, [focusMealId, entries]);
 
   const toggleMeal = (id) =>
     setOpenIds((prev) => (prev.includes(id) ? prev.filter((openId) => openId !== id) : [...prev, id]));

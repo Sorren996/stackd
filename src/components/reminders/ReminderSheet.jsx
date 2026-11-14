@@ -36,7 +36,9 @@ export default function ReminderSheet({ row, onClose, onSave, onDelete }) {
       setError("Give this reminder a name first.");
       return;
     }
-    if (!isCustom && !(draft.days || []).length) {
+    // Meal review is not a weekly schedule: it is one prompt attached to one
+    // meal, so it never asks for — or validates — a day of the week.
+    if (draft.type !== "meal" && !(draft.days || []).length) {
       setError("Choose at least one day.");
       return;
     }
@@ -96,7 +98,11 @@ export default function ReminderSheet({ row, onClose, onSave, onDelete }) {
       }
     >
       <div className="space-y-4 pt-2">
-        <p className="text-sm" style={mutedStyle}>{reminderTimingLine(draft)}</p>
+        {draft.type === "meal" ? (
+          <p className="text-base font-medium" style={{ color: CONTROL.ink }}>{mealDelayLabel(draft.delay_minutes)}</p>
+        ) : (
+          <p className="text-sm" style={mutedStyle}>{reminderTimingLine(draft)}</p>
+        )}
 
         {isCustom && (
           <div>
@@ -117,7 +123,6 @@ export default function ReminderSheet({ row, onClose, onSave, onDelete }) {
 
         {draft.type === "meal" ? (
           <ChoiceRow
-            label="When it arrives"
             options={MEAL_DELAY_CHOICES.map((minutes) => ({
               value: minutes,
               label: minutes === 90 ? "90 minutes" : minutes === 120 ? "2 hours" : "3 hours",
@@ -155,7 +160,7 @@ export default function ReminderSheet({ row, onClose, onSave, onDelete }) {
         />
 
         {draft.type === "meal" ? (
-          <p className="text-xs leading-relaxed" style={mutedStyle}>{mealDelayLabel(draft.delay_minutes)}. {REMINDER_NOTES.meal}</p>
+          <p className="text-xs leading-relaxed" style={mutedStyle}>{REMINDER_NOTES.meal}</p>
         ) : draft.type === "basal" ? (
           <p className="text-xs leading-relaxed" style={mutedStyle}>{REMINDER_NOTES.basal}</p>
         ) : null}

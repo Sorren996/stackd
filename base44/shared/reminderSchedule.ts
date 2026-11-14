@@ -193,23 +193,41 @@ export function clockFireState(reminder: any, nowMs: number) {
   };
 }
 
-/** The same two moments for the meal reminder, measured from the meal itself. */
-export function mealFireState(reminder: any, mealAtMs: number, nowMs: number) {
-  const now = zonedParts(nowMs, reminder?.timezone);
-  const delay = Number(reminder?.delay_minutes) || 120;
-  const scheduledAtMs = mealAtMs + delay * 60_000;
-  const sentToday = reminder?.last_sent_date === now.dateKey;
-  const retriedToday = reminder?.last_retry_sent_date === now.dateKey;
-  const elapsed = nowMs - scheduledAtMs;
+/**
+ * A meal review reminder belongs to ONE meal, never to a weekly schedule.
+ *
+ * Its moment is written on the meal itself (reminder_at, from that meal's own
+ * consumed_at plus the chosen delay), so the settings row only carries whether
+ * the feature is on and how long the delay is. There is one prompt, then one
+ * retry fifteen minutes after that prompt was actually sent, and nothing else.
+ */
+export function mealReminderAtMs(meal: any): number {
+  const at = Date.parse(String(meal?.reminder_at ?? ""));
+  return Number.isFinite(at) ? at : Number.NaN;
+}
+
+export function mealReviewFireState(meal: any, nowMs: number) {
+  const scheduledAtMs = mealReminderAtMs(meal);
+  const state = String(meal?.reminder_state || "none");
+  const sentAtMs = Date.parse(String(meal?.reminder_sent_at ?? ""));
+  const sinceScheduled = nowMs - scheduledAtMs;
+  const sinceSent = nowMs - sentAtMs;
   return {
-    dateKey: now.dateKey,
     scheduledAtMs,
-    firstDue: !sentToday && elapsed >= 0 && elapsed < FIRE_WINDOW_MINUTES * 60_000,
+    firstDue:
+      state === "scheduled" && Number.isFinite(scheduledAtMs) &&
+      sinceScheduled >= 0 && sinceScheduled < FIRE_WINDOW_MINUTES * 60_000,
     retryDue:
-      sentToday && !retriedToday &&
-      elapsed >= RETRY_MINUTES * 60_000 &&
-      elapsed - RETRY_MINUTES * 60_000 < FIRE_WINDOW_MINUTES * 60_000,
+      state === "sent" && Number.isFinite(sentAtMs) &&
+      sinceSent >= RETRY_MINUTES * 60_000 &&
+      sinceSent - RETRY_MINUTES * 60_000 < FIRE_WINDOW_MINUTES * 60_000,
   };
+}
+
+/** Opening this link lands on the home screen with that meal's review open. */
+export function mealReviewDestination(mealId: unknown): string {
+  const id = String(mealId ?? "").trim();
+  return id ? `/?meal=${encodeURIComponent(id)}` : "/";
 }
 
 /**

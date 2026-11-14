@@ -82,6 +82,33 @@
       "type": "string",
       "description": "Optional notes"
     },
+    "reminder_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this meal's own review reminder is due: the meal's own consumed_at plus the delay chosen on the Meal review settings sheet. Set only when the person asked for it on this meal while logging. Meals never carry a weekly schedule and neither this field nor any validation requires days."
+    },
+    "reminder_state": {
+      "type": "string",
+      "enum": [
+        "none",
+        "scheduled",
+        "sent",
+        "cancelled"
+      ],
+      "enumColors": [
+        "gray",
+        "blue",
+        "green",
+        "gray"
+      ],
+      "default": "none",
+      "description": "Lifecycle of this meal's own review reminder. scheduled = waiting for reminder_at; sent = the first prompt went out (its one retry may still follow); cancelled = never to be sent again, either because the person undid it, reviewed the meal first, or switched Meal review off. none = no reminder was asked for on this meal."
+    },
+    "reminder_sent_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this meal's first review prompt was sent. The single retry is measured fifteen minutes from this moment, so a delayed sweep can never shorten it."
+    },
     "is_locked": {
       "type": "boolean",
       "default": false,
