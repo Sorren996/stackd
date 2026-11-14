@@ -1,8 +1,8 @@
 import { forwardRef, useImperativeHandle, useLayoutEffect, useRef } from "react";
 import updateGlucoseTicker from "@/lib/glucoseTickerDom";
 
-// React owns the shell only. Stable digit rails are updated in place; active
-// scrolling cancels any live tick and writes the new digits synchronously.
+// React owns the shell only. Stable digit rails roll in place, including while
+// panning; callers request instant updates only for re-seats and large jumps.
 const GlucoseTicker = forwardRef(function GlucoseTicker({ className = "", initialValue = "", style, ariaHidden = false }, ref) {
   const rootRef = useRef(null);
   const initialRef = useRef(initialValue);

@@ -404,8 +404,7 @@ function ActivityGraph({ doses, activeInsulinBreakdown = [], glucoseReadings = [
   const prevGlowStatusRef = useRef(null);
   const prevOverReferenceRef = useRef(false);
   const lastSelectedKeyRef = useRef(null);
-  const lastLiveTimeRef = useRef(null);
-  const pendingLiveTickRef = useRef(null);
+  const tickerReseatRef = useRef(false);
   // The reading the marker sits on, and the window it was picked in, so a
   // window change can carry that same reading across the new scale.
   const anchorTimeRef = useRef(null);
@@ -1027,32 +1026,32 @@ function ActivityGraph({ doses, activeInsulinBreakdown = [], glucoseReadings = [
 
   // Scroll frames write only refs/DOM. Small subscribers own their visibility;
   // nothing here schedules a render of the chart or its Recharts descendants.
-  const handleSelectionFrame = (entry, { scrolling = false } = {}) => {
+  const handleSelectionFrame = (entry, { instant = false } = {}) => {
+    const previousEntry = scrubEntryRef.current;
+    // Four or more skipped samples (or a gap over 15 minutes) is a jump.
+    const largeJump = previousEntry && entry && (Math.abs(entry.selectionIndex - previousEntry.selectionIndex) > 3
+      || Math.abs(entry.time - previousEntry.time) > 15 * 60000);
+    const reseating = instant || tickerReseatRef.current || lastViewWindowRef.current !== viewWindow;
     scrubEntryRef.current = entry;
-    selectionSource.publish(entry);
+    selectionSource.publish(entry ? { ...entry, animateValue: Boolean(previousEntry && !reseating && !largeJump) } : null);
     if (!filters.glucose || !entry || !Number.isFinite(entry.time)) return;
-    anchorTimeRef.current = entry.centreTime ?? entry.time;
+    // The zoom effect must retain the centre from BEFORE its scale changed.
+    if (lastViewWindowRef.current === viewWindow) anchorTimeRef.current = entry.centreTime ?? entry.time;
     const headerEntry = entry.kind === FORECAST_KIND ? scrubAnchor : entry;
     if (!headerEntry) return;
     const value = Math.min(Math.max(headerEntry.value, effectiveMin), effectiveMax);
     const displayValue = formatGlucoseDisplay(value);
     const key = `${headerEntry.kind}:${headerEntry.time}:${displayValue}`;
     const previous = lastSelectedKeyRef.current;
-    const moving = scrollBusyRef.current || (scrolling && !automaticScrollRef.current);
-    if (lastLiveTimeRef.current !== latestGlucoseTime) {
-      pendingLiveTickRef.current = lastLiveTimeRef.current !== null && latestGlucoseTime > lastLiveTimeRef.current
-        && atRestingRef.current && !moving ? latestGlucoseTime : null;
-      lastLiveTimeRef.current = latestGlucoseTime;
+    // Normal scroll frames animate only a changed value, never restart an
+    // unchanged digit merely because another scroll frame arrived.
+    if (previous?.displayValue !== displayValue || reseating) {
+      tickerRef.current?.setValue(displayValue, Boolean(previous && !reseating && !largeJump));
     }
-    const newLiveReading = pendingLiveTickRef.current === headerEntry.time;
-    if (moving || previous?.key !== key) {
-      tickerRef.current?.setValue(displayValue, Boolean(!moving && newLiveReading));
-    }
-    if (newLiveReading) pendingLiveTickRef.current = null;
     if (previous?.key !== key) {
       if (tooltipTimeRef.current) tooltipTimeRef.current.textContent = formatReadingTime(headerEntry.time);
       if (tooltipDateRef.current) tooltipDateRef.current.textContent = format(new Date(headerEntry.time), "EEEE, MMM d");
-      lastSelectedKeyRef.current = { key, time: headerEntry.time };
+      lastSelectedKeyRef.current = { key, time: headerEntry.time, displayValue };
     }
     const glowStatus = value > targetHigh ? "high" : value < targetLow ? "low" : "in_range";
     const overReference = value > highReference || value < FIXED_LOW_REFERENCE;
@@ -1065,7 +1064,7 @@ function ActivityGraph({ doses, activeInsulinBreakdown = [], glucoseReadings = [
 
   // Display preferences can change without changing the selected sample.
   useEffect(() => {
-    handleSelectionFrame(scrubEntryRef.current);
+    handleSelectionFrame(scrubEntryRef.current, { instant: true });
   }, [glucoseUnits, targetLow, targetHigh, highReference, effectiveMin, effectiveMax]);
 
   const updateMonitoringOverlay = (scrollLeft) => {
@@ -1121,6 +1120,7 @@ function ActivityGraph({ doses, activeInsulinBreakdown = [], glucoseReadings = [
   const settleScroll = () => {
     scrollBusyRef.current = false;
     automaticScrollRef.current = false;
+    tickerReseatRef.current = false;
   };
 
   const scheduleScrollSettle = () => {
@@ -1133,7 +1133,7 @@ function ActivityGraph({ doses, activeInsulinBreakdown = [], glucoseReadings = [
 
   const beginScrollGesture = () => {
     automaticScrollRef.current = false;
-    tickerRef.current?.stopAnimation();
+    tickerReseatRef.current = false;
     scrollBusyRef.current = true;
     if (settleTimerRef.current) clearTimeout(settleTimerRef.current);
     settleTimerRef.current = null;
@@ -1182,6 +1182,10 @@ function ActivityGraph({ doses, activeInsulinBreakdown = [], glucoseReadings = [
   const scrollToLatestGlucose = () => {
     if (!scrollRef.current) return;
 
+    // Now is an explicit re-seat, including every frame of its smooth travel.
+    tickerReseatRef.current = true;
+    tickerRef.current?.stopAnimation();
+    scheduleScrollSettle();
     // Tapping Now re-arms following, whatever the reader had latched off.
     automaticScrollRef.current = false;
     atRestingRef.current = true;
@@ -1221,6 +1225,7 @@ function ActivityGraph({ doses, activeInsulinBreakdown = [], glucoseReadings = [
       const keepLeft = Math.min(Math.max(anchorX - containerWidth / 2, 0), Math.max(maxScrollLeft, 0));
       scrollRef.current.scrollLeft = keepLeft;
       atRestingRef.current = isAtResting(keepLeft, restingScrollLeft);
+      scheduleScrollSettle();
     } else if (anchorToLatest && followAllowed && Math.abs(scrollRef.current.scrollLeft - restingScrollLeft) > 0.5) {
       automaticScrollRef.current = true;
       scrollRef.current.scrollLeft = restingScrollLeft;
@@ -1297,7 +1302,12 @@ function ActivityGraph({ doses, activeInsulinBreakdown = [], glucoseReadings = [
             <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full" style={{ background: "#5b6550" }} />
             }
             </button>
-            <TimeViewToggle value={viewWindow} onChange={setViewWindow} />
+            <TimeViewToggle value={viewWindow} onChange={(next) => {
+              if (next === viewWindow) return;
+              tickerReseatRef.current = true;
+              tickerRef.current?.stopAnimation();
+              setViewWindow(next);
+            }} />
             <AnimatePresence>
               {showFilter && filterAnchorRect &&
             <>

@@ -88,6 +88,7 @@ export default function ProjectionOverlay({
     const runs = [];
     readings.forEach((entry) => { (runs[entry.run ?? 0] ||= []).push(entry); });
     const futureRun = anchor ? [anchor, ...forecasts] : [];
+    const selectionIndices = new Map(entries.map((entry, index) => [entry, index]));
     const runGeometry = runs.map(run => run.map(p => ({ x: xOf(p.time), y: yOf(p.value) })));
     const futureGeometry = futureRun.map(p => ({ x: xOf(p.time), y: yOf(p.value) }));
     let frame = null;
@@ -108,7 +109,7 @@ export default function ProjectionOverlay({
       }
       // Report centreTime on every frame, even between two sample identities,
       // so zoom anchoring and the marker always share the exact centre.
-      reportRef.current?.(selected ? { ...selected, centreTime } : null, { scrolling });
+      reportRef.current?.(selected ? { ...selected, centreTime, selectionIndex: selectionIndices.get(selected) } : null, { scrolling });
     };
     const onScroll = () => {
       if (frame !== null) return;

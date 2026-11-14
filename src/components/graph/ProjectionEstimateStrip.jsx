@@ -17,6 +17,7 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { projectionCardCopy } from "@/components/graph/ProjectionTooltipCard";
+import GlucoseTicker from "@/components/graph/GlucoseTicker";
 
 // 8px lead-in + 12px eyebrow + 4px gap + 22px value. Only the strip's own
 // contents ever animate; this height is a constant.
@@ -33,7 +34,8 @@ export default function ProjectionEstimateStrip({ selectionSource }) {
     const update = (entry) => {
       const next = projectionCardCopy(entry?.kind === "forecast" ? entry : null);
       if (Boolean(next) !== shown) setShown(Boolean(next));
-      if (next) for (const field of ['eyebrow', 'value', 'unit', 'range']) {
+      if (next) textRefs.current.value?.setValue(next.value, entry.animateValue === true);
+      if (next) for (const field of ['eyebrow', 'unit', 'range']) {
         const element = textRefs.current[field];
         if (element && element.textContent !== (next[field] || '')) element.textContent = next[field] || '';
       }
@@ -73,7 +75,8 @@ export default function ProjectionEstimateStrip({ selectionSource }) {
               </span>
             </div>
             <div className="mt-1 flex items-baseline gap-1.5">
-              <span
+              <GlucoseTicker
+                initialValue={copy.value}
                 ref={el => { textRefs.current.value = el; }}
                 style={{
                   fontFamily: "var(--font-display, 'Fraunces', Georgia, serif)",
@@ -85,9 +88,7 @@ export default function ProjectionEstimateStrip({ selectionSource }) {
                   fontVariantNumeric: "tabular-nums",
                   letterSpacing: "-0.01em",
                 }}
-              >
-                {copy.value}
-              </span>
+              />
               <span ref={el => { textRefs.current.unit = el; }} className="text-[11px] font-medium" style={{ color: "#8F7E6B" }}>
                 {copy.unit}
               </span>
