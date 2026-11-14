@@ -67,6 +67,14 @@ import {
   resolveGestureIntent,
 } from "@/lib/projection/projectionScrub";
 import { BAR_HEIGHT } from "@/components/nav/navGeometry";
+import ScrubDebugHud from "@/components/graph/ScrubDebugHud";
+
+// ── TEMPORARY INSTRUMENTATION ────────────────────────────────────────────
+// One switch. While a scrub is running, a small fixed monospace readout shows
+// the live mapping: the finger's raw clientX, the content-space x it resolves
+// to, the time that implies, the chart's drawn width, the snapped entry, and
+// the drawn marker's x. Flip to false to remove the readout entirely.
+const SCRUB_DEBUG = true;
 
 const MARGIN = 8;
 const CARD_GAP = 12; // px between the marker and the card
@@ -138,6 +146,8 @@ export default function ProjectionOverlay({
   // The cream card belongs to a tap and only to a tap: a drag never opens it,
   // and it closes the moment a drag begins.
   const [cardShown, setCardShown] = useState(false);
+  // TEMPORARY: the last scrub frame's mapping, for the debug readout only.
+  const [debug, setDebug] = useState(null);
   const svgRef = useRef(null);
   const hitRef = useRef(null);
 
@@ -362,11 +372,13 @@ export default function ProjectionOverlay({
     if (!source || !source.length || !pointer) return;
 
     const contentX = contentXOf(pointer.clientX);
-    // The dot stops at the first reading and the last forecast point, and never
-    // leaves the plot.
+    // The dot is drawn at the FINGER's own x in the chart's content space,
+    // clamped only to the plot itself — never to the snapped entry's x. It
+    // starts at the first drawn reading (there is no trace to ride before it)
+    // and may travel to the right edge of the drawn plot; the numbers still
+    // snap to whichever entry is nearest in time.
     const lower = Math.max(source[0].x, 0);
-    const upper = Math.min(source[source.length - 1].x, chartWidth);
-    const clampedX = Math.min(Math.max(contentX, lower), Math.max(lower, upper));
+    const clampedX = Math.min(Math.max(contentX, lower), Math.max(lower, chartWidth));
     const y = interpolatePolylineY(source, clampedX);
     const prev = fingerRef.current;
     if (!prev || Math.abs(prev.x - clampedX) > 0.5 || Math.abs(prev.y - y) > 0.5) {
@@ -377,6 +389,34 @@ export default function ProjectionOverlay({
     const time = timeAtContentX(contentX, domainStart, totalMs, chartWidth);
     const nearest = nearestPointByTime(source, time);
     if (nearest) select(nearest);
+
+    // The live readout: exactly what this frame mapped, so a marker that stops
+    // while contentX keeps moving is visible as numbers rather than described.
+    if (SCRUB_DEBUG) {
+      const hitWidth = hitRef.current?.getBoundingClientRect?.()?.width ?? null;
+      const scroller = scrollContainerRef?.current || scrollParentOf(hitRef.current);
+      const maxForecastX = source.reduce(
+        (max, p) => (p.kind === "forecast" ? Math.max(max, p.x) : max),
+        0
+      );
+      const round = (v) => (Number.isFinite(v) ? Math.round(v * 10) / 10 : null);
+      setDebug({
+        clientX: Math.round(pointer.clientX),
+        contentX: round(contentX),
+        time: Number.isFinite(time) ? new Date(time).toISOString().slice(11, 19) : "—",
+        r: Math.round(chartWidth),
+        nearestIndex: nearest ? source.indexOf(nearest) : -1,
+        nearestKind: nearest?.kind ?? "—",
+        nearestX: round(nearest?.x),
+        markerX: round(clampedX),
+        points: source.length,
+        forecasts: source.filter((p) => p.kind === "forecast").length,
+        maxForecastX: round(maxForecastX),
+        rectW: round(hitWidth),
+        scrollLeft: round(scroller?.scrollLeft),
+        fits: maxForecastX <= chartWidth + 0.5,
+      });
+    }
   }, [contentXOf, domainStart, totalMs, chartWidth, select]);
 
   const scheduleScrub = useCallback(() => {
@@ -501,6 +541,8 @@ export default function ProjectionOverlay({
     // The dot falls back from the finger to the entry the numbers show.
     fingerRef.current = null;
     setFinger(null);
+    // The readout belongs to a live scrub and goes with it.
+    setDebug(null);
     return state;
   }, [cancelFrame, releasePin]);
 
@@ -737,10 +779,9 @@ export default function ProjectionOverlay({
   // of it and the pair would read as two markers.
   const endPoint = merged[merged.length - 1];
 
-  // Where the dot is drawn. Under the finger while a scrub is running, on the
-  // selected entry once a gesture has settled, and on the newest real reading at
-  // rest. Nothing else moves it, and it stops at the first reading and the last
-  // forecast point.
+  // Where the dot is drawn. Under the finger while a scrub is running — its own
+  // mapped content x, not the snapped entry's — on the selected entry once a
+  // gesture has settled, and on the newest real reading at rest.
   const marker = finger
     || (activePoint ? { x: activePoint.x, y: activePoint.y } : null)
     || (restingPoint ? { x: restingPoint.x, y: restingPoint.y } : null);
@@ -833,6 +874,8 @@ export default function ProjectionOverlay({
           onPointerCancel={handlePointerCancel}
         />
       </svg>
+
+      {SCRUB_DEBUG && scrubbing && <ScrubDebugHud debug={debug} />}
 
       {/* The cream card exists only for a tapped reading. An estimate is
           described by the strip, so no portal node is created and nothing is
