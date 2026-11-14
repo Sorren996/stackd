@@ -12,7 +12,7 @@
 
 export const DOSE_TERMS = {
   sensitivity: {
-    label: 'Glucose drop per unit',
+    label: 'Insulin Sensitivity Factor',
     medical: 'Insulin sensitivity',
     unit: 'mg/dL per unit',
     helper: 'How much one unit is expected to lower glucose.',
