@@ -32,18 +32,18 @@ function FieldLabel({ children, sub }) {
           letterSpacing: "0.16em",
           fontWeight: 700,
           fontSize: "10px",
-          color: FAINT,
-        }}
-      >
+          color: FAINT
+        }}>
+        
         {children}
       </span>
-      {sub && (
-        <span style={{ fontSize: "11px", color: FAINT, fontWeight: 400 }}>
+      {sub &&
+      <span style={{ fontSize: "11px", color: FAINT, fontWeight: 400 }} className="hidden">
           {sub}
         </span>
-      )}
-    </div>
-  );
+      }
+    </div>);
+
 }
 
 // ── Tap-to-type stepper ───────────────────────────────────────────────────
@@ -67,8 +67,8 @@ export function TapStepper({ label, sub, value, onChange, unit, step = 1, preset
           disabled={current <= min}
           className="flex h-12 w-12 items-center justify-center rounded-full active:scale-95 disabled:opacity-30"
           style={{ background: CANVAS, color: INK }}
-          aria-label={`Decrease by ${step}`}
-        >
+          aria-label={`Decrease by ${step}`}>
+          
           <Minus className="h-5 w-5" />
         </button>
 
@@ -83,15 +83,15 @@ export function TapStepper({ label, sub, value, onChange, unit, step = 1, preset
             }}
             onBlur={() => {
               const n = Number(value);
-              if (!Number.isFinite(n) || n < min) onChange("");
-              else if (n > min) onChange(String(n));
-              else onChange("");
+              if (!Number.isFinite(n) || n < min) onChange("");else
+              if (n > min) onChange(String(n));else
+              onChange("");
             }}
             placeholder="0"
             className="w-[72px] bg-transparent text-center text-4xl font-light leading-none outline-none"
             style={{ color: INK, fontVariantNumeric: "tabular-nums" }}
-            aria-label={label || "Value"}
-          />
+            aria-label={label || "Value"} />
+          
           {unit && <span className="text-sm font-medium" style={{ color: FAINT }}>{unit}</span>}
         </div>
 
@@ -100,39 +100,39 @@ export function TapStepper({ label, sub, value, onChange, unit, step = 1, preset
           onClick={() => set(current + step)}
           className="flex h-12 w-12 items-center justify-center rounded-full active:scale-95"
           style={{ background: CANVAS, color: INK }}
-          aria-label={`Increase by ${step}`}
-        >
+          aria-label={`Increase by ${step}`}>
+          
           <Plus className="h-5 w-5" />
         </button>
       </div>
 
-      {presets.length > 0 && (
-        <div className="mt-2.5 flex justify-center gap-2">
+      {presets.length > 0 &&
+      <div className="mt-2.5 flex justify-center gap-2">
           {presets.map((preset) => {
-            const isSelected = current === preset;
-            return (
-              <button
-                key={preset}
-                type="button"
-                onClick={() => set(preset)}
-                className="flex shrink-0 items-center justify-center rounded-full text-sm font-semibold"
-                style={{
-                  height: 44,
-                  minWidth: 56,
-                  transition: "background 200ms ease-out, color 200ms ease-out",
-                  background: isSelected ? COPPER : CANVAS,
-                  color: isSelected ? CREAM : TAUPE,
-                }}
-                aria-pressed={isSelected}
-              >
+          const isSelected = current === preset;
+          return (
+            <button
+              key={preset}
+              type="button"
+              onClick={() => set(preset)}
+              className="flex shrink-0 items-center justify-center rounded-full text-sm font-semibold"
+              style={{
+                height: 44,
+                minWidth: 56,
+                transition: "background 200ms ease-out, color 200ms ease-out",
+                background: isSelected ? COPPER : CANVAS,
+                color: isSelected ? CREAM : TAUPE
+              }}
+              aria-pressed={isSelected}>
+              
                 {preset}
-              </button>
-            );
-          })}
+              </button>);
+
+        })}
         </div>
-      )}
-    </div>
-  );
+      }
+    </div>);
+
 }
 
 // ── Compact segmented control ─────────────────────────────────────────────
@@ -144,8 +144,8 @@ export function CompactSegmented({ value, onChange, options, ariaLabel, layoutId
   return (
     <div
       className="inline-flex rounded-full p-1"
-      style={{ background: CANVAS }}
-    >
+      style={{ background: CANVAS }}>
+      
       {options.map((opt) => {
         const isSelected = opt.value === value;
         return (
@@ -157,36 +157,36 @@ export function CompactSegmented({ value, onChange, options, ariaLabel, layoutId
             style={{
               height: 40,
               padding: "0 18px",
-              color: isSelected ? CREAM : TAUPE,
+              color: isSelected ? CREAM : TAUPE
             }}
             aria-pressed={isSelected}
-            aria-label={ariaLabel ? `${ariaLabel}: ${opt.label}` : opt.label}
-          >
-            {isSelected && (
-              <motion.span
-                layoutId={layoutId}
-                className="absolute inset-0 rounded-full"
-                style={{ background: COPPER, zIndex: 0 }}
-                transition={{ type: "spring", stiffness: 380, damping: 32 }}
-                initial={false}
-                aria-hidden
-              />
-            )}
+            aria-label={ariaLabel ? `${ariaLabel}: ${opt.label}` : opt.label}>
+            
+            {isSelected &&
+            <motion.span
+              layoutId={layoutId}
+              className="absolute inset-0 rounded-full"
+              style={{ background: COPPER, zIndex: 0 }}
+              transition={{ type: "spring", stiffness: 380, damping: 32 }}
+              initial={false}
+              aria-hidden />
+
+            }
             <span className="relative z-10">{opt.label}</span>
-          </button>
-        );
+          </button>);
+
       })}
-    </div>
-  );
+    </div>);
+
 }
 
 // ── Triple segmented — Low / Medium / High (protein & fat) ─────────────────
 export function TripleSegmented({ label, value, onChange }) {
   const opts = [
-    { value: "low", label: "Low" },
-    { value: "med", label: "Medium" },
-    { value: "high", label: "High" },
-  ];
+  { value: "low", label: "Low" },
+  { value: "med", label: "Medium" },
+  { value: "high", label: "High" }];
+
   return (
     <div>
       {label && <div className="mb-1.5"><FieldLabel>{label}</FieldLabel></div>}
@@ -203,17 +203,17 @@ export function TripleSegmented({ label, value, onChange }) {
                 height: 44,
                 transition: "background 200ms ease-out, color 200ms ease-out",
                 background: isSelected ? COPPER : CANVAS,
-                color: isSelected ? CREAM : TAUPE,
+                color: isSelected ? CREAM : TAUPE
               }}
-              aria-pressed={isSelected}
-            >
+              aria-pressed={isSelected}>
+              
               {opt.label}
-            </button>
-          );
+            </button>);
+
         })}
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 // ── Insulin chips — only from the user's settings, with fast/basal labels ──
@@ -227,8 +227,8 @@ export function InsulinChips({ value, onChange, options, ariaLabel }) {
         <p className="mt-2 text-xs" style={{ color: FAINT }}>
           Add insulins in Settings to log a dose.
         </p>
-      </div>
-    );
+      </div>);
+
   }
 
   return (
@@ -250,21 +250,21 @@ export function InsulinChips({ value, onChange, options, ariaLabel }) {
                 padding: "0 16px",
                 transition: "background 200ms ease-out, color 200ms ease-out",
                 background: isSelected ? COPPER : CANVAS,
-                color: isSelected ? CREAM : INK,
+                color: isSelected ? CREAM : INK
               }}
               aria-pressed={isSelected}
-              aria-label={ariaLabel ? `${ariaLabel}: ${opt.label}` : opt.label}
-            >
+              aria-label={ariaLabel ? `${ariaLabel}: ${opt.label}` : opt.label}>
+              
               {opt.label}
               <em style={{ fontSize: "11px", fontWeight: 400, fontStyle: "italic", opacity: 0.7 }}>
                 {tag}
               </em>
-            </button>
-          );
+            </button>);
+
         })}
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 // ── Rescue-carb chip — single tap toggle, sage accent ──────────────────────
@@ -279,13 +279,13 @@ export function RescueChip({ checked, onChange }) {
         padding: "0 18px",
         transition: "background 200ms ease-out, color 200ms ease-out",
         background: checked ? SAGE : CANVAS,
-        color: checked ? CREAM : TAUPE,
+        color: checked ? CREAM : TAUPE
       }}
-      aria-pressed={checked}
-    >
+      aria-pressed={checked}>
+      
       Rescue carbs
-    </button>
-  );
+    </button>);
+
 }
 
 // ── Now-time field — "Now" chip toggles to native time input ───────────────
@@ -306,7 +306,7 @@ export function NowTimeField({ dateValue, timeValue, onDateChange, onTimeChange,
     color: INK,
     border: "none",
     outline: "none",
-    borderRadius: "9999px",
+    borderRadius: "9999px"
   };
 
   return (
@@ -315,8 +315,8 @@ export function NowTimeField({ dateValue, timeValue, onDateChange, onTimeChange,
         type="button"
         onClick={setNow}
         className="flex h-11 items-center rounded-full px-4 text-sm font-semibold transition active:scale-95"
-        style={{ background: "rgba(156,82,40,0.12)", color: COPPER }}
-      >
+        style={{ background: "rgba(156,82,40,0.12)", color: COPPER }}>
+        
         Now
       </button>
       <input
@@ -325,18 +325,18 @@ export function NowTimeField({ dateValue, timeValue, onDateChange, onTimeChange,
         max={maxDate}
         onChange={(e) => onDateChange(e.target.value)}
         className="rounded-full px-3 text-sm font-medium"
-        style={inputStyle}
-      />
+        style={inputStyle} />
+      
       <input
         type="time"
         value={timeValue}
         max={maxTime}
         onChange={(e) => onTimeChange(e.target.value)}
         className="rounded-full px-3 text-sm font-medium"
-        style={inputStyle}
-      />
-    </div>
-  );
+        style={inputStyle} />
+      
+    </div>);
+
 }
 
 // ── Collapsible note field ─────────────────────────────────────────────────
@@ -351,11 +351,11 @@ export function CollapsibleNote({ value, onChange, placeholder = "Note" }) {
         type="button"
         onClick={() => setOpen(true)}
         className="text-sm font-medium"
-        style={{ color: COPPER }}
-      >
+        style={{ color: COPPER }}>
+        
         Add note (optional)
-      </button>
-    );
+      </button>);
+
   }
   return (
     <textarea
@@ -364,9 +364,9 @@ export function CollapsibleNote({ value, onChange, placeholder = "Note" }) {
       placeholder={placeholder}
       rows={2}
       className="w-full rounded-2xl px-4 pt-3 text-base font-medium"
-      style={{ background: CANVAS, color: INK, border: "none", outline: "none", resize: "none", minHeight: "56px" }}
-    />
-  );
+      style={{ background: CANVAS, color: INK, border: "none", outline: "none", resize: "none", minHeight: "56px" }} />);
+
+
 }
 
 // ── Large −/+ numeric stepper ──────────────────────────────────────────────
@@ -384,16 +384,16 @@ export function StepperField({ label, value, onChange, unit, step = 1, presets, 
       {label && <FieldLabel>{label}</FieldLabel>}
       <div
         className="flex items-center justify-between"
-        style={{ height: "56px", marginTop: label ? "10px" : 0 }}
-      >
+        style={{ height: "56px", marginTop: label ? "10px" : 0 }}>
+        
         <button
           type="button"
           onClick={() => set(current - step)}
           disabled={current <= min}
           className="flex h-12 w-12 items-center justify-center rounded-full active:scale-95 disabled:opacity-30"
           style={{ background: CANVAS, color: INK }}
-          aria-label={`Decrease ${label || "value"} by ${step}`}
-        >
+          aria-label={`Decrease ${label || "value"} by ${step}`}>
+          
           <Minus className="h-5 w-5" />
         </button>
 
@@ -409,41 +409,41 @@ export function StepperField({ label, value, onChange, unit, step = 1, presets, 
           onClick={() => set(current + step)}
           className="flex h-12 w-12 items-center justify-center rounded-full active:scale-95"
           style={{ background: CANVAS, color: INK }}
-          aria-label={`Increase ${label || "value"} by ${step}`}
-        >
+          aria-label={`Increase ${label || "value"} by ${step}`}>
+          
           <Plus className="h-5 w-5" />
         </button>
       </div>
 
-      {presets && presets.length > 0 && (
-        <div className="no-scrollbar mt-4" style={{ overflowX: "auto", overflowY: "hidden", scrollbarWidth: "none" }}>
+      {presets && presets.length > 0 &&
+      <div className="no-scrollbar mt-4" style={{ overflowX: "auto", overflowY: "hidden", scrollbarWidth: "none" }}>
           <div className="flex justify-center gap-2">
             {presets.map((preset) => {
-              const isSelected = current === preset;
-              return (
-                <button
-                  key={preset}
-                  type="button"
-                  onClick={() => set(preset)}
-                  className="flex shrink-0 items-center justify-center rounded-full text-sm font-semibold"
-                  style={{
-                    height: 44,
-                    minWidth: 56,
-                    transition: "background 200ms ease-out, color 200ms ease-out",
-                    background: isSelected ? COPPER : CANVAS,
-                    color: isSelected ? CREAM : TAUPE,
-                  }}
-                  aria-pressed={isSelected}
-                >
+            const isSelected = current === preset;
+            return (
+              <button
+                key={preset}
+                type="button"
+                onClick={() => set(preset)}
+                className="flex shrink-0 items-center justify-center rounded-full text-sm font-semibold"
+                style={{
+                  height: 44,
+                  minWidth: 56,
+                  transition: "background 200ms ease-out, color 200ms ease-out",
+                  background: isSelected ? COPPER : CANVAS,
+                  color: isSelected ? CREAM : TAUPE
+                }}
+                aria-pressed={isSelected}>
+                
                   {preset}
-                </button>
-              );
-            })}
+                </button>);
+
+          })}
           </div>
         </div>
-      )}
-    </div>
-  );
+      }
+    </div>);
+
 }
 
 // ── Segmented control — for type choices (insulin types, etc.) ─────────────
@@ -457,8 +457,8 @@ export function SegmentedControl({ label, value, onChange, options, ariaLabel })
         <p className="mt-2 text-xs" style={{ color: FAINT }}>
           Add types in Settings to log an entry.
         </p>
-      </div>
-    );
+      </div>);
+
   }
 
   return (
@@ -471,9 +471,9 @@ export function SegmentedControl({ label, value, onChange, options, ariaLabel })
           overflowX: "auto",
           overflowY: "hidden",
           scrollbarWidth: "none",
-          overscrollBehaviorX: "contain",
-        }}
-      >
+          overscrollBehaviorX: "contain"
+        }}>
+        
         <div className="flex gap-2">
           {options.map((option) => {
             const isSelected = option.value === value;
@@ -488,30 +488,30 @@ export function SegmentedControl({ label, value, onChange, options, ariaLabel })
                   padding: "0 16px",
                   transition: "background 200ms ease-out, color 200ms ease-out",
                   background: isSelected ? COPPER : CANVAS,
-                  color: isSelected ? CREAM : TAUPE,
+                  color: isSelected ? CREAM : TAUPE
                 }}
                 aria-pressed={isSelected}
-                aria-label={ariaLabel ? `${ariaLabel}: ${option.label}` : option.label}
-              >
-                {option.color && (
-                  <span
-                    style={{
-                      width: 12,
-                      height: 12,
-                      borderRadius: "9999px",
-                      background: option.color,
-                      boxShadow: isSelected ? "0 0 0 2px rgba(247,241,232,0.85)" : "0 0 0 1px rgba(63,56,48,0.10)",
-                    }}
-                  />
-                )}
+                aria-label={ariaLabel ? `${ariaLabel}: ${option.label}` : option.label}>
+                
+                {option.color &&
+                <span
+                  style={{
+                    width: 12,
+                    height: 12,
+                    borderRadius: "9999px",
+                    background: option.color,
+                    boxShadow: isSelected ? "0 0 0 2px rgba(247,241,232,0.85)" : "0 0 0 1px rgba(63,56,48,0.10)"
+                  }} />
+
+                }
                 {option.label}
-              </button>
-            );
+              </button>);
+
           })}
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 // ── Time field with a "Now" shortcut chip ──────────────────────────────────
@@ -532,7 +532,7 @@ export function TimeField({ dateLabel = "Date", timeLabel = "Time", dateValue, t
     background: CANVAS,
     color: INK,
     border: "none",
-    outline: "none",
+    outline: "none"
   };
 
   return (
@@ -546,8 +546,8 @@ export function TimeField({ dateLabel = "Date", timeLabel = "Time", dateValue, t
             max={maxDate}
             onChange={(e) => onDateChange(e.target.value)}
             className={`${inputClass} mt-2`}
-            style={inputStyle}
-          />
+            style={inputStyle} />
+          
         </div>
         <div className="flex-1">
           <FieldLabel>{timeLabel}</FieldLabel>
@@ -557,20 +557,20 @@ export function TimeField({ dateLabel = "Date", timeLabel = "Time", dateValue, t
             max={maxTime}
             onChange={(e) => onTimeChange(e.target.value)}
             className={`${inputClass} mt-2`}
-            style={inputStyle}
-          />
+            style={inputStyle} />
+          
         </div>
       </div>
       <button
         type="button"
         onClick={setNow}
         className="mt-3 flex items-center gap-1.5 rounded-full px-4 text-xs font-semibold"
-        style={{ height: "36px", background: "rgba(156,82,40,0.12)", color: COPPER }}
-      >
+        style={{ height: "36px", background: "rgba(156,82,40,0.12)", color: COPPER }}>
+        
         Now
       </button>
-    </div>
-  );
+    </div>);
+
 }
 
 // ── Text field — optional notes / name ─────────────────────────────────────
@@ -579,42 +579,42 @@ export function TextField({ label, value, onChange, placeholder, multiline = fal
   return (
     <div>
       {label && <FieldLabel>{label}</FieldLabel>}
-      {multiline ? (
-        <textarea
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          rows={3}
-          className="w-full rounded-2xl px-4 pt-3.5 text-base font-medium"
-          style={{
-            marginTop: label ? "10px" : 0,
-            background: CANVAS,
-            color: INK,
-            border: "none",
-            outline: "none",
-            resize: "none",
-            minHeight: "56px",
-          }}
-        />
-      ) : (
-        <input
-          type="text"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          className="w-full rounded-2xl px-4 text-base font-medium"
-          style={{
-            height: "56px",
-            marginTop: label ? "10px" : 0,
-            background: CANVAS,
-            color: INK,
-            border: "none",
-            outline: "none",
-          }}
-        />
-      )}
-    </div>
-  );
+      {multiline ?
+      <textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        rows={3}
+        className="w-full rounded-2xl px-4 pt-3.5 text-base font-medium"
+        style={{
+          marginTop: label ? "10px" : 0,
+          background: CANVAS,
+          color: INK,
+          border: "none",
+          outline: "none",
+          resize: "none",
+          minHeight: "56px"
+        }} /> :
+
+
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full rounded-2xl px-4 text-base font-medium"
+        style={{
+          height: "56px",
+          marginTop: label ? "10px" : 0,
+          background: CANVAS,
+          color: INK,
+          border: "none",
+          outline: "none"
+        }} />
+
+      }
+    </div>);
+
 }
 
 // ── Rescue-carbs toggle — for the meal form ───────────────────────────────
@@ -625,8 +625,8 @@ export function RescueCarbToggle({ checked, onChange }) {
       onClick={() => onChange(!checked)}
       className="flex w-full items-center justify-between rounded-2xl px-4"
       style={{ height: "56px", background: CANVAS }}
-      aria-pressed={checked}
-    >
+      aria-pressed={checked}>
+      
       <span className="text-sm font-medium" style={{ color: INK }}>
         Rescue carbs
       </span>
@@ -636,9 +636,9 @@ export function RescueCarbToggle({ checked, onChange }) {
           width: "48px",
           height: "28px",
           background: checked ? COPPER : "#d8cec2",
-          transition: "background 200ms ease-out",
-        }}
-      >
+          transition: "background 200ms ease-out"
+        }}>
+        
         <span
           style={{
             width: "22px",
@@ -646,12 +646,12 @@ export function RescueCarbToggle({ checked, onChange }) {
             borderRadius: "9999px",
             background: CREAM,
             transform: checked ? "translateX(11px)" : "translateX(-11px)",
-            transition: "transform 200ms ease-out",
-          }}
-        />
+            transition: "transform 200ms ease-out"
+          }} />
+        
       </span>
-    </button>
-  );
+    </button>);
+
 }
 
 export { FieldLabel, INK, COPPER, SAGE, TAUPE, FAINT, CREAM, CANVAS, HAIRLINE };
