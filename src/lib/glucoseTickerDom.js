@@ -7,7 +7,8 @@ export default function updateGlucoseTicker(root, value, animate = false) {
   if (!slide) root.getAnimations({ subtree: true }).forEach(animation => animation.cancel());
   if (text === previous) return;
   root.dataset.value = text;
-  const rising = Number(text) > Number(previous);
+  // One coin flip per update, shared by every digit and its parked glyph.
+  const rollUp = animate && Math.random() < 0.5;
   while (root.children.length > text.length) root.lastElementChild.remove();
   [...text].forEach((digit, index) => {
     let slot = root.children[index];
@@ -26,7 +27,7 @@ export default function updateGlucoseTicker(root, value, animate = false) {
     slot.style.width = /\d/.test(digit) ? '1ch' : '0.4ch';
     if (rail.firstElementChild.textContent === digit) return;
     const running = rail.getAnimations();
-    let outgoing = previous[index] ?? '', start = `${rising ? 100 : -100}%`;
+    let outgoing = previous[index] ?? '', start = `${rollUp ? 100 : -100}%`;
     if (slide && running.length) {
       // Capture the visible glyph BEFORE cancelling. Rebase that glyph onto
       // the outgoing slot without moving it, even on a direction reversal.
@@ -35,7 +36,7 @@ export default function updateGlucoseTicker(root, value, animate = false) {
       const outgoingY = y + (rail.lastElementChild.style.top === '-100%' ? -height : height);
       const keepOutgoing = Math.abs(outgoingY) < Math.abs(y);
       outgoing = (keepOutgoing ? rail.lastElementChild : rail.firstElementChild).textContent;
-      start = `${(keepOutgoing ? outgoingY : y) + (rising ? height : -height)}px`;
+      start = `${(keepOutgoing ? outgoingY : y) + (rollUp ? height : -height)}px`;
     }
     running.forEach(animation => {
       animation.onfinish = animation.oncancel = null;
@@ -44,7 +45,7 @@ export default function updateGlucoseTicker(root, value, animate = false) {
     rail.style.willChange = 'auto';
     rail.firstElementChild.textContent = digit;
     rail.lastElementChild.textContent = outgoing;
-    rail.lastElementChild.style.top = rising ? '-100%' : '100%';
+    rail.lastElementChild.style.top = rollUp ? '-100%' : '100%';
     if (slide && previous[index] !== digit) {
       rail.style.willChange = 'transform';
       const animation = rail.animate([{ transform: `translateY(${start})` }, { transform: 'translateY(0)' }],

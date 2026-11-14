@@ -16,7 +16,7 @@ const GlucoseTicker = forwardRef(function GlucoseTicker({ className = "", initia
     stopAnimation: () => rootRef.current?.getAnimations({ subtree: true }).forEach(animation => animation.cancel()),
   }), []);
   return <span ref={rootRef} className={className}
-    style={{ display: "inline-flex", fontVariantNumeric: "tabular-nums", ...style }}
+    style={{ display: "inline-flex", minWidth: "3ch", justifyContent: "flex-start", fontVariantNumeric: "tabular-nums", ...style }}
     aria-hidden={ariaHidden ? "true" : undefined} />;
 });
 
