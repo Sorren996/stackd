@@ -8,56 +8,56 @@ import { Link } from "react-router-dom";
  * Pass `to` for a navigable row (renders chevron), or `onClick` for an action.
  */
 export default function LedgerRow({ label, value, note, timestamp, to, onClick, danger = false, actionLabel }) {
-  const content = (
-    <div className="flex items-baseline gap-2 py-2.5">
-      {timestamp && (
-        <span className="shrink-0 text-xs" style={{ color: "#746959" }}>
+  const content =
+  <div className="flex items-baseline gap-2 py-2.5">
+      {timestamp &&
+    <span className="shrink-0 text-xs" style={{ color: "#746959" }}>
           {timestamp}
         </span>
-      )}
+    }
       <span className="shrink-0">
         <span className="block text-sm font-medium" style={{ color: danger ? "#c97060" : "#3f3830" }}>
           {label}
         </span>
-        {note && (
-          <span className="mt-0.5 block text-[11px]" style={{ color: danger ? "#c97060" : "#746959" }}>
+        {note &&
+      <span className="mt-0.5 block text-[11px]" style={{ color: danger ? "#c97060" : "#746959" }}>
             {note}
           </span>
-        )}
+      }
       </span>
       <span className="flex-1 overflow-hidden">
         <span className="dotted-leader block" />
       </span>
-      {value && (
-        <span className="shrink-0 text-sm" style={{ color: danger ? "#c97060" : "#6b6153" }}>
+      {value &&
+    <span className="shrink-0 text-sm hidden" style={{ color: danger ? "#c97060" : "#6b6153" }}>
           {value}
         </span>
-      )}
-      {actionLabel ? (
-        <span className="shrink-0 text-xs font-semibold uppercase tracking-wider" style={{ color: danger ? "#c97060" : "#746959" }}>
+    }
+      {actionLabel ?
+    <span className="shrink-0 text-xs font-semibold uppercase tracking-wider" style={{ color: danger ? "#c97060" : "#746959" }}>
           {actionLabel}
-        </span>
-      ) : (to || onClick) && (
-        <span className="shrink-0 text-sm" style={{ color: "#746959" }}>
+        </span> :
+    (to || onClick) &&
+    <span className="shrink-0 text-sm" style={{ color: "#746959" }}>
           ›
         </span>
-      )}
-    </div>
-  );
+    }
+    </div>;
+
 
   if (to) {
     return (
       <Link to={to} className="block transition hover:opacity-70 active:opacity-50">
         {content}
-      </Link>
-    );
+      </Link>);
+
   }
   if (onClick) {
     return (
       <button type="button" onClick={onClick} className="block w-full text-left transition hover:opacity-70 active:opacity-50">
         {content}
-      </button>
-    );
+      </button>);
+
   }
   return content;
 }
