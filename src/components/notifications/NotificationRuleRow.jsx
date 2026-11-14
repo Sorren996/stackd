@@ -1,6 +1,7 @@
 import { memo, useId } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
+import { switchThumbClass, switchTrackClass } from '@/lib/notifications/notificationFieldTheme';
 import { alertSummary, alertTimingSummary } from '@/lib/notifications/notificationPresentation';
 function NotificationRuleRow({ rule, draft, thresholds, disabled, pending, onToggle, onEdit }) {
   const id = useId();
@@ -17,7 +18,7 @@ function NotificationRuleRow({ rule, draft, thresholds, disabled, pending, onTog
       {pending && <span role="status" className="text-xs text-ink-muted">Saving…</span>}
     </div>
     <div className="flex h-11 w-11 shrink-0 items-center justify-center">
-      <Switch aria-labelledby={id} aria-describedby={`${id}-summary`} aria-busy={pending} checked={draft.categories?.[rule.key] === true} disabled={disabled || pending || draft.master_enabled !== true} onCheckedChange={onToggle} thumbClassName="bg-paper shadow-none duration-100" className="relative shadow-none duration-100 after:absolute after:-inset-y-3 after:-inset-x-1 data-[state=checked]:bg-field data-[state=unchecked]:bg-ink-muted" />
+      <Switch aria-labelledby={id} aria-describedby={`${id}-summary`} aria-busy={pending} checked={draft.categories?.[rule.key] === true} disabled={disabled || pending || draft.master_enabled !== true} onCheckedChange={onToggle} thumbClassName={switchThumbClass} className={switchTrackClass} />
     </div>
   </div>;
 }

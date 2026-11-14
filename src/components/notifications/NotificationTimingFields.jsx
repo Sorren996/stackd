@@ -1,5 +1,6 @@
 import ChoiceRow from '@/components/notifications/ChoiceRow';
 import { ABOVE_DURATION_OPTIONS } from '@/lib/notifications/notificationCopy';
+import { fieldStyle, focusRing } from '@/lib/notifications/notificationFieldTheme';
 export default function NotificationTimingFields({ rule, draft, disabled, onChange }) {
   const key = rule.key;
   // Every low rule is decided per new reading: no delay, no reminder interval.
@@ -13,7 +14,7 @@ export default function NotificationTimingFields({ rule, draft, disabled, onChan
       <p className="pb-3 text-xs leading-relaxed text-ink-muted">{key === 'custom_high' ? 'With a wait selected, readings must stay at or above your chosen level for that time.' : 'Readings must stay above your comfort zone for the time you choose.'} Gaps restart the wait.</p>
     </>}
     <label className="block py-2 text-xs text-ink-muted">Remind me again
-      <select className="mt-2 min-h-11 w-full min-w-0 rounded-2xl border-0 bg-background px-3 text-base text-ink" value={draft.repeat_minutes?.[key] ?? ''} disabled={disabled} onChange={event => onChange({ repeat_minutes: { [key]: event.target.value ? Number(event.target.value) : null } })}>
+      <select className={`mt-2 min-h-11 w-full min-w-0 px-3 text-base ${focusRing}`} style={fieldStyle} value={draft.repeat_minutes?.[key] ?? ''} disabled={disabled} onChange={event => onChange({ repeat_minutes: { [key]: event.target.value ? Number(event.target.value) : null } })}>
         <option value="">No repeats</option>{[15, 30, 60, 120].map(minutes => <option key={minutes} value={minutes}>Every {minutes} minutes</option>)}
       </select>
     </label>

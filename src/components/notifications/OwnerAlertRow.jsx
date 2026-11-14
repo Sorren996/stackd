@@ -1,6 +1,7 @@
 import { memo, useId } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
+import { switchThumbClass, switchTrackClass } from '@/lib/notifications/notificationFieldTheme';
 
 /**
  * One of the six alert rows: a name, one plain sentence saying what it does,
@@ -35,8 +36,8 @@ function OwnerAlertRow({ row, sentence, checked, fixed, disabled, pending, onTog
         checked={checked}
         disabled={disabled || pending || fixed}
         onCheckedChange={onToggle}
-        thumbClassName="bg-paper shadow-none duration-100"
-        className="relative shadow-none duration-100 after:absolute after:-inset-y-3 after:-inset-x-1 data-[state=checked]:bg-field data-[state=unchecked]:bg-ink-muted"
+        thumbClassName={switchThumbClass}
+        className={switchTrackClass}
       />
     </div>
   </div>;

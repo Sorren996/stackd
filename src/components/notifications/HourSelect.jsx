@@ -1,3 +1,5 @@
+import { fieldStyle, focusRing, mutedStyle } from '@/lib/notifications/notificationFieldTheme';
+
 const HOUR_OPTIONS = Array.from({ length: 24 }, (_, hour) => hour);
 
 /** 12-hour clock label with minutes, e.g. 10:00 PM. */
@@ -11,11 +13,11 @@ export function hourLabel(hour) {
 
 export { HOUR_OPTIONS };
 
-/** One hour picker on the app's own cream field. */
+/** One hour picker on the app's own cream field, at the page's field styling. */
 export default function HourSelect({ label, value, onChange, timeZone, disabled, ariaLabel }) {
   return (
     <label className="flex min-w-0 flex-1 flex-col gap-1">
-      <span className="text-xs" style={{ color: "#746959" }}>
+      <span className="text-xs" style={mutedStyle}>
         {label}
       </span>
       <select
@@ -23,8 +25,8 @@ export default function HourSelect({ label, value, onChange, timeZone, disabled,
         value={value == null ? "" : String(value)}
         onChange={(event) => onChange(Number(event.target.value))}
         aria-label={`${ariaLabel || label} (${timeZone})`}
-        className="min-h-11 w-full min-w-0 rounded-lg px-2 text-base"
-        style={{ background: "#fdf9f2", border: "1px solid #eadccf", color: "#3f3830" }}
+        className={`min-h-11 w-full min-w-0 px-3 text-base ${focusRing}`}
+        style={fieldStyle}
       >
         {HOUR_OPTIONS.map((hour) => (
           <option key={hour} value={hour}>

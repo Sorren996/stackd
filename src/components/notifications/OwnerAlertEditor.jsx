@@ -3,6 +3,7 @@ import LogSheetShell from '@/components/forms/LogSheetShell';
 import ChoiceRow from '@/components/notifications/ChoiceRow';
 import ToggleRow from '@/components/notifications/ToggleRow';
 import NotificationLevelField from '@/components/notifications/NotificationLevelField';
+import { focusRing, mutedStyle, primaryStyle } from '@/lib/notifications/notificationFieldTheme';
 import { mergeNotificationPatch } from '@/lib/notifications/notificationPresentation';
 import {
   HIGH_MAX_MGDL,
@@ -58,7 +59,7 @@ export default function OwnerAlertEditor({ row, draft, units, disabled, onSave, 
       title={row.label}
       footer={
         <div className="flex justify-end">
-          <button form={formId} type="submit" disabled={disabled || pending} className="min-h-11 rounded-full bg-brand px-6 py-3 text-sm font-semibold text-brand-ink active:opacity-80 disabled:opacity-60">
+          <button form={formId} type="submit" disabled={disabled || pending} className={`min-h-11 rounded-full px-6 py-3 text-sm font-semibold active:opacity-80 disabled:opacity-60 ${focusRing}`} style={primaryStyle}>
             {pending ? 'Saving…' : 'Save'}
           </button>
         </div>
@@ -76,7 +77,7 @@ export default function OwnerAlertEditor({ row, draft, units, disabled, onSave, 
               disabled={disabled || pending}
               onChange={level => change({ low_mgdl: level })}
             />
-            <p className="text-xs leading-relaxed text-ink-muted">
+            <p className="text-xs leading-relaxed" style={mutedStyle}>
               Every new reading below this level notifies you, with no wait and no reminder interval.
             </p>
           </>
@@ -100,7 +101,7 @@ export default function OwnerAlertEditor({ row, draft, units, disabled, onSave, 
               disabled={disabled || pending}
               onChange={on => change({ high_sustained_minutes: on ? 15 : 0 })}
             />
-            <p className="text-xs leading-relaxed text-ink-muted">
+            <p className="text-xs leading-relaxed" style={mutedStyle}>
               One notice per excursion. It speaks again once you have come back down and gone high again.
             </p>
           </>
@@ -147,7 +148,7 @@ export default function OwnerAlertEditor({ row, draft, units, disabled, onSave, 
               disabled={disabled || pending}
               onChange={minutes => change({ missing_delay_minutes: minutes })}
             />
-            <p className="text-xs leading-relaxed text-ink-muted">
+            <p className="text-xs leading-relaxed" style={mutedStyle}>
               While readings are still missing it reminds you every {MISSING_REPEAT_MINUTES} minutes, and stops as soon as readings are arriving again.
             </p>
           </>
