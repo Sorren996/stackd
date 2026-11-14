@@ -1490,6 +1490,12 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
                     height={GLUCOSE_CHART_HEIGHT}
                     data={chartData}
                     margin={{ top: GLUCOSE_MARGIN_TOP, right: 0, left: -20, bottom: 0 }} className="opacity-100">
+              {/* The glucose plot shares the insulin plot's time scale. It is
+                  declared here but hidden: a vertical reference line or band is
+                  measured against an x-axis, and without one recharts cannot
+                  place the "now" line or the future wash at all. */}
+              <XAxis dataKey="time" type="number" domain={[domainStart, domainEnd]} hide />
+
               {filters.glucose &&
                     <ReferenceArea
                       yAxisId="glucose"
