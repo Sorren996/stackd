@@ -339,39 +339,34 @@ test("an unusable timezone never silently suppresses a notification", () => {
 
 // ── Validation of saved settings ──────────────────────────────────────────
 
-test("a sustained-high duration must come from the offered choices", () => {
-  const missing = sanitizePersonalPreferences({ master_enabled: true, categories: { above_range: true } }, null);
-  assert.equal(missing.error, "above_range_minutes_required");
+test("the High row's optional sustained time is only ever the two offered choices", () => {
+  // Default: the first reading at or above the level notifies immediately.
+  const immediate = sanitizePersonalPreferences({ categories: { high: true } }, null);
+  assert.equal(immediate.error, null);
+  assert.equal(immediate.value.high_sustained_minutes, 0);
 
-  const bad = sanitizePersonalPreferences(
-    { master_enabled: true, categories: { above_range: true }, above_range_minutes: 45 },
-    null
-  );
-  assert.equal(bad.error, "invalid_above_range_minutes");
+  const bad = sanitizePersonalPreferences({ high_sustained_minutes: 45 }, null);
+  assert.equal(bad.error, "invalid_high_sustained_minutes");
 
-  const good = sanitizePersonalPreferences(
-    { master_enabled: true, categories: { above_range: true }, above_range_minutes: ABOVE_RANGE_DURATION_CHOICES[1] },
-    null
-  );
+  const good = sanitizePersonalPreferences({ high_sustained_minutes: 15 }, null);
   assert.equal(good.error, null);
-  assert.equal(good.value.above_range_minutes, 30);
+  assert.equal(good.value.high_sustained_minutes, 15);
+  // The engine reads the same fifteen minutes through its legacy mirror.
+  assert.equal(good.value.custom_high_minutes, 15);
 });
 
-test("a missing-reading delay must be chosen explicitly, and above the sync grace", () => {
-  const none = sanitizePersonalPreferences({ master_enabled: true, categories: { missing_readings: true } }, null);
-  assert.equal(none.error, "missing_delay_minutes_required");
+test("Sensor problems keeps its twenty minute delay unless another offered delay is chosen", () => {
+  const defaults = sanitizePersonalPreferences({ categories: { sensor_problems: true } }, null);
+  assert.equal(defaults.error, null);
+  assert.equal(defaults.value.missing_delay_minutes, 20);
+  assert.equal(defaults.value.repeat_minutes.missing_readings, 15);
 
-  const tooShort = sanitizePersonalPreferences(
-    { master_enabled: true, categories: { missing_readings: true }, missing_delay_minutes: 5 },
-    null
-  );
+  const tooShort = sanitizePersonalPreferences({ missing_delay_minutes: 5 }, null);
   assert.equal(tooShort.error, "invalid_missing_delay_minutes");
 
-  const good = sanitizePersonalPreferences(
-    { master_enabled: true, categories: { missing_readings: true }, missing_delay_minutes: MISSING_DELAY_CHOICES[2] },
-    null
-  );
+  const good = sanitizePersonalPreferences({ missing_delay_minutes: MISSING_DELAY_CHOICES[2] }, null);
   assert.equal(good.error, null);
+  assert.equal(good.value.missing_delay_minutes, 30);
 });
 
 test("quiet hours need a window and a real IANA zone", () => {
@@ -389,19 +384,24 @@ test("quiet hours need a window and a real IANA zone", () => {
   );
   assert.equal(good.error, null);
   assert.equal(good.value.quiet_start_hour, 21);
-  assert.equal(good.value.urgent_during_quiet, false, "urgent during quiet is separate and off by default");
+  assert.equal(good.value.urgent_during_quiet, true, "urgent low is always allowed through quiet hours");
 });
 
-test("everything starts off", () => {
+test("a new account starts protected, with the every-reading stream off", () => {
   const { value } = sanitizePersonalPreferences({}, null);
-  assert.equal(value.master_enabled, false);
-  assert.deepEqual(value.categories, {
-    custom_low: false, custom_high: false, falling_fast: false, rising_fast: false,
-    urgent_low: false, low_glucose: false,
-    below_range: false,
-    above_range: false,
-    missing_readings: false,
-  });
+  assert.equal(value.model_version, 2);
+  assert.equal(value.master_enabled, true);
+  assert.equal(value.categories.urgent_low, true);
+  assert.equal(value.categories.low, true);
+  assert.equal(value.categories.high, true);
+  assert.equal(value.categories.changing_fast, true);
+  assert.equal(value.categories.sensor_problems, true);
+  assert.equal(value.low_mgdl, 70);
+  assert.equal(value.high_mgdl, 180);
+  assert.equal(value.fast_rate, 2);
+  assert.equal(value.fast_direction, "both");
+  assert.equal(value.high_sustained_minutes, 0);
+  assert.equal(value.all_readings_enabled, false);
   assert.equal(value.show_health_details, false);
 });
 

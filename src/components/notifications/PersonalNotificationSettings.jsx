@@ -1,10 +1,16 @@
 import SectionCard from '@/components/editorial/SectionCard';
 import ToggleRow from '@/components/notifications/ToggleRow';
-import NotificationRuleList from '@/components/notifications/NotificationRuleList';
+import OwnerAlertList from '@/components/notifications/OwnerAlertList';
 import NotificationThresholdNote from '@/components/notifications/NotificationThresholdNote';
 import NotificationPrivacyControls from '@/components/notifications/NotificationPrivacyControls';
 import AllReadingsSettings from '@/components/notifications/AllReadingsSettings';
 import useNotificationDraft from '@/hooks/useNotificationDraft';
+
+/**
+ * The owner's own alerts: one switch at the top, then the six rows — urgent
+ * low, Low, High, Changing fast, Sensor problems and the every-reading stream —
+ * then preview privacy and quiet hours.
+ */
 export default function PersonalNotificationSettings({ personal, thresholds, onSave }) {
   const { draft, error, pendingKeys, apply } = useNotificationDraft(personal, onSave);
   const disabled = false;
@@ -15,10 +21,10 @@ export default function PersonalNotificationSettings({ personal, thresholds, onS
       {!draft.master_enabled && <p className="pt-2 text-xs text-ink-muted">Alerts are paused. Your choices below are kept.</p>}
     </SectionCard>
     {error && <p role="alert" className="rounded-xl bg-paper p-3 text-sm text-red-text">{error}</p>}
-    <NotificationRuleList draft={draft} thresholds={thresholds} pendingKeys={pendingKeys} disabled={disabled} onChange={apply} />
+    <OwnerAlertList draft={draft} thresholds={thresholds} pendingKeys={pendingKeys} disabled={disabled} onChange={apply} />
     {/* Owner only: a follower account never reaches this screen, and the
         server refuses to store the stream for a relationship either. */}
     <AllReadingsSettings draft={draft} pendingKeys={pendingKeys} disabled={disabled} onChange={apply} />
-    <SectionCard><h2 className="mb-3 font-serif-italic text-xl text-ink">Privacy &amp; quiet hours</h2><NotificationPrivacyControls draft={draft} pendingKeys={pendingKeys} disabled={disabled} onChange={apply} /></SectionCard>
+    <SectionCard><h2 className="mb-3 font-serif-italic text-xl text-ink">Privacy &amp; quiet hours</h2><NotificationPrivacyControls draft={draft} pendingKeys={pendingKeys} disabled={disabled} urgentAlwaysOn onChange={apply} /></SectionCard>
   </div>;
 }

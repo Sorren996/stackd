@@ -7,6 +7,7 @@
 
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.54";
 import { categoryActivation } from '../../shared/notificationOptions.ts';
+import { ownerPreferencePayload } from '../../shared/notificationModel.ts';
 import { ok, fail, asArray, currentUser, readBody, audit } from "../../shared/sharingAccess.ts";
 import {
   sanitizePersonalPreferences,
@@ -29,7 +30,17 @@ export default async function (req: Request): Promise<Response> {
     );
     const existing = existingRows[0] || null;
 
-    const { value, error } = sanitizePersonalPreferences(body.preferences, existing as any);
+    // The person's own range lets an older row's below/above-range choices be
+    // read as the Low and High levels they meant before anything is saved.
+    const settingsRows = asArray(
+      await sr.entities.UserSettings.filter({ created_by_id: user.id }, { sort: "-updated_date", limit: 1 })
+    );
+    const settings = settingsRows[0] || null;
+
+    const { value, error } = sanitizePersonalPreferences(body.preferences, existing as any, {
+      targetLow: settings?.target_range_low ?? null,
+      targetHigh: settings?.target_range_high ?? null,
+    });
     if (error) return fail(error, 400);
 
     const stored = await savePreferences(sr, existing, user.id, value);
@@ -56,20 +67,13 @@ export default async function (req: Request): Promise<Response> {
 }
 
 async function savePreferences(sr: any, existing: any, userId: string, value: PersonalPreferences) {
+  // One row, written in both vocabularies: the six rows this screen shows and
+  // the per-category mirrors the decision engine reads.
   const payload = {
-    ...value,
+    ...ownerPreferencePayload(value),
     category_activation: categoryActivation(existing, value),
     user_id: userId,
-    master_enabled: value.master_enabled,
-    categories: value.categories,
-    above_range_minutes: value.above_range_minutes,
-    missing_delay_minutes: value.missing_delay_minutes,
-    show_health_details: value.show_health_details,
-    quiet_hours_enabled: value.quiet_hours_enabled,
-    quiet_start_hour: value.quiet_start_hour,
-    quiet_end_hour: value.quiet_end_hour,
-    quiet_timezone: value.quiet_timezone,
-    urgent_during_quiet: value.urgent_during_quiet,
+    model_version: value.model_version,
   };
   if (existing?.id) return sr.entities.NotificationPreference.update(existing.id, payload);
   return sr.entities.NotificationPreference.create(payload);

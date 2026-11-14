@@ -22,19 +22,54 @@ finally { if (originalWindow === undefined) delete globalThis.window; else globa
 const { Personal, Follower, Fields } = compiled.exports;
 const preferences = { master_enabled: true, categories: {}, repeat_minutes: {} };
 const thresholds = { target_low: 70, target_high: 180, units: 'mg/dL' };
+// The owner's row exactly as the server returns it: six-row values + mirrors.
+const ownerPreferences = {
+  model_version: 2,
+  master_enabled: true,
+  categories: { urgent_low: true, low: true, high: true, changing_fast: true, sensor_problems: true },
+  low_mgdl: 70,
+  high_mgdl: 180,
+  high_sustained_minutes: 0,
+  fast_direction: 'both',
+  fast_rate: 2,
+  fast_level_mgdl: null,
+  missing_delay_minutes: 20,
+  repeat_minutes: { missing_readings: 15 },
+};
 
-test('personal UI uses fixed low and urgent switches without inline editors or frequency controls', () => {
-  const html = renderToStaticMarkup(React.createElement(Personal, { personal: preferences, thresholds, saving: false, onSave() {} }));
-  for (const label of ['Custom low', 'Low glucose', 'Custom high', 'Above comfort zone', 'Falling fast', 'Rising fast', 'Urgent low', 'Missing readings']) assert.match(html, new RegExp(label));
-  assert.equal((html.match(/<details/g) || []).length, 0);
-  assert.match(html, /These settings change your alerts, not your comfort zone/);
-  for (const label of ['Glucose levels', 'Changing quickly', 'Connection', 'Every new reading below 70 mg\/dL', 'Above 180 mg\/dL', 'Every new reading below 55 mg\/dL']) assert.ok(html.includes(label));
-  assert.equal((html.match(/role="switch"/g) || []).length, 11);
-  assert.equal((html.match(/aria-haspopup="dialog"/g) || []).length, 6);
-  assert.doesNotMatch(html, /Edit low glucose|Edit urgent low|Below comfort zone|>Edit</);
-  assert.doesNotMatch(html, /≥|≤|not set mg\/dL|read-only|First-alert delay|Repeat within this episode/);
+test('the personal screen shows six rows in order, one switch each, with the level behind the row', () => {
+  const html = renderToStaticMarkup(React.createElement(Personal, { personal: ownerPreferences, thresholds, saving: false, onSave() {} }));
+
+  // The order the owner set: urgent low, Low, High, Changing fast, Sensor
+  // problems, then the every-reading stream.
+  let at = -1;
+  for (const label of ['Urgent low', '>Low<', '>High<', 'Changing fast', 'Sensor problems', 'Receive all readings']) {
+    const next = html.indexOf(label.startsWith('>') ? label : `${label}`);
+    assert.ok(next > at, `${label} appears after the row before it`);
+    at = next;
+  }
+
+  // One plain sentence per row, with the real saved value in it.
+  assert.match(html, /Below 55 mg\/dL, every time\. Always on, and it still comes through quiet hours\./);
+  assert.match(html, /Every new reading below 70 mg\/dL\./);
+  assert.match(html, /The first reading at or above 180 mg\/dL, until you come back down\./);
+  assert.match(html, /Rising or falling by 2 mg\/dL a minute or faster\./);
+  assert.match(html, /No new readings for 20 minutes, then a reminder every 15 minutes\./);
+
+  // Master, the five rows and the every-reading stream; only four rows open a
+  // detail sheet, because urgent low is fixed.
+  assert.equal((html.match(/role="switch"/g) || []).length, 7);
+  assert.equal((html.match(/aria-haspopup="dialog"/g) || []).length, 4);
+  assert.doesNotMatch(html, /aria-label="Edit urgent low"/);
+  assert.match(html, /These settings change your alerts, not your target range/);
+
+  // The four absorbed choices and all comfort-zone wording are gone.
+  assert.doesNotMatch(html, /Custom low|Custom high|Low glucose|comfort zone|Below comfort|Above comfort|>Falling fast<|>Rising fast</);
+
   assert.match(html, /Show health details in previews/);
   assert.match(html, /Quiet hours/);
+  // Urgent low through quiet hours is fixed, so it is not offered as a choice.
+  assert.doesNotMatch(html, /Allow urgent low during quiet hours/);
   assert.doesNotMatch(html, /Recent notifications|Change your range settings/);
 });
 

@@ -10,7 +10,7 @@ export const OPTION_DEFAULTS = {
 // (including master re-enable) starts a new activation, on the next fresh sample.
 export function categoryActivation(existing, value, newId = () => crypto.randomUUID()) {
   const activation = { ...(existing?.category_activation || {}) };
-  for (const key of ['custom_low', 'custom_high', 'below_range', 'above_range', 'falling_fast', 'rising_fast', 'urgent_low', 'low_glucose', 'missing_readings']) {
+  for (const key of ['urgent_low', 'low', 'high', 'changing_fast', 'sensor_problems', 'custom_low', 'custom_high', 'below_range', 'above_range', 'falling_fast', 'rising_fast', 'low_glucose', 'missing_readings']) {
     if (value.master_enabled && value.categories?.[key] === true && (existing?.master_enabled !== true || existing?.categories?.[key] !== true)) activation[key] = `${new Date().toISOString()}|${newId()}`;
   }
   return activation;
@@ -22,7 +22,8 @@ export function sanitizeNotificationOptions(input = {}, existing = {}, categorie
     value[key] = key in input ? input[key] : existing[key] ?? OPTION_DEFAULTS[key];
   }
   for (const [key, min, max] of [
-    ['custom_low_mgdl', 60, 150], ['custom_high_mgdl', 100, 400],
+    // The Low row allows 55–100, so its mirror must accept that whole range.
+    ['custom_low_mgdl', 55, 150], ['custom_high_mgdl', 100, 400],
     ['falling_fast_level_mgdl', 40, 400], ['rising_fast_level_mgdl', 40, 400],
   ]) {
     const v = value[key];

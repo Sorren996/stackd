@@ -5,6 +5,10 @@
     "user_id": {
       "type": "string"
     },
+    "model_version": {
+      "type": "number",
+      "description": "2 = the six-row model (one Low level, one High level, one Changing fast row, one Sensor problems row). Absent or 1 = a row saved before that model, read by deriving the six rows from the per-category choices it holds."
+    },
     "master_enabled": {
       "type": "boolean",
       "default": false
@@ -12,41 +16,57 @@
     "categories": {
       "type": "object",
       "properties": {
-        "low_glucose": {
-          "type": "boolean",
-          "description": "Explicit fixed below-70 choice. Absent preserves an existing below_range choice only when its boundary is exactly 70; never auto-enabled."
-        },
         "urgent_low": {
           "type": "boolean",
-          "default": false
+          "description": "Fixed below 55 mg/dL. Always on in the six-row model and allowed through quiet hours; the stored value is kept for older readers."
+        },
+        "low": {
+          "type": "boolean",
+          "description": "The one Low row: every distinct new reading strictly below low_mgdl."
+        },
+        "high": {
+          "type": "boolean",
+          "description": "The one High row: the first reading at or above high_mgdl, then not again for that episode until it returns below."
+        },
+        "changing_fast": {
+          "type": "boolean",
+          "description": "The Changing fast row: a measured pace in fast_direction, with an optional level condition."
+        },
+        "sensor_problems": {
+          "type": "boolean",
+          "description": "The Sensor problems row: readings that stop arriving. Keeps the 20 minute delay and the 15 minute repeat."
+        },
+        "low_glucose": {
+          "type": "boolean",
+          "description": "Legacy mirror of the Low row at exactly 70 mg/dL. Written from the six-row values, never read as a separate choice."
         },
         "below_range": {
           "type": "boolean",
-          "default": false
+          "description": "Legacy comfort-zone low. Absorbed by the Low row and always written false."
         },
         "above_range": {
           "type": "boolean",
-          "default": false
+          "description": "Legacy comfort-zone high. Absorbed by the High row and always written false."
         },
         "missing_readings": {
           "type": "boolean",
-          "default": false
+          "description": "Legacy mirror of the Sensor problems row."
         },
         "custom_low": {
           "type": "boolean",
-          "default": false
+          "description": "Legacy mirror of the Low row at a level other than 70 mg/dL."
         },
         "custom_high": {
           "type": "boolean",
-          "default": false
+          "description": "Legacy mirror of the High row."
         },
         "falling_fast": {
           "type": "boolean",
-          "default": false
+          "description": "Legacy mirror of the Changing fast row, falling direction."
         },
         "rising_fast": {
           "type": "boolean",
-          "default": false
+          "description": "Legacy mirror of the Changing fast row, rising direction."
         }
       }
     },
@@ -54,17 +74,61 @@
       "type": "object",
       "description": "Server-generated per-category explicit opt-in markers; not accepted from request input."
     },
+    "low_mgdl": {
+      "type": "number",
+      "minimum": 55,
+      "maximum": 100,
+      "description": "The one Low level, canonical mg/dL. Notification-only; never a calculation input."
+    },
+    "high_mgdl": {
+      "type": "number",
+      "minimum": 140,
+      "maximum": 400,
+      "description": "The one High level, canonical mg/dL. Notification-only; never a calculation input."
+    },
+    "high_sustained_minutes": {
+      "type": "number",
+      "enum": [
+        0,
+        15
+      ],
+      "default": 0,
+      "description": "0 = the first reading at or above the High level notifies immediately. 15 = it has to stay at or above for fifteen minutes first."
+    },
+    "fast_direction": {
+      "type": "string",
+      "enum": [
+        "rising",
+        "falling",
+        "both"
+      ],
+      "description": "Which direction the Changing fast row watches."
+    },
+    "fast_rate": {
+      "type": "number",
+      "enum": [
+        2,
+        3
+      ],
+      "description": "The chosen pace for the Changing fast row, in mg/dL per minute."
+    },
+    "fast_level_mgdl": {
+      "type": "number",
+      "minimum": 40,
+      "maximum": 400,
+      "description": "Optional level condition for the Changing fast row. Empty means any level."
+    },
     "custom_low_mgdl": {
       "type": "number",
-      "minimum": 60,
+      "minimum": 55,
       "maximum": 150,
-      "description": "Notification-only low; canonical mg/dL, never a calculation input."
+      "description": "Legacy mirror of low_mgdl for older readers. Written from the Low row, never edited directly."
     },
     "custom_high_mgdl": {
       "type": "number",
       "minimum": 100,
       "maximum": 400,
-      "description": "Notification-only high; canonical mg/dL, never a calculation input."
+      "description": "Legacy mirror of high_mgdl for older readers. Written from the High row, never edited directly."
     },
     "custom_high_minutes": {
       "type": "number",
@@ -74,7 +138,8 @@
         30,
         60
       ],
-      "default": 0
+      "default": 0,
+      "description": "Legacy mirror of high_sustained_minutes."
     },
     "falling_fast_rate": {
       "type": "number",
@@ -102,10 +167,11 @@
     },
     "repeat_minutes": {
       "type": "object",
-      "description": "Explicit per-category repeats, 15/30/60/120 minutes; absent/null means once per episode. Fixed low and urgent low ignore legacy repeats."
+      "description": "Explicit per-category repeats, 15/30/60/120 minutes. Fixed low and urgent low ignore repeats; Sensor problems repeats every 15 minutes while readings are missing."
     },
     "above_range_minutes": {
-      "type": "number"
+      "type": "number",
+      "description": "Legacy comfort-zone timing. Always written null now."
     },
     "missing_delay_minutes": {
       "type": "number"
@@ -129,12 +195,13 @@
     },
     "urgent_during_quiet": {
       "type": "boolean",
-      "default": false
+      "default": true,
+      "description": "Urgent low is allowed through quiet hours in the six-row model, so this is always stored true."
     },
     "all_readings_enabled": {
       "type": "boolean",
       "default": false,
-      "description": "Owner only: one quiet note for each new reading. Followers can never enable this, and it is hidden for follower accounts. A reading that already produced an alert never produces a second, stream notice."
+      "description": "Owner only: one quiet note for each new reading. Followers can never enable it, and it is hidden for follower accounts. A reading that already produced an alert never produces a second, stream notice."
     },
     "all_readings_pause_enabled": {
       "type": "boolean",

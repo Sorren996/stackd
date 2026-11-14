@@ -8,6 +8,7 @@
 
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.40";
 import { writeAuditLog } from "../../shared/auditLog.ts";
+import { seedOwnerPreferences } from "../../shared/notificationModel.ts";
 
 export default async function (req: Request): Promise<Response> {
   try {
@@ -30,6 +31,21 @@ export default async function (req: Request): Promise<Response> {
 
     // Write audit log — service role bypasses the admin-only create RLS.
     const sr = base44.asServiceRole;
+
+    // New-account alert defaults are STORED here, at account creation, rather
+    // than inferred later: everything that protects the person starts on, and
+    // the every-reading stream starts off. Idempotent, so finishing onboarding
+    // twice cannot reset a choice the person has since made.
+    const seeded = await seedOwnerPreferences(sr, user);
+    if (seeded.created) {
+      await writeAuditLog(sr, {
+        action: "notifications.defaults_seeded",
+        affected_user_id: user.id,
+        affected_user_email: user.email,
+        metadata: { model_version: 2 },
+      });
+    }
+
     await writeAuditLog(sr, {
       action: "onboarding_completed",
       affected_user_id: user.id,

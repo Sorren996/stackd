@@ -15,6 +15,19 @@
 //    decided, and a sustained condition is never inferred across a gap.
 
 import { sanitizeNotificationOptions } from './notificationOptions.ts';
+import {
+  FAST_DIRECTIONS,
+  FAST_RATES,
+  HIGH_MAX_MGDL,
+  HIGH_MIN_MGDL,
+  HIGH_SUSTAINED_CHOICES,
+  LOW_MAX_MGDL,
+  LOW_MIN_MGDL,
+  OWNER_MODEL_VERSION,
+  OWNER_ROW_KEYS,
+  URGENT_LOW_MGDL,
+  withLegacyMirrors,
+} from './notificationModel.ts';
 import { notificationAgeMinutes, PUSH_FUTURE_TOLERANCE_MINUTES } from './notificationTiming.ts';
 import { normalizeTrendWord } from './notificationTrend.ts';
 import { trendPresentation, trendGlyph } from './trendPresentation.ts';
@@ -48,8 +61,9 @@ export const CATEGORY_LABELS: Record<Category, string> = {
   missing_readings: "Readings haven't updated",
 };
 
-/** The app's existing urgent-low threshold, mirrored (never re-derived). */
-export const URGENT_LOW_MGDL = 55;
+// The app's existing urgent-low threshold is defined once, with the six-row
+// model, and re-exported here so every existing reader keeps working.
+export { URGENT_LOW_MGDL };
 
 /**
  * How old a reading may be and still start a notification.
@@ -690,7 +704,17 @@ export function resolveTapAccess(
 
 export interface PersonalPreferences {
   master_enabled: boolean;
-  categories: Record<Category, boolean>;
+  /** Both vocabularies live here: the six rows and their legacy mirrors. */
+  categories: Record<string, boolean>;
+  /** 2 = the six-row model. */
+  model_version?: number | null;
+  /** The one Low level (mg/dL), and the one High level. */
+  low_mgdl?: number | null;
+  high_mgdl?: number | null;
+  high_sustained_minutes?: number | null;
+  fast_direction?: string | null;
+  fast_rate?: number | null;
+  fast_level_mgdl?: number | null;
   above_range_minutes: number | null;
   missing_delay_minutes: number | null;
   show_health_details: boolean;
@@ -754,41 +778,84 @@ export interface SanitizeResult<T> {
 }
 
 /**
- * Build the stored personal preferences from a submitted patch, starting from
- * what is already saved. Enabling a category that needs a timing requires that
- * timing to have been chosen explicitly — it is never filled in silently.
+ * Build the stored personal preferences from a submitted patch.
+ *
+ * The six rows are the source of truth. A record saved before that model is
+ * first derived from the per-category choices it actually holds, so a write can
+ * never read as "everything off" just because the row is old. The legacy
+ * per-category mirrors are then written from the six rows, so one stored record
+ * speaks both vocabularies and the existing engine keeps one rulebook.
  */
 export function sanitizePersonalPreferences(
   submitted: Record<string, unknown> | null | undefined,
-  existing: Partial<PersonalPreferences> | null | undefined
+  existing: Partial<PersonalPreferences> | null | undefined,
+  options: { targetLow?: unknown; targetHigh?: unknown } = {}
 ): SanitizeResult<PersonalPreferences> {
-  const base: PersonalPreferences = {
-    ...EMPTY_PERSONAL_PREFERENCES,
-    ...(existing || {}),
-    categories: { ...EMPTY_PERSONAL_PREFERENCES.categories, ...(existing?.categories || {}) },
-  };
-  if (existing && existing.categories?.low_glucose == null) delete base.categories.low_glucose;
   const input = submitted || {};
+  const base: any = withLegacyMirrors(existing || null, options);
 
-  const categories: Record<Category, boolean> = { ...base.categories };
-  if (input.categories && typeof input.categories === "object") {
-    for (const key of CATEGORY_KEYS) {
-      if (typeof (input.categories as Record<string, unknown>)[key] === "boolean") {
-        categories[key] = (input.categories as Record<string, boolean>)[key];
-      }
+  const categories: Record<string, boolean> = { ...(base.categories || {}) };
+  if (input.categories && typeof input.categories === "object" && !Array.isArray(input.categories)) {
+    for (const key of OWNER_ROW_KEYS) {
+      const value = (input.categories as Record<string, unknown>)[key];
+      if (typeof value === "boolean") categories[key] = value;
     }
   }
 
-  const master = readBoolean(input.master_enabled, base.master_enabled);
-  const options = sanitizeNotificationOptions(input, base, categories, master);
-  if (options.error) return { value: base, error: options.error };
+  const master = readBoolean(input.master_enabled, base.master_enabled === true);
 
-  // A timing is only written when the person picks one of the offered values.
-  let aboveMinutes = base.above_range_minutes ?? null;
-  if ("above_range_minutes" in input) {
-    aboveMinutes = readDurationChoice(input.above_range_minutes, ABOVE_RANGE_DURATION_CHOICES);
-    if (input.above_range_minutes != null && aboveMinutes == null) {
-      return { value: base, error: "invalid_above_range_minutes" };
+  let lowMgdl = Number(base.low_mgdl);
+  if (input.low_mgdl != null && input.low_mgdl !== "") {
+    const raw = input.low_mgdl;
+    if (typeof raw !== "number" || !Number.isInteger(raw) || raw < LOW_MIN_MGDL || raw > LOW_MAX_MGDL) {
+      return { value: base, error: "invalid_low_mgdl" };
+    }
+    lowMgdl = raw;
+  }
+
+  let highMgdl = Number(base.high_mgdl);
+  if (input.high_mgdl != null && input.high_mgdl !== "") {
+    const raw = input.high_mgdl;
+    if (typeof raw !== "number" || !Number.isInteger(raw) || raw < HIGH_MIN_MGDL || raw > HIGH_MAX_MGDL) {
+      return { value: base, error: "invalid_high_mgdl" };
+    }
+    highMgdl = raw;
+  }
+
+  let sustained = Number(base.high_sustained_minutes);
+  if (input.high_sustained_minutes != null) {
+    const raw = input.high_sustained_minutes;
+    if (typeof raw !== "number" || !HIGH_SUSTAINED_CHOICES.includes(raw)) {
+      return { value: base, error: "invalid_high_sustained_minutes" };
+    }
+    sustained = raw;
+  }
+
+  let direction = String(base.fast_direction);
+  if (input.fast_direction != null) {
+    if (!FAST_DIRECTIONS.includes(String(input.fast_direction))) {
+      return { value: base, error: "invalid_fast_direction" };
+    }
+    direction = String(input.fast_direction);
+  }
+
+  let fastRate = Number(base.fast_rate);
+  if (input.fast_rate != null) {
+    const raw = input.fast_rate;
+    if (typeof raw !== "number" || !FAST_RATES.includes(raw)) return { value: base, error: "invalid_fast_rate" };
+    fastRate = raw;
+  }
+
+  let fastLevel: number | null = base.fast_level_mgdl == null ? null : Number(base.fast_level_mgdl);
+  if ("fast_level_mgdl" in input) {
+    if (input.fast_level_mgdl == null || input.fast_level_mgdl === "") {
+      fastLevel = null;
+    } else {
+      const raw = input.fast_level_mgdl;
+      if (typeof raw !== "number" || !Number.isInteger(raw) || raw < 40 || raw > 400) {
+        return { value: base, error: "invalid_fast_level_mgdl" };
+      }
+      fastLevel = raw;
     }
   }
 
@@ -799,11 +866,7 @@ export function sanitizePersonalPreferences(
       return { value: base, error: "invalid_missing_delay_minutes" };
     }
   }
-
-  if (master && categories.above_range && aboveMinutes == null) {
-    return { value: base, error: "above_range_minutes_required" };
-  }
-  if (master && categories.missing_readings && missingMinutes == null) {
+  if (master && categories.sensor_problems && missingMinutes == null) {
     return { value: base, error: "missing_delay_minutes_required" };
   }
 
@@ -856,27 +919,34 @@ export function sanitizePersonalPreferences(
     return { value: base, error: "all_readings_pause_required" };
   }
 
-  return {
-    value: {
-      ...options.value,
-      master_enabled: master,
-      categories,
-      above_range_minutes: aboveMinutes,
-      missing_delay_minutes: missingMinutes,
-      show_health_details: readBoolean(input.show_health_details, base.show_health_details),
-      quiet_hours_enabled: quietEnabled,
-      quiet_start_hour: quietStart,
-      quiet_end_hour: quietEnd,
-      quiet_timezone: quietTimezone,
-      urgent_during_quiet: readBoolean(input.urgent_during_quiet, base.urgent_during_quiet),
-      all_readings_enabled: streamEnabled,
-      all_readings_pause_enabled: pauseEnabled,
-      all_readings_pause_start_hour: pauseStart,
-      all_readings_pause_end_hour: pauseEnd,
-      all_readings_pause_timezone: pauseTimezone,
-    },
-    error: null,
-  };
+  const record: any = withLegacyMirrors({
+    ...base,
+    master_enabled: master,
+    categories,
+    low_mgdl: lowMgdl,
+    high_mgdl: highMgdl,
+    high_sustained_minutes: sustained,
+    fast_direction: direction,
+    fast_rate: fastRate,
+    fast_level_mgdl: fastLevel,
+    missing_delay_minutes: missingMinutes,
+    show_health_details: readBoolean(input.show_health_details, base.show_health_details === true),
+    quiet_hours_enabled: quietEnabled,
+    quiet_start_hour: quietStart,
+    quiet_end_hour: quietEnd,
+    quiet_timezone: quietTimezone,
+    all_readings_enabled: streamEnabled,
+    all_readings_pause_enabled: pauseEnabled,
+    all_readings_pause_start_hour: pauseStart,
+    all_readings_pause_end_hour: pauseEnd,
+    all_readings_pause_timezone: pauseTimezone,
+  }, options);
+
+  // The legacy guardrails still run, over the mirrors this record now holds.
+  const legacyCheck = sanitizeNotificationOptions({}, record);
+  if (legacyCheck.error) return { value: base, error: legacyCheck.error };
+
+  return { value: { ...record, model_version: OWNER_MODEL_VERSION }, error: null };
 }
 
 export interface FollowerPreferences {

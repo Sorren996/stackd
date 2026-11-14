@@ -12,6 +12,7 @@ import {
   allReadingsCandidate, collapseWinners, readingIdentity, STREAM_MAX_AGE_MINUTES,
 } from './notificationReadingWinner.ts';
 import { applyFollowerCadence, isFollowerLowCategory } from './notificationFollowerCadence.ts';
+import { OWNER_MODEL_VERSION, withLegacyMirrors } from './notificationModel.ts';
 import { DEVICE_RETRY_BASE_MS, NOT_MEMBER_REASON } from './notificationReachability.ts';
 
 const array = page => Array.isArray(page) ? page : page?.items || [];
@@ -49,8 +50,15 @@ async function scheduleDeviceRetry(sr, ownerId, reason, nowMs) {
   }
 }
 
-export async function evaluateRecipient({ sr, ownerId, prefs, relationship = null, settings, recipientSettings = null, rows, connection, nowMs, absoluteUrl }) {
+export async function evaluateRecipient({ sr, ownerId, prefs: storedPreferences, relationship = null, settings, recipientSettings = null, rows, connection, nowMs, absoluteUrl }) {
   const wallStarted = Date.now();
+  // An owner row saved with the six-row model is read through the same mirrors
+  // the save path writes, so a field left behind by an older write can never
+  // change a decision. A follower row carries no model version and is used
+  // exactly as it is stored.
+  const prefs = Number(storedPreferences?.model_version) === OWNER_MODEL_VERSION
+    ? withLegacyMirrors(storedPreferences)
+    : storedPreferences;
   const recipientId = prefs?.user_id;
   if (!recipientId || !recipientAuthorized(prefs, relationship, ownerId, recipientId, [], nowMs)) return 'off';
   const scopeKey = relationship ? `follow:${relationship.id}` : 'self';
@@ -195,7 +203,10 @@ export async function evaluateRecipient({ sr, ownerId, prefs, relationship = nul
     scheduleRetry: reason => scheduleDeviceRetry(sr, ownerId, reason, nowMs),
     recheck: async () => {
       const entity = relationship ? sr.entities.FollowNotificationPreference : sr.entities.NotificationPreference;
-      const fresh = await entity.get(prefs.id);
+      const storedFresh = await entity.get(prefs.id);
+      const fresh = Number(storedFresh?.model_version) === OWNER_MODEL_VERSION
+        ? withLegacyMirrors(storedFresh)
+        : storedFresh;
       const relation = relationship ? await sr.entities.SharedAccess.get(relationship.id) : null;
       if (isStream) {
         if (fresh?.master_enabled !== true || fresh.all_readings_enabled !== true) return { ok: false, reason: 'permission_changed' };

@@ -27,24 +27,28 @@ function runner(prefs, thresholds = { low: 70, high: 180 }) {
   };
 }
 
-test('new categories default off; old opt-ins/values survive patches; entering a number never opts in', () => {
-  const existing = preferences({ below_range: true, above_range: true, urgent_low: true }, { custom_low_mgdl: 95, show_health_details: true });
+test('the six rows keep their saved values; a submitted number never opts a row in', () => {
+  const existing = sanitizePersonalPreferences({ categories: { low: false, changing_fast: false, sensor_problems: false }, show_health_details: true }, null).value;
   const before = structuredClone(existing);
-  const saved = sanitizePersonalPreferences({ custom_high_mgdl: 240, target_range_low: 10, insulin_sensitivity_mgdl_per_unit: 999 }, existing);
+  const saved = sanitizePersonalPreferences({ low_mgdl: 85, fast_rate: 3, target_range_low: 10, insulin_sensitivity_mgdl_per_unit: 999 }, existing);
   assert.equal(saved.error, null);
-  for (const k of ['custom_low', 'custom_high', 'falling_fast', 'rising_fast']) assert.equal(saved.value.categories[k], false);
-  assert.equal(saved.value.categories.below_range, true);
-  assert.equal(saved.value.custom_low_mgdl, 95);
+  assert.equal(saved.value.categories.low, false, 'entering a level never turns a row on');
+  assert.equal(saved.value.categories.changing_fast, false);
+  assert.equal(saved.value.categories.sensor_problems, false);
+  assert.equal(saved.value.low_mgdl, 85, 'the level is still stored');
+  assert.equal(saved.value.fast_rate, 3);
+  assert.equal(saved.value.categories.high, true, 'rows nobody touched are unchanged');
   assert.equal(saved.value.show_health_details, true);
-  assert.equal('target_range_low' in saved.value, false);
+  assert.equal('target_range_low' in saved.value, false, 'a settings field cannot be written through this call');
   assert.equal('insulin_sensitivity_mgdl_per_unit' in saved.value, false);
   assert.deepEqual(existing, before);
 });
 
 test('notification limits, separation and finite integer validation, including exact endpoints', () => {
-  for (const value of [60, 150]) assert.equal(sanitizeNotificationOptions({ custom_low_mgdl: value }).error, null);
+  // The Low row allows 55–100, so its mirror accepts that whole range.
+  for (const value of [55, 150]) assert.equal(sanitizeNotificationOptions({ custom_low_mgdl: value }).error, null);
   for (const value of [100, 400]) assert.equal(sanitizeNotificationOptions({ custom_high_mgdl: value }).error, null);
-  for (const value of [59, 151, NaN, Infinity, '100', true, 70.5]) assert.ok(sanitizeNotificationOptions({ custom_low_mgdl: value }).error);
+  for (const value of [54, 151, NaN, Infinity, '100', true, 70.5]) assert.ok(sanitizeNotificationOptions({ custom_low_mgdl: value }).error);
   for (const value of [99, 401]) assert.ok(sanitizeNotificationOptions({ custom_high_mgdl: value }).error);
   assert.equal(sanitizeNotificationOptions({ custom_low_mgdl: 100, custom_high_mgdl: 120 }).error, null);
   assert.equal(sanitizeNotificationOptions({ custom_low_mgdl: 100, custom_high_mgdl: 119 }).error, 'notification_threshold_separation');

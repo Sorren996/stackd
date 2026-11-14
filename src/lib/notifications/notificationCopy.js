@@ -5,21 +5,29 @@
 export const CATEGORY_COPY = [
   { key: 'low_glucose', label: 'Low glucose', description: 'Every new reading below 70 mg/dL' },
   { key: 'custom_low', label: 'Custom low', description: 'Every new reading below your selected notification level.' },
-  { key: 'below_range', label: 'Below comfort zone', description: "Every new reading below your comfort zone's lower boundary." },
+  { key: 'below_range', label: 'Below target range', description: 'Every new reading below the lower end of their target range.' },
   { key: 'custom_high', label: 'Custom high', description: 'At or above your selected notification level.' },
-  { key: 'above_range', label: 'Above comfort zone', description: 'Sustained above the existing upper boundary.' },
+  { key: 'above_range', label: 'Above target range', description: 'Sustained above the upper end of their target range.' },
   { key: 'falling_fast', label: 'Falling fast', description: 'A measured downward pace, with an optional level condition.' },
   { key: 'rising_fast', label: 'Rising fast', description: 'A measured upward pace, with an optional level condition.' },
   { key: 'urgent_low', label: 'Urgent low', description: 'Below the existing urgent boundary, separate from your other choices.' },
   { key: 'missing_readings', label: 'Missing readings', description: 'When readings stop arriving from your sensor.' },
 ];
 
+// How a delivered notice is named in the recent list. The six rows are what a
+// person chose, so a low is a low and a high is a high — the older per-category
+// names are only what was stored.
 export const CATEGORY_LABEL = {
-  custom_low: 'Custom low', custom_high: 'Custom high', falling_fast: 'Falling fast', rising_fast: 'Rising fast',
+  custom_low: 'Low', low_glucose: 'Low', below_range: 'Low',
+  custom_high: 'High', above_range: 'High',
+  low: 'Low', high: 'High',
+  falling_fast: 'Falling fast', rising_fast: 'Rising fast',
+  changing_fast: 'Changing fast',
   urgent_low: "Urgent low",
-  below_range: "Below comfort zone",
-  above_range: "Above comfort zone",
   missing_readings: "Readings haven't updated",
+  sensor_problems: "Sensor problems",
+  all_readings: 'Every reading',
+  low_recovery: 'Back in range',
 };
 
 export const ABOVE_DURATION_OPTIONS = [

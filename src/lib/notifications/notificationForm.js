@@ -1,5 +1,12 @@
-export const NOTIFICATION_ISOLATION_COPY = 'These thresholds only control notifications. They don’t change your comfort zone or calculations.';
+import { ownerFormError } from './notificationModel.js';
+
+export const NOTIFICATION_ISOLATION_COPY = 'These thresholds only control notifications. They don’t change your target range or calculations.';
 export function notificationFormError(prefs, previous) {
+  // The owner's screen edits the six rows; a follower's screen still edits the
+  // per-category permissions their sharer granted.
+  if (prefs && (prefs.model_version === 2 || prefs.low_mgdl != null || prefs.high_mgdl != null)) {
+    return ownerFormError(prefs, previous);
+  }
   const low = prefs.custom_low_mgdl, high = prefs.custom_high_mgdl;
   if (low != null && (!Number.isInteger(low) || low < 60 || low > 150)) return 'Choose a notification low from 60–150 mg/dL.';
   if (high != null && (!Number.isInteger(high) || high < 100 || high > 400)) return 'Choose a notification high from 100–400 mg/dL.';

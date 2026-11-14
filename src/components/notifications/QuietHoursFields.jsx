@@ -44,6 +44,9 @@ export default function QuietHoursFields({
   endHour,
   timeZone,
   urgentDuringQuiet,
+  // The owner's own alerts always let urgent low through, so that is not a
+  // choice on their screen; a follower's permission is the sharer's, not theirs.
+  urgentAlwaysOn = false,
   onChange,
   disabled = false,
   pending = false,
@@ -60,7 +63,13 @@ export default function QuietHoursFields({
         onChange={(next) =>
           onChange(
             next
-              ? { quiet_hours_enabled: true, quiet_start_hour: startHour ?? 21, quiet_end_hour: endHour ?? 7, quiet_timezone: zone }
+              ? {
+                  quiet_hours_enabled: true,
+                  quiet_start_hour: startHour ?? 21,
+                  quiet_end_hour: endHour ?? 7,
+                  quiet_timezone: zone,
+                  ...(urgentAlwaysOn ? { urgent_during_quiet: true } : {}),
+                }
               : { quiet_hours_enabled: false }
           )
         }
@@ -87,15 +96,22 @@ export default function QuietHoursFields({
           <p className="pt-1.5 text-xs" style={{ color: "#746959" }}>
             Times use {zone}. A window that runs past midnight is handled.
           </p>
-          <div className="pt-1">
-            <ToggleRow
-              label="Allow urgent low during quiet hours"
-              description="Separate choice. Off means nothing is sent in this window, urgent included."
-              checked={Boolean(urgentDuringQuiet)}
-              disabled={disabled}
-              onChange={(next) => onChange({ urgent_during_quiet: next })}
-            />
-          </div>
+          <p className="pt-1.5 text-xs" style={{ color: "#746959" }}>
+            {urgentAlwaysOn
+              ? "Urgent low still comes through this window. Every other alert is held."
+              : "Urgent low follows your choice below."}
+          </p>
+          {!urgentAlwaysOn && (
+            <div className="pt-1">
+              <ToggleRow
+                label="Allow urgent low during quiet hours"
+                description="Separate choice. Off means nothing is sent in this window, urgent included."
+                checked={Boolean(urgentDuringQuiet)}
+                disabled={disabled}
+                onChange={(next) => onChange({ urgent_during_quiet: next })}
+              />
+            </div>
+          )}
         </div>
       )}
     </div>

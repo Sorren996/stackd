@@ -8,7 +8,6 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.54";
 import { ok, fail, asArray, currentUser, readBody } from "../../shared/sharingAccess.ts";
 import {
-  EMPTY_PERSONAL_PREFERENCES,
   URGENT_LOW_MGDL,
   effectiveFollowerCategories,
   relationshipAllowsPush,
@@ -20,8 +19,13 @@ import {
 } from "../../shared/notificationCore.ts";
 
 
-function personalPreferencesFrom(row: any): PersonalPreferences {
-  const { value } = sanitizePersonalPreferences({}, row || {});
+// A missing row is NOT "everything off": it resolves to the new-account
+// defaults, so the screen can never show protection as switched off by absence.
+function personalPreferencesFrom(row: any, settings: any): PersonalPreferences {
+  const { value } = sanitizePersonalPreferences({}, row || null, {
+    targetLow: settings?.target_range_low ?? null,
+    targetHigh: settings?.target_range_high ?? null,
+  });
   return value;
 }
 
@@ -100,7 +104,7 @@ export default async function (req: Request): Promise<Response> {
 
     // Delivery, episode and audit records stay internal; no history fetch.
     return ok({
-      personal: ownPrefs ? personalPreferencesFrom(ownPrefs) : { ...EMPTY_PERSONAL_PREFERENCES },
+      personal: personalPreferencesFrom(ownPrefs, settings),
       has_saved_preferences: Boolean(ownPrefs),
       thresholds: {
         target_low: settings?.target_range_low ?? null,
