@@ -56,9 +56,9 @@ test('the personal screen shows six rows in order, one switch each, with the lev
   assert.match(html, /Rising or falling by 2 mg\/dL a minute or faster\./);
   assert.match(html, /No new readings for 20 minutes, then a reminder every 15 minutes\./);
 
-  // Master, the five rows and the every-reading stream; only four rows open a
-  // detail sheet, because urgent low is fixed.
-  assert.equal((html.match(/role="switch"/g) || []).length, 7);
+  // Master, the five rows, the every-reading stream, then the two privacy
+  // switches. Only four rows open a detail sheet, because urgent low is fixed.
+  assert.equal((html.match(/role="switch"/g) || []).length, 9);
   assert.equal((html.match(/aria-haspopup="dialog"/g) || []).length, 4);
   assert.doesNotMatch(html, /aria-label="Edit urgent low"/);
   assert.match(html, /These settings change your alerts, not your target range/);

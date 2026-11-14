@@ -10,7 +10,7 @@ import assert from 'node:assert/strict';
 import { advanceNotificationEpisodes } from '../notificationEpisodes.ts';
 import { lowStreamDecisions } from '../notificationLowStream.ts';
 import { decideMissingNotification, sanitizePersonalPreferences } from '../notificationCore.ts';
-import { OWNER_DEFAULTS, ownerView, withLegacyMirrors } from '../notificationModel.ts';
+import { OWNER_DEFAULTS, ownerView, seedOwnerPreferences, withLegacyMirrors } from '../notificationModel.ts';
 
 const T = Date.parse('2026-11-13T12:00:00Z');
 const row = (m, value) => ({ id: `s:${m}`, value, recorded_at: new Date(T + m * 60000).toISOString(), source: 'dexcom_share' });
@@ -234,4 +234,63 @@ test('a row turns on only when the switch says so', () => {
   assert.equal(withLevelButOff.low_mgdl, 95);
   assert.equal(withLevelButOff.categories.custom_low, false);
   assert.equal(withLevelButOff.categories.low_glucose, false, 'no low boundary is left armed');
+});
+
+// ── Account creation ──────────────────────────────────────────────────────
+
+test('a brand-new account is STORED with the protective defaults at sign-up', async () => {
+  const created = [];
+  const sr = {
+    entities: {
+      NotificationPreference: {
+        filter: async () => ({ items: [] }),
+        create: async (payload) => { created.push(payload); return { id: 'pref-new', ...payload }; },
+      },
+      NotificationLedger: { filter: async () => ({ items: [] }), create: async () => ({}) },
+    },
+  };
+
+  const result = await seedOwnerPreferences(sr, { id: 'new-account' });
+  assert.equal(result.created, true);
+  assert.equal(created.length, 1);
+
+  const saved = created[0];
+  assert.equal(saved.user_id, 'new-account');
+  assert.equal(saved.model_version, 2);
+  assert.equal(saved.master_enabled, true);
+  assert.equal(saved.low_mgdl, 70);
+  assert.equal(saved.high_mgdl, 180);
+  assert.equal(saved.fast_direction, 'both');
+  assert.equal(saved.fast_rate, 2);
+  assert.equal(saved.high_sustained_minutes, 0);
+  assert.equal(saved.missing_delay_minutes, 20);
+  assert.equal(saved.all_readings_enabled, false, 'the every-reading stream starts off');
+  assert.equal(saved.show_health_details, false);
+  for (const key of ['urgent_low', 'low', 'high', 'changing_fast', 'sensor_problems']) {
+    assert.equal(saved.categories[key], true, `${key} starts on`);
+  }
+  assert.equal(saved.categories.below_range, false);
+
+  // What the Notifications screen reads straight back is that same row.
+  const read = sanitizePersonalPreferences({}, saved, { targetLow: 70, targetHigh: 180 }).value;
+  assert.equal(read.master_enabled, true);
+  assert.equal(read.low_mgdl, 70);
+  assert.equal(read.high_mgdl, 180);
+
+  // Finishing onboarding again never resets a choice the person has since made.
+  const second = await seedOwnerPreferences(
+    { entities: { NotificationPreference: { filter: async () => ({ items: [saved] }) } } },
+    { id: 'new-account' }
+  );
+  assert.equal(second.created, false);
+});
+
+test('an account with no stored row at all reads as those defaults, never as off', () => {
+  const { value } = sanitizePersonalPreferences({}, null, { targetLow: 70, targetHigh: 180 });
+  assert.equal(value.master_enabled, true);
+  assert.equal(value.low_mgdl, OWNER_DEFAULTS.low_mgdl);
+  assert.equal(value.high_mgdl, OWNER_DEFAULTS.high_mgdl);
+  assert.equal(value.categories.low, true);
+  assert.equal(value.categories.high, true);
+  assert.equal(value.categories.urgent_low, true);
 });
