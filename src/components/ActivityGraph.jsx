@@ -1380,6 +1380,13 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
   // The newest real reading — the point the marker always sits on.
   const latestGlucosePoint = glucoseLinePoints.length ? glucoseLinePoints[glucoseLinePoints.length - 1] : null;
 
+  // The scrub layer covers the whole plot, so it is mounted whenever there is
+  // something to sit on: the trajectory when the engine produced one, otherwise
+  // the drawn readings themselves. Without a projection the newest reading is
+  // the right-hand boundary and the marker never moves into empty chart.
+  const scrubReadings = filters.glucose ? glucoseLinePoints : [];
+  const showScrubLayer = Boolean(projection) || scrubReadings.length > 0;
+
   return (
     <div ref={containerRef} className="relative overflow-visible">
       <div ref={monitoringA11yRef} className="sr-only" aria-live="polite" role="status" />
@@ -1571,7 +1578,7 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
                 {/* The projection belongs to every window that contains its
                        points, the 24-hour view included. It maps onto this view's
                        own plot geometry and clips at the edges like the rest. */}
-                {projection &&
+                {showScrubLayer &&
                 <ProjectionOverlay
                   projection={projection}
                   domainStart={domainStart}
@@ -1584,7 +1591,7 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
                   effectiveMax={effectiveMax}
                   getGlucoseY={getCandleGlucoseY}
                   latestReading={latestGlucosePoint}
-                  readings={filteredGlucoseReadings}
+                  readings={scrubReadings}
                   onForecastSelect={setForecastEstimate}
                   resetSignal={scrubReset} />
 
@@ -1707,8 +1714,8 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
             </ComposedChart>
           </div>
 
-          {/* ── Projection overlay (future trajectory) ── */}
-          {projection &&
+          {/* ── The scrub layer: readings, then the future trajectory ── */}
+          {showScrubLayer &&
                 <ProjectionOverlay
                   projection={projection}
                   domainStart={domainStart}
@@ -1721,7 +1728,7 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
                   effectiveMax={effectiveMax}
                   getGlucoseY={getGlucoseY}
                   latestReading={latestGlucosePoint}
-                  readings={filteredGlucoseReadings}
+                  readings={scrubReadings}
                   onForecastSelect={setForecastEstimate}
                   resetSignal={scrubReset} />
 

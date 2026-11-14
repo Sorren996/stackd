@@ -1,6 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { resolveScrubPoint, resolveCardFlip } from "../projection/projectionScrub.js";
+import {
+  resolveScrubPoint,
+  resolveCardFlip,
+  resolveGestureIntent,
+  resolveRubberBand,
+} from "../projection/projectionScrub.js";
 
 const point = (x, kind = "forecast") => ({ x, kind });
 const reading = point(100, "reading");
@@ -33,13 +38,51 @@ test("past the last point the last point latches", () => {
   assert.equal(resolveScrubPoint(points, 400, firstForecast), firstForecast);
 });
 
-test("the newest reading resists before the marker steps into the future", () => {
+test("the boundary between the solid line and the dashes carries no wall", () => {
   const points = [reading, firstForecast]; // 100 → 140
-  // A couple of pixels past the anchor, the marker still holds the reading.
-  assert.equal(resolveScrubPoint(points, 102, reading), reading);
-  // Past the resistance band the ordinary snap takes over, and it still only
-  // ever resolves to a real model point — never a position in between.
-  assert.equal(resolveScrubPoint(points, 130, reading), firstForecast);
+  // Crossing from the reading into the future needs only the same hysteresis
+  // every other pair uses, so one continuous gesture crosses it and comes back.
+  assert.equal(resolveScrubPoint(points, 129, reading), firstForecast);
+  assert.equal(resolveScrubPoint(points, 111, firstForecast), reading);
+});
+
+test("one gesture travels the whole merged list without skipping a point", () => {
+  // Readings, then the forecast grid: a finger sweeping right lands on every
+  // point in order, and the same sweep back returns through them.
+  const merged = [point(10, "reading"), point(40, "reading"), point(70, "reading"), point(100), point(130)];
+  let current = merged[0];
+  const visited = [];
+  for (let x = 10; x <= 130; x += 2) {
+    current = resolveScrubPoint(merged, x, current);
+    if (visited[visited.length - 1] !== current) visited.push(current);
+  }
+  assert.deepEqual(visited, merged);
+});
+
+test("intent locks on the first movement: sideways scrubs, vertical scrolls", () => {
+  // Below the slop nothing is decided yet.
+  assert.equal(resolveGestureIntent(2, 3), null);
+  // Sideways wins ties and stays the answer however the finger drifts later.
+  assert.equal(resolveGestureIntent(6, 2), "scrub");
+  assert.equal(resolveGestureIntent(-6, 2), "scrub");
+  assert.equal(resolveGestureIntent(5, 5), "scrub");
+  // A clearly vertical start is a page scroll.
+  assert.equal(resolveGestureIntent(1, 9), "scroll");
+});
+
+test("the rubber band gives past the horizon and before the earliest reading", () => {
+  // Inside the trace there is no give at all.
+  assert.equal(resolveRubberBand(120, 100, 200), 0);
+  // Past the horizon: 35% of the travel, capped at 24px.
+  assert.equal(resolveRubberBand(220, 100, 200), 7);
+  assert.equal(resolveRubberBand(400, 100, 200), 24);
+  // Before the earliest reading: a small give, capped at 10px.
+  assert.equal(resolveRubberBand(80, 100, 200), -7);
+  assert.equal(resolveRubberBand(-100, 100, 200), -10);
+});
+
+test("without a projection the give past the newest reading is almost none", () => {
+  assert.equal(resolveRubberBand(240, 100, 200, { endTravel: 4 }), 4);
 });
 
 test("the future region ends at the projection horizon", () => {

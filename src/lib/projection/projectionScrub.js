@@ -10,13 +10,36 @@
 
 export const SCRUB_HYSTERESIS_PX = 8;
 
-// The edge between what happened and what is estimated is soft, not a wall.
-// The newest reading holds for a few pixels of travel past it before the marker
-// may step into the future, so entering the estimate resists the finger instead
-// of latching the moment the pointer crosses the anchor. Past that band the
-// ordinary snap takes over, the marker still only ever lands on a real model
-// point, and the far end of the region remains the projection's horizon.
-export const SCRUB_ENTRY_RESISTANCE_PX = 4;
+// A gesture's intent is decided once, on the first real movement, and then it
+// never changes: horizontal means scrubbing for the rest of the gesture,
+// vertical means the page scrolls and no marker ever appears. Re-deciding later
+// is what made a scrub read as a tap — a finger that drifted a few pixels down
+// mid-drag used to drop the whole gesture.
+export const SCRUB_LOCK_SLOP_PX = 4;
+
+export function resolveGestureIntent(dx, dy, slop = SCRUB_LOCK_SLOP_PX) {
+  if (!Number.isFinite(dx) || !Number.isFinite(dy)) return null;
+  if (Math.abs(dx) < slop && Math.abs(dy) < slop) return null;
+  return Math.abs(dx) >= Math.abs(dy) ? "scrub" : "scroll";
+}
+
+// The rubber band at both ends of the trace. The selection latches to the end
+// point, but the marker keeps following the finger by a fraction of its travel,
+// so the edge gives instead of feeling like a wall. The offset is signed: right
+// past the horizon, left before the earliest reading.
+export const RUBBER_BAND_FACTOR = 0.35;
+
+export function resolveRubberBand(localX, firstX, lastX, options = {}) {
+  const {
+    factor = RUBBER_BAND_FACTOR,
+    startTravel = 10,
+    endTravel = 24,
+  } = options;
+  if (!Number.isFinite(localX) || !Number.isFinite(firstX) || !Number.isFinite(lastX)) return 0;
+  if (localX > lastX) return Math.min((localX - lastX) * factor, endTravel);
+  if (localX < firstX) return Math.max((localX - firstX) * factor, -startTravel);
+  return 0;
+}
 
 // How far past the midpoint the pointer must travel toward the other point
 // before the selection follows it.
@@ -30,16 +53,6 @@ export function resolveScrubPoint(points, localX, current, hysteresisPx = SCRUB_
   // pointer travels, so nothing is re-set while the finger sits there.
   if (localX <= first.x) return first;
   if (localX >= last.x) return last;
-
-  // Resistance at the anchor: the newest reading keeps the marker for the first
-  // few pixels of travel past it, then the snap below takes over.
-  if (
-    current === first &&
-    first.kind === "reading" &&
-    localX < first.x + SCRUB_ENTRY_RESISTANCE_PX
-  ) {
-    return first;
-  }
 
   // The two points either side of the pointer.
   let lo = 0;
