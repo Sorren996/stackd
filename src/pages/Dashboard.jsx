@@ -25,6 +25,7 @@ import {
   readCachedLatestGlucose,
   readCachedLatestGlucoseSavedAt,
   writeCachedLatestGlucose,
+  clearCachedLatestGlucose,
 } from "@/lib/latestGlucoseCache";
 import { markProjectionInputsChanged } from "@/lib/projection/projectionStaleness";
 const EMPTY = [];
@@ -43,6 +44,25 @@ function replaceCachedItem(queryClient, queryKey, updatedItem) {
   queryClient.setQueryData(queryKey, (current = []) =>
     Array.isArray(current) ? current.map((item) => (item.id === updatedItem.id ? { ...item, ...updatedItem } : item)) : current
   );
+}
+
+// A removed reading has to leave the cache, not just be refetched. The chart's
+// query folds a response into what is already on screen and refuses a response
+// whose newest reading is older than the one displayed, so a deleted newest
+// reading would otherwise be kept from the stale copy.
+function dropCachedReading(queryClient, readingId) {
+  const drop = (current) =>
+    Array.isArray(current) ? current.filter((row) => row?.id !== readingId) : current;
+  queryClient.setQueriesData({ queryKey: ["glucose-readings"] }, drop);
+  queryClient.setQueriesData({ queryKey: ["latest-glucose"] }, drop);
+}
+
+// The Journal reads glucose through its own keys, so its day and month views
+// have to be told the reading changed too.
+function invalidateJournal(queryClient) {
+  queryClient.invalidateQueries({ queryKey: ["history-summary"] });
+  queryClient.invalidateQueries({ queryKey: ["history-day-recap"] });
+  queryClient.invalidateQueries({ queryKey: ["history-month-readings"] });
 }
 
 export default function Dashboard() {
@@ -223,10 +243,23 @@ export default function Dashboard() {
 
   const deleteGlucose = useMutation({
     mutationFn: (id) => base44.entities.GlucoseReading.delete(id),
-    onSuccess: () => {
+    onSuccess: (_data, deletedId) => {
+      // When the removed reading was this device's saved newest one, that copy
+      // goes too, so the hero falls back to the reading before it instead of
+      // re-showing a reading that no longer exists.
+      if (readCachedLatestGlucose(user.id)[0]?.id === deletedId) clearCachedLatestGlucose();
+      dropCachedReading(queryClient, deletedId);
       queryClient.invalidateQueries({ queryKey: ["latest-glucose"] });
-      queryClient.invalidateQueries({ queryKey: ["glucose-readings", "graph"] });
+      queryClient.invalidateQueries({ queryKey: ["glucose-readings"] });
+      invalidateJournal(queryClient);
       toast.success("Reading gently removed");
+    },
+    onError: (error) => {
+      // Nothing was removed, so the reading stays exactly where it was.
+      console.error("Unable to remove reading", error);
+      queryClient.invalidateQueries({ queryKey: ["latest-glucose"] });
+      queryClient.invalidateQueries({ queryKey: ["glucose-readings"] });
+      toast.error("Unable to remove this reading. Please try again.");
     },
   });
 
@@ -283,6 +316,7 @@ export default function Dashboard() {
         queryClient.invalidateQueries({ queryKey: ["latest-glucose"] });
         queryClient.invalidateQueries({ queryKey: ["glucose-readings"] });
         queryClient.invalidateQueries({ queryKey: ["glucose-readings", "graph"] });
+        invalidateJournal(queryClient);
         const latest = queryClient.getQueryData(["latest-glucose", user.id])?.[0];
         if (latest?.id === updatedItem.id) writeCachedLatestGlucose(updatedItem, user.id);
       } else {
@@ -446,7 +480,6 @@ export default function Dashboard() {
                   carbEntries={graphCarbs}
                   onSelectLog={setEditingLog}
                   onDeleteLog={handleDeleteLog}
-                  glucoseReadOnly={dexcomConnected}
                   projection={freshness.verified ? projection : null}
                   projectionNote={freshness.verified ? abstainNote : null}
                   snapshotNow={now}

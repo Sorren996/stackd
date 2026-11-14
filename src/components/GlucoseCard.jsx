@@ -64,7 +64,7 @@ export default function GlucoseCard({ reading, onDelete, locked = false }) {
         )}
       </div>
 
-      {!locked && (
+      {!locked && onDelete && (
       <AlertDialog>
         <AlertDialogTrigger asChild>
           <Button variant="ghost" size="icon" className="shrink-0 w-7 h-7 hover:text-destructive hover:bg-destructive/10 mt-0.5" style={{ color: "#cdd9cd" }}>

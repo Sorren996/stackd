@@ -65,8 +65,17 @@ function renderCard(item, groupKey, locked, onEdit, onDeleteDose, onDeleteGlucos
     );
   }
 
-  const card = <GlucoseCard reading={item} locked={locked} onDelete={(id) => onDeleteGlucose(id)} />;
-  return locked ? (
+  // A reading that came from the sensor is not ours to rewrite: it keeps its
+  // card, without the edit gesture and without the remove control.
+  const isSensorReading = item.source === "dexcom" || item.source === "dexcom_share";
+  const card = (
+    <GlucoseCard
+      reading={item}
+      locked={locked}
+      onDelete={isSensorReading ? undefined : (id) => onDeleteGlucose(id)}
+    />
+  );
+  return locked || isSensorReading ? (
     <div key={`glucose-${item.id}`}>{card}</div>
   ) : (
     <EditableLog key={`glucose-${item.id}`} onEdit={handleEdit}>

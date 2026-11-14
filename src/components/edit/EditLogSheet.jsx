@@ -1,11 +1,19 @@
 import { useState, useEffect, useMemo } from "react";
 import { INSULIN_PROFILES, isBasalInsulinType } from "@/lib/insulinPharmacology";
 import { getDefaultInsulinLibrary } from "@/lib/userSettings";
-import { getGlucoseUnits, glucoseUnitLabel, parseGlucoseInput } from "@/lib/glucoseUnits";
+import {
+  getGlucoseUnits,
+  glucoseUnitLabel,
+  parseGlucoseInput,
+  formatGlucose,
+  glucoseInputMax,
+  GLUCOSE_MAX_MGDL,
+} from "@/lib/glucoseUnits";
 import { toast } from "sonner";
 import LogSheetShell from "@/components/forms/LogSheetShell";
 import {
   TapStepper,
+  StepperField,
   InsulinChips,
   CompactSegmented,
   TripleSegmented,
@@ -43,6 +51,9 @@ function mergeDateTime(dateValue, timeValue) {
   if (date.getTime() > Date.now()) return null;
   return date.toISOString();
 }
+
+// The one preset set, stated in mg/dL and shown in whichever unit is active.
+const GLUCOSE_PRESETS = [70, 100, 130, 180];
 
 const toLevel = (g) => {
   const n = Number(g) || 0;
@@ -102,6 +113,7 @@ export default function EditLogSheet({ log, onClose, onSave, isSaving }) {
   const [form, setForm] = useState(() => getEditInitialForm(log));
   const [insulinLibrary, setInsulinLibrary] = useState(readInsulinLibrary);
   const [glucoseUnits, setGlucoseUnits] = useState(getGlucoseUnits);
+  const isMmol = glucoseUnits === "mmol/L";
 
   useEffect(() => {
     setForm(getEditInitialForm(log));
@@ -159,16 +171,19 @@ export default function EditLogSheet({ log, onClose, onSave, isSaving }) {
     }
 
     if (log.type === "glucose") {
-      const value = parseGlucoseInput(form.value);
-      if (!Number.isFinite(value) || value <= 0) {
+      const parsed = parseGlucoseInput(form.value);
+      if (!Number.isFinite(parsed) || parsed <= 0) {
         toast.error("Enter a glucose value.");
         return;
       }
+      // The same ceiling as logging: nothing is stored above 600 mg/dL.
+      const value = Math.min(parsed, GLUCOSE_MAX_MGDL);
       const recordedAt = mergeDateTime(form.date, form.time);
       if (!recordedAt) {
         toast.error("Choose a time that is not in the future.");
         return;
       }
+      // Same record, same source — only the value, moment and note change.
       onSave({
         type: "glucose",
         id: log.item.id,
@@ -250,23 +265,20 @@ export default function EditLogSheet({ log, onClose, onSave, isSaving }) {
           </>
         )}
 
-        {log?.type === "glucose" &&
-          (glucoseUnits === "mmol/L" ? (
-            <TextField
-              label={`Glucose (${glucoseUnitLabel()})`}
-              value={form.value}
-              onChange={(v) => updateField("value", v.replace(/[^\d.]/g, "").slice(0, 4))}
-              placeholder="e.g. 6.5"
-            />
-          ) : (
-            <TapStepper
-              label={`Glucose (${glucoseUnitLabel()})`}
-              value={form.value}
-              onChange={(value) => updateField("value", value)}
-              step={5}
-              presets={[70, 100, 130, 180]}
-            />
-          ))}
+        {/* The same field, unit and ceiling as logging: one stepper that steps
+            by 0.1 in mmol/L and 5 in mg/dL, and never passes 600 mg/dL. */}
+        {log?.type === "glucose" && (
+          <StepperField
+            label={`Glucose (${glucoseUnitLabel()})`}
+            value={form.value}
+            onChange={(value) => updateField("value", value)}
+            step={isMmol ? 0.1 : 5}
+            decimals={isMmol ? 1 : 0}
+            max={glucoseInputMax()}
+            presets={GLUCOSE_PRESETS.map((mg) => (isMmol ? Number(formatGlucose(mg)) : mg))}
+            ariaLabel="Glucose value"
+          />
+        )}
 
         {log?.type === "carbs" && (
           <>

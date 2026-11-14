@@ -365,6 +365,9 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
   };
 
   const handleIndicatorClick = (e) => {
+    // A press on a control inside the row (the "Now" shortcut) is its own
+    // action, never a request to open this reading.
+    if (e?.target && e.target !== e.currentTarget && e.target.closest?.("button, a")) return;
     if (!filteredGlucoseReadings.length) return;
     const scrollLeft = scrollRef.current?.scrollLeft ?? maxScrollLeft;
     const centerTime = getCenterTimeForScroll(scrollLeft);
@@ -572,6 +575,13 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
   sort((a, b) => a.time - b.time),
   [glucoseMap]
   );
+
+  // The reading row opens the same preview the dose and meal markers use. It is
+  // offered whenever a reading is drawn and a handler exists; whether that
+  // reading offers Edit and Remove is decided per reading in the popover, so a
+  // sensor reading simply shows its preview without those actions.
+  const canOpenGlucosePopover =
+    Boolean(onSelectLog || onDeleteLog) && filters.glucose && glucoseLinePoints.length > 0;
 
   // ── One smooth glucose trace, broken only at genuine gaps ──────────────
   // Readings arrive about every five minutes, so they join into one
@@ -1400,11 +1410,23 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
                    left, its time and date and the way back to now on the right. It sits
                    in normal flow above the trace, replacing the tall stacked block that
                    used to float over the top of the chart and leave dead space. */}
-      <div className="resume-chart-row relative flex items-center gap-2 px-[18px] pb-1.5">
+      <div
+        className="resume-chart-row relative flex items-center gap-2 px-[18px] pb-1.5"
+        onClick={canOpenGlucosePopover ? handleIndicatorClick : undefined}
+        onKeyDown={canOpenGlucosePopover ? (e) => {
+          if (e.key !== "Enter" && e.key !== " ") return;
+          e.preventDefault();
+          handleIndicatorClick(e);
+        } : undefined}
+        role={canOpenGlucosePopover ? "button" : undefined}
+        tabIndex={canOpenGlucosePopover ? 0 : undefined}
+        aria-label={canOpenGlucosePopover ? "Open this reading" : undefined}
+        style={canOpenGlucosePopover ? { cursor: "pointer" } : undefined}
+      >
         <div className="resume-chart-reading flex min-w-0 items-end gap-2">
           {filters.glucose && glucoseLinePoints.length > 0 &&
             <>
-              {(onSelectLog || onDeleteLog) && !dexcomConnected &&
+              {(onSelectLog || onDeleteLog) &&
               <span className="flex h-4 w-4 shrink-0 items-center justify-center self-center rounded-full border" style={{ borderColor: "#e6dccd", background: "#fdf8f1", color: "#7a6b5d" }}>
                   <Info className="h-2.5 w-2.5" />
                 </span>
