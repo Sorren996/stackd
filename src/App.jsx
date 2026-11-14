@@ -34,7 +34,7 @@ import RouteFallback from "@/components/RouteFallback";
 import {
   LazyHistory, LazyAnalytics, LazySettings, LazyInsights,
   LazyInsulinSettings, LazyProfileSettings, LazyPrivacyConsent,
-  LazyDisplaySettings, LazyDexcomSettings,
+  LazyDisplaySettings, LazyDexcomSettings, LazySensorSession,
   LazySharing, LazyNotifications, LazyContactSupport, LazySupportInbox,
   LazySplitPlanReview, LazyFollowingHome, LazyFollowerSettings,
   LazyFollowInvite, LazyInstall, LazyPrivacy, LazyTerms, LazyPublicContact,
@@ -392,6 +392,7 @@ const AuthenticatedApp = () => {
             <Route path="/settings/privacy-consent" element={<LazyPrivacyConsent />} />
             <Route path="/settings/display" element={<LazyDisplaySettings />} />
             <Route path="/settings/dexcom" element={<LazyDexcomSettings />} />
+            <Route path="/settings/sensor" element={<LazySensorSession />} />
             <Route path="/settings/sharing" element={<LazySharing />} />
             <Route path="/settings/notifications" element={<LazyNotifications />} />
             <Route path="/shared" element={<LazyFollowingHome />} />
@@ -401,6 +402,8 @@ const AuthenticatedApp = () => {
             <Route path="/split-plan/:planId" element={<LazySplitPlanReview />} />
           </Route>
           <Route path="/install" element={page(<LazyInstall />)} />
+          <Route path="/privacy" element={page(<LazyPrivacy />)} />
+          <Route path="/terms" element={page(<LazyTerms />)} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </ErrorBoundary>

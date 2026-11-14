@@ -20,6 +20,7 @@ export const LazyProfileSettings = lazy(() => import("@/pages/ProfileSettingsPag
 export const LazyPrivacyConsent = lazy(() => import("@/pages/PrivacyConsentPage"));
 export const LazyDisplaySettings = lazy(() => import("@/pages/DisplaySettingsPage"));
 export const LazyDexcomSettings = lazy(() => import("@/pages/DexcomSettingsPage"));
+export const LazySensorSession = lazy(() => import("@/pages/SensorSessionPage"));
 export const LazySharing = lazy(() => import("@/pages/SharingPage"));
 export const LazyNotifications = lazy(() => import("@/pages/NotificationsPage"));
 export const LazyContactSupport = lazy(() => import("@/pages/ContactSupportPage"));

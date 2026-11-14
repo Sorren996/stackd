@@ -28,10 +28,10 @@ function sessionColor(remainingMs) {
   return remainingMs < DAY_MS ? COLOR_NEAR : COLOR_FRESH;
 }
 
-export default function SensorSessionCard() {
+export default function SensorSessionCard({ defaultExpanded = false }) {
   const { modelId, startedAt, modelMeta, remainingMs } = useSensorSession();
   const { save, isSaving } = useUserSettings();
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(defaultExpanded);
   const [draftModel, setDraftModel] = useState("G7");
   const [draftStartedAt, setDraftStartedAt] = useState(() => toLocalDatetimeInputValue(Date.now()));
 

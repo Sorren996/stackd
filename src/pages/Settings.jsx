@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/AuthContext";
-import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 import { toast } from "sonner";
 import PageHeader from "@/components/editorial/PageHeader";
 import SectionCard from "@/components/editorial/SectionCard";
 import LedgerRow from "@/components/editorial/LedgerRow";
-import SensorSessionCard from "@/components/settings/SensorSessionCard";
+import SettingsStatusBand from "@/components/settings/SettingsStatusBand";
+import NeedsAttention from "@/components/settings/NeedsAttention";
 import AdminTestNotification from "@/components/settings/AdminTestNotification";
+import useSettingsSummaries from "@/hooks/useSettingsSummaries";
+import { getAppVersion } from "@/lib/appVersion";
 import { isNativeIOS } from "@/lib/nativeShell";
 
 function readGraphHeight() {
@@ -15,11 +17,17 @@ function readGraphHeight() {
   return v === 300 || v === 400 ? v : 400;
 }
 
+/**
+ * Settings is a hub, never a second copy: the band says what the sensor is
+ * doing, each row carries the one value that matters, and every row opens the
+ * screen that owns that setting. Groups follow how often they are reached —
+ * the sensor first, then what Stackd does, then people, privacy, help and app.
+ */
 export default function Settings() {
   const { logout, user } = useAuth();
   const queryClient = useQueryClient();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const { connected: dexcomConnected, connection } = useDexcomConnection();
+  const { band, attention, sensorLabel, sensorNote, notificationsLabel, insulinLabel } = useSettingsSummaries();
   const graphHeight = readGraphHeight();
   const nativeIOS = isNativeIOS();
 
@@ -34,73 +42,73 @@ export default function Settings() {
     }
   };
 
-  const dexcomStatus = dexcomConnected
-    ? `${connection?.cgm_model || "G7"}, connected`
-    : "not connected";
-
   return (
-    <div className="mx-auto max-w-md space-y-6 pb-4 pt-2">
+    <div className="mx-auto max-w-md space-y-4 pb-4 pt-2">
       <PageHeader italicWord="profile" rightText="synced just now" />
 
-      {/* Connection status line */}
-      <SectionCard>
-        <div className="flex items-center gap-2">
-          <span
-            className="inline-block h-2 w-2 rounded-full"
-            style={{ background: dexcomConnected ? "#5b6550" : "#b8aea0" }}
-          />
-          <span className="text-xs font-medium" style={{ color: "#6b6153" }}>
-            {dexcomConnected
-              ? `Dexcom ${connection?.cgm_model || "G7"}, connected, updating every 5 min`
-              : "No glucose source connected"}
-          </span>
-        </div>
+      {/* Full width, above every group: the sensor at a glance, or the fix. */}
+      <SettingsStatusBand band={band} />
+      <NeedsAttention items={attention} />
+
+      <SectionCard label="Sensor">
+        <LedgerRow
+          label="Sensor session"
+          value={sensorLabel}
+          note={sensorNote}
+          to="/settings/sensor"
+        />
       </SectionCard>
 
-      <SectionCard label="Health Settings">
-        <LedgerRow label="Insulin plan" value="Settings & meal types" to="/settings/insulin" />
-        <LedgerRow label="Dexcom connection" value={dexcomStatus} to="/settings/dexcom" />
+      <SectionCard label="Your setup">
+        <LedgerRow label="Notifications" value={notificationsLabel} to="/settings/notifications" />
+        <LedgerRow
+          label="Insulin"
+          value={insulinLabel}
+          note="Carb ratio"
+          to="/settings/insulin"
+        />
+        <LedgerRow label="Display" value={`Chart scale: ${graphHeight}`} to="/settings/display" />
       </SectionCard>
 
-      <SectionCard label="Sharing">
+      <SectionCard label="People">
         <LedgerRow label="Sharing with others" value="Who follows you" to="/settings/sharing" />
         <LedgerRow label="People you follow" value="Invitations you accepted" to="/shared" />
       </SectionCard>
 
-      <SectionCard label="Notifications">
-        <LedgerRow label="Notifications" value="Push, privacy, quiet hours" to="/settings/notifications" />
-      </SectionCard>      <SensorSessionCard />
-
-      <SectionCard label="App">
-        <LedgerRow label="Display" value={`Chart scale: ${graphHeight}`} to="/settings/display" />
-        {!nativeIOS && <LedgerRow label="Add to Home Screen" value="Install" to="/install" />}
+      <SectionCard label="Privacy">
+        <LedgerRow label="Privacy & Consent" value="Consent & controls" to="/settings/privacy-consent" />
       </SectionCard>
 
-      <SectionCard label="Help & Account">
-        <LedgerRow label="Profile" value={user?.email || "Name & email"} to="/settings/profile" />
-        <LedgerRow label="Privacy & Consent" value="Consent & controls" to="/settings/privacy-consent" />
+      <SectionCard label="Help">
         <LedgerRow label="Contact & Support" value="Help & feedback" to="/settings/contact-support" />
-        <LedgerRow
-          label={isLoggingOut ? "Logging out..." : "Log Out"}
-          onClick={handleLogout}
-          danger
-        />
+        {user?.role === "admin" && (
+          <LedgerRow label="Support Inbox" value="Review requests" to="/settings/support-inbox" />
+        )}
+      </SectionCard>
+
+      <SectionCard label="App">
+        <LedgerRow label="Profile" value={user?.email || "Name & email"} to="/settings/profile" />
+        {!nativeIOS && <LedgerRow label="Install" value="Add to Home Screen" to="/install" />}
+        <LedgerRow label="Privacy" to="/privacy" />
+        <LedgerRow label="Terms" to="/terms" />
+        <p className="pt-2.5 text-[11px]" style={{ color: "#746959" }}>
+          Stackd v{getAppVersion()}
+        </p>
       </SectionCard>
 
       {user?.role === "admin" && (
         <SectionCard label="Admin">
-          <LedgerRow label="Support Inbox" value="Review requests" to="/settings/support-inbox" />
-          <div className="mt-3 border-t pt-3.5" style={{ borderColor: "#eadccf" }}>
-            <AdminTestNotification />
-          </div>
+          <AdminTestNotification />
         </SectionCard>
       )}
 
+      {/* Sign out stays last, quiet and on its own. */}
       <SectionCard>
-        <p className="text-xs leading-relaxed" style={{ color: "#746959" }}>
-          Your settings shape what every review shows.{" "}
-          <span className="font-serif-italic">Changes apply to logs going forward.</span>
-        </p>
+        <LedgerRow
+          label={isLoggingOut ? "Signing out..." : "Sign out"}
+          onClick={handleLogout}
+          danger
+        />
       </SectionCard>
     </div>
   );
