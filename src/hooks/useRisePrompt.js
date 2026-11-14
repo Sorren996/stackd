@@ -24,6 +24,7 @@ export default function useRisePrompt({readings,meals,doses,now,ready}) {
     const args={event:detected,bucket:decision.bucket}; pending.current=args;
     begin.mutate(args);
   },[allowed,detected,overlapped,decision?.kind,decision?.id,active,context.data]);
+  useEffect(()=>{if(active && now-Date.parse(active.row.created_date)>=3*3600000){setActive(null);pending.current=null;}},[active,now]);
   const answer=useMutation({mutationFn:({tag,mealId})=>answerRiseContext(active.row.id,tag,mealId),onSuccess:(_row,args)=>{setClosed(active.event);setActive(null);pending.current=null;client.invalidateQueries({queryKey:riseContextKey(user.id)});if(args.tag!=='meal' && args.tag!=='not_now') markProjectionInputsChanged();}});
   const respond=(tag,mealId)=>{attempt.current={tag,mealId};answer.mutate(attempt.current);};
   const quiet=promptQuiet(preferences,now);
