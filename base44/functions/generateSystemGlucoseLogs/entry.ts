@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.61';
 import { upsertReadings } from '../../shared/readingPersistence.ts';
 
 // Triggered when a user logs a new glucose reading (manual or CGM). Fills the

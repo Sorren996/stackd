@@ -1,4 +1,4 @@
-import { createClientFromRequest } from "npm:@base44/sdk@0.8.52";
+import { createClientFromRequest } from "npm:@base44/sdk@0.8.61";
 import { generateProjectionForUser } from "../../shared/projectionGeneration.ts";
 
 // Stackd Insight Engine — Glucose Projection Generator (HTTP entry point)

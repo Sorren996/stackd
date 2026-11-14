@@ -13,6 +13,10 @@
     "event_key": {
       "type": "string"
     },
+    "calendar_day": {
+      "type": "string",
+      "description": "Local date on which this check-in was first shown, in the person's saved timezone."
+    },
     "tag": {
       "type": "string",
       "enum": [
@@ -90,7 +94,16 @@
       "created_by_id": "{{user.id}}"
     },
     "update": {
-      "created_by_id": "{{user.id}}"
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
     },
     "delete": {
       "$or": [

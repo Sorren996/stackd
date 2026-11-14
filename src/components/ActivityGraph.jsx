@@ -28,6 +28,7 @@ import MealEditOverlay from "@/components/insulin/MealEditOverlay";
 import { clusterCarbGroups, findMealGroupAtTime } from "@/lib/concurrentMeals";
 import ProjectionOverlay from "@/components/graph/ProjectionOverlay";
 import ProjectionEstimateStrip from "@/components/graph/ProjectionEstimateStrip";
+import RisePromptSection from '@/components/graph/RisePromptSection';
 
 const STEP_MS = 3 * 60 * 1000;
 // How far the plot's domain reaches behind the newest reading. The Home chart
@@ -1824,6 +1825,7 @@ function ActivityGraph({ doses, activeInsulinBreakdown = [], glucoseReadings = [
             }
         </div>
       </div>
+      <RisePromptSection readings={glucoseReadings} meals={carbEntries} doses={doses} now={stableNow} ready={historyReady && !glucoseReadOnly} />
       <DelayedRiseCautionCard carbEntries={carbEntries} selectionSource={selectionSource} />
       </div>
 

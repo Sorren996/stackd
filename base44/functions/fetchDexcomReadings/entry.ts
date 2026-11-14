@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.54';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.61';
 import { secrets } from 'base44:runtime';
 import { DEXCOM_TOKEN_URL, DEXCOM_API_BASE } from "../../shared/dexcomConfig.ts";
 import { notifyAfterPersist } from "../../shared/notificationIngest.ts";

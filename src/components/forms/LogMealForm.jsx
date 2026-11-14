@@ -48,7 +48,7 @@ function levelFromGrams(grams) {
  * Low/Med/High feeding the hasDelayedRise detector, rescue-carb chip,
  * time defaults to now. No dose recommendations.
  */
-export default function LogMealForm({ open, onClose }) {
+export default function LogMealForm({ open, onClose, initialCarbs = null, initialTime = null, estimateNote = null, onSaved = null }) {
   const [foodName, setFoodName] = useState("");
   const [carbs, setCarbs] = useState("");
   const [proteinLevel, setProteinLevel] = useState("low");
@@ -71,13 +71,14 @@ export default function LogMealForm({ open, onClose }) {
   useEffect(() => {
     if (!open) return;
     setFoodName("");
-    setCarbs("");
+    setCarbs(initialCarbs > 0 ? String(initialCarbs) : "");
     setProteinLevel("low");
     setFatLevel("low");
     setIsRescue(false);
     setNotes("");
-    setDate(getTodayDateValue());
-    setTime(new Date().toTimeString().slice(0, 5));
+    const at = initialTime ? new Date(initialTime) : new Date();
+    setDate(`${at.getFullYear()}-${String(at.getMonth()+1).padStart(2,'0')}-${String(at.getDate()).padStart(2,'0')}`);
+    setTime(at.toTimeString().slice(0, 5));
     setEstMacros(null);
     setRemindMe(false);
     clearMealReminder();
@@ -150,8 +151,9 @@ export default function LogMealForm({ open, onClose }) {
     createCarb.mutate(
       { submittedEntries, optimisticEntries, splitPlan: null },
       {
-        onSuccess: () => {
+        onSuccess: (saved) => {
           setLogging(false);
+          onSaved?.(saved[0]);
           onClose?.();
         },
         onError: () => {
@@ -190,6 +192,7 @@ export default function LogMealForm({ open, onClose }) {
       }
     >
       <div className="space-y-5">
+        {estimateNote && <p className="text-xs leading-relaxed text-ink-muted">{estimateNote}</p>}
         <TextField
           value={foodName}
           onChange={setFoodName}

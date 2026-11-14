@@ -12,7 +12,7 @@
 
 // Pinned to the version the notification engine is exercised under: ingestion
 // now calls that engine in-process, so every caller must share one SDK version.
-import { createClientFromRequest } from "npm:@base44/sdk@0.8.54";
+import { createClientFromRequest } from "npm:@base44/sdk@0.8.61";
 import { requestDexcomRefreshIfNeeded } from "../../shared/dexcomShareSync.ts";
 import { followShareReadings } from "../../shared/nearRealtimeFollowThrough.ts";
 import { dayKeyFromTimezone, recomputeDailySummary } from "../../shared/dailySummary.ts";

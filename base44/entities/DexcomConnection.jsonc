@@ -29,6 +29,15 @@
       ],
       "default": "connected",
       "description": "Current state of the Dexcom Share connection. Credentials are NOT stored here \u2014 they live encrypted in the server-only DexcomCredential vault."
+    },
+    "ingest_lease_token": {
+      "type": "string",
+      "description": "Server ingestion compare-and-swap token shared by every sensor writer for this owner."
+    },
+    "ingest_lease_until": {
+      "type": "number",
+      "default": 0,
+      "description": "Expiry of the server ingestion lease in epoch milliseconds; stale workers cannot release a newer lease."
     }
   },
   "required": [

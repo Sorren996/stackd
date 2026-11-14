@@ -19,6 +19,7 @@
 // SAFETY: only shapes storage. Never interprets a value.
 
 import { scoreReadingWindow, readPages, ownerQuery } from './projectionResidualScoring.ts';
+import { withReadingLease } from './readingLease.ts';
 
 function momentOf(recordedAt: unknown): number | null {
   const t = new Date(recordedAt as string).getTime();
@@ -50,6 +51,10 @@ export async function upsertReadings({
   ownerId: string;
   rows: any[];
 }): Promise<UpsertResult> {
+  return withReadingLease(sr, ownerId, () => persistReadings({sr,ownerId,rows}));
+}
+
+async function persistReadings({sr,ownerId,rows}): Promise<UpsertResult> {
   const uniqueBatch = new Map<number, any>();
   for (const row of Array.isArray(rows) ? rows : []) {
     const moment = momentOf(row?.recorded_at);
