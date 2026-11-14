@@ -1,0 +1,63 @@
+{
+  "name": "ProjectionInputChange",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string"
+    },
+    "entity_id": {
+      "type": "string"
+    },
+    "entity_name": {
+      "type": "string"
+    },
+    "event_type": {
+      "type": "string"
+    },
+    "changed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "event_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "event_key": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "user_id",
+    "changed_at",
+    "event_key"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "data.user_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
