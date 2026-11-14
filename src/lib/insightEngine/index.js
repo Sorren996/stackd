@@ -41,6 +41,7 @@ export const MEAL_RESPONSE_MODEL_VERSION_PERSONALIZED = "1.1.0-meal-personalized
 import { extractEffectiveMealParams } from "./modelResolution";
 import { getEmpiricalSigma, saturateHalfWidth, UNCERTAINTY_CEILING_MGDL } from "./uncertaintyCalibration";
 import { mealInPlayWindowMinutes } from "../mealInPlayWindow";
+import { getInsulinProfile } from '../insulinPharmacology';
 import { projectSuperposition, GLUCOSE_FLOOR, GLUCOSE_CEILING, rescueShapeFor, rescueAbsorptionRate } from "./superposition";
 
 // ── Shadow evaluation (Milestone 4) ─────────────────────────────────────────
@@ -472,8 +473,9 @@ export function normalizeInputs(rawReadings, rawMeals, rawDoses, settings, now) 
     if (units <= 0) return false;
     const doseTime = new Date(d?.administered_at || d?.created_at).getTime();
     if (!Number.isFinite(doseTime)) return false;
-    const dia = getDoseTierDIA(units);
-    return doseTime <= now && doseTime + dia * MINUTE_MS > now;
+    const dia = getInsulinProfile(d.insulin_type).duration;
+    const at = anchor?.time ?? now;
+    return doseTime <= at && doseTime + dia * MINUTE_MS > at;
   });
 
   const momentum = computeMomentum(readings, now);

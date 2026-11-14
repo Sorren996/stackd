@@ -4,16 +4,11 @@ export function expectedPriorDoses(prior, anchorTime) {
   return (prior?.input_snapshot?.doses||[]).filter(d=>{const at=Date.parse(d.administered_at);return !basal(d) && Number(d.units)>0 && at<=anchorTime && at+profileFor(d.insulin_type).duration*60000>anchorTime;});
 }
 export async function completeDoseJoin(sr,userId,doses,anchorTime,now) {
-  const {items}=await sr.entities.GlucoseProjection.filter({user_id:userId,abstained:false,'input_provenance.doseCount':{$gt:0},generated_at:{$gte:new Date(now-16*3600000).toISOString()}},{sort:'-generated_at',limit:1});
-  const missing=expectedPriorDoses(items[0],anchorTime).filter(d=>!doses.some(row=>row.id===d.id));
-  for(const d of missing) {
-    const saved=await sr.entities.InsulinDose.get(d.id).catch(e=>(e.status===404||e.response?.status===404)?null:Promise.reject(e));
-    // A confirmed deletion is intentional, never resurrect it from a snapshot.
-    if(saved && saved.created_by_id===userId) return false;
-  }
-  if(!doses.length) {
-    const count=await sr.entities.InsulinDose.count({created_by_id:userId,administered_at:{$gte:new Date(now-16*3600000).toISOString(),$lte:new Date(now).toISOString()}});
-    if(count>0) return false;
-  }
-  return true;
+  const since=anchorTime-16*3600000;
+  const recent={created_by_id:userId,administered_at:{$gte:new Date(since).toISOString(),$lte:new Date(now).toISOString()}};
+  const expectedCount=await sr.entities.InsulinDose.count(recent);
+  const loaded=new Set(doses.filter(d=>Date.parse(d.administered_at)>=since && Date.parse(d.administered_at)<=now).map(d=>d.id));
+  // Detect both empty and partial joins, including a first projection without a
+  // previous snapshot. A deletion also skips this pass, rather than reviving it.
+  return expectedCount===loaded.size;
 }

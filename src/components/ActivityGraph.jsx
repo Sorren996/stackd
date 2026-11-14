@@ -1825,7 +1825,7 @@ function ActivityGraph({ doses, activeInsulinBreakdown = [], glucoseReadings = [
             }
         </div>
       </div>
-      <RisePromptSection readings={glucoseReadings} meals={carbEntries} doses={doses} now={stableNow} ready={historyReady && !glucoseReadOnly} />
+      <RisePromptSection readings={glucoseReadings} meals={carbEntries} doses={doses} now={stableNow} ready={historyReady && !historyError && !glucoseReadOnly} />
       <DelayedRiseCautionCard carbEntries={carbEntries} selectionSource={selectionSource} />
       </div>
 

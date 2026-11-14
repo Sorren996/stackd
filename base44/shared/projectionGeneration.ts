@@ -9,6 +9,7 @@ import { calibrateUncertainty } from "./uncertaintyCalibration.ts";
 import { buildInputSnapshot } from "./projectionSnapshot.ts";
 import { residualBandForUser } from "./projectionBandService.ts";
 import { reconcileReadings } from './readingPersistence.ts';
+import { completeDoseJoin } from './projectionDoseGuard.ts';
 import { learnRescueCarbModel, observeRescueEpisodes, MIN_EPISODES } from "./rescueCarbLearning.ts";
 
 // Shared server-side GlucoseProjection generator.
@@ -277,6 +278,18 @@ async function runGenerateProjectionForUser({
     return { ok: false, skipped: true, reason: "input_load_failed" };
   }
 
+  const anchorTime = Math.max(...readings.filter(r => r.source !== 'system' && !r.is_interpolated && Date.parse(r.recorded_at) <= now).map(r => Date.parse(r.recorded_at)));
+  if (Number.isFinite(anchorTime)) {
+    try {
+      if (!await completeDoseJoin(sr, normalizedUserId, doses, anchorTime, now)) {
+        console.warn(JSON.stringify({diagStage:'PROJECTION_DOSE_JOIN_INCOMPLETE',reason:'incomplete_dose_join'}));
+        return {ok:false,skipped:true,reason:'incomplete_dose_join'};
+      }
+    } catch {
+      return {ok:false,skipped:true,reason:'dose_join_unverified'};
+    }
+  }
+
   const settings =
     settingsList.find((row: any) => row?.settings_confirmed === true) ||
     settingsList[0] ||
@@ -422,7 +435,7 @@ async function runGenerateProjectionForUser({
         bandSource: uncertaintyCalibration.bandSource, usedOnlyBelow30Samples: true },
     };
     result.uncertainty = { ...result.uncertainty, method: band.summary.method,
-      version: band.summary.version, calibrated: !band.summary.defaultBlend,
+      version: band.summary.version, calibrated: !band.summary.defaultBlend && !band.summary.contextAdjustment,
       sampleCount: band.summary.sampleCount, coverageObserved: band.summary.coverage,
       bandSource: 'user_residual_quantiles', residualCount: band.summary.sampleCount };
   }

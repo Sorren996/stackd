@@ -19,7 +19,7 @@ export default function useRisePrompt({readings,meals,doses,now,ready}) {
   const overlapped=closed && detected && Date.parse(detected.window_start)<=Date.parse(closed.window_end) && Date.parse(detected.window_end)>=Date.parse(closed.window_start);
   const begin=useMutation({mutationFn:({event,bucket})=>beginRiseContext(user.id,event,bucket,settings?.timezone),onSuccess:(row,args)=>{setActive({row,event:args.event});client.invalidateQueries({queryKey:riseContextKey(user.id)});}});
   useEffect(()=>{
-    if(!allowed || !detected || overlapped || decision?.kind!=='prompt' || active || pending.current) return;
+    if(!allowed || document.visibilityState!=='visible' || !detected || overlapped || decision?.kind!=='prompt' || active || pending.current) return;
     if(decision.id) {const row=context.data.recent.find(r=>r.id===decision.id);setActive({row,event:{...detected,window_start:row.window_start,window_end:row.window_end}});return;}
     const args={event:detected,bucket:decision.bucket}; pending.current=args;
     begin.mutate(args);

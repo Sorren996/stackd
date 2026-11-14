@@ -82,7 +82,7 @@ export default function LogMealForm({ open, onClose, initialCarbs = null, initia
     setEstMacros(null);
     setRemindMe(false);
     clearMealReminder();
-  }, [open]);
+  }, [open, initialCarbs, initialTime]);
 
   const carbsNum = Number(carbs) || 0;
   const levelGrams = proteinFatFromLevels(proteinLevel, fatLevel);

@@ -10,7 +10,7 @@ export function promptQuiet(preferences, now) {
   return start===end || (start<end ? hour>=start && hour<end : hour>=start || hour<end);
 }
 export function detectUnloggedRise(readings, meals, doses, settings, now) {
-  const points=canonicalGlucoseSeries(readings).filter(r=>r.source!=='manual' && r.time<=now+120000);
+  const points=canonicalGlucoseSeries(readings,{cgmOnly:true}).filter(r=>!r.is_interpolated && r.time<=now+120000);
   const end=points.at(-1); if(!end || now-end.time>10*60000) return null;
   if(meals.some(m=>{const t=Date.parse(m.consumed_at);return t<=end.time && (end.time-t<=4*3600000 || t+mealInPlayWindowMinutes(m.carbs)*60000>end.time);})) return null;
   let start=null;
@@ -25,7 +25,7 @@ export function detectUnloggedRise(readings, meals, doses, settings, now) {
   const bolus=doses.filter(d=>!isBasalInsulinType(d.insulin_type) && Date.parse(d.administered_at)>=start.time-45*60000 && Date.parse(d.administered_at)<=end.time).sort((a,b)=>Date.parse(b.administered_at)-Date.parse(a.administered_at))[0];
   const ratio=Number(settings?.meal_insulin_units_per_5g);
   const estimate=settings?.settings_confirmed===true && bolus && ratio>0 ? Math.round((Number(bolus.units)*5/ratio)/5)*5 : null;
-  return {window_start:new Date(start.time).toISOString(),window_end:new Date(end.time).toISOString(),rise_magnitude:end.value-start.value,peak_value:Math.max(...points.filter(r=>r.time>=start.time).map(r=>r.value)),active_bolus_units:doses.reduce((sum,d)=>sum+(isBasalInsulinType(d.insulin_type)?0:getDoseIOB(d,start.time)),0),estimate_carbs:estimate>0?estimate:null};
+  return {window_start:new Date(start.time).toISOString(),window_end:new Date(end.time).toISOString(),rise_magnitude:end.value-start.value,peak_value:Math.max(...points.filter(r=>r.time>=start.time).map(r=>r.value)),active_bolus_units:doses.reduce((sum,d)=>sum+(isBasalInsulinType(d.insulin_type)?0:getDoseIOB(d,end.time)),0),estimate_carbs:estimate>0?estimate:null};
 }
 export function promptDecision(event, context, now, zone) {
   if(!event || !context || promptQuiet(context.preferences,now)) return null;

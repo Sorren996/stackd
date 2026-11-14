@@ -35,6 +35,7 @@ import { extractEffectiveMealParams } from "./modelResolution.ts";
 import type { UncertaintyCalibration } from "./uncertaintyCalibration.ts";
 import { getEmpiricalSigma, saturateHalfWidth, UNCERTAINTY_CEILING_MGDL } from "./uncertaintyCalibration.ts";
 import { mealInPlayWindowMinutes } from "./mealInPlayWindow.ts";
+import projectionInsulinProfile from './projectionInsulinProfiles.ts';
 import {
   projectSuperposition,
   GLUCOSE_FLOOR,
@@ -576,8 +577,9 @@ export function normalizeInputs(
       if (units <= 0) return false;
       const doseTime = new Date(d?.administered_at || d?.created_at).getTime();
       if (!Number.isFinite(doseTime)) return false;
-      const dia = getDoseTierDIA(units);
-      return doseTime <= now && doseTime + dia * MINUTE_MS > now;
+      const dia = projectionInsulinProfile(d.insulin_type).duration;
+      const at = anchor?.time ?? now;
+      return doseTime <= at && doseTime + dia * MINUTE_MS > at;
     });
 
   const momentum = computeMomentum(readings, now);
