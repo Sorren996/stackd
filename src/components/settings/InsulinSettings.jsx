@@ -9,7 +9,6 @@ import SettingRow from "@/components/settings/insulin/SettingRow";
 import NumericEditSheet from "@/components/settings/insulin/NumericEditSheet";
 import TargetRangeSheet from "@/components/settings/insulin/TargetRangeSheet";
 import StackingSheet from "@/components/settings/insulin/StackingSheet";
-import TermInfoButton from "@/components/doseplan/TermInfoButton";
 import { DOSE_TERMS } from "@/lib/dosePlanCopy";
 import LibraryPicker from "@/components/settings/insulin/LibraryPicker";
 import SubsetPicker from "@/components/settings/insulin/SubsetPicker";
@@ -353,7 +352,7 @@ export default function InsulinSettings() {
           title={DOSE_TERMS.sensitivity.label}
           value={toDisplayGlucose(insulinSensitivity)}
           unit={`${glucoseUnitLabel()} per unit`}
-          help={DOSE_TERMS.sensitivity.helper}
+          help={DOSE_TERMS.sensitivity.short}
           decrement={stepDraft(-sensitivityStep(), sensitivityDecimal())}
           increment={stepDraft(sensitivityStep(), sensitivityDecimal())}
           onSave={(v) => {
@@ -369,7 +368,7 @@ export default function InsulinSettings() {
           title={DOSE_TERMS.mealRatio.label}
           value={unitsPer5g}
           unit={DOSE_TERMS.mealRatio.unit}
-          help={DOSE_TERMS.mealRatio.helper}
+          help={DOSE_TERMS.mealRatio.short}
           decrement={stepDraft(-0.5, true)}
           increment={stepDraft(0.5, true)}
           onSave={(v) => {
@@ -385,7 +384,7 @@ export default function InsulinSettings() {
           title={DOSE_TERMS.correctionTarget.label}
           value={toDisplayGlucose(correctionTargetGlucose)}
           unit={glucoseUnitLabel()}
-          help={DOSE_TERMS.correctionTarget.helper}
+          help={DOSE_TERMS.correctionTarget.short}
           decrement={stepDraft(-sensitivityStep(), sensitivityDecimal())}
           increment={stepDraft(sensitivityStep(), sensitivityDecimal())}
           onSave={(v) => {
@@ -491,22 +490,16 @@ export default function InsulinSettings() {
           <GroupCard>
             <SettingRow
               label={DOSE_TERMS.sensitivity.label}
-              value={`${toDisplayGlucose(insulinSensitivity) || "—"} ${glucoseUnitLabel()} per unit`}
-              info={<TermInfoButton termKey="sensitivity" />}
               onPress={() => setActiveSheet("sensitivity")}
             />
             <RowDivider />
             <SettingRow
               label={DOSE_TERMS.mealRatio.label}
-              value={`${unitsPer5g || "—"} units per 5 g carbs`}
-              info={<TermInfoButton termKey="mealRatio" />}
               onPress={() => setActiveSheet("carb")}
             />
             <RowDivider />
             <SettingRow
               label={DOSE_TERMS.correctionTarget.label}
-              value={`${toDisplayGlucose(correctionTargetGlucose) || "—"} ${glucoseUnitLabel()}`}
-              info={<TermInfoButton termKey="correctionTarget" />}
               onPress={() => setActiveSheet("correction")}
             />
             <RowDivider />
@@ -568,13 +561,11 @@ export default function InsulinSettings() {
           <GroupCard>
             <SettingRow
               label="My insulin library"
-              value={`${insulinLibrary.length} selected`}
               onPress={() => setLibraryOpen(true)}
             />
             <RowDivider />
             <SettingRow
               label="Meal & correction types"
-              value={`${mealInsulinTypes.length} of ${insulinLibrary.length}`}
               onPress={() => setSubsetOpen(true)}
             />
           </GroupCard>

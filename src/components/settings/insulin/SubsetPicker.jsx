@@ -68,6 +68,9 @@ export default function SubsetPicker({ library, selected, onToggle, onClose }) {
           className="shrink-0 px-4 py-3 pb-[max(env(safe-area-inset-bottom),0.75rem)]"
           style={{ borderTop: "1px solid #eadccf" }}
         >
+          <p className="pb-2 text-center text-[12px]" style={{ color: "#746959" }}>
+            {selected.length} of {library.length} meal types selected
+          </p>
           <button
             type="button"
             onClick={onClose}
