@@ -117,6 +117,18 @@ export function parseGlucoseInput(displayValue) {
   return Math.round(n * 18);
 }
 
+/**
+ * Highest glucose value the entry screens accept, stated once in mg/dL.
+ * 500 mg/dL reads as 27.8 mmol/L, and it is converted by the same helper as
+ * every other displayed value so the ceiling can never drift from the unit.
+ */
+export const GLUCOSE_MAX_MGDL = 500;
+
+/** That ceiling, expressed in whichever unit is currently displayed. */
+export function glucoseInputMax() {
+  return isMmolMode() ? Number(formatGlucose(GLUCOSE_MAX_MGDL)) : GLUCOSE_MAX_MGDL;
+}
+
 /** Hook helper: subscribe to glucose-units-updated events.
  *  Returns a cleanup function. */
 export function onGlucoseUnitsChange(callback) {

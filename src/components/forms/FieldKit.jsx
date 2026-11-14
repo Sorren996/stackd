@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { Minus, Plus } from "lucide-react";
 import { isBasalInsulinType } from "@/lib/insulinPharmacology";
@@ -370,13 +370,45 @@ export function CollapsibleNote({ value, onChange, placeholder = "Note" }) {
 }
 
 // ── Large −/+ numeric stepper ──────────────────────────────────────────────
-// Locked 56px field height, large central value, − / + buttons. Optional
-// `unit` suffix and `step` (default 1). Presets row optional via `presets`.
-export function StepperField({ label, value, onChange, unit, step = 1, presets, min = 0 }) {
+// Locked 56px field height, a large central value that is a real text field
+// (tap the number, or the space between the steppers, to type), and − / +
+// buttons. Optional `unit` suffix, `step` (default 1) and `presets` row.
+//
+// `decimals` sets how precisely it can be typed: 0 = whole numbers only,
+// 1 = one decimal place. `max` is the highest value it will ever hold — pass it
+// only where the caller has a real ceiling; omitted means no upper bound.
+export function StepperField({
+  label, value, onChange, unit, step = 1, presets, min = 0, max, decimals = 0, ariaLabel,
+}) {
+  const fieldRef = useRef(null);
   const current = Number(value) || 0;
+  const cap = Number.isFinite(max) ? max : null;
+  const atMax = cap !== null && current >= cap;
+  const round = (n) => Math.round(n * 10 ** decimals) / 10 ** decimals;
+
+  // Keystrokes land exactly as typed — cleaned, never clamped. Clamping mid-entry
+  // would fight someone typing past the ceiling, so the bound is applied on blur
+  // and again by the caller before it submits.
+  const clean = (raw) => {
+    const text = String(raw ?? "");
+    if (decimals === 0) return text.replace(/[^\d]/g, "");
+    const digits = text.replace(/[^\d.]/g, "");
+    const [whole, ...rest] = digits.split(".");
+    if (!rest.length) return digits;
+    return `${whole}.${rest.join("").slice(0, decimals)}`;
+  };
+
+  const emit = (n) => {
+    if (!Number.isFinite(n) || n <= min) {
+      onChange("");
+      return;
+    }
+    onChange(round(cap !== null ? Math.min(cap, n) : n).toFixed(decimals));
+  };
+
   const set = (next) => {
-    const clamped = Math.max(min, next);
-    onChange(clamped > 0 ? String(clamped) : "");
+    const bounded = Math.max(min, cap !== null ? Math.min(cap, next) : next);
+    onChange(bounded > min ? round(bounded).toFixed(decimals) : "");
   };
 
   return (
@@ -384,7 +416,11 @@ export function StepperField({ label, value, onChange, unit, step = 1, presets, 
       {label && <FieldLabel>{label}</FieldLabel>}
       <div
         className="flex items-center justify-between"
-        style={{ height: "56px", marginTop: label ? "10px" : 0 }}>
+        style={{ height: "56px", marginTop: label ? "10px" : 0 }}
+        onClick={(e) => {
+          // The empty space between the steppers focuses the field too.
+          if (!e.target.closest("button")) fieldRef.current?.focus();
+        }}>
         
         <button
           type="button"
@@ -397,17 +433,29 @@ export function StepperField({ label, value, onChange, unit, step = 1, presets, 
           <Minus className="h-5 w-5" />
         </button>
 
-        <div className="flex min-w-[100px] items-baseline justify-center gap-1">
-          <span className="text-4xl font-black leading-none" style={{ color: INK, fontVariantNumeric: "tabular-nums" }}>
-            {current}
-          </span>
+        <label className="flex min-w-[120px] cursor-text items-baseline justify-center gap-1">
+          <input
+            ref={fieldRef}
+            type="text"
+            inputMode={decimals > 0 ? "decimal" : "numeric"}
+            pattern={decimals > 0 ? "[0-9]*[.,]?[0-9]*" : "[0-9]*"}
+            value={value}
+            onChange={(e) => onChange(clean(e.target.value))}
+            onFocus={(e) => e.currentTarget.select()}
+            onBlur={(e) => emit(Number(e.target.value))}
+            placeholder="0"
+            aria-label={ariaLabel || label || "Value"}
+            className="w-[120px] bg-transparent p-0 text-center text-4xl font-black leading-none outline-none placeholder:text-[#3f3830]"
+            style={{ border: "none", color: INK, fontVariantNumeric: "tabular-nums" }} />
+          
           {unit && <span className="text-sm font-medium" style={{ color: FAINT }}>{unit}</span>}
-        </div>
+        </label>
 
         <button
           type="button"
           onClick={() => set(current + step)}
-          className="flex h-12 w-12 items-center justify-center rounded-full active:scale-95"
+          disabled={atMax}
+          className="flex h-12 w-12 items-center justify-center rounded-full active:scale-95 disabled:opacity-30"
           style={{ background: CANVAS, color: INK }}
           aria-label={`Increase ${label || "value"} by ${step}`}>
           
@@ -435,7 +483,7 @@ export function StepperField({ label, value, onChange, unit, step = 1, presets, 
                 }}
                 aria-pressed={isSelected}>
                 
-                  {preset}
+                  {Number(preset).toFixed(decimals)}
                 </button>);
 
           })}

@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useCreateGlucose } from "@/hooks/useLogMutations";
-import { getGlucoseUnits, glucoseUnitLabel, parseGlucoseInput } from "@/lib/glucoseUnits";
+import { getGlucoseUnits, glucoseUnitLabel, parseGlucoseInput, formatGlucose, glucoseInputMax } from "@/lib/glucoseUnits";
 import { toast } from "sonner";
 import LogSheetShell from "@/components/forms/LogSheetShell";
 import {
@@ -10,6 +10,9 @@ import {
   COPPER,
   CREAM,
 } from "@/components/forms/FieldKit";
+
+// The one preset set, stated in mg/dL and shown in whichever unit is active.
+const PRESETS_MGDL = [70, 100, 130, 180];
 
 function getTodayDateValue() {
   const now = new Date();
@@ -22,6 +25,9 @@ function getTodayDateValue() {
  */
 export default function LogGlucoseForm({ open, onClose }) {
   const [value, setValue] = useState("");
+  // The last sensible value typed or stepped to, so a cleared field still has
+  // something real to fall back on.
+  const lastValid = useRef(null);
   const [date, setDate] = useState(getTodayDateValue);
   const [time, setTime] = useState(() => new Date().toTimeString().slice(0, 5));
   const [notes, setNotes] = useState("");
@@ -33,6 +39,7 @@ export default function LogGlucoseForm({ open, onClose }) {
   useEffect(() => {
     if (!open) return;
     setValue("");
+    lastValid.current = null;
     setNotes("");
     setDate(getTodayDateValue());
     setTime(new Date().toTimeString().slice(0, 5));
@@ -48,13 +55,32 @@ export default function LogGlucoseForm({ open, onClose }) {
     };
   }, []);
 
-  // mmol/L uses smaller step (0.1) and presets; mg/dL uses 5/10.
+  // One stepper serves both units: mmol/L steps by 0.1 and keeps one decimal,
+  // mg/dL steps by 5. The same presets show in whichever unit is active.
   const isMmol = glucoseUnits === "mmol/L";
-  const step = isMmol ? 1 : 5; // stepper is integer-friendly; mmol handled below
-  const presets = isMmol ? [] : [70, 100, 130, 180];
+  const decimals = isMmol ? 1 : 0;
+  const step = isMmol ? 0.1 : 5;
+  const max = glucoseInputMax();
+  const presets = isMmol
+    ? PRESETS_MGDL.map((mg) => Number(formatGlucose(mg)))
+    : PRESETS_MGDL;
 
-  const numericValue = parseGlucoseInput(value);
+  // What will actually be saved: the field's own value, capped at the ceiling,
+  // or the last valid value when the field has been cleared. The Log label
+  // reads this, so it always matches the reading that goes in.
+  const typed = Number(value);
+  const effective = Number.isFinite(typed) && typed > 0
+    ? Math.min(typed, max)
+    : lastValid.current;
+  const numericValue = effective == null ? null : parseGlucoseInput(effective);
   const canSubmit = Number.isFinite(numericValue) && numericValue > 0 && !logging;
+
+  const handleValueChange = (next) => {
+    setValue(next);
+    const n = Number(next);
+    // Remember the newest sensible value so a cleared field can fall back to it.
+    if (Number.isFinite(n) && n > 0) lastValid.current = Math.min(n, max);
+  };
 
   const handleSubmit = () => {
     if (!canSubmit) return;
@@ -69,6 +95,11 @@ export default function LogGlucoseForm({ open, onClose }) {
       toast.error("Choose a time that is not in the future.");
       return;
     }
+
+    // Settle the field on the value that will be saved: capped at the ceiling,
+    // and restored to the last valid value if it was left empty.
+    setValue(effective.toFixed(decimals));
+    lastValid.current = effective;
 
     navigator.vibrate?.(20);
     setLogging(true);
@@ -103,8 +134,6 @@ export default function LogGlucoseForm({ open, onClose }) {
     );
   };
 
-  // For mmol/L the integer stepper is awkward; fall back to a text input feel
-  // by letting the user type via the TextField. For mg/dL use the stepper.
   return (
     <LogSheetShell
       open={open}
@@ -118,16 +147,21 @@ export default function LogGlucoseForm({ open, onClose }) {
           className="w-full rounded-2xl py-4 text-base font-semibold transition disabled:opacity-40"
           style={{ background: COPPER, color: CREAM, boxShadow: "0 4px 16px rgba(156,82,40,0.25)" }}
         >
-          {logging ? "Logging..." : `Log ${value || "--"} ${glucoseUnitLabel()}`}
+          {logging ? "Logging..." : `Log ${effective == null ? "--" : effective.toFixed(decimals)} ${glucoseUnitLabel()}`}
         </button>
       }
     >
       <div className="space-y-4">
-        {isMmol ? (
-          <TextField label={`Glucose (${glucoseUnitLabel()})`} value={value} onChange={(v) => setValue(v.replace(/[^\d.]/g, "").slice(0, 4))} placeholder="e.g. 6.5" />
-        ) : (
-          <StepperField label={`Glucose (${glucoseUnitLabel()})`} value={value} onChange={setValue} step={5} presets={presets} />
-        )}
+        <StepperField
+          label={`Glucose (${glucoseUnitLabel()})`}
+          value={value}
+          onChange={handleValueChange}
+          step={step}
+          presets={presets}
+          max={max}
+          decimals={decimals}
+          ariaLabel="Glucose value"
+        />
         <TimeField
           dateValue={date}
           timeValue={time}
