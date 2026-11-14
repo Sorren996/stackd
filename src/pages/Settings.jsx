@@ -63,9 +63,8 @@ export default function Settings() {
         <LedgerRow label="Notifications" value={notificationsLabel} to="/settings/notifications" />
         <LedgerRow label="Reminders" value={remindersLabel} to="/settings/reminders" />
         <LedgerRow
-          label="Insulin"
+          label="Insulin plan"
           value={insulinLabel}
-          note="Carb ratio"
           to="/settings/insulin"
         />
         <LedgerRow label="Display" value={`Chart scale: ${graphHeight}`} to="/settings/display" />
