@@ -16,7 +16,7 @@ import { useIsLightTheme } from "@/lib/theme";
 import { getGraphTheme } from "@/lib/graphTheme";
 import { shouldAnchorToLatest } from "@/lib/graphAnchor";
 import { resolveScrollBounds, isAtResting, shouldReturnToResting, shouldFollowLatest } from "@/lib/graphScroll";
-import { buildScrubEntries, nearestEntry, positionTimeOf, projectionEndTime, FORECAST_KIND } from "@/lib/graphScrub";
+import { buildScrubEntries, projectionEndTime, FORECAST_KIND } from "@/lib/graphScrub";
 import { formatGlucose, glucoseUnitLabel, getGlucoseUnits } from "@/lib/glucoseUnits";
 import GlucoseTicker from "@/components/graph/GlucoseTicker";
 import TimeViewToggle from "@/components/graph/TimeViewToggle";
@@ -318,10 +318,12 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
 
   const isCandlestick = viewWindow === 24;
   const [activeMarker, setActiveMarker] = useState(null);
-  // THE SCRUB POSITION — the one number the marker, the readout and the strip
-  // all read from. 0 is the newest received reading, which is also where it
-  // starts on load; 1 is the final forecast point.
-  const [scrubPosition, setScrubPosition] = useState(0);
+  // The drawn point the marker is on. The trace layer owns the one position and
+  // reports the point it lands on from it; the readout, the estimate strip and
+  // the tapped reading all read it, so nothing keeps a second selection.
+  const [scrubEntry, setScrubEntry] = useState(null);
+  // Bumped by "Now", which sends the marker back to the newest reading.
+  const [scrubResetSignal, setScrubResetSignal] = useState(0);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [selectedDoseKey, setSelectedDoseKey] = useState(null);
   const [editingMeal, setEditingMeal] = useState(null);
@@ -372,7 +374,7 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
     if (e?.target && e.target !== e.currentTarget && e.target.closest?.("button, a")) return;
     if (!filteredGlucoseReadings.length) return;
     // The reading the readout is showing — the one under the marker.
-    const selectionTime = scrubTime ?? getCenterTimeForScroll(scrollRef.current?.scrollLeft ?? maxScrollLeft);
+    const selectionTime = scrubEntry?.time ?? getCenterTimeForScroll(scrollRef.current?.scrollLeft ?? maxScrollLeft);
     let nearest = null;
     for (const reading of filteredGlucoseReadings) {
       const dist = Math.abs(reading.time - selectionTime);
@@ -611,13 +613,6 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
 
   const scrubAnchor = scrub.anchor;
   const scrubHorizon = scrub.horizon;
-  const scrubTime = positionTimeOf(scrubAnchor, scrubHorizon, scrubPosition);
-  // The readout names the drawn point nearest the marker, so the numbers are
-  // always real points while the dot moves continuously.
-  const scrubEntry = useMemo(
-    () => nearestEntry(scrub.entries, scrubTime),
-    [scrub.entries, scrubTime]
-  );
 
   const maxBolusUnits = useMemo(
     () => Math.max(...filteredDoses.filter((d) => !isBasalInsulinType(d.insulin_type)).map(getDoseUnits), 1),
@@ -1184,7 +1179,7 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
 
     // Tapping Now re-arms following, whatever the reader had latched off.
     atRestingRef.current = true;
-    setScrubPosition(0);
+    setScrubResetSignal((n) => n + 1);
     scrollRef.current.scrollTo({ left: restingScrollLeft, behavior: "smooth" });
   };
 
@@ -1479,7 +1474,8 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
                   getGlucoseY={getCandleGlucoseY}
                   showReadingLine={false}
                   interactive={false}
-                  position={scrubPosition}
+                  resetSignal={scrubResetSignal}
+                  onSelectionChange={setScrubEntry}
                   scrollContainerRef={scrollRef} />
 
                 }
@@ -1574,8 +1570,8 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
                   glucoseMarginTop={GLUCOSE_MARGIN_TOP}
                   plotHeight={plotHeight}
                   getGlucoseY={getGlucoseY}
-                  position={scrubPosition}
-                  onPositionChange={setScrubPosition}
+                  resetSignal={scrubResetSignal}
+                  onSelectionChange={setScrubEntry}
                   scrollContainerRef={scrollRef} />
 
                 }

@@ -37,7 +37,7 @@
 // SAFETY: an informational wellness estimate, never a clinical prediction.
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { nearestEntry, valueAtTime, positionForTime, FORECAST_KIND, READING_KIND } from "@/lib/graphScrub";
+import { nearestEntry, valueAtTime, positionForTime, FORECAST_KIND } from "@/lib/graphScrub";
 import { formatGlucose, glucoseUnitLabel } from "@/lib/glucoseUnits";
 
 const READING_STROKE = "#8c4a28";
