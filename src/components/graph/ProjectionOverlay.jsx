@@ -307,6 +307,30 @@ export default function ProjectionOverlay({
   const mergedRef = useRef(merged);
   mergedRef.current = merged;
 
+  // ── ONE SOURCE FOR THE LINE AND THE GESTURE ───────────────────────────
+  // The dashed continuation is the TAIL OF THIS SAME ARRAY, cut from the newest
+  // real reading onward. The forecast is therefore literally the continuation of
+  // the readings' polyline: it cannot drift from the marker that rides it, and
+  // there is no second projection element, second handler or independently
+  // positioned copy anywhere in this file.
+  const dashPoints = useMemo(() => {
+    let lastReading = -1;
+    merged.forEach((p, i) => {
+      if (p.kind === "reading") lastReading = i;
+    });
+    return lastReading >= 0 ? merged.slice(lastReading) : merged;
+  }, [merged]);
+
+  // Where the marker sits when nothing is selected: the newest real reading,
+  // never the horizon. The plot shows exactly one dot, and it belongs to this
+  // overlay (the graph itself no longer paints one).
+  const restingPoint = useMemo(() => {
+    for (let i = merged.length - 1; i >= 0; i -= 1) {
+      if (merged[i].kind === "reading") return merged[i];
+    }
+    return merged.length ? merged[merged.length - 1] : null;
+  }, [merged]);
+
   // ── Content-space mapping ─────────────────────────────────────────────
   // The plot lives inside a horizontally scrolling container, so the finger's
   // clientX is only meaningful once the container's own rect and scroll offset
@@ -363,11 +387,16 @@ export default function ProjectionOverlay({
   // ── Pinning the scroller ──────────────────────────────────────────────
   // For as long as the finger is down the chart does not pan: the offset is
   // saved on pointerdown, held there, and restored on release.
+  // While the finger owns the plot the chart does not scroll at all: the offset
+  // is held, and the container's own overflow-x is switched off for the duration
+  // — the browser bounces an `auto` scroller at its ends, and a scroller that
+  // cannot scroll has nothing to bounce. Everything is restored on release.
   const releasePin = useCallback(() => {
     const pin = pinRef.current;
     if (!pin) return;
     pin.el.removeEventListener("scroll", pin.onScroll);
     pin.el.scrollLeft = pin.left;
+    pin.el.style.overflowX = pin.previousOverflowX;
     pinRef.current = null;
   }, []);
 
@@ -376,10 +405,12 @@ export default function ProjectionOverlay({
     const el = scrollContainerRef?.current || scrollParentOf(hitRef.current);
     if (!el) return;
     const left = el.scrollLeft;
+    const previousOverflowX = el.style.overflowX;
+    el.style.overflowX = "hidden";
     const onScroll = () => {
       if (el.scrollLeft !== left) el.scrollLeft = left;
     };
-    pinRef.current = { el, left, onScroll };
+    pinRef.current = { el, left, onScroll, previousOverflowX };
     el.addEventListener("scroll", onScroll, { passive: true });
   }, [releasePin, scrollContainerRef]);
 
@@ -682,32 +713,41 @@ export default function ProjectionOverlay({
       : "Glucose readings. Press Enter to open, then use arrow keys to step through the readings.";
 
   // ── Drawing ───────────────────────────────────────────────────────────
-  // Both the median and the band are drawn with the SAME shape-preserving
-  // smoothing as the measured line (Fritsch–Carlson), so the forecast reads as
-  // one continuous curve rather than a chain of straight segments, and the
-  // curve cannot overshoot a value the model never produced.
-  const linePath = monotoneXPath(points.map((p) => ({ x: p.x, y: p.y })));
+  // Drawn from `dashPoints` — the tail of the scrub's own array — with the SAME
+  // shape-preserving smoothing as the measured line (Fritsch–Carlson), so the
+  // forecast leaves the tip of the readings' polyline as one continuous curve
+  // and cannot overshoot a value the model never produced.
+  const linePath = monotoneXPath(dashPoints.map((p) => ({ x: p.x, y: p.y })));
 
   // The band covers the forecast and closes at the reading, which has no
   // uncertainty of its own: upper edge forward, lower edge back.
-  const bandPoints = points.filter((p) => p.kind === "forecast");
+  const bandPoints = dashPoints.filter((p) => p.kind === "forecast");
   const hasBand = bandPoints.length > 1 && bandPoints.every((p) => p.lower != null && p.upper != null);
   let bandPath = "";
   if (hasBand) {
-    const upper = points.map((p) => ({ x: p.x, y: getGlucoseY(p.upper != null ? p.upper : p.value) }));
-    const lower = points.map((p) => ({ x: p.x, y: getGlucoseY(p.lower != null ? p.lower : p.value) }));
+    const upper = dashPoints.map((p) => ({ x: p.x, y: getGlucoseY(p.upper != null ? p.upper : p.value) }));
+    const lower = dashPoints.map((p) => ({ x: p.x, y: getGlucoseY(p.lower != null ? p.lower : p.value) }));
     const back = monotoneXPath([...lower].reverse()).replace(/^M/, "L");
     bandPath = `${monotoneXPath(upper)} ${back} Z`;
   }
 
   // The last drawn forecast point carries a small dot, so the eye finds where
-  // the estimate stops. No number is attached to it.
-  const endPoint = points[points.length - 1];
+  // the estimate stops. No number is attached to it — and it is not drawn at all
+  // while a selection exists, because at the horizon the marker would land on top
+  // of it and the pair would read as two markers.
+  const endPoint = merged[merged.length - 1];
 
-  // Where the dot is drawn. Under the finger while a scrub is running, and on
-  // the entry the numbers show at rest. Nothing else moves it, and it stops at
-  // the first reading and the last forecast point.
-  const marker = finger || (activePoint ? { x: activePoint.x, y: activePoint.y } : null);
+  // Where the dot is drawn. Under the finger while a scrub is running, on the
+  // selected entry once a gesture has settled, and on the newest real reading at
+  // rest. Nothing else moves it, and it stops at the first reading and the last
+  // forecast point.
+  const marker = finger
+    || (activePoint ? { x: activePoint.x, y: activePoint.y } : null)
+    || (restingPoint ? { x: restingPoint.x, y: restingPoint.y } : null);
+
+  // The hit layer's own height: the glucose plot and nothing below it. It can
+  // never reach the insulin band, whatever the plot height passed in.
+  const hitHeight = Math.max(0, Math.min(plotHeight, glucoseChartHeight - glucoseMarginTop));
 
   return (
     <>
@@ -734,7 +774,7 @@ export default function ProjectionOverlay({
           strokeLinejoin="round"
           style={{ pointerEvents: "none" }}
         />
-        {hasFuture && endPoint && (
+        {hasFuture && endPoint && !activePoint && (
           <circle
             cx={endPoint.x}
             cy={endPoint.y}
@@ -769,19 +809,22 @@ export default function ProjectionOverlay({
             />
           </>
         )}
-        {/* The one scrub layer: a transparent area over the whole plot, and the
-            only set of pointer handlers. Everything above it in this svg is
-            inert (pointerEvents: none), so the dashed line cannot compete for
-            touches. touch-action is none, because horizontal movement here
-            belongs to the scrub and not to the scroller; a gesture whose first
-            movement is clearly vertical is handed to the page by hand. */}
+        {/* The one scrub layer: a transparent area over the glucose plot only —
+            from the top margin down to the BOTTOM OF THE GLUCOSE PLOT, stopping
+            above the insulin band, which keeps its own taps and never starts a
+            scrub. It is the only set of pointer handlers in this file. Everything
+            above it in this svg is inert (pointerEvents: none), so the dashed
+            line cannot compete for touches. touch-action is none, because
+            horizontal movement here belongs to the scrub and not to the
+            scroller; a gesture whose first movement is clearly vertical is
+            handed to the page by hand. */}
         <rect
           ref={hitRef}
           data-projection-scrub
           x={0}
           y={glucoseMarginTop}
           width={chartWidth}
-          height={plotHeight}
+          height={hitHeight}
           fill="transparent"
           style={{ cursor: "pointer", touchAction: "none", pointerEvents: "all" }}
           onPointerDown={handlePointerDown}

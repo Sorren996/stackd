@@ -393,7 +393,6 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
   };
   const scrollRef = useRef(null);
   const tickerRef = useRef(null);
-  const selectionMarkerRef = useRef(null);
   const tooltipTimeRef = useRef(null);
   const tooltipDateRef = useRef(null);
   const scrollFrameRef = useRef(null);
@@ -1082,31 +1081,9 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
     return Math.abs(a.time - time) <= Math.abs(b.time - time) ? a : b;
   };
 
-  // The marker sits on the reading the big number shows — the one nearest the
-  // centre of the view. At rest that is the newest reading, so the dot rests on
-  // the end of the line; as the view scrolls, it travels along the curve to
-  // whichever reading is now displayed, instead of being stranded on an earlier
-  // sample. It is moved imperatively from the same frame as the number, so it
-  // can never lag behind the scroll.
-  const positionSelectionMarker = (reading) => {
-    const el = selectionMarkerRef.current;
-    if (!el || !reading || !Number.isFinite(reading.time)) return;
-    const value = Number(getReadingValue(reading) ?? reading.value);
-    if (!Number.isFinite(value)) return;
-    const HALO_R = 9;
-    const cx = Math.min(
-      Math.max((reading.time - domainStart) / totalMs * chartWidth, HALO_R),
-      Math.max(HALO_R, chartWidth - HALO_R)
-    );
-    const cy = Math.min(
-      Math.max(getGlucoseY(Math.min(value, effectiveMax)), GLUCOSE_MARGIN_TOP + HALO_R),
-      GLUCOSE_MARGIN_TOP + plotHeight - HALO_R
-    );
-    el.setAttribute("transform", `translate(${cx} ${cy})`);
-  };
-
-  // The centred reading's number, time and glow, plus the marker that rides on
-  // that same reading.
+  // The centred reading's number, time and glow. The dot itself is NOT drawn
+  // here: the glucose plot's own overlay owns the one and only marker (see
+  // ProjectionOverlay), so this component draws no dot at all.
   const drawCenterGlucose = (scrollLeft, animate = false, suppressMotion = false) => {
     const timeEl = tooltipTimeRef.current;
     const dateEl = tooltipDateRef.current;
@@ -1121,10 +1098,9 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
     const selected = getSelectedReading(centerTime);
     if (!selected || !Number.isFinite(selected.time)) return;
 
-    // Keep the marker on the reading the number is showing, and remember which
-    // reading that is so a window change can keep it in place.
+    // Remember which reading the number is showing, so a window change can keep
+    // it in place.
     anchorTimeRef.current = selected.time;
-    positionSelectionMarker(selected);
 
     // Stale-reading contingency: when the CGM stream has gone quiet and the
     // viewport is centered in the gap past the last real reading, hide the
@@ -1542,10 +1518,11 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
             className="overflow-x-auto"
             style={{
               WebkitOverflowScrolling: "touch",
-              // The end of the content is the end of the story: the browser is
-              // told not to rubber-band past it, so nothing has to be pulled
-              // back afterwards.
-              overscrollBehaviorX: "contain",
+              // THE SCROLL CONTAINER ITSELF, not a child: the browser's own
+              // rubber-band lives on the element that actually has overflow-x
+              // auto, so "none" is declared right here. Nothing to bounce means
+              // nothing to pull back afterwards.
+              overscrollBehaviorX: "none",
               scrollbarWidth: "none",
               overflowY: "hidden"
             }}
@@ -1749,39 +1726,9 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
 
                 }
 
-          {/* ── The selection marker ──
-                                   One dot, drawn inside the chart's own content coordinates, sitting
-                                   on the reading the big number shows. It starts on the newest
-                                   reading and is then moved by positionSelectionMarker() from the
-                                   same animation frame that updates the number, so scrolling carries
-                                   it along the line to the displayed sample instead of leaving it on
-                                   an earlier one. Coordinates are clamped inside the plot so it can
-                                   never render outside the drawable area. */}
-          {!isCandlestick && filters.glucose && (() => {
-                  const HALO_R = 9;
-                  const newest = filteredGlucoseReadings[filteredGlucoseReadings.length - 1];
-                  const newestValue = newest ? Number(getReadingValue(newest) ?? newest.value) : NaN;
-                  const clampX = (t) => Math.min(Math.max((t - domainStart) / totalMs * chartWidth, HALO_R), Math.max(HALO_R, chartWidth - HALO_R));
-                  const clampY = (v) => Math.min(
-                    Math.max(getGlucoseY(Math.min(v, effectiveMax)), GLUCOSE_MARGIN_TOP + HALO_R),
-                    GLUCOSE_MARGIN_TOP + plotHeight - HALO_R
-                  );
-                  const startX = newest && Number.isFinite(newest.time) ? clampX(newest.time) : chartWidth - HALO_R;
-                  const startY = Number.isFinite(newestValue) ? clampY(newestValue) : GLUCOSE_MARGIN_TOP + plotHeight / 2;
-                  return (
-                    <svg
-                      className="pointer-events-none absolute left-0 top-0 z-[12]"
-                      width={chartWidth}
-                      height={GLUCOSE_CHART_HEIGHT}
-                      viewBox={`0 0 ${chartWidth} ${GLUCOSE_CHART_HEIGHT}`}
-                      aria-hidden="true">
-                <g ref={selectionMarkerRef} transform={`translate(${startX} ${startY})`}>
-                  <circle r={9} fill="#8c4a28" fillOpacity={0.12} />
-                  <circle r={3.6} fill="#8c4a28" stroke="#fdf8f1" strokeWidth={1.6} />
-                </g>
-              </svg>);
-
-                })()}
+          {/* There is no dot here. The glucose plot's overlay draws the single
+              marker that exists on screen, from the same point array it scrubs,
+              so a second halo can never be painted beside it. */}
 
           {/* ── Insulin row (lower) — one shared timeline ── */}
           <div style={{ position: "absolute", top: INSULIN_ROW_TOP, left: 0 }}>
