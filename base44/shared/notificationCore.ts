@@ -49,7 +49,7 @@ export type Category = (typeof CATEGORY_KEYS)[number];
  * the optional all-readings stream and the follower recovery note. They share
  * the copy and quiet-hour machinery without appearing in any settings list.
  */
-export const DELIVERY_ONLY_CATEGORIES = ["all_readings", "low_recovery"] as const;
+export const DELIVERY_ONLY_CATEGORIES = ["all_readings", "low_recovery", "reminder"] as const;
 
 export type DeliveryCategory = Category | (typeof DELIVERY_ONLY_CATEGORIES)[number];
 
@@ -448,6 +448,9 @@ const PUSH_LABELS: Record<DeliveryCategory, string> = {
   missing_readings: "Readings haven't updated",
   all_readings: "Glucose",
   low_recovery: "Back in range",
+  // A reminder the person set themselves. Its own copy (a name, a plain line)
+  // is supplied by the reminder scheduler; this label is only a fallback.
+  reminder: "Reminder",
 };
 
 

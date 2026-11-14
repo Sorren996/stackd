@@ -1,0 +1,45 @@
+{
+  "description": "Sends the reminders a person set for themselves (basal log, meal review, up to three custom) and the three sensor session prompts, in each person's own timezone. Timing lives here rather than in the app, so a reminder arrives with the app closed. It never reads a glucose value, never reacts to a reading, and never changes an alert, a threshold or a projection.",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "recurring",
+      "cron_expression": "*/5 * * * *",
+      "one_time_date": null,
+      "timezone": "UTC",
+      "interval_value": null,
+      "interval_unit": null,
+      "interval_anchor": null,
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
+  },
+  "name": "Send due reminders",
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "send_due_reminders",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "send_reminders": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "sendDueReminders",
+            "args": {}
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Send due reminders",
+            "description": "Person-set reminders and sensor session prompts"
+          }
+        }
+      }
+    ]
+  }
+}

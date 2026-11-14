@@ -35,7 +35,7 @@ import {
   LazyHistory, LazyAnalytics, LazySettings, LazyInsights,
   LazyInsulinSettings, LazyProfileSettings, LazyPrivacyConsent,
   LazyDisplaySettings, LazyDexcomSettings, LazySensorSession,
-  LazySharing, LazyNotifications, LazyContactSupport, LazySupportInbox,
+  LazySharing, LazyNotifications, LazyReminders, LazyContactSupport, LazySupportInbox,
   LazySplitPlanReview, LazyFollowingHome, LazyFollowerSettings,
   LazyFollowInvite, LazyInstall, LazyPrivacy, LazyTerms, LazyPublicContact,
   LazyHowItWorks, LazySharingExplained,
@@ -395,6 +395,7 @@ const AuthenticatedApp = () => {
             <Route path="/settings/sensor" element={<LazySensorSession />} />
             <Route path="/settings/sharing" element={<LazySharing />} />
             <Route path="/settings/notifications" element={<LazyNotifications />} />
+            <Route path="/settings/notifications/reminders" element={<LazyReminders />} />
             <Route path="/shared" element={<LazyFollowingHome />} />
             <Route path="/follow" element={<LazyFollowInvite />} />
             <Route path="/settings/contact-support" element={<LazyContactSupport />} />

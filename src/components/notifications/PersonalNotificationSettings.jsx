@@ -4,6 +4,7 @@ import OwnerAlertList from '@/components/notifications/OwnerAlertList';
 import NotificationThresholdNote from '@/components/notifications/NotificationThresholdNote';
 import NotificationPrivacyControls from '@/components/notifications/NotificationPrivacyControls';
 import AllReadingsSettings from '@/components/notifications/AllReadingsSettings';
+import RemindersLinkRow from '@/components/notifications/RemindersLinkRow';
 import useNotificationDraft from '@/hooks/useNotificationDraft';
 
 /**
@@ -26,5 +27,8 @@ export default function PersonalNotificationSettings({ personal, thresholds, onS
         server refuses to store the stream for a relationship either. */}
     <AllReadingsSettings draft={draft} pendingKeys={pendingKeys} disabled={disabled} onChange={apply} />
     <SectionCard><h2 className="mb-3 font-serif-italic text-xl text-ink">Privacy &amp; quiet hours</h2><NotificationPrivacyControls draft={draft} pendingKeys={pendingKeys} disabled={disabled} urgentAlwaysOn onChange={apply} /></SectionCard>
+    {/* Last, below every alert row and quiet hours: the prompts the person
+        writes for themselves, which are not alerts at all. */}
+    <RemindersLinkRow />
   </div>;
 }

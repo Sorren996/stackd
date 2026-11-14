@@ -23,6 +23,7 @@ export const LazyDexcomSettings = lazy(() => import("@/pages/DexcomSettingsPage"
 export const LazySensorSession = lazy(() => import("@/pages/SensorSessionPage"));
 export const LazySharing = lazy(() => import("@/pages/SharingPage"));
 export const LazyNotifications = lazy(() => import("@/pages/NotificationsPage"));
+export const LazyReminders = lazy(() => import("@/pages/RemindersPage"));
 export const LazyContactSupport = lazy(() => import("@/pages/ContactSupportPage"));
 export const LazySupportInbox = lazy(() => import("@/pages/SupportInbox"));
 export const LazySplitPlanReview = lazy(() => import("@/pages/SplitPlanReview"));

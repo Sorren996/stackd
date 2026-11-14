@@ -20,7 +20,7 @@
     },
     "category": {
       "type": "string",
-      "description": "The winning category for the reading this notice is about. One reading produces at most one row: urgent_low, then custom_low/below_range/low_glucose, then custom_high/above_range, then falling_fast/rising_fast, then all_readings. low_recovery is the single follower note that closes a low episode.",
+      "description": "The winning category for the reading this notice is about. One reading produces at most one row: urgent_low, then custom_low/below_range/low_glucose, then custom_high/above_range, then falling_fast/rising_fast, then all_readings. low_recovery is the single follower note that closes a low episode. reminder is a prompt the person set themselves (or a sensor session prompt), which never reacts to a reading.",
       "enum": [
         "urgent_low",
         "below_range",
@@ -32,7 +32,8 @@
         "rising_fast",
         "low_glucose",
         "all_readings",
-        "low_recovery"
+        "low_recovery",
+        "reminder"
       ],
       "enumColors": [
         "red",
@@ -45,7 +46,8 @@
         "green",
         "red",
         "gray",
-        "green"
+        "green",
+        "gray"
       ]
     },
     "channel": {

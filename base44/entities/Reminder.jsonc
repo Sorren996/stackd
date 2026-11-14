@@ -1,0 +1,110 @@
+{
+  "name": "Reminder",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "Owner of this reminder. Written server-side from the signed-in account, never from request input."
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "basal",
+        "meal",
+        "custom"
+      ],
+      "description": "basal = one daily basal log prompt, meal = a review prompt after a meal has been logged, custom = a name the person wrote themselves. At most one basal and one meal row per account, and at most three custom rows (enforced server side)."
+    },
+    "name": {
+      "type": "string",
+      "description": "The push title. 'Basal log' or 'Meal review' for the two fixed types; free text up to 40 characters for a custom reminder, which is also its body. Never templated, never prefilled from anything."
+    },
+    "days": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "default": [],
+      "description": "Days of the week it may fire on, 0 = Sunday \u2026 6 = Saturday. Empty for the meal reminder, which follows the meal that was logged."
+    },
+    "time_minutes": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1439,
+      "default": 1260,
+      "description": "Local time of day in minutes after midnight, in this row's own timezone."
+    },
+    "delay_minutes": {
+      "type": "number",
+      "enum": [
+        90,
+        120,
+        180
+      ],
+      "description": "Meal reminder only: how long after the meal was logged the prompt arrives."
+    },
+    "enabled": {
+      "type": "boolean",
+      "default": false,
+      "description": "Off by default. Only an enabled reminder is ever picked up by the scheduler."
+    },
+    "skip_quiet": {
+      "type": "boolean",
+      "default": true,
+      "description": "When on, the reminder is skipped inside the person's quiet hours rather than held for later. Sensor reminders ignore this and are never stored here."
+    },
+    "last_sent_date": {
+      "type": "string",
+      "description": "Local date (YYYY-MM-DD in this row's timezone) the first send happened, or was deliberately skipped. Set by the scheduler; a second send that day never happens."
+    },
+    "last_retry_sent_date": {
+      "type": "string",
+      "description": "Local date the one allowed retry happened. A reminder fires once, then once more 15 minutes later, and never again that day."
+    },
+    "timezone": {
+      "type": "string",
+      "default": "UTC",
+      "description": "IANA zone this reminder's local day and time are evaluated in, so a clock change resolves itself."
+    }
+  },
+  "required": [
+    "type",
+    "name",
+    "enabled"
+  ],
+  "rls": {
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.user_id": "{{user.id}}"
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.user_id": "{{user.id}}"
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.user_id": "{{user.id}}"
+        }
+      ]
+    }
+  }
+}

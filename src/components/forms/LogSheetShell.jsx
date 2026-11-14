@@ -43,6 +43,7 @@ export default function LogSheetShell({
   detent = "default",
   labelledBy,
   compact = false,
+  titleStyle,
 }) {
   const dragControls = useDragControls();
   const prefersReducedMotion = useReducedMotion();
@@ -201,7 +202,7 @@ export default function LogSheetShell({
               >
                 Cancel
               </button>
-              <h2 id={headingId} className={compact ? 'min-w-0 text-center font-serif-italic text-lg' : 'text-base font-semibold'} style={{ color: PALETTE.ink }}>
+              <h2 id={headingId} className={compact ? 'min-w-0 text-center font-serif-italic text-lg' : 'text-base font-semibold'} style={{ color: PALETTE.ink, ...titleStyle }}>
                 {title}
               </h2>
               <div style={{ width: "52px" }} aria-hidden />
