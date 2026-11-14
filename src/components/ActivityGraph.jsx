@@ -1514,14 +1514,6 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
                         strokeWidth={1}
                         strokeDasharray="6 5" />
                       
-                  {/* Now — a faint dotted vertical through the measured area. */}
-                  <ReferenceLine
-                        x={stableNow}
-                        yAxisId="glucose"
-                        stroke="#8a7b6b"
-                        strokeWidth={1}
-                        strokeDasharray="2 4"
-                        strokeOpacity={0.35} />
                       
                 </>
                     }
