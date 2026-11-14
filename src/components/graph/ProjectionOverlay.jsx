@@ -88,8 +88,10 @@ export default function ProjectionOverlay({
     const runs = [];
     readings.forEach((entry) => { (runs[entry.run ?? 0] ||= []).push(entry); });
     const futureRun = anchor ? [anchor, ...forecasts] : [];
-    let lastKey = null;
-    const update = () => {
+    const runGeometry = runs.map(run => run.map(p => ({ x: xOf(p.time), y: yOf(p.value) })));
+    const futureGeometry = futureRun.map(p => ({ x: xOf(p.time), y: yOf(p.value) }));
+    let frame = null;
+    const update = (scrolling = false) => {
       const centreX = el ? el.scrollLeft + el.clientWidth / 2 : xOf(anchor?.time);
       const centreTime = anchor && Math.abs(centreX - xOf(anchor.time)) <= 0.5
         ? anchor.time : domainStart + centreX / chartWidth * totalMs;
@@ -98,21 +100,26 @@ export default function ProjectionOverlay({
       const run = future ? futureRun : runs[selected?.run ?? 0] || [];
       // No interpolation across genuine reading gaps.
       const onRun = run.length && centreTime >= run[0].time && centreTime <= run[run.length - 1].time;
-      const y = onRun ? monotoneXValue(run.map((p) => ({ x: xOf(p.time), y: yOf(p.value) })), centreX)
+      const y = onRun ? monotoneXValue(future ? futureGeometry : runGeometry[selected?.run ?? 0], centreX)
         : selected ? yOf(selected.value) : null;
       if (markerRef.current) {
         markerRef.current.style.display = selected ? "" : "none";
         if (selected) markerRef.current.setAttribute("transform", `translate(${centreX} ${y})`);
       }
-      const key = selected ? `${selected.kind}:${selected.time}:${selected.value}` : "";
-      if (key !== lastKey) {
-        lastKey = key;
-        reportRef.current?.(selected ? { ...selected, centreTime } : null);
-      }
+      // Report centreTime on every frame, even between two sample identities,
+      // so zoom anchoring and the marker always share the exact centre.
+      reportRef.current?.(selected ? { ...selected, centreTime } : null, { scrolling });
+    };
+    const onScroll = () => {
+      if (frame !== null) return;
+      frame = requestAnimationFrame(() => { frame = null; update(true); });
     };
     update();
-    el?.addEventListener("scroll", update, { passive: true });
-    return () => el?.removeEventListener("scroll", update);
+    el?.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      el?.removeEventListener("scroll", onScroll);
+      if (frame !== null) cancelAnimationFrame(frame);
+    };
   }, [entries, anchor, domainStart, totalMs, chartWidth, xOf, yOf, scrollContainerRef, resetSignal]);
 
   if (!entries.length) return null;

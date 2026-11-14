@@ -14,6 +14,7 @@
 // own label, and the range collapses to "likely around X" when its ends round to
 // the same number.
 
+import { useLayoutEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { projectionCardCopy } from "@/components/graph/ProjectionTooltipCard";
 
@@ -23,17 +24,32 @@ export const STRIP_SLOT_PX = 46;
 
 const REVEAL = { duration: 0.18, ease: [0.32, 0.72, 0.25, 1] };
 
-export default function ProjectionEstimateStrip({ point = null }) {
+export default function ProjectionEstimateStrip({ selectionSource }) {
+  const [shown, setShown] = useState(false);
+  const textRefs = useRef({});
+  const point = selectionSource.getSnapshot();
   const copy = projectionCardCopy(point?.kind === "forecast" ? point : null);
+  useLayoutEffect(() => {
+    const update = (entry) => {
+      const next = projectionCardCopy(entry?.kind === "forecast" ? entry : null);
+      if (Boolean(next) !== shown) setShown(Boolean(next));
+      if (next) for (const field of ['eyebrow', 'value', 'unit', 'range']) {
+        const element = textRefs.current[field];
+        if (element && element.textContent !== (next[field] || '')) element.textContent = next[field] || '';
+      }
+    };
+    update(selectionSource.getSnapshot());
+    return selectionSource.subscribe(update);
+  }, [selectionSource, shown]);
 
   return (
     <div
       className="relative w-full"
       style={{ height: STRIP_SLOT_PX }}
-      data-projection-estimate={copy ? "shown" : "empty"}
+      data-projection-estimate={shown ? "shown" : "empty"}
     >
       <AnimatePresence initial={false}>
-        {copy && (
+        {shown && copy && (
           <motion.div
             key="estimate"
             initial={{ opacity: 0, y: 6 }}
@@ -49,6 +65,7 @@ export default function ProjectionEstimateStrip({ point = null }) {
                 style={{ background: "#AF751B" }}
               />
               <span
+                ref={el => { textRefs.current.eyebrow = el; }}
                 className="text-[10px] font-semibold uppercase"
                 style={{ letterSpacing: ".16em", color: "#8F7E6B", lineHeight: "12px" }}
               >
@@ -57,6 +74,7 @@ export default function ProjectionEstimateStrip({ point = null }) {
             </div>
             <div className="mt-1 flex items-baseline gap-1.5">
               <span
+                ref={el => { textRefs.current.value = el; }}
                 style={{
                   fontFamily: "var(--font-display, 'Fraunces', Georgia, serif)",
                   fontSize: 22,
@@ -70,14 +88,12 @@ export default function ProjectionEstimateStrip({ point = null }) {
               >
                 {copy.value}
               </span>
-              <span className="text-[11px] font-medium" style={{ color: "#8F7E6B" }}>
+              <span ref={el => { textRefs.current.unit = el; }} className="text-[11px] font-medium" style={{ color: "#8F7E6B" }}>
                 {copy.unit}
               </span>
-              {copy.range && (
-                <span className="text-[11px] leading-none" style={{ color: "#5B5046" }}>
-                  {copy.range}
-                </span>
-              )}
+              <span ref={el => { textRefs.current.range = el; }} className="text-[11px] leading-none" style={{ color: "#5B5046" }}>
+                {copy.range}
+              </span>
             </div>
           </motion.div>
         )}

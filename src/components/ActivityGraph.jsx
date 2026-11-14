@@ -1,4 +1,6 @@
-import { useMemo, useRef, useEffect, useState, useCallback } from "react";
+import { memo, useMemo, useRef, useEffect, useState, useCallback } from "react";
+import { readManualGlucoseEnabled } from "@/lib/manualGlucose";
+import createChartSelectionSource from "@/lib/chartSelectionSource";
 import { createPortal } from "react-dom";
 import { Area, XAxis, YAxis, Line, ComposedChart, ReferenceLine, ReferenceArea } from "recharts";
 import { generateActivityCurve, getDoseIOB, getInsulinProfile, isBasalInsulinType } from "@/lib/insulinPharmacology";
@@ -298,7 +300,7 @@ function FilterDropdown({ filters, onChange, anchorRect }) {
 
 }
 
-export default function ActivityGraph({ doses, activeInsulinBreakdown = [], glucoseReadings = [], carbEntries = [], onSelectLog = null, onDeleteLog = null, glucoseReadOnly = false, projection = null, projectionNote = null, snapshotNow, resumeRevision = 0, historyReady = true, historyLoading = false, historyError = false }) {
+function ActivityGraph({ doses, activeInsulinBreakdown = [], glucoseReadings = [], carbEntries = [], onSelectLog = null, onDeleteLog = null, glucoseReadOnly = false, projection = null, projectionNote = null, snapshotNow, resumeRevision = 0, historyReady = true, historyLoading = false, historyError = false }) {
   const previousResume = useRef(resumeRevision);
   const previousNowPosition = useRef(null);
   // Identity of the scroll container the last anchoring ran against. A newly
@@ -321,7 +323,11 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
   // The drawn point the marker is on. The trace layer owns the one position and
   // reports the point it lands on from it; the readout, the estimate strip and
   // the tapped reading all read it, so nothing keeps a second selection.
-  const [scrubEntry, setScrubEntry] = useState(null);
+  const selectionSource = useMemo(() => createChartSelectionSource(), []);
+  const scrubEntryRef = useRef(null);
+  const automaticScrollRef = useRef(false);
+  const [, refreshManualFlag] = useState(0);
+  const manualGlucoseEnabled = readManualGlucoseEnabled();
   // Bumped by "Now", which sends the marker back to the newest reading.
   const [scrubResetSignal, setScrubResetSignal] = useState(0);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -374,7 +380,7 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
     if (e?.target && e.target !== e.currentTarget && e.target.closest?.("button, a")) return;
     if (!filteredGlucoseReadings.length) return;
     // The reading the readout is showing — the one under the marker.
-    const selectionTime = scrubEntry?.time ?? getCenterTimeForScroll(scrollRef.current?.scrollLeft ?? maxScrollLeft);
+    const selectionTime = scrubEntryRef.current?.time ?? getCenterTimeForScroll(scrollRef.current?.scrollLeft ?? maxScrollLeft);
     let nearest = null;
     for (const reading of filteredGlucoseReadings) {
       const dist = Math.abs(reading.time - selectionTime);
@@ -398,6 +404,8 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
   const prevGlowStatusRef = useRef(null);
   const prevOverReferenceRef = useRef(false);
   const lastSelectedKeyRef = useRef(null);
+  const lastLiveTimeRef = useRef(null);
+  const pendingLiveTickRef = useRef(null);
   // The reading the marker sits on, and the window it was picked in, so a
   // window change can carry that same reading across the new scale.
   const anchorTimeRef = useRef(null);
@@ -439,6 +447,7 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
 
   useEffect(() => {
     const updateSettings = () => {
+      refreshManualFlag((revision) => revision + 1);
       setTargetRange(readTargetRange());
       setGraphHeight(readGraphHeight());
       setHighReference(readHighReference());
@@ -1016,41 +1025,48 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
     };
   };
 
-  // ── The readout is bound to the scrub position ────────────────────────────
-  // Whatever the marker sits on is what the number says. Nothing else writes
-  // this row — not a scroll handler, not a timer — so the value beside the chart
-  // and the marker on it can never be showing different moments.
-  useEffect(() => {
-    if (!filters.glucose || !scrubEntry || !Number.isFinite(scrubEntry.time)) return;
-
-    // Forecast selection belongs only to the strip; the header stays on
-    // the newest received reading while the centre is in the future.
-    const headerEntry = scrubEntry.kind === FORECAST_KIND ? scrubAnchor : scrubEntry;
+  // Scroll frames write only refs/DOM. Small subscribers own their visibility;
+  // nothing here schedules a render of the chart or its Recharts descendants.
+  const handleSelectionFrame = (entry, { scrolling = false } = {}) => {
+    scrubEntryRef.current = entry;
+    selectionSource.publish(entry);
+    if (!filters.glucose || !entry || !Number.isFinite(entry.time)) return;
+    anchorTimeRef.current = entry.centreTime ?? entry.time;
+    const headerEntry = entry.kind === FORECAST_KIND ? scrubAnchor : entry;
     if (!headerEntry) return;
     const value = Math.min(Math.max(headerEntry.value, effectiveMin), effectiveMax);
-    const key = `${headerEntry.kind}:${headerEntry.time}:${headerEntry.value}`;
-    const shouldAnimate = lastSelectedKeyRef.current !== null && lastSelectedKeyRef.current !== key;
-    lastSelectedKeyRef.current = key;
-    // Remembered so a change of time window can keep the same point in place.
-    anchorTimeRef.current = scrubEntry.centreTime ?? scrubEntry.time;
-
-    if (tickerRef.current) tickerRef.current.setValue(formatGlucoseDisplay(value), shouldAnimate);
-    if (tooltipTimeRef.current) tooltipTimeRef.current.textContent = formatReadingTime(headerEntry.time);
-    if (tooltipDateRef.current) tooltipDateRef.current.textContent = format(new Date(headerEntry.time), "EEEE, MMM d");
-
-    // The card glow follows the same point, and only ever fires when the status
-    // actually changes rather than on every step of a drag.
-    const glowStatus =
-    value > targetHigh ? "high" :
-    value < targetLow ? "low" :
-    "in_range";
+    const displayValue = formatGlucoseDisplay(value);
+    const key = `${headerEntry.kind}:${headerEntry.time}:${displayValue}`;
+    const previous = lastSelectedKeyRef.current;
+    const moving = scrollBusyRef.current || (scrolling && !automaticScrollRef.current);
+    if (lastLiveTimeRef.current !== latestGlucoseTime) {
+      pendingLiveTickRef.current = lastLiveTimeRef.current !== null && latestGlucoseTime > lastLiveTimeRef.current
+        && atRestingRef.current && !moving ? latestGlucoseTime : null;
+      lastLiveTimeRef.current = latestGlucoseTime;
+    }
+    const newLiveReading = pendingLiveTickRef.current === headerEntry.time;
+    if (moving || previous?.key !== key) {
+      tickerRef.current?.setValue(displayValue, Boolean(!moving && newLiveReading));
+    }
+    if (newLiveReading) pendingLiveTickRef.current = null;
+    if (previous?.key !== key) {
+      if (tooltipTimeRef.current) tooltipTimeRef.current.textContent = formatReadingTime(headerEntry.time);
+      if (tooltipDateRef.current) tooltipDateRef.current.textContent = format(new Date(headerEntry.time), "EEEE, MMM d");
+      lastSelectedKeyRef.current = { key, time: headerEntry.time };
+    }
+    const glowStatus = value > targetHigh ? "high" : value < targetLow ? "low" : "in_range";
     const overReference = value > highReference || value < FIXED_LOW_REFERENCE;
     if (glowStatus !== prevGlowStatusRef.current || overReference !== prevOverReferenceRef.current) {
       prevGlowStatusRef.current = glowStatus;
       prevOverReferenceRef.current = overReference;
       window.dispatchEvent(new CustomEvent("stackd-center-glucose-status", { detail: { status: glowStatus, overReference } }));
     }
-  }, [scrubEntry, scrubAnchor, filters.glucose, effectiveMin, effectiveMax, targetLow, targetHigh, highReference]);
+  };
+
+  // Display preferences can change without changing the selected sample.
+  useEffect(() => {
+    handleSelectionFrame(scrubEntryRef.current);
+  }, [glucoseUnits, targetLow, targetHigh, highReference, effectiveMin, effectiveMax]);
 
   const updateMonitoringOverlay = (scrollLeft) => {
     const centerTime = getCenterTimeForScroll(scrollLeft);
@@ -1104,6 +1120,7 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
   // is the right stop; settling never changes the reader's scroll position.
   const settleScroll = () => {
     scrollBusyRef.current = false;
+    automaticScrollRef.current = false;
   };
 
   const scheduleScrollSettle = () => {
@@ -1115,6 +1132,8 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
   };
 
   const beginScrollGesture = () => {
+    automaticScrollRef.current = false;
+    tickerRef.current?.stopAnimation();
     scrollBusyRef.current = true;
     if (settleTimerRef.current) clearTimeout(settleTimerRef.current);
     settleTimerRef.current = null;
@@ -1128,7 +1147,7 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
   // Finger down or momentum still running — either way the reader is moving the
   // viewport, so nothing here writes a position.
   const handleScrollPosition = (scrollLeft) => {
-    scrollBusyRef.current = true;
+    scrollBusyRef.current = !automaticScrollRef.current;
     // Following the live edge is only allowed from the live edge. Panning away
     // latches it off until the reader comes back to the edge or taps Now.
     atRestingRef.current = isAtResting(scrollLeft, restingScrollLeft);
@@ -1164,6 +1183,7 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
     if (!scrollRef.current) return;
 
     // Tapping Now re-arms following, whatever the reader had latched off.
+    automaticScrollRef.current = false;
     atRestingRef.current = true;
     setScrubResetSignal((n) => n + 1);
     scrollRef.current.scrollTo({ left: restingScrollLeft, behavior: "smooth" });
@@ -1201,8 +1221,10 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
       const keepLeft = Math.min(Math.max(anchorX - containerWidth / 2, 0), Math.max(maxScrollLeft, 0));
       scrollRef.current.scrollLeft = keepLeft;
       atRestingRef.current = isAtResting(keepLeft, restingScrollLeft);
-    } else if (anchorToLatest && followAllowed) {
+    } else if (anchorToLatest && followAllowed && Math.abs(scrollRef.current.scrollLeft - restingScrollLeft) > 0.5) {
+      automaticScrollRef.current = true;
       scrollRef.current.scrollLeft = restingScrollLeft;
+      scheduleScrollSettle();
     }
     previousNowPosition.current = restingScrollLeft;
     updateMonitoringOverlay(scrollRef.current.scrollLeft);
@@ -1250,9 +1272,7 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
   // mounted whenever there is a glucose trace to draw. It is the only place a
   // glucose marker is ever painted.
   const showTraceLayer = filters.glucose && (glucoseLinePoints.length > 0 || Boolean(projection));
-  // Only a real forecast point nearest the viewport centre fills the strip.
-  // At rest and throughout history the strip's reserved slot stays empty.
-  const stripPoint = scrubEntry?.kind === FORECAST_KIND ? scrubEntry : null;
+  // The strip subscribes directly to the chart's scroll-frame channel.
 
   return (
     <div ref={containerRef} className="relative overflow-visible">
@@ -1311,7 +1331,7 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
         <div className="resume-chart-reading flex min-w-0 items-end gap-2">
           {filters.glucose && glucoseLinePoints.length > 0 &&
             <>
-              {(onSelectLog || onDeleteLog) &&
+              {manualGlucoseEnabled && (onSelectLog || onDeleteLog) &&
               <span className="flex h-4 w-4 shrink-0 items-center justify-center self-center rounded-full border" style={{ borderColor: "#e6dccd", background: "#fdf8f1", color: "#7a6b5d" }}>
                   <Info className="h-2.5 w-2.5" />
                 </span>
@@ -1356,7 +1376,7 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
           moves when a forecast appears or ends. It describes the model point
           nearest the centre only while the centre is after the newest reading;
           at rest and on past readings it remains empty. */}
-      <ProjectionEstimateStrip projection={projection} point={stripPoint} />
+      <ProjectionEstimateStrip selectionSource={selectionSource} />
       <div
           ref={graphViewportRef}
           className="relative overflow-hidden"
@@ -1461,7 +1481,7 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
                   showReadingLine={false}
                   interactive={false}
                   resetSignal={scrubResetSignal}
-                  onSelectionChange={setScrubEntry}
+                  onSelectionChange={handleSelectionFrame}
                   scrollContainerRef={scrollRef} />
 
                 }
@@ -1545,7 +1565,7 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
                   plotHeight={plotHeight}
                   getGlucoseY={getGlucoseY}
                   resetSignal={scrubResetSignal}
-                  onSelectionChange={setScrubEntry}
+                  onSelectionChange={handleSelectionFrame}
                   scrollContainerRef={scrollRef} />
 
                 }
@@ -1789,7 +1809,7 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
             }
         </div>
       </div>
-      <DelayedRiseCautionCard carbEntries={carbEntries} />
+      <DelayedRiseCautionCard carbEntries={carbEntries} selectionSource={selectionSource} />
       </div>
 
       {activeMarker && (
@@ -1811,3 +1831,6 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
     </div>);
 
 }
+
+// Status events update the surrounding card, not the expensive plot tree.
+export default memo(ActivityGraph);

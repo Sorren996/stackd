@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+import { hasDelayedRise, HIGH_PROTEIN_FAT_MONITORING_HOURS } from "@/lib/mealMonitoring";
 import { AnimatePresence, motion } from "framer-motion";
 import { Clock } from "lucide-react";
 import { useMonitoringStatus } from "@/hooks/useMonitoringStatus";
@@ -16,18 +18,34 @@ import { useMonitoringStatus } from "@/hooks/useMonitoringStatus";
  * Copy describes, never prescribes. Sandstone-tinted surface, amber text
  * (#8a5a12, 5.3:1), small leading clock glyph, no border, no red/alarm styling.
  */
-export default function DelayedRiseCautionCard({ carbEntries }) {
+export default function DelayedRiseCautionCard({ carbEntries, selectionSource }) {
   const status = useMonitoringStatus(carbEntries);
-  const multiple = status.meals.length > 1;
+  const [selectedCount, setSelectedCount] = useState(null);
+  useEffect(() => {
+    if (!selectionSource) return;
+    let lastCount;
+    const update = (entry) => {
+      const time = entry?.centreTime;
+      const count = Number.isFinite(time) ? carbEntries.filter(meal => {
+        const start = Date.parse(meal.consumed_at);
+        return hasDelayedRise(meal) && time >= start && time < start + HIGH_PROTEIN_FAT_MONITORING_HOURS * 3600000;
+      }).length : null;
+      if (lastCount !== count) { lastCount = count; setSelectedCount(count); }
+    };
+    update(selectionSource.getSnapshot());
+    return selectionSource.subscribe(update);
+  }, [carbEntries, selectionSource]);
+  const active = selectedCount === null ? status.isActive : selectedCount > 0;
+  const multiple = (selectedCount ?? status.meals.length) > 1;
 
   return (
     <AnimatePresence initial={false}>
-      {status.isActive && (
+      {active && (
         <motion.div
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: "auto" }}
           exit={{ opacity: 0, height: 0 }}
-          transition={{ duration: 280, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
           className="overflow-hidden px-3"
           aria-live="polite"
         >
