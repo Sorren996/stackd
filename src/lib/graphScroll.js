@@ -6,8 +6,7 @@
 // tail to the right. So the resting offset is simply nowX minus half a viewport,
 // bounded by the scrollable extent. Every automatic write goes to that one
 // number — the first paint, the Now control, a new reading while the reader is
-// sitting there, and the single correction after a gesture has genuinely
-// finished.
+// sitting there. It is never a scroll limit or a settle-time correction.
 //
 // Nothing in this module is called from a scroll handler, and nothing here runs
 // while a finger or iOS momentum is moving the viewport.
@@ -51,14 +50,6 @@ export function isAtResting(scrollLeft, restingScrollLeft, tolerance = NEAR_EDGE
   return Math.abs(scrollLeft - Number(restingScrollLeft)) <= tolerance;
 }
 
-/**
- * A gesture ended somewhere past the resting offset — a bounce into the future
- * zone. Panning into history (left of rest) is never pulled back here.
- */
-export function shouldReturnToResting(scrollLeft, restingScrollLeft) {
-  if (!Number.isFinite(scrollLeft)) return false;
-  return scrollLeft > Number(restingScrollLeft) + 1;
-}
 
 /**
  * Following new data is only allowed when the reader is not moving the viewport

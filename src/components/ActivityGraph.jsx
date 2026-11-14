@@ -15,7 +15,7 @@ import { useDexcomConnection } from "@/hooks/useDexcomConnection";
 import { useIsLightTheme } from "@/lib/theme";
 import { getGraphTheme } from "@/lib/graphTheme";
 import { shouldAnchorToLatest } from "@/lib/graphAnchor";
-import { resolveScrollBounds, isAtResting, shouldReturnToResting, shouldFollowLatest } from "@/lib/graphScroll";
+import { resolveScrollBounds, isAtResting, shouldFollowLatest } from "@/lib/graphScroll";
 import { buildScrubEntries, projectionEndTime, FORECAST_KIND } from "@/lib/graphScrub";
 import { formatGlucose, glucoseUnitLabel, getGlucoseUnits } from "@/lib/glucoseUnits";
 import GlucoseTicker from "@/components/graph/GlucoseTicker";
@@ -512,19 +512,13 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
   const latestGlucoseBucket = isCandlestick ?
   Math.floor(latestGlucoseTime / HOUR_MS) * HOUR_MS :
   Math.round(latestGlucoseTime / STEP_MS) * STEP_MS;
-  // THE PLOT ENDS AT B. B is the final forecast point the projection actually
-  // drew — never a declared horizon it did not reach — or the newest reading
-  // when there is no projection. The plot's right edge is B plus a few pixels of
-  // breathing room, so the marker can stand on B without being cut in half; any
-  // more than that would leave empty space the drag could not reach.
+  // Half a visible window after the horizon lets the native right edge
+  // place the final point exactly at the viewport centre.
   const forecastEndTime = projectionEndTime(projection);
   const domainStart = isCandlestick ?
   latestGlucoseBucket - CANDLESTICK_HISTORY_HOURS * HOUR_MS :
   latestGlucoseBucket - HISTORY_DAYS * 24 * HOUR_MS;
-  const domainEndPadMs = containerWidth > 0 ?
-  Math.round((14 * viewWindow * 60 * 60 * 1000) / containerWidth) :
-  4 * 60000;
-  const domainEnd = Math.max(latestGlucoseBucket, forecastEndTime ?? 0) + domainEndPadMs;
+  const domainEnd = (forecastEndTime ?? latestGlucoseTime) + viewWindow * HOUR_MS / 2;
   const filteredGlucoseReadings = useMemo(() =>
   filters.glucose ?
   sortedGlucoseReadings.filter((reading) => reading.time >= domainStart && reading.time <= domainEnd) :
@@ -797,8 +791,8 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
   const totalMs = domainEnd - domainStart;
   const visibleMs = viewWindow * 60 * 60 * 1000;
   const pxPerMin = containerWidth / (visibleMs / 60000);
-  const chartWidth = Math.max(containerWidth, Math.round(totalMs / 60000 * pxPerMin));
-  const latestGlucoseX = (latestGlucoseBucket - domainStart) / totalMs * chartWidth;
+  const chartWidth = Math.max(containerWidth, totalMs / 60000 * pxPerMin);
+  const latestGlucoseX = (latestGlucoseTime - domainStart) / totalMs * chartWidth;
 
   // THE RESTING POSITION IS THE CENTRE OF THE VIEWPORT.
   //
@@ -1029,17 +1023,20 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
   useEffect(() => {
     if (!filters.glucose || !scrubEntry || !Number.isFinite(scrubEntry.time)) return;
 
-    // Clamped for the display scale only; the value is the point's own.
-    const value = Math.min(Math.max(scrubEntry.value, effectiveMin), effectiveMax);
-    const key = `${scrubEntry.kind}:${scrubEntry.time}:${scrubEntry.value}`;
+    // Forecast selection belongs only to the strip; the header stays on
+    // the newest received reading while the centre is in the future.
+    const headerEntry = scrubEntry.kind === FORECAST_KIND ? scrubAnchor : scrubEntry;
+    if (!headerEntry) return;
+    const value = Math.min(Math.max(headerEntry.value, effectiveMin), effectiveMax);
+    const key = `${headerEntry.kind}:${headerEntry.time}:${headerEntry.value}`;
     const shouldAnimate = lastSelectedKeyRef.current !== null && lastSelectedKeyRef.current !== key;
     lastSelectedKeyRef.current = key;
     // Remembered so a change of time window can keep the same point in place.
-    anchorTimeRef.current = scrubEntry.time;
+    anchorTimeRef.current = scrubEntry.centreTime ?? scrubEntry.time;
 
     if (tickerRef.current) tickerRef.current.setValue(formatGlucoseDisplay(value), shouldAnimate);
-    if (tooltipTimeRef.current) tooltipTimeRef.current.textContent = formatReadingTime(scrubEntry.time);
-    if (tooltipDateRef.current) tooltipDateRef.current.textContent = format(new Date(scrubEntry.time), "EEEE, MMM d");
+    if (tooltipTimeRef.current) tooltipTimeRef.current.textContent = formatReadingTime(headerEntry.time);
+    if (tooltipDateRef.current) tooltipDateRef.current.textContent = format(new Date(headerEntry.time), "EEEE, MMM d");
 
     // The card glow follows the same point, and only ever fires when the status
     // actually changes rather than on every step of a drag.
@@ -1053,7 +1050,7 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
       prevOverReferenceRef.current = overReference;
       window.dispatchEvent(new CustomEvent("stackd-center-glucose-status", { detail: { status: glowStatus, overReference } }));
     }
-  }, [scrubEntry, filters.glucose, effectiveMin, effectiveMax, targetLow, targetHigh, highReference]);
+  }, [scrubEntry, scrubAnchor, filters.glucose, effectiveMin, effectiveMax, targetLow, targetHigh, highReference]);
 
   const updateMonitoringOverlay = (scrollLeft) => {
     const centerTime = getCenterTimeForScroll(scrollLeft);
@@ -1103,21 +1100,10 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
     }
   };
 
-  // ── Scroll gestures: observe, never correct mid-gesture ────────────────
-  //
-  // A scroll handler may not move the container. Writing scrollLeft there
-  // fights iOS momentum (iOS pushes past the end, the handler pulls it back,
-  // iOS pushes again), and that fight is what moved the now-guide up to 142px
-  // mid-swipe. This is the only correction, it runs once a gesture has genuinely
-  // finished, and it targets the resting offset — the centre of the viewport,
-  // never the end of the content — so a bounce resolves to centre. Panning into
-  // history is never pulled back.
+  // Settling only releases auto-follow's busy flag. The native scroll edge
+  // is the right stop; settling never changes the reader's scroll position.
   const settleScroll = () => {
     scrollBusyRef.current = false;
-    const el = scrollRef.current;
-    if (el && shouldReturnToResting(el.scrollLeft, restingScrollLeft)) {
-      el.scrollLeft = restingScrollLeft;
-    }
   };
 
   const scheduleScrollSettle = () => {
@@ -1496,16 +1482,6 @@ export default function ActivityGraph({ doses, activeInsulinBreakdown = [], gluc
                   place the "now" line or the future wash at all. */}
               <XAxis dataKey="time" type="number" domain={[domainStart, domainEnd]} hide />
 
-              {filters.glucose &&
-                    <ReferenceArea
-                      yAxisId="glucose"
-                      x1={stableNow}
-                      x2={domainEnd}
-                      fill="#af751b"
-                      fillOpacity={0.06}
-                      stroke="none" />
-
-                    }
 
               <YAxis yAxisId="glucose" domain={[effectiveMin, effectiveMax]} allowDataOverflow hide />
 

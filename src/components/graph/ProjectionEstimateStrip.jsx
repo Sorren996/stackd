@@ -1,12 +1,7 @@
 // The projection estimate strip.
 //
-// It reads the same single position as the marker: when the scrub is on a
-// forecast point, the strip describes THAT point — an amber dot, the eyebrow
-// ("estimated in 180 min", taken from the point's own offset), the estimate
-// with its unit, and the range it was drawn with. When the readout is on a
-// received reading, there is no forecast point under it to describe, so the
-// strip falls back to the projection's horizon and the slot never empties while
-// a forecast exists.
+// Shows only a selected model forecast point. At rest and on past readings
+// the contents are empty, while the reserved slot keeps the plot still.
 //
 // THE SLOT IS FIXED. The strip occupies exactly STRIP_SLOT_PX whether or not
 // there is a projection, so the plot, its scale and its axis never move as a
@@ -28,31 +23,8 @@ export const STRIP_SLOT_PX = 46;
 
 const REVEAL = { duration: 0.18, ease: [0.32, 0.72, 0.25, 1] };
 
-// The final forecast point of the projection, in the shape the card copy
-// helper understands. Null when there is no projection to describe.
-function horizonPoint(projection) {
-  if (!projection || projection.abstained) return null;
-  const trajectory = Array.isArray(projection.trajectory) ? projection.trajectory : [];
-  let last = null;
-  for (const p of trajectory) {
-    const value = Number(p?.value);
-    if (Number.isFinite(value)) last = { ...p, value };
-  }
-  if (!last) return null;
-
-  const offset = Number(last.min_offset);
-  return {
-    kind: "forecast",
-    value: last.value,
-    minOffset: Number.isFinite(offset) ? offset : null,
-    lower: Number.isFinite(Number(last.lower)) ? Number(last.lower) : null,
-    upper: Number.isFinite(Number(last.upper)) ? Number(last.upper) : null,
-  };
-}
-
-export default function ProjectionEstimateStrip({ projection, point = null }) {
-  // The forecast point the readout is on, else the horizon.
-  const copy = projectionCardCopy(point?.kind === "forecast" ? point : horizonPoint(projection));
+export default function ProjectionEstimateStrip({ point = null }) {
+  const copy = projectionCardCopy(point?.kind === "forecast" ? point : null);
 
   return (
     <div
